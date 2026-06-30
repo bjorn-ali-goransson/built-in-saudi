@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://built-in-saudi.com/sitemap.xml
