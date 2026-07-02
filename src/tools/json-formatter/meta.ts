@@ -4,13 +4,13 @@ import { CodeIcon } from '../../components/icons'
 
 export const jsonFormatterTool: Tool = {
   id: 'json-formatter',
-  name: 'JSON Formatter',
-  nameAr: 'منسّق JSON',
-  tagline: 'Prettify, minify & validate JSON.',
+  name: 'Code Formatter',
+  nameAr: 'منسّق الكود',
+  tagline: 'Prettify & minify JSON, CSS and XML.',
   description:
-    'Format, minify and validate JSON in your browser — 2/4-space indent, sort keys, and a precise line/column error when it’s invalid. Copy or download the result. Nothing is uploaded, so pasted tokens and PII stay on your device.',
+    'Format, minify and validate code in your browser — JSON (with a precise line/column error and sort-keys), plus CSS and XML beautify/minify. 2/4-space indent, copy or download. Nothing is uploaded, so pasted tokens and PII stay on your device.',
   category: 'Developer',
-  keywords: ['json', 'format', 'formatter', 'beautify', 'minify', 'validate', 'pretty print', 'json منسق', 'تنسيق'],
+  keywords: ['json', 'css', 'xml', 'format', 'formatter', 'beautify', 'minify', 'validate', 'pretty print', 'منسق', 'تنسيق'],
   status: 'stable',
   Icon: CodeIcon,
   component: lazyTool(() => import('./JsonFormatterTool')),

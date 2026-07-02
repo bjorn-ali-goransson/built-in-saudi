@@ -131,8 +131,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'json-formatter',
-    en: { name: 'JSON Formatter', description: 'Format, minify and validate JSON in your browser — 2/4-space indent, sort keys, and a precise line/column error when invalid. Nothing uploaded.' },
-    ar: { name: 'منسّق JSON', description: 'نسّق وصغّر وتحقّق من JSON داخل متصفحك — مسافة ٢/٤، ترتيب المفاتيح، ورسالة خطأ دقيقة بالسطر والعمود. دون رفع أي شيء.' },
+    en: { name: 'Code Formatter', description: 'Format, minify and validate code in your browser — JSON (line/column errors, sort keys) plus CSS and XML beautify/minify. Nothing uploaded.' },
+    ar: { name: 'منسّق الكود', description: 'نسّق وصغّر وتحقّق من الكود داخل متصفحك — JSON (أخطاء بالسطر والعمود وترتيب المفاتيح) مع CSS وXML. دون رفع أي شيء.' },
   },
   {
     id: 'base64',

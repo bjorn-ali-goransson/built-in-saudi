@@ -53,6 +53,11 @@ test.describe('tools', () => {
     await page.getByTestId('json-input').fill('{"a":1,}')
     await page.getByTestId('json-format').click()
     await expect(page.getByTestId('json-error')).toBeVisible()
+    // CSS format
+    await page.getByTestId('fmt-css').click()
+    await page.getByTestId('json-input').fill('a{color:red;font-weight:bold}')
+    await page.getByTestId('json-format').click()
+    await expect(page.getByTestId('json-output')).toContainText('color: red;')
   })
 
   test('base64: encodes text', async ({ page }) => {
