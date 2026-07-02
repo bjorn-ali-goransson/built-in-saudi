@@ -76,7 +76,7 @@
 .catalog { padding-bottom: clamp(3rem, 8vw, 5.5rem); }
 .catalog__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.7rem; }
 .catalog__title { font-size: clamp(1.6rem, 4vw, 2.3rem); }
-.catalog__count { font-family: var(--font-mono); font-size: 0.82rem; color: var(--ink-faint); letter-spacing: 0.02em; }
+.catalog__count { font-family: var(--font-body); font-size: 0.82rem; color: var(--ink-faint); letter-spacing: 0.02em; }
 
 /* Fuzzy search */
 .tool-search {
@@ -138,7 +138,7 @@
 .tool-card__tagline { font-size: 0.92rem; color: var(--ink-soft); line-height: 1.45; flex: 1; }
 
 .tool-card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line-soft); }
-.tool-card__cat { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+.tool-card__cat { font-family: var(--font-body); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
 .tool-card__go { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.86rem; color: var(--green-600); }
 .tool-card__arrow { width: 16px; height: 16px; transition: transform 0.2s; }
 .tool-card:hover .tool-card__arrow { transform: translateX(3px); }
@@ -183,12 +183,12 @@
 .qr__row { display: grid; gap: 0.9rem; }
 
 .qr__style { border: none; padding: 1.2rem 0 0; border-top: 1px solid var(--line-soft); display: grid; gap: 1.1rem; }
-.qr__style legend { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); padding: 0; }
+.qr__style legend { font-family: var(--font-body); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); padding: 0; }
 .qr__control { display: grid; gap: 0.5rem; }
 .qr__control > label { font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); display: flex; justify-content: space-between; }
 
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; width: fit-content; }
-.seg__btn { padding: 0.4rem 0.85rem; background: var(--surface); font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; color: var(--ink-soft); border-right: 1px solid var(--line); }
+.seg__btn { padding: 0.4rem 0.85rem; background: var(--surface); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; color: var(--ink-soft); border-right: 1px solid var(--line); }
 .seg__btn:last-child { border-right: none; }
 .seg__btn.is-active { background: var(--green-600); color: var(--sand-100); }
 
@@ -214,7 +214,7 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 .qr__actions .btn { flex: 1; justify-content: center; }
 
 .qr__encoded { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; background: var(--sand-100); border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 0.6rem 0.75rem; overflow: hidden; }
-.qr__encoded-label { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-size: 0.66rem; }
+.qr__encoded-label { font-family: var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-size: 0.66rem; }
 .qr__encoded code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--green-700); word-break: break-all; }
 
 .qr__privacy { font-size: 0.8rem; color: var(--ink-faint); display: flex; align-items: center; gap: 0.4rem; }
@@ -300,7 +300,7 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 .pray__card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; }
 .pray__card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .pray__card-head h2 { font-size: 1.25rem; }
-.pray__method { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-faint); }
+.pray__method { font-family: var(--font-body); font-size: 0.74rem; color: var(--ink-faint); }
 [dir='rtl'] .pray__method { font-family: var(--font-ar); }
 
 .pray__times { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
@@ -498,7 +498,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .launcher__btn:hover, .launcher__btn[aria-expanded='true'] { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); background: color-mix(in srgb, var(--green-400) 10%, transparent); }
 .launcher__btn svg { width: 22px; height: 22px; }
 .launcher__panel { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); width: min(92vw, 320px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 0.9rem; z-index: 50; animation: fadeUp 0.16s ease both; }
-.launcher__title { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 0.6rem; }
+.launcher__title { font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 0.6rem; }
 [dir='rtl'] .launcher__title { font-family: var(--font-ar); letter-spacing: 0; }
 .launcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
 .launcher__app { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.7rem 0.4rem; border-radius: var(--r-sm); text-decoration: none; color: var(--ink); text-align: center; transition: background 0.15s; }
@@ -543,7 +543,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__loc-chip:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); }
 .pray__loc-pin { width: 16px; height: 16px; color: var(--green-600); flex: none; }
 .pray__loc-caret { color: var(--ink-faint); font-size: 0.8rem; }
-.pray__method-note { text-align: center; font-size: 0.76rem; color: var(--ink-faint); margin-top: 0.8rem; font-family: var(--font-mono); letter-spacing: 0.02em; }
+.pray__method-note { text-align: center; font-size: 0.76rem; color: var(--ink-faint); margin-top: 0.8rem; font-family: var(--font-body); letter-spacing: 0.02em; }
 [dir='rtl'] .pray__method-note { font-family: var(--font-ar); letter-spacing: 0; }
 
 /* Gentle "Enable alerts" inside the next-prayer hero */
@@ -594,7 +594,7 @@ html { -webkit-tap-highlight-color: transparent; }
 [dir='rtl'] .sheet__title { font-family: var(--font-ar); }
 .sheet__geo { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem; border: 1px solid var(--green-600); border-radius: var(--r-sm); background: color-mix(in srgb, var(--green-500) 10%, transparent); color: var(--green-700); font-weight: 600; cursor: pointer; }
 .sheet__geo svg { width: 17px; height: 17px; }
-.sheet__hint { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin: 1.1rem 0 0.4rem; }
+.sheet__hint { font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin: 1.1rem 0 0.4rem; }
 [dir='rtl'] .sheet__hint { font-family: var(--font-ar); letter-spacing: 0; }
 .sheet__cities { list-style: none; margin: 0 -0.4rem; padding: 0; overflow-y: auto; flex: 1; }
 .sheet__city { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.75rem 0.6rem; border-radius: var(--r-sm); background: none; border: none; color: var(--ink); font: inherit; font-size: 1rem; text-align: start; cursor: pointer; }
@@ -606,7 +606,7 @@ html { -webkit-tap-highlight-color: transparent; }
 
 /* Update toast with changelog notes */
 .updated-toast { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; border-radius: var(--r-md); max-width: min(92vw, 460px); text-align: center; }
-.updated-toast__label { font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.8; }
+.updated-toast__label { font-family: var(--font-body); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.8; }
 .updated-toast__notes { font-size: 0.9rem; line-height: 1.35; }
 
 /* Hero action pills — location + alerts side by side */
@@ -635,7 +635,7 @@ html { -webkit-tap-highlight-color: transparent; }
 /* Gentle day separator in the circular prayer list */
 .pray__daysep { display: flex; align-items: center; gap: 0.7rem; padding: 0.2rem 0.2rem; margin: 0.1rem 0; }
 .pray__daysep::before, .pray__daysep::after { content: ''; flex: 1; height: 1px; background: var(--line-soft); }
-.pray__daysep span { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.pray__daysep span { font-family: var(--font-body); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
 [dir='rtl'] .pray__daysep span { font-family: var(--font-ar); letter-spacing: 0; }
 
 /* Center the sheet action buttons' text */
@@ -723,13 +723,13 @@ html { -webkit-tap-highlight-color: transparent; }
 .pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.32rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
 .pill:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); }
 .pill--accent { background: color-mix(in srgb, var(--green-500) 12%, transparent); color: var(--green-700); border-color: color-mix(in srgb, var(--green-500) 30%, transparent); }
-.pray__viewdate { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-faint); margin-inline-end: 0.2rem; }
+.pray__viewdate { font-family: var(--font-body); font-size: 0.8rem; color: var(--ink-faint); margin-inline-end: 0.2rem; }
 [dir='rtl'] .pray__viewdate { font-family: var(--font-ar); }
 .pray__date-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; margin: 0; }
 
 /* File metadata groups */
 .meta__group { margin-bottom: 0.4rem; }
-.meta__group-title { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin-bottom: 0.4rem; }
+.meta__group-title { font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin-bottom: 0.4rem; }
 [dir='rtl'] .meta__group-title { font-family: var(--font-ar); letter-spacing: 0; }
 .meta__list { display: flex; flex-direction: column; border: 1px solid var(--line-soft); border-radius: var(--r-md); overflow: hidden; }
 .meta__row { display: grid; grid-template-columns: minmax(0, 38%) 1fr; gap: 1rem; padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--line-soft); font-size: 0.9rem; }
@@ -745,7 +745,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .lang__native { color: var(--ink-soft); font-size: 1.1rem; }
 .lang__bar { height: 8px; border-radius: 999px; background: var(--sand-200); overflow: hidden; }
 .lang__bar span { display: block; height: 100%; background: var(--green-600); border-radius: 999px; transition: width 0.2s; }
-.lang__conf { font-size: 0.8rem; color: var(--ink-faint); font-family: var(--font-mono); }
+.lang__conf { font-size: 0.8rem; color: var(--ink-faint); font-family: var(--font-body); }
 .lang__alts { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-top: 0.3rem; }
 .lang__alts-label { font-size: 0.76rem; color: var(--ink-faint); }
 
