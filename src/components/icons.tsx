@@ -190,6 +190,14 @@ export function GridIcon({ className }: P) {
   )
 }
 
+export function CardIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 9.5h19M6 15h4" />
+    </svg>
+  )
+}
+
 export function PercentIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

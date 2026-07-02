@@ -72,6 +72,15 @@ test.describe('tools', () => {
     await expect(page.getByTestId('unit-result')).toContainText('212')
   })
 
+  test('iban validator: valid SA IBAN, bank, and checksum failure', async ({ page }) => {
+    await page.goto('/en/tools/iban-validator')
+    await page.getByTestId('iban-input').fill('SA0380000000608010167519')
+    await expect(page.getByTestId('iban-status')).toContainText('Valid')
+    await expect(page.getByTestId('iban-bank')).toContainText('Al Rajhi')
+    await page.getByTestId('iban-input').fill('SA0380000000608010167518')
+    await expect(page.getByTestId('iban-status')).toContainText('Invalid')
+  })
+
   test('vat calculator: add and remove 15%', async ({ page }) => {
     await page.goto('/en/tools/vat-calculator')
     await page.getByTestId('vat-amount').fill('100')

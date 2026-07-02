@@ -77,6 +77,11 @@ export const liveToolSeo: ToolSeo[] = [
     },
   },
   {
+    id: 'iban-validator',
+    en: { name: 'IBAN Validator', description: 'Validate an IBAN (ISO 7064 mod-97), enforce the Saudi SA + 22-digit format, group it in fours and identify the bank — in your browser, never sent anywhere.' },
+    ar: { name: 'مدقّق الآيبان', description: 'تحقّق من الآيبان عبر mod-97، وتأكّد من صيغة السعودية (SA + ٢٢ رقمًا)، واعرضه بمجموعات من أربعة وتعرّف على البنك — داخل متصفحك دون إرسال.' },
+  },
+  {
     id: 'islamic-calendar',
     en: { name: 'Islamic Calendar', description: 'A month-at-a-glance Islamic calendar (Umm al-Qura) — Hijri/Gregorian toggle, moon phase per day, the white days (13–15), and Islamic dates like Ramadan and the Eids. Computed in your browser.' },
     ar: { name: 'التقويم الإسلامي', description: 'تقويم إسلامي شهري (أم القرى) — تبديل هجري/ميلادي، وطور القمر لكل يوم، والأيام البيض (١٣–١٥)، ومناسبات كرمضان والعيدين. يُحسب داخل متصفحك.' },

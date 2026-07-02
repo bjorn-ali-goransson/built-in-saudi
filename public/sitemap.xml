@@ -361,4 +361,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/vat-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/vat-calculator"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/tools/iban-validator</loc>
+    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/iban-validator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/iban-validator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/iban-validator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/tools/iban-validator</loc>
+    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/iban-validator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/iban-validator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/iban-validator"/>
+  </url>
 </urlset>

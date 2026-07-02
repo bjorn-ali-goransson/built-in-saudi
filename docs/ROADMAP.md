@@ -114,7 +114,7 @@ _(No loan/EMI/interest calculators — see Out of scope.)_
 |------|------|------|----------|--------|
 | **Prayer Times & Hijri Calendar** (Umm al-Qura; incl. Hijri converter + Ramadan/Eid) | `/tools/prayer-times` | client | — | ✅ live |
 | Hijri ↔ Gregorian converter | `/tools/hijri-converter` | client | T2 | ↳ folded into Prayer Times |
-| [Saudi IBAN validator](./tools/iban-validator.md) | `/tools/iban-validator` | client | T2 | 📝 |
+| [Saudi IBAN validator](./tools/iban-validator.md) | `/tools/iban-validator` | client | T2 | ✅ live |
 | [Tafqeet — amount to Arabic words (تفقيط)](./tools/tafqeet.md) | `/tools/tafqeet` | client | T2 | 📝 |
 | Arabic text tools (tashkeel, numerals) | `/tools/arabic-text` | client | T3 | 🧭 |
 | Saudi phone number formatter | `/tools/saudi-phone` | client | T3 | 🧭 |
