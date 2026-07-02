@@ -4,7 +4,7 @@ import { CodeIcon } from '../../components/icons'
 
 export const base64Tool: Tool = {
   id: 'base64',
-  name: 'Base64 Encoder / Decoder',
+  name: 'Base64 Convert',
   tagline: 'Encode and decode Base64 text — UTF-8 safe.',
   description:
     'Encode or decode Base64 text with full UTF-8 support (Arabic and emoji round-trip correctly), plus a URL-safe option. Runs entirely in your browser — your data is never uploaded.',

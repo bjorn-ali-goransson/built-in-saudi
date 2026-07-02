@@ -4,7 +4,7 @@ import { TextIcon } from '../../components/icons'
 
 export const wordCounterTool: Tool = {
   id: 'text-counter',
-  name: 'Word & Character Counter',
+  name: 'Word Counter',
   tagline: 'Live word, character, sentence & reading-time counts.',
   description:
     'Count words, characters, sentences and paragraphs live as you type, with reading-time estimates. Counts Arabic and emoji correctly. Runs entirely in your browser.',

@@ -4,7 +4,7 @@ import { CalendarIcon } from '../../components/icons'
 
 export const dateDiffTool: Tool = {
   id: 'date-diff',
-  name: 'Date Difference',
+  name: 'Date Diff',
   tagline: 'How long between two dates — years, months, days.',
   description:
     'Find the exact duration between two dates: years, months and days, plus total days and weeks. Great for ages, deadlines and durations. Runs entirely in your browser.',

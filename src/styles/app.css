@@ -150,7 +150,7 @@
 .tool-card--soon .tool-card__icon { background: color-mix(in srgb, var(--ink) 6%, transparent); }
 
 /* ── Tool page ───────────────────────────────────── */
-.tool-page { padding: clamp(1.5rem, 4vw, 2.5rem) 0 clamp(3rem, 8vw, 5rem); animation: fadeUp 0.5s ease both; }
+.tool-page { padding: clamp(1.5rem, 4vw, 2.5rem) 0 clamp(1.5rem, 4vw, 2.5rem); animation: fadeUp 0.5s ease both; }
 .crumbs { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; margin-bottom: 1.3rem; }
 .crumbs a { text-decoration: none; color: var(--ink-soft); font-weight: 600; }
 .crumbs a:hover { color: var(--green-600); }
@@ -234,7 +234,7 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 }
 
 .site-footer { flex-shrink: 0; padding: 1.4rem 0 1.6rem; margin-top: 0; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--sand-100) 50%, transparent); }
-.site-footer__inner { display: flex; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
+.site-footer__inner { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; }
 .site-footer__ethos { max-width: 34rem; color: var(--ink-soft); font-size: 0.95rem; }
 .site-footer__made { font-family: var(--font-ar); color: var(--gold-500); margin-top: 0.6rem; font-size: 0.92rem; }
 .site-footer__links { display: flex; gap: 1.3rem; align-items: flex-start; }
@@ -451,8 +451,8 @@ html { -webkit-tap-highlight-color: transparent; }
 [dir='rtl'] .pray__hero-label { letter-spacing: 0; }
 .pray__hero-name { font-family: var(--font-display); font-size: clamp(1.9rem, 6vw, 2.7rem); line-height: 1.05; }
 [dir='rtl'] .pray__hero-name { font-family: var(--font-ar); }
-.pray__hero-time { font-family: var(--font-mono); font-size: clamp(1.5rem, 5vw, 2rem); }
-.pray__hero-count { font-size: 0.95rem; opacity: 0.85; }
+.pray__hero-count { font-family: var(--font-mono); font-size: clamp(1.5rem, 5.5vw, 2.1rem); font-weight: 600; }
+.pray__hero-time { font-family: var(--font-mono); font-size: 1rem; opacity: 0.72; }
 .pray__calcdate { margin: -0.4rem 0 0.9rem; font-size: 0.8rem; color: var(--ink-faint); }
 
 /* Date Difference tool (#14) */
@@ -631,7 +631,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__hero-pill svg, .pray__hero-pill .pray__loc-caret { color: #fff; opacity: 1; }
 
 /* Hero time is a 12/24h toggle button */
-.pray__hero-time { -webkit-appearance: none; appearance: none; background: none; border: none; color: inherit; cursor: pointer; padding: 0; font-family: inherit; }
+.pray__hero-time { -webkit-appearance: none; appearance: none; background: none; border: none; color: inherit; cursor: pointer; padding: 0; }
 .pray__hero-time:hover { opacity: 0.85; }
 
 /* Gentle day separator in the circular prayer list */
@@ -642,3 +642,11 @@ html { -webkit-tap-highlight-color: transparent; }
 
 /* Center the sheet action buttons' text */
 .sheet__actions .btn { justify-content: center; text-align: center; }
+
+/* Alert settings rows */
+.pray__set-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0.2rem; border-bottom: 1px solid var(--line-soft); }
+.pray__set-row:last-of-type { border-bottom: none; }
+.pray__set-row .input { width: auto; min-width: 8rem; }
+.pray__set-label { display: flex; flex-direction: column; }
+.pray__set-label small { color: var(--ink-faint); font-size: 0.78rem; margin-top: 0.1rem; }
+.pray__check { width: 22px; height: 22px; accent-color: var(--green-600); flex: none; }

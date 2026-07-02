@@ -57,7 +57,7 @@ export default function DateDiffTool() {
 
   const [mode, setMode] = useState<Mode>('greg')
   const [gFrom, setGFrom] = useState(toISO(new Date()))
-  const [gTo, setGTo] = useState(toISO(new Date()))
+  const [gTo, setGTo] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 30); return toISO(d) })
   const [hFrom, setHFrom] = useState<Hijri>(nowH)
   const [hTo, setHTo] = useState<Hijri>(nowH)
 

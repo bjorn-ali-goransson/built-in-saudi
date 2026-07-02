@@ -44,24 +44,42 @@ self.addEventListener('fetch', (event) => {
   })())
 })
 
+// Keep-alive: a delivered push (or a tap) proves the device is reachable, which
+// renews the 90-day inactivity window server-side.
+async function touch() {
+  try {
+    const sub = await self.registration.pushManager.getSubscription()
+    if (sub) {
+      await fetch('https://us-central1-blitz-ksa.cloudfunctions.net/touch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      })
+    }
+  } catch (e) { /* ignore */ }
+}
+
 // Prayer-time push notifications
 self.addEventListener('push', (event) => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
-  event.waitUntil(self.registration.showNotification(data.title || 'Built in Saudi', {
-    body: data.body || '',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
-    tag: data.tag || 'bis',
-    dir: 'auto',
-    data: { url: data.url || '/' },
-  }))
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(data.title || 'Built in Saudi', {
+      body: data.body || '',
+      icon: '/icon.svg',
+      badge: '/icon.svg',
+      tag: data.tag || 'bis',
+      dir: 'auto',
+      data: { url: data.url || '/' },
+    }),
+    touch(),
+  ]))
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = (event.notification.data && event.notification.data.url) || '/'
   event.waitUntil((async () => {
+    touch()
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     for (const c of all) { if (c.url.includes('built-in-saudi') && 'focus' in c) return c.focus() }
     return self.clients.openWindow(url)

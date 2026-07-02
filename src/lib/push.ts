@@ -2,7 +2,7 @@
 const VAPID_PUBLIC = 'BEaG67kHuMGzXfGGUGh7fmk-Bl-8icOr3UgKtxLnbfkPZjACFLVcZxAeLonizLLM-PNqxJ0vmH8KOB5zjbVKFtE'
 const FN = 'https://us-central1-blitz-ksa.cloudfunctions.net'
 
-export interface PushPrefs { minutesBefore: number; prayers: string[] }
+export interface PushPrefs { minutesBefore: number; prayers: string[]; iqamaAlert?: boolean }
 export interface PushLoc { lat: number; lng: number; tz: string }
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -78,6 +78,19 @@ export async function enablePush(loc: PushLoc, locale: string, prefs: PushPrefs)
 function errStr(e: unknown): string {
   if (e instanceof Error) return `${e.name}: ${e.message}`
   return String(e)
+}
+
+/** Keep-alive ping so the 90-day inactivity window is renewed. Best-effort. */
+export async function touchSubscription(): Promise<void> {
+  const sub = await currentSubscription()
+  if (!sub) return
+  try {
+    await fetch(`${FN}/touch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    })
+  } catch { /* ignore */ }
 }
 
 export async function disablePush(): Promise<void> {

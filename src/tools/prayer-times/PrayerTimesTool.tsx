@@ -2,8 +2,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
-import { BellIcon } from '../../components/icons'
-import { pushSupported, currentSubscription, enablePush, disablePush } from '../../lib/push'
+import { BellIcon, CogIcon } from '../../components/icons'
+import { pushSupported, currentSubscription, enablePush, disablePush, touchSubscription } from '../../lib/push'
 import { alertsHelp } from './alertsHelp'
 import { reverseGeocode } from './geo'
 import { CITIES, DEFAULT_CITY } from './cities'
@@ -21,7 +21,7 @@ const STR = {
     location: 'Location', useMyLocation: 'Use my location', myLocation: 'My location',
     save: 'Save', cancel: 'Cancel', chooseCity: 'Choose a city',
     prayerTimes: 'Prayer times', method: 'Umm al-Qura method',
-    next: 'Next prayer', inTime: (h: number, m: number) => `in ${h}h ${m}m`,
+    next: 'Next prayer', inTime: (h: number, m: number) => (h > 0 ? `in ${h}h ${m}m` : `in ${m}m`),
     timeForPrayer: 'It’s time for prayer',
     iqamaIn: (m: number) => `Iqama in ${m} min`,
     iqamaNow: 'Iqama now', iqamaAfter: (m: number) => `Iqama −${m} min`,
@@ -41,6 +41,9 @@ const STR = {
     privacy: 'Prayer times are computed in your browser.',
     geoError: 'Couldn’t get your location — please pick a city instead.',
     enableAlerts: 'Enable alerts', alertsOn: 'Alerts on', close: 'Close',
+    alertSettings: 'Alert settings', turnOff: 'Turn off alerts', done: 'Done',
+    iqamaAlertLabel: 'Iqama alert', iqamaAlertHint: 'A second reminder at iqama',
+    beforeLabel: 'Alert before', atAdhan: 'At adhan', minShort: (m: number) => `${m} min`,
     alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
     prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
@@ -49,7 +52,7 @@ const STR = {
     location: 'الموقع', useMyLocation: 'استخدم موقعي', myLocation: 'موقعي',
     save: 'حفظ', cancel: 'إلغاء', chooseCity: 'اختر مدينة',
     prayerTimes: 'مواقيت الصلاة', method: 'طريقة أم القرى',
-    next: 'الصلاة التالية', inTime: (h: number, m: number) => `بعد ${h} س ${m} د`,
+    next: 'الصلاة التالية', inTime: (h: number, m: number) => (h > 0 ? `بعد ${h} س ${m} د` : `بعد ${m} د`),
     timeForPrayer: 'حان وقت الصلاة',
     iqamaIn: (m: number) => `الإقامة بعد ${m} د`,
     iqamaNow: 'حان وقت الإقامة', iqamaAfter: (m: number) => `الإقامة −${m} د`,
@@ -69,6 +72,9 @@ const STR = {
     privacy: 'تُحسب مواقيت الصلاة داخل متصفحك.',
     geoError: 'تعذّر تحديد موقعك — يرجى اختيار مدينة بدلاً من ذلك.',
     enableAlerts: 'تفعيل التنبيهات', alertsOn: 'التنبيهات مفعّلة', close: 'إغلاق',
+    alertSettings: 'إعدادات التنبيه', turnOff: 'إيقاف التنبيهات', done: 'تم',
+    iqamaAlertLabel: 'تنبيه الإقامة', iqamaAlertHint: 'تذكير ثانٍ عند الإقامة',
+    beforeLabel: 'التنبيه قبل', atAdhan: 'عند الأذان', minShort: (m: number) => `${m} د`,
     alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
     prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
@@ -86,6 +92,18 @@ function saveLoc(v: SavedLoc) { try { localStorage.setItem(LOC_KEY, JSON.stringi
 function readLoc(): SavedLoc | null {
   try { const r = localStorage.getItem(LOC_KEY); return r ? (JSON.parse(r) as SavedLoc) : null } catch { return null }
 }
+
+interface AlertPrefs { minutesBefore: number; iqamaAlert: boolean }
+const PREFS_KEY = 'bis-prayer-prefs'
+const DAILY = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
+function readPrefs(): AlertPrefs {
+  try {
+    const r = localStorage.getItem(PREFS_KEY)
+    if (r) { const p = JSON.parse(r); return { minutesBefore: Number(p.minutesBefore) || 0, iqamaAlert: !!p.iqamaAlert } }
+  } catch { /* ignore */ }
+  return { minutesBefore: 0, iqamaAlert: false }
+}
+function savePrefs(p: AlertPrefs) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)) } catch { /* ignore */ } }
 
 export default function PrayerTimesTool() {
   const { locale } = useLocale()
@@ -108,6 +126,8 @@ export default function PrayerTimesTool() {
   const [clock24, setClock24] = useState(() => {
     try { return localStorage.getItem('bis-prayer-24h') === '1' } catch { return false }
   })
+  const [prefs, setPrefs] = useState<AlertPrefs>(() => readPrefs())
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
   // Refresh "now" every 30s (not every second) for the countdown, and also when
@@ -251,25 +271,47 @@ export default function PrayerTimesTool() {
     saveLoc({ mode: 'city', cityId: id })
   }
 
-  // Reflect whether push is already subscribed on this device.
-  useEffect(() => { currentSubscription().then((sub) => setPushOn(!!sub)) }, [])
+  // Reflect subscription state; renew the inactivity window (max once/12h).
+  useEffect(() => {
+    currentSubscription().then((sub) => {
+      setPushOn(!!sub)
+      if (!sub) return
+      try {
+        const last = Number(localStorage.getItem('bis-prayer-touch') || 0)
+        if (Date.now() - last > 43200000) {
+          localStorage.setItem('bis-prayer-touch', String(Date.now()))
+          touchSubscription()
+        }
+      } catch { touchSubscription() }
+    })
+  }, [])
 
-  async function togglePush() {
+  async function enableAlerts() {
     if (!pushSupported()) { setHelpDetail('push not supported'); setHelpOpen(true); return }
     setPushBusy(true)
     try {
-      if (pushOn) {
-        await disablePush()
-        setPushOn(false)
-      } else {
-        const r = await enablePush(
-          { lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale,
-          { minutesBefore: 0, prayers: ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] },
-        )
-        if (r.status === 'ok') setPushOn(true)
-        else { setHelpDetail(r.detail || ''); setHelpOpen(true) } // blocked/unsupported/error → how-to + reason
-      }
+      const r = await enablePush(
+        { lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale,
+        { minutesBefore: prefs.minutesBefore, iqamaAlert: prefs.iqamaAlert, prayers: DAILY },
+      )
+      if (r.status === 'ok') setPushOn(true)
+      else { setHelpDetail(r.detail || ''); setHelpOpen(true) } // blocked/unsupported/error → how-to + reason
     } finally { setPushBusy(false) }
+  }
+
+  async function applyPrefs(np: AlertPrefs) {
+    setPrefs(np); savePrefs(np)
+    setPushBusy(true)
+    try {
+      await enablePush({ lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale,
+        { minutesBefore: np.minutesBefore, iqamaAlert: np.iqamaAlert, prayers: DAILY })
+    } finally { setPushBusy(false) }
+  }
+
+  async function disableAlerts() {
+    setPushBusy(true)
+    try { await disablePush(); setPushOn(false); setSettingsOpen(false) }
+    finally { setPushBusy(false) }
   }
 
   // Resolve a "City, Country" label for granted coordinates (best-effort).
@@ -305,13 +347,13 @@ export default function PrayerTimesTool() {
       <section className={`pray__hero ${active ? 'is-active' : ''}`} data-testid="next-prayer">
         <span className="pray__hero-label">{active ? s.timeForPrayer : s.next}</span>
         <span className="pray__hero-name">{s.prayers[active ? active.key : nextInfo.key]}</span>
+        <span className="pray__hero-count" data-testid="hero-count">
+          {active ? iqamaText : s.inTime(countdown.h, countdown.m)}
+        </span>
         <button className="pray__hero-time" data-testid="hero-time" onClick={toggleClock}
           title={clock24 ? '12-hour' : '24-hour'} aria-label="Toggle 12 or 24 hour clock">
           {fmtTime(active ? active.adhan : nextInfo.time)}
         </button>
-        <span className="pray__hero-count" data-testid="hero-count">
-          {active ? iqamaText : s.inTime(countdown.h, countdown.m)}
-        </span>
         <div className="pray__hero-actions">
           <button className="pray__hero-pill" data-testid="loc-chip"
             onClick={() => { setPendingCity(cityId); setShowLocPicker(true) }}>
@@ -319,8 +361,9 @@ export default function PrayerTimesTool() {
             <span className="pray__loc-caret" aria-hidden="true">▾</span>
           </button>
           <button className={`pray__hero-pill pray__hero-alerts ${pushOn ? 'is-on' : ''}`} data-testid="pray-notify"
-            disabled={pushBusy} aria-pressed={!!pushOn} onClick={togglePush}>
-            <BellIcon /> {pushOn ? s.alertsOn : s.enableAlerts}
+            disabled={pushBusy} aria-pressed={!!pushOn}
+            onClick={() => (pushOn ? setSettingsOpen(true) : enableAlerts())}>
+            {pushOn ? <CogIcon /> : <BellIcon />} {pushOn ? s.alertsOn : s.enableAlerts}
           </button>
         </div>
       </section>
@@ -363,7 +406,48 @@ export default function PrayerTimesTool() {
           onSave={() => { pickCity(pendingCity); setShowLocPicker(false) }}
         />
       )}
+      {settingsOpen && (
+        <AlertSettings s={s} prefs={prefs} busy={pushBusy}
+          onApply={applyPrefs} onDisable={disableAlerts} onClose={() => setSettingsOpen(false)} />
+      )}
     </div>
+  )
+}
+
+function AlertSettings({ s, prefs, busy, onApply, onDisable, onClose }: {
+  s: typeof STR['en']; prefs: AlertPrefs; busy: boolean
+  onApply: (p: AlertPrefs) => void; onDisable: () => void; onClose: () => void
+}) {
+  return createPortal(
+    <div className="sheet-overlay" role="dialog" aria-modal="true" data-testid="alert-settings" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <span className="sheet__grip" aria-hidden="true" />
+        <h3 className="sheet__title">{s.alertSettings}</h3>
+
+        <div className="pray__set-row">
+          <span>{s.beforeLabel}</span>
+          <select className="input" value={prefs.minutesBefore} disabled={busy} data-testid="set-before"
+            onChange={(e) => onApply({ ...prefs, minutesBefore: Number(e.target.value) })}>
+            <option value={0}>{s.atAdhan}</option>
+            <option value={5}>{s.minShort(5)}</option>
+            <option value={10}>{s.minShort(10)}</option>
+            <option value={15}>{s.minShort(15)}</option>
+          </select>
+        </div>
+
+        <label className="pray__set-row">
+          <span className="pray__set-label">{s.iqamaAlertLabel}<small>{s.iqamaAlertHint}</small></span>
+          <input type="checkbox" className="pray__check" checked={prefs.iqamaAlert} disabled={busy} data-testid="set-iqama"
+            onChange={(e) => onApply({ ...prefs, iqamaAlert: e.target.checked })} />
+        </label>
+
+        <div className="sheet__actions">
+          <button className="btn" data-testid="set-disable" disabled={busy} onClick={onDisable}>{s.turnOff}</button>
+          <button className="btn btn--primary" data-testid="set-done" onClick={onClose}>{s.done}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
