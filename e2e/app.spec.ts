@@ -60,6 +60,14 @@ test.describe('tools', () => {
     await expect(page.getByTestId('json-output')).toContainText('color: red;')
   })
 
+  test('case converter: transforms across cases', async ({ page }) => {
+    await page.goto('/en/tools/case-converter')
+    await page.getByTestId('case-input').fill('hello world')
+    await expect(page.getByTestId('case-title')).toHaveText('Hello World')
+    await expect(page.getByTestId('case-camel')).toHaveText('helloWorld')
+    await expect(page.getByTestId('case-snake')).toHaveText('hello_world')
+  })
+
   test('hash generator: SHA-256 of "abc" matches the known vector', async ({ page }) => {
     await page.goto('/en/tools/hash-generator')
     await page.getByTestId('hash-algo-SHA-256').click()

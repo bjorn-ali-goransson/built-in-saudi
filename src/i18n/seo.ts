@@ -130,6 +130,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'نص بديل', description: 'ولّد نصًا بديلًا بالفقرات أو الجُمل أو الكلمات — نص Lorem ipsum الكلاسيكي أو نص حشو عربي. يعمل بالكامل داخل متصفحك.' },
   },
   {
+    id: 'case-converter',
+    en: { name: 'Case Converter', description: 'Convert text between UPPER, lower, Title, Sentence, camelCase, PascalCase, snake_case, kebab-case and CONSTANT_CASE — live, with copy. Arabic passes through untouched.' },
+    ar: { name: 'محوّل حالة الأحرف', description: 'حوّل النص بين الحالات — كبيرة/صغيرة/أول الكلمة/أول الجملة وcamelCase وsnake_case وkebab وCONSTANT — مباشرةً مع النسخ. العربية دون تغيير.' },
+  },
+  {
     id: 'hash-generator',
     en: { name: 'Hash Generator', description: 'Compute SHA-1/256/384/512 of any text or file — hex and Base64. Files are hashed locally and never uploaded.' },
     ar: { name: 'مولّد البصمة (Hash)', description: 'احسب SHA-1/256/384/512 لأي نص أو ملف — ست عشري وBase64. تُحسب الملفات محليًا ولا تُرفع.' },

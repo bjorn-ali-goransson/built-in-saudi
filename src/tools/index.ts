@@ -10,6 +10,7 @@ import { qiblaTool } from './qibla/meta'
 import { passwordGeneratorTool } from './password-generator/meta'
 import { uuidGeneratorTool } from './uuid-generator/meta'
 import { wordCounterTool } from './word-counter/meta'
+import { caseConverterTool } from './case-converter/meta'
 import { languageDetectTool } from './language-detect/meta'
 import { hashGeneratorTool } from './hash-generator/meta'
 import { loremTool } from './lorem/meta'
@@ -38,6 +39,7 @@ export const tools: Tool[] = [
   passwordGeneratorTool,
   uuidGeneratorTool,
   wordCounterTool,
+  caseConverterTool,
   languageDetectTool,
   hashGeneratorTool,
   loremTool,
