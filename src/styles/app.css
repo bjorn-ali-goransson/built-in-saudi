@@ -465,3 +465,17 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__year { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .pray__year .btn { padding: 0.35rem 0.65rem; min-width: 2.2rem; justify-content: center; }
 .pray__year-num { font-family: var(--font-mono); font-weight: 700; color: var(--green-700); min-width: 3ch; text-align: center; }
+
+/* Auto-reload toast (#16) */
+.updated-toast { position: fixed; inset-block-start: 84px; inset-inline: 0; margin-inline: auto; z-index: 70; width: fit-content; max-width: 90vw; background: var(--green-700); color: var(--sand-100); padding: 0.6rem 1.1rem; border-radius: 999px; box-shadow: var(--shadow-lg); font-size: 0.9rem; animation: fadeUp 0.3s ease both; }
+
+/* Error page actions (#17) */
+.message-page__actions { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; }
+
+/* Location loading state (#18) */
+.pray__locating { font-size: 0.85rem; color: var(--ink-faint); margin-bottom: 0.6rem; }
+.pray__times.is-locating { opacity: 0.55; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* Hide tool-head icon on mobile — reduce noise (#20) */
+@media (max-width: 560px) { .tool-head__icon { display: none; } }

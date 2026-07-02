@@ -76,6 +76,7 @@ export default function PrayerTimesTool() {
   })
   const [cityId, setCityId] = useState<string>(DEFAULT_CITY.id)
   const [geoError, setGeoError] = useState('')
+  const [locating, setLocating] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
   // Refresh "now" every 30s (not every second) for the countdown, and also when
@@ -92,6 +93,7 @@ export default function PrayerTimesTool() {
   // Auto-request the visitor's location on load (falls back silently to the city).
   useEffect(() => {
     if (!navigator.geolocation) return
+    setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCityId('')
@@ -99,8 +101,9 @@ export default function PrayerTimesTool() {
           lat: pos.coords.latitude, lng: pos.coords.longitude,
           tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: STR[locale].myLocation,
         })
+        setLocating(false)
       },
-      () => { /* keep the default city silently */ },
+      () => setLocating(false), // keep the default city silently
       { timeout: 10000 },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,6 +160,7 @@ export default function PrayerTimesTool() {
   function useMyLocation() {
     setGeoError('')
     if (!navigator.geolocation) { setGeoError(s.geoError); return }
+    setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCityId('')
@@ -164,8 +168,9 @@ export default function PrayerTimesTool() {
           lat: pos.coords.latitude, lng: pos.coords.longitude,
           tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: s.myLocation,
         })
+        setLocating(false)
       },
-      () => setGeoError(s.geoError),
+      () => { setGeoError(s.geoError); setLocating(false) },
       { timeout: 10000 },
     )
   }
@@ -221,7 +226,8 @@ export default function PrayerTimesTool() {
           <span className="pray__method">{s.method} · {loc.label}</span>
         </div>
         <p className="pray__calcdate" data-testid="calc-date">{s.calcFor} {dateFmt.format(now)}</p>
-        <ul className="pray__times">
+        {locating && <p className="pray__locating" data-testid="pray-locating">{s.locating}</p>}
+        <ul className={`pray__times ${locating ? 'is-locating' : ''}`}>
           {PRAYER_ORDER.map((k) => {
             const isNext = k === nextInfo.key
             return (

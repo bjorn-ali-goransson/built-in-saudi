@@ -74,7 +74,11 @@ function prerenderPlugin(): Plugin {
     apply: 'build',
     closeBundle() {
       const dist = 'dist'
-      const shell = readFileSync(join(dist, 'index.html'), 'utf8')
+      // Stamp a build id so open tabs can detect a new deploy (see useVersionCheck).
+      const build = String(Date.now())
+      let shell = readFileSync(join(dist, 'index.html'), 'utf8')
+      shell = shell.replace('</head>', `<meta name="build" content="${build}" /></head>`)
+      writeFileSync(join(dist, 'version.json'), JSON.stringify({ build }))
 
       writeFileSync(join(dist, '404.html'), shell) // SPA fallback
 

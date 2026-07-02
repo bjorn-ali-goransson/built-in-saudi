@@ -7,6 +7,8 @@ import { Header } from './Header'
 import { Footer } from './Footer'
 import { LanguageSuggestion } from './LanguageSuggestion'
 import { NotificationBell } from './NotificationBell'
+import { UpdatedToast } from './UpdatedToast'
+import { useVersionCheck } from '../lib/useVersionCheck'
 
 export function Layout() {
   const { lang } = useParams()
@@ -22,6 +24,7 @@ export function Layout() {
 
 function LocalizedLayout({ locale }: { locale: Locale }) {
   const t = dicts[locale]
+  useVersionCheck()
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -43,6 +46,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         <Footer />
         <NotificationBell />
         <LanguageSuggestion />
+        <UpdatedToast />
         <ScrollRestoration />
       </div>
     </LocaleProvider>
