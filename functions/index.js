@@ -24,9 +24,11 @@ const NAMES = {
 // `place` is the localized city name (may be absent → generic body).
 function compose(locale, prayer, kind, mins, place) {
   const ar = locale === 'ar'
+  // "حسب توقيت: <place>" — a colon avoids Arabic grammar/agreement and reads fine
+  // even if the geocoder returns a Latin-script city name for device locations.
   const byCity = ar
-    ? (place ? `حسب التوقيت لمدينة ${place}` : 'حسب توقيتك')
-    : (place ? `Based on ${place} timing` : 'Based on your location')
+    ? (place ? `حسب توقيت: ${place}` : 'حسب توقيتك')
+    : (place ? `Timing: ${place}` : 'Based on your location')
   if (kind === 'iqama') {
     return ar
       ? { title: `إقامة صلاة ${prayer}`, body: byCity }
