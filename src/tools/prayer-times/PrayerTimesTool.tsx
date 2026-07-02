@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
@@ -26,7 +26,7 @@ const STR = {
     iqamaIn: (m: number) => `Iqama in ${m} min`,
     iqamaNow: 'Iqama now', iqamaAfter: (m: number) => `Iqama −${m} min`,
     calcFor: 'Calculated for', locating: 'Finding your location…',
-    today: 'Today', showMore: 'Show more', showLess: 'Show less', converter: 'Date converter',
+    today: 'Today', showMore: 'Show more', showLess: 'Show less', plusDay: '+1 day', choose: 'Choose', converter: 'Date converter',
     gregorian: 'Gregorian date', hijri: 'Hijri date',
     day: 'Day', month: 'Month', year: 'Year',
     prevDay: 'Previous day', nextDay: 'Next day',
@@ -57,7 +57,7 @@ const STR = {
     iqamaIn: (m: number) => `الإقامة بعد ${m} د`,
     iqamaNow: 'حان وقت الإقامة', iqamaAfter: (m: number) => `الإقامة −${m} د`,
     calcFor: 'محسوبة ليوم', locating: 'جارٍ تحديد موقعك…',
-    today: 'اليوم', showMore: 'عرض المزيد', showLess: 'عرض أقل', converter: 'محوّل التاريخ',
+    today: 'اليوم', showMore: 'عرض المزيد', showLess: 'عرض أقل', plusDay: '+يوم', choose: 'اختر', converter: 'محوّل التاريخ',
     gregorian: 'التاريخ الميلادي', hijri: 'التاريخ الهجري',
     day: 'اليوم', month: 'الشهر', year: 'السنة',
     prevDay: 'اليوم السابق', nextDay: 'اليوم التالي',
@@ -130,7 +130,18 @@ export default function PrayerTimesTool() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [viewDateStr, setViewDateStr] = useState('') // '' = live (now-centric)
   const [showMore, setShowMore] = useState(false)
-  const [dateOpen, setDateOpen] = useState(false)
+  const dateRef = useRef<HTMLInputElement>(null)
+
+  function stepDay(delta: number) {
+    const base = viewDateStr ? new Date(`${viewDateStr}T12:00:00`) : new Date()
+    base.setDate(base.getDate() + delta)
+    setViewDateStr(`${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`)
+  }
+  function openChoose() {
+    const el = dateRef.current
+    if (!el) return
+    try { if (typeof el.showPicker === 'function') el.showPicker(); else el.focus() } catch { el.focus() }
+  }
   const [now, setNow] = useState(() => new Date())
 
   // Refresh "now" every 30s (not every second) for the countdown, and also when
@@ -404,22 +415,15 @@ export default function PrayerTimesTool() {
         })}
       </ul>
       <div className="pray__more">
-        <div className="pray__more-pill">
-          <button className="pray__more-main" data-testid="pray-more" onClick={() => setShowMore((v) => !v)}>
-            {showMore ? s.showLess : s.showMore}
-          </button>
-          <button className="pray__more-toggle" data-testid="pray-date-toggle" aria-expanded={dateOpen}
-            aria-label={s.today} onClick={() => setDateOpen((v) => !v)}>▾</button>
-        </div>
-        {dateOpen && (
-          <div className="pray__more-menu">
-            <input className="input" type="date" value={viewDateStr} data-testid="pray-date"
-              onChange={(e) => setViewDateStr(e.target.value)} />
-            {viewDateStr && (
-              <button className="btn" data-testid="pray-today" onClick={() => { setViewDateStr(''); setDateOpen(false) }}>{s.today}</button>
-            )}
-          </div>
+        {!isLive && (
+          <span className="pray__viewdate" data-testid="pray-viewdate">{weekdayFmt.format(new Date(`${viewDateStr}T12:00:00`))}</span>
         )}
+        <button className="pill" data-testid="pray-more" onClick={() => setShowMore((v) => !v)}>{showMore ? s.showLess : s.showMore}</button>
+        <button className="pill" data-testid="pray-plusday" onClick={() => stepDay(1)}>{s.plusDay}</button>
+        <button className="pill" data-testid="pray-choose" onClick={openChoose}>{s.choose}</button>
+        {!isLive && <button className="pill pill--accent" data-testid="pray-today" onClick={() => setViewDateStr('')}>{s.today}</button>}
+        <input ref={dateRef} type="date" className="pray__date-hidden" value={viewDateStr} data-testid="pray-date"
+          aria-hidden="true" tabIndex={-1} onChange={(e) => setViewDateStr(e.target.value)} />
       </div>
       <p className="pray__method-note">{s.method}</p>
 

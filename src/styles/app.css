@@ -705,3 +705,26 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__more-toggle { padding-inline: 0.65rem; border-inline-start: 1px solid var(--line-soft); }
 .pray__more-menu { display: flex; gap: 0.5rem; align-items: center; }
 .pray__more-menu .input { width: auto; }
+
+/* Mobile home: catalog becomes a phone-home-screen app grid */
+@media (max-width: 560px) {
+  .tool-grid { grid-template-columns: repeat(4, 1fr); gap: 0.9rem 0.5rem; }
+  .tool-card { padding: 0.4rem 0.2rem; align-items: center; text-align: center; gap: 0.45rem; background: none; border: none; box-shadow: none; overflow: visible; }
+  .tool-card::before { display: none; }
+  .tool-card:hover { transform: none; box-shadow: none; border: none; }
+  .tool-card__top, .tool-card__tagline, .tool-card__foot { display: none; }
+  .tool-card__icon { margin: 0 auto; width: 58px; height: 58px; border-radius: 16px; background: var(--green-600); color: var(--sand-100); box-shadow: var(--shadow-sm); }
+  .tool-card__icon svg { width: 28px; height: 28px; }
+  .tool-card:hover .tool-card__icon { background: var(--green-600); color: var(--sand-100); }
+  .tool-card__name { font-size: 0.72rem; font-weight: 500; margin: 0; line-height: 1.2; }
+  .tool-card[aria-disabled='true'], .tool-card.is-soon { opacity: 0.55; }
+}
+
+/* Prayer list controls — small discrete pills */
+.pray__more { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 0.9rem; }
+.pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.32rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.pill:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); }
+.pill--accent { background: color-mix(in srgb, var(--green-500) 12%, transparent); color: var(--green-700); border-color: color-mix(in srgb, var(--green-500) 30%, transparent); }
+.pray__viewdate { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-faint); margin-inline-end: 0.2rem; }
+[dir='rtl'] .pray__viewdate { font-family: var(--font-ar); }
+.pray__date-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; margin: 0; }
