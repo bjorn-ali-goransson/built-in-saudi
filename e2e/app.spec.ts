@@ -93,6 +93,17 @@ test.describe('tools', () => {
     await expect(page.getByText(/al-Bukhārī/)).toBeVisible()
   })
 
+  test('hisn al-muslim: lists chapters and opens one', async ({ page }) => {
+    await page.goto('/en/tools/hisn-al-muslim')
+    const chapters = page.locator('[data-testid^="hisn-ch-"]')
+    expect(await chapters.count()).toBeGreaterThan(50)
+    await chapters.first().click()
+    await expect(page.getByTestId('hisn-back')).toBeVisible()
+    await page.getByTestId('hisn-back').click()
+    await page.getByTestId('hisn-search').fill('الاستيقاظ')
+    expect(await page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

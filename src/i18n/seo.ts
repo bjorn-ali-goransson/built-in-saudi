@@ -82,6 +82,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'التقويم الإسلامي', description: 'تقويم إسلامي شهري (أم القرى) — تبديل هجري/ميلادي، وطور القمر لكل يوم، والأيام البيض (١٣–١٥)، ومناسبات كرمضان والعيدين. يُحسب داخل متصفحك.' },
   },
   {
+    id: 'hisn-al-muslim',
+    en: { name: 'Hisn al-Muslim', description: 'Ḥiṣn al-Muslim (the Fortress of the Muslim) — the full du‘a collection compiled by Saʿīd b. Wahf al-Qaḥṭānī. Search ~130 chapters and read the vocalized Arabic du‘as. Offline.' },
+    ar: { name: 'حصن المسلم', description: 'حصن المسلم — مجموعة الأذكار والأدعية، جمع سعيد بن وهف القحطاني. ابحث في نحو ١٣٠ بابًا واقرأ الأدعية بالنص العربي المشكول. يعمل دون اتصال.' },
+  },
+  {
     id: 'adhkar',
     en: { name: 'Morning & Evening Adhkar', description: 'The core morning and evening adhkār from the Qur’an and authentic Sunnah — Arabic with transliteration, an English meaning, repeat counts and sources, and a tap-to-count tracker.' },
     ar: { name: 'أذكار الصباح والمساء', description: 'أذكار الصباح والمساء الأساسية من القرآن والسنة الصحيحة — بالعربية مع النطق والمعنى بالإنجليزية وعدد التكرار والمصدر وعدّاد باللمس.' },
