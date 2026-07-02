@@ -3,6 +3,7 @@ import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { BellIcon } from '../../components/icons'
 import { pushSupported, currentSubscription, enablePush, disablePush } from '../../lib/push'
+import { alertsHelp } from './alertsHelp'
 import { CITIES, DEFAULT_CITY } from './cities'
 import {
   gregorianToHijri, hijriToGregorian, formatHijri, eventsForHijriYear,
@@ -32,11 +33,8 @@ const STR = {
     upcoming: 'Islamic dates',
     privacy: 'Computed locally — your location is never uploaded.',
     geoError: 'Couldn’t get your location — please pick a city instead.',
-    notify: 'Notify me before prayers', notifyOn: 'Notifications on',
-    notifyNote: 'To send alerts, your location is stored on our server. Turn off anytime.',
-    notifyDenied: 'Notifications are blocked — enable them in your browser settings.',
-    notifyUnsupported: 'Notifications aren’t supported on this browser.',
-    notifyIos: 'On iPhone: install the app first (Share → Add to Home Screen).',
+    enableAlerts: 'Enable alerts', alertsOn: 'Alerts on', close: 'Close',
+    notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
     prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
     events: {
       ramadan: 'Ramadan', eidFitr: 'Eid al-Fitr', eidAdha: 'Eid al-Adha',
@@ -62,11 +60,8 @@ const STR = {
     upcoming: 'المناسبات الإسلامية',
     privacy: 'يُحسب محليًا — لا يُرفع موقعك أبدًا.',
     geoError: 'تعذّر تحديد موقعك — يرجى اختيار مدينة بدلاً من ذلك.',
-    notify: 'نبّهني قبل الصلوات', notifyOn: 'الإشعارات مفعّلة',
-    notifyNote: 'لإرسال التنبيهات يُحفظ موقعك على خادمنا. يمكنك الإيقاف في أي وقت.',
-    notifyDenied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح.',
-    notifyUnsupported: 'الإشعارات غير مدعومة في هذا المتصفح.',
-    notifyIos: 'على الآيفون: ثبّت التطبيق أولاً (مشاركة ← إضافة إلى الشاشة الرئيسية).',
+    enableAlerts: 'تفعيل التنبيهات', alertsOn: 'التنبيهات مفعّلة', close: 'إغلاق',
+    notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
     prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
     events: {
       ramadan: 'رمضان', eidFitr: 'عيد الفطر', eidAdha: 'عيد الأضحى',
@@ -98,8 +93,9 @@ export default function PrayerTimesTool() {
   const [geoError, setGeoError] = useState('')
   const [locating, setLocating] = useState(false)
   const [pushOn, setPushOn] = useState<boolean | null>(null)
-  const [pushMsg, setPushMsg] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
+  const [showLocPicker, setShowLocPicker] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
   // Refresh "now" every 30s (not every second) for the countdown, and also when
@@ -195,8 +191,7 @@ export default function PrayerTimesTool() {
   useEffect(() => { currentSubscription().then((sub) => setPushOn(!!sub)) }, [])
 
   async function togglePush() {
-    setPushMsg('')
-    if (!pushSupported()) { setPushMsg(s.notifyUnsupported); return }
+    if (!pushSupported()) { setHelpOpen(true); return }
     setPushBusy(true)
     try {
       if (pushOn) {
@@ -208,8 +203,7 @@ export default function PrayerTimesTool() {
           { minutesBefore: 10, prayers: ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] },
         )
         if (r === 'ok') setPushOn(true)
-        else if (r === 'unsupported') setPushMsg(s.notifyUnsupported)
-        else setPushMsg(s.notifyDenied)
+        else setHelpOpen(true) // blocked / unsupported → show how-to help
       }
     } finally { setPushBusy(false) }
   }
@@ -258,56 +252,54 @@ export default function PrayerTimesTool() {
         <span className="pray__hero-name">{s.prayers[nextInfo.key]}</span>
         <span className="pray__hero-time">{timeFmt.format(nextInfo.time)}</span>
         <span className="pray__hero-count">{s.inTime(countdown.h, countdown.m)}</span>
+        <button className={`pray__hero-alerts ${pushOn ? 'is-on' : ''}`} data-testid="pray-notify"
+          disabled={pushBusy} aria-pressed={!!pushOn} onClick={togglePush}>
+          <BellIcon /> {pushOn ? s.alertsOn : s.enableAlerts}
+        </button>
       </section>
 
-      {/* Location */}
-      <div className="pray__loc">
-        <label className="field pray__city">
-          <span className="field__label">{s.location}</span>
-          <select className="input" value={cityId} onChange={(e) => pickCity(e.target.value)}>
+      {/* Location — a chip that reveals the picker only when tapped */}
+      {!showLocPicker ? (
+        <button className="pray__loc-chip" data-testid="loc-chip" onClick={() => setShowLocPicker(true)}>
+          <svg className="pray__loc-pin" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+            <circle cx="12" cy="9" r="2.4" fill="currentColor" stroke="none" />
+          </svg>
+          <span className="pray__loc-name">{loc.label}</span>
+          <span className="pray__loc-caret" aria-hidden="true">▾</span>
+        </button>
+      ) : (
+        <div className="pray__loc">
+          <select className="input" value={cityId} autoFocus
+            onChange={(e) => { pickCity(e.target.value); setShowLocPicker(false) }}>
             {cityId === '' && <option value="">{s.myLocation}</option>}
             {CITIES.map((c) => (
               <option key={c.id} value={c.id}>{locale === 'ar' ? c.ar : c.en}</option>
             ))}
           </select>
-        </label>
-        <button className="btn" onClick={useMyLocation}>{s.useMyLocation}</button>
-      </div>
-      {geoError && <p className="pray__geoerr">{geoError}</p>}
-
-      {/* Prayer notifications opt-in */}
-      <div className="pray__notify">
-        <button className={`btn pray__notify-btn ${pushOn ? 'is-on' : ''}`} data-testid="pray-notify"
-          disabled={pushBusy} aria-pressed={!!pushOn} onClick={togglePush}>
-          <BellIcon /> {pushOn ? s.notifyOn : s.notify}
-        </button>
-        <p className="pray__notify-note">{pushOn ? s.notifyNote : s.notifyIos}</p>
-      </div>
-      {pushMsg && <p className="pray__geoerr">{pushMsg}</p>}
-
-      {/* Prayer times */}
-      <section className="pray__card">
-        <div className="pray__card-head">
-          <h2>{s.prayerTimes}</h2>
-          <span className="pray__method">{s.method} · {loc.label}</span>
+          <button className="btn" onClick={() => { useMyLocation(); setShowLocPicker(false) }}>{s.useMyLocation}</button>
         </div>
-        <p className="pray__calcdate" data-testid="calc-date">{s.calcFor} {dateFmt.format(now)}</p>
-        {locating && <p className="pray__locating" data-testid="pray-locating">{s.locating}</p>}
-        <ul className={`pray__times ${locating ? 'is-locating' : ''}`}>
-          {PRAYER_ORDER.map((k) => {
-            const isNext = k === nextInfo.key
-            return (
-              <li key={k} className={`pray__row ${isNext ? 'is-next' : ''}`}>
-                <span className="pray__name">{s.prayers[k]}</span>
-                <span className="pray__time">{timeFmt.format(times[k])}</span>
-                {isNext && (
-                  <span className="pray__next">{s.next} · {s.inTime(countdown.h, countdown.m)}</span>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+      )}
+      {geoError && <p className="pray__geoerr">{geoError}</p>}
+      {pushOn && <p className="pray__notify-note">{s.notifyNote}</p>}
+
+      {/* Prayer times — flush, no card/well (nativization) */}
+      {locating && <p className="pray__locating" data-testid="pray-locating">{s.locating}</p>}
+      <ul className={`pray__times ${locating ? 'is-locating' : ''}`}>
+        {PRAYER_ORDER.map((k) => {
+          const isNext = k === nextInfo.key
+          return (
+            <li key={k} className={`pray__row ${isNext ? 'is-next' : ''}`}>
+              <span className="pray__name">{s.prayers[k]}</span>
+              <span className="pray__time">{timeFmt.format(times[k])}</span>
+              {isNext && (
+                <span className="pray__next">{s.next} · {s.inTime(countdown.h, countdown.m)}</span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="pray__method-note">{s.method}</p>
 
       {/* Today */}
       <section className="pray__today">
@@ -348,6 +340,26 @@ export default function PrayerTimesTool() {
       </div>
 
       <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
+
+      {helpOpen && (
+        <AlertsHelpDialog help={alertsHelp(locale)} closeLabel={s.close} onClose={() => setHelpOpen(false)} />
+      )}
+    </div>
+  )
+}
+
+function AlertsHelpDialog({ help, closeLabel, onClose }: {
+  help: { title: string; steps: string[] }; closeLabel: string; onClose: () => void
+}) {
+  return (
+    <div className="pray__help-overlay" role="dialog" aria-modal="true" data-testid="alerts-help" onClick={onClose}>
+      <div className="pray__help" onClick={(e) => e.stopPropagation()}>
+        <h3 className="pray__help-title">{help.title}</h3>
+        <ol className="pray__help-steps">
+          {help.steps.map((step, i) => <li key={i}>{step}</li>)}
+        </ol>
+        <button className="btn btn--primary" data-testid="alerts-help-close" onClick={onClose}>{closeLabel}</button>
+      </div>
     </div>
   )
 }

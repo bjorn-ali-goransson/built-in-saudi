@@ -538,3 +538,24 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__notify-btn svg { width: 18px; height: 18px; }
 .pray__notify-btn.is-on { background: var(--green-600); color: var(--primary-ink); border-color: var(--green-700); }
 .pray__notify-note { font-size: 0.8rem; color: var(--ink-faint); max-width: 42ch; }
+
+/* Nativization: location chip + flush prayer times (#27 follow-ups) */
+.pray__loc-chip { display: inline-flex; align-items: center; gap: 0.5rem; align-self: flex-start; padding: 0.5rem 0.8rem; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; }
+.pray__loc-chip:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); }
+.pray__loc-pin { width: 16px; height: 16px; color: var(--green-600); flex: none; }
+.pray__loc-caret { color: var(--ink-faint); font-size: 0.8rem; }
+.pray__method-note { text-align: center; font-size: 0.76rem; color: var(--ink-faint); margin-top: 0.8rem; font-family: var(--font-mono); letter-spacing: 0.02em; }
+[dir='rtl'] .pray__method-note { font-family: var(--font-ar); letter-spacing: 0; }
+
+/* Gentle "Enable alerts" inside the next-prayer hero */
+.pray__hero-alerts { margin-top: 0.7rem; align-self: center; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border: 1px solid color-mix(in srgb, var(--sand-100) 35%, transparent); border-radius: 999px; background: color-mix(in srgb, #000 12%, transparent); color: var(--sand-100); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.pray__hero-alerts:hover:not(:disabled) { background: color-mix(in srgb, #000 22%, transparent); }
+.pray__hero-alerts svg { width: 15px; height: 15px; }
+.pray__hero-alerts.is-on { background: color-mix(in srgb, var(--sand-100) 20%, transparent); border-color: color-mix(in srgb, var(--sand-100) 55%, transparent); }
+.pray__hero-alerts:disabled { opacity: 0.6; cursor: default; }
+
+/* Alerts how-to dialog (only shown when enabling fails) */
+.pray__help-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1.2rem; background: color-mix(in srgb, var(--ink) 45%, transparent); animation: fadeUp 0.15s ease both; }
+.pray__help { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 1.4rem; }
+.pray__help-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.9rem; }
+.pray__help-steps { margin: 0 0 1.2rem; padding-inline-start: 1.3rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--ink-soft); font-size: 0.95rem; line-height: 1.5; }

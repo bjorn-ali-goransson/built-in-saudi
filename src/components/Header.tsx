@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useLocale, localePath, swapLocaleInPath, setStoredLocale } from '../i18n'
+import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool } from '../i18n'
+import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
 
 export function Header() {
@@ -8,6 +9,11 @@ export function Header() {
   const other = locale === 'ar' ? 'en' : 'ar'
   const home = localePath(locale)
   const isAr = locale === 'ar'
+
+  // "The happening" — show the current tool's name next to the logo (app-bar feel).
+  const match = location.pathname.match(/\/tools\/([^/]+)/)
+  const currentTool = match ? getTool(match[1]) : null
+  const context = currentTool && currentTool.component ? localizeTool(currentTool, locale).name : ''
 
   return (
     <header className="site-header">
@@ -27,10 +33,12 @@ export function Header() {
             </svg>
           </span>
           <span className="brand__text">
-            <span className="brand__name">{isAr ? 'بُنِيَ في السعودية' : 'Built in Saudi'}</span>
-            <span className="brand__ar" lang={isAr ? 'en' : 'ar'}>
-              {isAr ? 'BUILT IN SAUDI' : 'بُنِيَ في السعودية'}
-            </span>
+            <span className="brand__name">{context || (isAr ? 'بُنِيَ في السعودية' : 'Built in Saudi')}</span>
+            {!context && (
+              <span className="brand__ar" lang={isAr ? 'en' : 'ar'}>
+                {isAr ? 'BUILT IN SAUDI' : 'بُنِيَ في السعودية'}
+              </span>
+            )}
           </span>
         </Link>
 
