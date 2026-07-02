@@ -17,7 +17,7 @@ export function ToolCard({ tool, index }: Props) {
 
   const inner = (
     <>
-      <div className="flex items-center justify-between">
+      <div className="tool-card__top flex items-center justify-between">
         <span className="font-mono text-[0.8rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_30%,transparent)] tracking-[0.05em]">{num}</span>
         {tool.status !== 'stable' && (
           <span className={`pill pill--${tool.status}`}>
@@ -27,7 +27,7 @@ export function ToolCard({ tool, index }: Props) {
       </div>
 
       <span
-        className={`grid place-items-center w-[46px] h-[46px] rounded-[12px] mt-1 transition-[background,color] duration-200 [&_svg]:size-6 ${
+        className={`tool-card__icon grid place-items-center w-[46px] h-[46px] rounded-[12px] mt-1 transition-[background,color] duration-200 [&_svg]:size-6 ${
           comingSoon
             ? 'bg-[color-mix(in_srgb,var(--color-ink)_6%,transparent)] text-ink-faint'
             : 'bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-600 group-hover:bg-green-600 group-hover:text-sand-100'
@@ -37,10 +37,10 @@ export function ToolCard({ tool, index }: Props) {
         <Icon />
       </span>
 
-      <h3 className={`text-[1.18rem] font-semibold mt-[0.35rem] ${comingSoon ? 'text-ink-faint' : ''}`}>{l.name}</h3>
-      <p className="text-[0.92rem] text-ink-soft leading-[1.45] flex-1">{l.tagline}</p>
+      <h3 className={`tool-card__name text-[1.18rem] font-semibold mt-[0.35rem] ${comingSoon ? 'text-ink-faint' : ''}`}>{l.name}</h3>
+      <p className="tool-card__tagline text-[0.92rem] text-ink-soft leading-[1.45] flex-1">{l.tagline}</p>
 
-      <div className="flex items-center justify-between mt-[0.7rem] pt-[0.7rem] border-t border-[color:var(--line-soft)]">
+      <div className="tool-card__foot flex items-center justify-between mt-[0.7rem] pt-[0.7rem] border-t border-[color:var(--line-soft)]">
         <span className="font-body text-[0.72rem] uppercase tracking-[0.06em] text-ink-faint">{l.category}</span>
         {!comingSoon && (
           <span className="inline-flex items-center gap-[0.35rem] font-semibold text-[0.86rem] text-green-600">

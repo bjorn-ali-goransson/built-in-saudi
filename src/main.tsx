@@ -4,7 +4,6 @@ import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import './styles/tailwind.css'
 import './styles/theme.css'
-import './styles/app.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
