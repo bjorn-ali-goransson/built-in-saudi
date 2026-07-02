@@ -70,6 +70,14 @@ Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`
 `prefers-reduced-motion`. Buttons: use the global reset — always set an explicit
 `border`/`background` on custom buttons (never rely on UA defaults).
 
+**Design principles (native-app feel — keep enforcing):**
+- **Restrained rounding** — small radii (`--r-sm/md/lg` are 5/8/12px); avoid pill/bubbly shapes except intentional chips.
+- **No gradients by default** — use solid colours; a gradient must earn its place.
+- **Edge-docked overlays** — bars/notifications dock to screen edges (full-width, squared), not floating rounded cards.
+- **Less copy, more capability** — intuitive over explanatory; tuck power features behind a "⋯"/overflow, not walls of text.
+- **Personalisation over preferences** — remember choices in `localStorage` (e.g. prayer location `bis-prayer-loc`, seen-tools) rather than settings pages.
+- Tools may **diverge in look/personality**; the shared chassis (Layout, tokens, registry) stays modular.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.
@@ -93,6 +101,27 @@ npm run preview    # preview the production build
 Push to `main` → Actions builds and publishes `dist/` to Pages. Custom domain
 `built-in-saudi.com` (apex; `www` → apex), HTTPS enforced. DNS is in **Google
 Cloud DNS**, project **`blitz-ksa`**, zone `built-in-saudi`.
+
+## Deploy resilience & PWA
+
+- The build stamps `<meta name="build">` + writes `/version.json`; `useVersionCheck`
+  polls it (cache-busted) and reloads open tabs when a new deploy is detected.
+- Every tool loads via **`lazyTool()`** (`src/lib/lazyTool.tsx`), which reloads once
+  if a hashed chunk 404s after a redeploy. **Use `lazyTool`, never bare `React.lazy`**
+  for tool components.
+- **PWA / installable:** `public/manifest.webmanifest` + `public/icon.svg` + a
+  **network-first** `public/sw.js` (offline shell; never caches `version.json`, so
+  deploy detection keeps working).
+
+## Product direction: native app, one domain
+
+Building toward a **native-app feel on a single domain**. Subdomain-per-tool is
+intentionally **deferred** (GitHub Pages is one-domain-per-repo; subdomains fragment
+SEO for a young site). If we ever do it, the path is a wildcard `*.built-in-saudi.com`
+on Cloudflare Pages from this one codebase — so keep routing abstracted (locale/tool
+from the URL) to make that a config flip, not a rewrite. Trend home toward a
+**dashboard** (pinned/recent, Hijri + next-prayer glance) reached via the 9-dot
+**`AppLauncher`**.
 
 ## Infrastructure map
 
