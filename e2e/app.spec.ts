@@ -72,6 +72,14 @@ test.describe('tools', () => {
     await expect(page.getByTestId('unit-result')).toContainText('212')
   })
 
+  test('arabic poetry: meters reference + verse formatter', async ({ page }) => {
+    await page.goto('/en/tools/arabic-poetry')
+    await expect(page.getByTestId('bahr-taweel')).toContainText('الطويل')
+    await page.getByTestId('poetry-tab-format').click()
+    await page.getByTestId('poetry-input').fill('قفا نبك من ذكرى\nبسقط اللوى')
+    await expect(page.getByTestId('poetry-output')).toContainText('قفا نبك')
+  })
+
   test('case converter: transforms across cases', async ({ page }) => {
     await page.goto('/en/tools/case-converter')
     await page.getByTestId('case-input').fill('hello world')

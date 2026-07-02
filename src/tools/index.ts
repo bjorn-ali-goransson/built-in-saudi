@@ -11,6 +11,7 @@ import { passwordGeneratorTool } from './password-generator/meta'
 import { uuidGeneratorTool } from './uuid-generator/meta'
 import { wordCounterTool } from './word-counter/meta'
 import { caseConverterTool } from './case-converter/meta'
+import { poetryTool } from './poetry/meta'
 import { languageDetectTool } from './language-detect/meta'
 import { hashGeneratorTool } from './hash-generator/meta'
 import { loremTool } from './lorem/meta'
@@ -41,6 +42,7 @@ export const tools: Tool[] = [
   uuidGeneratorTool,
   wordCounterTool,
   caseConverterTool,
+  poetryTool,
   languageDetectTool,
   hashGeneratorTool,
   loremTool,

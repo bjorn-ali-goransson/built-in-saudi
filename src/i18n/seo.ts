@@ -130,6 +130,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'نص بديل', description: 'ولّد نصًا بديلًا بالفقرات أو الجُمل أو الكلمات — نص Lorem ipsum الكلاسيكي أو نص حشو عربي. يعمل بالكامل داخل متصفحك.' },
   },
   {
+    id: 'arabic-poetry',
+    en: { name: 'Arabic Poetry Meters', description: 'The 16 classical Arabic poetic metres (buḥūr) of al-Khalīl with tafʿīlāt and example verses, plus a formatter that lays pasted poetry out in the two-hemistich bayt form. Offline.' },
+    ar: { name: 'بحور الشعر', description: 'بحور الشعر العربي الستة عشر عند الخليل بتفعيلاتها وأمثلتها، مع منسّق يعرض الشعر الملصق في صورته العمودية (صدر وعجز). يعمل دون اتصال.' },
+  },
+  {
     id: 'case-converter',
     en: { name: 'Case Converter', description: 'Convert text between UPPER, lower, Title, Sentence, camelCase, PascalCase, snake_case, kebab-case and CONSTANT_CASE — live, with copy. Arabic passes through untouched.' },
     ar: { name: 'محوّل حالة الأحرف', description: 'حوّل النص بين الحالات — كبيرة/صغيرة/أول الكلمة/أول الجملة وcamelCase وsnake_case وkebab وCONSTANT — مباشرةً مع النسخ. العربية دون تغيير.' },
