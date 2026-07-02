@@ -795,3 +795,11 @@ html { -webkit-tap-highlight-color: transparent; }
 .cal2__sw--today { background: var(--green-600); }
 .cal2__sw--white { border: 2px solid var(--gold-400); }
 .cal2__sw--holiday { background: var(--gold-500); }
+
+/* Nativization pass: flatten the tool "well" cards — hairline border, no floating
+   shadow, restrained rounding — so tools feel flush and app-like, not carded. */
+.qr__panel, .pw__out, .wc__stat, .dd__hero, .pray__card, .meta__list, .zip__list,
+.lang__result, .lorem__out, .cal2__detail {
+  box-shadow: none;
+  border-radius: var(--r-md);
+}
