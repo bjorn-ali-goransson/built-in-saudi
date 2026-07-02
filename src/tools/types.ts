@@ -34,4 +34,6 @@ export interface Tool {
   component?: LazyExoticComponent<ComponentType>
   /** External tool: link out instead of routing in. */
   href?: string
+  /** Arabic translations of the display fields (category is translated centrally). */
+  ar?: { name: string; tagline: string; description: string }
 }

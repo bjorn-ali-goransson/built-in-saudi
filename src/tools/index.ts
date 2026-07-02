@@ -24,6 +24,11 @@ export const tools: Tool[] = [
     keywords: ['password', 'passphrase', 'random', 'secure'],
     status: 'coming-soon',
     Icon: KeyIcon,
+    ar: {
+      name: 'مولّد كلمات المرور',
+      tagline: 'كلمات مرور قوية تُنشأ محليًا على جهازك.',
+      description: 'أنشئ كلمات مرور وعبارات مرور قوية وعشوائية بالكامل داخل متصفحك.',
+    },
   },
   {
     id: 'image-compressor',
@@ -34,6 +39,11 @@ export const tools: Tool[] = [
     keywords: ['image', 'compress', 'optimize', 'resize', 'jpg', 'png'],
     status: 'coming-soon',
     Icon: ImageIcon,
+    ar: {
+      name: 'ضاغط الصور',
+      tagline: 'صغّر حجم صور JPG وPNG دون رفعها إلى أي مكان.',
+      description: 'اضغط الصور وغيّر أبعادها على جهازك — ملفاتك لا تغادر حاسوبك.',
+    },
   },
   {
     id: 'color-tools',
@@ -44,6 +54,11 @@ export const tools: Tool[] = [
     keywords: ['color', 'colour', 'palette', 'hex', 'rgb', 'hsl'],
     status: 'coming-soon',
     Icon: PaletteIcon,
+    ar: {
+      name: 'منتقي الألوان واللوحات',
+      tagline: 'اختر الألوان وحوّلها وابنِ لوحات (HEX · RGB · HSL).',
+      description: 'اختر الألوان وحوّل بين الصيغ وأنشئ لوحات ألوان متناسقة.',
+    },
   },
   {
     id: 'unit-converter',
@@ -54,6 +69,11 @@ export const tools: Tool[] = [
     keywords: ['convert', 'unit', 'length', 'weight', 'temperature'],
     status: 'coming-soon',
     Icon: RulerIcon,
+    ar: {
+      name: 'محوّل الوحدات',
+      tagline: 'الطول والوزن والحرارة والبيانات والمزيد.',
+      description: 'حوّل بين الوحدات اليومية بسرعة ودقة.',
+    },
   },
   {
     id: 'json-formatter',
@@ -64,6 +84,11 @@ export const tools: Tool[] = [
     keywords: ['json', 'format', 'validate', 'minify', 'pretty'],
     status: 'coming-soon',
     Icon: BracesIcon,
+    ar: {
+      name: 'مُنسّق JSON',
+      tagline: 'نسّق JSON وتحقّق منه واختصره فورًا.',
+      description: 'نسّق JSON وتحقّق من صحته واختصره مع إبلاغ واضح عن الأخطاء.',
+    },
   },
   {
     id: 'uuid-generator',
@@ -74,6 +99,11 @@ export const tools: Tool[] = [
     keywords: ['uuid', 'guid', 'id', 'random'],
     status: 'coming-soon',
     Icon: HashIcon,
+    ar: {
+      name: 'مولّد UUID',
+      tagline: 'أنشئ معرّفات UUID (v4) بالجملة.',
+      description: 'أنشئ معرّفًا واحدًا أو عدة معرّفات UUID بنقرة واحدة.',
+    },
   },
   {
     id: 'text-counter',
@@ -84,6 +114,11 @@ export const tools: Tool[] = [
     keywords: ['word', 'character', 'count', 'text', 'reading time'],
     status: 'coming-soon',
     Icon: TextIcon,
+    ar: {
+      name: 'عدّاد الكلمات والحروف',
+      tagline: 'عدّ الكلمات والحروف والجُمل ووقت القراءة مباشرةً.',
+      description: 'عُدّ الكلمات والحروف والجُمل مع تقدير فوري لوقت القراءة.',
+    },
   },
   {
     id: 'base64',
@@ -94,6 +129,11 @@ export const tools: Tool[] = [
     keywords: ['base64', 'encode', 'decode', 'data uri'],
     status: 'coming-soon',
     Icon: CodeIcon,
+    ar: {
+      name: 'ترميز وفكّ Base64',
+      tagline: 'رمّز وفكّ نصوص وملفات Base64.',
+      description: 'رمّز أو فكّ ترميز Base64 للنصوص والملفات الصغيرة محليًا.',
+    },
   },
 ]
 

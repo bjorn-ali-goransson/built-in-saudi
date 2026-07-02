@@ -73,6 +73,13 @@ body {
 
 :lang(ar) { font-family: var(--font-ar); }
 
+/* Arabic / RTL: swap the display + body fonts to the Arabic face (Fraunces and
+   Hanken don't carry Arabic glyphs). Mono stays for Latin/number contexts. */
+[dir='rtl'] {
+  --font-display: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+}
+
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.08; letter-spacing: -0.01em; color: var(--green-700); }
 
 a { color: var(--green-600); text-decoration-color: color-mix(in srgb, var(--green-600) 35%, transparent); text-underline-offset: 3px; }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Tool } from '../tools/types'
 import { ArrowIcon } from './icons'
+import { useLocale, localePath, localizeTool } from '../i18n'
 
 interface Props {
   tool: Tool
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export function ToolCard({ tool, index }: Props) {
+  const { locale, t } = useLocale()
+  const l = localizeTool(tool, locale)
   const num = String(index + 1).padStart(2, '0')
   const comingSoon = tool.status === 'coming-soon'
   const Icon = tool.Icon
@@ -18,7 +21,7 @@ export function ToolCard({ tool, index }: Props) {
         <span className="tool-card__num">{num}</span>
         {tool.status !== 'stable' && (
           <span className={`pill pill--${tool.status}`}>
-            {comingSoon ? 'Coming soon' : 'Beta'}
+            {comingSoon ? t.card.comingSoon : t.card.beta}
           </span>
         )}
       </div>
@@ -27,14 +30,14 @@ export function ToolCard({ tool, index }: Props) {
         <Icon />
       </span>
 
-      <h3 className="tool-card__name">{tool.name}</h3>
-      <p className="tool-card__tagline">{tool.tagline}</p>
+      <h3 className="tool-card__name">{l.name}</h3>
+      <p className="tool-card__tagline">{l.tagline}</p>
 
       <div className="tool-card__foot">
-        <span className="tool-card__cat">{tool.category}</span>
+        <span className="tool-card__cat">{l.category}</span>
         {!comingSoon && (
           <span className="tool-card__go">
-            Open <ArrowIcon className="tool-card__arrow" />
+            {t.card.open} <ArrowIcon className="tool-card__arrow" />
           </span>
         )}
       </div>
@@ -58,7 +61,7 @@ export function ToolCard({ tool, index }: Props) {
   }
 
   return (
-    <Link className="tool-card" to={`/tools/${tool.id}`}>
+    <Link className="tool-card" to={localePath(locale, `/tools/${tool.id}`)}>
       {inner}
     </Link>
   )

@@ -4,6 +4,7 @@ import {
   LinkIcon, TextIcon, WifiIcon, MailIcon, PhoneIcon,
   DownloadIcon, CopyIcon,
 } from '../../components/icons'
+import { useLocale } from '../../i18n'
 import {
   type QrContentType, type WifiFields, type EmailFields,
   normalizeUrl, buildWifi, buildEmail, buildPhone,
@@ -11,22 +12,20 @@ import {
 
 type EcLevel = 'L' | 'M' | 'Q' | 'H'
 
-const TYPES: { id: QrContentType; label: string; Icon: typeof LinkIcon }[] = [
-  { id: 'link', label: 'Link', Icon: LinkIcon },
-  { id: 'text', label: 'Text', Icon: TextIcon },
-  { id: 'wifi', label: 'Wi-Fi', Icon: WifiIcon },
-  { id: 'email', label: 'Email', Icon: MailIcon },
-  { id: 'phone', label: 'Phone', Icon: PhoneIcon },
+const TYPE_DEFS: { id: QrContentType; Icon: typeof LinkIcon }[] = [
+  { id: 'link', Icon: LinkIcon },
+  { id: 'text', Icon: TextIcon },
+  { id: 'wifi', Icon: WifiIcon },
+  { id: 'email', Icon: MailIcon },
+  { id: 'phone', Icon: PhoneIcon },
 ]
 
-const EC_LEVELS: { id: EcLevel; hint: string }[] = [
-  { id: 'L', hint: '~7% recovery' },
-  { id: 'M', hint: '~15% recovery' },
-  { id: 'Q', hint: '~25% recovery' },
-  { id: 'H', hint: '~30% recovery' },
-]
+const EC_LEVELS: EcLevel[] = ['L', 'M', 'Q', 'H']
 
 export default function QrCodeTool() {
+  const { t } = useLocale()
+  const q = t.qr
+
   const [type, setType] = useState<QrContentType>('link')
   const [link, setLink] = useState('https://built-in-saudi.com')
   const [text, setText] = useState('')
@@ -58,28 +57,15 @@ export default function QrCodeTool() {
   }, [type, link, text, wifi, email, phone])
 
   const opts = useMemo(
-    () => ({
-      errorCorrectionLevel: ecLevel,
-      margin,
-      color: { dark: fg, light: bg },
-    }),
+    () => ({ errorCorrectionLevel: ecLevel, margin, color: { dark: fg, light: bg } }),
     [ecLevel, margin, fg, bg],
   )
 
-  // Render the live SVG whenever content or styling changes.
   useEffect(() => {
     let cancelled = false
-    if (!value) {
-      setSvg('')
-      setError('')
-      return
-    }
+    if (!value) { setSvg(''); setError(''); return }
     QRCode.toString(value, { type: 'svg', width: size, ...opts })
-      .then((markup) => {
-        if (cancelled) return
-        setSvg(markup)
-        setError('')
-      })
+      .then((markup) => { if (!cancelled) { setSvg(markup); setError('') } })
       .catch((err: unknown) => {
         if (cancelled) return
         setSvg('')
@@ -109,8 +95,7 @@ export default function QrCodeTool() {
 
   async function downloadPng() {
     if (!value) return
-    const url = await QRCode.toDataURL(value, { width: size, ...opts })
-    download(url, 'png')
+    download(await QRCode.toDataURL(value, { width: size, ...opts }), 'png')
   }
 
   function downloadSvg() {
@@ -128,85 +113,81 @@ export default function QrCodeTool() {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
       flashCopied()
     } catch {
-      setError('Copying images isn’t supported in this browser — use Download instead.')
+      setError(q.copyUnsupported)
     }
   }
 
   return (
     <div className="qr">
-      {/* ── Controls ─────────────────────────────── */}
+      {/* Controls */}
       <div className="qr__panel">
-        <div className="qr__types" role="tablist" aria-label="QR content type">
-          {TYPES.map((t) => (
+        <div className="qr__types" role="tablist" aria-label={q.style}>
+          {TYPE_DEFS.map((d) => (
             <button
-              key={t.id}
+              key={d.id}
               role="tab"
-              aria-selected={type === t.id}
-              className={`qr__type ${type === t.id ? 'is-active' : ''}`}
-              onClick={() => { setType(t.id); setError('') }}
+              aria-selected={type === d.id}
+              className={`qr__type ${type === d.id ? 'is-active' : ''}`}
+              onClick={() => { setType(d.id); setError('') }}
             >
-              <t.Icon /> <span>{t.label}</span>
+              <d.Icon /> <span>{q.types[d.id]}</span>
             </button>
           ))}
         </div>
 
         <div className="qr__fields">
           {type === 'link' && (
-            <Field label="Website / URL">
-              <input
-                className="input" type="url" inputMode="url" placeholder="example.com"
-                value={link} onChange={(e) => setLink(e.target.value)} autoComplete="off"
-              />
+            <Field label={q.fieldUrl}>
+              <input className="input" type="url" inputMode="url" placeholder={q.placeholderUrl}
+                value={link} onChange={(e) => setLink(e.target.value)} autoComplete="off" />
             </Field>
           )}
 
           {type === 'text' && (
-            <Field label="Text">
-              <textarea
-                className="input input--area" rows={4} placeholder="Any text to encode…"
-                value={text} onChange={(e) => setText(e.target.value)}
-              />
+            <Field label={q.fieldText}>
+              <textarea className="input input--area" rows={4} placeholder={q.placeholderText}
+                value={text} onChange={(e) => setText(e.target.value)} />
             </Field>
           )}
 
           {type === 'wifi' && (
             <div className="qr__row">
-              <Field label="Network name (SSID)">
-                <input className="input" value={wifi.ssid} placeholder="MyNetwork"
+              <Field label={q.fieldSsid}>
+                <input className="input" value={wifi.ssid} placeholder={q.placeholderSsid}
                   onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })} />
               </Field>
-              <Field label="Password">
+              <Field label={q.fieldPassword}>
                 <input className="input" value={wifi.password} placeholder="••••••••"
                   disabled={wifi.encryption === 'nopass'}
                   onChange={(e) => setWifi({ ...wifi, password: e.target.value })} />
               </Field>
-              <Field label="Security">
+              <Field label={q.fieldSecurity}>
                 <select className="input" value={wifi.encryption}
                   onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as WifiFields['encryption'] })}>
-                  <option value="WPA">WPA / WPA2 / WPA3</option>
-                  <option value="WEP">WEP</option>
-                  <option value="nopass">None (open)</option>
+                  <option value="WPA">{q.secWpa}</option>
+                  <option value="WEP">{q.secWep}</option>
+                  <option value="nopass">{q.secNone}</option>
                 </select>
               </Field>
               <label className="check">
                 <input type="checkbox" checked={wifi.hidden}
                   onChange={(e) => setWifi({ ...wifi, hidden: e.target.checked })} />
-                Hidden network
+                {q.hidden}
               </label>
             </div>
           )}
 
           {type === 'email' && (
             <div className="qr__row">
-              <Field label="To">
-                <input className="input" type="email" placeholder="name@example.com"
+              <Field label={q.fieldTo}>
+                <input className="input" type="email" placeholder={q.placeholderEmail}
                   value={email.to} onChange={(e) => setEmail({ ...email, to: e.target.value })} />
               </Field>
-              <Field label="Subject">
+              <Field label={q.fieldSubject}>
                 <input className="input" value={email.subject}
                   onChange={(e) => setEmail({ ...email, subject: e.target.value })} />
               </Field>
-              <Field label="Message">
+              <Field label={q.fieldMessage}>
                 <textarea className="input input--area" rows={3} value={email.body}
                   onChange={(e) => setEmail({ ...email, body: e.target.value })} />
               </Field>
@@ -214,35 +195,35 @@ export default function QrCodeTool() {
           )}
 
           {type === 'phone' && (
-            <Field label="Phone number">
-              <input className="input" type="tel" inputMode="tel" placeholder="+966 5X XXX XXXX"
+            <Field label={q.fieldPhone}>
+              <input className="input" type="tel" inputMode="tel" placeholder={q.placeholderPhone}
                 value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
           )}
         </div>
 
         <fieldset className="qr__style">
-          <legend>Style</legend>
+          <legend>{q.style}</legend>
 
           <div className="qr__control">
-            <label>Error correction</label>
-            <div className="seg" role="group" aria-label="Error correction level">
-              {EC_LEVELS.map((l) => (
-                <button key={l.id} title={l.hint}
-                  className={`seg__btn ${ecLevel === l.id ? 'is-active' : ''}`}
-                  onClick={() => setEcLevel(l.id)}>{l.id}</button>
+            <label>{q.errorCorrection}</label>
+            <div className="seg" role="group" aria-label={q.errorCorrection}>
+              {EC_LEVELS.map((lvl) => (
+                <button key={lvl}
+                  className={`seg__btn ${ecLevel === lvl ? 'is-active' : ''}`}
+                  onClick={() => setEcLevel(lvl)}>{lvl}</button>
               ))}
             </div>
           </div>
 
           <div className="qr__control">
-            <label htmlFor="qr-size">Export size <span className="muted">{size}px</span></label>
+            <label htmlFor="qr-size">{q.exportSize} <span className="muted">{size}px</span></label>
             <input id="qr-size" type="range" min={128} max={1024} step={32}
               value={size} onChange={(e) => setSize(Number(e.target.value))} />
           </div>
 
           <div className="qr__control">
-            <label htmlFor="qr-margin">Quiet zone <span className="muted">{margin}</span></label>
+            <label htmlFor="qr-margin">{q.quietZone} <span className="muted">{margin}</span></label>
             <input id="qr-margin" type="range" min={0} max={8} step={1}
               value={margin} onChange={(e) => setMargin(Number(e.target.value))} />
           </div>
@@ -250,52 +231,48 @@ export default function QrCodeTool() {
           <div className="qr__colors">
             <label className="swatch">
               <input type="color" value={fg} onChange={(e) => setFg(e.target.value)} />
-              <span>Foreground</span>
+              <span>{q.foreground}</span>
             </label>
             <label className="swatch">
               <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} />
-              <span>Background</span>
+              <span>{q.background}</span>
             </label>
           </div>
         </fieldset>
       </div>
 
-      {/* ── Preview + export ─────────────────────── */}
+      {/* Preview + export */}
       <div className="qr__preview">
         <div className="qr__stage" style={{ background: bg }}>
           {hasCode ? (
             <div className="qr__svg" dangerouslySetInnerHTML={{ __html: svg }} />
           ) : (
             <div className="qr__empty">
-              {error
-                ? <span className="qr__error">{error}</span>
-                : <span>Fill in the fields to generate your QR code.</span>}
+              {error ? <span className="qr__error">{error}</span> : <span>{q.empty}</span>}
             </div>
           )}
         </div>
 
         <div className="qr__actions">
           <button className="btn btn--primary" onClick={downloadPng} disabled={!hasCode}>
-            <DownloadIcon /> PNG
+            <DownloadIcon /> {q.png}
           </button>
           <button className="btn" onClick={downloadSvg} disabled={!hasCode}>
-            <DownloadIcon /> SVG
+            <DownloadIcon /> {q.svg}
           </button>
           <button className="btn" onClick={copyPng} disabled={!hasCode}>
-            <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
+            <CopyIcon /> {copied ? q.copied : q.copy}
           </button>
         </div>
 
         {hasCode && (
-          <p className="qr__encoded" title="The exact text encoded in this QR code">
-            <span className="qr__encoded-label">Encodes</span>
-            <code>{value}</code>
+          <p className="qr__encoded">
+            <span className="qr__encoded-label">{q.encodes}</span>
+            <code dir="ltr">{value}</code>
           </p>
         )}
 
-        <p className="qr__privacy">
-          <span aria-hidden="true">🔒</span> Generated locally — nothing is uploaded.
-        </p>
+        <p className="qr__privacy"><span aria-hidden="true">🔒</span> {q.privacy}</p>
       </div>
     </div>
   )

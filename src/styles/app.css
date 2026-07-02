@@ -248,3 +248,44 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
   .site-header__inner { height: 60px; }
   .brand__ar { display: none; }
 }
+
+/* ======================================================================
+   Internationalisation: RTL tweaks, language toggle, suggestion popup
+   ====================================================================== */
+
+/* Mono labels that may carry Arabic text need the Arabic face in RTL. */
+[dir='rtl'] .catalog__count,
+[dir='rtl'] .tool-card__cat,
+[dir='rtl'] .pill,
+[dir='rtl'] .hero__kicker,
+[dir='rtl'] .qr__style legend,
+[dir='rtl'] .qr__encoded-label,
+[dir='rtl'] .qr__type { font-family: var(--font-ar); letter-spacing: 0; }
+
+/* Directional flips */
+[dir='rtl'] .hero__title em::after { background: linear-gradient(270deg, var(--gold-400), transparent); }
+[dir='rtl'] .tool-card::before { transform-origin: right; }
+[dir='rtl'] .site-nav__link::after { left: auto; right: 0; }
+[dir='rtl'] .tool-card__arrow { transform: scaleX(-1); }
+[dir='rtl'] .tool-card:hover .tool-card__arrow { transform: scaleX(-1) translateX(3px); }
+
+/* Language toggle in the header */
+.lang-toggle {
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 0.28rem 0.7rem; font-size: 0.85rem; line-height: 1;
+}
+.lang-toggle::after { content: none; }
+.lang-toggle:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); background: color-mix(in srgb, var(--green-400) 10%, transparent); }
+
+/* Gentle language-suggestion popup */
+.lang-hint {
+  position: fixed; inset-inline-end: 1.25rem; inset-block-end: 1.25rem; z-index: 60;
+  max-width: min(92vw, 340px); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg);
+  padding: 1rem 1.1rem; animation: fadeUp 0.4s ease both;
+}
+.lang-hint__msg { font-size: 0.98rem; color: var(--ink); margin-bottom: 0.8rem; }
+.lang-hint__actions { display: flex; gap: 0.6rem; align-items: center; }
+.lang-hint__switch { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
+.lang-hint__dismiss { color: var(--ink-faint); font-weight: 600; font-size: 0.88rem; padding: 0.4rem 0.5rem; border-radius: var(--r-sm); }
+.lang-hint__dismiss:hover { color: var(--ink); background: var(--sand-100); }
