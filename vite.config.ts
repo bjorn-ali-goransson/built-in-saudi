@@ -53,8 +53,8 @@ function homeContent(locale: Loc): string {
       return `<li><a href="/${locale}/tools/${tool.id}">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
     })
     .join('')
-  return `<main><p>${esc(t.hero.kicker)}</p><h1>${esc(t.hero.title1)} ${esc(t.hero.title2)}</h1>`
-    + `<p>${esc(t.hero.lede)}</p><h2>${esc(t.catalog.title)}</h2><ul>${items}</ul></main>`
+  // Home is app-list-only (the hero copy was removed); keep a single H1 for SEO.
+  return `<main><h1>${esc(t.hero.title1)} ${esc(t.hero.title2)}</h1><ul>${items}</ul></main>`
 }
 
 function toolContent(locale: Loc, tool: ToolSeo): string {
