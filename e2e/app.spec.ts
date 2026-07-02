@@ -60,6 +60,15 @@ test.describe('tools', () => {
     await expect(page.getByTestId('json-output')).toContainText('color: red;')
   })
 
+  test('unit converter: length and temperature', async ({ page }) => {
+    await page.goto('/en/tools/unit-converter')
+    await page.getByTestId('unit-value').fill('1') // default 1 m → ft
+    await expect(page.getByTestId('unit-result')).toContainText('3.2808')
+    await page.getByTestId('unit-category').selectOption('temperature')
+    await page.getByTestId('unit-value').fill('100') // C → F
+    await expect(page.getByTestId('unit-result')).toContainText('212')
+  })
+
   test('case converter: transforms across cases', async ({ page }) => {
     await page.goto('/en/tools/case-converter')
     await page.getByTestId('case-input').fill('hello world')

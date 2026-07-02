@@ -15,6 +15,7 @@ import { languageDetectTool } from './language-detect/meta'
 import { hashGeneratorTool } from './hash-generator/meta'
 import { loremTool } from './lorem/meta'
 import { jsonFormatterTool } from './json-formatter/meta'
+import { unitConverterTool } from './unit-converter/meta'
 import { base64Tool } from './base64/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
@@ -44,6 +45,7 @@ export const tools: Tool[] = [
   hashGeneratorTool,
   loremTool,
   jsonFormatterTool,
+  unitConverterTool,
   base64Tool,
   dateDiffTool,
   zipInspectorTool,

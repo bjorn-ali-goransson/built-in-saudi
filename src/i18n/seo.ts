@@ -145,6 +145,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'منسّق الكود', description: 'نسّق وصغّر وتحقّق من الكود داخل متصفحك — JSON (أخطاء بالسطر والعمود وترتيب المفاتيح) مع CSS وXML. دون رفع أي شيء.' },
   },
   {
+    id: 'unit-converter',
+    en: { name: 'Unit Converter', description: 'Convert length, mass, temperature, data, area, volume, speed and time — live, with swap + copy. Exact tables; temperature with proper offsets.' },
+    ar: { name: 'محوّل الوحدات', description: 'حوّل الطول والكتلة والحرارة والبيانات والمساحة والحجم والسرعة والزمن — مباشرةً مع تبديل ونسخ. جداول دقيقة والحرارة بمعاملات إزاحة صحيحة.' },
+  },
+  {
     id: 'base64',
     en: { name: 'Base64 Convert', description: 'Encode and decode Base64 text with full UTF-8 support and a URL-safe option — entirely in your browser.' },
     ar: { name: 'ترميز وفكّ Base64', description: 'رمّز وفكّ نصوص Base64 بدعم كامل لـ UTF-8 وخيار آمن للروابط — بالكامل داخل متصفحك.' },

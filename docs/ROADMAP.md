@@ -53,7 +53,7 @@ optional [backend worker](./BACKEND.md).
 | Tool | Slug | Runs | Priority | Status |
 |------|------|------|----------|--------|
 | [Base64 encoder/decoder](./tools/base64.md) | `/tools/base64` | client | T1 | 📝 |
-| [Unit converter](./tools/unit-converter.md) | `/tools/unit-converter` | client | T2 | 📝 |
+| [Unit converter](./tools/unit-converter.md) | `/tools/unit-converter` | client | T2 | ✅ live |
 | [Case converter](./tools/case-converter.md) | `/tools/case-converter` | client | T2 | ✅ live |
 | Timestamp ↔ date | `/tools/timestamp` | client | T2 | 🧭 |
 | Number base converter | `/tools/number-base` | client | T3 | 🧭 |
