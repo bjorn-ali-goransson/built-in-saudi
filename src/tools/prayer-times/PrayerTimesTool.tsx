@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { BellIcon } from '../../components/icons'
@@ -94,6 +95,7 @@ export default function PrayerTimesTool() {
   const [locating, setLocating] = useState(false)
   const [pushOn, setPushOn] = useState<boolean | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [helpDetail, setHelpDetail] = useState('')
   const [pushBusy, setPushBusy] = useState(false)
   const [showLocPicker, setShowLocPicker] = useState(false)
   const [now, setNow] = useState(() => new Date())
@@ -191,7 +193,7 @@ export default function PrayerTimesTool() {
   useEffect(() => { currentSubscription().then((sub) => setPushOn(!!sub)) }, [])
 
   async function togglePush() {
-    if (!pushSupported()) { setHelpOpen(true); return }
+    if (!pushSupported()) { setHelpDetail('push not supported'); setHelpOpen(true); return }
     setPushBusy(true)
     try {
       if (pushOn) {
@@ -202,8 +204,8 @@ export default function PrayerTimesTool() {
           { lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale,
           { minutesBefore: 10, prayers: ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] },
         )
-        if (r === 'ok') setPushOn(true)
-        else setHelpOpen(true) // blocked / unsupported → show how-to help
+        if (r.status === 'ok') setPushOn(true)
+        else { setHelpDetail(r.detail || ''); setHelpOpen(true) } // blocked/unsupported/error → how-to + reason
       }
     } finally { setPushBusy(false) }
   }
@@ -342,25 +344,30 @@ export default function PrayerTimesTool() {
       <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
 
       {helpOpen && (
-        <AlertsHelpDialog help={alertsHelp(locale)} closeLabel={s.close} onClose={() => setHelpOpen(false)} />
+        <AlertsHelpDialog help={alertsHelp(locale)} detail={helpDetail} closeLabel={s.close}
+          onClose={() => setHelpOpen(false)} />
       )}
     </div>
   )
 }
 
-function AlertsHelpDialog({ help, closeLabel, onClose }: {
-  help: { title: string; steps: string[] }; closeLabel: string; onClose: () => void
+function AlertsHelpDialog({ help, detail, closeLabel, onClose }: {
+  help: { title: string; steps: string[] }; detail?: string; closeLabel: string; onClose: () => void
 }) {
-  return (
+  // Portal to <body> so no transformed/animated ancestor can hijack the fixed
+  // overlay's containing block — guarantees it centers on the viewport.
+  return createPortal(
     <div className="pray__help-overlay" role="dialog" aria-modal="true" data-testid="alerts-help" onClick={onClose}>
       <div className="pray__help" onClick={(e) => e.stopPropagation()}>
         <h3 className="pray__help-title">{help.title}</h3>
         <ol className="pray__help-steps">
           {help.steps.map((step, i) => <li key={i}>{step}</li>)}
         </ol>
+        {detail && <p className="pray__help-detail" data-testid="alerts-help-detail">{detail}</p>}
         <button className="btn btn--primary" data-testid="alerts-help-close" onClick={onClose}>{closeLabel}</button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

@@ -559,3 +559,9 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__help { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 1.4rem; }
 .pray__help-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.9rem; }
 .pray__help-steps { margin: 0 0 1.2rem; padding-inline-start: 1.3rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--ink-soft); font-size: 0.95rem; line-height: 1.5; }
+
+/* Full-bleed next-prayer hero — edge to edge (nativization) */
+.pray__hero { margin-inline: calc(50% - 50vw); width: 100vw; max-width: 100vw; border-radius: 0; }
+
+/* Alerts help: the actual failure reason (for support/debugging) */
+.pray__help-detail { margin: 0 0 1rem; font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-faint); word-break: break-word; background: var(--sand-100); padding: 0.5rem 0.6rem; border-radius: var(--r-sm); }

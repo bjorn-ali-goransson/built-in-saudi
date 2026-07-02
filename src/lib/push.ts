@@ -24,27 +24,60 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
   return reg.pushManager.getSubscription()
 }
 
-export type EnableResult = 'ok' | 'denied' | 'unsupported' | 'error'
+export type EnableStatus = 'ok' | 'denied' | 'unsupported' | 'error'
+export interface EnableResult { status: EnableStatus; detail?: string }
 
 export async function enablePush(loc: PushLoc, locale: string, prefs: PushPrefs): Promise<EnableResult> {
-  if (!pushSupported()) return 'unsupported'
+  if (!('serviceWorker' in navigator)) return { status: 'unsupported', detail: 'no service worker support' }
+  if (!('PushManager' in window)) return { status: 'unsupported', detail: 'no Push API' }
+  if (!('Notification' in window)) return { status: 'unsupported', detail: 'no Notification API' }
+
+  let perm: NotificationPermission
   try {
-    const perm = await Notification.requestPermission()
-    if (perm !== 'granted') return 'denied'
-    const reg = await navigator.serviceWorker.ready
-    const sub = await reg.pushManager.subscribe({
+    perm = await Notification.requestPermission()
+  } catch (e) {
+    return { status: 'error', detail: `requestPermission: ${errStr(e)}` }
+  }
+  if (perm !== 'granted') return { status: 'denied', detail: `permission: ${perm}` }
+
+  let reg: ServiceWorkerRegistration
+  try {
+    // Don't wait forever if the SW never activates.
+    reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('service worker not ready (10s)')), 10000)),
+    ])
+  } catch (e) {
+    return { status: 'error', detail: errStr(e) }
+  }
+  if (!reg.pushManager) return { status: 'error', detail: 'no pushManager on registration' }
+
+  let sub: PushSubscription
+  try {
+    sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) as BufferSource,
     })
+  } catch (e) {
+    return { status: 'error', detail: `subscribe: ${errStr(e)}` }
+  }
+
+  try {
     const res = await fetch(`${FN}/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub, lat: loc.lat, lng: loc.lng, tz: loc.tz, locale, prefs }),
     })
-    return res.ok ? 'ok' : 'error'
-  } catch {
-    return 'error'
+    if (!res.ok) return { status: 'error', detail: `server HTTP ${res.status}` }
+  } catch (e) {
+    return { status: 'error', detail: `network/CORS: ${errStr(e)}` }
   }
+  return { status: 'ok' }
+}
+
+function errStr(e: unknown): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`
+  return String(e)
 }
 
 export async function disablePush(): Promise<void> {

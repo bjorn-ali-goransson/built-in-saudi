@@ -48,15 +48,19 @@ function docId(endpoint) {
   return Buffer.from(endpoint).toString('base64url').slice(0, 300)
 }
 
-function cors(res) {
-  res.set('Access-Control-Allow-Origin', ORIGIN)
+function cors(req, res) {
+  const origin = (req.headers && req.headers.origin) || ''
+  // Allow the apex and any built-in-saudi.com subdomain (e.g. www.).
+  const allowed = /^https:\/\/([a-z0-9-]+\.)?built-in-saudi\.com$/.test(origin) ? origin : ORIGIN
+  res.set('Access-Control-Allow-Origin', allowed)
+  res.set('Vary', 'Origin')
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.set('Access-Control-Allow-Headers', 'Content-Type')
 }
 
 // POST { subscription, lat, lng, tz, locale, prefs } → saves/updates a subscription.
 http('subscribe', async (req, res) => {
-  cors(res)
+  cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
@@ -83,7 +87,7 @@ http('subscribe', async (req, res) => {
 
 // POST { endpoint } → removes a subscription.
 http('unsubscribe', async (req, res) => {
-  cors(res)
+  cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
