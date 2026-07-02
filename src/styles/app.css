@@ -805,3 +805,11 @@ html { -webkit-tap-highlight-color: transparent; }
 /* Home is just the apps now (hero copy removed) */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .catalog--home { padding-top: clamp(1.2rem, 4vw, 2rem); }
+
+/* Islamic calendar — holidays list */
+.cal2__holidays { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+.cal2__hol-title { font-size: 0.95rem; font-weight: 600; color: var(--green-700); margin-bottom: 0.2rem; }
+.cal2__hol { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0.85rem; border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; text-align: start; transition: border-color 0.12s, background 0.12s; }
+.cal2__hol:hover { border-color: var(--green-500); background: color-mix(in srgb, var(--green-400) 6%, transparent); }
+.cal2__hol-name { font-weight: 600; color: var(--ink); }
+.cal2__hol-date { font-size: 0.82rem; color: var(--ink-faint); }

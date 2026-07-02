@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import {
   gregorianToHijri, hijriToGregorian, daysInHijriMonth, HIJRI_MONTHS, type IslamicEventKey,
@@ -9,22 +9,24 @@ type Mode = 'hijri' | 'greg'
 const STR = {
   en: {
     hijri: 'Hijri', gregorian: 'Gregorian', today: 'Today', prev: 'Previous month', next: 'Next month',
-    whiteDays: 'White days (13–15)', holiday: 'Islamic date', todayLegend: 'Today', moonNote: 'Moon phase is approximate (from the Hijri day).',
+    whiteDays: 'White days (13–15)', holiday: 'Islamic date', todayLegend: 'Today', holidaysTitle: 'Islamic dates',
     events: { ramadan: 'Ramadan', eidFitr: 'Eid al-Fitr', eidAdha: 'Eid al-Adha', arafah: 'Day of Arafah', newYear: 'Islamic New Year', ashura: 'Day of Ashura' } as Record<IslamicEventKey, string>,
   },
   ar: {
     hijri: 'هجري', gregorian: 'ميلادي', today: 'اليوم', prev: 'الشهر السابق', next: 'الشهر التالي',
-    whiteDays: 'الأيام البيض (١٣–١٥)', holiday: 'مناسبة إسلامية', todayLegend: 'اليوم', moonNote: 'طور القمر تقريبي (من اليوم الهجري).',
+    whiteDays: 'الأيام البيض (١٣–١٥)', holiday: 'مناسبة إسلامية', todayLegend: 'اليوم', holidaysTitle: 'المناسبات الإسلامية',
     events: { ramadan: 'رمضان', eidFitr: 'عيد الفطر', eidAdha: 'عيد الأضحى', arafah: 'يوم عرفة', newYear: 'رأس السنة الهجرية', ashura: 'عاشوراء' } as Record<IslamicEventKey, string>,
   },
 }
 
-const MOON = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘']
-const moonFor = (hd: number) => MOON[Math.round(((hd - 1) / 29.53) * 8) % 8]
-
 const HOLIDAYS: Record<string, IslamicEventKey> = {
   '1-1': 'newYear', '1-10': 'ashura', '9-1': 'ramadan', '10-1': 'eidFitr', '12-9': 'arafah', '12-10': 'eidAdha',
 }
+// Ordered through the Hijri year for the list below the grid.
+const HOLIDAY_LIST: { key: IslamicEventKey; m: number; d: number }[] = [
+  { key: 'newYear', m: 1, d: 1 }, { key: 'ashura', m: 1, d: 10 }, { key: 'ramadan', m: 9, d: 1 },
+  { key: 'eidFitr', m: 10, d: 1 }, { key: 'arafah', m: 12, d: 9 }, { key: 'eidAdha', m: 12, d: 10 },
+]
 
 interface Cell { hy: number; hm: number; hd: number; greg: Date }
 
@@ -88,6 +90,14 @@ export default function IslamicCalendarTool() {
   }
   const isToday = (d: Date) => d.toDateString() === now.toDateString()
 
+  const dateFmtShort = useMemo(() => new Intl.DateTimeFormat(intl, { day: 'numeric', month: 'short', year: 'numeric' }), [intl])
+  const topRef = useRef<HTMLDivElement>(null)
+  function goToHoliday(h: { key: IslamicEventKey; m: number; d: number }) {
+    setMode('hijri'); setHy(todayH.y); setHm(h.m)
+    setSel({ hy: todayH.y, hm: h.m, hd: h.d, greg: hijriToGregorian(todayH.y, h.m, h.d) })
+    setTimeout(() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 40)
+  }
+
   return (
     <div className="stack cal2" data-testid="islamic-calendar">
       <div className="cal2__bar">
@@ -100,7 +110,7 @@ export default function IslamicCalendarTool() {
         <button className="pill" data-testid="cal-today" onClick={goToday}>{s.today}</button>
       </div>
 
-      <div className="cal2__head">
+      <div className="cal2__head" ref={topRef}>
         <button className="cal2__nav" aria-label={s.prev} data-testid="cal-prev" onClick={() => step(-1)}>‹</button>
         <div className="cal2__title">
           <strong data-testid="cal-title">{title}</strong>
@@ -122,7 +132,7 @@ export default function IslamicCalendarTool() {
             <button key={c.greg.toDateString()} className={`cal2__cell ${today ? 'is-today' : ''} ${white ? 'is-white' : ''} ${holiday ? 'is-holiday' : ''} ${sel && sel.greg.toDateString() === c.greg.toDateString() ? 'is-sel' : ''}`}
               data-testid={`cal-day-${c.hm}-${c.hd}`} onClick={() => setSel(c)}>
               <span className="cal2__num">{primary}</span>
-              <span className="cal2__moon" title="">{moonFor(c.hd)}</span>
+              {white ? <span className="cal2__moon" aria-hidden="true">🌕</span> : <span className="cal2__moon" />}
               <span className="cal2__sub-num">{secondary}</span>
               {holiday && <span className="cal2__dot" aria-hidden="true" />}
             </button>
@@ -133,7 +143,7 @@ export default function IslamicCalendarTool() {
       {sel && (
         <div className="cal2__detail" data-testid="cal-detail">
           <strong>{HIJRI_MONTHS[locale][sel.hm - 1]} {sel.hd}, {sel.hy} {locale === 'ar' ? 'هـ' : 'AH'}</strong>
-          <span>{dateFmt.format(sel.greg)} · {moonFor(sel.hd)}</span>
+          <span>{dateFmt.format(sel.greg)}{sel.hd >= 13 && sel.hd <= 15 ? ' · 🌕' : ''}</span>
           {HOLIDAYS[`${sel.hm}-${sel.hd}`] && <span className="cal2__tag cal2__tag--holiday">{s.events[HOLIDAYS[`${sel.hm}-${sel.hd}`]]}</span>}
           {sel.hd >= 13 && sel.hd <= 15 && <span className="cal2__tag cal2__tag--white">{s.whiteDays}</span>}
         </div>
@@ -141,10 +151,21 @@ export default function IslamicCalendarTool() {
 
       <div className="cal2__legend">
         <span><i className="cal2__sw cal2__sw--today" /> {s.todayLegend}</span>
-        <span><i className="cal2__sw cal2__sw--white" /> {s.whiteDays}</span>
+        <span>🌕 {s.whiteDays}</span>
         <span><i className="cal2__sw cal2__sw--holiday" /> {s.holiday}</span>
       </div>
-      <p className="pray__method-note">{s.moonNote}</p>
+
+      <section className="cal2__holidays" data-testid="cal-holidays">
+        <h2 className="cal2__hol-title">{s.holidaysTitle}</h2>
+        {HOLIDAY_LIST.map((h) => (
+          <button key={h.key} className="cal2__hol" data-testid={`cal-hol-${h.key}`} onClick={() => goToHoliday(h)}>
+            <span className="cal2__hol-name">{s.events[h.key]}</span>
+            <span className="cal2__hol-date">
+              {HIJRI_MONTHS[locale][h.m - 1]} {h.d} · {dateFmtShort.format(hijriToGregorian(todayH.y, h.m, h.d))}
+            </span>
+          </button>
+        ))}
+      </section>
     </div>
   )
 }
