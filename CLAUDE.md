@@ -111,6 +111,18 @@ one; update a tool's spec + this file if the approach changes.
 
 Bilingual **Arabic (`/ar`) + English (`/en`)** with locale-prefixed URLs; the
 root `/` redirects based on the user agent's preferred language (leaning English
-unless Arabic is clearly preferred). Arabic is RTL. Note: **QR code is "باركود"
-in Saudi usage** (conflates with barcode — that's expected). _(In progress — see
-task/PR; update this section when it lands.)_
+unless Arabic is the primary language), and a stored choice (`localStorage`
+`bis-locale`) wins over detection. Arabic is RTL (`dir`/font swapped in
+`theme.css`). Note: **QR code is "باركود" in Saudi usage** (conflates with
+barcode — that's expected).
+
+- Strings live in `src/i18n/en.ts` (source-of-truth shape) + `ar.ts`; access via
+  `useLocale()` → `t`. Tool display fields are translated with a tool's `ar`
+  field + central category map (`localizeTool`, `categoryLabel`).
+- All internal links go through `localePath(locale, sub)`. New pages must call
+  `useDocumentMeta(locale, subPath, …)` (sets canonical + hreflang).
+- Adding a tool: also add its `ar` translations in `meta.ts`/`index.ts`, its
+  category to `CATEGORY_LABELS`, and its `/en` + `/ar` URLs to `sitemap.xml`.
+  The prerender script emits both locales automatically.
+- The language-switch popup (`LanguageSuggestion`) shows in the *suggested*
+  language when the UA preference differs from the current locale.
