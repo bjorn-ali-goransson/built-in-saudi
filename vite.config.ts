@@ -36,9 +36,11 @@ function applyHead(html: string, h: Head): string {
     .replace(/<\/head>/, `${hreflangs(h.sub)}</head>`)
 }
 
-// Inject crawlable content into #root; React's createRoot replaces it on mount.
+// Inject crawlable content into #root, but `hidden` so it never paints (avoids a
+// flash of unstyled content). The text stays in the HTML source for crawlers,
+// and React's createRoot replaces the whole block on mount.
 function injectContent(html: string, content: string): string {
-  return html.replace('<div id="root"></div>', `<div id="root">${content}</div>`)
+  return html.replace('<div id="root"></div>', `<div id="root"><div data-ssr hidden>${content}</div></div>`)
 }
 
 function homeContent(locale: Loc): string {

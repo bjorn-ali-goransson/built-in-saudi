@@ -130,3 +130,9 @@ Scored the same way (usability vs infra cost → confidence):
 **Bottom line:** the flat-rate box is worth it, but sequence it — booking + dynamic
 QR are the high-confidence, low-cost wins; the heavy converters are worth it only
 where the browser can't compete, and only with strict privacy hygiene.
+
+## Deferred — needs a backend (parked TODOs)
+These were requested but require infra, so they wait until we stand up the backend:
+- **Prayer-time alerts** (#6) and **"alert me N days before" for Islamic dates** (#8):
+  background/phone notifications when the site is closed need **Web Push (VAPID)**
+  — a small push backend. Local/while-open notifications remain possible client-side.
