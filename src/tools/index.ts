@@ -4,6 +4,7 @@ import { imageFormatConverterTool } from './image-format-converter/meta'
 import { imageCropperTool } from './image-cropper/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
+import { pdfSplitTool } from './pdf-split/meta'
 import { qrCodeTool } from './qr-code/meta'
 import { prayerTimesTool } from './prayer-times/meta'
 import { hijriCalendarTool } from './hijri-calendar/meta'
@@ -44,6 +45,7 @@ export const tools: Tool[] = [
   imageCropperTool,
   imagesToPdfTool,
   pdfMergeTool,
+  pdfSplitTool,
   prayerTimesTool,
   islamicCalendarTool,
   adhkarTool,

@@ -72,7 +72,7 @@ optional [backend worker](./BACKEND.md).
 |------|------|------|----------|--------|
 | [Images → PDF](./tools/images-to-pdf.md) | `/tools/images-to-pdf` | client | T1 | ✅ live |
 | [Merge PDF](./tools/pdf-merge.md) | `/tools/pdf-merge` | client | T1 | ✅ live |
-| [Split PDF](./tools/pdf-split.md) | `/tools/pdf-split` | client | T1 | 📝 |
+| [Split PDF](./tools/pdf-split.md) | `/tools/pdf-split` | client | T1 | ✅ live |
 | PDF → images | `/tools/pdf-to-images` | client | T2 | 🧭 |
 | PDF → text (extract) | `/tools/pdf-to-text` | client | T2 | 🧭 |
 | Rotate / reorder / delete / page numbers | `/tools/pdf-organize` | client | T2 | 🧭 |

@@ -25,6 +25,11 @@ export interface ToolSeo {
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'pdf-split',
+    en: { name: 'Split PDF', description: 'Split a PDF in your browser — extract a page range like 1-3,5 into a new file, or burst into single-page PDFs (ZIP or one by one). Never uploaded.' },
+    ar: { name: 'تقسيم PDF', description: 'قسّم PDF داخل متصفحك — استخرج نطاق صفحات مثل 1-3،5 في ملف جديد، أو فكّكه إلى صفحات مفردة (ZIP أو واحدة تلو الأخرى). لا يُرفع أبدًا.' },
+  },
+  {
     id: 'pdf-merge',
     en: { name: 'Merge PDF', description: 'Merge several PDFs into one in the order you choose — reorder, remove, see the page count. Runs in your browser; your documents are never uploaded.' },
     ar: { name: 'دمج PDF', description: 'ادمج عدة ملفات PDF في ملف واحد بالترتيب — إعادة ترتيب وحذف وعدد صفحات. يعمل داخل متصفحك؛ لا تُرفع مستنداتك أبدًا.' },
