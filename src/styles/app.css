@@ -565,3 +565,6 @@ html { -webkit-tap-highlight-color: transparent; }
 
 /* Alerts help: the actual failure reason (for support/debugging) */
 .pray__help-detail { margin: 0 0 1rem; font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-faint); word-break: break-word; background: var(--sand-100); padding: 0.5rem 0.6rem; border-radius: var(--r-sm); }
+
+/* Alerts dialog: platform sub-heading under the failure message */
+.pray__help-sub { font-weight: 600; margin: 0.2rem 0 0.6rem; color: var(--ink); }

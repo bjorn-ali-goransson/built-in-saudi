@@ -35,6 +35,7 @@ const STR = {
     privacy: 'Computed locally — your location is never uploaded.',
     geoError: 'Couldn’t get your location — please pick a city instead.',
     enableAlerts: 'Enable alerts', alertsOn: 'Alerts on', close: 'Close',
+    alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
     prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
     events: {
@@ -62,6 +63,7 @@ const STR = {
     privacy: 'يُحسب محليًا — لا يُرفع موقعك أبدًا.',
     geoError: 'تعذّر تحديد موقعك — يرجى اختيار مدينة بدلاً من ذلك.',
     enableAlerts: 'تفعيل التنبيهات', alertsOn: 'التنبيهات مفعّلة', close: 'إغلاق',
+    alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
     prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
     events: {
@@ -344,26 +346,27 @@ export default function PrayerTimesTool() {
       <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
 
       {helpOpen && (
-        <AlertsHelpDialog help={alertsHelp(locale)} detail={helpDetail} closeLabel={s.close}
-          onClose={() => setHelpOpen(false)} />
+        <AlertsHelpDialog failedMsg={s.alertsFailed} help={alertsHelp(locale)} detail={helpDetail}
+          closeLabel={s.close} onClose={() => setHelpOpen(false)} />
       )}
     </div>
   )
 }
 
-function AlertsHelpDialog({ help, detail, closeLabel, onClose }: {
-  help: { title: string; steps: string[] }; detail?: string; closeLabel: string; onClose: () => void
+function AlertsHelpDialog({ failedMsg, help, detail, closeLabel, onClose }: {
+  failedMsg: string; help: { title: string; steps: string[] }; detail?: string; closeLabel: string; onClose: () => void
 }) {
   // Portal to <body> so no transformed/animated ancestor can hijack the fixed
   // overlay's containing block — guarantees it centers on the viewport.
   return createPortal(
     <div className="pray__help-overlay" role="dialog" aria-modal="true" data-testid="alerts-help" onClick={onClose}>
       <div className="pray__help" onClick={(e) => e.stopPropagation()}>
-        <h3 className="pray__help-title">{help.title}</h3>
+        <h3 className="pray__help-title">{failedMsg}</h3>
+        {detail && <p className="pray__help-detail" data-testid="alerts-help-detail">{detail}</p>}
+        <p className="pray__help-sub">{help.title}</p>
         <ol className="pray__help-steps">
           {help.steps.map((step, i) => <li key={i}>{step}</li>)}
         </ol>
-        {detail && <p className="pray__help-detail" data-testid="alerts-help-detail">{detail}</p>}
         <button className="btn btn--primary" data-testid="alerts-help-close" onClick={onClose}>{closeLabel}</button>
       </div>
     </div>,
