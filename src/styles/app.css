@@ -363,3 +363,59 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 .pw__strength--strong .pw__strength-label, .pw__strength--excellent .pw__strength-label { color: var(--green-600); }
 .pw__panel { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; display: grid; gap: 1.1rem; }
 .pw__checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem 1rem; }
+
+/* ======================================================================
+   Startpage notification (banner ↔ bell)
+   ====================================================================== */
+.notif {
+  position: fixed; inset-block-end: 1.1rem; inset-inline-start: 1.1rem; z-index: 60;
+  max-width: min(92vw, 360px); display: flex; gap: 0.7rem; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg); padding: 0.9rem 1rem; animation: fadeUp 0.4s ease both;
+}
+.notif__icon { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--green-400) 16%, transparent); color: var(--green-600); }
+.notif__icon svg { width: 20px; height: 20px; }
+.notif__body { flex: 1; min-width: 0; }
+.notif__title { display: block; font-family: var(--font-display); color: var(--green-700); font-size: 1rem; }
+[dir='rtl'] .notif__title { font-family: var(--font-ar); }
+.notif__msg { margin-top: 0.2rem; font-size: 0.85rem; color: var(--ink-soft); line-height: 1.45; }
+.notif__actions { display: flex; flex-direction: column; gap: 0.2rem; }
+.notif__btn { width: 28px; height: 28px; border-radius: 8px; color: var(--ink-faint); font-size: 0.95rem; line-height: 1; display: grid; place-items: center; }
+.notif__btn:hover { background: var(--sand-100); color: var(--ink); }
+.notif-bell {
+  position: fixed; inset-block-end: 1.1rem; inset-inline-start: 1.1rem; z-index: 60;
+  width: 48px; height: 48px; border-radius: 50%; background: var(--green-600); color: var(--sand-100);
+  display: grid; place-items: center; border: 1px solid var(--green-700); box-shadow: var(--shadow-md);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.notif-bell:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.notif-bell svg { width: 22px; height: 22px; }
+
+/* ======================================================================
+   Mobile optimization — native-app feel (#1)
+   ====================================================================== */
+html { -webkit-tap-highlight-color: transparent; }
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .site-footer { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+  .notif, .notif-bell, .lang-hint { inset-block-end: calc(1.1rem + env(safe-area-inset-bottom)); }
+  .wrap { padding-inline: max(clamp(1.1rem, 4vw, 2.5rem), env(safe-area-inset-left)); }
+}
+
+/* Comfortable tap targets on touch devices */
+@media (pointer: coarse) {
+  .btn, .qr__type, .seg__btn, .notif__btn, .tool-search__clear, .lang-toggle { min-height: 42px; }
+  .notif-bell { width: 52px; height: 52px; }
+  input[type='range'] { height: 30px; }
+}
+
+@media (max-width: 560px) {
+  .tool-grid { grid-template-columns: 1fr; }
+  .hero { padding-top: 2.4rem; }
+  .qr__actions { flex-wrap: wrap; }
+  .qr__actions .btn { min-width: 30%; }
+  .notif { max-width: calc(100vw - 2rem); inset-inline: 1rem; }
+  .pray__grid { grid-template-columns: 1fr; }
+  .pw__out-row { flex-direction: column; }
+  .pw__out-row .btn { width: 100%; justify-content: center; }
+}

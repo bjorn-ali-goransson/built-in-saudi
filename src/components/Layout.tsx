@@ -6,6 +6,7 @@ import {
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { LanguageSuggestion } from './LanguageSuggestion'
+import { NotificationBell } from './NotificationBell'
 
 export function Layout() {
   const { lang } = useParams()
@@ -40,6 +41,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
           </Suspense>
         </main>
         <Footer />
+        <NotificationBell />
         <LanguageSuggestion />
         <ScrollRestoration />
       </div>

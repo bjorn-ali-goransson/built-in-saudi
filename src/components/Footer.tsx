@@ -16,9 +16,17 @@ export function Footer() {
           </p>
         </div>
         <nav className="site-footer__links" aria-label="Footer">
-          <Link to={localePath(locale)}>{t.footer.allTools}</Link>
-          <a href="https://github.com/bjorn-ali-goransson/built-in-saudi" target="_blank" rel="noreferrer noopener">
+          <Link to={localePath(locale)} data-testid="footer-all-tools">{t.footer.allTools}</Link>
+          <a href="https://github.com/bjorn-ali-goransson/built-in-saudi" target="_blank" rel="noreferrer noopener" data-testid="footer-github">
             {t.footer.github}
+          </a>
+          <a
+            href="https://github.com/bjorn-ali-goransson/built-in-saudi/issues/new"
+            target="_blank"
+            rel="noreferrer noopener"
+            data-testid="footer-report-issue"
+          >
+            {t.footer.reportIssue}
           </a>
         </nav>
       </div>

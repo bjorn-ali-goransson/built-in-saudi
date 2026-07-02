@@ -35,6 +35,16 @@ export const en = {
     made: 'Made with care in the Kingdom of Saudi Arabia',
     allTools: 'All tools',
     github: 'GitHub',
+    reportIssue: 'Report an issue',
+  },
+
+  notif: {
+    title: 'Say hello 👋',
+    message:
+      'New tools just landed — Prayer Times, a Password Generator and a QR code maker. All free, all private. More on the way.',
+    open: 'Open announcement',
+    minimize: 'Minimize announcement',
+    dismiss: 'Dismiss announcement',
   },
 
   notFound: {
