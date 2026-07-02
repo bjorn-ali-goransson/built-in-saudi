@@ -14,7 +14,7 @@ export function useVersionCheck() {
     let stopped = false
     const check = async () => {
       try {
-        const res = await fetch('/version.json', { cache: 'no-store' })
+        const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
         if (!res.ok) return
         const { build } = await res.json()
         if (!stopped && build && build !== current) {

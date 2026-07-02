@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { KeyIcon } from '../../components/icons'
 
@@ -12,7 +12,7 @@ export const passwordGeneratorTool: Tool = {
   keywords: ['password', 'passphrase', 'random', 'secure', 'generator', 'كلمة المرور'],
   status: 'stable',
   Icon: KeyIcon,
-  component: lazy(() => import('./PasswordGeneratorTool')),
+  component: lazyTool(() => import('./PasswordGeneratorTool')),
   ar: {
     name: 'مولّد كلمات المرور',
     tagline: 'كلمات مرور قوية تُنشأ محليًا على جهازك.',

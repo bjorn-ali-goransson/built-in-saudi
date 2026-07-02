@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { TextIcon } from '../../components/icons'
 
@@ -12,7 +12,7 @@ export const wordCounterTool: Tool = {
   keywords: ['word', 'character', 'count', 'counter', 'text', 'reading time', 'عدد الكلمات'],
   status: 'stable',
   Icon: TextIcon,
-  component: lazy(() => import('./WordCounterTool')),
+  component: lazyTool(() => import('./WordCounterTool')),
   ar: {
     name: 'عدّاد الكلمات والحروف',
     tagline: 'عدّ الكلمات والحروف والجُمل ووقت القراءة مباشرةً.',

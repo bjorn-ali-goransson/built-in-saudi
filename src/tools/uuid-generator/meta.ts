@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { HashIcon } from '../../components/icons'
 
@@ -12,7 +12,7 @@ export const uuidGeneratorTool: Tool = {
   keywords: ['uuid', 'guid', 'id', 'random', 'v4', 'rfc 4122'],
   status: 'stable',
   Icon: HashIcon,
-  component: lazy(() => import('./UuidGeneratorTool')),
+  component: lazyTool(() => import('./UuidGeneratorTool')),
   ar: {
     name: 'مولّد UUID',
     tagline: 'أنشئ معرّفات UUID (v4) بالجملة.',

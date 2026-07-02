@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { MoonIcon } from '../../components/icons'
 
@@ -16,7 +16,7 @@ export const prayerTimesTool: Tool = {
   ],
   status: 'stable',
   Icon: MoonIcon,
-  component: lazy(() => import('./PrayerTimesTool')),
+  component: lazyTool(() => import('./PrayerTimesTool')),
   ar: {
     name: 'مواقيت الصلاة والتقويم الهجري',
     tagline: 'مواقيت الصلاة بطريقة أم القرى، والتاريخ الهجري، ورمضان والعيدان.',

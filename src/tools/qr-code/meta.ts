@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { QrIcon } from '../../components/icons'
 
@@ -16,7 +16,7 @@ export const qrCodeTool: Tool = {
   ],
   status: 'stable',
   Icon: QrIcon,
-  component: lazy(() => import('./QrCodeTool')),
+  component: lazyTool(() => import('./QrCodeTool')),
   ar: {
     name: 'مولّد الباركود',
     tagline: 'أنشئ باركود واضحًا للروابط والواي فاي والبريد والمزيد.',

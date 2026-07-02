@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { CalendarIcon } from '../../components/icons'
 
@@ -12,7 +12,7 @@ export const dateDiffTool: Tool = {
   keywords: ['date', 'difference', 'duration', 'days between', 'age', 'how many days', 'الفرق بين تاريخين'],
   status: 'stable',
   Icon: CalendarIcon,
-  component: lazy(() => import('./DateDiffTool')),
+  component: lazyTool(() => import('./DateDiffTool')),
   ar: {
     name: 'الفرق بين تاريخين',
     tagline: 'كم المدة بين تاريخين — سنوات وأشهر وأيام.',

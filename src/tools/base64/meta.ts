@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
 import { CodeIcon } from '../../components/icons'
 
@@ -12,7 +12,7 @@ export const base64Tool: Tool = {
   keywords: ['base64', 'encode', 'decode', 'url-safe', 'data uri', 'ترميز'],
   status: 'stable',
   Icon: CodeIcon,
-  component: lazy(() => import('./Base64Tool')),
+  component: lazyTool(() => import('./Base64Tool')),
   ar: {
     name: 'ترميز وفكّ Base64',
     tagline: 'رمّز وفكّ نصوص Base64 — بدعم كامل لـ UTF-8.',
