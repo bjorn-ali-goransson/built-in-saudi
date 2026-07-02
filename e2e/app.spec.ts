@@ -92,6 +92,16 @@ test.describe('tools', () => {
     await expect(page.getByTestId('istikhara-dua')).toContainText('اللَّهُمَّ')
     await expect(page.getByText(/al-Bukhārī/)).toBeVisible()
   })
+
+  test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
+    await page.goto('/en/tools/adhkar')
+    const kursi = page.getByTestId('dhikr-kursi')
+    await expect(kursi).toBeVisible()
+    await kursi.click() // count 1 → done
+    await expect(kursi).toContainText('Done')
+    await page.getByTestId('adhkar-evening').click()
+    await expect(page.getByTestId('dhikr-amsayna-evening')).toBeVisible()
+  })
 })
 
 test.describe('shell', () => {

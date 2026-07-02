@@ -249,4 +249,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/istikhara"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/istikhara"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/tools/adhkar</loc>
+    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/adhkar"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/adhkar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/adhkar"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/tools/adhkar</loc>
+    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/adhkar"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/adhkar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/adhkar"/>
+  </url>
 </urlset>

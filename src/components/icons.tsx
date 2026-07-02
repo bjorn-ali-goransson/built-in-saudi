@@ -190,6 +190,15 @@ export function GridIcon({ className }: P) {
   )
 }
 
+export function SunHorizonIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 18h18" /><path d="M6.5 18a5.5 5.5 0 0 1 11 0" />
+      <path d="M12 5v2M5 9l1.4 1.4M19 9l-1.4 1.4M2.5 14h1.5M20 14h1.5" />
+    </svg>
+  )
+}
+
 export function CompassStarIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
