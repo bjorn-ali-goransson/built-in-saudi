@@ -16,7 +16,7 @@ export function ToolPage() {
 }
 
 function LoadedTool({ tool }: { tool: NonNullable<ReturnType<typeof getTool>> }) {
-  useDocumentMeta(tool.name, tool.description)
+  useDocumentMeta(tool.name, tool.description, `/tools/${tool.id}`)
   const ToolComponent = tool.component!
   const Icon = tool.Icon
 
