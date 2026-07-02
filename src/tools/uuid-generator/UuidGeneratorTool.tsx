@@ -56,20 +56,20 @@ export default function UuidGeneratorTool() {
   return (
     <div className="stack" data-testid="uuid-generator">
       <div className="panel">
-        <div className="qr__control">
+        <div className="grid gap-[0.5rem] [&>label]:text-[0.82rem] [&>label]:font-semibold [&>label]:text-ink-soft [&>label]:flex [&>label]:justify-between">
           <label htmlFor="uuid-count">{s.count} <span className="muted">{count}</span></label>
           <input id="uuid-count" type="range" min={1} max={100} value={count}
             data-testid="uuid-count" aria-label={s.count}
             onChange={(e) => setCount(Number(e.target.value))} />
         </div>
-        <div className="pw__checks">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-[0.6rem_1rem]">
           <label className="check"><input type="checkbox" checked={upper} data-testid="uuid-uppercase" onChange={(e) => setUpper(e.target.checked)} /> {s.uppercase}</label>
           <label className="check"><input type="checkbox" checked={noDashes} data-testid="uuid-nodashes" onChange={(e) => setNoDashes(e.target.checked)} /> {s.noDashes}</label>
           <label className="check"><input type="checkbox" checked={braces} data-testid="uuid-braces" onChange={(e) => setBraces(e.target.checked)} /> {s.braces}</label>
         </div>
         <div className="stack__actions">
           <button className="btn" onClick={regenerate} aria-label={s.regenerateAria} data-testid="uuid-regenerate">
-            <DownloadIcon className="pw__regen-icon" /> {s.regenerate}
+            <DownloadIcon className="rotate-90" /> {s.regenerate}
           </button>
           <button className="btn btn--primary" onClick={copyAll} data-testid="uuid-copy">
             <CopyIcon /> {copied ? s.copied : s.copyAll}
@@ -81,7 +81,7 @@ export default function UuidGeneratorTool() {
       <textarea id="uuid-output" className="input input--area code-out" data-testid="uuid-output"
         readOnly rows={Math.min(count, 12)} dir="ltr" value={list.join('\n')} />
 
-      <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
+      <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </div>
   )
 }

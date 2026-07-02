@@ -100,7 +100,7 @@ export default function LoremTool() {
         </label>
       )}
 
-      <div className="pw__actions">
+      <div className="flex gap-[0.6rem] mt-[0.6rem] [&>.btn]:flex-1 [&>.btn]:justify-center">
         <button className="btn" data-testid="lorem-regen" onClick={() => setSeed((v) => v + 1)}><RefreshIcon /> {s.regenerate}</button>
         <button className="btn btn--primary" data-testid="lorem-copy" onClick={copy}><CopyIcon /> {copied ? s.copied : s.copy}</button>
       </div>

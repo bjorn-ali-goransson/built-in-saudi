@@ -174,31 +174,6 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 /* ======================================================================
    Password Generator tool
    ====================================================================== */
-.pw { display: flex; flex-direction: column; gap: 1.3rem; }
-.pw__out { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.2rem; }
-.pw__out-row { display: flex; gap: 0.6rem; align-items: stretch; margin-top: 0.4rem; flex-wrap: wrap; }
-.pw__value {
-  flex: 1; min-width: 12rem; display: flex; align-items: center; font-family: var(--font-mono);
-  font-size: 1.15rem; word-break: break-all; padding: 0.7rem 0.9rem;
-  background: var(--sand-100); border: 1px solid var(--line-soft); border-radius: var(--r-sm); color: var(--ink);
-}
-.pw__empty { color: var(--danger); font-family: var(--font-body); font-size: 0.95rem; }
-.pw__regen { flex: none; padding-inline: 0.8rem; }
-.pw__regen-icon { transform: rotate(90deg); }
-.pw__strength { display: flex; align-items: center; gap: 0.7rem; margin-top: 0.9rem; }
-.pw__strength-bar { flex: 1; height: 7px; border-radius: 999px; background: var(--sand-200); overflow: hidden; }
-.pw__strength-bar > span { display: block; height: 100%; border-radius: 999px; transition: width 0.25s, background 0.25s; }
-.pw__strength-label { font-size: 0.82rem; font-weight: 600; font-family: var(--font-mono); white-space: nowrap; }
-[dir='rtl'] .pw__strength-label { font-family: var(--font-ar); }
-.pw__strength--weak .pw__strength-bar > span { width: 25%; background: var(--danger); }
-.pw__strength--fair .pw__strength-bar > span { width: 50%; background: var(--gold-500); }
-.pw__strength--strong .pw__strength-bar > span { width: 78%; background: var(--green-500); }
-.pw__strength--excellent .pw__strength-bar > span { width: 100%; background: var(--green-600); }
-.pw__strength--weak .pw__strength-label { color: var(--danger); }
-.pw__strength--fair .pw__strength-label { color: var(--gold-500); }
-.pw__strength--strong .pw__strength-label, .pw__strength--excellent .pw__strength-label { color: var(--green-600); }
-.pw__panel { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; display: grid; gap: 1.1rem; }
-.pw__checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem 1rem; }
 
 /* ======================================================================
    Startpage notification (banner ↔ bell)
@@ -465,8 +440,6 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__check { width: 22px; height: 22px; accent-color: var(--green-600); flex: none; }
 
 /* Password: regenerate + copy side by side */
-.pw__actions { display: flex; gap: 0.6rem; margin-top: 0.6rem; }
-.pw__actions .btn { flex: 1; justify-content: center; }
 
 /* Prayer list: show-more + date selector row */
 .pray__more { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.8rem; }

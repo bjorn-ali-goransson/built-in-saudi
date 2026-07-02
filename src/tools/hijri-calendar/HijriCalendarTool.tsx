@@ -123,7 +123,7 @@ export default function HijriCalendarTool() {
         </section>
       </div>
 
-      <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
+      <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </div>
   )
 }

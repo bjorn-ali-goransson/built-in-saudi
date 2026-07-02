@@ -36,11 +36,11 @@ export function ErrorPage() {
   }, [msg])
 
   return (
-    <div className="wrap message-page" data-testid="error-page">
-      <p className="message-page__code">⚠</p>
-      <h1 className="message-page__title">{t.title}</h1>
-      <p className="message-page__body">{t.body}</p>
-      <div className="message-page__actions">
+    <div className="mx-auto max-w-[40rem] px-[clamp(1.1rem,4vw,2.5rem)] text-center py-[clamp(4rem,12vw,8rem)]" data-testid="error-page">
+      <p className="font-mono font-bold tracking-[0.2em] text-gold-500">⚠</p>
+      <h1 className="text-[clamp(2rem,6vw,3rem)] mt-[0.5rem]">{t.title}</h1>
+      <p className="text-ink-soft mx-auto mt-4 mb-8 text-[1.05rem]">{t.body}</p>
+      <div className="flex gap-[0.7rem] justify-center flex-wrap">
         <button className="btn btn--primary" data-testid="error-reload"
           onClick={() => window.location.reload()}>{t.reload}</button>
         <Link to={localePath(locale)} className="btn">{t.home}</Link>

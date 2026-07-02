@@ -87,36 +87,39 @@ export default function PasswordGeneratorTool() {
   }
 
   const level = strength(bits)
+  const st = STRENGTH[level]
 
   return (
-    <div className="pw" data-testid="password-generator">
-      <div className="pw__out" data-testid="pw-output-wrap">
+    <div className="flex flex-col gap-[1.3rem]" data-testid="password-generator">
+      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.2rem]" data-testid="pw-output-wrap">
         <label className="field__label" htmlFor="pw-output">{s.output}</label>
-        <div className="pw__out-row">
-          <output id="pw-output" className="pw__value" data-testid="pw-output" dir="ltr">
-            {noSet ? <span className="pw__empty">{s.empty}</span> : value}
+        <div className="flex gap-[0.6rem] items-stretch mt-[0.4rem] flex-wrap">
+          <output id="pw-output" className="flex-1 min-w-[12rem] flex items-center font-mono text-[1.15rem] break-all px-[0.9rem] py-[0.7rem] bg-sand-100 border border-[color:var(--line-soft)] rounded-[5px] text-ink" data-testid="pw-output" dir="ltr">
+            {noSet ? <span className="text-[color:var(--danger)] font-body text-[0.95rem]">{s.empty}</span> : value}
           </output>
         </div>
-        <div className="pw__actions">
-          <button className="btn pw__regen" onClick={regenerate} disabled={noSet}
+        <div className="flex gap-[0.6rem] mt-[0.6rem]">
+          <button className="btn flex-none px-[0.8rem]" onClick={regenerate} disabled={noSet}
             aria-label={s.regenerateAria} title={s.regenerate} data-testid="pw-regenerate">
             <RefreshIcon /> {s.regenerate}
           </button>
-          <button className="btn btn--primary" onClick={copy} disabled={noSet || !value}
+          <button className="btn btn--primary flex-1 justify-center" onClick={copy} disabled={noSet || !value}
             aria-label={s.copy} data-testid="pw-copy">
             <CopyIcon /> {copied ? s.copied : s.copy}
           </button>
         </div>
         {!noSet && (
-          <div className={`pw__strength pw__strength--${level}`} data-testid="pw-strength"
+          <div className="flex items-center gap-[0.7rem] mt-[0.9rem]" data-testid="pw-strength"
             role="status" aria-label={`${s.strength}: ${s.levels[level]}`}>
-            <span className="pw__strength-bar"><span /></span>
-            <span className="pw__strength-label">{s.levels[level]} · {s.bits(bits)}</span>
+            <span className="flex-1 h-[7px] rounded-full bg-sand-200 overflow-hidden">
+              <span className="block h-full rounded-full transition-[width,background] duration-[250ms]" style={{ width: st.w, background: st.bar }} />
+            </span>
+            <span className={`text-[0.82rem] font-semibold font-mono whitespace-nowrap rtl:font-ar ${st.label}`}>{s.levels[level]} · {s.bits(bits)}</span>
           </div>
         )}
       </div>
 
-      <div className="pw__panel">
+      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.3rem] grid gap-[1.1rem]">
         <div className="seg" role="group" aria-label={s.strength}>
           {(['password', 'passphrase'] as Mode[]).map((m) => (
             <button key={m} className={`seg__btn ${mode === m ? 'is-active' : ''}`}
@@ -127,13 +130,13 @@ export default function PasswordGeneratorTool() {
 
         {mode === 'password' ? (
           <>
-            <div className="qr__control">
+            <div className={CONTROL}>
               <label htmlFor="pw-length">{s.length} <span className="muted">{length}</span></label>
               <input id="pw-length" type="range" min={6} max={64} value={length}
                 data-testid="pw-length" aria-label={s.length}
                 onChange={(e) => setLength(Number(e.target.value))} />
             </div>
-            <div className="pw__checks">
+            <div className={CHECKS}>
               <Toggle label={s.lowercase} checked={lower} onChange={setLower} testid="pw-lower" />
               <Toggle label={s.uppercase} checked={upper} onChange={setUpper} testid="pw-upper" />
               <Toggle label={s.digits} checked={digits} onChange={setDigits} testid="pw-digits" />
@@ -143,7 +146,7 @@ export default function PasswordGeneratorTool() {
           </>
         ) : (
           <>
-            <div className="qr__control">
+            <div className={CONTROL}>
               <label htmlFor="pw-words">{s.words} <span className="muted">{words}</span></label>
               <input id="pw-words" type="range" min={3} max={8} value={words}
                 data-testid="pw-words" aria-label={s.words}
@@ -158,7 +161,7 @@ export default function PasswordGeneratorTool() {
                 <option value=".">{s.sepDot}</option>
               </select>
             </label>
-            <div className="pw__checks">
+            <div className={CHECKS}>
               <Toggle label={s.capitalize} checked={capitalize} onChange={setCapitalize} testid="pw-capitalize" />
               <Toggle label={s.addNumber} checked={addNumber} onChange={setAddNumber} testid="pw-number" />
             </div>
@@ -166,9 +169,18 @@ export default function PasswordGeneratorTool() {
         )}
       </div>
 
-      <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
+      <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </div>
   )
+}
+
+const CONTROL = 'grid gap-[0.5rem] [&>label]:text-[0.82rem] [&>label]:font-semibold [&>label]:text-ink-soft [&>label]:flex [&>label]:justify-between'
+const CHECKS = 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-[0.6rem_1rem]'
+const STRENGTH: Record<Strength, { w: string; bar: string; label: string }> = {
+  weak: { w: '25%', bar: 'var(--danger)', label: 'text-[color:var(--danger)]' },
+  fair: { w: '50%', bar: 'var(--gold-500)', label: 'text-gold-500' },
+  strong: { w: '78%', bar: 'var(--green-500)', label: 'text-green-600' },
+  excellent: { w: '100%', bar: 'var(--green-600)', label: 'text-green-600' },
 }
 
 function Toggle({ label, checked, onChange, testid }: {
