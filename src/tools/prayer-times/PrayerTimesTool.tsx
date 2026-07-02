@@ -132,11 +132,6 @@ export default function PrayerTimesTool() {
   const [showMore, setShowMore] = useState(false)
   const dateRef = useRef<HTMLInputElement>(null)
 
-  function stepDay(delta: number) {
-    const base = viewDateStr ? new Date(`${viewDateStr}T12:00:00`) : new Date()
-    base.setDate(base.getDate() + delta)
-    setViewDateStr(`${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`)
-  }
   function openChoose() {
     const el = dateRef.current
     if (!el) return
@@ -419,7 +414,6 @@ export default function PrayerTimesTool() {
           <span className="pray__viewdate" data-testid="pray-viewdate">{weekdayFmt.format(new Date(`${viewDateStr}T12:00:00`))}</span>
         )}
         <button className="pill" data-testid="pray-more" onClick={() => setShowMore((v) => !v)}>{showMore ? s.showLess : s.showMore}</button>
-        <button className="pill" data-testid="pray-plusday" onClick={() => stepDay(1)}>{s.plusDay}</button>
         <button className="pill" data-testid="pray-choose" onClick={openChoose}>{s.choose}</button>
         {!isLive && <button className="pill pill--accent" data-testid="pray-today" onClick={() => setViewDateStr('')}>{s.today}</button>}
         <input ref={dateRef} type="date" className="pray__date-hidden" value={viewDateStr} data-testid="pray-date"
