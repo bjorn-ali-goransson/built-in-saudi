@@ -122,6 +122,8 @@ Tasks are tracked as GitHub issues (repo `bjorn-ali-goransson/built-in-saudi`).
   for direction.
 - Implement the owner's issues, then close with a short comment **signed as
   yourself**: `— 🤖 Claude (via @bjorn-ali-goransson)` (uses the owner's token).
+  When you close an issue via your own comment, **add the `closed-by-claude`
+  label** (`gh issue edit <n> --add-label closed-by-claude`).
 - If an issue is blocked awaiting the owner's input, close it with a note asking
   them to **comment and reopen** when ready (keeps the open queue actionable).
 - Adding a tool = open an issue, implement, close it (see "How to add a tool").
