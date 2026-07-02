@@ -25,7 +25,7 @@ function LoadedTool({ tool }: { tool: Tool }) {
 
   const ToolComponent = tool.component!
   return (
-    <div className="tool-page wrap">
+    <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] animate-[fadeUp_0.5s_ease_both]">
       <ToolComponent />
     </div>
   )
