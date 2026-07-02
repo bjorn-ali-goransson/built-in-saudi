@@ -26,7 +26,7 @@ interface Head { locale: Loc; dir: string; title: string; desc: string; canonica
 
 function applyHead(html: string, h: Head): string {
   return html
-    .replace(/<html[^>]*>/, `<html lang="${h.locale}" dir="${h.dir}">`)
+    .replace(/<html[^>]*>/, `<html lang="${h.locale}" dir="${h.dir}" translate="no">`)
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(h.title)}</title>`)
     .replace(/(<meta name="description" content=")[^"]*(")/, `$1${escAttr(h.desc)}$2`)
     .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${h.canonical}$2`)
