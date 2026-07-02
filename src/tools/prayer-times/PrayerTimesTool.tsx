@@ -314,7 +314,7 @@ export default function PrayerTimesTool() {
         </span>
         <div className="pray__hero-actions">
           <button className="pray__hero-pill" data-testid="loc-chip"
-            onClick={() => { setPendingCity(cityId || DEFAULT_CITY.id); setShowLocPicker(true) }}>
+            onClick={() => { setPendingCity(cityId); setShowLocPicker(true) }}>
             <LocPin /> <span className="pray__hero-pill-name">{loc.label}</span>
             <span className="pray__loc-caret" aria-hidden="true">▾</span>
           </button>

@@ -639,3 +639,6 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__daysep::before, .pray__daysep::after { content: ''; flex: 1; height: 1px; background: var(--line-soft); }
 .pray__daysep span { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
 [dir='rtl'] .pray__daysep span { font-family: var(--font-ar); letter-spacing: 0; }
+
+/* Center the sheet action buttons' text */
+.sheet__actions .btn { justify-content: center; text-align: center; }
