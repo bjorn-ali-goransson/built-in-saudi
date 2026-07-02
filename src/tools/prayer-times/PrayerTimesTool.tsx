@@ -3,7 +3,7 @@ import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { CITIES, DEFAULT_CITY } from './cities'
 import {
-  gregorianToHijri, hijriToGregorian, formatHijri, upcomingEvents,
+  gregorianToHijri, hijriToGregorian, formatHijri, eventsForHijriYear,
   HIJRI_MONTHS, type IslamicEventKey,
 } from './islamic'
 
@@ -22,7 +22,12 @@ const STR = {
     prevDay: 'Previous day', nextDay: 'Next day',
     inDays: (n: number) => `in ${n} ${n === 1 ? 'day' : 'days'}`,
     daysAgo: (n: number) => `${n} ${n === 1 ? 'day' : 'days'} ago`,
-    upcoming: 'Upcoming Islamic dates',
+    inMonths: (n: number) => `in ${n} ${n === 1 ? 'month' : 'months'}`,
+    monthsAgo: (n: number) => `${n} ${n === 1 ? 'month' : 'months'} ago`,
+    inHours: (n: number) => `in ${n} ${n === 1 ? 'hour' : 'hours'}`,
+    hoursAgo: (n: number) => `${n} ${n === 1 ? 'hour' : 'hours'} ago`,
+    soon: 'now', hijriYear: 'Hijri year', prevYear: 'Previous year', nextYear: 'Next year', thisYear: 'This year',
+    upcoming: 'Islamic dates',
     privacy: 'Computed locally — your location is never uploaded.',
     geoError: 'Couldn’t get your location — please pick a city instead.',
     prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
@@ -42,7 +47,12 @@ const STR = {
     prevDay: 'اليوم السابق', nextDay: 'اليوم التالي',
     inDays: (n: number) => `بعد ${n} يوم`,
     daysAgo: (n: number) => `قبل ${n} يوم`,
-    upcoming: 'المناسبات الإسلامية القادمة',
+    inMonths: (n: number) => `بعد ${n} شهر`,
+    monthsAgo: (n: number) => `قبل ${n} شهر`,
+    inHours: (n: number) => `بعد ${n} ساعة`,
+    hoursAgo: (n: number) => `قبل ${n} ساعة`,
+    soon: 'الآن', hijriYear: 'السنة الهجرية', prevYear: 'السنة السابقة', nextYear: 'السنة التالية', thisYear: 'هذه السنة',
+    upcoming: 'المناسبات الإسلامية',
     privacy: 'يُحسب محليًا — لا يُرفع موقعك أبدًا.',
     geoError: 'تعذّر تحديد موقعك — يرجى اختيار مدينة بدلاً من ذلك.',
     prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
@@ -161,7 +171,23 @@ export default function PrayerTimesTool() {
   }
 
   const hijriToday = formatHijri(now, locale)
-  const events = useMemo(() => upcomingEvents(now), [dayKey])
+  const [hijriYear, setHijriYear] = useState(() => gregorianToHijri(new Date()).y)
+  const events = useMemo(() => eventsForHijriYear(hijriYear), [hijriYear])
+
+  const relTime = (target: Date): string => {
+    const diff = target.getTime() - now.getTime()
+    const absDays = Math.round(Math.abs(diff) / 86400000)
+    const future = diff >= 0
+    if (absDays === 0) {
+      const hrs = Math.round(Math.abs(diff) / 3600000)
+      return hrs === 0 ? s.soon : future ? s.inHours(hrs) : s.hoursAgo(hrs)
+    }
+    if (absDays >= 60) {
+      const months = Math.round(absDays / 30.44)
+      return future ? s.inMonths(months) : s.monthsAgo(months)
+    }
+    return future ? s.inDays(absDays) : s.daysAgo(absDays)
+  }
 
   return (
     <div className="pray">
@@ -222,14 +248,26 @@ export default function PrayerTimesTool() {
         <Converter locale={locale} s={s} dateFmt={dateFmt} />
 
         <section className="pray__card">
-          <div className="pray__card-head"><h2>{s.upcoming}</h2></div>
-          <ul className="pray__events">
+          <div className="pray__card-head">
+            <h2>{s.upcoming}</h2>
+            <div className="pray__year" role="group" aria-label={s.hijriYear}>
+              <button className="btn" aria-label={s.prevYear} data-testid="year-prev"
+                onClick={() => setHijriYear((y) => y - 1)}>−</button>
+              <span className="pray__year-num" data-testid="year-value">{hijriYear}</span>
+              <button className="btn" aria-label={s.nextYear} data-testid="year-next"
+                onClick={() => setHijriYear((y) => y + 1)}>+</button>
+              <button className="btn" data-testid="year-this"
+                onClick={() => setHijriYear(gregorianToHijri(new Date()).y)}>{s.thisYear}</button>
+            </div>
+          </div>
+          <ul className="pray__events" data-testid="events">
             {events.map((ev) => (
-              <li key={ev.key} className="pray__event">
+              <li key={ev.key} className="pray__event"
+                title={`${dateFmt.format(ev.date)} · ${formatHijri(ev.date, locale)}`}>
                 <span className="pray__event-name">{s.events[ev.key]}</span>
                 <span className="pray__event-date">
                   {dateFmt.format(ev.date)}
-                  <span className="pray__event-hijri">{formatHijri(ev.date, locale)}</span>
+                  <span className="pray__event-hijri">{relTime(ev.date)}</span>
                 </span>
               </li>
             ))}

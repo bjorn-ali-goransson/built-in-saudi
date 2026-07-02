@@ -460,3 +460,8 @@ html { -webkit-tap-highlight-color: transparent; }
 .dd__hero { text-align: center; font-family: var(--font-display); font-size: clamp(1.5rem, 5vw, 2.3rem); color: var(--green-700); padding: 1.3rem; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
 [dir='rtl'] .dd__hero { font-family: var(--font-ar); }
 @media (max-width: 560px) { .dd__inputs { grid-template-columns: 1fr; } .dd__swap { justify-self: center; } }
+
+/* Islamic dates: year picker (#8) */
+.pray__year { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.pray__year .btn { padding: 0.35rem 0.65rem; min-width: 2.2rem; justify-content: center; }
+.pray__year-num { font-family: var(--font-mono); font-weight: 700; color: var(--green-700); min-width: 3ch; text-align: center; }

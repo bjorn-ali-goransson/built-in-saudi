@@ -63,6 +63,13 @@ const EVENTS: { key: IslamicEventKey; m: number; d: number }[] = [
 
 export interface UpcomingEvent { key: IslamicEventKey; date: Date }
 
+/** All Islamic events for a specific Hijri year, sorted by Gregorian date. */
+export function eventsForHijriYear(hy: number): UpcomingEvent[] {
+  return EVENTS
+    .map((ev) => ({ key: ev.key, date: hijriToGregorian(hy, ev.m, ev.d) }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+}
+
 /** The next occurrence (>= today) of each Islamic event, sorted by date. */
 export function upcomingEvents(from: Date): UpcomingEvent[] {
   const today = new Date(from.getFullYear(), from.getMonth(), from.getDate())
