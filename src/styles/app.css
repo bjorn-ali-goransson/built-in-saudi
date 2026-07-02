@@ -53,81 +53,16 @@
 .hero__badges svg { width: 19px; height: 19px; color: var(--green-500); }
 
 /* ── Catalog ─────────────────────────────────────── */
-.catalog { padding-bottom: clamp(3rem, 8vw, 5.5rem); }
-.catalog__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.7rem; }
-.catalog__title { font-size: clamp(1.6rem, 4vw, 2.3rem); }
-.catalog__count { font-family: var(--font-body); font-size: 0.82rem; color: var(--ink-faint); letter-spacing: 0.02em; }
 
 /* Fuzzy search */
-.tool-search {
-  position: relative; display: flex; align-items: center; gap: 0.6rem;
-  margin-bottom: 1.5rem; padding: 0.15rem 0.9rem;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: 999px; box-shadow: var(--shadow-sm);
-  transition: border-color 0.16s, box-shadow 0.16s;
-}
-.tool-search:focus-within { border-color: var(--green-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green-500) 18%, transparent); }
-.tool-search__icon { width: 20px; height: 20px; color: var(--ink-faint); flex: none; }
-.tool-search__input {
-  flex: 1; border: none; background: none; outline: none;
-  font: inherit; font-size: 1rem; color: var(--ink); padding: 0.7rem 0;
-}
-.tool-search__input::placeholder { color: var(--ink-faint); }
-.tool-search__input::-webkit-search-decoration,
-.tool-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
-.tool-search__clear {
-  flex: none; width: 24px; height: 24px; border-radius: 999px; font-size: 0.8rem;
-  color: var(--ink-faint); display: grid; place-items: center;
-  transition: background 0.15s, color 0.15s;
-}
-.tool-search__clear:hover { background: var(--sand-200); color: var(--ink); }
-.tool-search__empty { padding: 2.5rem 0; color: var(--ink-soft); font-size: 1.05rem; }
 
-.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 1.1rem; }
 
 /* ── Tool card ───────────────────────────────────── */
-.tool-card {
-  position: relative; display: flex; flex-direction: column; gap: 0.55rem;
-  padding: 1.35rem 1.35rem 1.15rem; text-decoration: none; color: var(--ink);
-  background: var(--surface); border: 1px solid var(--line-soft);
-  border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
-  transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-  overflow: hidden; isolation: isolate;
-}
-.tool-card::before {
-  content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
-  background: var(--gold-400);
-  transform: scaleX(0); transform-origin: left; transition: transform 0.28s ease; z-index: 2;
-}
-.tool-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--green-500) 30%, transparent); }
-.tool-card:hover::before { transform: scaleX(1); }
 
-.tool-card__top { display: flex; align-items: center; justify-content: space-between; }
-.tool-card__num { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: color-mix(in srgb, var(--ink) 30%, transparent); letter-spacing: 0.05em; }
 
-.tool-card__icon {
-  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px;
-  background: color-mix(in srgb, var(--green-400) 12%, transparent);
-  color: var(--green-600); margin-top: 0.25rem;
-  transition: background 0.22s, color 0.22s;
-}
-.tool-card__icon svg { width: 24px; height: 24px; }
-.tool-card:hover .tool-card__icon { background: var(--green-600); color: var(--sand-100); }
 
-.tool-card__name { font-size: 1.18rem; font-weight: 600; margin-top: 0.35rem; }
-.tool-card__tagline { font-size: 0.92rem; color: var(--ink-soft); line-height: 1.45; flex: 1; }
 
-.tool-card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line-soft); }
-.tool-card__cat { font-family: var(--font-body); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
-.tool-card__go { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.86rem; color: var(--green-600); }
-.tool-card__arrow { width: 16px; height: 16px; transition: transform 0.2s; }
-.tool-card:hover .tool-card__arrow { transform: translateX(3px); }
 
-.tool-card--soon { background: color-mix(in srgb, var(--sand-100) 60%, var(--surface)); border-style: dashed; border-color: var(--line); cursor: default; box-shadow: none; }
-.tool-card--soon:hover { transform: none; box-shadow: none; border-color: var(--line); }
-.tool-card--soon::before { display: none; }
-.tool-card--soon .tool-card__name, .tool-card--soon .tool-card__icon { color: var(--ink-faint); }
-.tool-card--soon .tool-card__icon { background: color-mix(in srgb, var(--ink) 6%, transparent); }
 
 /* ── Tool page ───────────────────────────────────── */
 .tool-page { padding: clamp(1.5rem, 4vw, 2.5rem) 0 clamp(1.5rem, 4vw, 2.5rem); animation: fadeUp 0.5s ease both; }
@@ -224,7 +159,6 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 
 /* Mono labels that may carry Arabic text need the Arabic face in RTL. */
 [dir='rtl'] .catalog__count,
-[dir='rtl'] .tool-card__cat,
 [dir='rtl'] .pill,
 [dir='rtl'] .hero__kicker,
 [dir='rtl'] .qr__style legend,
@@ -233,9 +167,6 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 
 /* Directional flips */
 [dir='rtl'] .hero__title em::after { background: var(--gold-400); }
-[dir='rtl'] .tool-card::before { transform-origin: right; }
-[dir='rtl'] .tool-card__arrow { transform: scaleX(-1); }
-[dir='rtl'] .tool-card:hover .tool-card__arrow { transform: scaleX(-1) translateX(3px); }
 
 /* Language toggle in the header */
 
@@ -753,7 +684,6 @@ html { -webkit-tap-highlight-color: transparent; }
 
 /* Home is just the apps now (hero copy removed) */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.catalog--home { padding-top: clamp(1.2rem, 4vw, 2rem); }
 
 /* Islamic calendar — holidays list */
 .cal2__holidays { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }

@@ -34,15 +34,15 @@ export function HomePage() {
 
   return (
     <>
-      <section className="catalog catalog--home wrap" aria-labelledby="catalog-title">
+      <section className="wrap pt-[clamp(1.2rem,4vw,2rem)] pb-[clamp(3rem,8vw,5.5rem)]" aria-labelledby="catalog-title">
         <h1 id="catalog-title" className="sr-only">{t.hero.title1} {t.hero.title2}</h1>
 
-        <div className="tool-search" role="search">
-          <SearchIcon className="tool-search__icon" />
+        <div className="tool-search relative flex items-center gap-[0.6rem] mb-[1.5rem] py-[0.15rem] px-[0.9rem] bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-sm)] transition-[border-color,box-shadow] duration-150 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--green-500)_18%,transparent)]" role="search">
+          <SearchIcon className="w-5 h-5 text-ink-faint flex-none" />
           <input
             ref={inputRef}
             type="search"
-            className="tool-search__input"
+            className="tool-search__input flex-1 border-none bg-transparent outline-none font-body text-[1rem] text-ink py-[0.7rem] placeholder:text-ink-faint [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
             placeholder={t.catalog.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -52,7 +52,7 @@ export function HomePage() {
           {query && (
             <button
               type="button"
-              className="tool-search__clear"
+              className="flex-none w-6 h-6 rounded-full text-[0.8rem] text-ink-faint grid place-items-center transition-[background,color] duration-150 hover:bg-sand-200 hover:text-ink"
               onClick={() => { setQuery(''); inputRef.current?.focus() }}
               aria-label={t.catalog.clear}
             >
@@ -62,13 +62,13 @@ export function HomePage() {
         </div>
 
         {results.length > 0 ? (
-          <div className="tool-grid">
+          <div className="tool-grid grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem]">
             {results.map(({ tool, i }) => (
               <ToolCard key={tool.id} tool={tool} index={i} />
             ))}
           </div>
         ) : (
-          <p className="tool-search__empty">{t.catalog.empty(query)}</p>
+          <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
         )}
       </section>
     </>
