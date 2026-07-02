@@ -78,6 +78,31 @@
 .catalog__title { font-size: clamp(1.6rem, 4vw, 2.3rem); }
 .catalog__count { font-family: var(--font-mono); font-size: 0.82rem; color: var(--ink-faint); letter-spacing: 0.02em; }
 
+/* Fuzzy search */
+.tool-search {
+  position: relative; display: flex; align-items: center; gap: 0.6rem;
+  margin-bottom: 1.5rem; padding: 0.15rem 0.9rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; box-shadow: var(--shadow-sm);
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+.tool-search:focus-within { border-color: var(--green-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green-500) 18%, transparent); }
+.tool-search__icon { width: 20px; height: 20px; color: var(--ink-faint); flex: none; }
+.tool-search__input {
+  flex: 1; border: none; background: none; outline: none;
+  font: inherit; font-size: 1rem; color: var(--ink); padding: 0.7rem 0;
+}
+.tool-search__input::placeholder { color: var(--ink-faint); }
+.tool-search__input::-webkit-search-decoration,
+.tool-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.tool-search__clear {
+  flex: none; width: 24px; height: 24px; border-radius: 999px; font-size: 0.8rem;
+  color: var(--ink-faint); display: grid; place-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.tool-search__clear:hover { background: var(--sand-200); color: var(--ink); }
+.tool-search__empty { padding: 2.5rem 0; color: var(--ink-soft); font-size: 1.05rem; }
+
 .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 1.1rem; }
 
 /* ── Tool card ───────────────────────────────────── */

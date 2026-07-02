@@ -80,7 +80,7 @@ a:hover { color: var(--green-500); }
 
 img, svg { display: block; max-width: 100%; }
 
-button { font: inherit; cursor: pointer; color: inherit; }
+button { font: inherit; cursor: pointer; color: inherit; background: none; border: none; -webkit-appearance: none; appearance: none; }
 
 ::selection { background: color-mix(in srgb, var(--gold-400) 45%, transparent); }
 

@@ -170,6 +170,15 @@ export function BoltIcon({ className }: P) {
   )
 }
 
+export function SearchIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  )
+}
+
 export function CodeIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
