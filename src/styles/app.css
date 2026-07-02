@@ -520,3 +520,14 @@ html { -webkit-tap-highlight-color: transparent; }
 .notif__icon { width: 30px; height: 30px; }
 .notif__msg { margin-top: 0.1rem; }
 .notif__btn { align-self: flex-start; margin-inline-start: auto; }
+
+/* Compact tool header on repeat visits (#26) */
+.tool-head--compact { align-items: center; margin-bottom: 1.2rem; gap: 0.7rem; }
+.tool-head--compact .tool-head__icon { width: 40px; height: 40px; border-radius: var(--r-sm); }
+.tool-head--compact .tool-head__icon svg { width: 22px; height: 22px; }
+.tool-head--compact .tool-head__title { font-size: clamp(1.3rem, 3.5vw, 1.7rem); }
+
+/* Auto-hide notification bell; reveal on scroll (#25) */
+.notif-bell { transition: transform 0.28s ease, opacity 0.28s ease, box-shadow 0.2s ease; }
+.notif-bell.is-hidden { opacity: 0; transform: translateY(140%); pointer-events: none; }
+.notif-bell.is-revealed { opacity: 1; transform: none; }

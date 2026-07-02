@@ -21,7 +21,9 @@ export function NotificationBell() {
   const { t } = useLocale()
   const n = t.notif
   const [open, setOpen] = useState(!wasSeen())
+  const [revealed, setRevealed] = useState(false)
   const timer = useRef<number | undefined>(undefined)
+  const revealTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     if (!open) return
@@ -32,12 +34,23 @@ export function NotificationBell() {
     return () => window.clearTimeout(timer.current)
   }, [open])
 
+  // The minimized bell auto-hides; reveal it briefly while the user scrolls.
+  useEffect(() => {
+    const onScroll = () => {
+      setRevealed(true)
+      window.clearTimeout(revealTimer.current)
+      revealTimer.current = window.setTimeout(() => setRevealed(false), 1800)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); window.clearTimeout(revealTimer.current) }
+  }, [])
+
   if (!ANNOUNCEMENT_ID) return null // nothing worth telling → show nothing at all
 
   if (!open) {
     return (
-      <button className="notif-bell" data-testid="notif-bell" aria-label={n.open}
-        onClick={() => setOpen(true)}>
+      <button className={`notif-bell ${revealed ? 'is-revealed' : 'is-hidden'}`}
+        data-testid="notif-bell" aria-label={n.open} onClick={() => setOpen(true)}>
         <BellIcon />
       </button>
     )
