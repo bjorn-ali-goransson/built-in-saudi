@@ -91,7 +91,7 @@ export default function PasswordGeneratorTool() {
 
   return (
     <div className="flex flex-col gap-[1.3rem]" data-testid="password-generator">
-      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.2rem]" data-testid="pw-output-wrap">
+      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md p-[1.2rem]" data-testid="pw-output-wrap">
         <label className="field__label" htmlFor="pw-output">{s.output}</label>
         <div className="flex gap-[0.6rem] items-stretch mt-[0.4rem] flex-wrap">
           <output id="pw-output" className="flex-1 min-w-[12rem] flex items-center font-mono text-[1.15rem] break-all px-[0.9rem] py-[0.7rem] bg-sand-100 border border-[color:var(--line-soft)] rounded-[5px] text-ink" data-testid="pw-output" dir="ltr">

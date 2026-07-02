@@ -120,7 +120,7 @@ export default function QrCodeTool() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-6 items-start">
       {/* Controls */}
-      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.3rem]">
+      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md p-[1.3rem]">
         <div className="flex flex-wrap gap-[0.4rem] pb-[1.1rem] border-b border-[color:var(--line-soft)]" role="group" aria-label={q.style}>
           {TYPE_DEFS.map((d) => (
             <button
