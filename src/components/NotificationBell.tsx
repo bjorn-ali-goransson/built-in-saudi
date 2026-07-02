@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../i18n'
 import { BellIcon } from './icons'
 
-// Bump this id to re-announce something new (a fresh id shows the banner again).
-const NOTIF_ID = 'launch'
-const KEY = `bis-notif-${NOTIF_ID}`
+// The current announcement. Set to `null` when there's nothing worth telling —
+// then NOTHING renders (no banner, no bell). Bump the id + update `t.notif`
+// (en.ts / ar.ts) whenever there's real news to re-announce it once.
+const ANNOUNCEMENT_ID: string | null = 'launch'
+const KEY = `bis-notif-${ANNOUNCEMENT_ID}`
 
 function wasSeen(): boolean {
   try { return localStorage.getItem(KEY) === 'seen' } catch { return false }
@@ -29,6 +31,8 @@ export function NotificationBell() {
     }, 6000)
     return () => window.clearTimeout(timer.current)
   }, [open])
+
+  if (!ANNOUNCEMENT_ID) return null // nothing worth telling → show nothing at all
 
   if (!open) {
     return (
