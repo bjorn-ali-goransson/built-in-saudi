@@ -141,10 +141,23 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .check { display: inline-flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; font-weight: 500; color: var(--ink-soft); cursor: pointer; }
 .check input { width: 1.05rem; height: 1.05rem; accent-color: var(--green-600); }
 
-/* ── Pills ──────────────────────────────────────── */
-.pill { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 999px; }
+/* ── Status pills (card badges) ─────────────────── */
 .pill--coming-soon { background: color-mix(in srgb, var(--gold-400) 22%, transparent); color: var(--gold-500); }
 .pill--beta { background: color-mix(in srgb, var(--green-400) 20%, transparent); color: var(--green-600); }
+.pill--coming-soon, .pill--beta { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 999px; }
+
+/* ── Interactive pill (controls) & segmented / stack / code (base primitives,
+      consolidated here from app.css during the Tailwind migration #33) ─────── */
+.pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.32rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.pill:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); }
+.pill--accent { background: color-mix(in srgb, var(--green-500) 12%, transparent); color: var(--green-700); border-color: color-mix(in srgb, var(--green-500) 30%, transparent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; width: fit-content; }
+.seg__btn { padding: 0.4rem 0.85rem; background: var(--surface); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; color: var(--ink-soft); border-right: 1px solid var(--line); }
+.seg__btn:last-child { border-right: none; }
+.seg__btn.is-active { background: var(--green-600); color: var(--sand-100); }
+.stack { display: flex; flex-direction: column; gap: 1.1rem; }
+.stack__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.code-out { font-family: var(--font-mono); font-size: 0.9rem; }
 
 /* ── Motion ─────────────────────────────────────── */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }

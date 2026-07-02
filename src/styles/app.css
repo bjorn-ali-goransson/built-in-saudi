@@ -90,10 +90,6 @@
 .qr__control { display: grid; gap: 0.5rem; }
 .qr__control > label { font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); display: flex; justify-content: space-between; }
 
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; width: fit-content; }
-.seg__btn { padding: 0.4rem 0.85rem; background: var(--surface); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; color: var(--ink-soft); border-right: 1px solid var(--line); }
-.seg__btn:last-child { border-right: none; }
-.seg__btn.is-active { background: var(--green-600); color: var(--sand-100); }
 
 input[type='range'] { width: 100%; accent-color: var(--green-600); }
 
@@ -304,10 +300,7 @@ html { -webkit-tap-highlight-color: transparent; }
 /* ======================================================================
    Shared simple-tool layout (UUID, Word Counter, Base64, …)
    ====================================================================== */
-.stack { display: flex; flex-direction: column; gap: 1.1rem; }
-.stack__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .panel { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; display: grid; gap: 1.1rem; }
-.code-out { font-family: var(--font-mono); font-size: 0.9rem; }
 
 /* Word counter stat cards */
 .wc__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.8rem; }
@@ -579,9 +572,6 @@ html { -webkit-tap-highlight-color: transparent; }
 
 /* Prayer list controls — small discrete pills */
 .pray__more { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 0.9rem; }
-.pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.32rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
-.pill:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); }
-.pill--accent { background: color-mix(in srgb, var(--green-500) 12%, transparent); color: var(--green-700); border-color: color-mix(in srgb, var(--green-500) 30%, transparent); }
 .pray__viewdate { font-family: var(--font-body); font-size: 0.8rem; color: var(--ink-faint); margin-inline-end: 0.2rem; }
 [dir='rtl'] .pray__viewdate { font-family: var(--font-ar); }
 .pray__date-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; margin: 0; }
