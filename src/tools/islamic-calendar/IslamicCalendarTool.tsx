@@ -99,8 +99,8 @@ export default function IslamicCalendarTool() {
   }
 
   return (
-    <div className="stack cal2" data-testid="islamic-calendar">
-      <div className="cal2__bar">
+    <div className="flex flex-col gap-[0.9rem]" data-testid="islamic-calendar">
+      <div className="flex justify-between items-center gap-[0.6rem]">
         <div className="seg" role="group">
           {(['hijri', 'greg'] as Mode[]).map((m) => (
             <button key={m} className={`seg__btn ${mode === m ? 'is-active' : ''}`} aria-pressed={mode === m}
@@ -110,57 +110,58 @@ export default function IslamicCalendarTool() {
         <button className="pill" data-testid="cal-today" onClick={goToday}>{s.today}</button>
       </div>
 
-      <div className="cal2__head" ref={topRef}>
-        <button className="cal2__nav" aria-label={s.prev} data-testid="cal-prev" onClick={() => step(-1)}>‹</button>
-        <div className="cal2__title">
+      <div className="flex items-center justify-between gap-[0.6rem]" ref={topRef}>
+        <button className="w-[42px] h-[42px] border border-[color:var(--line)] rounded-[5px] bg-[var(--surface)] text-[1.5rem] text-ink-soft cursor-pointer grid place-items-center hover:border-green-500 hover:text-green-700" aria-label={s.prev} data-testid="cal-prev" onClick={() => step(-1)}>‹</button>
+        <div className="text-center flex flex-col [&_strong]:font-display [&_strong]:text-[1.3rem] [&_strong]:text-green-700 rtl:[&_strong]:font-ar">
           <strong data-testid="cal-title">{title}</strong>
-          <span className="cal2__sub">{sub}</span>
+          <span className="text-[0.82rem] text-ink-faint">{sub}</span>
         </div>
-        <button className="cal2__nav" aria-label={s.next} data-testid="cal-next" onClick={() => step(1)}>›</button>
+        <button className="w-[42px] h-[42px] border border-[color:var(--line)] rounded-[5px] bg-[var(--surface)] text-[1.5rem] text-ink-soft cursor-pointer grid place-items-center hover:border-green-500 hover:text-green-700" aria-label={s.next} data-testid="cal-next" onClick={() => step(1)}>›</button>
       </div>
 
-      <div className="cal2__grid" role="grid">
-        {weekdayLabels.map((w, i) => <span key={`w${i}`} className="cal2__wd">{w}</span>)}
-        {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} className="cal2__cell is-blank" />)}
+      <div className="grid grid-cols-7 gap-[4px]" role="grid">
+        {weekdayLabels.map((w, i) => <span key={`w${i}`} className="text-center text-[0.68rem] font-bold text-ink-faint uppercase pb-[0.2rem]">{w}</span>)}
+        {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} className="cal2__cell is-blank aspect-square" />)}
         {cells.map((c) => {
           const holiday = HOLIDAYS[`${c.hm}-${c.hd}`]
           const white = c.hd >= 13 && c.hd <= 15
           const today = isToday(c.greg)
+          const isSel = sel && sel.greg.toDateString() === c.greg.toDateString()
           const primary = mode === 'hijri' ? c.hd : c.greg.getDate()
           const secondary = mode === 'hijri' ? c.greg.getDate() : c.hd
           return (
-            <button key={c.greg.toDateString()} className={`cal2__cell ${today ? 'is-today' : ''} ${white ? 'is-white' : ''} ${holiday ? 'is-holiday' : ''} ${sel && sel.greg.toDateString() === c.greg.toDateString() ? 'is-sel' : ''}`}
+            <button key={c.greg.toDateString()} className={`cal2__cell relative aspect-square flex flex-col items-center justify-center gap-px border rounded-[5px] cursor-pointer p-[2px] transition-[border-color] duration-[120ms] hover:border-green-500 ${today ? 'bg-green-600 border-green-700' : white ? 'bg-[var(--surface)] border-gold-400' : 'bg-[var(--surface)] border-[color:var(--line-soft)]'} ${isSel ? 'outline outline-2 outline-green-500 -outline-offset-1' : ''}`}
               data-testid={`cal-day-${c.hm}-${c.hd}`} onClick={() => setSel(c)}>
-              <span className="cal2__num">{primary}</span>
-              {white ? <span className="cal2__moon" aria-hidden="true">🌕</span> : <span className="cal2__moon" />}
-              <span className="cal2__sub-num">{secondary}</span>
-              {holiday && <span className="cal2__dot" aria-hidden="true" />}
+              <span className={`text-[1rem] font-bold leading-none ${today ? 'text-sand-100' : holiday ? 'text-gold-500' : ''}`}>{primary}</span>
+              {white ? <span className="text-[0.72rem] leading-none" aria-hidden="true">🌕</span> : <span className="text-[0.72rem] leading-none" />}
+              <span className={`text-[0.6rem] leading-none ${today ? 'text-[color-mix(in_srgb,var(--sand-100)_80%,transparent)]' : 'text-ink-faint'}`}>{secondary}</span>
+              {holiday && <span className="absolute bottom-[3px] w-[5px] h-[5px] rounded-full bg-gold-500" aria-hidden="true" />}
             </button>
           )
         })}
       </div>
 
       {sel && (
-        <div className="cal2__detail" data-testid="cal-detail">
+        <div className="flex flex-col gap-[0.35rem] px-4 py-[0.9rem] border border-[color:var(--line-soft)] rounded-md bg-[var(--surface)] [&_strong]:text-[1.05rem] [&_strong]:text-green-700" data-testid="cal-detail">
           <strong>{HIJRI_MONTHS[locale][sel.hm - 1]} {sel.hd}, {sel.hy} {locale === 'ar' ? 'هـ' : 'AH'}</strong>
           <span>{dateFmt.format(sel.greg)}{sel.hd >= 13 && sel.hd <= 15 ? ' · 🌕' : ''}</span>
-          {HOLIDAYS[`${sel.hm}-${sel.hd}`] && <span className="cal2__tag cal2__tag--holiday">{s.events[HOLIDAYS[`${sel.hm}-${sel.hd}`]]}</span>}
-          {sel.hd >= 13 && sel.hd <= 15 && <span className="cal2__tag cal2__tag--white">{s.whiteDays}</span>}
+          {HOLIDAYS[`${sel.hm}-${sel.hd}`] && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--gold-400)_25%,transparent)] text-gold-500">{s.events[HOLIDAYS[`${sel.hm}-${sel.hd}`]]}</span>}
+          {sel.hd >= 13 && sel.hd <= 15 && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--green-400)_15%,transparent)] text-green-700">{s.whiteDays}</span>}
         </div>
       )}
 
-      <div className="cal2__legend">
-        <span><i className="cal2__sw cal2__sw--today" /> {s.todayLegend}</span>
+      <div className="flex flex-wrap gap-[0.9rem] text-[0.8rem] text-ink-soft [&_span]:inline-flex [&_span]:items-center [&_span]:gap-[0.4rem]">
+        <span><i className="w-3 h-3 rounded inline-block bg-green-600" /> {s.todayLegend}</span>
         <span>🌕 {s.whiteDays}</span>
-        <span><i className="cal2__sw cal2__sw--holiday" /> {s.holiday}</span>
+        <span><i className="w-3 h-3 rounded inline-block bg-gold-500" /> {s.holiday}</span>
       </div>
 
-      <section className="cal2__holidays" data-testid="cal-holidays">
-        <h2 className="cal2__hol-title">{s.holidaysTitle}</h2>
+      <section className="flex flex-col gap-[0.4rem] mt-[0.4rem]" data-testid="cal-holidays">
+        <h2 className="text-[0.95rem] font-semibold text-green-700 mb-[0.2rem]">{s.holidaysTitle}</h2>
         {HOLIDAY_LIST.map((h) => (
-          <button key={h.key} className="cal2__hol" data-testid={`cal-hol-${h.key}`} onClick={() => goToHoliday(h)}>
-            <span className="cal2__hol-name">{s.events[h.key]}</span>
-            <span className="cal2__hol-date">
+          <button key={h.key} className="flex items-center justify-between gap-4 px-[0.85rem] py-[0.6rem] border border-[color:var(--line-soft)] rounded-[5px] bg-[var(--surface)] cursor-pointer text-start transition-[border-color,background] duration-[120ms] hover:border-green-500 hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)]" data-testid={`cal-hol-${h.key}`} onClick={() => goToHoliday(h)}>
+            <span className="font-semibold text-ink">{s.events[h.key]}</span>
+            <span className="text-[0.82rem] text-ink-faint">
               {HIJRI_MONTHS[locale][h.m - 1]} {h.d} · {dateFmtShort.format(hijriToGregorian(todayH.y, h.m, h.d))}
             </span>
           </button>
