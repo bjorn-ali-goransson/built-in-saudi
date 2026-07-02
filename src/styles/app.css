@@ -238,18 +238,10 @@ html { -webkit-tap-highlight-color: transparent; }
 /* ======================================================================
    Shared simple-tool layout (UUID, Word Counter, Base64, …)
    ====================================================================== */
-.panel { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; display: grid; gap: 1.1rem; }
 
 /* Word counter stat cards */
-.wc__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.8rem; }
-.wc__stat { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-md); box-shadow: var(--shadow-sm); padding: 0.9rem 1rem; text-align: center; }
-.wc__stat-num { display: block; font-family: var(--font-display); font-size: 1.7rem; color: var(--green-700); line-height: 1; }
-[dir='rtl'] .wc__stat-num { font-family: var(--font-ar); }
-.wc__stat-label { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--ink-faint); }
 
 /* Base64 bar + error */
-.b64__bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.b64__error { padding: 0.8rem 0.9rem; background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: var(--r-sm); color: var(--danger); font-weight: 600; }
 
 /* Prayer times: big next-prayer hero + calculation date (#6) */
 .pray__hero { text-align: center; padding: 1.4rem 1rem; display: flex; flex-direction: column; gap: 0.15rem; color: var(--sand-100); border-radius: var(--r-lg); box-shadow: var(--shadow-md); background: var(--green-600); }
@@ -262,11 +254,6 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__calcdate { margin: -0.4rem 0 0.9rem; font-size: 0.8rem; color: var(--ink-faint); }
 
 /* Date Difference tool (#14) */
-.dd__inputs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.8rem; align-items: end; }
-.dd__swap { align-self: end; padding: 0.7rem 0.9rem; font-size: 1.1rem; }
-.dd__hero { text-align: center; font-family: var(--font-display); font-size: clamp(1.5rem, 5vw, 2.3rem); color: var(--green-700); padding: 1.3rem; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
-[dir='rtl'] .dd__hero { font-family: var(--font-ar); }
-@media (max-width: 560px) { .dd__inputs { grid-template-columns: 1fr; } .dd__swap { justify-self: center; } }
 
 /* Islamic dates: year picker (#8) */
 .pray__year { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }

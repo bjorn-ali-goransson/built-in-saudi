@@ -113,11 +113,11 @@ export default function ZipInspectorTool() {
 
       {file && (
         <>
-          <div className="wc__stats">
-            <div className="wc__stat"><span className="wc__stat-num" data-testid="zip-format">{file.format}</span><span className="wc__stat-label">{s.format}</span></div>
-            {totals && <div className="wc__stat"><span className="wc__stat-num" data-testid="zip-files">{totals.files}</span><span className="wc__stat-label">{s.files}</span></div>}
-            {totals && <div className="wc__stat"><span className="wc__stat-num">{fmtBytes(totals.size)}</span><span className="wc__stat-label">{s.total}</span></div>}
-            {totals && <div className="wc__stat"><span className="wc__stat-num">{saved}%</span><span className="wc__stat-label">{s.ratio}</span></div>}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-[0.8rem]">
+            <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="zip-format">{file.format}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.format}</span></div>
+            {totals && <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="zip-files">{totals.files}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.files}</span></div>}
+            {totals && <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar">{fmtBytes(totals.size)}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.total}</span></div>}
+            {totals && <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar">{saved}%</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.ratio}</span></div>}
           </div>
 
           {file.entries === null && <p className="pray__geoerr">{s.notZip}</p>}

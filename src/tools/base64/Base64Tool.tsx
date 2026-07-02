@@ -69,7 +69,7 @@ export default function Base64Tool() {
 
   return (
     <div className="stack" data-testid="base64">
-      <div className="b64__bar">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="seg" role="group" aria-label={`${s.encode} / ${s.decode}`}>
           {(['encode', 'decode'] as Mode[]).map((m) => (
             <button key={m} className={`seg__btn ${mode === m ? 'is-active' : ''}`}
@@ -94,7 +94,7 @@ export default function Base64Tool() {
       <div className="field">
         <span className="field__label">{s.output}</span>
         {error ? (
-          <p className="b64__error" data-testid="b64-error" role="alert">{s.error}</p>
+          <p className="px-[0.9rem] py-[0.8rem] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_35%,transparent)] rounded-[5px] text-[color:var(--danger)] font-semibold" data-testid="b64-error" role="alert">{s.error}</p>
         ) : (
           <textarea className="input input--area code-out" rows={5} readOnly dir="ltr"
             data-testid="b64-output" value={output} />

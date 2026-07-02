@@ -100,7 +100,7 @@ export default function DateDiffTool() {
         ))}
       </div>
 
-      <div className="panel dd__inputs">
+      <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.3rem] grid grid-cols-[1fr_auto_1fr] gap-[0.8rem] items-end max-[560px]:grid-cols-1">
         {mode === 'greg' ? (
           <label className="field">
             <span className="field__label">{s.from}</span>
@@ -110,7 +110,7 @@ export default function DateDiffTool() {
           <HijriInput label={s.from} value={hFrom} onChange={setHFrom} s={s} months={HIJRI_MONTHS[locale]} testid="from" />
         )}
 
-        <button className="btn dd__swap" data-testid="dd-swap" aria-label={s.swap} title={s.swap} onClick={swap}>⇅</button>
+        <button className="btn self-end px-[0.9rem] py-[0.7rem] text-[1.1rem] max-[560px]:justify-self-center" data-testid="dd-swap" aria-label={s.swap} title={s.swap} onClick={swap}>⇅</button>
 
         {mode === 'greg' ? (
           <label className="field">
@@ -124,10 +124,10 @@ export default function DateDiffTool() {
 
       {result && (
         <>
-          <div className="dd__hero" data-testid="dd-phrase">{phrase}</div>
+          <div className="text-center font-display text-[clamp(1.5rem,5vw,2.3rem)] text-green-700 p-[1.3rem] bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md rtl:font-ar" data-testid="dd-phrase">{phrase}</div>
           <div className="wc__stats">
-            <div className="wc__stat"><span className="wc__stat-num" data-testid="dd-total-days">{result.totalDays}</span><span className="wc__stat-label">{s.totalDays}</span></div>
-            <div className="wc__stat"><span className="wc__stat-num" data-testid="dd-total-weeks">{result.totalWeeks}</span><span className="wc__stat-label">{s.totalWeeks}</span></div>
+            <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="dd-total-days">{result.totalDays}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.totalDays}</span></div>
+            <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="dd-total-weeks">{result.totalWeeks}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.totalWeeks}</span></div>
           </div>
         </>
       )}

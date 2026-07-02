@@ -59,11 +59,11 @@ export default function WordCounterTool() {
 
   return (
     <div className="stack" data-testid="word-counter">
-      <div className="wc__stats" data-testid="wc-stats">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-[0.8rem]" data-testid="wc-stats">
         {cards.map(([label, val]) => (
-          <div className="wc__stat" key={label}>
-            <span className="wc__stat-num" data-testid={`wc-${label}`}>{val}</span>
-            <span className="wc__stat-label">{label}</span>
+          <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center" key={label}>
+            <span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid={`wc-${label}`}>{val}</span>
+            <span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{label}</span>
           </div>
         ))}
       </div>

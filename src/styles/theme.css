@@ -158,6 +158,7 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .stack { display: flex; flex-direction: column; gap: 1.1rem; }
 .stack__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .code-out { font-family: var(--font-mono); font-size: 0.9rem; }
+.panel { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; display: grid; gap: 1.1rem; }
 
 /* ── Motion ─────────────────────────────────────── */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
