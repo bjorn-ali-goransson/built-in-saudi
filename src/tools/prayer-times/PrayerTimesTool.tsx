@@ -14,7 +14,8 @@ const STR = {
   en: {
     location: 'Location', useMyLocation: 'Use my location', myLocation: 'My location',
     prayerTimes: 'Prayer times', method: 'Umm al-Qura method',
-    next: 'Next', inTime: (h: number, m: number) => `in ${h}h ${m}m`,
+    next: 'Next prayer', inTime: (h: number, m: number) => `in ${h}h ${m}m`,
+    calcFor: 'Calculated for', locating: 'Finding your location…',
     today: 'Today', converter: 'Date converter',
     gregorian: 'Gregorian date', hijri: 'Hijri date',
     day: 'Day', month: 'Month', year: 'Year',
@@ -33,7 +34,8 @@ const STR = {
   ar: {
     location: 'الموقع', useMyLocation: 'استخدم موقعي', myLocation: 'موقعي',
     prayerTimes: 'مواقيت الصلاة', method: 'طريقة أم القرى',
-    next: 'التالية', inTime: (h: number, m: number) => `بعد ${h} س ${m} د`,
+    next: 'الصلاة التالية', inTime: (h: number, m: number) => `بعد ${h} س ${m} د`,
+    calcFor: 'محسوبة ليوم', locating: 'جارٍ تحديد موقعك…',
     today: 'اليوم', converter: 'محوّل التاريخ',
     gregorian: 'التاريخ الميلادي', hijri: 'التاريخ الهجري',
     day: 'اليوم', month: 'الشهر', year: 'السنة',
@@ -66,10 +68,32 @@ export default function PrayerTimesTool() {
   const [geoError, setGeoError] = useState('')
   const [now, setNow] = useState(() => new Date())
 
-  // Tick every 30s for the "next prayer" countdown.
+  // Refresh "now" every 30s (not every second) for the countdown, and also when
+  // the tab becomes visible again — laptops/phones pause timers while asleep, so
+  // this recovers the correct time (and recalculates if the day rolled over).
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 30000)
-    return () => window.clearInterval(id)
+    const tick = () => setNow(new Date())
+    const id = window.setInterval(tick, 30000)
+    const onVisible = () => { if (!document.hidden) tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
+  }, [])
+
+  // Auto-request the visitor's location on load (falls back silently to the city).
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCityId('')
+        setLoc({
+          lat: pos.coords.latitude, lng: pos.coords.longitude,
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: STR[locale].myLocation,
+        })
+      },
+      () => { /* keep the default city silently */ },
+      { timeout: 10000 },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const timeFmt = useMemo(
@@ -141,6 +165,14 @@ export default function PrayerTimesTool() {
 
   return (
     <div className="pray">
+      {/* Big next-prayer hero */}
+      <section className="pray__hero" data-testid="next-prayer">
+        <span className="pray__hero-label">{s.next}</span>
+        <span className="pray__hero-name">{s.prayers[nextInfo.key]}</span>
+        <span className="pray__hero-time">{timeFmt.format(nextInfo.time)}</span>
+        <span className="pray__hero-count">{s.inTime(countdown.h, countdown.m)}</span>
+      </section>
+
       {/* Location */}
       <div className="pray__loc">
         <label className="field pray__city">
@@ -162,6 +194,7 @@ export default function PrayerTimesTool() {
           <h2>{s.prayerTimes}</h2>
           <span className="pray__method">{s.method} · {loc.label}</span>
         </div>
+        <p className="pray__calcdate" data-testid="calc-date">{s.calcFor} {dateFmt.format(now)}</p>
         <ul className="pray__times">
           {PRAYER_ORDER.map((k) => {
             const isNext = k === nextInfo.key

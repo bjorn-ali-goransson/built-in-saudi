@@ -443,3 +443,13 @@ html { -webkit-tap-highlight-color: transparent; }
 /* Base64 bar + error */
 .b64__bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .b64__error { padding: 0.8rem 0.9rem; background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: var(--r-sm); color: var(--danger); font-weight: 600; }
+
+/* Prayer times: big next-prayer hero + calculation date (#6) */
+.pray__hero { text-align: center; padding: 1.4rem 1rem; display: flex; flex-direction: column; gap: 0.15rem; color: var(--sand-100); border-radius: var(--r-lg); box-shadow: var(--shadow-md); background: linear-gradient(180deg, var(--green-500), var(--green-700)); }
+.pray__hero-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.82; }
+[dir='rtl'] .pray__hero-label { letter-spacing: 0; }
+.pray__hero-name { font-family: var(--font-display); font-size: clamp(1.9rem, 6vw, 2.7rem); line-height: 1.05; }
+[dir='rtl'] .pray__hero-name { font-family: var(--font-ar); }
+.pray__hero-time { font-family: var(--font-mono); font-size: clamp(1.5rem, 5vw, 2rem); }
+.pray__hero-count { font-size: 0.95rem; opacity: 0.85; }
+.pray__calcdate { margin: -0.4rem 0 0.9rem; font-size: 0.8rem; color: var(--ink-faint); }
