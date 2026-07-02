@@ -60,6 +60,13 @@ test.describe('tools', () => {
     await expect(page.getByTestId('json-output')).toContainText('color: red;')
   })
 
+  test('hash generator: SHA-256 of "abc" matches the known vector', async ({ page }) => {
+    await page.goto('/en/tools/hash-generator')
+    await page.getByTestId('hash-algo-SHA-256').click()
+    await page.getByTestId('hash-text').fill('abc')
+    await expect(page.getByTestId('hash-hex')).toHaveText('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+  })
+
   test('base64: encodes text', async ({ page }) => {
     await page.goto('/en/tools/base64')
     await page.getByTestId('b64-input').fill('Built in Saudi')

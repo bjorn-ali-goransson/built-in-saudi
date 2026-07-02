@@ -130,6 +130,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'نص بديل', description: 'ولّد نصًا بديلًا بالفقرات أو الجُمل أو الكلمات — نص Lorem ipsum الكلاسيكي أو نص حشو عربي. يعمل بالكامل داخل متصفحك.' },
   },
   {
+    id: 'hash-generator',
+    en: { name: 'Hash Generator', description: 'Compute SHA-1/256/384/512 of any text or file — hex and Base64. Files are hashed locally and never uploaded.' },
+    ar: { name: 'مولّد البصمة (Hash)', description: 'احسب SHA-1/256/384/512 لأي نص أو ملف — ست عشري وBase64. تُحسب الملفات محليًا ولا تُرفع.' },
+  },
+  {
     id: 'json-formatter',
     en: { name: 'Code Formatter', description: 'Format, minify and validate code in your browser — JSON (line/column errors, sort keys) plus CSS and XML beautify/minify. Nothing uploaded.' },
     ar: { name: 'منسّق الكود', description: 'نسّق وصغّر وتحقّق من الكود داخل متصفحك — JSON (أخطاء بالسطر والعمود وترتيب المفاتيح) مع CSS وXML. دون رفع أي شيء.' },

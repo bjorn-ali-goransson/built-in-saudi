@@ -46,7 +46,7 @@ optional [backend worker](./BACKEND.md).
 | Barcode / QR generator (باركود) | `/tools/qr-code` | client | — | ✅ live |
 | [Password generator](./tools/password-generator.md) | `/tools/password-generator` | client | T1 | 📝 |
 | [UUID generator](./tools/uuid-generator.md) | `/tools/uuid-generator` | client | T1 | 📝 |
-| [Hash generator](./tools/hash-generator.md) | `/tools/hash-generator` | client | T2 | 📝 |
+| [Hash generator](./tools/hash-generator.md) | `/tools/hash-generator` | client | T2 | ✅ live |
 | Lorem Ipsum generator | `/tools/lorem-ipsum` | client | T3 | 🧭 |
 
 ## Converters & encoders
