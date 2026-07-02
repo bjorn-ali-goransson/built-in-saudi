@@ -42,6 +42,13 @@ export function formatHijri(date: Date, locale: 'en' | 'ar'): string {
   }).format(date)
 }
 
+/** Number of days (29 or 30) in an Umm al-Qura Hijri month. */
+export function daysInHijriMonth(y: number, m: number): number {
+  const start = hijriToGregorian(y, m, 1)
+  const next = hijriToGregorian(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1, 1)
+  return Math.round((next.getTime() - start.getTime()) / 86400000)
+}
+
 export const HIJRI_MONTHS = {
   en: ['Muharram', 'Safar', 'Rabiʿ al-Awwal', 'Rabiʿ al-Thani', 'Jumada al-Awwal',
     'Jumada al-Thani', 'Rajab', 'Shaʿban', 'Ramadan', 'Shawwal', 'Dhu al-Qaʿda', 'Dhu al-Hijja'],
