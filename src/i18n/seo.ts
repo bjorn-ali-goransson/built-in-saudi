@@ -77,6 +77,19 @@ export const liveToolSeo: ToolSeo[] = [
     },
   },
   {
+    id: 'qibla',
+    en: {
+      name: 'Qibla Locator',
+      description:
+        'Find the Qibla direction from your location — the exact bearing to the Kaaba in Makkah, a live compass where supported, and the distance. Computed in your browser.',
+    },
+    ar: {
+      name: 'اتجاه القبلة',
+      description:
+        'حدّد اتجاه القبلة من موقعك — الاتجاه الدقيق إلى الكعبة في مكة، وبوصلة مباشرة حيثما تتوفّر، والمسافة. يُحسب داخل متصفحك.',
+    },
+  },
+  {
     id: 'uuid-generator',
     en: { name: 'UUID Generator', description: 'Generate one or many RFC-4122 v4 UUIDs with optional formatting, entirely in your browser.' },
     ar: { name: 'مولّد UUID', description: 'أنشئ معرّفًا واحدًا أو عدة معرّفات UUID (v4) مع خيارات تنسيق، بالكامل داخل متصفحك.' },

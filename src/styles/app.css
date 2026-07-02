@@ -659,3 +659,24 @@ html { -webkit-tap-highlight-color: transparent; }
 .pray__more { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.8rem; }
 .pray__more .btn { flex: none; }
 .pray__more-date { flex: 1; min-width: 0; }
+
+/* ── Qibla locator ── */
+.qibla { display: flex; flex-direction: column; align-items: center; gap: 1.2rem; padding-top: 0.5rem; }
+.qibla__dial { position: relative; width: min(78vw, 300px); aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); }
+.qibla__rose { position: absolute; inset: 0; transition: transform 0.15s ease; }
+.qibla__rose span { position: absolute; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--ink-faint); }
+.qibla__n { top: 8px; left: 50%; transform: translateX(-50%); color: var(--green-600); }
+.qibla__s { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.qibla__e { right: 10px; top: 50%; transform: translateY(-50%); }
+.qibla__w { left: 10px; top: 50%; transform: translateY(-50%); }
+.qibla__needle { position: absolute; inset: 0; transition: transform 0.15s ease; }
+.qibla__needle::before { content: ''; position: absolute; top: 14%; left: 50%; width: 3px; height: 40%; background: var(--green-600); transform: translateX(-50%); transform-origin: bottom center; border-radius: 3px; }
+.qibla__kaaba { position: absolute; top: 5%; left: 50%; transform: translateX(-50%); font-size: 1.7rem; line-height: 1; }
+.qibla__readout { display: flex; gap: 2.2rem; }
+.qibla__stat { display: flex; flex-direction: column; align-items: center; }
+.qibla__stat-num { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; color: var(--green-700); }
+.qibla__stat-label { font-size: 0.76rem; color: var(--ink-faint); text-align: center; }
+.qibla__place { color: var(--ink-soft); font-size: 0.95rem; }
+.qibla__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
+.qibla__compass-on { display: inline-flex; align-items: center; padding: 0.5rem 0.9rem; color: var(--green-700); font-weight: 600; }
+.qibla__hint { font-size: 0.85rem; color: var(--ink-faint); text-align: center; max-width: 32ch; }

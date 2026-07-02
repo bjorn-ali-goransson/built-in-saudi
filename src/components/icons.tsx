@@ -190,6 +190,15 @@ export function GridIcon({ className }: P) {
   )
 }
 
+export function CompassIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88z" fill="currentColor" stroke="none" opacity="0.85" />
+    </svg>
+  )
+}
+
 export function RefreshIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

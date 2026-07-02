@@ -2,6 +2,7 @@ import type { Tool } from './types'
 import { qrCodeTool } from './qr-code/meta'
 import { prayerTimesTool } from './prayer-times/meta'
 import { hijriCalendarTool } from './hijri-calendar/meta'
+import { qiblaTool } from './qibla/meta'
 import { passwordGeneratorTool } from './password-generator/meta'
 import { uuidGeneratorTool } from './uuid-generator/meta'
 import { wordCounterTool } from './word-counter/meta'
@@ -19,6 +20,7 @@ export const tools: Tool[] = [
   qrCodeTool,
   prayerTimesTool,
   hijriCalendarTool,
+  qiblaTool,
   passwordGeneratorTool,
   uuidGeneratorTool,
   wordCounterTool,
