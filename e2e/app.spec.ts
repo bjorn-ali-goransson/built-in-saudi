@@ -72,6 +72,16 @@ test.describe('tools', () => {
     await expect(page.getByTestId('unit-result')).toContainText('212')
   })
 
+  test('vat calculator: add and remove 15%', async ({ page }) => {
+    await page.goto('/en/tools/vat-calculator')
+    await page.getByTestId('vat-amount').fill('100')
+    await expect(page.getByTestId('vat-vat')).toContainText('15.00')
+    await expect(page.getByTestId('vat-gross')).toContainText('115.00')
+    await page.getByTestId('vat-mode-remove').click()
+    await page.getByTestId('vat-amount').fill('115')
+    await expect(page.getByTestId('vat-net')).toContainText('100.00')
+  })
+
   test('arabic poetry: meters reference + verse formatter', async ({ page }) => {
     await page.goto('/en/tools/arabic-poetry')
     await expect(page.getByTestId('bahr-taweel')).toContainText('الطويل')

@@ -190,6 +190,14 @@ export function GridIcon({ className }: P) {
   )
 }
 
+export function PercentIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M19 5L5 19" /><circle cx="7.5" cy="7.5" r="2.5" /><circle cx="16.5" cy="16.5" r="2.5" />
+    </svg>
+  )
+}
+
 export function UploadIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

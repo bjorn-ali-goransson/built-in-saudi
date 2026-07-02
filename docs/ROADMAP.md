@@ -97,7 +97,7 @@ optional [backend worker](./BACKEND.md).
 ## Calculators
 | Tool | Slug | Runs | Priority | Status |
 |------|------|------|----------|--------|
-| [Saudi VAT calculator (15%)](./tools/vat-calculator.md) | `/tools/vat-calculator` | client | T2 | 📝 |
+| [Saudi VAT calculator (15%)](./tools/vat-calculator.md) | `/tools/vat-calculator` | client | T2 | ✅ live |
 | Zakat calculator | `/tools/zakat-calculator` | client | T2 | 🧭 |
 | BMI / Age / Percentage | `/tools/calculators` | client | T3 | 🧭 |
 
