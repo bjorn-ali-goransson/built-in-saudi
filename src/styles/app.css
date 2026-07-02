@@ -5,27 +5,7 @@
 .app-shell { display: flex; flex-direction: column; min-height: 100dvh; }
 .app-main { flex: 1 0 auto; }
 
-/* ── Header ──────────────────────────────────────── */
-.site-header {
-  position: sticky; top: 0; z-index: 40;
-  backdrop-filter: saturate(140%) blur(10px);
-  background: color-mix(in srgb, var(--sand-50) 82%, transparent);
-  border-bottom: 1px solid var(--line-soft);
-}
-.site-header__inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-
-.brand { display: inline-flex; align-items: center; gap: 0.7rem; text-decoration: none; }
-.brand__mark { display: grid; place-items: center; filter: drop-shadow(0 3px 6px rgba(11, 61, 46, 0.22)); transition: transform 0.2s; }
-.brand:hover .brand__mark { transform: rotate(-4deg) scale(1.04); }
-.brand__text { display: flex; flex-direction: column; line-height: 1.05; }
-.brand__name { font-family: var(--font-display); font-weight: 600; font-size: 1.16rem; color: var(--green-700); }
-.brand__ar { font-family: var(--font-ar); font-size: 0.74rem; color: var(--gold-500); }
-
-.site-nav { display: flex; gap: 1.4rem; align-items: center; }
-.site-nav__link { font-weight: 600; font-size: 0.95rem; color: var(--ink-soft); text-decoration: none; position: relative; }
-.site-nav__link::after { content: ''; position: absolute; left: 0; bottom: -6px; width: 0; height: 2px; background: var(--gold-400); transition: width 0.22s ease; }
-.site-nav__link:hover { color: var(--green-700); }
-.site-nav__link:hover::after { width: 100%; }
+/* Header, nav, launcher & footer: migrated to Tailwind utilities (#33). */
 
 /* ── Sadu divider ────────────────────────────────── */
 .sadu { color: var(--green-500); line-height: 0; opacity: 0.55; overflow: hidden; }
@@ -233,18 +213,9 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
   .qr__actions { max-width: 340px; margin-inline: auto; width: 100%; }
 }
 
-.site-footer { flex-shrink: 0; padding: 1.4rem 0 1.6rem; margin-top: 0; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--sand-100) 50%, transparent); }
-.site-footer__inner { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; }
-.site-footer__ethos { max-width: 34rem; color: var(--ink-soft); font-size: 0.95rem; }
-.site-footer__made { font-family: var(--font-ar); color: var(--gold-500); margin-top: 0.6rem; font-size: 0.92rem; }
-.site-footer__links { display: flex; gap: 1.3rem; align-items: flex-start; }
-.site-footer__links a { text-decoration: none; font-weight: 600; color: var(--ink-soft); font-size: 0.92rem; }
-.site-footer__links a:hover { color: var(--green-600); }
 
 @media (max-width: 560px) {
   .hero__badges { gap: 0.6rem 1rem; }
-  .site-header__inner { height: 60px; }
-  .brand__ar { display: none; }
 }
 
 /* ======================================================================
@@ -263,18 +234,10 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 /* Directional flips */
 [dir='rtl'] .hero__title em::after { background: var(--gold-400); }
 [dir='rtl'] .tool-card::before { transform-origin: right; }
-[dir='rtl'] .site-nav__link::after { left: auto; right: 0; }
 [dir='rtl'] .tool-card__arrow { transform: scaleX(-1); }
 [dir='rtl'] .tool-card:hover .tool-card__arrow { transform: scaleX(-1) translateX(3px); }
 
 /* Language toggle in the header */
-.lang-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--line); border-radius: 999px;
-  padding: 0.28rem 0.9rem; font-size: 0.85rem; line-height: 1;
-}
-.lang-toggle::after { content: none; }
-.lang-toggle:hover { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); background: color-mix(in srgb, var(--green-400) 10%, transparent); }
 
 /* Gentle language-suggestion popup */
 .lang-hint {
@@ -396,7 +359,6 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 html { -webkit-tap-highlight-color: transparent; }
 
 @supports (padding: env(safe-area-inset-bottom)) {
-  .site-footer { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
   .notif, .notif-bell, .lang-hint { inset-block-end: calc(1.1rem + env(safe-area-inset-bottom)); }
   .wrap { padding-inline: max(clamp(1.1rem, 4vw, 2.5rem), env(safe-area-inset-left)); }
 }
@@ -493,19 +455,6 @@ html { -webkit-tap-highlight-color: transparent; }
 /* ======================================================================
    App launcher (#24) + edge-docked notification + refinements
    ====================================================================== */
-.launcher { position: relative; }
-.launcher__btn { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); color: var(--ink-soft); background: var(--surface); transition: border-color 0.16s, color 0.16s, background 0.16s; }
-.launcher__btn:hover, .launcher__btn[aria-expanded='true'] { border-color: color-mix(in srgb, var(--green-500) 40%, transparent); color: var(--green-700); background: color-mix(in srgb, var(--green-400) 10%, transparent); }
-.launcher__btn svg { width: 22px; height: 22px; }
-.launcher__panel { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); width: min(92vw, 320px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 0.9rem; z-index: 50; animation: fadeUp 0.16s ease both; }
-.launcher__title { font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 0.6rem; }
-[dir='rtl'] .launcher__title { font-family: var(--font-ar); letter-spacing: 0; }
-.launcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-.launcher__app { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.7rem 0.4rem; border-radius: var(--r-sm); text-decoration: none; color: var(--ink); text-align: center; transition: background 0.15s; }
-.launcher__app:hover { background: var(--sand-100); }
-.launcher__app-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: color-mix(in srgb, var(--green-400) 14%, transparent); color: var(--green-600); }
-.launcher__app-icon svg { width: 22px; height: 22px; }
-.launcher__app-name { font-size: 0.72rem; line-height: 1.2; }
 
 /* Notification docked to the bottom edge — slim + squared (feedback) */
 .notif {

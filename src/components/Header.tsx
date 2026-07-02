@@ -16,10 +16,10 @@ export function Header() {
   const context = currentTool && currentTool.component ? localizeTool(currentTool, locale).name : ''
 
   return (
-    <header className="site-header">
-      <div className="wrap site-header__inner">
-        <Link to={home} className="brand" aria-label="Built in Saudi — home">
-          <span className="brand__mark" aria-hidden="true">
+    <header className="sticky top-0 z-40 backdrop-blur-[10px] backdrop-saturate-[1.4] bg-[color-mix(in_srgb,var(--sand-50)_82%,transparent)] border-b border-[color:var(--line-soft)]">
+      <div className="wrap flex items-center justify-between h-[68px] max-[560px]:h-[60px]">
+        <Link to={home} className="group inline-flex items-center gap-[0.7rem] no-underline" aria-label="Built in Saudi — home">
+          <span className="grid place-items-center transition-transform duration-200 drop-shadow-[0_3px_6px_rgba(11,61,46,0.22)] group-hover:rotate-[-4deg] group-hover:scale-[1.04]" aria-hidden="true">
             <svg viewBox="0 0 64 64" width="34" height="34">
               <rect width="64" height="64" rx="14" fill="var(--green-700)" />
               <path d="M32 12 L46 34 L18 34 Z" fill="none" stroke="var(--gold-400)" strokeWidth="3" strokeLinejoin="round" />
@@ -32,20 +32,20 @@ export function Header() {
               </g>
             </svg>
           </span>
-          <span className="brand__text">
-            <span className="brand__name">{context || (isAr ? 'بُنِيَ في السعودية' : 'Built in Saudi')}</span>
+          <span className="flex flex-col leading-[1.05]">
+            <span className="font-display font-semibold text-[1.16rem] text-green-700">{context || (isAr ? 'بُنِيَ في السعودية' : 'Built in Saudi')}</span>
             {!context && (
-              <span className="brand__ar" lang={isAr ? 'en' : 'ar'}>
+              <span className="font-ar text-[0.74rem] text-gold-500 max-[560px]:hidden" lang={isAr ? 'en' : 'ar'}>
                 {isAr ? 'BUILT IN SAUDI' : 'بُنِيَ في السعودية'}
               </span>
             )}
           </span>
         </Link>
 
-        <nav className="site-nav" aria-label="Primary">
+        <nav className="flex gap-[1.4rem] items-center" aria-label="Primary">
           <Link
             to={swapLocaleInPath(location.pathname, other)}
-            className="site-nav__link lang-toggle"
+            className="lang-toggle inline-flex items-center justify-center border border-[color:var(--line)] rounded-full px-[0.9rem] py-[0.28rem] text-[0.85rem] leading-none font-semibold text-ink-soft no-underline hover:text-green-700 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]"
             onClick={() => setStoredLocale(other)}
             lang={other}
             hrefLang={other}

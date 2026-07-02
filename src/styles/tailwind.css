@@ -28,4 +28,15 @@
   --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --font-body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --font-ar: 'IBM Plex Sans Arabic', 'Hanken Grotesk', system-ui, sans-serif;
+
+  --shadow-lg: 0 18px 40px -12px rgba(18, 33, 27, 0.28);
+
+  /* Retained keyframe so `animate-[fadeUp_…]` utilities work post-migration. */
+  --animate-fadeup: fadeUp 0.16s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
