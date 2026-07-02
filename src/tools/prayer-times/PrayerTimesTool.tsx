@@ -13,6 +13,7 @@ const PRAYER_ORDER: PrayerKey[] = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib',
 const STR = {
   en: {
     location: 'Location', useMyLocation: 'Use my location', myLocation: 'My location',
+    save: 'Save', cancel: 'Cancel', chooseCity: 'Choose a city',
     prayerTimes: 'Prayer times', method: 'Umm al-Qura method',
     next: 'Next prayer', inTime: (h: number, m: number) => `in ${h}h ${m}m`,
     calcFor: 'Calculated for', locating: 'Finding your location…',
@@ -37,6 +38,7 @@ const STR = {
   },
   ar: {
     location: 'الموقع', useMyLocation: 'استخدم موقعي', myLocation: 'موقعي',
+    save: 'حفظ', cancel: 'إلغاء', chooseCity: 'اختر مدينة',
     prayerTimes: 'مواقيت الصلاة', method: 'طريقة أم القرى',
     next: 'الصلاة التالية', inTime: (h: number, m: number) => `بعد ${h} س ${m} د`,
     calcFor: 'محسوبة ليوم', locating: 'جارٍ تحديد موقعك…',
@@ -88,6 +90,7 @@ export default function PrayerTimesTool() {
   const [helpDetail, setHelpDetail] = useState('')
   const [pushBusy, setPushBusy] = useState(false)
   const [showLocPicker, setShowLocPicker] = useState(false)
+  const [pendingCity, setPendingCity] = useState<string>(DEFAULT_CITY.id)
   const [now, setNow] = useState(() => new Date())
 
   // Refresh "now" every 30s (not every second) for the countdown, and also when
@@ -229,24 +232,32 @@ export default function PrayerTimesTool() {
 
       {/* Location — a chip that reveals the picker only when tapped */}
       {!showLocPicker ? (
-        <button className="pray__loc-chip" data-testid="loc-chip" onClick={() => setShowLocPicker(true)}>
-          <svg className="pray__loc-pin" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-            <circle cx="12" cy="9" r="2.4" fill="currentColor" stroke="none" />
-          </svg>
+        <button className="pray__loc-chip" data-testid="loc-chip"
+          onClick={() => { setPendingCity(cityId || DEFAULT_CITY.id); setShowLocPicker(true) }}>
+          <LocPin />
           <span className="pray__loc-name">{loc.label}</span>
           <span className="pray__loc-caret" aria-hidden="true">▾</span>
         </button>
       ) : (
-        <div className="pray__loc">
-          <select className="input" value={cityId} autoFocus
-            onChange={(e) => { pickCity(e.target.value); setShowLocPicker(false) }}>
-            {cityId === '' && <option value="">{s.myLocation}</option>}
-            {CITIES.map((c) => (
-              <option key={c.id} value={c.id}>{locale === 'ar' ? c.ar : c.en}</option>
-            ))}
-          </select>
-          <button className="btn" onClick={() => { useMyLocation(); setShowLocPicker(false) }}>{s.useMyLocation}</button>
+        <div className="pray__locpick" data-testid="loc-picker">
+          <label className="field">
+            <span className="field__label">{s.chooseCity}</span>
+            <select className="input" value={pendingCity} autoFocus data-testid="loc-select"
+              onChange={(e) => setPendingCity(e.target.value)}>
+              {CITIES.map((c) => (
+                <option key={c.id} value={c.id}>{locale === 'ar' ? c.ar : c.en}</option>
+              ))}
+            </select>
+          </label>
+          <button className="btn pray__locpick-geo" data-testid="loc-geo"
+            onClick={() => { useMyLocation(); setShowLocPicker(false) }}>
+            <LocPin /> {s.useMyLocation}
+          </button>
+          <div className="pray__locpick-actions">
+            <button className="btn" data-testid="loc-cancel" onClick={() => setShowLocPicker(false)}>{s.cancel}</button>
+            <button className="btn btn--primary" data-testid="loc-save"
+              onClick={() => { pickCity(pendingCity); setShowLocPicker(false) }}>{s.save}</button>
+          </div>
         </div>
       )}
       {geoError && <p className="pray__geoerr">{geoError}</p>}
@@ -298,6 +309,15 @@ function AlertsHelpDialog({ failedMsg, help, detail, closeLabel, onClose }: {
       </div>
     </div>,
     document.body,
+  )
+}
+
+function LocPin() {
+  return (
+    <svg className="pray__loc-pin" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="9" r="2.4" fill="currentColor" stroke="none" />
+    </svg>
   )
 }
 

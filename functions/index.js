@@ -79,6 +79,15 @@ http('subscribe', async (req, res) => {
       nextPrayer: next ? next.name : null,
       updatedAt: new Date(),
     })
+    // Immediate confirmation push so the user sees it worked right away.
+    const lc = locale === 'ar' ? 'ar' : 'en'
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify({
+        title: lc === 'ar' ? 'تم تفعيل التنبيهات' : 'Prayer alerts on',
+        body: lc === 'ar' ? 'سنذكّرك قبل كل صلاة بإذن الله.' : 'We’ll remind you before each prayer.',
+        tag: 'prayer', url: `${ORIGIN}/${lc}/tools/prayer-times`,
+      }))
+    } catch (e) { /* non-fatal — subscription still saved */ }
     res.json({ ok: true, next: next ? { prayer: next.name, at: next.notifyAt } : null })
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) })
