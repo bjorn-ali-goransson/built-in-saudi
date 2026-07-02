@@ -53,14 +53,27 @@ export const liveToolSeo: ToolSeo[] = [
   {
     id: 'prayer-times',
     en: {
-      name: 'Prayer Times & Hijri Calendar',
+      name: 'Prayer Times',
       description:
-        'Accurate daily prayer times using the Umm al-Qura method, today’s Hijri date, a Hijri ↔ Gregorian converter, and upcoming Islamic dates including Ramadan and the two Eids — computed in your browser.',
+        'Accurate daily prayer times using the Umm al-Qura method for your city or location — computed in your browser, with optional notifications a few minutes before each prayer.',
     },
     ar: {
-      name: 'مواقيت الصلاة والتقويم الهجري',
+      name: 'مواقيت الصلاة',
       description:
-        'مواقيت صلاة يومية دقيقة بطريقة أم القرى، وتاريخ اليوم الهجري، ومحوّل بين الهجري والميلادي، والمناسبات الإسلامية القادمة بما فيها رمضان والعيدان — تُحسب داخل متصفحك.',
+        'مواقيت صلاة يومية دقيقة بطريقة أم القرى لمدينتك أو موقعك — تُحسب داخل متصفحك، مع تنبيهات اختيارية قبل كل صلاة بدقائق.',
+    },
+  },
+  {
+    id: 'hijri-calendar',
+    en: {
+      name: 'Hijri Calendar',
+      description:
+        'Convert between Hijri and Gregorian dates (Umm al-Qura), see today’s Hijri date, and upcoming Islamic dates including Ramadan and the two Eids — computed in your browser.',
+    },
+    ar: {
+      name: 'التقويم الهجري',
+      description:
+        'حوّل بين التاريخ الهجري والميلادي (أم القرى)، واعرف تاريخ اليوم الهجري، والمناسبات الإسلامية القادمة بما فيها رمضان والعيدان — تُحسب داخل متصفحك.',
     },
   },
   {

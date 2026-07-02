@@ -6,10 +6,6 @@ import { BellIcon } from '../../components/icons'
 import { pushSupported, currentSubscription, enablePush, disablePush } from '../../lib/push'
 import { alertsHelp } from './alertsHelp'
 import { CITIES, DEFAULT_CITY } from './cities'
-import {
-  gregorianToHijri, hijriToGregorian, formatHijri, eventsForHijriYear,
-  HIJRI_MONTHS, type IslamicEventKey,
-} from './islamic'
 
 type PrayerKey = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
 const PRAYER_ORDER: PrayerKey[] = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']
@@ -38,10 +34,6 @@ const STR = {
     alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
     prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
-    events: {
-      ramadan: 'Ramadan', eidFitr: 'Eid al-Fitr', eidAdha: 'Eid al-Adha',
-      arafah: 'Day of Arafah', newYear: 'Islamic New Year', ashura: 'Day of Ashura',
-    } as Record<IslamicEventKey, string>,
   },
   ar: {
     location: 'الموقع', useMyLocation: 'استخدم موقعي', myLocation: 'موقعي',
@@ -66,10 +58,6 @@ const STR = {
     alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
     prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
-    events: {
-      ramadan: 'رمضان', eidFitr: 'عيد الفطر', eidAdha: 'عيد الأضحى',
-      arafah: 'يوم عرفة', newYear: 'رأس السنة الهجرية', ashura: 'عاشوراء',
-    } as Record<IslamicEventKey, string>,
   },
 }
 
@@ -145,10 +133,6 @@ export default function PrayerTimesTool() {
   const timeFmt = useMemo(
     () => new Intl.DateTimeFormat(intlLoc, { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: loc.tz }),
     [intlLoc, loc.tz],
-  )
-  const dateFmt = useMemo(
-    () => new Intl.DateTimeFormat(intlLoc, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-    [intlLoc],
   )
 
   const dayKey = now.toDateString()
@@ -229,25 +213,6 @@ export default function PrayerTimesTool() {
     )
   }
 
-  const hijriToday = formatHijri(now, locale)
-  const [hijriYear, setHijriYear] = useState(() => gregorianToHijri(new Date()).y)
-  const events = useMemo(() => eventsForHijriYear(hijriYear), [hijriYear])
-
-  const relTime = (target: Date): string => {
-    const diff = target.getTime() - now.getTime()
-    const absDays = Math.round(Math.abs(diff) / 86400000)
-    const future = diff >= 0
-    if (absDays === 0) {
-      const hrs = Math.round(Math.abs(diff) / 3600000)
-      return hrs === 0 ? s.soon : future ? s.inHours(hrs) : s.hoursAgo(hrs)
-    }
-    if (absDays >= 60) {
-      const months = Math.round(absDays / 30.44)
-      return future ? s.inMonths(months) : s.monthsAgo(months)
-    }
-    return future ? s.inDays(absDays) : s.daysAgo(absDays)
-  }
-
   return (
     <div className="pray">
       {/* Big next-prayer hero */}
@@ -305,44 +270,6 @@ export default function PrayerTimesTool() {
       </ul>
       <p className="pray__method-note">{s.method}</p>
 
-      {/* Today */}
-      <section className="pray__today">
-        <span className="pray__today-hijri">{hijriToday}</span>
-        <span className="pray__today-greg">{dateFmt.format(now)}</span>
-      </section>
-
-      {/* Converter + upcoming */}
-      <div className="pray__grid">
-        <Converter locale={locale} s={s} dateFmt={dateFmt} />
-
-        <section className="pray__card">
-          <div className="pray__card-head">
-            <h2>{s.upcoming}</h2>
-            <div className="pray__year" role="group" aria-label={s.hijriYear}>
-              <button className="btn" aria-label={s.prevYear} data-testid="year-prev"
-                onClick={() => setHijriYear((y) => y - 1)}>−</button>
-              <span className="pray__year-num" data-testid="year-value">{hijriYear}</span>
-              <button className="btn" aria-label={s.nextYear} data-testid="year-next"
-                onClick={() => setHijriYear((y) => y + 1)}>+</button>
-              <button className="btn" data-testid="year-this"
-                onClick={() => setHijriYear(gregorianToHijri(new Date()).y)}>{s.thisYear}</button>
-            </div>
-          </div>
-          <ul className="pray__events" data-testid="events">
-            {events.map((ev) => (
-              <li key={ev.key} className="pray__event"
-                title={`${dateFmt.format(ev.date)} · ${formatHijri(ev.date, locale)}`}>
-                <span className="pray__event-name">{s.events[ev.key]}</span>
-                <span className="pray__event-date">
-                  {dateFmt.format(ev.date)}
-                  <span className="pray__event-hijri">{relTime(ev.date)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
       <p className="qr__privacy"><span aria-hidden="true">🔒</span> {s.privacy}</p>
 
       {helpOpen && (
@@ -374,80 +301,3 @@ function AlertsHelpDialog({ failedMsg, help, detail, closeLabel, onClose }: {
   )
 }
 
-function Converter({ locale, s, dateFmt }: {
-  locale: 'en' | 'ar'
-  s: typeof STR['en']
-  dateFmt: Intl.DateTimeFormat
-}) {
-  const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  const [greg, setGreg] = useState(() => toISO(new Date()))
-  const initHijri = gregorianToHijri(new Date())
-  const [hy, setHy] = useState(initHijri.y)
-  const [hm, setHm] = useState(initHijri.m)
-  const [hd, setHd] = useState(initHijri.d)
-
-  const gregAsHijri = useMemo(() => {
-    const [y, m, d] = greg.split('-').map(Number)
-    if (!y || !m || !d) return ''
-    return formatHijri(new Date(y, m - 1, d), locale)
-  }, [greg, locale])
-
-  const hijriAsGreg = useMemo(() => dateFmt.format(hijriToGregorian(hy, hm, hd)), [hy, hm, hd, dateFmt])
-
-  const shiftGreg = (delta: number) => {
-    const [y, m, d] = greg.split('-').map(Number)
-    if (y) setGreg(toISO(new Date(y, m - 1, d + delta)))
-  }
-  const daysFromToday = useMemo(() => {
-    const [y, m, d] = greg.split('-').map(Number)
-    if (!y) return null
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    return Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86400000)
-  }, [greg])
-  const countdown = daysFromToday === null ? ''
-    : daysFromToday === 0 ? s.today
-      : daysFromToday > 0 ? s.inDays(daysFromToday) : s.daysAgo(-daysFromToday)
-
-  return (
-    <section className="pray__card">
-      <div className="pray__card-head"><h2>{s.converter}</h2></div>
-
-      <label className="field">
-        <span className="field__label">{s.gregorian}</span>
-        <input className="input" type="date" value={greg} data-testid="conv-greg"
-          onChange={(e) => setGreg(e.target.value)} />
-      </label>
-      <div className="pray__conv-controls">
-        <button className="btn" data-testid="conv-prev-day" aria-label={s.prevDay}
-          onClick={() => shiftGreg(-1)}>−</button>
-        <button className="btn" data-testid="conv-today" onClick={() => setGreg(toISO(new Date()))}>{s.today}</button>
-        <button className="btn" data-testid="conv-next-day" aria-label={s.nextDay}
-          onClick={() => shiftGreg(1)}>+</button>
-        <span className="pray__countdown" data-testid="conv-countdown">{countdown}</span>
-      </div>
-      <p className="pray__conv-out" dir={locale === 'ar' ? 'rtl' : 'ltr'} data-testid="conv-hijri-out">{gregAsHijri}</p>
-
-      <div className="pray__hijri-inputs">
-        <label className="field">
-          <span className="field__label">{s.day}</span>
-          <input className="input" type="number" min={1} max={30} value={hd}
-            onChange={(e) => setHd(Math.min(30, Math.max(1, Number(e.target.value))))} />
-        </label>
-        <label className="field pray__month">
-          <span className="field__label">{s.month}</span>
-          <select className="input" value={hm} onChange={(e) => setHm(Number(e.target.value))}>
-            {HIJRI_MONTHS[locale].map((name, i) => (
-              <option key={i} value={i + 1}>{name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field__label">{s.year}</span>
-          <input className="input" type="number" min={1} max={2000} value={hy}
-            onChange={(e) => setHy(Math.max(1, Number(e.target.value)))} />
-        </label>
-      </div>
-      <p className="pray__conv-out">{hijriAsGreg}</p>
-    </section>
-  )
-}

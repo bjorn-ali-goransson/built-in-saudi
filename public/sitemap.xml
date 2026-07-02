@@ -56,6 +56,24 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/prayer-times"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/tools/hijri-calendar</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/hijri-calendar"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/hijri-calendar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/hijri-calendar"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/tools/hijri-calendar</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/hijri-calendar"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/hijri-calendar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/hijri-calendar"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/tools/password-generator</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
