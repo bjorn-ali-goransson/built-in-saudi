@@ -38,6 +38,19 @@ export const liveToolSeo: ToolSeo[] = [
     },
   },
   {
+    id: 'password-generator',
+    en: {
+      name: 'Password Generator',
+      description:
+        'Create strong random passwords and memorable passphrases entirely in your browser — adjustable length, character sets and a live strength estimate. Nothing is ever sent anywhere.',
+    },
+    ar: {
+      name: 'مولّد كلمات المرور',
+      description:
+        'أنشئ كلمات مرور قوية وعبارات مرور سهلة التذكّر بالكامل داخل متصفحك — طول قابل للضبط ومجموعات أحرف وتقدير فوري للقوة. لا يُرسل أي شيء إلى أي مكان.',
+    },
+  },
+  {
     id: 'prayer-times',
     en: {
       name: 'Prayer Times & Hijri Calendar',

@@ -1,8 +1,9 @@
 import type { Tool } from './types'
 import { qrCodeTool } from './qr-code/meta'
 import { prayerTimesTool } from './prayer-times/meta'
+import { passwordGeneratorTool } from './password-generator/meta'
 import {
-  KeyIcon, ImageIcon, PaletteIcon, RulerIcon,
+  ImageIcon, PaletteIcon, RulerIcon,
   BracesIcon, HashIcon, TextIcon, CodeIcon,
 } from '../components/icons'
 
@@ -15,23 +16,9 @@ import {
 export const tools: Tool[] = [
   qrCodeTool,
   prayerTimesTool,
+  passwordGeneratorTool,
 
   // ── Roadmap ──────────────────────────────────────────────
-  {
-    id: 'password-generator',
-    name: 'Password Generator',
-    tagline: 'Strong, memorable passwords — generated locally.',
-    description: 'Create strong random passwords and passphrases entirely in your browser.',
-    category: 'Generators',
-    keywords: ['password', 'passphrase', 'random', 'secure'],
-    status: 'coming-soon',
-    Icon: KeyIcon,
-    ar: {
-      name: 'مولّد كلمات المرور',
-      tagline: 'كلمات مرور قوية تُنشأ محليًا على جهازك.',
-      description: 'أنشئ كلمات مرور وعبارات مرور قوية وعشوائية بالكامل داخل متصفحك.',
-    },
-  },
   {
     id: 'image-compressor',
     name: 'Image Compressor',
