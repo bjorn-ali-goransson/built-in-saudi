@@ -1,5 +1,6 @@
 import type { Tool } from './types'
 import { qrCodeTool } from './qr-code/meta'
+import { prayerTimesTool } from './prayer-times/meta'
 import {
   KeyIcon, ImageIcon, PaletteIcon, RulerIcon,
   BracesIcon, HashIcon, TextIcon, CodeIcon,
@@ -13,6 +14,7 @@ import {
  */
 export const tools: Tool[] = [
   qrCodeTool,
+  prayerTimesTool,
 
   // ── Roadmap ──────────────────────────────────────────────
   {

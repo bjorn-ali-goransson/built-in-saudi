@@ -289,3 +289,48 @@ input[type='range'] { width: 100%; accent-color: var(--green-600); }
 .lang-hint__switch { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
 .lang-hint__dismiss { color: var(--ink-faint); font-weight: 600; font-size: 0.88rem; padding: 0.4rem 0.5rem; border-radius: var(--r-sm); }
 .lang-hint__dismiss:hover { color: var(--ink); background: var(--sand-100); }
+
+/* ======================================================================
+   Prayer Times & Hijri Calendar tool
+   ====================================================================== */
+.pray { display: flex; flex-direction: column; gap: 1.3rem; }
+.pray__loc { display: flex; gap: 0.8rem; align-items: flex-end; flex-wrap: wrap; }
+.pray__city { flex: 1; min-width: 200px; }
+.pray__geoerr { color: var(--danger); font-size: 0.9rem; }
+
+.pray__card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 1.3rem; }
+.pray__card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.pray__card-head h2 { font-size: 1.25rem; }
+.pray__method { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-faint); }
+[dir='rtl'] .pray__method { font-family: var(--font-ar); }
+
+.pray__times { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.pray__row {
+  display: flex; align-items: center; gap: 0.8rem; padding: 0.7rem 0.9rem;
+  border-radius: var(--r-md); background: color-mix(in srgb, var(--sand-100) 55%, var(--surface));
+  border: 1px solid transparent;
+}
+.pray__row.is-next { background: color-mix(in srgb, var(--green-400) 14%, transparent); border-color: color-mix(in srgb, var(--green-500) 35%, transparent); }
+.pray__name { font-weight: 600; font-size: 1.05rem; color: var(--green-700); min-width: 6rem; }
+.pray__time { font-family: var(--font-mono); font-size: 1.05rem; color: var(--ink); margin-inline-start: auto; }
+[dir='rtl'] .pray__time { font-family: var(--font-mono); }
+.pray__next { font-size: 0.78rem; font-weight: 600; color: var(--green-600); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.6rem; white-space: nowrap; }
+
+.pray__today { text-align: center; padding: 1.2rem; background: linear-gradient(180deg, var(--green-600), var(--green-700)); color: var(--sand-100); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
+.pray__today-hijri { display: block; font-family: var(--font-display); font-size: clamp(1.3rem, 4vw, 1.9rem); }
+[dir='rtl'] .pray__today-hijri { font-family: var(--font-ar); }
+.pray__today-greg { display: block; opacity: 0.8; margin-top: 0.3rem; font-size: 0.95rem; }
+
+.pray__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3rem; align-items: start; }
+@media (max-width: 720px) { .pray__grid { grid-template-columns: 1fr; } }
+
+.pray__conv-out { margin: 0.6rem 0 1rem; padding: 0.6rem 0.8rem; background: var(--sand-100); border-radius: var(--r-sm); font-weight: 600; color: var(--green-700); }
+.pray__hijri-inputs { display: grid; grid-template-columns: 0.7fr 1.4fr 0.9fr; gap: 0.6rem; }
+.pray__month { min-width: 0; }
+
+.pray__events { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+.pray__event { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line-soft); }
+.pray__event:last-child { border-bottom: none; padding-bottom: 0; }
+.pray__event-name { font-weight: 600; color: var(--green-700); }
+.pray__event-date { text-align: end; font-size: 0.9rem; color: var(--ink-soft); }
+.pray__event-hijri { display: block; font-size: 0.78rem; color: var(--ink-faint); }
