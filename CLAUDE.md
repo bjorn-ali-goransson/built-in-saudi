@@ -35,9 +35,10 @@ src/
     <id>/             one folder per real tool: meta.ts + <Name>Tool.tsx
   components/         Layout, Header, Footer, ToolCard, SaduDivider, icons
   pages/              HomePage (catalog + fuzzy search), ToolPage, NotFoundPage
-  lib/                fuzzy.ts, useDocumentMeta.ts, i18n (planned)
+  lib/                fuzzy.ts, useDocumentMeta.ts
+  i18n/               en.ts, ar.ts, index.tsx, seo.ts (pure prerender data)
   styles/             theme.css (tokens/base), app.css (components)
-scripts/spa-fallback.mjs   post-build: 404.html + per-tool prerender
+vite.config.ts        includes the build-time prerender plugin (SSG)
 public/               CNAME, robots.txt, sitemap.xml, favicon.svg, og.svg
 docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
 ```
@@ -49,10 +50,12 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
      `component`, an icon, category, keywords, and a good tagline/description.
    - `<Name>Tool.tsx` — the tool UI, **default export**.
 2. Register it in `src/tools/index.ts` (order = catalog order).
-3. That's it — routing (`/tools/:id`), the home catalog card, fuzzy search, SEO
-   meta, and the prerendered `dist/tools/<id>/index.html` all pick it up
-   automatically (the prerender script discovers any folder with a `meta.ts`).
-4. Add the tool's URL to `public/sitemap.xml`.
+3. Routing (`/:lang/tools/:id`), the home catalog card, and fuzzy search pick it
+   up automatically.
+4. **When the tool goes LIVE:** add its `en`/`ar` name + description to
+   `src/i18n/seo.ts` so the prerender plugin emits static `/<locale>/tools/<id>/`
+   HTML with correct head + content. Add its `/en` + `/ar` URLs to
+   `public/sitemap.xml`.
 5. Work from its spec in `docs/tools/<id>.md`; keep the spec's checklist honest.
 
 **External/showcase tools:** omit `component`, set `href` — the catalog links out
@@ -123,6 +126,7 @@ barcode — that's expected).
   `useDocumentMeta(locale, subPath, …)` (sets canonical + hreflang).
 - Adding a tool: also add its `ar` translations in `meta.ts`/`index.ts`, its
   category to `CATEGORY_LABELS`, and its `/en` + `/ar` URLs to `sitemap.xml`.
-  The prerender script emits both locales automatically.
+  The prerender plugin (vite.config.ts) emits both locales automatically for
+  tools listed in `src/i18n/seo.ts`.
 - The language-switch popup (`LanguageSuggestion`) shows in the *suggested*
   language when the UA preference differs from the current locale.

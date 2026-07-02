@@ -52,5 +52,7 @@ publishes `dist/` to GitHub Pages.
 - Custom domain `built-in-saudi.com` (apex) with `www` → apex, HTTPS enforced.
 - DNS is managed in Google Cloud DNS (project `blitz-ksa`).
 - `public/CNAME`, `robots.txt`, `sitemap.xml` ship with every build.
-- `scripts/spa-fallback.mjs` copies `index.html` → `404.html` so deep links
-  boot the SPA (clean URLs on GitHub Pages).
+- A **prerender plugin** in `vite.config.ts` writes localized static HTML per
+  route (`/en`, `/ar`, and each live tool) with correct `<head>`
+  (title/description/canonical/hreflang/og) and crawlable content, plus a
+  `404.html` SPA fallback. `createRoot` replaces the static block on mount.

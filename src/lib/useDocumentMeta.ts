@@ -1,20 +1,9 @@
 import { useEffect } from 'react'
 import { LOCALES, type Locale } from '../i18n'
+import { siteMeta } from '../i18n/seo'
 
 const ORIGIN = 'https://built-in-saudi.com'
-
-const SITE = {
-  en: {
-    suffix: ' — Built in Saudi',
-    title: 'Built in Saudi — Free, honest online tools',
-    desc: 'A growing toolbox of fast, free, privacy-first utilities — no ads, no sign-ups, nothing uploaded. Everything runs in your browser. Proudly built in Saudi Arabia.',
-  },
-  ar: {
-    suffix: ' — بُنِيَ في السعودية',
-    title: 'بُنِيَ في السعودية — أدوات مجانية وصادقة على الإنترنت',
-    desc: 'صندوقُ أدواتٍ متنامٍ من الأدوات المجانية التي تحترم خصوصيتك — بلا إعلانات، وبلا تسجيل، ولا يُرفع أي شيء. كل شيء يعمل داخل متصفحك. صُنع بفخر في السعودية.',
-  },
-} satisfies Record<Locale, { suffix: string; title: string; desc: string }>
+const SUFFIX: Record<Locale, string> = { en: ' — Built in Saudi', ar: ' — بُنِيَ في السعودية' }
 
 function setMeta(selector: string, attr: string, value: string) {
   const el = document.querySelector(selector)
@@ -43,9 +32,9 @@ function setHreflangs(subPath: string) {
  */
 export function useDocumentMeta(locale: Locale, subPath = '', title?: string, description?: string) {
   useEffect(() => {
-    const site = SITE[locale]
-    const fullTitle = title ? `${title}${site.suffix}` : site.title
-    const desc = description ?? site.desc
+    const site = siteMeta[locale]
+    const fullTitle = title ? `${title}${SUFFIX[locale]}` : site.title
+    const desc = description ?? site.description
     const canonical = `${ORIGIN}/${locale}${subPath}`
 
     document.title = fullTitle

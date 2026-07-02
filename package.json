@@ -6,7 +6,7 @@
   "description": "Built in Saudi — free, privacy-first online tools.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/spa-fallback.mjs",
+    "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
