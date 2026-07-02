@@ -608,3 +608,11 @@ html { -webkit-tap-highlight-color: transparent; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Islamic calendar — holidays list */
+
+/* Print: show only the invoice (used by the Invoice Generator) */
+@media print {
+  body * { visibility: hidden; }
+  .invoice-print, .invoice-print * { visibility: visible; }
+  .invoice-print { position: absolute; inset: 0; margin: 0; padding: 24px; width: 100%; }
+  .invoice-print .print-hide { display: none !important; }
+}

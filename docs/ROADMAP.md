@@ -106,7 +106,7 @@ _(No loan/EMI/interest calculators — see Out of scope.)_
 ## Business & invoicing
 | Tool | Slug | Runs | Priority | Status |
 |------|------|------|----------|--------|
-| [Invoice generator (SAR, VAT, bilingual)](./tools/invoice-generator.md) | `/tools/invoice-generator` | client | T2 | 📝 |
+| [Invoice generator (SAR, VAT, bilingual)](./tools/invoice-generator.md) | `/tools/invoice-generator` | client | T2 | ✅ live |
 | Payment receipt generator | `/tools/receipt-generator` | client | T3 | 🧭 |
 
 ## 🇸🇦 Saudi / local (brand wedge, low competition)

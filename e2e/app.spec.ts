@@ -158,6 +158,20 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
+  test('invoice generator: computes VAT and total from line items', async ({ page }) => {
+    await page.goto('/en/tools/invoice-generator')
+    await expect(page.getByTestId('invoice-generator')).toBeVisible()
+    await page.getByTestId('inv-qty-0').fill('2')
+    await page.getByTestId('inv-price-0').fill('100')
+    await page.getByTestId('inv-add-row').click()
+    await page.getByTestId('inv-qty-1').fill('1')
+    await page.getByTestId('inv-price-1').fill('50')
+    // subtotal 250, VAT 15% = 37.50, total 287.50
+    await expect(page.getByTestId('inv-subtotal')).toContainText('250')
+    await expect(page.getByTestId('inv-vat')).toContainText('37.5')
+    await expect(page.getByTestId('inv-total')).toContainText('287.5')
+  })
+
   test('hash generator: SHA-256 of "abc" matches the known vector', async ({ page }) => {
     await page.goto('/en/tools/hash-generator')
     await page.getByTestId('hash-algo-SHA-256').click()

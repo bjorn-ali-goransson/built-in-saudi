@@ -25,6 +25,11 @@ export interface ToolSeo {
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'invoice-generator',
+    en: { name: 'Invoice Generator', description: 'Create a bilingual (AR/EN) SAR invoice with line items, automatic 15% Saudi VAT and the total in Arabic words. Print or save as PDF; nothing uploaded.' },
+    ar: { name: 'منشئ الفواتير', description: 'أنشئ فاتورة ثنائية اللغة بالريال ببنودٍ وضريبة ١٥٪ تلقائيًا والإجمالي بالأحرف العربية. اطبعها أو احفظها PDF؛ لا يُرفع شيء.' },
+  },
+  {
     id: 'pdf-split',
     en: { name: 'Split PDF', description: 'Split a PDF in your browser — extract a page range like 1-3,5 into a new file, or burst into single-page PDFs (ZIP or one by one). Never uploaded.' },
     ar: { name: 'تقسيم PDF', description: 'قسّم PDF داخل متصفحك — استخرج نطاق صفحات مثل 1-3،5 في ملف جديد، أو فكّكه إلى صفحات مفردة (ZIP أو واحدة تلو الأخرى). لا يُرفع أبدًا.' },
