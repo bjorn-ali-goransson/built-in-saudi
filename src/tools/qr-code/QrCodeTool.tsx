@@ -121,12 +121,11 @@ export default function QrCodeTool() {
     <div className="qr">
       {/* Controls */}
       <div className="qr__panel">
-        <div className="qr__types" role="tablist" aria-label={q.style}>
+        <div className="qr__types" role="group" aria-label={q.style}>
           {TYPE_DEFS.map((d) => (
             <button
               key={d.id}
-              role="tab"
-              aria-selected={type === d.id}
+              aria-pressed={type === d.id}
               className={`qr__type ${type === d.id ? 'is-active' : ''}`}
               onClick={() => { setType(d.id); setError('') }}
             >
@@ -243,9 +242,10 @@ export default function QrCodeTool() {
 
       {/* Preview + export */}
       <div className="qr__preview">
-        <div className="qr__stage" style={{ background: bg }}>
+        <div className="qr__stage" style={{ background: bg }} role="img"
+          aria-label={hasCode ? `${q.encodes}: ${value}` : q.empty} aria-live="polite">
           {hasCode ? (
-            <div className="qr__svg" dangerouslySetInnerHTML={{ __html: svg }} />
+            <div className="qr__svg" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
           ) : (
             <div className="qr__empty">
               {error ? <span className="qr__error">{error}</span> : <span>{q.empty}</span>}
