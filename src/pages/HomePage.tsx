@@ -46,12 +46,17 @@ export function HomePage() {
     out.push({ key: '__rec', title: locale === 'ar' ? 'موصى به' : 'Recommended', tools: rec })
     out.push({ key: '__dua', title: locale === 'ar' ? 'دعاء وذكر' : 'Duʿāʾ & Dhikr', tools: dua })
     const cats = [...CATEGORY_ORDER, ...live.map((tl) => tl.category).filter((c) => !CATEGORY_ORDER.includes(c))]
+    const catSections: { key: string; title: string; tools: Tool[] }[] = []
     for (const cat of cats) {
       const inCat = live.filter((tl) => !used.has(tl.id) && tl.category === cat)
       if (!inCat.length) continue
       inCat.forEach((tl) => used.add(tl.id))
-      out.push({ key: cat, title: categoryLabel(cat, locale), tools: inCat })
+      catSections.push({ key: cat, title: categoryLabel(cat, locale), tools: inCat })
     }
+    // A category with a single app doesn't earn its own heading — pool them into "Other".
+    out.push(...catSections.filter((s) => s.tools.length > 1))
+    const singles = catSections.filter((s) => s.tools.length === 1).flatMap((s) => s.tools)
+    if (singles.length) out.push({ key: '__other', title: locale === 'ar' ? 'أخرى' : 'Other', tools: singles })
     return out.filter((s) => s.tools.length)
   }, [locale])
 
@@ -64,7 +69,7 @@ export function HomePage() {
         <input
           ref={inputRef}
           type="search"
-          className="tool-search__input flex-1 min-w-0 border-none bg-transparent outline-none font-body text-[1rem] text-ink py-[0.7rem] placeholder:text-ink-faint truncate [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+          className="tool-search__input flex-1 min-w-0 border-none bg-transparent outline-none appearance-none font-body text-[1rem] text-ink py-[0.7rem] placeholder:text-ink-faint truncate [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
           placeholder={t.catalog.searchPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
