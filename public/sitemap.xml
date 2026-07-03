@@ -487,4 +487,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/invoice-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/invoice-generator"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/tools/color-tools</loc>
+    <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/color-tools"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/color-tools"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/color-tools"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/tools/color-tools</loc>
+    <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/tools/color-tools"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/tools/color-tools"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/tools/color-tools"/>
+  </url>
 </urlset>

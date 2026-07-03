@@ -25,6 +25,11 @@ export interface ToolSeo {
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'color-tools',
+    en: { name: 'Color Picker & Palettes', description: 'Pick a colour and read it as HEX/RGB/HSL, then generate complementary, analogous and triadic palettes plus a shades ramp — copy any swatch. In your browser.' },
+    ar: { name: 'منتقي الألوان واللوحات', description: 'اختر لونًا واقرأه بصيغ HEX/RGB/HSL، ثم ولّد لوحات مكمّلة ومتجانسة وثلاثية وتدرّجات — وانسخ أي لون. داخل متصفحك.' },
+  },
+  {
     id: 'invoice-generator',
     en: { name: 'Invoice Generator', description: 'Create a bilingual (AR/EN) SAR invoice with line items, automatic 15% Saudi VAT and the total in Arabic words. Print or save as PDF; nothing uploaded.' },
     ar: { name: 'منشئ الفواتير', description: 'أنشئ فاتورة ثنائية اللغة بالريال ببنودٍ وضريبة ١٥٪ تلقائيًا والإجمالي بالأحرف العربية. اطبعها أو احفظها PDF؛ لا يُرفع شيء.' },

@@ -172,6 +172,14 @@ test.describe('tools', () => {
     await expect(page.getByTestId('inv-total')).toContainText('287.5')
   })
 
+  test('color tools: shows the picker, values and palettes', async ({ page }) => {
+    await page.goto('/en/tools/color-tools')
+    await expect(page.getByTestId('color-tools')).toBeVisible()
+    await expect(page.getByTestId('color-hex')).toContainText('#')
+    await expect(page.getByTestId('color-rgb')).toContainText('rgb(')
+    await expect(page.getByTestId('color-palette')).toBeVisible()
+  })
+
   test('hash generator: SHA-256 of "abc" matches the known vector', async ({ page }) => {
     await page.goto('/en/tools/hash-generator')
     await page.getByTestId('hash-algo-SHA-256').click()
