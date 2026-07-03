@@ -172,6 +172,18 @@ test.describe('tools', () => {
     await expect(page.getByTestId('inv-total')).toContainText('287.5')
   })
 
+  test('qr studio: renders a code + customization controls', async ({ page }) => {
+    await page.goto('/en/tools/qr-code')
+    await expect(page.getByTestId('qr-code')).toBeVisible()
+    await expect(page.getByTestId('qr-url')).toBeVisible()
+    await expect(page.getByTestId('qr-canvas')).toBeVisible()
+    await expect(page.getByTestId('qr-share')).toBeVisible()
+    await expect(page.getByTestId('qr-preset-0')).toBeVisible()
+    await page.getByTestId('qr-dot-liquid').click()
+    await page.getByTestId('qr-frame-circle').click()
+    await expect(page.getByTestId('qr-label')).toBeVisible()
+  })
+
   test('color tools: shows the picker, values and palettes', async ({ page }) => {
     await page.goto('/en/tools/color-tools')
     await expect(page.getByTestId('color-tools')).toBeVisible()
