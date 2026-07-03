@@ -27,6 +27,7 @@ const PRESETS: Preset[] = [
   { dot: 'rounded', fg: '#0e7490', bg: '#ecfeff', frame: 'circle' },
 ]
 const SAMPLE = 'https://built-in-saudi.com'
+const EMOJIS = ['⭐', '❤️', '🔥', '🌙', '🕌', '🐫', '🌴', '☕', '⚡', '💎', '🌟', '🍀', '🎁', '🚀', '🌸', '👍', '✨', '🧡', '🐍', '🎯']
 
 function hslHex(h: number, s: number, l: number): string {
   s /= 100; l /= 100
@@ -37,11 +38,11 @@ function hslHex(h: number, s: number, l: number): string {
 }
 
 // A small non-interactive QR preview rendered to its own canvas.
-function MiniQR({ dot, fg, bg, frame, px }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number }) {
+function MiniQR({ dot, fg, bg, frame, px, emoji }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number; emoji?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, ecLevel: 'M', frame, frameColor: fg, label: '' })
-  }, [dot, fg, bg, frame])
+    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, emoji, ecLevel: 'M', frame, frameColor: fg, label: '' })
+  }, [dot, fg, bg, frame, emoji])
   return <canvas ref={ref} className="rounded-[4px]" style={{ width: px, height: 'auto' }} aria-hidden="true" />
 }
 
@@ -57,6 +58,7 @@ export default function QrCodeTool() {
   const [phone, setPhone] = useState('')
 
   const [dot, setDot] = useState<DotStyle>('square')
+  const [emoji, setEmoji] = useState('⭐')
   const [fg, setFg] = useState('#12211b')
   const [bg, setBg] = useState('#ffffff')
   const [frame, setFrame] = useState<Frame>('none')
@@ -86,8 +88,8 @@ export default function QrCodeTool() {
     const c = canvasRef.current
     if (!c) return
     if (!value) { c.width = c.height = 0; return }
-    renderQR(c, { value, size: sizePx, margin, fg, bg, dot, ecLevel: logo ? 'H' : 'M', logo, frame, frameColor: fg, label })
-  }, [value, sizePx, margin, fg, bg, dot, logo, frame, label])
+    renderQR(c, { value, size: sizePx, margin, fg, bg, dot, emoji, ecLevel: logo ? 'H' : 'M', logo, frame, frameColor: fg, label })
+  }, [value, sizePx, margin, fg, bg, dot, emoji, logo, frame, label])
 
   function applyPreset(p: Preset) { setDot(p.dot); setFg(p.fg); setBg(p.bg); setFrame(p.frame) }
   function randomTheme() { const h = Math.floor(Math.random() * 360); setFg(hslHex(h, 70, 26)); setBg(hslHex((h + 8) % 360, 55, 96)) }
@@ -148,15 +150,26 @@ export default function QrCodeTool() {
       {/* Pattern (dot style) with live examples */}
       <div className="flex flex-col gap-2">
         <span className="field__label">{q.dotStyle}</span>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {DOT_STYLES.map((d) => (
             <button key={d} className={`flex flex-col items-center gap-1 rounded-md border-2 p-1.5 ${dot === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)]' : 'border-[color:var(--line-soft)] hover:border-green-500'}`}
               data-testid={`qr-dot-${d}`} onClick={() => setDot(d)}>
-              <MiniQR dot={d} fg={fg} bg={bg} frame="none" px={44} />
+              <MiniQR dot={d} fg={fg} bg={bg} frame="none" px={44} emoji={emoji} />
               <span className="text-[0.66rem] text-ink-soft leading-tight text-center">{q.dots[d]}</span>
             </button>
           ))}
         </div>
+        {dot === 'emoji' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <input className="input w-16 text-center text-[1.2rem]" value={emoji} maxLength={4} data-testid="qr-emoji" onChange={(e) => setEmoji(e.target.value || '⭐')} aria-label={q.dots.emoji} />
+            <button className="btn px-3" data-testid="qr-emoji-random" onClick={() => setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)])}>🎲 {q.randomTheme}</button>
+            <div className="flex flex-wrap gap-1">
+              {EMOJIS.slice(0, 10).map((em) => (
+                <button key={em} className="w-8 h-8 rounded-md border border-[color:var(--line-soft)] hover:border-green-500 text-[1.1rem] leading-none" onClick={() => setEmoji(em)} aria-label={em}>{em}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Theme */}

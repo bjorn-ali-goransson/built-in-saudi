@@ -112,7 +112,7 @@ export const ar: Dict = {
     logo: 'شعار في المنتصف',
     addLogo: 'إضافة صورة',
     removeLogo: 'إزالة',
-    dots: { square: 'مربّع', dots: 'دوائر', rounded: 'مستدير', cube: 'مكعبات ثلاثية', liquid: 'سائل' },
+    dots: { square: 'مربّع', dots: 'دوائر', rounded: 'مستدير', cube: 'مكعبات ثلاثية', liquid: 'سائل', emoji: 'إيموجي' },
     placeholderUrl: 'example.com',
     placeholderText: 'أي نص لتشفيره…',
     placeholderSsid: 'اسم شبكتي',

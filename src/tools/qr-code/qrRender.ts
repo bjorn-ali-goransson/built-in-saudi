@@ -1,8 +1,9 @@
 import QRCode from 'qrcode'
 
-export type DotStyle = 'square' | 'dots' | 'rounded' | 'cube' | 'liquid'
-export const DOT_STYLES: DotStyle[] = ['square', 'dots', 'rounded', 'cube', 'liquid']
+export type DotStyle = 'square' | 'dots' | 'rounded' | 'cube' | 'liquid' | 'emoji'
+export const DOT_STYLES: DotStyle[] = ['square', 'dots', 'rounded', 'cube', 'liquid', 'emoji']
 export type Frame = 'none' | 'card' | 'circle'
+const EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif'
 
 export interface RenderOpts {
   value: string
@@ -11,6 +12,7 @@ export interface RenderOpts {
   fg: string
   bg: string
   dot: DotStyle
+  emoji?: string
   ecLevel: 'L' | 'M' | 'Q' | 'H'
   logo?: HTMLImageElement | null
   frame?: Frame
@@ -67,6 +69,8 @@ function renderMatrix(canvas: HTMLCanvasElement, o: RenderOpts): number {
   const dark = shade(o.fg, -55)
   const on = (r: number, c: number) => r >= 0 && c >= 0 && r < count && c < count && !!data[r * count + c]
   const isFinder = (r: number, c: number) => (r < 7 && c < 7) || (r < 7 && c >= count - 7) || (r >= count - 7 && c < 7)
+  const emoji = o.emoji || '⭐'
+  if (o.dot === 'emoji') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.round(cell * 1.05)}px ${EMOJI_FONT}` }
 
   for (let r = 0; r < count; r++) {
     for (let c = 0; c < count; c++) {
@@ -86,6 +90,8 @@ function renderMatrix(canvas: HTMLCanvasElement, o: RenderOpts): number {
         const R = cell * 0.5
         varRect(ctx, x, y, cell, up || lf ? 0 : R, up || rt ? 0 : R, dn || rt ? 0 : R, dn || lf ? 0 : R)
         ctx.fill()
+      } else if (style === 'emoji') {
+        ctx.fillText(emoji, x + cell / 2, y + cell / 2)
       } else {
         const d = cell * 0.3
         ctx.fillStyle = o.fg; ctx.fillRect(x, y + d, cell - d, cell - d)

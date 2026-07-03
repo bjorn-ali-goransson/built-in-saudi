@@ -113,7 +113,7 @@ export const en = {
     logo: 'Logo in the middle',
     addLogo: 'Add image',
     removeLogo: 'Remove',
-    dots: { square: 'Square', dots: 'Circles', rounded: 'Rounded', cube: '3D cubes', liquid: 'Liquid' },
+    dots: { square: 'Square', dots: 'Circles', rounded: 'Rounded', cube: '3D cubes', liquid: 'Liquid', emoji: 'Emoji' },
     placeholderUrl: 'example.com',
     placeholderText: 'Any text to encode…',
     placeholderSsid: 'MyNetwork',
