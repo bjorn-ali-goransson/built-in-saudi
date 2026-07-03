@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { CodeIcon } from '../../components/icons'
+import { BracesIcon } from '../../components/icons'
 
 export const jsonFormatterTool: Tool = {
   id: 'json-formatter',
@@ -12,7 +12,7 @@ export const jsonFormatterTool: Tool = {
   category: 'Developer',
   keywords: ['json', 'css', 'xml', 'format', 'formatter', 'beautify', 'minify', 'validate', 'pretty print', 'منسق', 'تنسيق'],
   status: 'stable',
-  Icon: CodeIcon,
+  Icon: BracesIcon,
   component: lazyTool(() => import('./JsonFormatterTool')),
   ar: {
     name: 'منسّق JSON',

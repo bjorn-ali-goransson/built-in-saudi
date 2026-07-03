@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { ImageIcon } from '../../components/icons'
+import { CropIcon } from '../../components/icons'
 
 export const imageCropperTool: Tool = {
   id: 'image-cropper',
@@ -12,7 +12,7 @@ export const imageCropperTool: Tool = {
   category: 'Images',
   keywords: ['image', 'crop', 'cropper', 'trim', 'aspect ratio', 'square', 'avatar', 'قص الصور', 'اقتصاص', 'صور'],
   status: 'stable',
-  Icon: ImageIcon,
+  Icon: CropIcon,
   component: lazyTool(() => import('./ImageCropperTool')),
   ar: {
     name: 'أداة قص الصور',

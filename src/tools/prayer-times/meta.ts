@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { MoonIcon } from '../../components/icons'
+import { MosqueIcon } from '../../components/icons'
 
 export const prayerTimesTool: Tool = {
   id: 'prayer-times',
@@ -15,7 +15,7 @@ export const prayerTimesTool: Tool = {
     'notifications', 'مواقيت الصلاة', 'صلاة', 'أذان', 'الفجر', 'المغرب',
   ],
   status: 'stable',
-  Icon: MoonIcon,
+  Icon: MosqueIcon,
   component: lazyTool(() => import('./PrayerTimesTool')),
   ar: {
     name: 'مواقيت الصلاة',

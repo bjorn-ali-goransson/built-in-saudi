@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { FileIcon } from '../../components/icons'
+import { PhotoDocIcon } from '../../components/icons'
 
 export const imagesToPdfTool: Tool = {
   id: 'images-to-pdf',
@@ -12,7 +12,7 @@ export const imagesToPdfTool: Tool = {
   category: 'PDF',
   keywords: ['jpg to pdf', 'png to pdf', 'images to pdf', 'combine', 'merge images', 'pdf', 'صور إلى pdf', 'تحويل صور', 'دمج'],
   status: 'stable',
-  Icon: FileIcon,
+  Icon: PhotoDocIcon,
   component: lazyTool(() => import('./ImagesToPdfTool')),
   ar: {
     name: 'الصور إلى PDF',

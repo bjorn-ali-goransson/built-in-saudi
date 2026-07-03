@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { FileIcon } from '../../components/icons'
+import { MergeIcon } from '../../components/icons'
 
 export const pdfMergeTool: Tool = {
   id: 'pdf-merge',
@@ -12,7 +12,7 @@ export const pdfMergeTool: Tool = {
   category: 'PDF',
   keywords: ['pdf', 'merge', 'combine', 'join pdf', 'merge pdf', 'دمج pdf', 'دمج ملفات', 'جمع'],
   status: 'stable',
-  Icon: FileIcon,
+  Icon: MergeIcon,
   component: lazyTool(() => import('./PdfMergeTool')),
   ar: {
     name: 'دمج PDF',

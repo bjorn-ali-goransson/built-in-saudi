@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { FileIcon } from '../../components/icons'
+import { ScissorsIcon } from '../../components/icons'
 
 export const pdfSplitTool: Tool = {
   id: 'pdf-split',
@@ -12,7 +12,7 @@ export const pdfSplitTool: Tool = {
   category: 'PDF',
   keywords: ['pdf', 'split', 'extract pages', 'page range', 'burst', 'separate pdf', 'تقسيم pdf', 'استخراج صفحات', 'فصل'],
   status: 'stable',
-  Icon: FileIcon,
+  Icon: ScissorsIcon,
   component: lazyTool(() => import('./PdfSplitTool')),
   ar: {
     name: 'تقسيم PDF',

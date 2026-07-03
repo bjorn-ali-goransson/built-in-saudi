@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { ParagraphIcon } from '../../components/icons'
+import { FeatherIcon } from '../../components/icons'
 
 export const poetryTool: Tool = {
   id: 'arabic-poetry',
@@ -12,7 +12,7 @@ export const poetryTool: Tool = {
   category: 'Text',
   keywords: ['poetry', 'arabic', 'meters', 'buhur', 'bahr', 'aroud', 'prosody', 'شعر', 'بحور', 'العروض', 'تفعيلات', 'بيت'],
   status: 'stable',
-  Icon: ParagraphIcon,
+  Icon: FeatherIcon,
   component: lazyTool(() => import('./PoetryTool')),
   ar: {
     name: 'بحور الشعر',

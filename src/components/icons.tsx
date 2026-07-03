@@ -346,3 +346,62 @@ export function CodeIcon({ className }: P) {
     </svg>
   )
 }
+
+export function MosqueIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 3c2 1.6 3 3 3 4.5H9C9 6 10 4.6 12 3z" /><path d="M6 21V10h12v11" />
+      <path d="M10.5 21v-3a1.5 1.5 0 0 1 3 0v3" /><path d="M4 21h16M5 21V9M19 21V9" />
+    </svg>
+  )
+}
+
+export function FeatherIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M20.2 12.2a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" /><path d="M16 8 2 22M17.5 15H9" />
+    </svg>
+  )
+}
+
+export function TallyIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 5v14M10 5v14M14 5v14M18 5v14M3.5 17.5 20 11" />
+    </svg>
+  )
+}
+
+export function CropIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 2v14a2 2 0 0 0 2 2h14" /><path d="M18 22V8a2 2 0 0 0-2-2H2" />
+    </svg>
+  )
+}
+
+export function PhotoDocIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2" /><circle cx="9" cy="9" r="1.4" />
+      <path d="M4 16.5 8.5 13l3 2 4-3.5L20 16" />
+    </svg>
+  )
+}
+
+export function MergeIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M7 4v3a5 5 0 0 0 5 5 5 5 0 0 0 5-5V4" /><path d="M12 12v8" /><path d="m8 16 4 4 4-4" />
+    </svg>
+  )
+}
+
+export function ScissorsIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
+      <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" />
+    </svg>
+  )
+}
