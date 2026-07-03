@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { CopyIcon } from '../../components/icons'
+import { CopyIcon, ShareIcon, DownloadIcon } from '../../components/icons'
+import { buildIbanCard, canvasToBlob, type CardData } from './shareCard'
 
 // Saudi bank identifiers (the 2-digit bank code in the IBAN, positions 5–6).
 // Best-effort reference for the major banks; always shown alongside the raw code.
@@ -45,31 +46,91 @@ const STR = {
     valid: 'Valid IBAN', invalid: 'Invalid IBAN',
     reasons: { length: 'A Saudi IBAN must be SA + 22 digits (24 characters).', checksum: 'The checksum failed — check for a typo.', structure: 'Not a valid IBAN format.' } as Record<string, string>,
     bank: 'Bank', code: 'code', unknown: 'Unrecognised code — verify with your bank',
-    copy: 'Copy', copied: 'Copied!', privacy: 'Checked in your browser — the IBAN is never sent anywhere.',
+    copy: 'Copy', copied: 'Copied!', privacy: 'Checked in your browser — nothing is ever uploaded.',
+    nameLabel: 'Account holder name', namePlaceholder: 'e.g. Mohammed Al-Otaibi', nameHint: 'Optional — printed on the share card so accounts don’t get mixed up.',
+    cardTitle: 'Account information', account: 'Account number', share: 'Share', download: 'Save image',
   },
   ar: {
     placeholder: 'SA03 8000 0000 6080 1016 7519', label: 'رقم الآيبان',
     valid: 'آيبان صحيح', invalid: 'آيبان غير صحيح',
     reasons: { length: 'الآيبان السعودي = SA + ٢٢ رقمًا (٢٤ خانة).', checksum: 'فشل التحقق — راجع الأرقام.', structure: 'صيغة الآيبان غير صحيحة.' } as Record<string, string>,
     bank: 'البنك', code: 'الرمز', unknown: 'رمز غير معروف — تحقّق من بنكك',
-    copy: 'نسخ', copied: 'تم النسخ!', privacy: 'يُفحص داخل متصفحك — لا يُرسل الآيبان إلى أي مكان.',
+    copy: 'نسخ', copied: 'تم النسخ!', privacy: 'يُفحص داخل متصفحك — لا يُرفع شيء إلى أي مكان.',
+    nameLabel: 'اسم صاحب الحساب', namePlaceholder: 'مثال: محمد العتيبي', nameHint: 'اختياري — يظهر على بطاقة المشاركة حتى لا تختلط الحسابات.',
+    cardTitle: 'معلومات الحساب', account: 'رقم الحساب', share: 'مشاركة', download: 'حفظ الصورة',
   },
+}
+
+/** Saudi national account number = the 18 digits after SA + check + bank code. */
+function deriveAccount(ibanRaw: string): string {
+  return ibanRaw.startsWith('SA') && ibanRaw.length === 24 ? ibanRaw.slice(6) : ''
 }
 
 export default function IbanValidatorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [raw, setRaw] = useState('')
+  const [name, setName] = useState('')
   const [copied, setCopied] = useState(false)
+  const [cardUrl, setCardUrl] = useState<string | null>(null)
+  const blobRef = useRef<Blob | null>(null)
 
   const res = useMemo(() => check(raw), [raw])
-  const formatted = raw.replace(/\s+/g, '').toUpperCase().replace(/(.{4})/g, '$1 ').trim()
+  const ibanRaw = raw.replace(/\s+/g, '').toUpperCase()
+  const formatted = ibanRaw.replace(/(.{4})/g, '$1 ').trim()
+  const bank = res?.bankCode ? SA_BANKS[res.bankCode] : undefined
+  const account = deriveAccount(ibanRaw)
+
+  const cardData = useMemo<CardData | null>(() => {
+    if (!res?.valid) return null
+    return {
+      name: name.trim(), ibanRaw, ibanFmt: formatted, account,
+      bankName: bank ? (locale === 'ar' ? bank.ar : bank.en) : undefined,
+      labels: { title: s.cardTitle, holder: s.nameLabel, account: s.account, iban: s.label },
+      rtl: locale === 'ar',
+    }
+  }, [res?.valid, name, ibanRaw, formatted, account, bank, locale, s])
+
+  // Rebuild the share-card preview (lightly debounced) whenever the details change.
+  useEffect(() => {
+    if (!cardData) { setCardUrl(null); blobRef.current = null; return }
+    let url: string | null = null
+    let cancelled = false
+    const id = setTimeout(async () => {
+      try {
+        const canvas = await buildIbanCard(cardData)
+        const blob = await canvasToBlob(canvas)
+        if (cancelled) return
+        blobRef.current = blob
+        url = URL.createObjectURL(blob)
+        setCardUrl(url)
+      } catch { /* ignore render failures */ }
+    }, 250)
+    return () => { cancelled = true; clearTimeout(id); if (url) URL.revokeObjectURL(url) }
+  }, [cardData])
 
   async function copy() {
     try { await navigator.clipboard.writeText(formatted); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* ignore */ }
   }
 
-  const bank = res?.bankCode ? SA_BANKS[res.bankCode] : undefined
+  async function share() {
+    const blob = blobRef.current
+    if (!blob) return
+    const file = new File([blob], `iban-${ibanRaw}.png`, { type: 'image/png' })
+    const title = name.trim() ? `${s.cardTitle} — ${name.trim()}` : s.cardTitle
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title }); return } catch { return /* user cancelled */ }
+    }
+    download()
+  }
+
+  function download() {
+    if (!cardUrl) return
+    const a = document.createElement('a')
+    a.href = cardUrl
+    a.download = `iban-${ibanRaw}.png`
+    a.click()
+  }
 
   return (
     <div className="stack" data-testid="iban-validator">
@@ -94,7 +155,26 @@ export default function IbanValidatorTool() {
                   <span className="text-ink-faint">{s.bank}:</span> {bank ? (locale === 'ar' ? bank.ar : bank.en) : s.unknown} <span className="text-ink-faint font-mono">({s.code} {res.bankCode})</span>
                 </p>
               )}
+
               <button className="btn self-start" data-testid="iban-copy" onClick={copy}><CopyIcon /> {copied ? s.copied : s.copy}</button>
+
+              <label className="field">
+                <span className="field__label">{s.nameLabel}</span>
+                <input className="input" data-testid="iban-name" placeholder={s.namePlaceholder}
+                  value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" maxLength={60} />
+                <span className="text-[0.8rem] text-ink-faint">{s.nameHint}</span>
+              </label>
+
+              {cardUrl && (
+                <div className="flex flex-col items-center gap-3">
+                  <img src={cardUrl} alt={s.cardTitle} data-testid="iban-card"
+                    className="w-full max-w-[300px] rounded-lg shadow-[var(--shadow-md)]" />
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button className="btn btn--primary" data-testid="iban-share" onClick={share}><ShareIcon /> {s.share}</button>
+                    <button className="btn" data-testid="iban-download" onClick={download}><DownloadIcon /> {s.download}</button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-ink-soft text-[0.95rem]">{s.reasons[res.reason || 'structure']}</p>
