@@ -47,6 +47,29 @@ function compose(locale, prayer, kind, mins, place) {
 // Iqama (congregation) minutes after the adhan, per common Saudi practice.
 const IQAMA_MIN = { fajr: 20, dhuhr: 15, asr: 15, maghrib: 10, isha: 15 }
 
+// Non-prayer timed reminders (kind 'event'): morning adhkār at sunrise, evening
+// adhkār 15 min after Maghrib, and Ṣalāt al-Ḍuḥā 20 min after sunrise.
+const EVENING_ADHKAR_AFTER_MAGHRIB_MIN = 15
+const DUHA_AFTER_SUNRISE_MIN = 20
+const EVENT_TEXT = {
+  en: {
+    morningAdhkar: { title: 'Morning adhkār', body: 'Time for the morning remembrances' },
+    eveningAdhkar: { title: 'Evening adhkār', body: 'Time for the evening remembrances' },
+    duha: { title: 'Ḍuḥā prayer', body: 'The time for Ṣalāt al-Ḍuḥā has begun' },
+  },
+  ar: {
+    morningAdhkar: { title: 'أذكار الصباح', body: 'حان وقت أذكار الصباح' },
+    eveningAdhkar: { title: 'أذكار المساء', body: 'حان وقت أذكار المساء' },
+    duha: { title: 'صلاة الضحى', body: 'دخل وقت صلاة الضحى' },
+  },
+}
+const EVENT_TOOL = { morningAdhkar: 'adhkar', eveningAdhkar: 'adhkar', duha: 'prayer-times' }
+const EVENT_TAG = { morningAdhkar: 'adhkar', eveningAdhkar: 'adhkar', duha: 'duha' }
+function composeEvent(locale, key) {
+  const t = (EVENT_TEXT[locale] && EVENT_TEXT[locale][key]) || EVENT_TEXT.en[key] || { title: 'Reminder', body: '' }
+  return { title: t.title, body: t.body }
+}
+
 // Subscription lifecycle: expire after this much inactivity; warn a week before.
 const EXPIRE_DAYS = 90
 const WARN_DAYS = 7
@@ -63,7 +86,9 @@ function computeNext(lat, lng, prefs, from) {
   const coords = new adhan.Coordinates(lat, lng)
   const beforeMs = Number(prefs.minutesBefore ?? 0) * 60000
   const iqamaAlert = !!prefs.iqamaAlert
-  const enabled = new Set(prefs.prayers && prefs.prayers.length ? prefs.prayers : ALL_PRAYERS)
+  // `prayers` is authoritative: an explicit [] means no prayer alerts (e.g. an
+  // adhkār-only subscription); a missing field falls back to all (legacy docs).
+  const enabled = new Set(Array.isArray(prefs.prayers) ? prefs.prayers : ALL_PRAYERS)
   let best = null
   const consider = (name, notifyAt, kind) => {
     if (notifyAt > from && (!best || notifyAt < best.notifyAt)) best = { name, notifyAt, kind }
@@ -77,6 +102,10 @@ function computeNext(lat, lng, prefs, from) {
       consider(name, new Date(adhanAt.getTime() - beforeMs), 'adhan')
       if (iqamaAlert) consider(name, new Date(adhanAt.getTime() + IQAMA_MIN[name] * 60000), 'iqama')
     }
+    // Non-prayer reminders — independent of the enabled-prayers set.
+    if (prefs.morningAdhkar) consider('morningAdhkar', pt.sunrise, 'event')
+    if (prefs.eveningAdhkar) consider('eveningAdhkar', new Date(pt.maghrib.getTime() + EVENING_ADHKAR_AFTER_MAGHRIB_MIN * 60000), 'event')
+    if (prefs.duha) consider('duha', new Date(pt.sunrise.getTime() + DUHA_AFTER_SUNRISE_MIN * 60000), 'event')
   }
   return best
 }
@@ -103,19 +132,35 @@ http('subscribe', async (req, res) => {
   try {
     const { subscription, lat, lng, tz, place, locale, prefs } = req.body || {}
     if (!subscription || !subscription.endpoint) return res.status(400).json({ error: 'missing subscription' })
+    // Merge prefs into any existing subscription so the Prayer Times and Adhkar
+    // tools can each update just the toggles they own without clobbering the
+    // other's. A field is only changed when the caller explicitly sends it.
+    const ref = db.collection(COL).doc(docId(subscription.endpoint))
+    const existing = (await ref.get()).data() || {}
+    const prev = existing.prefs || {}
+    const has = (k) => prefs && Object.prototype.hasOwnProperty.call(prefs, k)
     const p = {
-      minutesBefore: Number((prefs && prefs.minutesBefore) ?? 0),
-      iqamaAlert: !!(prefs && prefs.iqamaAlert),
-      prayers: (prefs && prefs.prayers) || ALL_PRAYERS,
+      minutesBefore: has('minutesBefore') ? Number(prefs.minutesBefore) : Number(prev.minutesBefore ?? 0),
+      iqamaAlert: has('iqamaAlert') ? !!prefs.iqamaAlert : !!prev.iqamaAlert,
+      // Explicit [] = no prayer alerts (adhkār-only sub). New subs default to none.
+      prayers: has('prayers')
+        ? (Array.isArray(prefs.prayers) ? prefs.prayers : [])
+        : (Array.isArray(prev.prayers) ? prev.prayers : []),
+      morningAdhkar: has('morningAdhkar') ? !!prefs.morningAdhkar : !!prev.morningAdhkar,
+      eveningAdhkar: has('eveningAdhkar') ? !!prefs.eveningAdhkar : !!prev.eveningAdhkar,
+      duha: has('duha') ? !!prefs.duha : !!prev.duha,
     }
     const now = new Date()
-    const next = computeNext(Number(lat), Number(lng), p, now)
-    await db.collection(COL).doc(docId(subscription.endpoint)).set({
+    const latN = Number(lat), lngN = Number(lng)
+    const useLat = Number.isFinite(latN) ? latN : existing.lat
+    const useLng = Number.isFinite(lngN) ? lngN : existing.lng
+    const useTz = tz || existing.tz || 'Asia/Riyadh'
+    const usePlace = typeof place === 'string' && place.trim() ? place.trim().slice(0, 60) : (existing.place ?? null)
+    const lc = locale === 'ar' ? 'ar' : locale === 'en' ? 'en' : (existing.locale || 'en')
+    const next = computeNext(useLat, useLng, p, now)
+    await ref.set({
       subscription,
-      lat: Number(lat), lng: Number(lng),
-      tz: tz || 'Asia/Riyadh',
-      place: typeof place === 'string' && place.trim() ? place.trim().slice(0, 60) : null,
-      locale: locale === 'ar' ? 'ar' : 'en',
+      lat: useLat, lng: useLng, tz: useTz, place: usePlace, locale: lc,
       prefs: p,
       enabled: true,
       nextNotifyAt: next ? next.notifyAt : null,
@@ -127,11 +172,10 @@ http('subscribe', async (req, res) => {
       updatedAt: now,
     })
     // Immediate confirmation push so the user sees it worked right away.
-    const lc = locale === 'ar' ? 'ar' : 'en'
     try {
       await webpush.sendNotification(subscription, JSON.stringify({
-        title: lc === 'ar' ? 'تم تفعيل التنبيهات' : 'Prayer alerts on',
-        body: lc === 'ar' ? 'سنذكّرك قبل كل صلاة بإذن الله.' : 'We’ll remind you before each prayer.',
+        title: lc === 'ar' ? 'تم تفعيل التنبيهات' : 'Alerts on',
+        body: lc === 'ar' ? 'سنرسل تذكيراتك في وقتها بإذن الله.' : 'We’ll send your reminders at the right time.',
         tag: 'prayer', url: `${ORIGIN}/${lc}/tools/prayer-times`,
       }))
     } catch (e) { /* non-fatal — subscription still saved */ }
@@ -191,14 +235,23 @@ http('sendDue', async (req, res) => {
     if (expMs && nowMs >= expMs) { await doc.ref.delete(); removed++; continue }
 
     const locale = s.locale === 'ar' ? 'ar' : 'en'
-    const prayer = NAMES[locale][s.nextPrayer] || s.nextPrayer
-    const kind = s.nextKind === 'iqama' ? 'iqama' : 'adhan'
-    const mins = Number((s.prefs && s.prefs.minutesBefore) ?? 0)
-    const { title, body } = compose(locale, prayer, kind, mins, s.place)
+    const isEvent = s.nextKind === 'event'
+    let title, body, tag, tool
+    if (isEvent) {
+      ({ title, body } = composeEvent(locale, s.nextPrayer))
+      tag = EVENT_TAG[s.nextPrayer] || 'bis'
+      tool = EVENT_TOOL[s.nextPrayer] || 'prayer-times'
+    } else {
+      const prayer = NAMES[locale][s.nextPrayer] || s.nextPrayer
+      const kind = s.nextKind === 'iqama' ? 'iqama' : 'adhan'
+      const mins = Number((s.prefs && s.prefs.minutesBefore) ?? 0)
+      ;({ title, body } = compose(locale, prayer, kind, mins, s.place))
+      tag = 'prayer'; tool = 'prayer-times'
+    }
     try {
       await webpush.sendNotification(s.subscription, JSON.stringify({
-        title, body, tag: 'prayer',
-        url: `${ORIGIN}/${locale}/tools/prayer-times`,
+        title, body, tag,
+        url: `${ORIGIN}/${locale}/tools/${tool}`,
       }))
       sent++
     } catch (err) {
