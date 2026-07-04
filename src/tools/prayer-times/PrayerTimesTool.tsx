@@ -271,10 +271,15 @@ export default function PrayerTimesTool() {
     const params = CalculationMethod.UmmAlQura()
     const coords = new Coordinates(loc.lat, loc.lng)
     const base = viewDateStr ? new Date(`${viewDateStr}T12:00:00`) : now
+    // Sunrise + Ḍuḥā are only shown while it's actually morning — i.e. the live
+    // time is between today's Fajr and Dhuhr. Otherwise just the five prayers.
+    const today = new PrayerTimes(coords, now, params)
+    const showMarkers = !viewDateStr && now.getTime() >= today.fajr.getTime() && now.getTime() < today.dhuhr.getTime()
+    const keys: PrayerKey[] = showMarkers ? TIMELINE_KEYS : IQAMA_KEYS
     const inst: { key: PrayerKey; time: Date }[] = []
     for (const offset of [-1, 0, 1, 2, 3]) {
       const pt = new PrayerTimes(coords, new Date(base.getTime() + offset * 86400000), params)
-      for (const key of TIMELINE_KEYS) {
+      for (const key of keys) {
         const time = key === 'duha'
           ? new Date(pt.sunrise.getTime() + DUHA_AFTER_SUNRISE_MIN * 60000)
           : (pt[key] as Date)
@@ -292,7 +297,8 @@ export default function PrayerTimesTool() {
         if (inst[i].time.getTime() <= now.getTime()) startIdx = i; else break
       }
     }
-    return inst.slice(startIdx, startIdx + (showMore ? 14 : 7))
+    const base5 = showMarkers ? 7 : 5
+    return inst.slice(startIdx, startIdx + (showMore ? base5 * 2 : base5))
   }, [now, loc.lat, loc.lng, viewDateStr, showMore])
 
   function pickCity(id: string) {
