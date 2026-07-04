@@ -25,7 +25,7 @@ export const ADHKAR: Dhikr[] = [
   },
   {
     id: 'ikhlas-muawwidhat',
-    ar: 'قُلْ هُوَ اللَّهُ أَحَدٌ… ۞ قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ… ۞ قُلْ أَعُوذُ بِرَبِّ النَّاسِ…',
+    ar: 'قُلْ هُوَ اللَّهُ أَحَدٌ… قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ… قُلْ أَعُوذُ بِرَبِّ النَّاسِ…',
     translit: 'Sūrat al-Ikhlāṣ, al-Falaq and an-Nās — recited in full, three times each.',
     en: 'Recite Sūrat al-Ikhlāṣ (112), al-Falaq (113) and an-Nās (114) in full — three times each. Whoever says them three times in the morning and evening, they suffice him against all things.',
     count: 3,
@@ -123,15 +123,6 @@ export const ADHKAR: Dhikr[] = [
     when: 'both',
   },
   {
-    id: 'subhanallah-100',
-    ar: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ.',
-    translit: 'Subḥāna-llāhi wa bi-ḥamdih.',
-    en: 'Glory and praise be to Allah. (Whoever says it a hundred times in a day, his sins are wiped away though they were like the foam of the sea.)',
-    count: 100,
-    ref: 'al-Bukhārī & Muslim',
-    when: 'both',
-  },
-  {
     id: 'tahlil-10',
     ar: 'لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ.',
     translit: 'Lā ilāha illā-llāhu waḥdahu lā sharīka lah, lahu l-mulku wa lahu l-ḥamd, wa huwa ʿalā kulli shayʾin qadīr.',
@@ -156,6 +147,16 @@ export const ADHKAR: Dhikr[] = [
     en: 'O Allah, send blessings and peace upon our Prophet Muhammad.',
     count: 10,
     ref: 'aṭ-Ṭabarānī (whoever sends blessings ten times morning and evening attains the Prophet’s ﷺ intercession)',
+    when: 'both',
+  },
+  {
+    // Placed last on purpose — 100 repetitions, so it takes the longest.
+    id: 'subhanallah-100',
+    ar: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ.',
+    translit: 'Subḥāna-llāhi wa bi-ḥamdih.',
+    en: 'Glory and praise be to Allah. (Whoever says it a hundred times in a day, his sins are wiped away though they were like the foam of the sea.)',
+    count: 100,
+    ref: 'al-Bukhārī & Muslim',
     when: 'both',
   },
 ]
