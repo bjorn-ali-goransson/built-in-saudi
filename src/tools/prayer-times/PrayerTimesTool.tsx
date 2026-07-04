@@ -8,12 +8,16 @@ import { alertsHelp } from './alertsHelp'
 import { reverseGeocode } from './geo'
 import { CITIES, DEFAULT_CITY } from './cities'
 
-type PrayerKey = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
+type PrayerKey = 'fajr' | 'sunrise' | 'duha' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
 
 // Iqama (congregation) periods after the adhan, per common Saudi practice.
 type IqamaKey = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
 const IQAMA_MIN: Record<IqamaKey, number> = { fajr: 20, dhuhr: 15, asr: 15, maghrib: 10, isha: 15 }
 const IQAMA_KEYS: IqamaKey[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
+// The timeline also shows sunrise (shurūq, end of Fajr) and Ḍuḥā (sunrise+20) as
+// informational markers — no adhan/iqama, never the "next prayer" highlight.
+const TIMELINE_KEYS: PrayerKey[] = ['fajr', 'sunrise', 'duha', 'dhuhr', 'asr', 'maghrib', 'isha']
+const DUHA_AFTER_SUNRISE_MIN = 20
 const POST_IQAMA_MIN = 15 // keep showing the prayer this long after iqama, then resume "next"
 
 const STR = {
@@ -47,7 +51,7 @@ const STR = {
     beforeLabel: 'Alert before', atAdhan: 'At adhan', minShort: (m: number) => `${m} min`,
     alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
-    prayers: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
+    prayers: { fajr: 'Fajr', sunrise: 'Sunrise', duha: 'Ḍuḥā', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
   },
   ar: {
     location: 'الموقع', useMyLocation: 'استخدم موقعي', myLocation: 'موقعي',
@@ -79,7 +83,7 @@ const STR = {
     beforeLabel: 'التنبيه قبل', atAdhan: 'عند الأذان', minShort: (m: number) => `${m} د`,
     alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
-    prayers: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
+    prayers: { fajr: 'الفجر', sunrise: 'الشروق', duha: 'الضحى', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
   },
 }
 
@@ -267,10 +271,15 @@ export default function PrayerTimesTool() {
     const params = CalculationMethod.UmmAlQura()
     const coords = new Coordinates(loc.lat, loc.lng)
     const base = viewDateStr ? new Date(`${viewDateStr}T12:00:00`) : now
-    const inst: { key: IqamaKey; time: Date }[] = []
+    const inst: { key: PrayerKey; time: Date }[] = []
     for (const offset of [-1, 0, 1, 2, 3]) {
       const pt = new PrayerTimes(coords, new Date(base.getTime() + offset * 86400000), params)
-      for (const key of IQAMA_KEYS) inst.push({ key, time: pt[key] as Date })
+      for (const key of TIMELINE_KEYS) {
+        const time = key === 'duha'
+          ? new Date(pt.sunrise.getTime() + DUHA_AFTER_SUNRISE_MIN * 60000)
+          : (pt[key] as Date)
+        inst.push({ key, time })
+      }
     }
     inst.sort((a, b) => a.time.getTime() - b.time.getTime())
     let startIdx = 0
@@ -283,7 +292,7 @@ export default function PrayerTimesTool() {
         if (inst[i].time.getTime() <= now.getTime()) startIdx = i; else break
       }
     }
-    return inst.slice(startIdx, startIdx + (showMore ? 10 : 5))
+    return inst.slice(startIdx, startIdx + (showMore ? 14 : 7))
   }, [now, loc.lat, loc.lng, viewDateStr, showMore])
 
   function pickCity(id: string) {
@@ -411,7 +420,10 @@ export default function PrayerTimesTool() {
         {timeline.map((it, i) => {
           const prev = timeline[i - 1]
           const newDay = prev && it.time.toDateString() !== prev.time.toDateString()
-          const highlight = isLive && i === (active ? 0 : 1)
+          // Highlight the actual current/next prayer by its time — so the
+          // informational sunrise/Ḍuḥā markers are never highlighted.
+          const focusMs = active ? active.adhan.getTime() : nextInfo.time.getTime()
+          const highlight = isLive && it.time.getTime() === focusMs
           return (
             <Fragment key={i}>
               {newDay && (
