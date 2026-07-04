@@ -34,7 +34,7 @@ export function HomePage() {
     <section className="wrap pt-[clamp(1.2rem,4vw,2rem)] pb-[clamp(3rem,8vw,5.5rem)]" aria-labelledby="catalog-title">
       <h1 id="catalog-title" className="sr-only">{t.hero.title1} {t.hero.title2}</h1>
 
-      <div className="tool-search relative flex items-center gap-[0.6rem] mb-[clamp(3.75rem,12vw,4.75rem)] py-[0.15rem] px-[0.9rem] bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-sm)] transition-[border-color,box-shadow] duration-150 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--green-500)_18%,transparent)]" role="search">
+      <div className="tool-search relative flex items-center gap-[0.6rem] mb-[4rem] py-[0.15rem] px-[0.9rem] bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-sm)] transition-[border-color,box-shadow] duration-150 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--green-500)_18%,transparent)]" role="search">
         <SearchIcon className="w-5 h-5 text-ink-faint flex-none" />
         <input
           ref={inputRef}
