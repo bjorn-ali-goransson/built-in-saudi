@@ -1,8 +1,9 @@
 // Morning & evening adhkār — the core, universally-included set from the Qur'an
 // and authentic Sunnah (public domain). Transliteration + English meaning are
 // written for this app, not taken from any copyrighted translation. `when`:
-// 'both' = said morning and evening. Counts follow the well-known narrations.
-export type When = 'both' | 'morning' | 'evening'
+// 'both' = said morning and evening; 'sleep' = before sleeping (أذكار النوم).
+// Counts follow the well-known narrations.
+export type When = 'both' | 'morning' | 'evening' | 'sleep'
 export interface Dhikr {
   id: string
   ar: string
@@ -158,5 +159,79 @@ export const ADHKAR: Dhikr[] = [
     count: 100,
     ref: 'al-Bukhārī & Muslim',
     when: 'both',
+  },
+
+  // ── Before sleep (أذكار النوم) ──
+  {
+    id: 'sleep-muawwidhat',
+    ar: 'قُلْ هُوَ اللَّهُ أَحَدٌ… قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ… قُلْ أَعُوذُ بِرَبِّ النَّاسِ…',
+    translit: 'Recite al-Ikhlāṣ, al-Falaq and an-Nās, blow into the palms, and wipe over the body — three times.',
+    en: 'Cup your hands, recite Sūrat al-Ikhlāṣ (112), al-Falaq (113) and an-Nās (114), blow into your palms, then wipe over as much of your body as you can — beginning with the head, face and front — three times.',
+    count: 3,
+    ref: 'Ṣaḥīḥ al-Bukhārī',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-kursi',
+    ar: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ، لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ، لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ… وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ، وَلَا يَئُودُهُ حِفْظُهُمَا، وَهُوَ الْعَلِيُّ الْعَظِيمُ.',
+    translit: 'Āyat al-Kursī (al-Baqarah 2:255).',
+    en: 'Recite Āyat al-Kursī (al-Baqarah 2:255). Whoever says it when going to bed will have a guardian from Allah, and no devil will come near him until morning.',
+    count: 1,
+    ref: 'Ṣaḥīḥ al-Bukhārī',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-baqarah-end',
+    ar: 'آمَنَ الرَّسُولُ بِمَا أُنْزِلَ إِلَيْهِ مِنْ رَبِّهِ وَالْمُؤْمِنُونَ… لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا…',
+    translit: 'The last two verses of Sūrat al-Baqarah (2:285–286).',
+    en: 'Recite the last two verses of Sūrat al-Baqarah (2:285–286). Whoever recites them at night, they will suffice him.',
+    count: 1,
+    ref: 'Ṣaḥīḥ al-Bukhārī & Muslim',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-aslamtu',
+    ar: 'اللَّهُمَّ أَسْلَمْتُ نَفْسِي إِلَيْكَ، وَفَوَّضْتُ أَمْرِي إِلَيْكَ، وَوَجَّهْتُ وَجْهِي إِلَيْكَ، وَأَلْجَأْتُ ظَهْرِي إِلَيْكَ، رَغْبَةً وَرَهْبَةً إِلَيْكَ، لَا مَلْجَأَ وَلَا مَنْجَا مِنْكَ إِلَّا إِلَيْكَ، آمَنْتُ بِكِتَابِكَ الَّذِي أَنْزَلْتَ، وَبِنَبِيِّكَ الَّذِي أَرْسَلْتَ.',
+    translit: 'Allāhumma aslamtu nafsī ilayk… (say it as the last thing before sleeping).',
+    en: 'O Allah, I submit myself to You, entrust my affair to You, turn my face to You, and lay myself down relying on You — in hope and fear of You. There is no refuge or escape from You except to You. I believe in Your Book which You revealed and Your Prophet whom You sent. Make these the last words you say — if you die that night, you die upon the fiṭrah.',
+    count: 1,
+    ref: 'Ṣaḥīḥ al-Bukhārī & Muslim',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-bismika',
+    ar: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا.',
+    translit: 'Bismika-llāhumma amūtu wa aḥyā.',
+    en: 'In Your name, O Allah, I die and I live.',
+    count: 1,
+    ref: 'Ṣaḥīḥ al-Bukhārī',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-tasbih',
+    ar: 'سُبْحَانَ اللَّهِ.',
+    translit: 'Subḥāna-llāh. (Part of the bedtime tasbīḥ taught to Fāṭimah: 33 + 33 + 34.)',
+    en: 'Glory be to Allah — thirty-three times.',
+    count: 33,
+    ref: 'Ṣaḥīḥ al-Bukhārī & Muslim',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-tahmid',
+    ar: 'الْحَمْدُ لِلَّهِ.',
+    translit: 'Al-ḥamdu lillāh.',
+    en: 'All praise is due to Allah — thirty-three times.',
+    count: 33,
+    ref: 'Ṣaḥīḥ al-Bukhārī & Muslim',
+    when: 'sleep',
+  },
+  {
+    id: 'sleep-takbir',
+    ar: 'اللَّهُ أَكْبَرُ.',
+    translit: 'Allāhu akbar. (Completes the bedtime tasbīḥ.)',
+    en: 'Allah is the Greatest — thirty-four times.',
+    count: 34,
+    ref: 'Ṣaḥīḥ al-Bukhārī & Muslim',
+    when: 'sleep',
   },
 ]

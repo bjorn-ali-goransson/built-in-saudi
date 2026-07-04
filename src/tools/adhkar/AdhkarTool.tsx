@@ -8,7 +8,7 @@ import { ADHKAR, type When } from './data'
 
 const STR = {
   en: {
-    morning: 'Morning', evening: 'Evening',
+    morning: 'Morning', evening: 'Evening', sleep: 'Before sleep',
     lede: 'The core morning and evening remembrances from the Qur’an and authentic Sunnah. Tap the count button to track your repetitions — your progress is kept for today on this device.',
     times: (n: number) => `×${n}`, done: 'Done', reset: 'Reset', count: 'Count', overall: 'Progress',
     note: 'Arabic is the Qur’an/Sunnah text; transliteration and meaning were written for this app — verify before relying on them.',
@@ -21,7 +21,7 @@ const STR = {
     turnOff: 'Turn off',
   },
   ar: {
-    morning: 'الصباح', evening: 'المساء',
+    morning: 'الصباح', evening: 'المساء', sleep: 'قبل النوم',
     lede: 'أذكار الصباح والمساء الأساسية من القرآن والسنة الصحيحة. اضغط زر العدّ لتتبّع التكرار — يُحفظ تقدّمك لهذا اليوم على جهازك.',
     times: (n: number) => `×${n}`, done: 'تمّ', reset: 'إعادة', count: 'عدّ', overall: 'التقدّم',
     note: 'النص العربي من القرآن والسنة؛ وكُتب النطق والمعنى الإنجليزي لهذا التطبيق — تحقّق قبل الاعتماد عليهما.',
@@ -60,7 +60,8 @@ export default function AdhkarTool() {
   const [when, setWhen] = useState<When>(() => (new Date().getHours() < 12 ? 'morning' : 'evening'))
   const [progress, setProgress] = useState<Record<string, number>>(() => loadProgress(when))
 
-  const list = useMemo(() => ADHKAR.filter((d) => d.when === 'both' || d.when === when), [when])
+  // 'both' = morning + evening (not sleep); sleep shows only its own set.
+  const list = useMemo(() => ADHKAR.filter((d) => d.when === when || (d.when === 'both' && when !== 'sleep')), [when])
 
   // Bottom bar is a scroll-spy: reflects how far through the list you've scrolled
   // (position), not how many you've completed.
@@ -125,7 +126,7 @@ export default function AdhkarTool() {
     <div className="flex flex-col gap-5 max-w-[46rem] mx-auto pb-16" data-testid="adhkar">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="seg" role="group" aria-label="time">
-          {(['morning', 'evening'] as ('morning' | 'evening')[]).map((w) => (
+          {(['morning', 'evening', 'sleep'] as ('morning' | 'evening' | 'sleep')[]).map((w) => (
             <button key={w} className={`seg__btn ${when === w ? 'is-active' : ''}`} aria-pressed={when === w}
               data-testid={`adhkar-${w}`} onClick={() => switchWhen(w)}>{s[w]}</button>
           ))}
