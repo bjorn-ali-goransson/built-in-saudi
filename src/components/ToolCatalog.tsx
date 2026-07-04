@@ -25,7 +25,7 @@ export function CategorySections({ sections, indexOf, onNavigate }: { sections: 
   return (
     <>
       {sections.map((sec) => (
-        <div key={sec.key} className="mb-[clamp(2.6rem,8vw,3.6rem)]">
+        <div key={sec.key} className="mb-[clamp(3.4rem,10vw,4.6rem)]">
           <div className="flex items-center gap-3 mb-[1.1rem]">
             <h2 className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint whitespace-nowrap rtl:tracking-normal">{sec.title}</h2>
             <span className="flex-1 h-px bg-[color:var(--line-soft)]" aria-hidden="true" />
