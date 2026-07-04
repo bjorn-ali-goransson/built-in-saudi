@@ -15,6 +15,10 @@ const STR = {
     progress: (d: number, t: number) => `${d} / ${t}`,
     remind: 'Enable alerts', remindOn: 'Alerts on',
     remindErr: 'Couldn’t enable — allow notifications (and location).',
+    remindTitle: 'Adhkār reminders',
+    remindMorning: 'Morning adhkār', remindMorningHint: 'At sunrise',
+    remindEvening: 'Evening adhkār', remindEveningHint: 'After Maghrib',
+    turnOff: 'Turn off',
   },
   ar: {
     morning: 'الصباح', evening: 'المساء',
@@ -24,8 +28,23 @@ const STR = {
     progress: (d: number, t: number) => `${d} / ${t}`,
     remind: 'تفعيل التنبيهات', remindOn: 'التنبيهات مفعّلة',
     remindErr: 'تعذّر التفعيل — اسمح بالإشعارات (والموقع).',
+    remindTitle: 'تذكيرات الأذكار',
+    remindMorning: 'أذكار الصباح', remindMorningHint: 'عند الشروق',
+    remindEvening: 'أذكار المساء', remindEveningHint: 'بعد المغرب',
+    turnOff: 'إيقاف',
   },
 }
+
+interface RemindPrefs { morning: boolean; evening: boolean }
+function readRemind(): RemindPrefs {
+  try {
+    const raw = localStorage.getItem(REMIND_KEY)
+    if (raw === '1') return { morning: true, evening: true } // legacy value
+    if (raw) { const p = JSON.parse(raw); return { morning: !!p.morning, evening: !!p.evening } }
+  } catch { /* ignore */ }
+  return { morning: false, evening: false }
+}
+function saveRemind(p: RemindPrefs) { try { localStorage.setItem(REMIND_KEY, JSON.stringify(p)) } catch { /* ignore */ } }
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const storeKey = (when: When) => `bis-adhkar-${todayKey()}-${when}`
@@ -65,27 +84,24 @@ export default function AdhkarTool() {
   const spyPos = list.length ? Math.min(list.length, Math.max(1, Math.round((scrollPct / 100) * list.length))) : 0
 
   // Morning/evening adhkār reminders (a device push, shared with the prayer sub).
-  const [remindOn, setRemindOn] = useState<boolean>(() => { try { return localStorage.getItem(REMIND_KEY) === '1' } catch { return false } })
+  const [remind, setRemind] = useState<RemindPrefs>(() => readRemind())
   const [remindBusy, setRemindBusy] = useState(false)
   const [remindErr, setRemindErr] = useState('')
+  const [remindSettings, setRemindSettings] = useState(false)
+  const remindOn = remind.morning || remind.evening
 
-  async function toggleRemind() {
+  // Subscribe with the given morning/evening flags (merge preserves prayer/Ḍuḥā
+  // alerts). Optimistic; reverts if enabling fails (permission/location denied).
+  async function applyRemind(p: RemindPrefs) {
     if (!pushSupported()) { setRemindErr(s.remindErr); return }
-    setRemindBusy(true); setRemindErr('')
+    const prev = remind
+    setRemind(p); setRemindBusy(true); setRemindErr('')
     try {
-      if (remindOn) {
-        setRemindOn(false)
-        try { localStorage.setItem(REMIND_KEY, '0') } catch { /* ignore */ }
-        const loc = savedPrayerLocation() || FALLBACK_LOC
-        // Turn off just the adhkār events — merge preserves any prayer/Duha alerts.
-        enablePush({ lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale, { morningAdhkar: false, eveningAdhkar: false }).catch(() => {})
-      } else {
-        const loc = savedPrayerLocation() || await geolocate() || FALLBACK_LOC
-        const r = await enablePush({ lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale, { morningAdhkar: true, eveningAdhkar: true })
-        if (r.status === 'ok') { setRemindOn(true); try { localStorage.setItem(REMIND_KEY, '1') } catch { /* ignore */ } }
-        else setRemindErr(s.remindErr)
-      }
-    } finally { setRemindBusy(false) }
+      const loc = savedPrayerLocation() || await geolocate() || FALLBACK_LOC
+      const r = await enablePush({ lat: loc.lat, lng: loc.lng, tz: loc.tz }, locale, { morningAdhkar: p.morning, eveningAdhkar: p.evening })
+      if (r.status === 'ok' || (!p.morning && !p.evening)) saveRemind(p)
+      else { setRemind(prev); setRemindErr(s.remindErr) }
+    } catch { setRemind(prev); setRemindErr(s.remindErr) } finally { setRemindBusy(false) }
   }
 
   function switchWhen(w: When) { setWhen(w); setProgress(loadProgress(w)) }
@@ -117,7 +133,8 @@ export default function AdhkarTool() {
         <div className="flex items-center gap-2">
           {pushSupported() && (
             <button className={`pill ${remindOn ? 'pill--accent' : ''}`} data-testid="adhkar-remind"
-              disabled={remindBusy} aria-pressed={remindOn} onClick={toggleRemind}>
+              disabled={remindBusy} aria-pressed={remindOn}
+              onClick={() => (remindOn ? setRemindSettings(true) : applyRemind({ morning: true, evening: true }))}>
               {remindOn ? <CogIcon /> : <BellIcon />} {remindOn ? s.remindOn : s.remind}
             </button>
           )}
@@ -173,6 +190,37 @@ export default function AdhkarTool() {
       </ol>
 
       {locale !== 'ar' && <p className="text-[0.78rem] text-ink-faint">{s.note}</p>}
+
+      {/* Reminder settings — same bottom-sheet as Prayer Times, opened by the cog. */}
+      {remindSettings && createPortal(
+        <div className="sheet-overlay" role="dialog" aria-modal="true" data-testid="adhkar-remind-settings" onClick={() => setRemindSettings(false)}>
+          <div className="sheet" dir={locale === 'ar' ? 'rtl' : 'ltr'} onClick={(e) => e.stopPropagation()}>
+            <span className="sheet__grip" aria-hidden="true" />
+            <h3 className="sheet__title">{s.remindTitle}</h3>
+
+            <label className="pray__set-row">
+              <span className="pray__set-label">{s.remindMorning}<small>{s.remindMorningHint}</small></span>
+              <input type="checkbox" className="pray__check" checked={remind.morning} disabled={remindBusy} data-testid="adhkar-set-morning"
+                onChange={(e) => applyRemind({ ...remind, morning: e.target.checked })} />
+            </label>
+
+            <label className="pray__set-row">
+              <span className="pray__set-label">{s.remindEvening}<small>{s.remindEveningHint}</small></span>
+              <input type="checkbox" className="pray__check" checked={remind.evening} disabled={remindBusy} data-testid="adhkar-set-evening"
+                onChange={(e) => applyRemind({ ...remind, evening: e.target.checked })} />
+            </label>
+
+            {remindErr && <p className="text-[0.8rem] text-[color:var(--danger)]">{remindErr}</p>}
+
+            <div className="sheet__actions">
+              <button className="btn" data-testid="adhkar-set-off" disabled={remindBusy}
+                onClick={() => { applyRemind({ morning: false, evening: false }); setRemindSettings(false) }}>{s.turnOff}</button>
+              <button className="btn btn--primary" data-testid="adhkar-set-done" onClick={() => setRemindSettings(false)}>{s.done}</button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {/* Persistent, edge-docked scroll-spy — how far through the list you are.
           Portaled to <body> so it stays viewport-fixed (the tool page's fadeUp
