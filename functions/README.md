@@ -25,6 +25,10 @@ Set at deploy time via `--set-env-vars`, stored only in the function environment
 
 ## Deploy
 
+**CI deploys these automatically** on any `functions/**` change via
+`.github/workflows/deploy-functions.yml` (keyless auth through Workload Identity
+Federation). The manual commands below are the fallback / reference.
+
 ```sh
 ENVV="VAPID_PUBLIC=<pub>,VAPID_PRIVATE=<priv>,SENDER_SECRET=<secret>"
 gcloud functions deploy subscribe   --gen2 --runtime=nodejs20 --region=us-central1 \

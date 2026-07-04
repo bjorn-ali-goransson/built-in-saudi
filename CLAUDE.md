@@ -163,11 +163,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
 - **Search:** Google Search Console (domain property, DNS-verified) and Bing
   Webmaster Tools (DNS-verified); both have the sitemap submitted.
 - **Prayer alert backend** (`functions/`, our first backend): Cloud Functions gen2
-  (`subscribe`, `unsubscribe`, `send-due`) in `us-central1`, Firestore collection
-  `prayerSubs`, Cloud Scheduler job `prayer-send` (every minute). Web Push via VAPID
-  (`web-push`); server-side prayer times via `adhan` (**ESM only** — its CJS build is
-  broken). Public VAPID key lives in `src/lib/push.ts`; private key + `SENDER_SECRET`
-  are function env vars only (never committed). See [`functions/README.md`](./functions/README.md).
+  (`subscribe`, `unsubscribe`, `send-due`, `touch`, `debug`) in `us-central1`,
+  Firestore collection `prayerSubs`, Cloud Scheduler job `prayer-send` (every
+  minute). Web Push via VAPID (`web-push`); server-side prayer times via `adhan`
+  (**ESM only** — its CJS build is broken). Public VAPID key lives in
+  `src/lib/push.ts`; private key + `SENDER_SECRET` are function env vars only
+  (never committed). Alerts include the 5 prayers (+ optional iqama/minutes-before),
+  **Ḍuḥā** (sunrise+20), and **morning/evening adhkār** (sunrise / Maghrib+15) — all
+  additive `prefs` booleans; `subscribe` **merges** prefs so Prayer Times and Adhkar
+  each own their toggles. See [`functions/README.md`](./functions/README.md).
+- **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
+  deploys all five functions on any `functions/**` change, authenticating **keylessly
+  via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
+  `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA` +
+  repo secrets `VAPID_PUBLIC`/`VAPID_PRIVATE`/`SENDER_SECRET` feed it.
 
 ## Roadmap
 

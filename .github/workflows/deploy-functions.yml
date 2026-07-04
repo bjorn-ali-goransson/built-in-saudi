@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'functions/**'
+      - '!functions/README.md'
       - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
 
