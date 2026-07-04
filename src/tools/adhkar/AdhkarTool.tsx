@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { pushSupported, enablePush } from '../../lib/push'
 import { savedPrayerLocation, geolocate, FALLBACK_LOC } from '../../lib/prayerLocation'
+import { BellIcon, CogIcon } from '../../components/icons'
 import { ADHKAR, type When } from './data'
 
 const STR = {
@@ -12,7 +13,7 @@ const STR = {
     times: (n: number) => `×${n}`, done: 'Done', reset: 'Reset', count: 'Count', overall: 'Progress',
     note: 'Arabic is the Qur’an/Sunnah text; transliteration and meaning were written for this app — verify before relying on them.',
     progress: (d: number, t: number) => `${d} / ${t}`,
-    remind: 'Remind me', remindHint: 'Morning at sunrise, evening after Maghrib', remindOff: 'Turn off',
+    remind: 'Enable alerts', remindOn: 'Alerts on',
     remindErr: 'Couldn’t enable — allow notifications (and location).',
   },
   ar: {
@@ -21,7 +22,7 @@ const STR = {
     times: (n: number) => `×${n}`, done: 'تمّ', reset: 'إعادة', count: 'عدّ', overall: 'التقدّم',
     note: 'النص العربي من القرآن والسنة؛ وكُتب النطق والمعنى الإنجليزي لهذا التطبيق — تحقّق قبل الاعتماد عليهما.',
     progress: (d: number, t: number) => `${d} / ${t}`,
-    remind: 'ذكّرني', remindHint: 'الصباح عند الشروق، والمساء بعد المغرب', remindOff: 'إيقاف',
+    remind: 'تفعيل التنبيهات', remindOn: 'التنبيهات مفعّلة',
     remindErr: 'تعذّر التفعيل — اسمح بالإشعارات (والموقع).',
   },
 }
@@ -113,28 +114,17 @@ export default function AdhkarTool() {
               data-testid={`adhkar-${w}`} onClick={() => switchWhen(w)}>{s[w]}</button>
           ))}
         </div>
-        <button className="pill" data-testid="adhkar-reset" onClick={resetAll}>{s.reset}</button>
-      </div>
-
-      <p className="text-[0.95rem] text-ink-soft leading-relaxed">{s.lede}</p>
-
-      {pushSupported() && (
-        <div className="flex items-center gap-3 p-3 rounded-md border border-[color:var(--line-soft)] bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)]">
-          <span aria-hidden="true" className="text-[1.2rem] flex-none">🔔</span>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-[0.95rem] text-green-700">{s.remind}</div>
-            <div className="text-[0.8rem] text-ink-soft">{s.remindHint}</div>
-            {remindErr && <div className="text-[0.78rem] text-[color:var(--danger)] mt-0.5">{remindErr}</div>}
-          </div>
-          <button
-            className={`flex-none px-4 py-2 rounded-full text-[0.85rem] font-semibold border transition-[background,color,border-color] duration-150 ${remindOn
-              ? 'bg-sand-100 text-ink-faint border-[color:var(--line-soft)]'
-              : 'bg-green-600 text-sand-100 border-green-700 hover:bg-green-500'}`}
-            data-testid="adhkar-remind" disabled={remindBusy} aria-pressed={remindOn} onClick={toggleRemind}>
-            {remindOn ? s.remindOff : s.remind}
-          </button>
+        <div className="flex items-center gap-2">
+          {pushSupported() && (
+            <button className={`pill ${remindOn ? 'pill--accent' : ''}`} data-testid="adhkar-remind"
+              disabled={remindBusy} aria-pressed={remindOn} onClick={toggleRemind}>
+              {remindOn ? <CogIcon /> : <BellIcon />} {remindOn ? s.remindOn : s.remind}
+            </button>
+          )}
+          <button className="pill" data-testid="adhkar-reset" onClick={resetAll}>{s.reset}</button>
         </div>
-      )}
+      </div>
+      {remindErr && <p className="text-[0.8rem] text-[color:var(--danger)]">{remindErr}</p>}
 
       <ol className="list-none ps-0 m-0 flex flex-col gap-3">
         {list.map((d) => {
