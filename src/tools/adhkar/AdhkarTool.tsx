@@ -173,14 +173,16 @@ export default function AdhkarTool() {
                   <p className="text-[0.78rem] text-ink-faint">{d.ref}</p>
                 </div>
 
-                {/* Count is a real pill (.pill class beats the unlayered <button>
-                    reset in theme.css); Done stays flat muted text — not a pill. */}
+                {/* Both states use .pill (same box → no layout shift on toggle).
+                    Count is the accent pill; Done just drops its background/border
+                    (kept transparent, so the border width is preserved) and mutes
+                    the text — so a completed dhikr reads as flat, not a button. */}
                 <button
                   onClick={() => tap(d.id, d.count)}
                   data-testid={`dhikr-${d.id}`}
                   aria-label={`${s.count} — ${s.progress(cur, d.count)}`}
-                  className={done ? 'self-center mt-1' : 'pill pill--accent self-center mt-1'}
-                  style={done ? { color: 'var(--ink-faint)', fontWeight: 600 } : undefined}
+                  className={`pill self-center mt-1 ${done ? '' : 'pill--accent'}`}
+                  style={done ? { background: 'transparent', borderColor: 'transparent', color: 'var(--ink-faint)' } : undefined}
                 >
                   {done ? s.done : s.count}
                 </button>
