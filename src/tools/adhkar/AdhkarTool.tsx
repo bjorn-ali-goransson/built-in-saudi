@@ -173,13 +173,14 @@ export default function AdhkarTool() {
                   <p className="text-[0.78rem] text-ink-faint">{d.ref}</p>
                 </div>
 
+                {/* Count is a real pill (.pill class beats the unlayered <button>
+                    reset in theme.css); Done stays flat muted text — not a pill. */}
                 <button
                   onClick={() => tap(d.id, d.count)}
                   data-testid={`dhikr-${d.id}`}
                   aria-label={`${s.count} — ${s.progress(cur, d.count)}`}
-                  className={`self-center px-8 py-2.5 mt-1 rounded-full text-[1rem] font-semibold border transition-[background,color,border-color] duration-150 ${done
-                    ? 'bg-sand-100 text-ink-faint border-[color:var(--line-soft)]'
-                    : 'bg-[color-mix(in_srgb,var(--green-400)_14%,transparent)] text-green-700 border-[color-mix(in_srgb,var(--green-500)_35%,transparent)] hover:bg-green-600 hover:text-sand-100'}`}
+                  className={done ? 'self-center mt-1' : 'pill pill--accent self-center mt-1'}
+                  style={done ? { color: 'var(--ink-faint)', fontWeight: 600 } : undefined}
                 >
                   {done ? s.done : s.count}
                 </button>
