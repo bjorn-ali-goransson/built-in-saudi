@@ -9,6 +9,7 @@ import { LanguageSuggestion } from './LanguageSuggestion'
 import { NotificationBell } from './NotificationBell'
 import { UpdatedToast } from './UpdatedToast'
 import { useVersionCheck } from '../lib/useVersionCheck'
+import { clearStaleNotifications } from '../lib/push'
 
 export function Layout() {
   const { lang } = useParams()
@@ -30,6 +31,14 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
     document.documentElement.lang = locale
     document.documentElement.dir = t.dir
   }, [locale, t.dir])
+
+  // Mop up stale prayer/adhkār notifications whenever the app is opened/refocused.
+  useEffect(() => {
+    const run = () => { if (!document.hidden) clearStaleNotifications() }
+    run()
+    document.addEventListener('visibilitychange', run)
+    return () => document.removeEventListener('visibilitychange', run)
+  }, [])
 
   return (
     <LocaleProvider locale={locale}>

@@ -2,7 +2,16 @@
 const VAPID_PUBLIC = 'BEaG67kHuMGzXfGGUGh7fmk-Bl-8icOr3UgKtxLnbfkPZjACFLVcZxAeLonizLLM-PNqxJ0vmH8KOB5zjbVKFtE'
 const FN = 'https://us-central1-blitz-ksa.cloudfunctions.net'
 
-export interface PushPrefs { minutesBefore: number; prayers: string[]; iqamaAlert?: boolean }
+// All fields optional — the backend merges whatever a tool sends into the
+// existing subscription, so Prayer Times and Adhkar each send only what they own.
+export interface PushPrefs {
+  minutesBefore?: number
+  prayers?: string[]
+  iqamaAlert?: boolean
+  morningAdhkar?: boolean
+  eveningAdhkar?: boolean
+  duha?: boolean
+}
 export interface PushLoc { lat: number; lng: number; tz: string; place?: string }
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -90,6 +99,23 @@ export async function touchSubscription(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     })
+  } catch { /* ignore */ }
+}
+
+/** Close delivered notifications older than `maxAgeMs` — clears stale prayer/
+ *  adhkār reminders once the user is back in the app (they replace-by-tag while
+ *  live, so this only mops up an old one left over from earlier). */
+export async function clearStaleNotifications(maxAgeMs = 3600000): Promise<void> {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return
+  if (Notification.permission !== 'granted') return
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const notes = await reg.getNotifications()
+    const cutoff = Date.now() - maxAgeMs
+    for (const n of notes) {
+      const ts = (n as Notification & { timestamp?: number }).timestamp
+      if (ts && ts < cutoff) n.close()
+    }
   } catch { /* ignore */ }
 }
 

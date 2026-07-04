@@ -43,6 +43,7 @@ const STR = {
     enableAlerts: 'Enable alerts', alertsOn: 'Alerts on', close: 'Close',
     alertSettings: 'Alert settings', turnOff: 'Turn off alerts', done: 'Done',
     iqamaAlertLabel: 'Iqama alert', iqamaAlertHint: 'A second reminder at iqama',
+    duhaLabel: 'Ḍuḥā prayer', duhaHint: 'Remind me when Ḍuḥā begins (after sunrise)',
     beforeLabel: 'Alert before', atAdhan: 'At adhan', minShort: (m: number) => `${m} min`,
     alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
@@ -74,6 +75,7 @@ const STR = {
     enableAlerts: 'تفعيل التنبيهات', alertsOn: 'التنبيهات مفعّلة', close: 'إغلاق',
     alertSettings: 'إعدادات التنبيه', turnOff: 'إيقاف التنبيهات', done: 'تم',
     iqamaAlertLabel: 'تنبيه الإقامة', iqamaAlertHint: 'تذكير ثانٍ عند الإقامة',
+    duhaLabel: 'صلاة الضحى', duhaHint: 'ذكّرني عند دخول وقت الضحى (بعد الشروق)',
     beforeLabel: 'التنبيه قبل', atAdhan: 'عند الأذان', minShort: (m: number) => `${m} د`,
     alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
@@ -98,15 +100,15 @@ function readLoc(): SavedLoc | null {
   try { const r = localStorage.getItem(LOC_KEY); return r ? (JSON.parse(r) as SavedLoc) : null } catch { return null }
 }
 
-interface AlertPrefs { minutesBefore: number; iqamaAlert: boolean }
+interface AlertPrefs { minutesBefore: number; iqamaAlert: boolean; duha: boolean }
 const PREFS_KEY = 'bis-prayer-prefs'
 const DAILY = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
 function readPrefs(): AlertPrefs {
   try {
     const r = localStorage.getItem(PREFS_KEY)
-    if (r) { const p = JSON.parse(r); return { minutesBefore: Number(p.minutesBefore) || 0, iqamaAlert: !!p.iqamaAlert } }
+    if (r) { const p = JSON.parse(r); return { minutesBefore: Number(p.minutesBefore) || 0, iqamaAlert: !!p.iqamaAlert, duha: !!p.duha } }
   } catch { /* ignore */ }
-  return { minutesBefore: 0, iqamaAlert: false }
+  return { minutesBefore: 0, iqamaAlert: false, duha: false }
 }
 function savePrefs(p: AlertPrefs) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)) } catch { /* ignore */ } }
 
@@ -314,7 +316,7 @@ export default function PrayerTimesTool() {
     try {
       const r = await enablePush(
         { lat: loc.lat, lng: loc.lng, tz: loc.tz, place: await resolvePlace() }, locale,
-        { minutesBefore: prefs.minutesBefore, iqamaAlert: prefs.iqamaAlert, prayers: DAILY },
+        { minutesBefore: prefs.minutesBefore, iqamaAlert: prefs.iqamaAlert, duha: prefs.duha, prayers: DAILY },
       )
       if (r.status === 'ok') setPushOn(true)
       else { setHelpDetail(r.detail || ''); setHelpOpen(true) } // blocked/unsupported/error → how-to + reason
@@ -326,7 +328,7 @@ export default function PrayerTimesTool() {
     setPushBusy(true)
     try {
       await enablePush({ lat: loc.lat, lng: loc.lng, tz: loc.tz, place: await resolvePlace() }, locale,
-        { minutesBefore: np.minutesBefore, iqamaAlert: np.iqamaAlert, prayers: DAILY })
+        { minutesBefore: np.minutesBefore, iqamaAlert: np.iqamaAlert, duha: np.duha, prayers: DAILY })
     } finally { setPushBusy(false) }
   }
 
@@ -483,6 +485,12 @@ function AlertSettings({ s, prefs, busy, onApply, onDisable, onClose }: {
           <span className="pray__set-label">{s.iqamaAlertLabel}<small>{s.iqamaAlertHint}</small></span>
           <input type="checkbox" className="pray__check" checked={prefs.iqamaAlert} disabled={busy} data-testid="set-iqama"
             onChange={(e) => onApply({ ...prefs, iqamaAlert: e.target.checked })} />
+        </label>
+
+        <label className="pray__set-row">
+          <span className="pray__set-label">{s.duhaLabel}<small>{s.duhaHint}</small></span>
+          <input type="checkbox" className="pray__check" checked={prefs.duha} disabled={busy} data-testid="set-duha"
+            onChange={(e) => onApply({ ...prefs, duha: e.target.checked })} />
         </label>
 
         <div className="sheet__actions">
