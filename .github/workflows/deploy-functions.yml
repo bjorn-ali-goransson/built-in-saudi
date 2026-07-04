@@ -1,0 +1,52 @@
+name: Deploy Cloud Functions
+
+# The prayer-alert backend (functions/) deploys to Cloud Functions gen2 in
+# blitz-ksa/us-central1. Auth is keyless via Workload Identity Federation — see
+# the GCP_WIF_PROVIDER / GCP_DEPLOY_SA repo variables and the VAPID_*/SENDER_SECRET
+# repo secrets. Runs only when functions/ (or this workflow) changes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for the WIF OIDC token
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy functions
+        env:
+          ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }}
+        run: |
+          set -e
+          common=(--gen2 --runtime=nodejs20 --region=us-central1 \
+            --project="${{ vars.GCP_PROJECT }}" --source=. \
+            --trigger-http --allow-unauthenticated --set-env-vars="$ENVV")
+          gcloud functions deploy subscribe   "${common[@]}" --entry-point=subscribe
+          gcloud functions deploy unsubscribe "${common[@]}" --entry-point=unsubscribe
+          gcloud functions deploy send-due    "${common[@]}" --entry-point=sendDue
+          gcloud functions deploy touch       "${common[@]}" --entry-point=touch
+          gcloud functions deploy debug       "${common[@]}" --entry-point=debug
