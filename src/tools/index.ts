@@ -32,6 +32,7 @@ import { vatCalculatorTool } from './vat-calculator/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
 import { metadataTool } from './metadata/meta'
+import { bookWithMeTool } from './book-with-me/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -40,6 +41,7 @@ import { metadataTool } from './metadata/meta'
  * Order here is the order shown on the home catalog.
  */
 export const tools: Tool[] = [
+  bookWithMeTool,
   qrCodeTool,
   imageCompressorTool,
   imageFormatConverterTool,

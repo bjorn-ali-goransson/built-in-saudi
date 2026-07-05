@@ -76,6 +76,15 @@ the box only for what the browser genuinely can't.
 
 ## The booking service ("book a meeting with me")
 
+> **Now being built** — this graduated from brainstorm to a real tool. Full
+> architecture, data model, endpoints and the external-setup checklist live in
+> [`tools/book-with-me.md`](./tools/book-with-me.md). Decisions locked: booking
+> page on a Cloudflare Pages **subdomain** (`book-a-meeting.built-in-saudi.com/<code>`),
+> **full Google Calendar sync** (free/busy + auto-create events), **Resend** for
+> email + `.ics`, plus Web Push + Telegram DM on booking. Net-new GCP services:
+> **zero** — it rides the prayer-alerts stack (Cloud Functions gen2 + Firestore +
+> VAPID). The notes below are the original scoping rationale.
+
 - **Why it's the best first backend feature:** trivial compute, always-on but
   cheap, no big privacy tension (it's *your* calendar, not user files), and it's
   a real, personal, monetisable service.

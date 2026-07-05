@@ -1,0 +1,575 @@
+// Book With Me — the Calendly-style booking backend.
+//
+// Design notes (see docs/tools/book-with-me.md):
+//  • No new npm deps: Google, Resend and Telegram are all reached over Node 20's
+//    global fetch; host sessions are HMAC-signed with node:crypto; the .ics is
+//    hand-written. Leanness is on-brand.
+//  • One OAuth authorization-code flow does double duty: it signs the host in
+//    (we read the id_token straight from Google's token endpoint, so it's
+//    trusted) and grabs an offline refresh token for calendar access.
+//  • The client never sees the refresh token. After the callback we mint our own
+//    short-lived "hsid" session (HMAC over {sub,email,name}) and hand it back in
+//    the redirect fragment; saveSchedule/subscribeHostPush verify it.
+//  • Firestore: bookingHosts/{googleSub}, bookings/{uid_startMs} (the
+//    deterministic booking id makes double-booking a transaction, not a query).
+
+import { http } from '@google-cloud/functions-framework'
+import firestore from '@google-cloud/firestore'
+import webpush from 'web-push'
+import crypto from 'node:crypto'
+
+const { Firestore } = firestore
+const db = new Firestore()
+const HOSTS = 'bookingHosts'
+const BOOKINGS = 'bookings'
+
+const SITE = 'https://built-in-saudi.com'
+const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || ''
+const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || ''
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
+const SESSION_SECRET = process.env.SENDER_SECRET || 'x' // reuse the existing shared secret for HMAC
+
+// This function's own base URL, used as the OAuth redirect target. All gen2
+// functions in this project share the us-central1-<project> host.
+const FN_BASE = 'https://us-central1-blitz-ksa.cloudfunctions.net'
+const REDIRECT_URI = `${FN_BASE}/booking-google-callback`
+
+const OAUTH_SCOPES = [
+  'openid',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.freebusy',
+].join(' ')
+
+// ---- CORS (browser-facing endpoints) ---------------------------------------
+
+function cors(req, res) {
+  const origin = (req.headers && req.headers.origin) || ''
+  // Allow the apex, any *.built-in-saudi.com subdomain (incl. the booking
+  // subdomain), and Cloudflare Pages preview builds during setup.
+  const ok = /^https:\/\/([a-z0-9-]+\.)?built-in-saudi\.com$/.test(origin) || /\.pages\.dev$/.test(origin)
+  res.set('Access-Control-Allow-Origin', ok ? origin : SITE)
+  res.set('Vary', 'Origin')
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.set('Access-Control-Allow-Headers', 'Content-Type')
+}
+
+// ---- host session token (our own, HMAC) ------------------------------------
+
+const b64u = (buf) => Buffer.from(buf).toString('base64url')
+const SESSION_TTL_MS = 30 * 86400000
+
+function signSession(payload) {
+  const body = b64u(JSON.stringify({ ...payload, exp: Date.now() + SESSION_TTL_MS }))
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
+  return `${body}.${sig}`
+}
+
+function verifySession(token) {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null
+  const [body, sig] = token.split('.')
+  const expect = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
+  // constant-time compare
+  if (sig.length !== expect.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null
+  try {
+    const data = JSON.parse(Buffer.from(body, 'base64url').toString())
+    if (!data.exp || Date.now() > data.exp) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+// ---- Google REST helpers ----------------------------------------------------
+
+function decodeJwtPayload(jwt) {
+  // The id_token comes straight from Google's token endpoint over TLS, so we can
+  // trust its payload without re-verifying the signature.
+  try {
+    return JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString())
+  } catch {
+    return {}
+  }
+}
+
+async function exchangeCode(code) {
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      redirect_uri: REDIRECT_URI,
+      grant_type: 'authorization_code',
+    }),
+  })
+  if (!r.ok) throw new Error(`token exchange ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  return r.json() // { access_token, refresh_token?, id_token, expires_in }
+}
+
+async function accessTokenFor(refreshToken) {
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  })
+  if (!r.ok) throw new Error(`refresh ${r.status}`)
+  return (await r.json()).access_token
+}
+
+async function googleBusy(accessToken, calId, timeMinIso, timeMaxIso) {
+  const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ timeMin: timeMinIso, timeMax: timeMaxIso, items: [{ id: calId }] }),
+  })
+  if (!r.ok) throw new Error(`freeBusy ${r.status}`)
+  const data = await r.json()
+  const cal = (data.calendars && data.calendars[calId]) || {}
+  return (cal.busy || []).map((b) => ({ start: Date.parse(b.start), end: Date.parse(b.end) }))
+}
+
+async function insertEvent(accessToken, calId, event) {
+  const r = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?sendUpdates=all`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    },
+  )
+  if (!r.ok) throw new Error(`insertEvent ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  return r.json()
+}
+
+// ---- notifications ----------------------------------------------------------
+
+async function sendTelegram(chatId, text) {
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+  }).catch(() => {})
+}
+
+async function sendEmail({ to, subject, html, ics }) {
+  if (!RESEND_API_KEY || !to) return
+  const body = {
+    from: 'Built in Saudi <book@built-in-saudi.com>',
+    to: [to],
+    subject,
+    html,
+  }
+  if (ics) {
+    body.attachments = [{ filename: 'invite.ics', content: Buffer.from(ics).toString('base64') }]
+  }
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => {})
+}
+
+function icsStamp(ms) {
+  return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
+function buildICS({ uid, start, end, summary, description, location, organizerEmail, attendeeEmail }) {
+  const esc = (s) => String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n')
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Built in Saudi//Book With Me//EN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${icsStamp(Date.now())}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${esc(summary)}`,
+    description ? `DESCRIPTION:${esc(description)}` : '',
+    location ? `LOCATION:${esc(location)}` : '',
+    organizerEmail ? `ORGANIZER:mailto:${organizerEmail}` : '',
+    attendeeEmail ? `ATTENDEE;RSVP=TRUE:mailto:${attendeeEmail}` : '',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+    .filter(Boolean)
+    .join('\r\n')
+}
+
+// ---- timezone + slot math ---------------------------------------------------
+
+/** Offset (ms) of `tz` at the given UTC instant. */
+function tzOffsetMs(tz, utcMs) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+  const p = {}
+  for (const part of dtf.formatToParts(new Date(utcMs))) p[part.type] = part.value
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour === 24 ? 0 : +p.hour, +p.minute, +p.second)
+  return asUtc - utcMs
+}
+
+/** Wall-clock time in `tz` → UTC epoch ms. */
+function zonedToUtc(y, m, d, hh, mm, tz) {
+  const guess = Date.UTC(y, m, d, hh, mm)
+  return guess - tzOffsetMs(tz, guess)
+}
+
+/** {year,month,day,weekday} of a UTC instant, as seen in `tz`. */
+function partsInTz(utcMs, tz) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+  const p = {}
+  for (const part of dtf.formatToParts(new Date(utcMs))) p[part.type] = part.value
+  const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[p.weekday]
+  return { y: +p.year, m: +p.month, d: +p.day, weekday: wd }
+}
+
+const hhmmToMin = (s) => {
+  const [h, m] = s.split(':').map(Number)
+  return h * 60 + m
+}
+
+/**
+ * Open slot start epochs over the horizon = drawn availability, stepped by
+ * (length + gap), minus min-notice, minus busy ranges.
+ */
+function openSlots(host, busy, now) {
+  const tz = host.tz || 'Asia/Riyadh'
+  const meeting = host.meeting || {}
+  const windows = host.availability || []
+  const lenMs = (meeting.minutes || 45) * 60000
+  const stepMs = ((meeting.minutes || 45) + (meeting.gapMinutes || 0)) * 60000
+  const earliest = now + (meeting.minNoticeHours || 0) * 3600000
+  const horizonEnd = now + (meeting.horizonDays || 30) * 86400000
+  const slots = []
+  // Iterate calendar days in host tz from today until the horizon.
+  for (let dayOffset = 0; dayOffset <= (meeting.horizonDays || 30) + 1; dayOffset++) {
+    const probe = now + dayOffset * 86400000
+    const { y, m, d, weekday } = partsInTz(probe, tz)
+    for (const w of windows) {
+      if (w.day !== weekday) continue
+      const winStart = zonedToUtc(y, m - 1, d, 0, 0, tz) + hhmmToMin(w.start) * 60000
+      const winEnd = zonedToUtc(y, m - 1, d, 0, 0, tz) + hhmmToMin(w.end) * 60000
+      for (let s = winStart; s + lenMs <= winEnd + 1; s += stepMs) {
+        if (s < earliest || s > horizonEnd) continue
+        const e = s + lenMs
+        if (busy.some((b) => s < b.end && e > b.start)) continue
+        slots.push(s)
+      }
+    }
+  }
+  return [...new Set(slots)].sort((a, b) => a - b)
+}
+
+async function hostByCode(code) {
+  if (!code) return null
+  const snap = await db.collection(HOSTS).where('code', '==', String(code)).limit(1).get()
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() }
+}
+
+// ============================================================================
+// Endpoints
+// ============================================================================
+
+// GET ?code=<localCode>&locale=en → 302 to Google's consent screen.
+http('bookingGoogleStart', async (req, res) => {
+  try {
+    const code = String(req.query.code || '')
+    const locale = req.query.locale === 'ar' ? 'ar' : 'en'
+    const state = b64u(JSON.stringify({ code, locale, n: crypto.randomBytes(8).toString('hex') }))
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      response_type: 'code',
+      scope: OAUTH_SCOPES,
+      access_type: 'offline',
+      prompt: 'consent',
+      include_granted_scopes: 'true',
+      state,
+    })}`
+    res.redirect(302, url)
+  } catch (e) {
+    res.status(500).send(String((e && e.message) || e))
+  }
+})
+
+// GET ?code=…&state=… → exchange, upsert host, redirect back with #hsid.
+http('bookingGoogleCallback', async (req, res) => {
+  try {
+    const code = req.query.code
+    if (!code) return res.status(400).send('missing code')
+    let st = {}
+    try { st = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString()) } catch { /* ignore */ }
+    const tokens = await exchangeCode(code)
+    const id = decodeJwtPayload(tokens.id_token || '')
+    const sub = id.sub
+    if (!sub) return res.status(400).send('no subject in id_token')
+
+    const ref = db.collection(HOSTS).doc(sub)
+    const existing = (await ref.get()).data() || {}
+    // Keep the previously-stored refresh token if Google didn't send a new one
+    // (it only returns it on the first consent).
+    const refreshToken = tokens.refresh_token || (existing.google && existing.google.refreshToken) || null
+    // Assign a code: keep existing, else the local code from state (if free), else a fresh one.
+    let hostCode = existing.code || st.code || crypto.randomBytes(4).toString('hex')
+    if (!existing.code && st.code) {
+      const clash = await hostByCode(st.code)
+      if (clash && clash.id !== sub) hostCode = crypto.randomBytes(4).toString('hex')
+    }
+    await ref.set(
+      {
+        code: hostCode,
+        email: id.email || existing.email || null,
+        name: id.name || existing.name || null,
+        picture: id.picture || existing.picture || null,
+        google: { refreshToken, calendarId: (existing.google && existing.google.calendarId) || 'primary', connectedAt: new Date() },
+        updatedAt: new Date(),
+      },
+      { merge: true },
+    )
+    const hsid = signSession({ sub, email: id.email, name: id.name })
+    const locale = st.locale === 'ar' ? 'ar' : 'en'
+    res.redirect(302, `${SITE}/${locale}/tools/book-with-me#hsid=${hsid}&code=${hostCode}`)
+  } catch (e) {
+    res.status(500).send(String((e && e.message) || e))
+  }
+})
+
+// POST { hsid, code, tz, meeting, availability, notify, pushSub? } → upsert host.
+http('saveSchedule', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const { hsid, code, tz, meeting, availability, notify, pushSub } = req.body || {}
+    const sess = verifySession(hsid)
+    if (!sess) return res.status(401).json({ error: 'invalid session' })
+
+    // Enforce code uniqueness across hosts.
+    if (code) {
+      const clash = await hostByCode(code)
+      if (clash && clash.id !== sess.sub) return res.status(409).json({ error: 'code taken' })
+    }
+    const patch = { updatedAt: new Date() }
+    if (code) patch.code = String(code)
+    if (tz) patch.tz = String(tz)
+    if (meeting) patch.meeting = meeting
+    if (Array.isArray(availability)) patch.availability = availability
+    if (notify) patch.notify = notify
+    if (pushSub && pushSub.endpoint) patch.pushSub = pushSub
+    await db.collection(HOSTS).doc(sess.sub).set(patch, { merge: true })
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { code } → host meta + open slot start epochs (UTC ms) over the horizon.
+http('getAvailability', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const host = await hostByCode(req.body && req.body.code)
+    if (!host) return res.status(404).json({ error: 'not found' })
+    const now = Date.now()
+    const horizonEnd = now + ((host.meeting && host.meeting.horizonDays) || 30) * 86400000
+
+    // Busy = existing confirmed bookings + (if connected) Google free/busy.
+    const busy = []
+    const bk = await db
+      .collection(BOOKINGS)
+      .where('hostUid', '==', host.id)
+      .where('startUtc', '>=', new Date(now))
+      .get()
+    for (const d of bk.docs) {
+      const b = d.data()
+      if (b.status === 'cancelled') continue
+      busy.push({ start: b.startUtc.toMillis(), end: b.endUtc.toMillis() })
+    }
+    if (host.google && host.google.refreshToken) {
+      try {
+        const at = await accessTokenFor(host.google.refreshToken)
+        const gbusy = await googleBusy(at, host.google.calendarId || 'primary', new Date(now).toISOString(), new Date(horizonEnd).toISOString())
+        busy.push(...gbusy)
+      } catch (e) {
+        console.error('freebusy failed:', String((e && e.message) || e))
+      }
+    }
+    const slots = openSlots(host, busy, now)
+    res.json({
+      ok: true,
+      host: {
+        name: host.name || null,
+        tz: host.tz || 'Asia/Riyadh',
+        minutes: (host.meeting && host.meeting.minutes) || 45,
+        title: (host.meeting && host.meeting.title) || 'Meeting',
+        location: (host.meeting && host.meeting.location) || '',
+      },
+      slots,
+    })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { code, startUtc, name, email, note } → book (transactional), notify.
+http('book', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const { code, startUtc, name, email, note } = req.body || {}
+    if (!startUtc || !name || !email) return res.status(400).json({ error: 'missing fields' })
+    const host = await hostByCode(code)
+    if (!host) return res.status(404).json({ error: 'not found' })
+
+    const start = Number(startUtc)
+    const lenMs = ((host.meeting && host.meeting.minutes) || 45) * 60000
+    const end = start + lenMs
+    if (start < Date.now()) return res.status(400).json({ error: 'in the past' })
+
+    // Validate the slot is genuinely open right now (availability + freebusy).
+    let busy = []
+    if (host.google && host.google.refreshToken) {
+      try {
+        const at = await accessTokenFor(host.google.refreshToken)
+        busy = await googleBusy(at, host.google.calendarId || 'primary', new Date(start).toISOString(), new Date(end).toISOString())
+      } catch { /* if freebusy fails, fall back to availability + booking lock */ }
+    }
+    const stillOpen = openSlots(host, busy, Date.now() - 60000).includes(start)
+    if (!stillOpen) return res.status(409).json({ error: 'slot no longer available' })
+
+    // Atomic double-booking guard via a deterministic doc id per slot.
+    const bId = `${host.id}_${start}`
+    const bRef = db.collection(BOOKINGS).doc(bId)
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(bRef)
+      if (snap.exists && snap.data().status !== 'cancelled') throw new Error('ALREADY_BOOKED')
+      t.set(bRef, {
+        hostUid: host.id,
+        code: host.code,
+        startUtc: new Date(start),
+        endUtc: new Date(end),
+        booker: { name: String(name).slice(0, 120), email: String(email).slice(0, 160), note: String(note || '').slice(0, 500) },
+        status: 'confirmed',
+        gcalEventId: null,
+        createdAt: new Date(),
+      })
+    }).catch((e) => {
+      if (String(e.message).includes('ALREADY_BOOKED')) {
+        const err = new Error('slot no longer available'); err.code = 409; throw err
+      }
+      throw e
+    })
+
+    const title = (host.meeting && host.meeting.title) || 'Meeting'
+    const location = (host.meeting && host.meeting.location) || ''
+    const summary = `${title} — ${name}`
+
+    // Create the Google Calendar event (best-effort; booking already persisted).
+    if (host.google && host.google.refreshToken) {
+      try {
+        const at = await accessTokenFor(host.google.refreshToken)
+        const ev = await insertEvent(at, host.google.calendarId || 'primary', {
+          summary,
+          description: note ? `Booked via Built in Saudi.\n\n${note}` : 'Booked via Built in Saudi.',
+          location,
+          start: { dateTime: new Date(start).toISOString() },
+          end: { dateTime: new Date(end).toISOString() },
+          attendees: [{ email: String(email), displayName: String(name) }],
+        })
+        if (ev && ev.id) await bRef.update({ gcalEventId: ev.id })
+      } catch (e) {
+        console.error('gcal insert failed:', String((e && e.message) || e))
+      }
+    }
+
+    // Notify the host: push + Telegram.
+    const whenHost = new Date(start).toLocaleString('en-GB', { timeZone: host.tz || 'Asia/Riyadh' })
+    const notify = host.notify || {}
+    if (notify.push !== false && host.pushSub && host.pushSub.endpoint) {
+      try {
+        await webpush.sendNotification(host.pushSub, JSON.stringify({
+          title: `New booking: ${name}`,
+          body: `${title} · ${whenHost}`,
+          tag: 'booking',
+          url: `${SITE}/en/tools/book-with-me`,
+        }))
+      } catch (e) { /* prune handled elsewhere */ }
+    }
+    if (notify.telegram !== false && host.telegramChatId) {
+      await sendTelegram(
+        host.telegramChatId,
+        `📅 <b>New booking</b>\n${name} (${email})\n${title} · ${whenHost}${note ? `\n\n${note}` : ''}`,
+      )
+    }
+
+    // Email the booker (and host) a confirmation with a real .ics.
+    const ics = buildICS({
+      uid: `${bId}@built-in-saudi.com`,
+      start, end, summary: title, description: note || '', location,
+      organizerEmail: host.email, attendeeEmail: String(email),
+    })
+    const whenBooker = new Date(start).toISOString()
+    if (notify.email !== false) {
+      await sendEmail({
+        to: String(email),
+        subject: `Confirmed: ${title}`,
+        html: `<p>Your ${title.toLowerCase()} is booked.</p><p><b>When:</b> ${whenBooker} (UTC)</p>${location ? `<p><b>Where:</b> ${location}</p>` : ''}<p>Added to your calendar via the attached invite.</p>`,
+        ics,
+      })
+      if (host.email) {
+        await sendEmail({
+          to: host.email,
+          subject: `New booking: ${name}`,
+          html: `<p><b>${name}</b> (${email}) booked ${title}.</p><p><b>When:</b> ${whenHost}</p>${note ? `<p><b>Note:</b> ${note}</p>` : ''}`,
+          ics,
+        })
+      }
+    }
+
+    res.json({ ok: true })
+  } catch (e) {
+    if (e && e.code === 409) return res.status(409).json({ error: e.message })
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// Telegram webhook: on "/start <code>" link the sender's chat to that host.
+// Set up once with: setWebhook → this function's URL (see functions/README.md).
+http('telegramWebhook', async (req, res) => {
+  try {
+    const msg = req.body && (req.body.message || req.body.edited_message)
+    const text = (msg && msg.text) || ''
+    const chatId = msg && msg.chat && msg.chat.id
+    const m = text.match(/^\/start\s+(\S+)/)
+    if (m && chatId) {
+      const host = await hostByCode(m[1])
+      if (host) {
+        await db.collection(HOSTS).doc(host.id).set({ telegramChatId: chatId }, { merge: true })
+        await sendTelegram(chatId, '✅ Linked. You’ll get a message here whenever someone books with you.')
+      } else {
+        await sendTelegram(chatId, '❌ Couldn’t find that booking link.')
+      }
+    }
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(200).json({ ok: false }) // always 200 so Telegram doesn't retry-storm
+  }
+})

@@ -2,6 +2,10 @@ import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
 import webpush from 'web-push'
 import * as adhan from 'adhan'
+// Book With Me endpoints (bookingGoogleStart/Callback, saveSchedule,
+// getAvailability, book, telegramWebhook). Importing here registers their
+// http() handlers; VAPID is configured below and shared.
+import './booking.js'
 
 const { Firestore } = firestore
 const db = new Firestore()

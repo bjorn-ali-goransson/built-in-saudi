@@ -25,6 +25,11 @@ export interface ToolSeo {
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'book-with-me',
+    en: { name: 'Book With Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
+    ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
+  },
+  {
     id: 'color-tools',
     en: { name: 'Color Picker & Palettes', description: 'Pick a colour and read it as HEX/RGB/HSL, then generate complementary, analogous and triadic palettes plus a shades ramp — copy any swatch. In your browser.' },
     ar: { name: 'منتقي الألوان واللوحات', description: 'اختر لونًا واقرأه بصيغ HEX/RGB/HSL، ثم ولّد لوحات مكمّلة ومتجانسة وثلاثية وتدرّجات — وانسخ أي لون. داخل متصفحك.' },

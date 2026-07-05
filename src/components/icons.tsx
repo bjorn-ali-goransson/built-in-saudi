@@ -180,6 +180,16 @@ export function CalendarIcon({ className }: P) {
   )
 }
 
+export function CalendarCheckIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 3v3M16 3v3" />
+      <path d="M8.5 14.5l2.5 2.5 4.5-4.5" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -1,0 +1,224 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { useLocale } from '../i18n'
+import { useDocumentMeta } from '../lib/useDocumentMeta'
+import { Button, Input, Textarea, Field, Stack, Panel, Pill } from '../components/ui'
+import { getAvailability, book, type HostMeta } from '../lib/bookingApi'
+
+const STR = {
+  en: {
+    loading: 'Loading availability…',
+    notFound: 'This booking link doesn’t exist.',
+    error: 'Couldn’t load availability. Please try again.',
+    withMe: (n: string) => `Book a meeting with ${n}`,
+    withHost: 'Book a meeting',
+    mins: 'min',
+    yourTz: (tz: string) => `Times shown in your timezone (${tz})`,
+    none: 'No open times in the coming weeks. Check back soon.',
+    pick: 'Pick a time',
+    name: 'Your name',
+    email: 'Your email',
+    note: 'Anything to share? (optional)',
+    confirm: 'Confirm booking',
+    back: 'Back',
+    booking: 'Booking…',
+    booked: 'You’re booked! 🎉',
+    bookedBody: 'A confirmation with a calendar invite is on its way to your email.',
+    gone: 'That slot was just taken. Please pick another.',
+    at: 'at',
+  },
+  ar: {
+    loading: 'جارٍ تحميل الأوقات…',
+    notFound: 'رابط الحجز هذا غير موجود.',
+    error: 'تعذّر تحميل الأوقات. حاول مرة أخرى.',
+    withMe: (n: string) => `احجز اجتماعًا مع ${n}`,
+    withHost: 'احجز اجتماعًا',
+    mins: 'دقيقة',
+    yourTz: (tz: string) => `الأوقات معروضة بتوقيتك (${tz})`,
+    none: 'لا أوقات متاحة في الأسابيع القادمة. عُد قريبًا.',
+    pick: 'اختر وقتًا',
+    name: 'اسمك',
+    email: 'بريدك الإلكتروني',
+    note: 'شيء تودّ مشاركته؟ (اختياري)',
+    confirm: 'تأكيد الحجز',
+    back: 'رجوع',
+    booking: 'جارٍ الحجز…',
+    booked: 'تم حجزك! 🎉',
+    bookedBody: 'رسالة تأكيد مع دعوة تقويم في طريقها إلى بريدك.',
+    gone: 'حُجز هذا الوقت للتو. اختر وقتًا آخر.',
+    at: 'الساعة',
+  },
+}
+
+type Status = 'loading' | 'ready' | 'not-found' | 'error'
+
+export function BookingPage() {
+  const { code } = useParams()
+  const { locale } = useLocale()
+  const s = STR[locale]
+  useDocumentMeta(locale, `/book/${code}`)
+
+  const [status, setStatus] = useState<Status>('loading')
+  const [host, setHost] = useState<HostMeta | null>(null)
+  const [slots, setSlots] = useState<number[]>([])
+  const [selected, setSelected] = useState<number | null>(null)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [note, setNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+  const [gone, setGone] = useState(false)
+
+  const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!code) return
+    setStatus('loading')
+    getAvailability(code)
+      .then((r) => {
+        if (cancelled) return
+        setHost(r.host)
+        setSlots(r.slots)
+        setStatus('ready')
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setStatus(e.message === 'not-found' ? 'not-found' : 'error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [code])
+
+  const dayFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+    [locale],
+  )
+  const timeFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { hour: '2-digit', minute: '2-digit' }),
+    [locale],
+  )
+
+  // Group slots by the booker's local calendar day.
+  const grouped = useMemo(() => {
+    const byDay = new Map<string, number[]>()
+    for (const ms of slots) {
+      const key = new Date(ms).toDateString()
+      if (!byDay.has(key)) byDay.set(key, [])
+      byDay.get(key)!.push(ms)
+    }
+    return [...byDay.entries()]
+  }, [slots])
+
+  async function submit() {
+    if (!code || selected == null || !name.trim() || !email.trim()) return
+    setSubmitting(true)
+    setGone(false)
+    try {
+      const r = await book({ code, startUtc: selected, name: name.trim(), email: email.trim(), note: note.trim() })
+      if (r.conflict) {
+        // Slot taken — drop it and bounce back to the list.
+        setSlots((prev) => prev.filter((x) => x !== selected))
+        setSelected(null)
+        setGone(true)
+      } else if (r.ok) {
+        setDone(true)
+      }
+    } catch {
+      setGone(false)
+      setStatus('error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const heading = host?.name ? s.withMe(host.name) : s.withHost
+
+  return (
+    <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[46rem] animate-[fadeUp_0.5s_ease_both]">
+      {status === 'loading' && <p className="text-ink-faint">{s.loading}</p>}
+      {status === 'not-found' && <Panel><p className="text-ink-soft">{s.notFound}</p></Panel>}
+      {status === 'error' && <Panel><p className="text-ink-soft">{s.error}</p></Panel>}
+
+      {status === 'ready' && host && (
+        <Stack>
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display text-[clamp(1.5rem,4vw,2rem)] text-ink">{heading}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-[0.9rem] text-ink-soft">
+              <Pill>{host.title}</Pill>
+              <span className="font-mono">{host.minutes} {s.mins}</span>
+              {host.location && <span className="text-ink-faint">· {host.location}</span>}
+            </div>
+          </div>
+
+          {done ? (
+            <Panel data-testid="booking-done">
+              <h2 className="font-display text-[1.4rem] text-green-700">{s.booked}</h2>
+              <p className="text-ink-soft">{s.bookedBody}</p>
+              <p className="text-ink-faint text-[0.9rem]">
+                {selected != null && `${dayFmt.format(new Date(selected))} ${s.at} ${timeFmt.format(new Date(selected))}`}
+              </p>
+            </Panel>
+          ) : selected == null ? (
+            <>
+              <p className="text-[0.85rem] text-ink-faint">{s.yourTz(localTz)}</p>
+              {gone && (
+                <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>
+              )}
+              {grouped.length === 0 ? (
+                <Panel><p className="text-ink-soft">{s.none}</p></Panel>
+              ) : (
+                <Stack>
+                  {grouped.map(([key, times]) => (
+                    <div key={key} className="flex flex-col gap-2">
+                      <h2 className="text-[0.95rem] font-semibold text-ink">{dayFmt.format(new Date(times[0]))}</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {times.map((ms) => (
+                          <button
+                            key={ms}
+                            data-testid="slot"
+                            onClick={() => { setSelected(ms); setGone(false) }}
+                            className="font-mono text-[0.9rem] px-3 py-2 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-600 hover:text-green-700 transition-colors"
+                          >
+                            {timeFmt.format(new Date(ms))}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </Stack>
+              )}
+            </>
+          ) : (
+            <Panel>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-ink">
+                  {dayFmt.format(new Date(selected))} · {timeFmt.format(new Date(selected))}
+                </span>
+                <Button onClick={() => setSelected(null)}>{s.back}</Button>
+              </div>
+              <Field label={s.name}>
+                <Input value={name} data-testid="booker-name" onChange={(e) => setName(e.target.value)} autoFocus />
+              </Field>
+              <Field label={s.email}>
+                <Input type="email" value={email} data-testid="booker-email" onChange={(e) => setEmail(e.target.value)} />
+              </Field>
+              <Field label={s.note}>
+                <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
+              </Field>
+              <Button
+                variant="primary"
+                data-testid="confirm-booking"
+                disabled={submitting || !name.trim() || !email.trim()}
+                onClick={submit}
+              >
+                {submitting ? s.booking : s.confirm}
+              </Button>
+            </Panel>
+          )}
+        </Stack>
+      )}
+    </div>
+  )
+}

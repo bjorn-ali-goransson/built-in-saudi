@@ -40,14 +40,24 @@ jobs:
 
       - name: Deploy functions
         env:
-          ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }}
+          # Prayer-alert vars + Book With Me vars (Google OAuth / Resend / Telegram).
+          # GOOGLE_OAUTH_CLIENT_ID is public (repo variable); the rest are secrets.
+          ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }},GOOGLE_OAUTH_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID }},GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }},RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           set -e
           common=(--gen2 --runtime=nodejs20 --region=us-central1 \
             --project="${{ vars.GCP_PROJECT }}" --source=. \
             --trigger-http --allow-unauthenticated --set-env-vars="$ENVV")
+          # Prayer alerts
           gcloud functions deploy subscribe   "${common[@]}" --entry-point=subscribe
           gcloud functions deploy unsubscribe "${common[@]}" --entry-point=unsubscribe
           gcloud functions deploy send-due    "${common[@]}" --entry-point=sendDue
           gcloud functions deploy touch       "${common[@]}" --entry-point=touch
           gcloud functions deploy debug       "${common[@]}" --entry-point=debug
+          # Book With Me — the callback name must match REDIRECT_URI in booking.js.
+          gcloud functions deploy booking-google-start    "${common[@]}" --entry-point=bookingGoogleStart
+          gcloud functions deploy booking-google-callback "${common[@]}" --entry-point=bookingGoogleCallback
+          gcloud functions deploy save-schedule           "${common[@]}" --entry-point=saveSchedule
+          gcloud functions deploy get-availability        "${common[@]}" --entry-point=getAvailability
+          gcloud functions deploy book                    "${common[@]}" --entry-point=book
+          gcloud functions deploy telegram-webhook        "${common[@]}" --entry-point=telegramWebhook
