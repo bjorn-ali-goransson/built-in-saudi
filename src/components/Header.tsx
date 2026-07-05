@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool } from '../i18n'
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
+import { PalmLogo } from './PalmLogo'
 
 export function Header() {
   const { locale, t } = useLocale()
@@ -22,8 +23,9 @@ export function Header() {
       <div className="wrap flex items-center justify-between h-[68px] max-[560px]:h-[60px]">
         <div className="flex items-center gap-3 min-w-0">
           {!isHome && <AppLauncher />}
-          <Link to={localePath(locale)} className="font-display font-semibold text-[1.16rem] text-green-700 truncate no-underline" aria-label={siteName}>
-            {context || siteName}
+          <Link to={localePath(locale)} className="flex items-center gap-[0.5rem] font-display font-semibold text-[1.16rem] text-green-700 min-w-0 no-underline" aria-label={siteName}>
+            {!context && <PalmLogo className="w-[1.5em] flex-none text-green-600" />}
+            <span className="truncate">{context || siteName}</span>
           </Link>
         </div>
 
