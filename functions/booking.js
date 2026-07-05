@@ -47,9 +47,8 @@ const OAUTH_SCOPES = [
 
 function cors(req, res) {
   const origin = (req.headers && req.headers.origin) || ''
-  // Allow the apex, any *.built-in-saudi.com subdomain (incl. the booking
-  // subdomain), and Cloudflare Pages preview builds during setup.
-  const ok = /^https:\/\/([a-z0-9-]+\.)?built-in-saudi\.com$/.test(origin) || /\.pages\.dev$/.test(origin)
+  // Allow the apex and any *.built-in-saudi.com subdomain.
+  const ok = /^https:\/\/([a-z0-9-]+\.)?built-in-saudi\.com$/.test(origin)
   res.set('Access-Control-Allow-Origin', ok ? origin : SITE)
   res.set('Vary', 'Origin')
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS')

@@ -9,7 +9,7 @@ import {
   saveConfig,
   gridToWindows,
   windowsToGrid,
-  BOOKING_ORIGIN,
+  BOOKING_LINK_BASE,
   type HostConfig,
   type Grid,
 } from './lib'
@@ -141,7 +141,7 @@ export default function BookWithMeTool() {
     saveConfig(cfg)
   }, [cfg])
 
-  const link = `${BOOKING_ORIGIN}/${cfg.code}`
+  const link = `${BOOKING_LINK_BASE}/${cfg.code}`
 
   function updateGrid(next: Grid) {
     setGrid(next)

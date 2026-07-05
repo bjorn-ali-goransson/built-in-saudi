@@ -196,4 +196,7 @@ export function saveConfig(cfg: HostConfig): void {
   }
 }
 
-export const BOOKING_ORIGIN = 'https://book-a-meeting.built-in-saudi.com'
+// Path-based booking link on the apex (subdomain deferred — no Cloudflare needed).
+// A bare /book/<code> lets the visitor's own locale kick in via the Layout
+// redirect, so links aren't language-locked.
+export const BOOKING_LINK_BASE = 'https://built-in-saudi.com/book'

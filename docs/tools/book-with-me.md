@@ -1,6 +1,7 @@
 # Book With Me (Calendly-style scheduler)
 
-- **Slug:** `/tools/book-with-me` (host dashboard) · **Public booking:** `book-a-meeting.built-in-saudi.com/<code>`
+- **Slug:** `/tools/book-with-me` (host dashboard) · **Public booking:** `built-in-saudi.com/book/<code>`
+  (path-based; the `book-a-meeting` subdomain is deferred, so no Cloudflare)
 - **Category:** Business · **Priority:** Tier 1 (flagship)
 - **Runs:** hybrid — host UI is client-side; booking/notifications need the backend (badge ⚙︎)
 - **Status:** In progress
@@ -24,10 +25,12 @@ our auth + subdomain + transactional-email patterns for everything after it.
    connect, notification setup (Web Push subscribe + Telegram link), and the
    shareable link. Host state persists to Firestore via `saveSchedule`.
 2. **Public booking page** — `src/pages/BookingPage.tsx` at
-   `/:lang/book/:code`, also served at the apex-free subdomain root
-   `book-a-meeting.built-in-saudi.com/<code>`. No login. Shows real open slots =
-   **drawn availability − Google free/busy − existing bookings**; collects booker
-   name + email + note; books.
+   `/:lang/book/:code`, shared as `built-in-saudi.com/book/<code>` (a bare
+   `/book/<code>` redirects to the visitor's locale via Layout, so links aren't
+   language-locked). No login. Shows real open slots = **drawn availability −
+   Google free/busy − existing bookings**; collects booker name + email + note;
+   books. The `book-a-meeting` subdomain is deferred — path-based needs no extra
+   host, so Cloudflare is skipped for now.
 
 ## Architecture — reuses the prayer-alerts backend wholesale
 
@@ -152,10 +155,10 @@ These need accounts/click-ops the code can't do:
    `googleAuthCallback` function URL. Add `calendar.events` + `calendar.freebusy`
    scopes and submit the consent screen for verification. Client ID → repo var,
    client secret → repo secret.
-2. **Cloudflare Pages** — new Pages project from this repo, custom domain
-   `book-a-meeting.built-in-saudi.com`; add the CNAME in Google Cloud DNS
-   (`built-in-saudi` zone). The Pages build serves the same SPA; the subdomain
-   root path maps to the booking route (see `_redirects`).
+2. ~~**Cloudflare Pages**~~ — **deferred.** Booking is path-based
+   (`built-in-saudi.com/book/<code>`) on the existing GitHub Pages host, so no new
+   host/DNS is needed. If we later want the `book-a-meeting` subdomain, stand up a
+   Cloudflare Pages project on this repo with a wildcard CNAME (see CLAUDE.md).
 3. **Resend** — sign up, verify `built-in-saudi.com` as a sending domain (DKIM/SPF
    TXT in Cloud DNS). API key → repo secret `RESEND_API_KEY`.
 4. **Telegram** — create a bot via @BotFather; bot token → repo secret

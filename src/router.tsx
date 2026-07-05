@@ -17,8 +17,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage />, errorElement: <ErrorPage /> },
       { path: 'tools/:toolId', element: <ToolPage />, errorElement: <ErrorPage /> },
-      // Public booking page. Also served at book-a-meeting.built-in-saudi.com/<code>
-      // (Cloudflare Pages rewrites the subdomain root to /<locale>/book/<code>).
+      // Public booking page. Shared as built-in-saudi.com/book/<code> — a bare
+      // /book/<code> hits Layout with an invalid :lang and redirects to the
+      // visitor's locale (/en|/ar), so booking links aren't language-locked.
       { path: 'book/:code', element: <BookingPage />, errorElement: <ErrorPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
