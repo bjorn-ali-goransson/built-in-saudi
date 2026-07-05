@@ -234,10 +234,10 @@ export default function MetadataTool() {
 
   return (
     <Stack data-testid="metadata">
-      <label className="dropzone" data-testid="meta-drop"
+      <label className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="meta-drop"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handle(f) }}>
-        <input type="file" className="dropzone__input" data-testid="meta-file"
+        <input type="file" className="absolute w-px h-px opacity-0" data-testid="meta-file"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handle(f) }} />
         <span>{s.drop} <strong>{s.browse}</strong></span>
         <small>🔒 {s.hint}</small>
@@ -256,7 +256,7 @@ export default function MetadataTool() {
           </dl>
         </section>
       ))}
-      {groups && groups.length === 1 && <p className="pray__method-note">{s.none}</p>}
+      {groups && groups.length === 1 && <p className="text-center text-[0.76rem] text-ink-faint mt-[0.8rem] font-body tracking-[0.02em] rtl:font-ar rtl:tracking-normal">{s.none}</p>}
     </Stack>
   )
 }

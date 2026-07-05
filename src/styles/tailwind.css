@@ -2,9 +2,12 @@
    hand-written CSS without resetting anything. Brand design tokens are mapped so
    utilities like `bg-green-600`, `text-sand-100`, `rounded-md`, `font-display`
    use the design system. Migrate components to these utilities tool-by-tool. */
-@layer theme, utilities;
+@layer theme, base, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
+/* theme.css puts its element resets (button/h1-h4/a/…) in @layer base so utility
+   classes on our components override them (unlayered rules would win otherwise —
+   the cascade-layer trap that made buttons borderless and headings serif). */
 
 @theme {
   --color-sand-50: #faf7f0;

@@ -29,9 +29,9 @@ export function UpdatedToast() {
 
   if (!show) return null
   return (
-    <div className="updated-toast" role="status" data-testid="updated-toast">
-      <strong className="updated-toast__label">{MSG[locale]}</strong>
-      {notes && <span className="updated-toast__notes">{notes}</span>}
+    <div className="fixed top-[84px] inset-x-0 mx-auto z-[70] w-fit max-w-[min(92vw,460px)] bg-green-700 text-sand-100 py-[0.6rem] px-[1.1rem] rounded-md shadow-lg text-[0.9rem] animate-[fadeUp_0.3s_ease_both] flex flex-col items-center gap-[0.15rem] text-center border-[1.5px] border-white/90" role="status" data-testid="updated-toast">
+      <strong className="font-body text-[0.66rem] uppercase tracking-[0.09em] opacity-80">{MSG[locale]}</strong>
+      {notes && <span className="text-[0.9rem] leading-[1.35]">{notes}</span>}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { BellIcon, CogIcon } from '../../components/icons'
-import { Button, Pill, Select } from '../../components/ui'
+import { Button, Pill, Select, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { pushSupported, currentSubscription, enablePush, disablePush, touchSubscription } from '../../lib/push'
 import { alertsHelp } from './alertsHelp'
 import { reverseGeocode } from './geo'
@@ -116,6 +116,15 @@ function readPrefs(): AlertPrefs {
   return { minutesBefore: 0, iqamaAlert: false, duha: false }
 }
 function savePrefs(p: AlertPrefs) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)) } catch { /* ignore */ } }
+
+// Shared hero "pill" chip (was .pray__hero-pill): translucent capsule on the
+// green hero, with white 15px icons.
+const HERO_PILL =
+  'inline-flex items-center gap-[0.4rem] py-[0.38rem] px-[0.85rem] max-w-full rounded-full border '
+  + 'border-[color-mix(in_srgb,var(--sand-100)_32%,transparent)] bg-[color-mix(in_srgb,#000_12%,transparent)] '
+  + 'text-sand-100 text-[0.82rem] font-semibold cursor-pointer transition-[background,border-color] duration-150 '
+  + 'enabled:hover:bg-[color-mix(in_srgb,#000_22%,transparent)] '
+  + '[&_svg]:w-[15px] [&_svg]:h-[15px] [&_svg]:flex-none [&_svg]:text-white'
 
 export default function PrayerTimesTool() {
   const { locale } = useLocale()
@@ -394,36 +403,38 @@ export default function PrayerTimesTool() {
   }
 
   return (
-    <div className="pray">
+    <div className="flex flex-col gap-[1.3rem]">
       {/* Big next-prayer hero */}
-      <section className={`pray__hero ${active ? 'is-active' : ''}`} data-testid="next-prayer">
-        <span className="pray__hero-label">{active ? s.timeForPrayer : s.next}</span>
-        <span className="pray__hero-name">{s.prayers[active ? active.key : nextInfo.key]}</span>
-        <span className="pray__hero-count" data-testid="hero-count">
+      <section
+        className="text-center flex flex-col gap-[0.15rem] text-sand-100 rounded-none shadow-[var(--shadow-md)] bg-green-600 mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] py-[1.4rem] max-[560px]:py-[1.1rem] px-4"
+        data-testid="next-prayer">
+        <span className="text-[0.78rem] uppercase tracking-[0.09em] rtl:tracking-normal opacity-[0.82]">{active ? s.timeForPrayer : s.next}</span>
+        <span className="font-display rtl:font-ar text-[clamp(1.9rem,6vw,2.7rem)] max-[560px]:text-[1.8rem] leading-[1.05]">{s.prayers[active ? active.key : nextInfo.key]}</span>
+        <span className={`font-display rtl:font-ar text-[clamp(1.5rem,5.5vw,2.1rem)] ${active ? 'text-gold-400 font-bold' : 'font-semibold'}`} data-testid="hero-count">
           {active ? iqamaText : s.inTime(countdown.h, countdown.m)}
         </span>
-        <button className="pray__hero-time" data-testid="hero-time" onClick={toggleClock}
+        <button className="font-mono text-base opacity-[0.72] hover:opacity-[0.85] appearance-none bg-transparent border-none text-inherit cursor-pointer p-0" data-testid="hero-time" onClick={toggleClock}
           title={clock24 ? '12-hour' : '24-hour'} aria-label="Toggle 12 or 24 hour clock">
           {fmtTime(active ? active.adhan : nextInfo.time)}
         </button>
-        <div className="pray__hero-actions">
-          <button className="pray__hero-pill" data-testid="loc-chip"
+        <div className="flex gap-2 justify-center flex-wrap mt-[0.85rem]">
+          <button className={HERO_PILL} data-testid="loc-chip"
             onClick={() => { setPendingCity(cityId); setShowLocPicker(true) }}>
-            <LocPin /> <span className="pray__hero-pill-name">{loc.label}</span>
-            <span className="pray__loc-caret" aria-hidden="true">▾</span>
+            <LocPin /> <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[42vw]">{loc.label}</span>
+            <span className="text-white text-[0.8rem]" aria-hidden="true">▾</span>
           </button>
-          <button className={`pray__hero-pill pray__hero-alerts ${pushOn ? 'is-on' : ''}`} data-testid="pray-notify"
+          <button className={`${HERO_PILL} disabled:opacity-60 disabled:cursor-default ${pushOn ? 'bg-[color-mix(in_srgb,var(--sand-100)_20%,transparent)] border-[color-mix(in_srgb,var(--sand-100)_55%,transparent)]' : ''}`} data-testid="pray-notify"
             disabled={pushBusy} aria-pressed={!!pushOn}
             onClick={() => (pushOn ? setSettingsOpen(true) : enableAlerts())}>
             {pushOn ? <CogIcon /> : <BellIcon />} {pushOn ? s.alertsOn : s.enableAlerts}
           </button>
         </div>
       </section>
-      {geoError && <p className="pray__geoerr">{geoError}</p>}
+      {geoError && <p className="text-[color:var(--danger)] text-[0.9rem]">{geoError}</p>}
 
       {/* Prayer times — flush, no card/well (nativization) */}
-      {locating && <p className="pray__locating" data-testid="pray-locating">{s.locating}</p>}
-      <ul className={`pray__times ${locating ? 'is-locating' : ''}`} data-testid="prayer-list">
+      {locating && <p className="text-[0.85rem] text-ink-faint mb-[0.6rem]" data-testid="pray-locating">{s.locating}</p>}
+      <ul className={`list-none p-0 m-0 grid gap-2 ${locating ? 'opacity-[0.55] animate-[pulse_1.2s_ease-in-out_infinite]' : ''}`} data-testid="prayer-list">
         {timeline.map((it, i) => {
           const prev = timeline[i - 1]
           const newDay = prev && it.time.toDateString() !== prev.time.toDateString()
@@ -434,30 +445,30 @@ export default function PrayerTimesTool() {
           return (
             <Fragment key={i}>
               {newDay && (
-                <li className="pray__daysep" aria-hidden="true"><span>{weekdayFmt.format(it.time)}</span></li>
+                <li className="flex items-center gap-[0.7rem] px-[0.2rem] py-[0.2rem] my-[0.1rem] mx-0 before:content-[''] before:flex-1 before:h-px before:bg-[var(--line-soft)] after:content-[''] after:flex-1 after:h-px after:bg-[var(--line-soft)]" aria-hidden="true"><span className="font-body rtl:font-ar text-[0.68rem] uppercase tracking-[0.08em] rtl:tracking-normal text-ink-faint">{weekdayFmt.format(it.time)}</span></li>
               )}
-              <li className={`pray__row ${highlight ? 'is-next' : ''}`} data-testid={`prow-${it.key}`}>
-                <span className="pray__name">{s.prayers[it.key]}</span>
-                <span className="pray__time">{fmtTime(it.time)}</span>
+              <li className={`flex items-center gap-[0.8rem] max-[560px]:gap-[0.6rem] py-[0.7rem] px-[0.9rem] max-[560px]:py-[0.55rem] max-[560px]:px-[0.8rem] rounded-md border ${highlight ? 'bg-[color-mix(in_srgb,var(--green-400)_14%,transparent)] border-[color-mix(in_srgb,var(--green-500)_35%,transparent)]' : 'bg-[color-mix(in_srgb,var(--sand-100)_55%,var(--surface))] border-transparent'}`} data-testid={`prow-${it.key}`}>
+                <span className="font-semibold text-[1.05rem] max-[560px]:text-base text-green-700 min-w-[6rem] max-[560px]:min-w-0">{s.prayers[it.key]}</span>
+                <span className="font-mono text-[1.05rem] text-ink ms-auto whitespace-nowrap">{fmtTime(it.time)}</span>
                 {highlight && !active && (
-                  <span className="pray__next">{s.next} · {s.inTime(countdown.h, countdown.m)}</span>
+                  <span className="text-[0.78rem] font-semibold text-green-600 bg-[var(--surface)] border border-[var(--line)] rounded-full py-[0.2rem] px-[0.6rem] whitespace-nowrap max-[560px]:hidden">{s.next} · {s.inTime(countdown.h, countdown.m)}</span>
                 )}
               </li>
             </Fragment>
           )
         })}
       </ul>
-      <div className="pray__more">
+      <div className="flex flex-col flex-wrap items-center justify-center gap-2 mt-[0.9rem]">
         {!isLive && (
-          <span className="pray__viewdate" data-testid="pray-viewdate">{weekdayFmt.format(new Date(`${viewDateStr}T12:00:00`))}</span>
+          <span className="font-body rtl:font-ar text-[0.8rem] text-ink-faint me-[0.2rem]" data-testid="pray-viewdate">{weekdayFmt.format(new Date(`${viewDateStr}T12:00:00`))}</span>
         )}
         <Pill data-testid="pray-more" onClick={() => setShowMore((v) => !v)}>{showMore ? s.showLess : s.showMore}</Pill>
         <Pill data-testid="pray-choose" onClick={openChoose}>{s.choose}</Pill>
         {!isLive && <Pill variant="accent" data-testid="pray-today" onClick={() => setViewDateStr('')}>{s.today}</Pill>}
-        <input ref={dateRef} type="date" className="pray__date-hidden" value={viewDateStr} data-testid="pray-date"
+        <input ref={dateRef} type="date" className="absolute w-px h-px opacity-0 pointer-events-none border-0 p-0 m-0" value={viewDateStr} data-testid="pray-date"
           aria-hidden="true" tabIndex={-1} onChange={(e) => setViewDateStr(e.target.value)} />
       </div>
-      <p className="pray__method-note">{s.method}</p>
+      <p className="text-center text-[0.76rem] text-ink-faint mt-[0.8rem] font-body rtl:font-ar tracking-[0.02em] rtl:tracking-normal">{s.method}</p>
 
       {helpOpen && (
         <AlertsHelpDialog failedMsg={s.alertsFailed} help={alertsHelp(locale)} detail={helpDetail}
@@ -483,13 +494,11 @@ function AlertSettings({ s, prefs, busy, onApply, onDisable, onClose }: {
   s: typeof STR['en']; prefs: AlertPrefs; busy: boolean
   onApply: (p: AlertPrefs) => void; onDisable: () => void; onClose: () => void
 }) {
-  return createPortal(
-    <div className="sheet-overlay" role="dialog" aria-modal="true" data-testid="alert-settings" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <span className="sheet__grip" aria-hidden="true" />
-        <h3 className="sheet__title">{s.alertSettings}</h3>
+  return (
+    <Sheet data-testid="alert-settings" onClose={onClose}>
+        <SheetTitle>{s.alertSettings}</SheetTitle>
 
-        <div className="pray__set-row">
+        <div className="flex items-center justify-between gap-4 py-[0.85rem] px-[0.2rem] border-b border-[var(--line-soft)] last-of-type:border-b-0">
           <span>{s.beforeLabel}</span>
           <Select value={prefs.minutesBefore} disabled={busy} data-testid="set-before"
             onChange={(e) => onApply({ ...prefs, minutesBefore: Number(e.target.value) })}>
@@ -500,25 +509,23 @@ function AlertSettings({ s, prefs, busy, onApply, onDisable, onClose }: {
           </Select>
         </div>
 
-        <label className="pray__set-row">
-          <span className="pray__set-label">{s.iqamaAlertLabel}<small>{s.iqamaAlertHint}</small></span>
-          <input type="checkbox" className="pray__check" checked={prefs.iqamaAlert} disabled={busy} data-testid="set-iqama"
+        <label className="flex items-center justify-between gap-4 py-[0.85rem] px-[0.2rem] border-b border-[var(--line-soft)] last-of-type:border-b-0">
+          <span className="flex flex-col [&_small]:text-ink-faint [&_small]:text-[0.78rem] [&_small]:mt-[0.1rem]">{s.iqamaAlertLabel}<small>{s.iqamaAlertHint}</small></span>
+          <input type="checkbox" className="w-[22px] h-[22px] accent-green-600 flex-none" checked={prefs.iqamaAlert} disabled={busy} data-testid="set-iqama"
             onChange={(e) => onApply({ ...prefs, iqamaAlert: e.target.checked })} />
         </label>
 
-        <label className="pray__set-row">
-          <span className="pray__set-label">{s.duhaLabel}<small>{s.duhaHint}</small></span>
-          <input type="checkbox" className="pray__check" checked={prefs.duha} disabled={busy} data-testid="set-duha"
+        <label className="flex items-center justify-between gap-4 py-[0.85rem] px-[0.2rem] border-b border-[var(--line-soft)] last-of-type:border-b-0">
+          <span className="flex flex-col [&_small]:text-ink-faint [&_small]:text-[0.78rem] [&_small]:mt-[0.1rem]">{s.duhaLabel}<small>{s.duhaHint}</small></span>
+          <input type="checkbox" className="w-[22px] h-[22px] accent-green-600 flex-none" checked={prefs.duha} disabled={busy} data-testid="set-duha"
             onChange={(e) => onApply({ ...prefs, duha: e.target.checked })} />
         </label>
 
-        <div className="sheet__actions">
+        <SheetActions>
           <Button data-testid="set-disable" disabled={busy} onClick={onDisable}>{s.turnOff}</Button>
           <Button variant="primary" data-testid="set-done" onClick={onClose}>{s.done}</Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </SheetActions>
+    </Sheet>
   )
 }
 
@@ -531,39 +538,35 @@ function LocationSheet({ locale, s, pending, onPick, onUseLocation, onCancel, on
   onCancel: () => void
   onSave: () => void
 }) {
-  return createPortal(
-    <div className="sheet-overlay" role="dialog" aria-modal="true" data-testid="loc-sheet" onClick={onCancel}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <span className="sheet__grip" aria-hidden="true" />
-        <h3 className="sheet__title">{s.location}</h3>
+  return (
+    <Sheet data-testid="loc-sheet" onClose={onCancel}>
+        <SheetTitle>{s.location}</SheetTitle>
 
-        <button className="sheet__geo" data-testid="loc-geo" onClick={onUseLocation}>
+        <button className="inline-flex items-center justify-center gap-2 w-full p-3 border border-green-600 rounded-sm bg-[color-mix(in_srgb,var(--green-500)_10%,transparent)] text-green-700 font-semibold cursor-pointer [&_svg]:w-[17px] [&_svg]:h-[17px]" data-testid="loc-geo" onClick={onUseLocation}>
           <LocPin /> {s.useMyLocation}
         </button>
 
-        <p className="sheet__hint">{s.chooseCity}</p>
-        <ul className="sheet__cities" data-testid="loc-cities">
+        <p className="font-body text-[0.7rem] uppercase tracking-[0.07em] text-ink-faint mt-[1.1rem] mb-[0.4rem] rtl:font-ar rtl:tracking-normal">{s.chooseCity}</p>
+        <ul className="list-none mx-[-0.4rem] p-0 overflow-y-auto flex-1" data-testid="loc-cities">
           {CITIES.map((c) => {
             const selected = pending === c.id
             return (
               <li key={c.id}>
-                <button className={`sheet__city ${selected ? 'is-sel' : ''}`}
+                <button className={`flex items-center justify-between w-full py-3 px-[0.6rem] rounded-sm bg-none border-none text-ink [font:inherit] text-base text-start cursor-pointer hover:bg-sand-100 ${selected ? 'bg-[color-mix(in_srgb,var(--green-500)_12%,transparent)] text-green-700 font-semibold' : ''}`}
                   aria-pressed={selected} onClick={() => onPick(c.id)}>
                   <span>{locale === 'ar' ? c.ar : c.en}</span>
-                  {selected && <span className="sheet__check" aria-hidden="true">✓</span>}
+                  {selected && <span className="text-green-600 font-bold" aria-hidden="true">✓</span>}
                 </button>
               </li>
             )
           })}
         </ul>
 
-        <div className="sheet__actions">
+        <SheetActions>
           <Button data-testid="loc-cancel" onClick={onCancel}>{s.cancel}</Button>
           <Button variant="primary" data-testid="loc-save" onClick={onSave}>{s.save}</Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </SheetActions>
+    </Sheet>
   )
 }
 
@@ -573,12 +576,12 @@ function AlertsHelpDialog({ failedMsg, help, detail, closeLabel, onClose }: {
   // Portal to <body> so no transformed/animated ancestor can hijack the fixed
   // overlay's containing block — guarantees it centers on the viewport.
   return createPortal(
-    <div className="pray__help-overlay" role="dialog" aria-modal="true" data-testid="alerts-help" onClick={onClose}>
-      <div className="pray__help" onClick={(e) => e.stopPropagation()}>
-        <h3 className="pray__help-title">{failedMsg}</h3>
-        {detail && <p className="pray__help-detail" data-testid="alerts-help-detail">{detail}</p>}
-        <p className="pray__help-sub">{help.title}</p>
-        <ol className="pray__help-steps">
+    <div className="fixed inset-0 z-[80] grid place-items-center p-[1.2rem] bg-[color-mix(in_srgb,var(--ink)_45%,transparent)] animate-[fadeUp_0.15s_ease_both]" role="dialog" aria-modal="true" data-testid="alerts-help" onClick={onClose}>
+      <div className="w-[min(420px,100%)] bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-[var(--shadow-lg)] p-[1.4rem]" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-[1.15rem] font-bold mb-[0.9rem]">{failedMsg}</h3>
+        {detail && <p className="m-0 mb-4 font-mono text-[0.74rem] text-ink-faint break-words bg-sand-100 py-2 px-[0.6rem] rounded-sm" data-testid="alerts-help-detail">{detail}</p>}
+        <p className="font-semibold mt-[0.2rem] mx-0 mb-[0.6rem] text-ink">{help.title}</p>
+        <ol className="m-0 mb-[1.2rem] ps-[1.3rem] flex flex-col gap-2 text-ink-soft text-[0.95rem] leading-normal">
           {help.steps.map((step, i) => <li key={i}>{step}</li>)}
         </ol>
         <Button variant="primary" data-testid="alerts-help-close" onClick={onClose}>{closeLabel}</Button>
@@ -590,7 +593,7 @@ function AlertsHelpDialog({ failedMsg, help, detail, closeLabel, onClose }: {
 
 function LocPin() {
   return (
-    <svg className="pray__loc-pin" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="w-[16px] h-[16px] text-green-600 flex-none" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       <circle cx="12" cy="9" r="2.4" fill="currentColor" stroke="none" />
     </svg>

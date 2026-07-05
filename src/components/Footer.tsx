@@ -7,7 +7,7 @@ export function Footer() {
   const year = new Date().getFullYear()
   return (
     <footer className="shrink-0 pt-[1.4rem] pb-[1.6rem] max-[560px]:pb-[calc(2rem+env(safe-area-inset-bottom))] border-t border-[color:var(--line-soft)] bg-[color-mix(in_srgb,var(--sand-100)_50%,transparent)]">
-      <SaduDivider className="sadu--footer" />
+      <SaduDivider className="text-gold-400 opacity-60 mb-4" />
       <div className="wrap flex items-center justify-between gap-[1.2rem] flex-wrap">
         <div>
           <p className="font-ar text-gold-500 mt-[0.6rem] text-[0.92rem]" lang="ar">

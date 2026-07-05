@@ -96,7 +96,7 @@ export default function LoremTool() {
 
       {flavor === 'latin' && (
         <label className="flex items-center gap-[0.5rem] text-[0.9rem] text-ink-soft">
-          <input type="checkbox" className="pray__check" checked={startLorem} data-testid="lorem-start"
+          <input type="checkbox" className="w-[22px] h-[22px] accent-green-600 flex-none" checked={startLorem} data-testid="lorem-start"
             onChange={(e) => setStartLorem(e.target.checked)} /> {s.startLorem}
         </label>
       )}

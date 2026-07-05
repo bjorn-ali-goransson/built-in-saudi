@@ -49,7 +49,7 @@ export function NotificationBell() {
 
   if (!open) {
     return (
-      <button className={`notif-bell ${revealed ? 'is-revealed' : 'is-hidden'}`}
+      <button className={`fixed bottom-[1.1rem] start-[1.1rem] z-[60] w-12 h-12 rounded-full bg-green-600 text-sand-100 grid place-items-center border border-green-700 shadow-[var(--shadow-md)] [transition:transform_0.28s_ease,opacity_0.28s_ease,box-shadow_0.2s_ease] hover:-translate-y-0.5 hover:shadow-lg pointer-coarse:w-[52px] pointer-coarse:h-[52px] supports-[padding:env(safe-area-inset-bottom)]:bottom-[calc(1.1rem+env(safe-area-inset-bottom))] [&_svg]:w-[22px] [&_svg]:h-[22px] ${revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[140%] pointer-events-none'}`}
         data-testid="notif-bell" aria-label={n.open} onClick={() => setOpen(true)}>
         <BellIcon />
       </button>
@@ -57,11 +57,11 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="notif" role="status" aria-live="polite" data-testid="notif-banner">
-      <span className="notif__icon" aria-hidden="true"><BellIcon /></span>
-      <div className="notif__body">
-        <strong className="notif__title">{n.title}</strong>
-        <p className="notif__msg">{n.message}</p>
+    <div className="fixed inset-x-0 bottom-0 z-[60] max-w-none w-auto flex gap-[0.7rem] items-center bg-[var(--surface)] border-t border-[color:var(--line)] rounded-none shadow-[0_-4px_16px_rgba(18,33,27,0.12)] py-[0.7rem] px-[clamp(1rem,4vw,2rem)] pb-[calc(0.7rem+env(safe-area-inset-bottom,0px))] animate-[fadeUp_0.4s_ease_both]" role="status" aria-live="polite" data-testid="notif-banner">
+      <span className="flex-none w-[30px] h-[30px] grid place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--green-400)_16%,transparent)] text-green-600 [&_svg]:w-5 [&_svg]:h-5" aria-hidden="true"><BellIcon /></span>
+      <div className="flex-1 min-w-0">
+        <strong className="block font-display text-green-700 text-base rtl:font-ar">{n.title}</strong>
+        <p className="mt-[0.1rem] text-[0.85rem] text-ink-soft leading-[1.45]">{n.message}</p>
       </div>
     </div>
   )

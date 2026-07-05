@@ -103,10 +103,10 @@ export default function ZipInspectorTool() {
 
   return (
     <Stack data-testid="zip-inspector">
-      <label className="dropzone" data-testid="zip-drop"
+      <label className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="zip-drop"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handle(f) }}>
-        <input type="file" className="dropzone__input" data-testid="zip-file"
+        <input type="file" className="absolute w-px h-px opacity-0" data-testid="zip-file"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handle(f) }} />
         <span>{s.drop} <strong>{s.browse}</strong></span>
         <small>🔒 {s.hint}</small>
@@ -121,7 +121,7 @@ export default function ZipInspectorTool() {
             {totals && <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar">{saved}%</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.ratio}</span></div>}
           </div>
 
-          {file.entries === null && <p className="pray__geoerr">{s.notZip}</p>}
+          {file.entries === null && <p className="text-[color:var(--danger)] text-[0.9rem]">{s.notZip}</p>}
 
           {file.entries && (
             <div className="flex flex-col border border-[color:var(--line-soft)] rounded-md overflow-hidden" data-testid="zip-list">

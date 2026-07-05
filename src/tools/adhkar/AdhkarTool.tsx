@@ -4,7 +4,7 @@ import { useLocale } from '../../i18n'
 import { pushSupported, enablePush } from '../../lib/push'
 import { savedPrayerLocation, geolocate, FALLBACK_LOC } from '../../lib/prayerLocation'
 import { BellIcon, CogIcon } from '../../components/icons'
-import { Button, Pill, Seg, SegButton } from '../../components/ui'
+import { Button, Pill, Seg, SegButton, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { ADHKAR, type When } from './data'
 
 const STR = {
@@ -198,34 +198,26 @@ export default function AdhkarTool() {
       {locale !== 'ar' && <p className="text-[0.78rem] text-ink-faint">{s.note}</p>}
 
       {/* Reminder settings — same bottom-sheet as Prayer Times, opened by the cog. */}
-      {remindSettings && createPortal(
-        <div className="sheet-overlay" role="dialog" aria-modal="true" data-testid="adhkar-remind-settings" onClick={() => setRemindSettings(false)}>
-          <div className="sheet" dir={locale === 'ar' ? 'rtl' : 'ltr'} onClick={(e) => e.stopPropagation()}>
-            <span className="sheet__grip" aria-hidden="true" />
-            <h3 className="sheet__title">{s.remindTitle}</h3>
+      {remindSettings && (
+        <Sheet dir={locale === 'ar' ? 'rtl' : 'ltr'} data-testid="adhkar-remind-settings" onClose={() => setRemindSettings(false)}>
+          <SheetTitle>{s.remindTitle}</SheetTitle>
 
-            <label className="pray__set-row">
-              <span className="pray__set-label">{s.remindMorning}<small>{s.remindMorningHint}</small></span>
-              <input type="checkbox" className="pray__check" checked={remind.morning} disabled={remindBusy} data-testid="adhkar-set-morning"
-                onChange={(e) => applyRemind({ ...remind, morning: e.target.checked })} />
+          {([['morning', s.remindMorning, s.remindMorningHint], ['evening', s.remindEvening, s.remindEveningHint]] as const).map(([k, lbl, hint]) => (
+            <label key={k} className="flex items-center justify-between gap-4 py-[0.85rem] px-[0.2rem] border-b border-[color:var(--line-soft)] last-of-type:border-b-0">
+              <span className="flex flex-col [&_small]:text-ink-faint [&_small]:text-[0.78rem] [&_small]:mt-[0.1rem]">{lbl}<small>{hint}</small></span>
+              <input type="checkbox" className="w-[22px] h-[22px] accent-green-600 flex-none" checked={remind[k]} disabled={remindBusy} data-testid={`adhkar-set-${k}`}
+                onChange={(e) => applyRemind({ ...remind, [k]: e.target.checked })} />
             </label>
+          ))}
 
-            <label className="pray__set-row">
-              <span className="pray__set-label">{s.remindEvening}<small>{s.remindEveningHint}</small></span>
-              <input type="checkbox" className="pray__check" checked={remind.evening} disabled={remindBusy} data-testid="adhkar-set-evening"
-                onChange={(e) => applyRemind({ ...remind, evening: e.target.checked })} />
-            </label>
+          {remindErr && <p className="text-[0.8rem] text-[color:var(--danger)]">{remindErr}</p>}
 
-            {remindErr && <p className="text-[0.8rem] text-[color:var(--danger)]">{remindErr}</p>}
-
-            <div className="sheet__actions">
-              <Button data-testid="adhkar-set-off" disabled={remindBusy}
-                onClick={() => { applyRemind({ morning: false, evening: false }); setRemindSettings(false) }}>{s.turnOff}</Button>
-              <Button variant="primary" data-testid="adhkar-set-done" onClick={() => setRemindSettings(false)}>{s.done}</Button>
-            </div>
-          </div>
-        </div>,
-        document.body,
+          <SheetActions>
+            <Button data-testid="adhkar-set-off" disabled={remindBusy}
+              onClick={() => { applyRemind({ morning: false, evening: false }); setRemindSettings(false) }}>{s.turnOff}</Button>
+            <Button variant="primary" data-testid="adhkar-set-done" onClick={() => setRemindSettings(false)}>{s.done}</Button>
+          </SheetActions>
+        </Sheet>
       )}
 
       {/* Persistent, edge-docked scroll-spy — how far through the list you are.

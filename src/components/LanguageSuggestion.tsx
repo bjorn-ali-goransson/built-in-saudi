@@ -33,13 +33,13 @@ export function LanguageSuggestion() {
   }
 
   return (
-    <div className="lang-hint" dir={dir} lang={target} role="dialog" aria-live="polite">
-      <p className="lang-hint__msg">{s.message}</p>
-      <div className="lang-hint__actions">
-        <Button variant="primary" className="lang-hint__switch" onClick={switchLang}>
+    <div className="fixed end-5 bottom-5 z-[60] max-w-[min(92vw,340px)] bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-lg px-[1.1rem] py-4 animate-[fadeUp_0.4s_ease_both] supports-[padding:env(safe-area-inset-bottom)]:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]" dir={dir} lang={target} role="dialog" aria-live="polite">
+      <p className="text-[0.98rem] text-ink mb-[0.8rem]">{s.message}</p>
+      <div className="flex gap-[0.6rem] items-center">
+        <Button variant="primary" className="text-[0.9rem]" onClick={switchLang}>
           {s.switch}
         </Button>
-        <button className="lang-hint__dismiss" onClick={dismiss}>{s.dismiss}</button>
+        <button className="text-ink-faint font-semibold text-[0.88rem] px-[0.5rem] py-[0.4rem] rounded-sm hover:text-ink hover:bg-sand-100" onClick={dismiss}>{s.dismiss}</button>
       </div>
     </div>
   )

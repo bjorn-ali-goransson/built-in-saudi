@@ -58,7 +58,7 @@ export default function UuidGeneratorTool() {
     <Stack data-testid="uuid-generator">
       <Panel>
         <div className="grid gap-[0.5rem] [&>label]:text-[0.82rem] [&>label]:font-semibold [&>label]:text-ink-soft [&>label]:flex [&>label]:justify-between">
-          <label htmlFor="uuid-count">{s.count} <span className="muted">{count}</span></label>
+          <label htmlFor="uuid-count">{s.count} <span className="text-ink-faint font-medium">{count}</span></label>
           <input id="uuid-count" type="range" min={1} max={100} value={count}
             data-testid="uuid-count" aria-label={s.count}
             onChange={(e) => setCount(Number(e.target.value))} />

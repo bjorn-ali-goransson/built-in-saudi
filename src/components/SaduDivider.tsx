@@ -4,7 +4,7 @@
  */
 export function SaduDivider({ className }: { className?: string }) {
   return (
-    <div className={`sadu ${className ?? ''}`} aria-hidden="true">
+    <div className={`leading-[0] overflow-hidden ${className ?? 'text-green-500 opacity-[0.55]'}`} aria-hidden="true">
       <svg width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="xMidYMid slice">
         <defs>
           <pattern id="sadu-tri" width="24" height="16" patternUnits="userSpaceOnUse">

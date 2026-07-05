@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test'
 test.describe('home', () => {
   test('opens to the app grid + search', async ({ page }) => {
     await page.goto('/en')
-    await expect(page.locator('.tool-search')).toBeVisible()
-    const cards = page.locator('.tool-grid .tool-card')
+    await expect(page.locator('.tool-search__input')).toBeVisible()
+    const cards = page.locator('[data-testid^="tool-"]')
     await expect(cards.first()).toBeVisible()
     expect(await cards.count()).toBeGreaterThan(8)
     // The marketing hero is gone.
@@ -13,9 +13,9 @@ test.describe('home', () => {
 
   test('search filters the catalog', async ({ page }) => {
     await page.goto('/en')
-    const all = await page.locator('.tool-grid .tool-card').count()
+    const all = await page.locator('[data-testid^="tool-"]').count()
     await page.locator('.tool-search__input').fill('qibla')
-    const cards = page.locator('.tool-grid .tool-card')
+    const cards = page.locator('[data-testid^="tool-"]')
     await expect(cards.first()).toContainText(/Qibla/i) // ranked top
     expect(await cards.count()).toBeLessThan(all)       // and the list is filtered down
   })
@@ -233,7 +233,7 @@ test.describe('tools', () => {
   test('prayer times: renders hero + list', async ({ page }) => {
     await page.goto('/en/tools/prayer-times')
     await expect(page.getByTestId('next-prayer')).toBeVisible()
-    const rows = page.locator('[data-testid="prayer-list"] .pray__row')
+    const rows = page.locator('[data-testid^="prow-"]')
     expect(await rows.count()).toBeGreaterThanOrEqual(5)
   })
 
@@ -256,7 +256,7 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cal-hijri-num')).toHaveValue('18/01/1448')
     await expect(page.getByTestId('cal-hijri-title')).toContainText('Muharram 1448')
     // The hero shows the Hijri date with a real era (AH), never a Gregorian "BC".
-    const hero = page.locator('.pray__today-hijri')
+    const hero = page.getByTestId('hijri-today')
     await expect(hero).toContainText('AH')
     await expect(hero).not.toContainText('BC')
   })

@@ -132,7 +132,7 @@ export default function PasswordGeneratorTool() {
         {mode === 'password' ? (
           <>
             <div className={CONTROL}>
-              <label htmlFor="pw-length">{s.length} <span className="muted">{length}</span></label>
+              <label htmlFor="pw-length">{s.length} <span className="text-ink-faint font-medium">{length}</span></label>
               <input id="pw-length" type="range" min={6} max={64} value={length}
                 data-testid="pw-length" aria-label={s.length}
                 onChange={(e) => setLength(Number(e.target.value))} />
@@ -148,7 +148,7 @@ export default function PasswordGeneratorTool() {
         ) : (
           <>
             <div className={CONTROL}>
-              <label htmlFor="pw-words">{s.words} <span className="muted">{words}</span></label>
+              <label htmlFor="pw-words">{s.words} <span className="text-ink-faint font-medium">{words}</span></label>
               <input id="pw-words" type="range" min={3} max={8} value={words}
                 data-testid="pw-words" aria-label={s.words}
                 onChange={(e) => setWords(Number(e.target.value))} />

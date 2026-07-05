@@ -121,10 +121,10 @@ export default function LanguageDetectTool() {
           )}
         </div>
       ) : text.trim() ? (
-        <p className="pray__method-note">{s.empty}</p>
+        <p className="text-center text-[0.76rem] text-ink-faint mt-[0.8rem] font-body tracking-[0.02em] rtl:font-ar rtl:tracking-normal">{s.empty}</p>
       ) : null}
 
-      <p className="pray__method-note">{s.how}</p>
+      <p className="text-center text-[0.76rem] text-ink-faint mt-[0.8rem] font-body tracking-[0.02em] rtl:font-ar rtl:tracking-normal">{s.how}</p>
     </Stack>
   )
 }

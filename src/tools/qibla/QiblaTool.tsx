@@ -102,8 +102,8 @@ export default function QiblaTool() {
 
   return (
     <div className="flex flex-col items-center gap-[1.2rem] pt-[0.5rem]" data-testid="qibla">
-      {error && <p className="pray__geoerr" data-testid="qibla-error">{error}</p>}
-      {locating && <p className="pray__locating">{s.locating}</p>}
+      {error && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="qibla-error">{error}</p>}
+      {locating && <p className="text-[0.85rem] text-ink-faint mb-[0.6rem]">{s.locating}</p>}
 
       <div className="relative w-[min(78vw,300px)] aspect-square rounded-full border-2 border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]" role="img"
         aria-label={bearing != null ? `${s.bearing} ${Math.round(bearing)}° ${s.fromNorth}` : s.bearing}>

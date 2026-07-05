@@ -3,7 +3,7 @@ import type { Tool } from '../tools/types'
 import type { ToolSection } from '../lib/toolSections'
 import { ToolCard } from './ToolCard'
 
-export const TOOL_GRID = 'tool-grid grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem]'
+export const TOOL_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem] max-[560px]:grid-cols-4 max-[560px]:gap-[0.9rem_0.5rem]'
 
 // Close the launcher (or run any nav side-effect) once a card link is followed.
 function linkClick(onNavigate?: () => void) {

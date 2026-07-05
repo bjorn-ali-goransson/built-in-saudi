@@ -141,11 +141,11 @@ function HijriInput({ label, value, onChange, s, months, testid }: {
   return (
     <fieldset className="dd__hijri">
       <legend className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{label}</legend>
-      <div className="pray__hijri-inputs">
+      <div className="grid grid-cols-[0.7fr_1.4fr_0.9fr] gap-[0.6rem]">
         <Field label={s.fieldDay}>
           <Input type="number" min={1} max={30} value={value.d} data-testid={`dd-${testid}-day`}
             onChange={(e) => onChange({ ...value, d: Math.min(30, Math.max(1, Number(e.target.value))) })} /></Field>
-        <Field label={s.fieldMonth} className="pray__month">
+        <Field label={s.fieldMonth} className="min-w-0">
           <Select value={value.m} data-testid={`dd-${testid}-month`}
             onChange={(e) => onChange({ ...value, m: Number(e.target.value) })}>
             {months.map((name, i) => <option key={i} value={i + 1}>{name}</option>)}

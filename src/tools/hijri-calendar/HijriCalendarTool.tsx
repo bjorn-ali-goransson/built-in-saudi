@@ -76,11 +76,11 @@ export default function HijriCalendarTool() {
   const hijriToday = formatHijri(now, locale)
 
   return (
-    <div className="pray">
+    <div className="flex flex-col gap-[1.3rem]">
       {/* Today — edge-docked hero, like the prayer-times app */}
-      <section className="pray__today">
-        <span className="pray__today-hijri">{hijriToday}</span>
-        <span className="pray__today-greg">{dateFmt.format(now)}</span>
+      <section className="text-center bg-green-700 text-sand-100 shadow-[var(--shadow-md)] mx-[calc(50%_-_50vw)] w-screen max-w-[100vw] rounded-none mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] py-[1.4rem] px-[1.2rem]">
+        <span className="block font-display text-[clamp(1.3rem,4vw,1.9rem)] rtl:font-ar" data-testid="hijri-today">{hijriToday}</span>
+        <span className="block opacity-80 mt-[0.3rem] text-[0.95rem]">{dateFmt.format(now)}</span>
       </section>
 
       <Converter locale={locale} s={s} dateFmt={dateFmt} intlLoc={intlLoc} />
@@ -136,13 +136,13 @@ function Converter({ locale, s, dateFmt, intlLoc }: {
   })
 
   return (
-    <section className="pray__card" data-testid="converter">
-      <div className="pray__card-head">
-        <h2>{s.converter}</h2>
+    <section className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md p-[1.3rem]" data-testid="converter">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap mb-4">
+        <h2 className="text-[1.25rem]">{s.converter}</h2>
         <Button data-testid="conv-today" onClick={() => select(new Date())}>{s.today}</Button>
       </div>
 
-      <div className="cal2">
+      <div className="grid grid-cols-2 gap-[1.1rem] max-[560px]:grid-cols-1 max-[560px]:gap-[1.4rem]">
         <MonthCalendar
           testid="cal-greg" label={s.gregorian} title={`${gMonthName} ${gv.y}`}
           weekdays={WEEKDAYS[locale]} firstDow={gFirstDow} days={gDays}
@@ -214,25 +214,25 @@ function MonthCalendar(p: MonthCalendarProps) {
 
   return (
     <div className="cal" data-testid={p.testid}>
-      <div className="cal__head">
-        <button className="cal__nav" aria-label={p.prevLabel} data-testid={`${p.testid}-prev`} onClick={p.onPrev}>‹</button>
-        <div className="cal__titlebox">
-          <span className="cal__label">{p.label}</span>
-          <strong className="cal__title" data-testid={`${p.testid}-title`}>{p.title}</strong>
+      <div className="flex items-center gap-2">
+        <button className="flex-none w-8 h-8 grid place-items-center border border-[color:var(--line)] rounded-sm bg-[var(--surface)] text-green-700 text-[1.1rem] leading-none cursor-pointer transition-[border-color,background] duration-150 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_8%,transparent)]" aria-label={p.prevLabel} data-testid={`${p.testid}-prev`} onClick={p.onPrev}>‹</button>
+        <div className="flex-1 text-center flex flex-col leading-[1.15] min-w-0">
+          <span className="text-[0.68rem] uppercase tracking-[0.08em] text-ink-faint rtl:tracking-normal">{p.label}</span>
+          <strong className="font-display text-[1.02rem] text-green-700 whitespace-nowrap overflow-hidden text-ellipsis rtl:font-ar" data-testid={`${p.testid}-title`}>{p.title}</strong>
         </div>
-        <button className="cal__nav" aria-label={p.nextLabel} data-testid={`${p.testid}-next`} onClick={p.onNext}>›</button>
+        <button className="flex-none w-8 h-8 grid place-items-center border border-[color:var(--line)] rounded-sm bg-[var(--surface)] text-green-700 text-[1.1rem] leading-none cursor-pointer transition-[border-color,background] duration-150 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_8%,transparent)]" aria-label={p.nextLabel} data-testid={`${p.testid}-next`} onClick={p.onNext}>›</button>
       </div>
 
-      <div className="cal__dow" aria-hidden="true">
-        {p.weekdays.map((w, i) => <span key={i}>{w}</span>)}
+      <div className="grid grid-cols-7 gap-[2px] text-ink-faint text-[0.66rem] text-center" aria-hidden="true">
+        {p.weekdays.map((w, i) => <span key={i} className="py-[0.2rem] overflow-hidden text-ellipsis">{w}</span>)}
       </div>
-      <div className="cal__grid" role="grid">
+      <div className="grid grid-cols-7 gap-[2px]" role="grid">
         {cells.map((day, i) => day === null
-          ? <span key={i} className="cal__cell cal__cell--empty" />
+          ? <span key={i} className="aspect-square" />
           : (
             <button
               key={i}
-              className={`cal__cell${day === p.selectedDay ? ' is-sel' : ''}`}
+              className={`aspect-square grid place-items-center border border-transparent rounded-sm text-[0.9rem] [font-variant-numeric:tabular-nums] cursor-pointer transition-[border-color,background] duration-[120ms] max-[560px]:text-[0.95rem] ${day === p.selectedDay ? 'bg-green-600 text-sand-100 font-bold' : 'bg-[color-mix(in_srgb,var(--sand-100)_55%,var(--surface))] text-ink hover:border-[color-mix(in_srgb,var(--green-500)_45%,transparent)]'}`}
               data-testid={day === p.selectedDay ? `${p.testid}-selected` : undefined}
               aria-pressed={day === p.selectedDay}
               onClick={() => p.onPick(day)}
@@ -241,11 +241,11 @@ function MonthCalendar(p: MonthCalendarProps) {
       </div>
 
       <Input
-        className="cal__num" inputMode="numeric" dir="ltr" data-testid={`${p.testid}-num`}
+        className="font-mono text-center tracking-[0.04em]" inputMode="numeric" dir="ltr" data-testid={`${p.testid}-num`}
         value={text} onChange={(e) => onChange(e.target.value)} aria-label={p.label}
         spellCheck={false} autoComplete="off"
       />
-      <p className="cal__cap" dir={/* keep Arabic captions RTL */ undefined}>{p.caption}</p>
+      <p className="text-[0.82rem] text-ink-soft text-center" dir={/* keep Arabic captions RTL */ undefined}>{p.caption}</p>
     </div>
   )
 }
