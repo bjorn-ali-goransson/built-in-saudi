@@ -200,3 +200,7 @@ export function saveConfig(cfg: HostConfig): void {
 // A bare /book/<code> lets the visitor's own locale kick in via the Layout
 // redirect, so links aren't language-locked.
 export const BOOKING_LINK_BASE = 'https://built-in-saudi.com/book'
+
+// Public Telegram bot handle (safe to expose). The dashboard deep-links to
+// t.me/<bot>?start=<code>; the telegramWebhook binds that chat to the host.
+export const TELEGRAM_BOT = 'BuiltInSaudi_bot'

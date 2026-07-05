@@ -10,6 +10,7 @@ import {
   gridToWindows,
   windowsToGrid,
   BOOKING_LINK_BASE,
+  TELEGRAM_BOT,
   type HostConfig,
   type Grid,
 } from './lib'
@@ -63,6 +64,7 @@ const STR = {
     push: 'Push to this device',
     telegram: 'Telegram DM',
     email: 'Email',
+    linkTg: 'Link my Telegram',
     notifyNote: 'Push and Telegram activate after the backend deploy; email confirmations are on by default.',
     soon: 'Availability & settings save on this device until you publish.',
     publish: 'Publish & connect Google Calendar',
@@ -97,6 +99,7 @@ const STR = {
     push: 'إشعار لهذا الجهاز',
     telegram: 'رسالة تيليجرام',
     email: 'بريد إلكتروني',
+    linkTg: 'اربط تيليجرام',
     notifyNote: 'الإشعارات وتيليجرام تُفعَّل بعد نشر الخادم؛ تأكيدات البريد مفعّلة افتراضيًا.',
     soon: 'تُحفظ الأوقات والإعدادات على هذا الجهاز حتى تنشرها.',
     publish: 'انشر واربط تقويم جوجل',
@@ -307,11 +310,23 @@ export default function BookWithMeTool() {
               onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, push: e.target.checked } }))} />
             {s.push}
           </Check>
-          <Check>
-            <input type="checkbox" checked={cfg.notify.telegram}
-              onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, telegram: e.target.checked } }))} />
-            {s.telegram}
-          </Check>
+          <div className="flex flex-wrap items-center gap-3">
+            <Check>
+              <input type="checkbox" checked={cfg.notify.telegram}
+                onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, telegram: e.target.checked } }))} />
+              {s.telegram}
+            </Check>
+            {cfg.notify.telegram && (
+              <Button
+                href={`https://t.me/${TELEGRAM_BOT}?start=${cfg.code}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-telegram"
+              >
+                {s.linkTg}
+              </Button>
+            )}
+          </div>
           <Check>
             <input type="checkbox" checked={cfg.notify.email}
               onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, email: e.target.checked } }))} />
