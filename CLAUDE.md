@@ -177,11 +177,25 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **Ḍuḥā** (sunrise+20), and **morning/evening adhkār** (sunrise / Maghrib+15) — all
   additive `prefs` booleans; `subscribe` **merges** prefs so Prayer Times and Adhkar
   each own their toggles. See [`functions/README.md`](./functions/README.md).
+- **Book With Me backend** (`functions/booking.js`, same stack): Calendly-style
+  scheduling — `booking-google-start`/`-callback`, `save-schedule`,
+  `get-availability`, `book`, `telegram-webhook`. Firestore `bookingHosts` +
+  `bookings`. One Google OAuth flow signs the host in **and** grabs an offline
+  refresh token (calendar free/busy + auto-created events); host sessions are our
+  own HMAC token (`SENDER_SECRET`). No new npm deps — Google/Resend/Telegram over
+  `fetch`, hand-written `.ics`. Booking link is **path-based**
+  (`built-in-saudi.com/book/<code>`; subdomain deferred, no Cloudflare). On booking:
+  Web Push + Telegram DM (bot `@BuiltInSaudi_bot`) + Resend email w/ `.ics`. Extra
+  env: `GOOGLE_OAUTH_CLIENT_ID` (var), `GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/
+  `TELEGRAM_BOT_TOKEN` (secrets). One-time `setWebhook` after deploy. See
+  [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all five functions on any `functions/**` change, authenticating **keylessly
+  deploys all eleven functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
-  `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA` +
-  repo secrets `VAPID_PUBLIC`/`VAPID_PRIVATE`/`SENDER_SECRET` feed it.
+  `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
+  `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/
+  `VAPID_PRIVATE`/`SENDER_SECRET`/`GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/
+  `TELEGRAM_BOT_TOKEN` feed it.
 
 ## Roadmap
 
