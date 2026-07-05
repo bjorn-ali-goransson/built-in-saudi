@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 // Shared Umm al-Qura helpers live under the prayer-times tool.
 import {
-  gregorianToHijri, hijriToGregorian, formatHijri, eventsForHijriYear,
+  gregorianToHijri, hijriToGregorian, formatHijri,
   daysInHijriMonth, HIJRI_MONTHS, type IslamicEventKey,
 } from '../prayer-times/islamic'
 
@@ -73,23 +73,6 @@ export default function HijriCalendarTool() {
   )
 
   const hijriToday = formatHijri(now, locale)
-  const [hijriYear, setHijriYear] = useState(() => gregorianToHijri(new Date()).y)
-  const events = useMemo(() => eventsForHijriYear(hijriYear), [hijriYear])
-
-  const relTime = (target: Date): string => {
-    const diff = target.getTime() - now.getTime()
-    const absDays = Math.round(Math.abs(diff) / 86400000)
-    const future = diff >= 0
-    if (absDays === 0) {
-      const hrs = Math.round(Math.abs(diff) / 3600000)
-      return hrs === 0 ? s.soon : future ? s.inHours(hrs) : s.hoursAgo(hrs)
-    }
-    if (absDays >= 60) {
-      const months = Math.round(absDays / 30.44)
-      return future ? s.inMonths(months) : s.monthsAgo(months)
-    }
-    return future ? s.inDays(absDays) : s.daysAgo(absDays)
-  }
 
   return (
     <div className="pray">
@@ -99,36 +82,7 @@ export default function HijriCalendarTool() {
         <span className="pray__today-greg">{dateFmt.format(now)}</span>
       </section>
 
-      <div className="pray__grid">
-        <Converter locale={locale} s={s} dateFmt={dateFmt} intlLoc={intlLoc} />
-
-        <section className="pray__card">
-          <div className="pray__card-head">
-            <h2>{s.upcoming}</h2>
-            <div className="pray__year" role="group" aria-label={s.hijriYear}>
-              <button className="btn" aria-label={s.prevYear} data-testid="year-prev"
-                onClick={() => setHijriYear((y) => y - 1)}>−</button>
-              <span className="pray__year-num" data-testid="year-value">{hijriYear}</span>
-              <button className="btn" aria-label={s.nextYear} data-testid="year-next"
-                onClick={() => setHijriYear((y) => y + 1)}>+</button>
-              <button className="btn" data-testid="year-this"
-                onClick={() => setHijriYear(gregorianToHijri(new Date()).y)}>{s.thisYear}</button>
-            </div>
-          </div>
-          <ul className="pray__events" data-testid="events">
-            {events.map((ev) => (
-              <li key={ev.key} className="pray__event"
-                title={`${dateFmt.format(ev.date)} · ${formatHijri(ev.date, locale)}`}>
-                <span className="pray__event-name">{s.events[ev.key]}</span>
-                <span className="pray__event-date">
-                  {dateFmt.format(ev.date)}
-                  <span className="pray__event-hijri">{relTime(ev.date)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      <Converter locale={locale} s={s} dateFmt={dateFmt} intlLoc={intlLoc} />
 
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </div>
