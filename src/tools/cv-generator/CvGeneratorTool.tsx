@@ -173,7 +173,7 @@ export default function CvGeneratorTool() {
   const [polishLeft, setPolishLeft] = useState(0)
   const [queue, setQueue] = useState<string[]>([])
   const [qIndex, setQIndex] = useState(0)
-  const [changes, setChanges] = useState<string[]>([])
+  const [toast, setToast] = useState('')
   const [answerText, setAnswerText] = useState('')
   const [instruction, setInstruction] = useState('')
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
@@ -181,6 +181,9 @@ export default function CvGeneratorTool() {
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
+  // Guards the auto-generate effect so a failed generation never re-triggers it
+  // (which would hammer the API). Reset only when a new file is uploaded.
+  const autoTried = useRef(false)
 
   // Load + init Google Identity Services once (but don't force sign-in yet).
   useEffect(() => {
@@ -216,16 +219,28 @@ export default function CvGeneratorTool() {
   }, [qIndex, status])
 
   // Generate automatically as soon as we have both the CV text and a signed-in
-  // user — no explicit "Build" button needed.
+  // user — once per uploaded file. The autoTried guard stops a failed attempt
+  // (e.g. rate-limited) from re-firing and hammering the API.
   useEffect(() => {
-    if (status === 'ready' && idToken && text) generate()
+    if (status === 'ready' && idToken && text && !autoTried.current) {
+      autoTried.current = true
+      generate()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, idToken])
+
+  // Auto-dismiss the change toast.
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(''), 3800)
+    return () => clearTimeout(t)
+  }, [toast])
 
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     e.target.value = ''
     if (!f) return
+    autoTried.current = false
     setFileName(f.name)
     setErr('')
     setCv(null)
@@ -253,7 +268,7 @@ export default function CvGeneratorTool() {
       setPolishLeft(r.polishLeft)
       setQueue(r.questions)
       setQIndex(0)
-      setChanges([])
+      setToast('')
       setAnswerText('')
       setInstruction('')
       setStatus('done')
@@ -273,7 +288,7 @@ export default function CvGeneratorTool() {
       const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer')
       setCv(r.cv)
       setAnswersLeft(r.answersLeft)
-      if (r.summary) setChanges((c) => [...c, r.summary])
+      if (r.summary) setToast(r.summary)
       setAnswerText('')
       setQIndex((i) => i + 1)
     } catch (e) {
@@ -296,7 +311,7 @@ export default function CvGeneratorTool() {
       const r = await refineCv(idToken, cv, instruction.trim(), 'polish')
       setCv(r.cv)
       setPolishLeft(r.polishLeft)
-      if (r.summary) setChanges((c) => [...c, r.summary])
+      if (r.summary) setToast(r.summary)
       setInstruction('')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
@@ -366,7 +381,6 @@ export default function CvGeneratorTool() {
               {fileName && <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>}
               {status === 'extracting' && <p className="text-[0.85rem] text-ink-faint">{s.extracting}</p>}
               {status === 'generating' && <p className="text-[0.85rem] text-ink-faint">{s.building}</p>}
-              {status === 'ready' && text && <p className="text-[0.85rem] text-green-700">{s.extracted(text.length)}</p>}
             </div>
           )}
 
@@ -414,11 +428,6 @@ export default function CvGeneratorTool() {
           {/* Docked interaction bar — one question at a time, else the polish input */}
           <div ref={activeRef} className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
             <div className="wrap py-2.5 flex flex-col gap-2">
-              {changes.length > 0 && (
-                <p className="flex items-center gap-1.5 text-[0.76rem] text-green-700 truncate" data-testid="cv-changes">
-                  <span aria-hidden="true">✓</span>{changes[changes.length - 1]}
-                </p>
-              )}
               {currentQ ? (
                 <>
                   <div className="flex items-center justify-between gap-2">
@@ -445,6 +454,12 @@ export default function CvGeneratorTool() {
 
           {err && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
         </>
+      )}
+
+      {toast && (
+        <div className="fixed top-[4.9rem] left-1/2 -translate-x-1/2 z-[60] max-w-[80vw] inline-flex items-center gap-2 bg-green-600 text-sand-100 px-4 py-2.5 rounded-md shadow-[var(--shadow-md)] text-[0.85rem] animate-[fadeUp_0.3s_ease]" role="status" data-testid="cv-toast">
+          <span aria-hidden="true">✓</span>{toast}
+        </div>
       )}
 
       {status !== 'done' && dataLinks}

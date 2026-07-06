@@ -16,7 +16,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 const SITE = 'https://built-in-saudi.com'
 
-const UPLOAD_LIMIT = 2 // fresh generations per rolling 24h per user
+const UPLOAD_LIMIT = 10 // fresh generations per rolling 24h per user (temporarily raised for testing; set back to 2 for launch)
 const ANSWER_LIMIT = 5 // answers to the AI's own gap questions (quality-critical)
 const POLISH_LIMIT = 3 // user-initiated free-form tweaks
 const QUESTION_CAP = 5 // most questions the model may surface at once
