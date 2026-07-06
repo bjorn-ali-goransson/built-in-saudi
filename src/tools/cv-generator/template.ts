@@ -59,7 +59,7 @@ const CSS = `
   .project{margin-top:5px;}
   .project:first-of-type{margin-top:0;}
   .proj-line{margin:0;font-size:12px;line-height:1.34;color:var(--ink-soft);}
-  .proj-name{font-weight:700;color:var(--ink);}
+  .proj-name{font-weight:500;color:var(--accent);}
   .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:4px;}
   .row:first-of-type{margin-top:0;}
   .row .deg{font-size:12.5px;font-weight:600;color:var(--ink);}
@@ -92,7 +92,8 @@ function section(title: string, body: string): string {
 }
 
 function dates(a?: string, b?: string): string {
-  if (a && b) return `${esc(a)} – ${esc(b)}`
+  // Collapse an identical span (e.g. 2017–2017) to a single year.
+  if (a && b && a !== b) return `${esc(a)} – ${esc(b)}`
   return esc(a || b || '')
 }
 
