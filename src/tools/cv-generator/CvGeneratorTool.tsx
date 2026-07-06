@@ -4,7 +4,8 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack } from '../../components/ui'
 import { DownloadIcon, MicIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
-import { renderCvHtml, renderCvWordBlob } from './template'
+import { renderCvHtml } from './template'
+import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
 
 // Minimal Web Speech API surface (optional voice input).
@@ -333,8 +334,8 @@ export default function CvGeneratorTool() {
   function exportWord() {
     if (!cv) return
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(renderCvWordBlob(cv))
-    a.download = `${cvFilename(cv)}.doc`
+    a.href = URL.createObjectURL(cvToDocxBlob(cv))
+    a.download = `${cvFilename(cv)}.docx`
     document.body.appendChild(a)
     a.click()
     a.remove()
