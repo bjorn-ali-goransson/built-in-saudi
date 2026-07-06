@@ -33,7 +33,7 @@ const STR = {
     genErr: 'Something went wrong. Please try again.',
     result: 'Your CV',
     pdf: 'Save as PDF',
-    word: 'Download Word',
+    word: 'Save as Word',
     changesTitle: 'Improvements made',
     qLabel: (i: number, n: number) => `Question ${i} of ${n}`,
     answerPh: 'Type or speak your answer…',
@@ -68,7 +68,7 @@ const STR = {
     genErr: 'حدث خطأ ما. حاول مرة أخرى.',
     result: 'سيرتك',
     pdf: 'حفظ PDF',
-    word: 'تنزيل Word',
+    word: 'حفظ Word',
     changesTitle: 'التحسينات المُطبَّقة',
     qLabel: (i: number, n: number) => `سؤال ${i} من ${n}`,
     answerPh: 'اكتب أو انطق إجابتك…',
@@ -177,6 +177,7 @@ export default function CvGeneratorTool() {
   const [answerText, setAnswerText] = useState('')
   const [instruction, setInstruction] = useState('')
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
+  const [saveMenu, setSaveMenu] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -304,19 +305,6 @@ export default function CvGeneratorTool() {
     }
   }
 
-  function startOver() {
-    setCv(null)
-    setText('')
-    setFileName('')
-    setQueue([])
-    setQIndex(0)
-    setChanges([])
-    setAnswerText('')
-    setInstruction('')
-    setErr('')
-    setStatus('idle')
-  }
-
   function exportPdf() {
     if (!cv) return
     const w = window.open('', '_blank')
@@ -341,9 +329,17 @@ export default function CvGeneratorTool() {
   // Full-bleed green intro, docked flush to the navbar (cancels the page's top padding).
   const hero = (
     <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
-      <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-2">
+      <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-3">
         <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
+        {status === 'idle' && (
+          <label className="inline-flex self-start mt-1">
+            <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
+            <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-white text-green-700 px-4 py-2 text-[0.9rem] font-semibold hover:bg-sand-100">
+              {s.choose}
+            </span>
+          </label>
+        )}
       </div>
     </div>
   )
@@ -364,23 +360,15 @@ export default function CvGeneratorTool() {
         <>
           {hero}
 
-          {/* Upload — a green button that disappears once a CV is in */}
-          <div className="flex flex-col gap-2">
-            {status === 'idle' && (
-              <label className="inline-flex self-start">
-                <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
-                <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-green-600 text-sand-100 px-4 py-2 text-[0.9rem] font-semibold hover:bg-green-700">
-                  {s.choose}
-                </span>
-              </label>
-            )}
-            {fileName && status !== 'idle' && (
-              <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>
-            )}
-            {status === 'extracting' && <p className="text-[0.85rem] text-ink-faint">{s.extracting}</p>}
-            {status === 'generating' && <p className="text-[0.85rem] text-ink-faint">{s.building}</p>}
-            {status === 'ready' && text && <p className="text-[0.85rem] text-green-700">{s.extracted(text.length)}</p>}
-          </div>
+          {/* Status (the upload button now lives inside the hero) */}
+          {status !== 'idle' && (
+            <div className="flex flex-col gap-2">
+              {fileName && <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>}
+              {status === 'extracting' && <p className="text-[0.85rem] text-ink-faint">{s.extracting}</p>}
+              {status === 'generating' && <p className="text-[0.85rem] text-ink-faint">{s.building}</p>}
+              {status === 'ready' && text && <p className="text-[0.85rem] text-green-700">{s.extracted(text.length)}</p>}
+            </div>
+          )}
 
           {/* Sign-in appears once a CV is ready; generation then starts automatically */}
           {text && !idToken && status !== 'generating' && (
@@ -396,71 +384,70 @@ export default function CvGeneratorTool() {
 
       {status === 'done' && cv && (
         <>
-          {/* Live preview + export */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.result}</span>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="primary" onClick={exportPdf} data-testid="cv-pdf"><DownloadIcon /> {s.pdf}</Button>
-              <Button onClick={exportWord} data-testid="cv-word"><DownloadIcon /> {s.word}</Button>
-              <Button onClick={startOver} data-testid="cv-startover">{s.startOver}</Button>
-            </div>
+          {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit */}
+          <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)]">
+            <iframe
+              title={cvFilename(cv)}
+              className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
+              srcDoc={renderCvHtml(cv, { preview: true })}
+            />
           </div>
-          <iframe
-            title={s.result}
-            className="w-full h-[75vh] rounded-md border border-[color:var(--line-soft)] bg-white"
-            srcDoc={renderCvHtml(cv)}
-          />
 
-          {/* Log of what was changed (question + literal answer collapse to this) */}
-          {changes.length > 0 && (
-            <div className="flex flex-col gap-1.5" data-testid="cv-changes">
-              <span className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-ink-faint">{s.changesTitle}</span>
-              <ul className="flex flex-col gap-1">
-                {changes.map((c, i) => (
-                  <li key={i} className="flex gap-2 text-[0.88rem] text-ink-soft"><span className="text-green-600 flex-none">✓</span>{c}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Active section: one question at a time, else the polish box. Full-width bands. */}
-          <div ref={activeRef}>
-            {currentQ ? (
-              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] bg-[color-mix(in_srgb,var(--green-400)_9%,transparent)] border-y border-[color:var(--line-soft)]" data-testid="cv-question">
-                <div className="wrap py-[1.3rem] flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-green-700">{s.qLabel(qIndex + 1, queue.length)}</span>
-                    <span className="text-[0.78rem] text-ink-faint">{s.answersLeftL(answersLeft)}</span>
-                  </div>
-                  <p className="font-display rtl:font-ar text-[1.1rem] text-ink leading-snug">{currentQ}</p>
-                  <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
-                    busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
-                  <button type="button" className="self-start text-[0.8rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
-                </div>
-              </div>
-            ) : (
-              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] bg-[color-mix(in_srgb,var(--sand-100)_55%,transparent)] border-y border-[color:var(--line-soft)]" data-testid="cv-polish">
-                <div className="wrap py-[1.3rem] flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.82rem] font-semibold text-ink-soft">{s.polishTitle}</span>
-                    {polishLeft > 0 && <span className="text-[0.78rem] text-ink-faint">{s.polishLeftL(polishLeft)}</span>}
-                  </div>
-                  {polishLeft > 0 ? (
-                    <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
-                      busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
-                  ) : (
-                    <p className="text-[0.82rem] text-ink-faint">{s.noPolish}</p>
-                  )}
-                </div>
+          {/* Floating Save split-button — bottom-right (bottom-left in RTL), above the dock */}
+          <div className="fixed end-4 bottom-[7rem] z-50 flex items-stretch rounded-md shadow-[var(--shadow-md)]">
+            <button type="button" onClick={exportPdf} data-testid="cv-pdf"
+              className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer">
+              <DownloadIcon /> {s.pdf}
+            </button>
+            <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
+              className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
+            {saveMenu && (
+              <div className="absolute bottom-full end-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
+                <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
+                  className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
+                  <DownloadIcon /> {s.word}
+                </button>
               </div>
             )}
           </div>
 
-          {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
+          {/* Docked interaction bar — one question at a time, else the polish input */}
+          <div ref={activeRef} className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
+            <div className="wrap py-2.5 flex flex-col gap-2">
+              {changes.length > 0 && (
+                <p className="flex items-center gap-1.5 text-[0.76rem] text-green-700 truncate" data-testid="cv-changes">
+                  <span aria-hidden="true">✓</span>{changes[changes.length - 1]}
+                </p>
+              )}
+              {currentQ ? (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-green-700">{s.qLabel(qIndex + 1, queue.length)}</span>
+                    <button type="button" className="text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
+                  </div>
+                  <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
+                  <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
+                    busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
+                </>
+              ) : (
+                <>
+                  <span className="text-[0.8rem] font-semibold text-ink-soft">{s.polishTitle}</span>
+                  {polishLeft > 0 ? (
+                    <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
+                      busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
+                  ) : (
+                    <p className="text-[0.8rem] text-ink-faint">{s.noPolish}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {err && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
         </>
       )}
 
-      {dataLinks}
+      {status !== 'done' && dataLinks}
     </Stack>
   )
 }
