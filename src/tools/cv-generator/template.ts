@@ -162,7 +162,26 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
     // The .resume is contenteditable so edits flow straight into the exported PDF.
     const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}[contenteditable]{outline:none}`
     const editable = inner.replace('<main class="resume">', '<main class="resume" contenteditable="true" spellcheck="false">')
-    const scr = `<script>(function(){function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;el.style.zoom=Math.min(1,document.documentElement.clientWidth/p)}window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400)})();<\/script>`
+    const scr = `<script>(function(){
+      function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;el.style.zoom=Math.min(1,document.documentElement.clientWidth/p)}
+      window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400);
+      document.addEventListener('keydown',function(e){
+        if(e.key!=='Enter'||e.shiftKey||e.ctrlKey||e.metaKey)return;
+        var sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+        var n=sel.anchorNode,li=n&&n.nodeType===1?n:(n&&n.parentElement);
+        while(li&&li.tagName!=='LI'){if(li.tagName==='BODY'){li=null;break}li=li.parentElement}
+        if(!li)return;
+        e.preventDefault();
+        var range=sel.getRangeAt(0);
+        var after=range.cloneRange();after.selectNodeContents(li);after.setStart(range.endContainer,range.endOffset);
+        var frag=after.extractContents();
+        var newLi=document.createElement('li');
+        if((''+frag.textContent).trim()){newLi.appendChild(frag)}else{newLi.appendChild(document.createElement('br'))}
+        if(!(''+li.textContent).trim()){li.appendChild(document.createElement('br'))}
+        li.parentNode.insertBefore(newLi,li.nextSibling);
+        var r2=document.createRange();r2.setStart(newLi,0);r2.collapse(true);sel.removeAllRanges();sel.addRange(r2);
+      });
+    })();<\/script>`
     return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${editable}</div>${scr}</body></html>`
   }
   return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${inner}</body></html>`
