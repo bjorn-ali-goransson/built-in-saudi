@@ -78,12 +78,13 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
   return parseResult(data)
 }
 
-/** Apply one message — an answer to an AI question ('answer') or a free tweak ('polish'). */
-export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish'): Promise<CvResult> {
+/** Apply one message — an answer to an AI question ('answer') or a free tweak ('polish').
+ *  `context` is the previous change summary so the user can correct it ("no, like this"). */
+export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish', context = ''): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, cv, instruction, kind }),
+    body: JSON.stringify({ idToken, cv, instruction, kind, context }),
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)

@@ -157,8 +157,10 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
   if (opts.preview) {
     // Scale the whole A4 page down to the viewport width (never up) so the
     // preview shows the real, uniform proportions of the printed result.
-    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{transform-origin:top center;width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}`
-    const scr = `<script>(function(){function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;var k=Math.min(1,document.documentElement.clientWidth/p);el.style.transform='scale('+k+')';document.body.style.height=(el.scrollHeight*k)+'px'}window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400)})();<\/script>`
+    // CSS zoom (not transform) so it scales the layout box too — then margin:auto
+    // centres it and there's no stray whitespace beside the page.
+    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}`
+    const scr = `<script>(function(){function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;el.style.zoom=Math.min(1,document.documentElement.clientWidth/p)}window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400)})();<\/script>`
     return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${inner}</div>${scr}</body></html>`
   }
   return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${inner}</body></html>`
