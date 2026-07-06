@@ -16,7 +16,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 const SITE = 'https://built-in-saudi.com'
 
-const UPLOAD_LIMIT = 10 // fresh generations per rolling 24h per user (temporarily raised for testing; set back to 2 for launch)
+const UPLOAD_LIMIT = 2 // fresh generations per rolling 24h per user
+const OWNER_EMAIL = 'bjorn.a.goransson@gmail.com' // exempt from all rate limits
 const ANSWER_LIMIT = 5 // answers to the AI's own gap questions (quality-critical)
 const POLISH_LIMIT = 3 // user-initiated free-form tweaks
 const QUESTION_CAP = 5 // most questions the model may surface at once
@@ -179,7 +180,7 @@ http('cvGenerate', async (req, res) => {
     const now = Date.now()
     const d = (await ref.get()).data() || {}
     const recent = (Array.isArray(d.uploads) ? d.uploads : []).filter((t) => now - Number(t) < WINDOW_MS)
-    if (recent.length >= UPLOAD_LIMIT) {
+    if (user.email !== OWNER_EMAIL && recent.length >= UPLOAD_LIMIT) {
       return res.status(429).json({ error: `Limit reached — you can generate ${UPLOAD_LIMIT} CVs per 24 hours. Try again later.` })
     }
 
@@ -210,10 +211,11 @@ http('cvRefine', async (req, res) => {
     const d = (await ref.get()).data() || {}
     let answerCount = Number(d.answerCount || 0)
     let polishCount = Number(d.polishCount || 0)
-    if (isAnswer && answerCount >= ANSWER_LIMIT) {
+    const isOwner = user.email === OWNER_EMAIL
+    if (!isOwner && isAnswer && answerCount >= ANSWER_LIMIT) {
       return res.status(429).json({ error: `You’ve answered the maximum of ${ANSWER_LIMIT} questions for this CV.` })
     }
-    if (!isAnswer && polishCount >= POLISH_LIMIT) {
+    if (!isOwner && !isAnswer && polishCount >= POLISH_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${POLISH_LIMIT} polish requests for this CV. Upload again to start fresh.` })
     }
 
