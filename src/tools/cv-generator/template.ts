@@ -163,9 +163,3 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
   }
   return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${inner}</body></html>`
 }
-
-/** A Word-openable .doc (HTML flavour) — editable, selectable text. Layout
- *  fidelity in Word is approximate; the PDF is the pixel-perfect artefact. */
-export function renderCvWordBlob(cv: Cv): Blob {
-  return new Blob(['﻿' + renderCvHtml(cv)], { type: 'application/msword' })
-}
