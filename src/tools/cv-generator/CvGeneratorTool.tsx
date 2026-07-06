@@ -16,12 +16,9 @@ const SpeechRecCtor: (new () => SR) | undefined =
 
 const STR = {
   en: {
-    heroKicker: 'CV Generator',
-    heroTitle: 'Make your CV easy to say yes to',
-    heroBody: 'A recruiter skims a CV in seconds, so it has to put your strongest points first. This tool rewrites the CV you already have into a short, clear version — then asks a couple of quick questions to fill any gaps. Start by uploading your CV below.',
-    upload: 'Upload your CV',
-    uploadHint: 'PDF, Word (.docx) or text — read right here in your browser.',
-    choose: 'Choose file',
+    heroTitle: 'Optimize your CV',
+    heroBody: 'This tool rewrites the CV you already have and asks a couple of quick questions to fill any gaps.',
+    choose: 'Upload your CV',
     extracting: 'Reading your CV…',
     extracted: (n: number) => `Got it — read ${n.toLocaleString()} characters.`,
     tooShort: 'Couldn’t read enough text. Try a text-based PDF or a .docx.',
@@ -51,12 +48,9 @@ const STR = {
     voice: 'Voice input',
   },
   ar: {
-    heroKicker: 'منشئ السيرة الذاتية',
-    heroTitle: 'اجعل سيرتك سهلة القبول',
-    heroBody: 'يتصفّح المجنِّد السيرة في ثوانٍ، لذا يجب أن تُبرز أقوى نقاطك أولًا. تعيد هذه الأداة كتابة سيرتك الحالية في نسخة قصيرة وواضحة — ثم تطرح سؤالين سريعين لسدّ أي ثغرات. ابدأ برفع سيرتك أدناه.',
-    upload: 'ارفع سيرتك الذاتية',
-    uploadHint: 'PDF أو Word‏ (.docx) أو نص — تُقرأ هنا داخل متصفحك.',
-    choose: 'اختر ملفًا',
+    heroTitle: 'حسّن سيرتك الذاتية',
+    heroBody: 'تعيد هذه الأداة كتابة سيرتك الحالية وتطرح سؤالين سريعين لسدّ أي ثغرات.',
+    choose: 'ارفع سيرتك الذاتية',
     extracting: 'جارٍ قراءة سيرتك…',
     extracted: (n: number) => `تمّ — قُرئ ${n.toLocaleString()} حرفًا.`,
     tooShort: 'تعذّرت قراءة نص كافٍ. جرّب PDF نصيًا أو .docx.',
@@ -334,7 +328,6 @@ export default function CvGeneratorTool() {
   const hero = (
     <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
       <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-2">
-        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] opacity-75">{s.heroKicker}</span>
         <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
       </div>
@@ -349,8 +342,6 @@ export default function CvGeneratorTool() {
 
           {/* Upload — before any sign-in */}
           <div className="flex flex-col gap-2">
-            <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.upload}</span>
-            <p className="text-[0.82rem] text-ink-faint">{s.uploadHint}</p>
             <div className="flex flex-wrap items-center gap-3">
               <label className="inline-flex">
                 <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
