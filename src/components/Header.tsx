@@ -3,6 +3,7 @@ import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool 
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
 import { PalmLogo } from './PalmLogo'
+import { ShareButton } from './ShareButton'
 
 export function Header() {
   const { locale, t } = useLocale()
@@ -29,15 +30,18 @@ export function Header() {
           </Link>
         </div>
 
-        <Link
-          to={swapLocaleInPath(location.pathname, other)}
-          className="lang-toggle inline-flex items-center justify-center border border-[color:var(--line)] rounded-full px-[0.9rem] py-[0.28rem] text-[0.85rem] leading-none font-semibold text-ink-soft no-underline hover:text-green-700 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]"
-          onClick={() => setStoredLocale(other)}
-          lang={other}
-          hrefLang={other}
-        >
-          {t.switchLanguage}
-        </Link>
+        <div className="flex items-center gap-2 flex-none">
+          {!isHome && <ShareButton />}
+          <Link
+            to={swapLocaleInPath(location.pathname, other)}
+            className="lang-toggle inline-flex items-center justify-center border border-[color:var(--line)] rounded-full px-[0.9rem] py-[0.28rem] text-[0.85rem] leading-none font-semibold text-ink-soft no-underline hover:text-green-700 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]"
+            onClick={() => setStoredLocale(other)}
+            lang={other}
+            hrefLang={other}
+          >
+            {t.switchLanguage}
+          </Link>
+        </div>
       </div>
     </header>
   )
