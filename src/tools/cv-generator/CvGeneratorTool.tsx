@@ -29,15 +29,19 @@ const STR = {
     again: 'Regenerate',
     newFile: 'Start over',
     signinErr: 'Google sign-in couldn’t load. Disable blockers and retry.',
-    refineTitle: 'Fine-tune',
-    refinePh: 'e.g. Make the summary shorter · Emphasise leadership · Drop the oldest role',
+    polishTitle: 'Polish (optional)',
+    polishPh: 'e.g. Make the summary shorter · Emphasise leadership · Drop the oldest role',
     apply: 'Apply',
     applying: 'Applying…',
-    tweaksLeft: (n: number) => `${n} tweak${n === 1 ? '' : 's'} left`,
-    noTweaks: 'No tweaks left for this CV — upload again to start fresh.',
-    limitNote: '2 CVs per 24 hours · 3 tweaks each. Typos and tone are fixed automatically.',
+    answerPh: 'Type your answer to the questions above…',
+    answerBtn: 'Send answer',
+    answering: 'Sending…',
+    answersLeftL: (n: number) => `${n} answer${n === 1 ? '' : 's'} left`,
+    polishLeftL: (n: number) => `${n} polish left`,
+    noPolish: 'No polish requests left for this CV — upload again to start fresh.',
+    limitNote: '2 CVs per 24 hours · answer up to 5 questions · 3 polish tweaks. Typos and tone are fixed automatically.',
     questionsTitle: 'A few questions to sharpen your CV',
-    questionsHint: 'Answer any of these in the box below — each answer uses one tweak. Or skip them.',
+    questionsHint: 'The more you answer, the stronger your CV. Answering doesn’t use your polish tweaks.',
   },
   ar: {
     intro: 'أعِد بناء سيرتك لمسح المجنِّد الذي يستغرق ١٠ ثوانٍ — إشارة فقط بلا ضجيج. ارفع سيرتك الحالية ونعيد كتابتها في قالب نظيف متوافق مع أنظمة التتبّع.',
@@ -61,15 +65,19 @@ const STR = {
     again: 'إعادة الإنشاء',
     newFile: 'ابدأ من جديد',
     signinErr: 'تعذّر تحميل تسجيل دخول جوجل. عطّل المانعات وأعد المحاولة.',
-    refineTitle: 'ضبط دقيق',
-    refinePh: 'مثال: اجعل الملخّص أقصر · أبرِز القيادة · احذف أقدم وظيفة',
+    polishTitle: 'تحسين (اختياري)',
+    polishPh: 'مثال: اجعل الملخّص أقصر · أبرِز القيادة · احذف أقدم وظيفة',
     apply: 'تطبيق',
     applying: 'جارٍ التطبيق…',
-    tweaksLeft: (n: number) => `${n === 1 ? 'تعديل واحد متبقٍّ' : `${n} تعديلات متبقّية`}`,
-    noTweaks: 'لا تعديلات متبقّية لهذه السيرة — ارفع من جديد للبدء من الصفر.',
-    limitNote: 'سيرتان كل ٢٤ ساعة · ٣ تعديلات لكلٍّ. تُصحَّح الأخطاء والنبرة تلقائيًا.',
+    answerPh: 'اكتب إجابتك عن الأسئلة أعلاه…',
+    answerBtn: 'إرسال الإجابة',
+    answering: 'جارٍ الإرسال…',
+    answersLeftL: (n: number) => `${n === 1 ? 'إجابة واحدة متبقّية' : `${n} إجابات متبقّية`}`,
+    polishLeftL: (n: number) => `${n === 1 ? 'تحسين واحد متبقٍّ' : `${n} تحسينات متبقّية`}`,
+    noPolish: 'لا تحسينات متبقّية لهذه السيرة — ارفع من جديد للبدء من الصفر.',
+    limitNote: 'سيرتان كل ٢٤ ساعة · أجِب حتى ٥ أسئلة · ٣ تحسينات. تُصحَّح الأخطاء والنبرة تلقائيًا.',
     questionsTitle: 'أسئلة قليلة لتحسين سيرتك',
-    questionsHint: 'أجِب عن أيٍّ منها في الصندوق أدناه — كل إجابة تستهلك تعديلًا. أو تجاوزها.',
+    questionsHint: 'كلما أجبت أكثر، كانت سيرتك أقوى. الإجابة لا تستهلك تحسيناتك.',
   },
 }
 
@@ -85,10 +93,12 @@ export default function CvGeneratorTool() {
   const [text, setText] = useState('')
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
-  const [refinesLeft, setRefinesLeft] = useState(0)
+  const [answersLeft, setAnswersLeft] = useState(0)
+  const [polishLeft, setPolishLeft] = useState(0)
   const [questions, setQuestions] = useState<string[]>([])
+  const [answerText, setAnswerText] = useState('')
   const [instruction, setInstruction] = useState('')
-  const [refining, setRefining] = useState(false)
+  const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
   const btnRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -141,10 +151,12 @@ export default function CvGeneratorTool() {
     setStatus('generating')
     setErr('')
     try {
-      const { cv: result, refinesLeft: left, questions: qs } = await generateCv(idToken, text)
-      setCv(result)
-      setRefinesLeft(left)
-      setQuestions(qs)
+      const r = await generateCv(idToken, text)
+      setCv(r.cv)
+      setAnswersLeft(r.answersLeft)
+      setPolishLeft(r.polishLeft)
+      setQuestions(r.questions)
+      setAnswerText('')
       setInstruction('')
       setStatus('done')
     } catch (e) {
@@ -153,20 +165,26 @@ export default function CvGeneratorTool() {
     }
   }
 
-  async function refine() {
-    if (!idToken || !cv || !instruction.trim() || refinesLeft <= 0 || refining) return
-    setRefining(true)
+  async function applyRefine(kind: 'answer' | 'polish') {
+    if (!idToken || !cv || busy) return
+    const message = kind === 'answer' ? answerText.trim() : instruction.trim()
+    if (!message) return
+    if (kind === 'answer' && answersLeft <= 0) return
+    if (kind === 'polish' && polishLeft <= 0) return
+    setBusy(kind)
     setErr('')
     try {
-      const { cv: result, refinesLeft: left, questions: qs } = await refineCv(idToken, cv, instruction.trim())
-      setCv(result)
-      setRefinesLeft(left)
-      setQuestions(qs)
-      setInstruction('')
+      const r = await refineCv(idToken, cv, message, kind)
+      setCv(r.cv)
+      setAnswersLeft(r.answersLeft)
+      setPolishLeft(r.polishLeft)
+      setQuestions(r.questions)
+      if (kind === 'answer') setAnswerText('')
+      else setInstruction('')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
-      setRefining(false)
+      setBusy('')
     }
   }
 
@@ -243,37 +261,55 @@ export default function CvGeneratorTool() {
                 </div>
               </div>
 
-              {/* Fine-tune loop — up to 3 instruction tweaks, preview updates live */}
-              <div className="flex flex-col gap-2 border-t border-[color:var(--line-soft)] pt-3">
-                {questions.length > 0 && (
-                  <div className="flex flex-col gap-1.5 rounded-md border-s-2 border-green-600 bg-[color-mix(in_srgb,var(--green-400)_9%,transparent)] px-3 py-2.5" data-testid="cv-questions">
+              {/* AI gap-questions — answered here, own budget (up to 5) */}
+              {questions.length > 0 && answersLeft > 0 && (
+                <div className="flex flex-col gap-2 rounded-md border-s-2 border-green-600 bg-[color-mix(in_srgb,var(--green-400)_9%,transparent)] px-3 py-2.5" data-testid="cv-questions">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-[0.82rem] font-semibold text-green-700">{s.questionsTitle}</span>
-                    <ul className="list-disc ps-5 text-[0.88rem] text-ink-soft flex flex-col gap-1">
-                      {questions.map((q, i) => <li key={i}>{q}</li>)}
-                    </ul>
-                    <span className="text-[0.78rem] text-ink-faint">{s.questionsHint}</span>
+                    <span className="text-[0.78rem] text-ink-faint">{s.answersLeftL(answersLeft)}</span>
                   </div>
-                )}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[0.82rem] font-semibold text-ink-soft">{s.refineTitle}</span>
-                  {refinesLeft > 0 && <span className="text-[0.78rem] text-ink-faint">{s.tweaksLeft(refinesLeft)}</span>}
+                  <ul className="list-disc ps-5 text-[0.88rem] text-ink-soft flex flex-col gap-1">
+                    {questions.map((q, i) => <li key={i}>{q}</li>)}
+                  </ul>
+                  <span className="text-[0.78rem] text-ink-faint">{s.questionsHint}</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      className="grow min-w-0"
+                      value={answerText}
+                      placeholder={s.answerPh}
+                      data-testid="cv-answer"
+                      onChange={(e) => setAnswerText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') applyRefine('answer') }}
+                    />
+                    <Button variant="primary" onClick={() => applyRefine('answer')} disabled={busy !== '' || !answerText.trim()} data-testid="cv-answer-send">
+                      {busy === 'answer' ? s.answering : s.answerBtn}
+                    </Button>
+                  </div>
                 </div>
-                {refinesLeft > 0 ? (
+              )}
+
+              {/* User-initiated polish — separate budget (up to 3) */}
+              <div className="flex flex-col gap-2 border-t border-[color:var(--line-soft)] pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[0.82rem] font-semibold text-ink-soft">{s.polishTitle}</span>
+                  {polishLeft > 0 && <span className="text-[0.78rem] text-ink-faint">{s.polishLeftL(polishLeft)}</span>}
+                </div>
+                {polishLeft > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     <Input
                       className="grow min-w-0"
                       value={instruction}
-                      placeholder={s.refinePh}
+                      placeholder={s.polishPh}
                       data-testid="cv-instruction"
                       onChange={(e) => setInstruction(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') refine() }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') applyRefine('polish') }}
                     />
-                    <Button variant="primary" onClick={refine} disabled={refining || !instruction.trim()} data-testid="cv-refine">
-                      {refining ? s.applying : s.apply}
+                    <Button variant="primary" onClick={() => applyRefine('polish')} disabled={busy !== '' || !instruction.trim()} data-testid="cv-refine">
+                      {busy === 'polish' ? s.applying : s.apply}
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-[0.82rem] text-ink-faint">{s.noTweaks}</p>
+                  <p className="text-[0.82rem] text-ink-faint">{s.noPolish}</p>
                 )}
               </div>
 

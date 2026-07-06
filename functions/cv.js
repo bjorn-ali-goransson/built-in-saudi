@@ -17,7 +17,9 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 const SITE = 'https://built-in-saudi.com'
 
 const UPLOAD_LIMIT = 2 // fresh generations per rolling 24h per user
-const REFINE_LIMIT = 3 // instruction tweaks per generated CV
+const ANSWER_LIMIT = 5 // answers to the AI's own gap questions (quality-critical)
+const POLISH_LIMIT = 3 // user-initiated free-form tweaks
+const QUESTION_CAP = 5 // most questions the model may surface at once
 const WINDOW_MS = 24 * 60 * 60 * 1000
 
 function cors(req, res) {
@@ -64,7 +66,7 @@ FIX SILENTLY (do not ask, just correct):
 - Clarity: rewrite vague or confusing statements into clear ones where the meaning is reasonably inferable. Strip buzzword filler.
 
 ASK (only for MATERIAL gaps you cannot responsibly fix yourself):
-- Put up to 3 short, specific questions in "questions" when something important is missing or inconsistent and answering it would materially strengthen the CV. Examples: a role/seniority with no supporting evidence (e.g. "Developer, 3 years" but no technologies, projects or achievements listed); conflicting or impossible dates; a large unexplained employment gap; a claimed skill never evidenced.
+- Put up to 5 short, specific questions in "questions" when something important is missing or inconsistent and answering it would materially strengthen the CV. Only include a question if it is genuinely necessary for CV quality. Examples: a role/seniority with no supporting evidence (e.g. "Developer, 3 years" but no technologies, projects or achievements listed); conflicting or impossible dates; a large unexplained employment gap; a claimed skill never evidenced.
 - Do NOT ask about trivial things, and never invent facts to fill a gap. Always still produce the best CV you can from what's given — questions are additive, never blocking. If nothing material is missing, return an empty array.
 
 The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty):
@@ -82,7 +84,7 @@ The CV object shape (omit a section with an empty array; omit optional strings b
   "languages": [{ "name": string, "level": string }]
 }
 
-Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions": [ up to 3 short strings ] }`
+Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions": [ up to 5 short strings ] }`
 
 const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}`
 
@@ -147,7 +149,7 @@ async function callOpenAI(system, user) {
     // Tolerate the model returning { cv, questions } or just the CV object.
     const cvObj = parsed && parsed.cv && typeof parsed.cv === 'object' ? parsed.cv : parsed
     const questions = Array.isArray(parsed && parsed.questions)
-      ? parsed.questions.map((q) => String(q).trim()).filter(Boolean).slice(0, 3)
+      ? parsed.questions.map((q) => String(q).trim()).filter(Boolean).slice(0, QUESTION_CAP)
       : []
     return { cv: normalize(cvObj), questions }
   } catch {
@@ -161,7 +163,7 @@ function fail(res, e) {
   res.status(e && e.code ? e.code : 500).json({ error: String((e && e.message) || e) })
 }
 
-// POST { idToken, text } → { ok, cv, refinesLeft }. Fresh build; 2 per 24h.
+// POST { idToken, text } → { ok, cv, questions, answersLeft, polishLeft }. Fresh build; 2 per 24h.
 http('cvGenerate', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
@@ -181,39 +183,50 @@ http('cvGenerate', async (req, res) => {
     }
 
     const { cv, questions } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
-    // Record the successful upload and reset the refine budget for this new CV.
-    await ref.set({ uploads: [...recent, now], refineCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, questions, refinesLeft: REFINE_LIMIT })
+    // Record the successful upload and reset both budgets for this new CV.
+    await ref.set({ uploads: [...recent, now], answerCount: 0, polishCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
+    res.json({ ok: true, cv, questions, answersLeft: ANSWER_LIMIT, polishLeft: POLISH_LIMIT })
   } catch (e) {
     fail(res, e)
   }
 })
 
-// POST { idToken, cv, instruction } → { ok, cv, refinesLeft }. Up to 3 per CV.
+// POST { idToken, cv, instruction, kind } → { ok, cv, questions, answersLeft, polishLeft }
+// kind 'answer' (answering the AI's gap questions, up to 5) or 'polish' (free tweak, up to 3).
 http('cvRefine', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { idToken, cv: current, instruction } = req.body || {}
+    const { idToken, cv: current, instruction, kind } = req.body || {}
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
     if (!instruction || String(instruction).trim().length < 2) return res.status(400).json({ error: 'missing instruction' })
 
+    const isAnswer = kind === 'answer'
     const ref = db.collection(USAGE).doc(user.sub)
     const d = (await ref.get()).data() || {}
-    const used = Number(d.refineCount || 0)
-    if (used >= REFINE_LIMIT) {
-      return res.status(429).json({ error: `You’ve used all ${REFINE_LIMIT} tweaks for this CV. Upload again to start fresh.` })
+    let answerCount = Number(d.answerCount || 0)
+    let polishCount = Number(d.polishCount || 0)
+    if (isAnswer && answerCount >= ANSWER_LIMIT) {
+      return res.status(429).json({ error: `You’ve answered the maximum of ${ANSWER_LIMIT} questions for this CV.` })
+    }
+    if (!isAnswer && polishCount >= POLISH_LIMIT) {
+      return res.status(429).json({ error: `You’ve used all ${POLISH_LIMIT} polish requests for this CV. Upload again to start fresh.` })
     }
 
+    const lead = isAnswer
+      ? 'The candidate is ANSWERING one or more of your questions'
+      : 'The candidate asks you to change something (a polish request)'
     const { cv, questions } = await callOpenAI(
       REFINE_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\nCandidate's message: ${String(instruction).slice(0, 1000)}`,
+      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
     )
-    await ref.update({ refineCount: used + 1, updatedAt: new Date() })
-    res.json({ ok: true, cv, questions, refinesLeft: REFINE_LIMIT - (used + 1) })
+    if (isAnswer) answerCount += 1
+    else polishCount += 1
+    await ref.update({ answerCount, polishCount, updatedAt: new Date() })
+    res.json({ ok: true, cv, questions, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount })
   } catch (e) {
     fail(res, e)
   }

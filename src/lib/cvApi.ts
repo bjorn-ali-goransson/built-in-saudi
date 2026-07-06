@@ -52,14 +52,16 @@ export function decodeJwt(token: string): { email?: string; name?: string; pictu
 export interface CvResult {
   cv: Cv
   questions: string[]
-  refinesLeft: number
+  answersLeft: number
+  polishLeft: number
 }
 
-function parseResult(data: { cv?: Cv; questions?: unknown; refinesLeft?: unknown }): CvResult {
+function parseResult(data: { cv?: Cv; questions?: unknown; answersLeft?: unknown; polishLeft?: unknown }): CvResult {
   return {
     cv: data.cv as Cv,
     questions: Array.isArray(data.questions) ? data.questions.map(String) : [],
-    refinesLeft: Number(data.refinesLeft ?? 0),
+    answersLeft: Number(data.answersLeft ?? 0),
+    polishLeft: Number(data.polishLeft ?? 0),
   }
 }
 
@@ -74,12 +76,12 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
   return parseResult(data)
 }
 
-/** Apply one message — an answer to an AI question, or an instruction. */
-export async function refineCv(idToken: string, cv: Cv, instruction: string): Promise<CvResult> {
+/** Apply one message — an answer to an AI question ('answer') or a free tweak ('polish'). */
+export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish'): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, cv, instruction }),
+    body: JSON.stringify({ idToken, cv, instruction, kind }),
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
