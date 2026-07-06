@@ -58,6 +58,8 @@ Rules (apply strictly):
 - Phone/email: raw values, no "Phone:" / "Email:" labels.
 - REMOVE entirely: photos, references, GPA, university coursework/curriculum, exact addresses, objective-statement fluff, and any irrelevant experience (e.g. unrelated retail/food jobs for an IT professional).
 - Prefer strong action-verb bullets with measurable impact. Summarise anything verbose.
+- Order experience and education MOST RECENT FIRST (reverse chronological). If you add a role, insert it at the correct chronological position — a newer role goes at the top.
+- Skill category labels must be SHORT — 1 to 3 words (e.g. "Cloud", "Languages", "Testing"). They render as a narrow table column, so never use long phrases.
 - Education: degree, institution, year only. No scores.
 - Keep it truthful — never invent employers, dates, or achievements not supported by the source.
 
@@ -200,7 +202,7 @@ http('cvRefine', async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { idToken, cv: current, instruction, kind } = req.body || {}
+    const { idToken, cv: current, instruction, kind, context } = req.body || {}
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
@@ -222,9 +224,13 @@ http('cvRefine', async (req, res) => {
     const lead = isAnswer
       ? 'The candidate is ANSWERING one or more of your questions'
       : 'The candidate asks you to change something (a polish request)'
+    // The previous change, so the candidate can react to it ("no, not like that, like this").
+    const prev = typeof context === 'string' && context.trim()
+      ? `\n\nYour most recent change to this CV was: "${String(context).slice(0, 400)}". The candidate may be reacting to it — if so, correct it accordingly.`
+      : ''
     const { cv, questions, summary } = await callOpenAI(
       REFINE_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
+      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}${prev}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
     )
     if (isAnswer) answerCount += 1
     else polishCount += 1

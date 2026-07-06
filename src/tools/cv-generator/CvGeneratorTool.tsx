@@ -185,6 +185,8 @@ export default function CvGeneratorTool() {
   // Guards the auto-generate effect so a failed generation never re-triggers it
   // (which would hammer the API). Reset only when a new file is uploaded.
   const autoTried = useRef(false)
+  // The previous change summary, sent as context so the user can correct it.
+  const lastChangeRef = useRef('')
 
   // Load + init Google Identity Services once (but don't force sign-in yet).
   useEffect(() => {
@@ -270,6 +272,7 @@ export default function CvGeneratorTool() {
       setQueue(r.questions)
       setQIndex(0)
       setToast('')
+      lastChangeRef.current = ''
       setAnswerText('')
       setInstruction('')
       setStatus('done')
@@ -286,10 +289,10 @@ export default function CvGeneratorTool() {
     setBusy('answer')
     setErr('')
     try {
-      const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer')
+      const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current)
       setCv(r.cv)
       setAnswersLeft(r.answersLeft)
-      if (r.summary) setToast(r.summary)
+      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setAnswerText('')
       setQIndex((i) => i + 1)
     } catch (e) {
@@ -309,10 +312,10 @@ export default function CvGeneratorTool() {
     setBusy('polish')
     setErr('')
     try {
-      const r = await refineCv(idToken, cv, instruction.trim(), 'polish')
+      const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current)
       setCv(r.cv)
       setPolishLeft(r.polishLeft)
-      if (r.summary) setToast(r.summary)
+      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setInstruction('')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
@@ -458,8 +461,8 @@ export default function CvGeneratorTool() {
       )}
 
       {toast && (
-        <div className="fixed top-[4.9rem] left-1/2 -translate-x-1/2 z-[60] max-w-[80vw] inline-flex items-center gap-2 bg-green-600 text-sand-100 px-4 py-2.5 rounded-md shadow-[var(--shadow-md)] text-[0.85rem] animate-[fadeUp_0.3s_ease]" role="status" data-testid="cv-toast">
-          <span aria-hidden="true">✓</span>{toast}
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-[min(90vw,32rem)] flex items-start gap-2.5 bg-green-600 text-sand-100 px-5 py-3.5 rounded-lg shadow-[var(--shadow-md)] text-[0.92rem] leading-snug animate-[fadeUp_0.3s_ease]" role="status" data-testid="cv-toast">
+          <span aria-hidden="true" className="mt-0.5">✓</span><span>{toast}</span>
         </div>
       )}
 
