@@ -48,6 +48,8 @@ const STR = {
     applying: 'Applying…',
     polishLeftL: (n: number) => `${n} tweak${n === 1 ? '' : 's'} left`,
     noPolish: 'That’s all your tweaks — upload again to start fresh.',
+    makeAdjustments: 'Make adjustments',
+    closeAdjust: 'Done',
     startOver: 'Start over',
     signinErr: 'Google sign-in couldn’t load. Disable blockers and retry.',
     voice: 'Voice input',
@@ -83,6 +85,8 @@ const STR = {
     applying: 'جارٍ التطبيق…',
     polishLeftL: (n: number) => `${n === 1 ? 'تعديل واحد متبقٍّ' : `${n} تعديلات متبقّية`}`,
     noPolish: 'انتهت تعديلاتك — ارفع من جديد للبدء من الصفر.',
+    makeAdjustments: 'أجرِ تعديلات',
+    closeAdjust: 'تم',
     startOver: 'ابدأ من جديد',
     signinErr: 'تعذّر تحميل تسجيل دخول جوجل. عطّل المانعات وأعد المحاولة.',
     voice: 'إدخال صوتي',
@@ -179,6 +183,7 @@ export default function CvGeneratorTool() {
   const [instruction, setInstruction] = useState('')
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
   const [saveMenu, setSaveMenu] = useState(false)
+  const [adjustOpen, setAdjustOpen] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -272,6 +277,7 @@ export default function CvGeneratorTool() {
       setQueue(r.questions)
       setQIndex(0)
       setToast('')
+      setAdjustOpen(false)
       lastChangeRef.current = ''
       setAnswerText('')
       setInstruction('')
@@ -411,47 +417,53 @@ export default function CvGeneratorTool() {
             />
           </div>
 
-          {/* Floating Save split-button — top-left (top-right in RTL), just below the navbar */}
-          <div className="fixed start-4 top-[4.75rem] z-50 flex items-stretch rounded-md shadow-[var(--shadow-md)]">
-            <button type="button" onClick={exportPdf} data-testid="cv-pdf"
-              className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer">
-              <DownloadIcon /> {s.pdf}
-            </button>
-            <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
-              className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
-            {saveMenu && (
-              <div className="absolute top-full start-0 mt-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
-                <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
-                  className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
-                  <DownloadIcon /> {s.word}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Docked interaction bar — one question at a time, else the polish input */}
-          <div ref={activeRef} className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
-            <div className="wrap py-2.5 flex flex-col gap-2">
-              {currentQ ? (
-                <>
+          {/* Bottom bar: collapsed = Download + Make adjustments; expanded = the dialogue */}
+          <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
+            <div className="wrap py-2.5">
+              {adjustOpen ? (
+                <div ref={activeRef} className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-green-700">{s.qLabel(qIndex + 1, queue.length)}</span>
-                    <button type="button" className="text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
+                    <span className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-green-700">
+                      {currentQ ? s.qLabel(qIndex + 1, queue.length) : s.polishTitle}
+                    </span>
+                    <button type="button" className="text-[0.82rem] font-semibold text-ink-soft underline bg-transparent border-0 cursor-pointer p-0" onClick={() => setAdjustOpen(false)} data-testid="cv-adjust-close">{s.closeAdjust}</button>
                   </div>
-                  <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
-                  <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
-                    busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
-                </>
-              ) : (
-                <>
-                  <span className="text-[0.8rem] font-semibold text-ink-soft">{s.polishTitle}</span>
-                  {polishLeft > 0 ? (
+                  {currentQ ? (
+                    <>
+                      <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
+                      <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
+                        busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
+                      <button type="button" className="self-start text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
+                    </>
+                  ) : polishLeft > 0 ? (
                     <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
                       busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
                   ) : (
                     <p className="text-[0.8rem] text-ink-faint">{s.noPolish}</p>
                   )}
-                </>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
+                    <button type="button" onClick={exportPdf} data-testid="cv-pdf"
+                      className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer">
+                      <DownloadIcon /> {s.pdf}
+                    </button>
+                    <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
+                      className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
+                    {saveMenu && (
+                      <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
+                        <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
+                          className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
+                          <DownloadIcon /> {s.word}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={() => setAdjustOpen(true)} data-testid="cv-adjust-open">
+                    {s.makeAdjustments}{currentQ ? ` · ${queue.length - qIndex}` : ''}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
