@@ -11,7 +11,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
     title: 'Privacy Policy',
     updated: 'Last updated: 6 July 2026',
     intro:
-      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — chiefly the Book With Me scheduling tool — and exactly what we do with it.',
+      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — the Book With Me scheduling tool and the CV Generator — with a dedicated section for each, and exactly what we do with it.',
     sections: [
       {
         h: 'Tools that run in your browser',
@@ -29,11 +29,20 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
-        h: 'Google user data',
+        h: 'Book With Me — Google Calendar data',
         p: [
           'With your explicit consent, Book With Me uses the Google Calendar “events” and “free/busy” scopes for two purposes only: (1) to read your busy times so the booking page never offers a slot when you are busy, and (2) to create a calendar event when someone books with you. We store a refresh token to perform these actions on your behalf.',
           'Built in Saudi’s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We do not sell this data, do not use it for advertising, and do not share it with third parties except as needed to provide the feature (Google itself).',
           'You can revoke our access at any time from your Google Account’s security settings (Third-party access), or by contacting us to delete your host record.',
+        ],
+      },
+      {
+        h: 'CV Generator',
+        p: [
+          'Your CV file is read inside your browser — the file itself is never uploaded to us. Only the extracted plain text is sent to our server, which passes it to OpenAI to rewrite it into the structured result and to apply any answers or edits you make.',
+          'We do not store the content of your CV on our servers. We keep only a small per-user counter (tied to your Google account) to enforce the free limits and prevent abuse — such as how many CVs you generated today and how many edits you have made.',
+          'Sign-in here uses Google only to confirm you are a real person (your name and email). This tool requests no Google Calendar, Drive or other scopes.',
+          'The extracted text is processed by OpenAI purely to generate your CV. Per OpenAI’s API policy, data sent through the API is not used to train their models. We send only the CV text you provide, nothing more.',
         ],
       },
       {
@@ -52,6 +61,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'Retention and deletion',
         p: [
           'Client-side tool data lives only in your browser until you clear it. For Book With Me, your host record and bookings are kept while your scheduling link is active. To delete your data, revoke Google access and email us and we will remove your host record and bookings.',
+          'The CV Generator stores no CV content — only short-lived usage counters that reset over time, so there is nothing of yours to delete there.',
         ],
       },
       {
@@ -64,7 +74,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
     title: 'سياسة الخصوصية',
     updated: 'آخر تحديث: ٦ يوليو ٢٠٢٦',
     intro:
-      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — خصوصًا أداة «احجز معي» — وما نفعله بها بالضبط.',
+      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — أداة «احجز معي» ومنشئ السيرة الذاتية، ولكلٍّ قسم مستقل — وما نفعله بها بالضبط.',
     sections: [
       {
         h: 'أدوات تعمل داخل متصفحك',
@@ -82,11 +92,20 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
-        h: 'بيانات مستخدم جوجل',
+        h: '«احجز معي» — بيانات تقويم جوجل',
         p: [
           'بموافقتك الصريحة، تستخدم «احجز معي» صلاحيتَي «الأحداث» و«أوقات الانشغال» في تقويم جوجل لغرضين فقط: (١) قراءة أوقات انشغالك حتى لا تعرض صفحة الحجز وقتًا أنت مشغول فيه، و(٢) إنشاء حدث في التقويم عند الحجز. ونحفظ رمز تحديث للقيام بذلك نيابةً عنك.',
           'يلتزم «بُنِيَ في السعودية» في استخدامه ونقله للمعلومات الواردة من واجهات جوجل بسياسة بيانات مستخدم خدمات واجهات جوجل، بما في ذلك متطلبات الاستخدام المحدود. لا نبيع هذه البيانات، ولا نستخدمها للإعلانات، ولا نشاركها مع أطراف ثالثة إلا بالقدر اللازم لتقديم الميزة (جوجل نفسها).',
           'يمكنك إلغاء وصولنا في أي وقت من إعدادات أمان حساب جوجل (وصول الجهات الخارجية)، أو بمراسلتنا لحذف سجلك.',
+        ],
+      },
+      {
+        h: 'منشئ السيرة الذاتية',
+        p: [
+          'يُقرأ ملف سيرتك داخل متصفحك — ولا يُرفع الملف نفسه إلينا أبدًا. يُرسَل النص المستخرج فقط إلى خادمنا، الذي يمرّره إلى OpenAI لإعادة كتابته في النتيجة المنظّمة ولتطبيق أي إجابات أو تعديلات تجريها.',
+          'لا نخزّن محتوى سيرتك على خوادمنا. نحتفظ فقط بعدّاد صغير لكل مستخدم (مرتبط بحساب جوجل) لفرض الحدود المجانية ومنع الإساءة — مثل عدد السير التي أنشأتها اليوم وعدد التعديلات.',
+          'تسجيل الدخول هنا يستخدم جوجل فقط للتأكد أنك شخص حقيقي (اسمك وبريدك). ولا تطلب هذه الأداة أي صلاحيات تقويم أو Drive أو غيرها.',
+          'يُعالَج النص المستخرج بواسطة OpenAI لإنشاء سيرتك فقط. ووفق سياسة واجهة OpenAI، لا تُستخدم البيانات المُرسَلة عبر الواجهة لتدريب نماذجها. ونرسل نص سيرتك فقط لا غير.',
         ],
       },
       {
@@ -105,6 +124,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'الاحتفاظ والحذف',
         p: [
           'تبقى بيانات الأدوات في متصفحك حتى تمسحها. أما «احجز معي» فيُحفظ سجلك وحجوزاتك ما دام رابط الحجز نشطًا. لحذف بياناتك، ألغِ وصول جوجل وراسلنا وسنحذف سجلك وحجوزاتك.',
+          'لا يخزّن منشئ السيرة الذاتية أي محتوى — بل عدّادات استخدام قصيرة العمر تتجدد مع الوقت، فلا يوجد ما يُحذف هناك.',
         ],
       },
       {

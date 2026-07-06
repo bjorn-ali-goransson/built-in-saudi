@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { useLocale } from '../../i18n'
+import { Link } from 'react-router-dom'
+import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack } from '../../components/ui'
 import { DownloadIcon, MicIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
@@ -18,6 +19,9 @@ const STR = {
   en: {
     heroTitle: 'Optimize your CV',
     heroBody: 'This tool rewrites the CV you already have and asks a couple of quick questions to fill any gaps.',
+    dataNote: 'How we use your data:',
+    privacyLink: 'Privacy',
+    termsLink: 'Terms',
     choose: 'Upload your CV',
     extracting: 'Reading your CV…',
     extracted: (n: number) => `Got it — read ${n.toLocaleString()} characters.`,
@@ -50,6 +54,9 @@ const STR = {
   ar: {
     heroTitle: 'حسّن سيرتك الذاتية',
     heroBody: 'تعيد هذه الأداة كتابة سيرتك الحالية وتطرح سؤالين سريعين لسدّ أي ثغرات.',
+    dataNote: 'كيف نستخدم بياناتك:',
+    privacyLink: 'الخصوصية',
+    termsLink: 'الشروط',
     choose: 'ارفع سيرتك الذاتية',
     extracting: 'جارٍ قراءة سيرتك…',
     extracted: (n: number) => `تمّ — قُرئ ${n.toLocaleString()} حرفًا.`,
@@ -330,6 +337,12 @@ export default function CvGeneratorTool() {
       <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-2">
         <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
+        <p className="text-[0.8rem] opacity-80 flex items-center gap-3 mt-0.5">
+          <span>{s.dataNote}</span>
+          <Link to={localePath(locale, '/privacy')} className="underline" style={{ color: 'var(--sand-100)' }} data-testid="cv-privacy-link">{s.privacyLink}</Link>
+          <span aria-hidden="true">·</span>
+          <Link to={localePath(locale, '/terms')} className="underline" style={{ color: 'var(--sand-100)' }} data-testid="cv-terms-link">{s.termsLink}</Link>
+        </p>
       </div>
     </div>
   )

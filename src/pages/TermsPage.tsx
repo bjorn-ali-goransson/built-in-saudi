@@ -22,9 +22,16 @@ const STR = {
         ],
       },
       {
-        h: 'Bookings',
+        h: 'Book With Me',
         p: [
           'A booking made through Book With Me is an arrangement between the host and the person booking. Built in Saudi provides the scheduling tool but is not a party to, and not responsible for, the meeting itself.',
+        ],
+      },
+      {
+        h: 'CV Generator',
+        p: [
+          'The CV Generator rewrites the CV you provide using AI. The result is generated automatically and given as-is — you are responsible for reviewing it for accuracy before you use or send it, and for the truthfulness of the information you submit.',
+          'Only upload a CV you have the right to use. Free usage is subject to fair limits (a small number of generations and edits per day) which may change.',
         ],
       },
       {
@@ -62,9 +69,16 @@ const STR = {
         ],
       },
       {
-        h: 'الحجوزات',
+        h: '«احجز معي»',
         p: [
           'الحجز عبر «احجز معي» ترتيب بين المُضيف والشخص الحاجز. نوفّر أداة الجدولة فقط، ولسنا طرفًا في الاجتماع نفسه ولا مسؤولين عنه.',
+        ],
+      },
+      {
+        h: 'منشئ السيرة الذاتية',
+        p: [
+          'يعيد منشئ السيرة كتابة السيرة التي تقدّمها باستخدام الذكاء الاصطناعي. النتيجة تُولَّد تلقائيًا وتُقدَّم كما هي — وأنت مسؤول عن مراجعتها للتأكد من دقتها قبل استخدامها أو إرسالها، وعن صحة المعلومات التي تقدّمها.',
+          'ارفع فقط سيرةً يحقّ لك استخدامها. يخضع الاستخدام المجاني لحدود عادلة (عدد محدود من عمليات الإنشاء والتعديل يوميًا) قد تتغيّر.',
         ],
       },
       {
