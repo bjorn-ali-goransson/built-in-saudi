@@ -214,6 +214,13 @@ export default function CvGeneratorTool() {
     }
   }, [qIndex, status])
 
+  // Generate automatically as soon as we have both the CV text and a signed-in
+  // user — no explicit "Build" button needed.
+  useEffect(() => {
+    if (status === 'ready' && idToken && text) generate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, idToken])
+
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     e.target.value = ''
@@ -357,34 +364,30 @@ export default function CvGeneratorTool() {
         <>
           {hero}
 
-          {/* Upload — before any sign-in */}
+          {/* Upload — a green button that disappears once a CV is in */}
           <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex">
+            {status === 'idle' && (
+              <label className="inline-flex self-start">
                 <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
-                <span className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-4 py-2 text-[0.9rem] font-semibold text-ink-soft hover:border-green-600 hover:text-green-700">
+                <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-green-600 text-sand-100 px-4 py-2 text-[0.9rem] font-semibold hover:bg-green-700">
                   {s.choose}
                 </span>
               </label>
-              {fileName && <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[16rem]">{fileName}</span>}
-            </div>
+            )}
+            {fileName && status !== 'idle' && (
+              <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>
+            )}
             {status === 'extracting' && <p className="text-[0.85rem] text-ink-faint">{s.extracting}</p>}
-            {text && status !== 'extracting' && <p className="text-[0.85rem] text-green-700">{s.extracted(text.length)}</p>}
+            {status === 'generating' && <p className="text-[0.85rem] text-ink-faint">{s.building}</p>}
+            {status === 'ready' && text && <p className="text-[0.85rem] text-green-700">{s.extracted(text.length)}</p>}
           </div>
 
-          {/* Sign-in appears only once a CV is ready — kept minimal */}
-          {text && !idToken && (
+          {/* Sign-in appears once a CV is ready; generation then starts automatically */}
+          {text && !idToken && status !== 'generating' && (
             <div className="flex flex-col gap-2">
               <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
               <p className="text-[0.8rem] text-ink-faint">{s.loginNote}</p>
             </div>
-          )}
-
-          {/* Build */}
-          {text && idToken && (
-            <Button variant="primary" className="self-start" onClick={generate} disabled={status === 'generating'} data-testid="cv-generate">
-              {status === 'generating' ? s.building : s.build}
-            </Button>
           )}
 
           {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
