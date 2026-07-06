@@ -36,6 +36,8 @@ export const en = {
     allTools: 'All apps',
     github: 'GitHub',
     reportIssue: 'Report an issue',
+    privacy: 'Privacy',
+    terms: 'Terms',
   },
 
   notif: {

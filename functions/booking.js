@@ -251,11 +251,19 @@ function openSlots(host, busy, now) {
   const tz = host.tz || 'Asia/Riyadh'
   const meeting = host.meeting || {}
   const windows = host.availability || []
-  const lenMs = (meeting.minutes || 45) * 60000
-  const stepMs = ((meeting.minutes || 45) + (meeting.gapMinutes || 0)) * 60000
+  const minutes = meeting.minutes || 45
+  const lenMs = minutes * 60000
+  const stepMs = (minutes + (meeting.gapMinutes || 0)) * 60000
   const earliest = now + (meeting.minNoticeHours || 0) * 3600000
   const horizonEnd = now + (meeting.horizonDays || 30) * 86400000
+  const HOUR = 3600000
   const slots = []
+  const add = (s) => {
+    if (s < earliest || s > horizonEnd) return
+    const e = s + lenMs
+    if (busy.some((b) => s < b.end && e > b.start)) return
+    slots.push(s)
+  }
   // Iterate calendar days in host tz from today until the horizon.
   for (let dayOffset = 0; dayOffset <= (meeting.horizonDays || 30) + 1; dayOffset++) {
     const probe = now + dayOffset * 86400000
@@ -264,11 +272,13 @@ function openSlots(host, busy, now) {
       if (w.day !== weekday) continue
       const winStart = zonedToUtc(y, m - 1, d, 0, 0, tz) + hhmmToMin(w.start) * 60000
       const winEnd = zonedToUtc(y, m - 1, d, 0, 0, tz) + hhmmToMin(w.end) * 60000
-      for (let s = winStart; s + lenMs <= winEnd + 1; s += stepMs) {
-        if (s < earliest || s > horizonEnd) continue
-        const e = s + lenMs
-        if (busy.some((b) => s < b.end && e > b.start)) continue
-        slots.push(s)
+      if (minutes > 60) {
+        // Long meetings span hour boundaries — step continuously.
+        for (let s = winStart; s + lenMs <= winEnd + 1; s += stepMs) add(s)
+      } else {
+        // Sessions align to each whole hour; leftover time is the gap.
+        for (let h = winStart; h < winEnd; h += HOUR)
+          for (let s = h; s + lenMs <= h + HOUR + 1; s += stepMs) add(s)
       }
     }
   }

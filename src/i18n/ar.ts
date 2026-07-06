@@ -36,6 +36,8 @@ export const ar: Dict = {
     allTools: 'كل التطبيقات',
     github: 'GitHub',
     reportIssue: 'أبلغ عن مشكلة',
+    privacy: 'الخصوصية',
+    terms: 'الشروط',
   },
 
   notif: {

@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { en } from './src/i18n/en'
 import { ar } from './src/i18n/ar'
-import { siteMeta, liveToolSeo, type ToolSeo } from './src/i18n/seo'
+import { siteMeta, liveToolSeo, staticPageSeo, type ToolSeo } from './src/i18n/seo'
 
 const ORIGIN = 'https://built-in-saudi.com'
 const LOCALES = ['en', 'ar'] as const
@@ -113,6 +113,16 @@ function prerenderPlugin(): Plugin {
           page = injectContent(page, toolContent(locale, tool))
           write(`${locale}${sub}`, page)
         }
+
+        // Standalone pages (privacy, terms) — real 200 HTML with head + a
+        // crawlable content block; React renders the full page on mount.
+        for (const page of staticPageSeo) {
+          const ps = page[locale]
+          const sub = `/${page.id}`
+          let html = applyHead(shell, { locale, dir, title: `${ps.name}${suffix[locale]}`, desc: ps.description, canonical: `${ORIGIN}/${locale}${sub}`, sub })
+          html = injectContent(html, `<main><h1>${esc(ps.name)}</h1><p>${esc(ps.description)}</p></main>`)
+          write(`${locale}${sub}`, html)
+        }
       }
 
       // Root shell: English-default head + hreflang + language links (it redirects client-side).
@@ -120,7 +130,7 @@ function prerenderPlugin(): Plugin {
       root = injectContent(root, `<main><h1>${esc(siteMeta.en.title)}</h1><p><a href="/en">English</a> · <a href="/ar">العربية</a></p></main>`)
       writeFileSync(join(dist, 'index.html'), root)
 
-      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + 1} pages`)
+      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + staticPageSeo.length + 1} pages`)
     },
   }
 }

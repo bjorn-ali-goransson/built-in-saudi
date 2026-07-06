@@ -22,6 +22,20 @@ export interface ToolSeo {
   ar: { name: string; description: string }
 }
 
+/** Standalone (non-tool) pages that also get prerendered at /<locale>/<id>/. */
+export const staticPageSeo: ToolSeo[] = [
+  {
+    id: 'privacy',
+    en: { name: 'Privacy Policy', description: 'How Built in Saudi handles your data: almost everything runs in your browser and never leaves your device; the Book With Me scheduling tool and its Google Calendar use are explained in full.' },
+    ar: { name: 'سياسة الخصوصية', description: 'كيف يتعامل «بُنِيَ في السعودية» مع بياناتك: يعمل كل شيء تقريبًا داخل متصفحك ولا يغادر جهازك؛ مع شرحٍ كامل لأداة «احجز معي» واستخدامها لتقويم جوجل.' },
+  },
+  {
+    id: 'terms',
+    en: { name: 'Terms of Use', description: 'The simple terms covering your use of Built in Saudi and its free tools, including Book With Me.' },
+    ar: { name: 'شروط الاستخدام', description: 'الشروط البسيطة التي تغطي استخدامك لـ«بُنِيَ في السعودية» وأدواته المجانية، بما في ذلك «احجز معي».' },
+  },
+]
+
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {

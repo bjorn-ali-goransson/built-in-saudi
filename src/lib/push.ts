@@ -33,6 +33,27 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
   return reg.pushManager.getSubscription()
 }
 
+/** Subscribe this device and return the raw PushSubscription (no server POST) —
+ *  for tools that store it elsewhere (Book With Me keeps it on the host record).
+ *  Returns null if unsupported or permission denied. */
+export async function subscribeDevice(): Promise<PushSubscription | null> {
+  if (!pushSupported()) return null
+  try {
+    const perm = await Notification.requestPermission()
+    if (perm !== 'granted') return null
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('sw timeout')), 10000)),
+    ])
+    return await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) as BufferSource,
+    })
+  } catch {
+    return null
+  }
+}
+
 export type EnableStatus = 'ok' | 'denied' | 'unsupported' | 'error'
 export interface EnableResult { status: EnableStatus; detail?: string }
 

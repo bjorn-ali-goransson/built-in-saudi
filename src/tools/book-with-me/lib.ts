@@ -25,14 +25,15 @@ export interface HostConfig {
   meeting: MeetingConfig
   availability: AvailWindow[]
   notify: { push: boolean; telegram: boolean; email: boolean }
+  pushSub?: unknown // this device's Web Push subscription, sent to the host record
 }
 
 // ---- Grid geometry ----------------------------------------------------------
 
 export const DAY_START_MIN = 6 * 60 // grid starts at 06:00
 export const DAY_END_MIN = 24 * 60 // …ends at 24:00
-export const SLOT_MIN = 30 // one grid row = 30 minutes
-export const ROWS = (DAY_END_MIN - DAY_START_MIN) / SLOT_MIN // 36
+export const SLOT_MIN = 60 // one grid row = one whole hour (availability is hourly)
+export const ROWS = (DAY_END_MIN - DAY_START_MIN) / SLOT_MIN // 18
 export const DAYS = 7
 
 export type Grid = boolean[][] // [day 0..6][row 0..ROWS-1]
@@ -109,21 +110,70 @@ export function enumerateDaySlots(
   busy: { start: number; end: number }[],
   now: number,
 ): Slot[] {
-  const step = (meeting.minutes + meeting.gapMinutes) * 60_000
   const len = meeting.minutes * 60_000
+  const step = (meeting.minutes + meeting.gapMinutes) * 60_000
   const earliest = now + meeting.minNoticeHours * 3_600_000
+  const HOUR = 3_600_000
   const slots: Slot[] = []
+  const add = (s: number) => {
+    const e = s + len
+    if (s < earliest) return
+    if (busy.some((b) => s < b.end && e > b.start)) return
+    slots.push({ startUtc: s, endUtc: e })
+  }
   for (const w of windows) {
     const winStart = dayMidnightUtc + hhmmToMinutes(w.start) * 60_000
     const winEnd = dayMidnightUtc + hhmmToMinutes(w.end) * 60_000
-    for (let s = winStart; s + len <= winEnd + 1; s += step) {
-      const e = s + len
-      if (s < earliest) continue
-      const clash = busy.some((b) => s < b.end && e > b.start)
-      if (!clash) slots.push({ startUtc: s, endUtc: e })
+    if (meeting.minutes > 60) {
+      // Long meetings span hour boundaries — step continuously across the window.
+      for (let s = winStart; s + len <= winEnd + 1; s += step) add(s)
+    } else {
+      // Sessions align to each whole hour; any leftover time is the gap.
+      for (let h = winStart; h < winEnd; h += HOUR)
+        for (let s = h; s + len <= h + HOUR + 1; s += step) add(s)
     }
   }
   return slots
+}
+
+/**
+ * Client-side slot preview from the host's own config, computed in the browser's
+ * local time (which is the host's tz). No backend, no busy-times — it's what the
+ * booking page would show for a host with an empty calendar. Used by ?preview=1.
+ */
+export function previewSlots(cfg: HostConfig, now: number = Date.now()): number[] {
+  const { meeting, availability } = cfg
+  const len = meeting.minutes
+  const step = meeting.minutes + meeting.gapMinutes
+  const earliest = now + meeting.minNoticeHours * 3_600_000
+  const horizonEnd = now + meeting.horizonDays * 86_400_000
+  const out: number[] = []
+  for (let d = 0; d <= meeting.horizonDays + 1; d++) {
+    const day = new Date(now + d * 86_400_000)
+    const weekday = day.getDay()
+    for (const w of availability) {
+      if (w.day !== weekday) continue
+      const [sh, sm] = w.start.split(':').map(Number)
+      const [eh, em] = w.end.split(':').map(Number)
+      const winStartMin = sh * 60 + sm
+      const winEndMin = eh * 60 + em
+      const addAt = (mins: number) => {
+        const dt = new Date(day)
+        dt.setHours(Math.floor(mins / 60), mins % 60, 0, 0)
+        const s = dt.getTime()
+        if (s < earliest || s > horizonEnd) return
+        out.push(s)
+      }
+      if (len > 60) {
+        for (let m = winStartMin; m + len <= winEndMin; m += step) addAt(m)
+      } else {
+        // Sessions align to each whole hour; leftover is the gap.
+        for (let h = winStartMin; h < winEndMin; h += 60)
+          for (let m = h; m + len <= h + 60; m += step) addAt(m)
+      }
+    }
+  }
+  return [...new Set(out)].sort((a, b) => a - b)
 }
 
 // ---- Defaults + persistence -------------------------------------------------
