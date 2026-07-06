@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Panel, Stack } from '../../components/ui'
+import { Button, Panel, Stack, Input } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
-import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv } from '../../lib/cvApi'
+import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
 import { renderCvHtml, renderCvWordBlob } from './template'
 import { cvFilename, type Cv } from './schema'
 
@@ -29,6 +29,13 @@ const STR = {
     again: 'Regenerate',
     newFile: 'Start over',
     signinErr: 'Google sign-in couldn’t load. Disable blockers and retry.',
+    refineTitle: 'Fine-tune',
+    refinePh: 'e.g. Make the summary shorter · Emphasise leadership · Drop the oldest role',
+    apply: 'Apply',
+    applying: 'Applying…',
+    tweaksLeft: (n: number) => `${n} tweak${n === 1 ? '' : 's'} left`,
+    noTweaks: 'No tweaks left for this CV — upload again to start fresh.',
+    limitNote: '2 CVs per 24 hours · 3 tweaks each.',
   },
   ar: {
     intro: 'أعِد بناء سيرتك لمسح المجنِّد الذي يستغرق ١٠ ثوانٍ — إشارة فقط بلا ضجيج. ارفع سيرتك الحالية ونعيد كتابتها في قالب نظيف متوافق مع أنظمة التتبّع.',
@@ -52,6 +59,13 @@ const STR = {
     again: 'إعادة الإنشاء',
     newFile: 'ابدأ من جديد',
     signinErr: 'تعذّر تحميل تسجيل دخول جوجل. عطّل المانعات وأعد المحاولة.',
+    refineTitle: 'ضبط دقيق',
+    refinePh: 'مثال: اجعل الملخّص أقصر · أبرِز القيادة · احذف أقدم وظيفة',
+    apply: 'تطبيق',
+    applying: 'جارٍ التطبيق…',
+    tweaksLeft: (n: number) => `${n === 1 ? 'تعديل واحد متبقٍّ' : `${n} تعديلات متبقّية`}`,
+    noTweaks: 'لا تعديلات متبقّية لهذه السيرة — ارفع من جديد للبدء من الصفر.',
+    limitNote: 'سيرتان كل ٢٤ ساعة · ٣ تعديلات لكلٍّ.',
   },
 }
 
@@ -67,6 +81,9 @@ export default function CvGeneratorTool() {
   const [text, setText] = useState('')
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
+  const [refinesLeft, setRefinesLeft] = useState(0)
+  const [instruction, setInstruction] = useState('')
+  const [refining, setRefining] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -119,12 +136,30 @@ export default function CvGeneratorTool() {
     setStatus('generating')
     setErr('')
     try {
-      const result = await generateCv(idToken, text)
+      const { cv: result, refinesLeft: left } = await generateCv(idToken, text)
       setCv(result)
+      setRefinesLeft(left)
+      setInstruction('')
       setStatus('done')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
       setStatus('ready')
+    }
+  }
+
+  async function refine() {
+    if (!idToken || !cv || !instruction.trim() || refinesLeft <= 0 || refining) return
+    setRefining(true)
+    setErr('')
+    try {
+      const { cv: result, refinesLeft: left } = await refineCv(idToken, cv, instruction.trim())
+      setCv(result)
+      setRefinesLeft(left)
+      setInstruction('')
+    } catch (e) {
+      setErr((e as Error).message || s.genErr)
+    } finally {
+      setRefining(false)
     }
   }
 
@@ -169,7 +204,7 @@ export default function CvGeneratorTool() {
 
           <Panel>
             <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.upload}</span>
-            <p className="text-[0.82rem] text-ink-faint">{s.uploadHint}</p>
+            <p className="text-[0.82rem] text-ink-faint">{s.uploadHint} {s.limitNote}</p>
             <div className="flex flex-wrap items-center gap-3">
               <label className="inline-flex">
                 <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
@@ -200,6 +235,32 @@ export default function CvGeneratorTool() {
                   <Button onClick={exportWord} data-testid="cv-word"><DownloadIcon /> {s.word}</Button>
                 </div>
               </div>
+
+              {/* Fine-tune loop — up to 3 instruction tweaks, preview updates live */}
+              <div className="flex flex-col gap-2 border-t border-[color:var(--line-soft)] pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[0.82rem] font-semibold text-ink-soft">{s.refineTitle}</span>
+                  {refinesLeft > 0 && <span className="text-[0.78rem] text-ink-faint">{s.tweaksLeft(refinesLeft)}</span>}
+                </div>
+                {refinesLeft > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      className="grow min-w-0"
+                      value={instruction}
+                      placeholder={s.refinePh}
+                      data-testid="cv-instruction"
+                      onChange={(e) => setInstruction(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') refine() }}
+                    />
+                    <Button variant="primary" onClick={refine} disabled={refining || !instruction.trim()} data-testid="cv-refine">
+                      {refining ? s.applying : s.apply}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-[0.82rem] text-ink-faint">{s.noTweaks}</p>
+                )}
+              </div>
+
               <iframe
                 title={s.result}
                 className="w-full h-[75vh] rounded-md border border-[color:var(--line-soft)] bg-white"
