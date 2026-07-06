@@ -122,7 +122,7 @@ function heading(title: string): string {
 }
 
 function dates(a?: string, b?: string): string {
-  if (a && b) return `${a} – ${b}`
+  if (a && b && a !== b) return `${a} – ${b}`
   return a || b || ''
 }
 
@@ -173,7 +173,7 @@ function buildBody(cv: Cv): string {
   if (cv.projects.length) {
     P.push(heading('Projects'))
     for (const pr of cv.projects) {
-      P.push(para(run(pr.name, { b: true, color: INK, sz: 21 }) + run(' — ', { color: INK_SOFT, sz: 21 }) + rich(pr.description, { color: INK_SOFT, sz: 21 }), { after: 20 }))
+      P.push(para(run(pr.name, { color: ACCENT, sz: 21 }) + run(' — ', { color: INK_SOFT, sz: 21 }) + rich(pr.description, { color: INK_SOFT, sz: 21 }), { after: 20 }))
     }
   }
 
