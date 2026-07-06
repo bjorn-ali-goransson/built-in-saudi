@@ -337,18 +337,22 @@ export default function CvGeneratorTool() {
       <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-2">
         <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
-        <p className="text-[0.8rem] opacity-80 flex items-center gap-3 mt-0.5">
-          <span>{s.dataNote}</span>
-          <Link to={localePath(locale, '/privacy')} className="underline" style={{ color: 'var(--sand-100)' }} data-testid="cv-privacy-link">{s.privacyLink}</Link>
-          <span aria-hidden="true">·</span>
-          <Link to={localePath(locale, '/terms')} className="underline" style={{ color: 'var(--sand-100)' }} data-testid="cv-terms-link">{s.termsLink}</Link>
-        </p>
       </div>
     </div>
   )
 
+  // Discreet data-usage line, docked just above the site footer.
+  const dataLinks = (
+    <p className="text-[0.72rem] text-ink-faint opacity-80 flex items-center gap-2 mt-auto pt-6">
+      <span>{s.dataNote}</span>
+      <Link to={localePath(locale, '/privacy')} className="underline" style={{ color: 'var(--ink-faint)' }} data-testid="cv-privacy-link">{s.privacyLink}</Link>
+      <span aria-hidden="true">·</span>
+      <Link to={localePath(locale, '/terms')} className="underline" style={{ color: 'var(--ink-faint)' }} data-testid="cv-terms-link">{s.termsLink}</Link>
+    </p>
+  )
+
   return (
-    <Stack data-testid="cv-generator">
+    <Stack data-testid="cv-generator" className="min-h-[70vh]">
       {status !== 'done' && (
         <>
           {hero}
@@ -452,6 +456,8 @@ export default function CvGeneratorTool() {
           {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
         </>
       )}
+
+      {dataLinks}
     </Stack>
   )
 }
