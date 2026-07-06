@@ -88,7 +88,7 @@ Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions"
 
 const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}`
 
-const REFINE_SYSTEM = `You are an elite technical résumé editor in a short back-and-forth with the candidate. You are given the current CV as JSON plus their message — which is EITHER an answer to one of your earlier questions OR an instruction to change something. Incorporate it: if it answers a gap, weave the new information in and drop that question; if it's an instruction, apply it. Preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing issues silently, and re-evaluate remaining questions.\n\n${RULES}`
+const REFINE_SYSTEM = `You are an elite technical résumé editor in a short back-and-forth with the candidate. You are given the current CV as JSON plus their message — which is EITHER an answer to one of your earlier questions OR an instruction to change something. Incorporate it: if it answers a gap, weave the new information in and drop that question; if it's an instruction, apply it. Preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing issues silently, and re-evaluate remaining questions.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Return { "cv": { …the CV object… }, "questions": [ up to 5 strings ], "summary": "…" }.`
 
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
@@ -151,7 +151,8 @@ async function callOpenAI(system, user) {
     const questions = Array.isArray(parsed && parsed.questions)
       ? parsed.questions.map((q) => String(q).trim()).filter(Boolean).slice(0, QUESTION_CAP)
       : []
-    return { cv: normalize(cvObj), questions }
+    const summary = typeof (parsed && parsed.summary) === 'string' ? parsed.summary.trim() : ''
+    return { cv: normalize(cvObj), questions, summary }
   } catch {
     const e = new Error('AI returned malformed JSON')
     e.code = 502
@@ -219,14 +220,14 @@ http('cvRefine', async (req, res) => {
     const lead = isAnswer
       ? 'The candidate is ANSWERING one or more of your questions'
       : 'The candidate asks you to change something (a polish request)'
-    const { cv, questions } = await callOpenAI(
+    const { cv, questions, summary } = await callOpenAI(
       REFINE_SYSTEM,
       `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
     )
     if (isAnswer) answerCount += 1
     else polishCount += 1
     await ref.update({ answerCount, polishCount, updatedAt: new Date() })
-    res.json({ ok: true, cv, questions, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount })
+    res.json({ ok: true, cv, questions, summary, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount })
   } catch (e) {
     fail(res, e)
   }

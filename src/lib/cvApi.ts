@@ -52,14 +52,16 @@ export function decodeJwt(token: string): { email?: string; name?: string; pictu
 export interface CvResult {
   cv: Cv
   questions: string[]
+  summary: string
   answersLeft: number
   polishLeft: number
 }
 
-function parseResult(data: { cv?: Cv; questions?: unknown; answersLeft?: unknown; polishLeft?: unknown }): CvResult {
+function parseResult(data: { cv?: Cv; questions?: unknown; summary?: unknown; answersLeft?: unknown; polishLeft?: unknown }): CvResult {
   return {
     cv: data.cv as Cv,
     questions: Array.isArray(data.questions) ? data.questions.map(String) : [],
+    summary: typeof data.summary === 'string' ? data.summary : '',
     answersLeft: Number(data.answersLeft ?? 0),
     polishLeft: Number(data.polishLeft ?? 0),
   }
