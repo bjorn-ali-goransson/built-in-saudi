@@ -159,9 +159,20 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
     // preview shows the real, uniform proportions of the printed result.
     // CSS zoom (not transform) so it scales the layout box too — then margin:auto
     // centres it and there's no stray whitespace beside the page.
-    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}`
+    // The .resume is contenteditable so edits flow straight into the exported PDF.
+    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}[contenteditable]{outline:none}`
+    const editable = inner.replace('<main class="resume">', '<main class="resume" contenteditable="true" spellcheck="false">')
     const scr = `<script>(function(){function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;el.style.zoom=Math.min(1,document.documentElement.clientWidth/p)}window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400)})();<\/script>`
-    return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${inner}</div>${scr}</body></html>`
+    return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${editable}</div>${scr}</body></html>`
   }
   return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${inner}</body></html>`
+}
+
+/** Wrap an already-rendered .resume element's HTML into a print/PDF document
+ *  (A4, no preview scaling) — used to export exactly what the user edited. */
+export function renderPrintDoc(resumeHtml: string, name = 'CV'): string {
+  const head = `<meta charset="utf-8"><title>${esc(name)}</title>`
+    + `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`
+    + `<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`
+  return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${resumeHtml}</body></html>`
 }

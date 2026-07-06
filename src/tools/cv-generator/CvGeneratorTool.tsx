@@ -4,7 +4,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack } from '../../components/ui'
 import { DownloadIcon, MicIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
-import { renderCvHtml } from './template'
+import { renderCvHtml, renderPrintDoc } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
 
@@ -187,6 +187,7 @@ export default function CvGeneratorTool() {
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   // Guards the auto-generate effect so a failed generation never re-triggers it
   // (which would hammer the API). Reset only when a new file is uploaded.
   const autoTried = useRef(false)
@@ -334,7 +335,13 @@ export default function CvGeneratorTool() {
     if (!cv) return
     const w = window.open('', '_blank')
     if (!w) return
-    w.document.write(renderCvHtml(cv))
+    // Export exactly what the user sees/edited: pull the live (edited) .resume
+    // out of the preview iframe; fall back to a fresh render if unavailable.
+    const edited = iframeRef.current?.contentDocument?.querySelector('.resume') as HTMLElement | null
+    const html = edited
+      ? renderPrintDoc(edited.outerHTML.replace(/ contenteditable="[^"]*"/g, '').replace(/ spellcheck="[^"]*"/g, ''), cvFilename(cv))
+      : renderCvHtml(cv)
+    w.document.write(html)
     w.document.title = cvFilename(cv)
     w.document.close()
     setTimeout(() => { w.focus(); w.print() }, 500)
@@ -411,6 +418,7 @@ export default function CvGeneratorTool() {
           {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit */}
           <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)]">
             <iframe
+              ref={iframeRef}
               title={cvFilename(cv)}
               className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
               srcDoc={renderCvHtml(cv, { preview: true })}
