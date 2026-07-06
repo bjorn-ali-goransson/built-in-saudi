@@ -44,6 +44,7 @@ const STR = {
   en: {
     intro: 'Set when you’re free, share one link, let people self-book. Your schedule is saved on this device.',
     availability: 'Your weekly availability',
+    tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
     meeting: 'Meeting settings',
     length: 'Length',
     min: 'min',
@@ -79,6 +80,7 @@ const STR = {
   ar: {
     intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم. جدولك محفوظ على هذا الجهاز.',
     availability: 'أوقات فراغك الأسبوعية',
+    tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
     meeting: 'إعدادات الاجتماع',
     length: 'المدة',
     min: 'دقيقة',
@@ -114,6 +116,17 @@ const STR = {
 }
 
 const LENGTHS = [15, 30, 45, 60]
+
+/** "Asia/Riyadh (GMT+3)" — the IANA zone plus its current offset. */
+function tzLabel(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date())
+    const off = parts.find((p) => p.type === 'timeZoneName')?.value
+    return off ? `${tz} (${off})` : tz
+  } catch {
+    return tz
+  }
+}
 
 export default function BookWithMeTool() {
   const { locale } = useLocale()
@@ -224,7 +237,10 @@ export default function BookWithMeTool() {
 
       {/* Availability painter — the centerpiece */}
       <Panel>
-        <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.availability}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.availability}</span>
+          <span className="text-[0.8rem] text-ink-faint" data-testid="tz-note">{s.tzNote(tzLabel(cfg.tz))}</span>
+        </div>
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
       </Panel>
 
