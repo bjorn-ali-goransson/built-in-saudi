@@ -33,6 +33,7 @@ import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
 import { metadataTool } from './metadata/meta'
 import { bookWithMeTool } from './book-with-me/meta'
+import { cvGeneratorTool } from './cv-generator/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -42,6 +43,7 @@ import { bookWithMeTool } from './book-with-me/meta'
  */
 export const tools: Tool[] = [
   bookWithMeTool,
+  cvGeneratorTool,
   qrCodeTool,
   imageCompressorTool,
   imageFormatConverterTool,

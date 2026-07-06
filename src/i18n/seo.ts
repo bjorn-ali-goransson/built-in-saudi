@@ -44,6 +44,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
   },
   {
+    id: 'cv-generator',
+    en: { name: 'CV Generator', description: 'Upload your CV and get it rewritten into a clean, ATS-ready résumé — signal only, no noise. Photos, colours, GPAs and references stripped; skills and a punchy summary synthesised from your whole history. Export PDF or Word.' },
+    ar: { name: 'منشئ السيرة الذاتية', description: 'ارفع سيرتك واحصل عليها معادةَ الكتابة في قالب نظيف متوافق مع أنظمة التتبّع — إشارة بلا ضجيج. تُزال الصور والألوان والمعدّلات والمراجع؛ وتُستخلص المهارات وملخّص موجز. صدّر PDF أو Word.' },
+  },
+  {
     id: 'color-tools',
     en: { name: 'Color Picker & Palettes', description: 'Pick a colour and read it as HEX/RGB/HSL, then generate complementary, analogous and triadic palettes plus a shades ramp — copy any swatch. In your browser.' },
     ar: { name: 'منتقي الألوان واللوحات', description: 'اختر لونًا واقرأه بصيغ HEX/RGB/HSL، ثم ولّد لوحات مكمّلة ومتجانسة وثلاثية وتدرّجات — وانسخ أي لون. داخل متصفحك.' },
