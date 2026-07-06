@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { Button, Input, Textarea, Field, Stack, Panel, Pill } from '../components/ui'
 import { getAvailability, book, type HostMeta } from '../lib/bookingApi'
+import { loadConfig, previewSlots } from '../tools/book-with-me/lib'
 
 const STR = {
   en: {
@@ -26,6 +27,8 @@ const STR = {
     bookedBody: 'A confirmation with a calendar invite is on its way to your email.',
     gone: 'That slot was just taken. Please pick another.',
     at: 'at',
+    previewBanner: 'Preview — this is exactly what visitors see. Bookings are disabled here.',
+    previewDisabled: 'Disabled in preview',
   },
   ar: {
     loading: 'جارٍ تحميل الأوقات…',
@@ -47,6 +50,8 @@ const STR = {
     bookedBody: 'رسالة تأكيد مع دعوة تقويم في طريقها إلى بريدك.',
     gone: 'حُجز هذا الوقت للتو. اختر وقتًا آخر.',
     at: 'الساعة',
+    previewBanner: 'معاينة — هذا تمامًا ما يراه الزوار. الحجز معطّل هنا.',
+    previewDisabled: 'معطّل في المعاينة',
   },
 }
 
@@ -54,6 +59,8 @@ type Status = 'loading' | 'ready' | 'not-found' | 'error'
 
 export function BookingPage() {
   const { code } = useParams()
+  const [searchParams] = useSearchParams()
+  const preview = searchParams.get('preview') === '1'
   const { locale } = useLocale()
   const s = STR[locale]
   useDocumentMeta(locale, `/book/${code}`)
@@ -73,6 +80,15 @@ export function BookingPage() {
 
   useEffect(() => {
     let cancelled = false
+    // Preview: render straight from the host's own saved config (same browser),
+    // no backend call — works before publishing/connecting Google.
+    if (preview) {
+      const cfg = loadConfig()
+      setHost({ name: null, tz: cfg.tz, minutes: cfg.meeting.minutes, title: cfg.meeting.title, location: cfg.meeting.location })
+      setSlots(previewSlots(cfg))
+      setStatus('ready')
+      return
+    }
     if (!code) return
     setStatus('loading')
     getAvailability(code)
@@ -89,7 +105,7 @@ export function BookingPage() {
     return () => {
       cancelled = true
     }
-  }, [code])
+  }, [code, preview])
 
   const dayFmt = useMemo(
     () => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
@@ -143,6 +159,11 @@ export function BookingPage() {
 
       {status === 'ready' && host && (
         <Stack>
+          {preview && (
+            <div className="border-s-2 border-gold-400 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] px-3 py-2 text-[0.85rem] text-ink-soft" role="status" data-testid="preview-banner">
+              {s.previewBanner}
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <h1 className="font-display text-[clamp(1.5rem,4vw,2rem)] text-ink">{heading}</h1>
             <div className="flex flex-wrap items-center gap-2 text-[0.9rem] text-ink-soft">
@@ -210,10 +231,10 @@ export function BookingPage() {
               <Button
                 variant="primary"
                 data-testid="confirm-booking"
-                disabled={submitting || !name.trim() || !email.trim()}
+                disabled={preview || submitting || !name.trim() || !email.trim()}
                 onClick={submit}
               >
-                {submitting ? s.booking : s.confirm}
+                {preview ? s.previewDisabled : submitting ? s.booking : s.confirm}
               </Button>
             </Panel>
           )}

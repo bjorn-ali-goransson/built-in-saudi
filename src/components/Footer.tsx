@@ -16,6 +16,8 @@ export function Footer() {
         </div>
         <nav className="flex gap-[1.3rem] items-start [&_a]:no-underline [&_a]:font-semibold [&_a]:text-ink-soft [&_a]:text-[0.92rem] [&_a:hover]:text-green-600" aria-label="Footer">
           <Link to={localePath(locale)} data-testid="footer-all-tools">{t.footer.allTools}</Link>
+          <Link to={localePath(locale, '/privacy')} data-testid="footer-privacy">{t.footer.privacy}</Link>
+          <Link to={localePath(locale, '/terms')} data-testid="footer-terms">{t.footer.terms}</Link>
           <a href="https://github.com/bjorn-ali-goransson/built-in-saudi" target="_blank" rel="noreferrer noopener" data-testid="footer-github">
             {t.footer.github}
           </a>

@@ -4,6 +4,8 @@ import { RootRedirect } from './components/RootRedirect'
 import { HomePage } from './pages/HomePage'
 import { ToolPage } from './pages/ToolPage'
 import { BookingPage } from './pages/BookingPage'
+import { PrivacyPage } from './pages/PrivacyPage'
+import { TermsPage } from './pages/TermsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ErrorPage } from './components/ErrorPage'
 
@@ -21,6 +23,8 @@ export const router = createBrowserRouter([
       // /book/<code> hits Layout with an invalid :lang and redirects to the
       // visitor's locale (/en|/ar), so booking links aren't language-locked.
       { path: 'book/:code', element: <BookingPage />, errorElement: <ErrorPage /> },
+      { path: 'privacy', element: <PrivacyPage />, errorElement: <ErrorPage /> },
+      { path: 'terms', element: <TermsPage />, errorElement: <ErrorPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

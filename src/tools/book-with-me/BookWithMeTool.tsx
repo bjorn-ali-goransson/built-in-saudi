@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { CopyIcon } from '../../components/icons'
-import { Button, Input, Field, Stack, Seg, SegButton, Panel, Check } from '../../components/ui'
+import { CopyIcon, BellIcon } from '../../components/icons'
+import { Button, Input, Field, Stack, Seg, SegButton, Panel, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
+import { subscribeDevice } from '../../lib/push'
 import {
   loadConfig,
   saveConfig,
@@ -42,76 +43,88 @@ function readSession(): Session | null {
 
 const STR = {
   en: {
-    intro: 'Set when you’re free, share one link, let people self-book. Your schedule is saved on this device.',
+    intro: 'Set when you’re free, share one link, let people self-book.',
     availability: 'Your weekly availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
     meeting: 'Meeting settings',
     length: 'Length',
+    lengthHint: 'Each available hour is divided into sessions of this length (e.g. 30 min → two per hour; 45 min → one, with a gap).',
     min: 'min',
     gap: 'Gap between meetings',
     notice: 'Minimum notice',
     hours: 'hours',
     horizon: 'Bookable up to',
     days: 'days ahead',
-    title: 'Meeting title',
-    titlePh: 'Intro call',
-    location: 'Location / link',
-    locationPh: 'Google Meet, phone, address…',
-    share: 'Your booking link',
-    shareNote: 'Goes live once publishing is enabled. Anyone with the link can pick an open slot — no account needed.',
+    title: 'Meeting name',
+    titlePh: 'e.g. Intro call, Consultation',
+    titleHelp: 'What people are booking — shown on your booking page and used as the calendar event title.',
+    location: 'Where it happens',
+    locationPh: 'e.g. Google Meet link, phone number, address',
+    locationHelp: 'Optional. Added to the calendar invite so the booker knows where to go. Leave blank to sort out later.',
+    shareTitle: 'Share your booking page',
+    private: 'Private',
+    published: 'Published',
+    publishCta: 'Publish',
+    publishNote: 'Publish to activate your link — you’ll sign in with Google so we can check your calendar for conflicts and add booked meetings automatically.',
+    connectedAs: (who: string) => `Connected as ${who}`,
     copy: 'Copy link',
     copied: 'Copied!',
-    notify: 'Notify me when someone books',
-    push: 'Push to this device',
-    telegram: 'Telegram DM',
-    email: 'Email',
-    linkTg: 'Link my Telegram',
-    notifyNote: 'Push and Telegram activate after the backend deploy; email confirmations are on by default.',
-    soon: 'Availability & settings save on this device until you publish.',
-    publish: 'Publish & connect Google Calendar',
-    publishNote: 'Connect once to sign in, check your real calendar for conflicts, and auto-add booked meetings. Your link goes live immediately.',
-    connectedAs: (who: string) => `Connected as ${who}`,
-    published: 'Published',
+    previewLink: 'Preview',
     save: 'Save changes',
     saving: 'Saving…',
     saved: 'Saved ✓',
     saveErr: 'Couldn’t save — try again.',
+    alertsTitle: 'Booking alerts',
+    alertsNote: 'Get pinged the moment someone books. Your booker always receives an email confirmation.',
+    push: 'Push to this device',
+    telegram: 'Telegram DM',
+    email: 'Email me too',
+    linkTg: 'Link my Telegram',
+    pushDenied: 'Notifications are blocked in your browser settings.',
+    done: 'Done',
+    soon: 'Your schedule saves on this device until you publish.',
   },
   ar: {
-    intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم. جدولك محفوظ على هذا الجهاز.',
+    intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم.',
     availability: 'أوقات فراغك الأسبوعية',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
     meeting: 'إعدادات الاجتماع',
     length: 'المدة',
+    lengthHint: 'تُقسَّم كل ساعة متاحة إلى جلسات بهذه المدة (مثلاً ٣٠ دقيقة ← جلستان في الساعة؛ ٤٥ دقيقة ← جلسة واحدة مع فاصل).',
     min: 'دقيقة',
     gap: 'فاصل بين الاجتماعات',
     notice: 'أقل مهلة للحجز',
     hours: 'ساعات',
     horizon: 'الحجز حتى',
     days: 'يومًا مقدمًا',
-    title: 'عنوان الاجتماع',
-    titlePh: 'مكالمة تعارف',
-    location: 'المكان / الرابط',
-    locationPh: 'Google Meet، هاتف، عنوان…',
-    share: 'رابط الحجز الخاص بك',
-    shareNote: 'يعمل بعد تفعيل النشر. أي شخص لديه الرابط يختار وقتًا متاحًا — دون حساب.',
+    title: 'اسم الاجتماع',
+    titlePh: 'مثال: مكالمة تعارف، استشارة',
+    titleHelp: 'ما الذي يحجزه الناس — يظهر في صفحة الحجز ويُستخدم عنوانًا لحدث التقويم.',
+    location: 'أين سيُعقد',
+    locationPh: 'مثال: رابط Google Meet، رقم هاتف، عنوان',
+    locationHelp: 'اختياري. يُضاف إلى دعوة التقويم ليعرف الحاجز أين يذهب. اتركه فارغًا لتحديده لاحقًا.',
+    shareTitle: 'شارك صفحة الحجز',
+    private: 'خاص',
+    published: 'منشور',
+    publishCta: 'انشر',
+    publishNote: 'انشر لتفعيل رابطك — ستسجّل الدخول بجوجل لنتحقق من تعارضات تقويمك ونضيف الاجتماعات المحجوزة تلقائيًا.',
+    connectedAs: (who: string) => `متصل باسم ${who}`,
     copy: 'نسخ الرابط',
     copied: 'تم النسخ!',
-    notify: 'نبّهني عند الحجز',
-    push: 'إشعار لهذا الجهاز',
-    telegram: 'رسالة تيليجرام',
-    email: 'بريد إلكتروني',
-    linkTg: 'اربط تيليجرام',
-    notifyNote: 'الإشعارات وتيليجرام تُفعَّل بعد نشر الخادم؛ تأكيدات البريد مفعّلة افتراضيًا.',
-    soon: 'تُحفظ الأوقات والإعدادات على هذا الجهاز حتى تنشرها.',
-    publish: 'انشر واربط تقويم جوجل',
-    publishNote: 'اربط مرة واحدة لتسجيل الدخول، والتحقق من تعارضات تقويمك الحقيقي، وإضافة الاجتماعات المحجوزة تلقائيًا. يعمل رابطك فورًا.',
-    connectedAs: (who: string) => `متصل باسم ${who}`,
-    published: 'منشور',
+    previewLink: 'معاينة',
     save: 'حفظ التغييرات',
     saving: 'جارٍ الحفظ…',
     saved: 'تم الحفظ ✓',
     saveErr: 'تعذّر الحفظ — حاول مرة أخرى.',
+    alertsTitle: 'تنبيهات الحجز',
+    alertsNote: 'تصلك تنبيهات لحظة الحجز. ويستلم الحاجز دائمًا تأكيدًا بالبريد.',
+    push: 'إشعار لهذا الجهاز',
+    telegram: 'رسالة تيليجرام',
+    email: 'أرسل لي بريدًا أيضًا',
+    linkTg: 'اربط تيليجرام',
+    pushDenied: 'الإشعارات محظورة في إعدادات متصفحك.',
+    done: 'تم',
+    soon: 'يُحفظ جدولك على هذا الجهاز حتى تنشره.',
   },
 }
 
@@ -136,6 +149,8 @@ export default function BookWithMeTool() {
   const [copied, setCopied] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [alertsOpen, setAlertsOpen] = useState(false)
+  const [pushDenied, setPushDenied] = useState(false)
 
   // On return from the Google OAuth callback the dashboard URL carries
   // #hsid=<session>&code=<hostCode>. Capture it, then clear the hash.
@@ -186,12 +201,39 @@ export default function BookWithMeTool() {
         meeting: cfg.meeting,
         availability: cfg.availability,
         notify: cfg.notify,
+        pushSub: cfg.pushSub,
       })
       setSaveState('saved')
       setTimeout(() => setSaveState('idle'), 2000)
     } catch {
       setSaveState('error')
     }
+  }
+
+  async function togglePush(on: boolean) {
+    if (!on) {
+      setCfg((c) => ({ ...c, notify: { ...c.notify, push: false } }))
+      return
+    }
+    const sub = await subscribeDevice()
+    if (!sub) {
+      setPushDenied(true)
+      return
+    }
+    setPushDenied(false)
+    const pushSub = sub.toJSON()
+    setCfg((c) => ({ ...c, notify: { ...c.notify, push: true }, pushSub }))
+    if (session) {
+      saveSchedule({ hsid: session.hsid, code: cfg.code, notify: { ...cfg.notify, push: true }, pushSub }).catch(() => {})
+    }
+  }
+
+  function setChannel(key: 'telegram' | 'email', on: boolean) {
+    setCfg((c) => ({ ...c, notify: { ...c.notify, [key]: on } }))
+  }
+
+  function openPreview() {
+    window.open(`/${locale}/book/${cfg.code}?preview=1`, '_blank', 'noopener')
   }
 
   async function copyLink() {
@@ -208,34 +250,7 @@ export default function BookWithMeTool() {
     <Stack data-testid="book-with-me">
       <p className="text-[0.95rem] text-ink-soft">{s.intro}</p>
 
-      {/* Publish / connect Google */}
-      <Panel>
-        {session ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <span className="inline-flex items-center gap-2 text-[0.9rem] font-semibold text-green-700">
-                <span className="size-2 rounded-full bg-green-600" /> {s.published}
-              </span>
-              <span className="text-[0.82rem] text-ink-faint">{s.connectedAs(session.email || session.name || '')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
-              <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule">
-                {saveState === 'saving' ? s.saving : saveState === 'saved' ? s.saved : s.save}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Button variant="primary" className="self-start" onClick={publish} data-testid="connect-google">
-              {s.publish}
-            </Button>
-            <p className="text-[0.82rem] text-ink-faint">{s.publishNote}</p>
-          </div>
-        )}
-      </Panel>
-
-      {/* Availability painter — the centerpiece */}
+      {/* 1 · Availability painter — the centerpiece */}
       <Panel>
         <div className="flex flex-col gap-1">
           <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.availability}</span>
@@ -244,7 +259,7 @@ export default function BookWithMeTool() {
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
       </Panel>
 
-      {/* Meeting settings */}
+      {/* 2 · Meeting settings */}
       <Panel>
         <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.meeting}</span>
 
@@ -274,6 +289,7 @@ export default function BookWithMeTool() {
               onChange={(e) => setMeeting('minutes', Math.max(5, Number(e.target.value) || 5))}
             />
           </div>
+          <span className="text-[0.78rem] text-ink-faint">{s.lengthHint}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -294,65 +310,106 @@ export default function BookWithMeTool() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label={s.title}>
+            <span className="text-[0.78rem] text-ink-faint">{s.titleHelp}</span>
             <Input value={cfg.meeting.title} placeholder={s.titlePh}
               onChange={(e) => setMeeting('title', e.target.value)} />
           </Field>
           <Field label={s.location}>
+            <span className="text-[0.78rem] text-ink-faint">{s.locationHelp}</span>
             <Input value={cfg.meeting.location} placeholder={s.locationPh}
               onChange={(e) => setMeeting('location', e.target.value)} />
           </Field>
         </div>
       </Panel>
 
-      {/* Share link */}
+      {/* 3 · Publish & share — after the schedule, Google-Docs style */}
       <Panel>
-        <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.share}</span>
-        <div className="flex flex-wrap gap-2">
-          <Input className="font-mono grow min-w-0 text-[0.85rem]" readOnly value={link}
-            data-testid="booking-link" onFocus={(e) => e.currentTarget.select()} />
-          <Button variant="primary" onClick={copyLink} data-testid="copy-link">
-            <CopyIcon /> {copied ? s.copied : s.copy}
-          </Button>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.shareTitle}</span>
+          <span
+            data-testid="publish-status"
+            className={`inline-flex items-center gap-1.5 text-[0.78rem] font-semibold px-2.5 py-1 rounded-full ${
+              session
+                ? 'bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)] text-green-700'
+                : 'bg-[color-mix(in_srgb,var(--sand-100)_60%,transparent)] text-ink-faint'
+            }`}
+          >
+            {session && <span className="size-1.5 rounded-full bg-green-600" />}
+            {session ? s.published : s.private}
+          </span>
         </div>
-        <p className="text-[0.82rem] text-ink-faint">{s.shareNote}</p>
+
+        {session ? (
+          <>
+            <span className="text-[0.82rem] text-ink-faint">{s.connectedAs(session.email || session.name || '')}</span>
+            <div className="flex flex-wrap gap-2">
+              <Input className="font-mono grow min-w-0 text-[0.85rem]" readOnly value={link}
+                data-testid="booking-link" onFocus={(e) => e.currentTarget.select()} />
+              <Button variant="primary" onClick={copyLink} data-testid="copy-link">
+                <CopyIcon /> {copied ? s.copied : s.copy}
+              </Button>
+              <Button onClick={openPreview} data-testid="preview-link">{s.previewLink}</Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
+              <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule">
+                {saveState === 'saving' ? s.saving : saveState === 'saved' ? s.saved : s.save}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[0.82rem] text-ink-faint">{s.publishNote}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" onClick={publish} data-testid="connect-google">{s.publishCta}</Button>
+              <Button onClick={openPreview} data-testid="preview-link">{s.previewLink}</Button>
+            </div>
+          </>
+        )}
       </Panel>
 
-      {/* Notifications */}
-      <Panel>
-        <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.notify}</span>
-        <div className="flex flex-col gap-2">
-          <Check>
-            <input type="checkbox" checked={cfg.notify.push}
-              onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, push: e.target.checked } }))} />
-            {s.push}
-          </Check>
-          <div className="flex flex-wrap items-center gap-3">
-            <Check>
-              <input type="checkbox" checked={cfg.notify.telegram}
-                onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, telegram: e.target.checked } }))} />
-              {s.telegram}
-            </Check>
-            {cfg.notify.telegram && (
-              <Button
-                href={`https://t.me/${TELEGRAM_BOT}?start=${cfg.code}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-telegram"
-              >
-                {s.linkTg}
-              </Button>
-            )}
-          </div>
-          <Check>
-            <input type="checkbox" checked={cfg.notify.email}
-              onChange={(e) => setCfg((c) => ({ ...c, notify: { ...c.notify, email: e.target.checked } }))} />
-            {s.email}
-          </Check>
-        </div>
-        <p className="text-[0.82rem] text-ink-faint">{s.notifyNote}</p>
-      </Panel>
+      {/* 4 · Booking alerts — a pill that opens a settings sheet */}
+      <div className="flex items-center gap-2">
+        <Pill data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}>
+          <BellIcon /> {s.alertsTitle}
+        </Pill>
+      </div>
 
       <p className="text-[0.82rem] text-ink-faint">{s.soon}</p>
+
+      {alertsOpen && (
+        <Sheet data-testid="alerts-sheet" onClose={() => setAlertsOpen(false)}>
+          <SheetTitle>{s.alertsTitle}</SheetTitle>
+          <Stack className="!gap-3">
+            <div className="flex flex-col gap-1">
+              <Check>
+                <input type="checkbox" checked={cfg.notify.push} onChange={(e) => togglePush(e.target.checked)} />
+                {s.push}
+              </Check>
+              {pushDenied && <span className="text-[0.8rem] text-gold-500 ms-7">{s.pushDenied}</span>}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Check>
+                <input type="checkbox" checked={cfg.notify.telegram} onChange={(e) => setChannel('telegram', e.target.checked)} />
+                {s.telegram}
+              </Check>
+              {cfg.notify.telegram && (
+                <Button href={`https://t.me/${TELEGRAM_BOT}?start=${cfg.code}`} target="_blank" rel="noopener noreferrer" data-testid="link-telegram">
+                  {s.linkTg}
+                </Button>
+              )}
+            </div>
+            <Check>
+              <input type="checkbox" checked={cfg.notify.email} onChange={(e) => setChannel('email', e.target.checked)} />
+              {s.email}
+            </Check>
+            <p className="text-[0.8rem] text-ink-faint">{s.alertsNote}</p>
+          </Stack>
+          <SheetActions>
+            <Button variant="primary" onClick={() => setAlertsOpen(false)}>{s.done}</Button>
+          </SheetActions>
+        </Sheet>
+      )}
     </Stack>
   )
 }

@@ -130,7 +130,7 @@ export function AvailabilityGrid({
                     data-testid={`cell-${day}-${row}`}
                     aria-label={`${days[day]} ${minutesToHHMM(rowToMinutes(row))}`}
                     className={[
-                      'h-4 cursor-crosshair border-[color:var(--line-soft)]',
+                      'h-7 cursor-crosshair border-[color:var(--line-soft)]',
                       day === 0 ? 'border-s' : '',
                       'border-e border-b',
                       isHour ? 'border-t border-t-[color:var(--line)]' : '',
