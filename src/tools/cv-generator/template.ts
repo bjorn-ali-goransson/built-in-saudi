@@ -33,7 +33,7 @@ const CSS = `
   .headline{margin:6px 0 0;font-size:12.5px;font-weight:600;line-height:1.4;color:var(--ink);}
   .headline .role{color:var(--accent);}
   .headline .sep{color:var(--line);margin:0 8px;font-weight:400;}
-  .section{margin-top:9px;}
+  .section{margin-top:16px;}
   .sec-head{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-size:10.5px;font-weight:700;
     text-transform:uppercase;letter-spacing:0.15em;color:var(--accent);}
   .sec-head::after{content:"";flex:1;height:1px;background:var(--line);}

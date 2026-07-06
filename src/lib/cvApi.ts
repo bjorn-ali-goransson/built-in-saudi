@@ -49,7 +49,12 @@ export function decodeJwt(token: string): { email?: string; name?: string; pictu
   }
 }
 
-export async function generateCv(idToken: string, text: string): Promise<Cv> {
+export interface CvResult {
+  cv: Cv
+  refinesLeft: number
+}
+
+export async function generateCv(idToken: string, text: string): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -57,5 +62,17 @@ export async function generateCv(idToken: string, text: string): Promise<Cv> {
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return data.cv as Cv
+  return { cv: data.cv as Cv, refinesLeft: Number(data.refinesLeft ?? 0) }
+}
+
+/** Apply one instruction-driven tweak to an already-generated CV. */
+export async function refineCv(idToken: string, cv: Cv, instruction: string): Promise<CvResult> {
+  const r = await fetch(`${FN}/cv-refine`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, cv, instruction }),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+  return { cv: data.cv as Cv, refinesLeft: Number(data.refinesLeft ?? 0) }
 }

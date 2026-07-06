@@ -63,3 +63,4 @@ jobs:
           gcloud functions deploy telegram-webhook        "${common[@]}" --entry-point=telegramWebhook
           # CV Generator
           gcloud functions deploy cv-generate             "${common[@]}" --entry-point=cvGenerate
+          gcloud functions deploy cv-refine               "${common[@]}" --entry-point=cvRefine
