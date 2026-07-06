@@ -6,6 +6,8 @@ import * as adhan from 'adhan'
 // getAvailability, book, telegramWebhook). Importing here registers their
 // http() handlers; VAPID is configured below and shared.
 import './booking.js'
+// CV Generator endpoint (cvGenerate).
+import './cv.js'
 
 const { Firestore } = firestore
 const db = new Firestore()

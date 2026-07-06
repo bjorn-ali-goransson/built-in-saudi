@@ -180,6 +180,17 @@ export function CalendarIcon({ className }: P) {
   )
 }
 
+export function CvIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 3h7l5 5v13a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V3Z" />
+      <path d="M13 3v5h5" />
+      <path d="M8.5 12.5h4M8.5 15.5h7M8.5 18.5h5" />
+      <path d="M16.5 4.2l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5.5-1.3Z" />
+    </svg>
+  )
+}
+
 export function CalendarCheckIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
