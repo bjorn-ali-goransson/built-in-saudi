@@ -35,7 +35,9 @@ const STR = {
     applying: 'Applying…',
     tweaksLeft: (n: number) => `${n} tweak${n === 1 ? '' : 's'} left`,
     noTweaks: 'No tweaks left for this CV — upload again to start fresh.',
-    limitNote: '2 CVs per 24 hours · 3 tweaks each.',
+    limitNote: '2 CVs per 24 hours · 3 tweaks each. Typos and tone are fixed automatically.',
+    questionsTitle: 'A few questions to sharpen your CV',
+    questionsHint: 'Answer any of these in the box below — each answer uses one tweak. Or skip them.',
   },
   ar: {
     intro: 'أعِد بناء سيرتك لمسح المجنِّد الذي يستغرق ١٠ ثوانٍ — إشارة فقط بلا ضجيج. ارفع سيرتك الحالية ونعيد كتابتها في قالب نظيف متوافق مع أنظمة التتبّع.',
@@ -65,7 +67,9 @@ const STR = {
     applying: 'جارٍ التطبيق…',
     tweaksLeft: (n: number) => `${n === 1 ? 'تعديل واحد متبقٍّ' : `${n} تعديلات متبقّية`}`,
     noTweaks: 'لا تعديلات متبقّية لهذه السيرة — ارفع من جديد للبدء من الصفر.',
-    limitNote: 'سيرتان كل ٢٤ ساعة · ٣ تعديلات لكلٍّ.',
+    limitNote: 'سيرتان كل ٢٤ ساعة · ٣ تعديلات لكلٍّ. تُصحَّح الأخطاء والنبرة تلقائيًا.',
+    questionsTitle: 'أسئلة قليلة لتحسين سيرتك',
+    questionsHint: 'أجِب عن أيٍّ منها في الصندوق أدناه — كل إجابة تستهلك تعديلًا. أو تجاوزها.',
   },
 }
 
@@ -82,6 +86,7 @@ export default function CvGeneratorTool() {
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
   const [refinesLeft, setRefinesLeft] = useState(0)
+  const [questions, setQuestions] = useState<string[]>([])
   const [instruction, setInstruction] = useState('')
   const [refining, setRefining] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
@@ -136,9 +141,10 @@ export default function CvGeneratorTool() {
     setStatus('generating')
     setErr('')
     try {
-      const { cv: result, refinesLeft: left } = await generateCv(idToken, text)
+      const { cv: result, refinesLeft: left, questions: qs } = await generateCv(idToken, text)
       setCv(result)
       setRefinesLeft(left)
+      setQuestions(qs)
       setInstruction('')
       setStatus('done')
     } catch (e) {
@@ -152,9 +158,10 @@ export default function CvGeneratorTool() {
     setRefining(true)
     setErr('')
     try {
-      const { cv: result, refinesLeft: left } = await refineCv(idToken, cv, instruction.trim())
+      const { cv: result, refinesLeft: left, questions: qs } = await refineCv(idToken, cv, instruction.trim())
       setCv(result)
       setRefinesLeft(left)
+      setQuestions(qs)
       setInstruction('')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
@@ -238,6 +245,15 @@ export default function CvGeneratorTool() {
 
               {/* Fine-tune loop — up to 3 instruction tweaks, preview updates live */}
               <div className="flex flex-col gap-2 border-t border-[color:var(--line-soft)] pt-3">
+                {questions.length > 0 && (
+                  <div className="flex flex-col gap-1.5 rounded-md border-s-2 border-green-600 bg-[color-mix(in_srgb,var(--green-400)_9%,transparent)] px-3 py-2.5" data-testid="cv-questions">
+                    <span className="text-[0.82rem] font-semibold text-green-700">{s.questionsTitle}</span>
+                    <ul className="list-disc ps-5 text-[0.88rem] text-ink-soft flex flex-col gap-1">
+                      {questions.map((q, i) => <li key={i}>{q}</li>)}
+                    </ul>
+                    <span className="text-[0.78rem] text-ink-faint">{s.questionsHint}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[0.82rem] font-semibold text-ink-soft">{s.refineTitle}</span>
                   {refinesLeft > 0 && <span className="text-[0.78rem] text-ink-faint">{s.tweaksLeft(refinesLeft)}</span>}
