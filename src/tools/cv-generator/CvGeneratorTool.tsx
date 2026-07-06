@@ -335,7 +335,7 @@ export default function CvGeneratorTool() {
     <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
       <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-2">
         <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] opacity-75">{s.heroKicker}</span>
-        <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight">{s.heroTitle}</h1>
+        <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
       </div>
     </div>
