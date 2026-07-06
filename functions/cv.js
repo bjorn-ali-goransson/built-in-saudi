@@ -58,7 +58,16 @@ Rules (apply strictly):
 - Education: degree, institution, year only. No scores.
 - Keep it truthful — never invent employers, dates, or achievements not supported by the source.
 
-The JSON shape (omit a section with an empty array; omit optional strings by leaving them empty):
+FIX SILENTLY (do not ask, just correct):
+- Spelling, grammar and typos.
+- Tone: make it professional, confident and concise. Rewrite anything unprofessional, casual, arrogant or over-the-top (e.g. "rockstar ninja", "single-handedly saved the company") into credible, specific, results-focused language.
+- Clarity: rewrite vague or confusing statements into clear ones where the meaning is reasonably inferable. Strip buzzword filler.
+
+ASK (only for MATERIAL gaps you cannot responsibly fix yourself):
+- Put up to 3 short, specific questions in "questions" when something important is missing or inconsistent and answering it would materially strengthen the CV. Examples: a role/seniority with no supporting evidence (e.g. "Developer, 3 years" but no technologies, projects or achievements listed); conflicting or impossible dates; a large unexplained employment gap; a claimed skill never evidenced.
+- Do NOT ask about trivial things, and never invent facts to fill a gap. Always still produce the best CV you can from what's given — questions are additive, never blocking. If nothing material is missing, return an empty array.
+
+The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty):
 {
   "name": string, "role": string, "available": string,
   "contact": { "location": string, "phone": string, "email": string, "links": [{ "label": string, "url": string }] },
@@ -71,11 +80,13 @@ The JSON shape (omit a section with an empty array; omit optional strings by lea
   "publications": [{ "title": string, "detail": string, "year": string }],
   "education": [{ "degree": string, "institution": string, "year": string }],
   "languages": [{ "name": string, "level": string }]
-}`
+}
 
-const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten and sharpen.\n\n${RULES}\n\nReturn ONLY the JSON.`
+Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions": [ up to 3 short strings ] }`
 
-const REFINE_SYSTEM = `You are an elite technical résumé editor refining an ALREADY-structured CV (given as JSON). Apply the user's instruction, preserve everything the instruction does not touch, keep the EXACT same JSON shape, and keep obeying every rule below.\n\n${RULES}\n\nReturn ONLY the full updated JSON.`
+const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}`
+
+const REFINE_SYSTEM = `You are an elite technical résumé editor in a short back-and-forth with the candidate. You are given the current CV as JSON plus their message — which is EITHER an answer to one of your earlier questions OR an instruction to change something. Incorporate it: if it answers a gap, weave the new information in and drop that question; if it's an instruction, apply it. Preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing issues silently, and re-evaluate remaining questions.\n\n${RULES}`
 
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
@@ -132,7 +143,13 @@ async function callOpenAI(system, user) {
   const data = await ai.json()
   const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
   try {
-    return normalize(JSON.parse(content))
+    const parsed = JSON.parse(content)
+    // Tolerate the model returning { cv, questions } or just the CV object.
+    const cvObj = parsed && parsed.cv && typeof parsed.cv === 'object' ? parsed.cv : parsed
+    const questions = Array.isArray(parsed && parsed.questions)
+      ? parsed.questions.map((q) => String(q).trim()).filter(Boolean).slice(0, 3)
+      : []
+    return { cv: normalize(cvObj), questions }
   } catch {
     const e = new Error('AI returned malformed JSON')
     e.code = 502
@@ -163,10 +180,10 @@ http('cvGenerate', async (req, res) => {
       return res.status(429).json({ error: `Limit reached — you can generate ${UPLOAD_LIMIT} CVs per 24 hours. Try again later.` })
     }
 
-    const cv = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
+    const { cv, questions } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
     // Record the successful upload and reset the refine budget for this new CV.
     await ref.set({ uploads: [...recent, now], refineCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, refinesLeft: REFINE_LIMIT })
+    res.json({ ok: true, cv, questions, refinesLeft: REFINE_LIMIT })
   } catch (e) {
     fail(res, e)
   }
@@ -191,12 +208,12 @@ http('cvRefine', async (req, res) => {
       return res.status(429).json({ error: `You’ve used all ${REFINE_LIMIT} tweaks for this CV. Upload again to start fresh.` })
     }
 
-    const cv = await callOpenAI(
+    const { cv, questions } = await callOpenAI(
       REFINE_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\nInstruction: ${String(instruction).slice(0, 1000)}`,
+      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}\n\nCandidate's message: ${String(instruction).slice(0, 1000)}`,
     )
     await ref.update({ refineCount: used + 1, updatedAt: new Date() })
-    res.json({ ok: true, cv, refinesLeft: REFINE_LIMIT - (used + 1) })
+    res.json({ ok: true, cv, questions, refinesLeft: REFINE_LIMIT - (used + 1) })
   } catch (e) {
     fail(res, e)
   }

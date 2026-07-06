@@ -51,7 +51,16 @@ export function decodeJwt(token: string): { email?: string; name?: string; pictu
 
 export interface CvResult {
   cv: Cv
+  questions: string[]
   refinesLeft: number
+}
+
+function parseResult(data: { cv?: Cv; questions?: unknown; refinesLeft?: unknown }): CvResult {
+  return {
+    cv: data.cv as Cv,
+    questions: Array.isArray(data.questions) ? data.questions.map(String) : [],
+    refinesLeft: Number(data.refinesLeft ?? 0),
+  }
 }
 
 export async function generateCv(idToken: string, text: string): Promise<CvResult> {
@@ -62,10 +71,10 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return { cv: data.cv as Cv, refinesLeft: Number(data.refinesLeft ?? 0) }
+  return parseResult(data)
 }
 
-/** Apply one instruction-driven tweak to an already-generated CV. */
+/** Apply one message — an answer to an AI question, or an instruction. */
 export async function refineCv(idToken: string, cv: Cv, instruction: string): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
@@ -74,5 +83,5 @@ export async function refineCv(idToken: string, cv: Cv, instruction: string): Pr
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return { cv: data.cv as Cv, refinesLeft: Number(data.refinesLeft ?? 0) }
+  return parseResult(data)
 }
