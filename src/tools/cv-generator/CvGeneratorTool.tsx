@@ -393,8 +393,8 @@ export default function CvGeneratorTool() {
             />
           </div>
 
-          {/* Floating Save split-button — bottom-right (bottom-left in RTL), above the dock */}
-          <div className="fixed end-4 bottom-[7rem] z-50 flex items-stretch rounded-md shadow-[var(--shadow-md)]">
+          {/* Floating Save split-button — top-left (top-right in RTL), just below the navbar */}
+          <div className="fixed start-4 top-[4.75rem] z-50 flex items-stretch rounded-md shadow-[var(--shadow-md)]">
             <button type="button" onClick={exportPdf} data-testid="cv-pdf"
               className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer">
               <DownloadIcon /> {s.pdf}
@@ -402,7 +402,7 @@ export default function CvGeneratorTool() {
             <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
               className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
             {saveMenu && (
-              <div className="absolute bottom-full end-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
+              <div className="absolute top-full start-0 mt-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
                 <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
                   className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
                   <DownloadIcon /> {s.word}
