@@ -42,6 +42,7 @@ export function AvailabilityGrid({
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [tip, setTip] = useState<{ x: number; y: number } | null>(null)
+  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -55,13 +56,29 @@ export function AvailabilityGrid({
     if (cell) c.scrollTop += cell.getBoundingClientRect().top - c.getBoundingClientRect().top - 44
   }, [])
 
+  const cellRect = (c: Cell) =>
+    gridRef.current?.querySelector(`[data-day="${c.day}"][data-row="${c.row}"]`)?.getBoundingClientRect()
+
   function boxCenter(d: Drag): { x: number; y: number } | null {
-    const q = (c: Cell) =>
-      gridRef.current?.querySelector(`[data-day="${c.day}"][data-row="${c.row}"]`)?.getBoundingClientRect()
-    const a = q(d.anchor)
-    const b = q(d.current)
+    const a = cellRect(d.anchor)
+    const b = cellRect(d.current)
     if (!a || !b) return null
     return { x: (Math.min(a.left, b.left) + Math.max(a.right, b.right)) / 2, y: (Math.min(a.top, b.top) + Math.max(a.bottom, b.bottom)) / 2 }
+  }
+
+  // The selection rect in grid-content coordinates (for the absolute overlay).
+  function computeBox(d: Drag): { top: number; left: number; width: number; height: number } | null {
+    const g = gridRef.current
+    const a = cellRect(d.anchor)
+    const b = cellRect(d.current)
+    if (!g || !a || !b) return null
+    const gr = g.getBoundingClientRect()
+    return {
+      left: Math.min(a.left, b.left) - gr.left,
+      top: Math.min(a.top, b.top) - gr.top,
+      width: Math.max(a.right, b.right) - Math.min(a.left, b.left),
+      height: Math.max(a.bottom, b.bottom) - Math.min(a.top, b.top),
+    }
   }
 
   function begin(cell: Cell) {
@@ -70,6 +87,7 @@ export function AvailabilityGrid({
     dragRef.current = d
     setDrag(d)
     setTip(boxCenter(d))
+    setBox(computeBox(d))
   }
 
   function extend(cell: Cell) {
@@ -80,6 +98,7 @@ export function AvailabilityGrid({
     dragRef.current = next
     setDrag(next)
     setTip(boxCenter(next))
+    setBox(computeBox(next))
   }
 
   function commit() {
@@ -87,6 +106,7 @@ export function AvailabilityGrid({
     dragRef.current = null
     setDrag(null)
     setTip(null)
+    setBox(null)
     if (!d) return
     const next = grid.map((col) => col.slice())
     const paint = d.mode === 'paint'
@@ -127,7 +147,7 @@ export function AvailabilityGrid({
       <div ref={scrollRef} className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)]">
         <div
           ref={gridRef}
-          className="grid touch-none"
+          className="grid touch-none relative"
           style={{ gridTemplateColumns: `3.4rem repeat(${DAYS}, minmax(0, 1fr))` }}
           onPointerDown={(e) => {
             const cell = cellAt(e.clientX, e.clientY)
@@ -187,11 +207,13 @@ export function AvailabilityGrid({
             </div>
           ))}
 
-          {/* One outline around the whole drag box — no internal doubling. */}
-          {sel && (
+          {/* One outline around the whole drag box — absolutely positioned so it
+              stays out of the grid's auto-placement (a grid item would shove the
+              cells around). No internal doubling. */}
+          {box && (
             <div
-              className={`pointer-events-none z-[3] rounded-[2px] border-2 ${drag!.mode === 'erase' ? 'border-gold-500' : 'border-green-700'}`}
-              style={{ gridColumn: `${sel.d0 + 2} / ${sel.d1 + 3}`, gridRow: `${sel.r0 + 2} / ${sel.r1 + 3}` }}
+              className={`pointer-events-none absolute z-[3] rounded-[2px] border-2 ${drag?.mode === 'erase' ? 'border-gold-500' : 'border-green-700'}`}
+              style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
             />
           )}
         </div>
