@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DAYS, ROWS, SLOT_MIN, rowToMinutes, minutesToHHMM, type Grid } from './lib'
 
 interface Cell {
@@ -44,7 +44,16 @@ export function AvailabilityGrid({
   const [tip, setTip] = useState<{ x: number; y: number } | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const days = DAY_LABELS[locale]
+
+  // On load, scroll so midday is in view (the grid now spans all 24 hours).
+  useEffect(() => {
+    const c = scrollRef.current
+    if (!c) return
+    const cell = c.querySelector('[data-day="0"][data-row="8"]') as HTMLElement | null
+    if (cell) c.scrollTop += cell.getBoundingClientRect().top - c.getBoundingClientRect().top - 44
+  }, [])
 
   function boxCenter(d: Drag): { x: number; y: number } | null {
     const q = (c: Cell) =>
@@ -86,23 +95,36 @@ export function AvailabilityGrid({
     onChange(next)
   }
 
-  // Live totals shown in the floating tooltip while dragging.
+  // Selection bounds — one outline round the whole drag box (no internal doubling).
+  const sel = drag
+    ? {
+        d0: Math.min(drag.anchor.day, drag.current.day),
+        d1: Math.max(drag.anchor.day, drag.current.day),
+        r0: Math.min(drag.anchor.row, drag.current.row),
+        r1: Math.max(drag.anchor.row, drag.current.row),
+      }
+    : null
+
+  // Live totals shown in the floating tooltip while dragging. When erasing we
+  // count only the slots actually painted (that will really be removed), not
+  // the whole rectangle.
   const info = (() => {
-    if (!drag) return null
-    const d0 = Math.min(drag.anchor.day, drag.current.day)
-    const d1 = Math.max(drag.anchor.day, drag.current.day)
-    const r0 = Math.min(drag.anchor.row, drag.current.row)
-    const r1 = Math.max(drag.anchor.row, drag.current.row)
-    const count = (d1 - d0 + 1) * (r1 - r0 + 1)
-    const dstr = d0 === d1 ? days[d0] : `${days[d0]}–${days[d1]}`
-    const tstr = `${minutesToHHMM(rowToMinutes(r0))}–${minutesToHHMM(rowToMinutes(r1) + SLOT_MIN)}`
+    if (!sel || !drag) return null
+    const erasing = drag.mode === 'erase'
+    let count = 0
+    for (let day = sel.d0; day <= sel.d1; day++)
+      for (let row = sel.r0; row <= sel.r1; row++)
+        if (!erasing || grid[day][row]) count++
+    const dstr = sel.d0 === sel.d1 ? days[sel.d0] : `${days[sel.d0]}–${days[sel.d1]}`
+    const tstr = `${minutesToHHMM(rowToMinutes(sel.r0))}–${minutesToHHMM(rowToMinutes(sel.r1) + SLOT_MIN)}`
     const noun = locale === 'ar' ? 'موعد' : `slot${count !== 1 ? 's' : ''}`
-    return `${count} ${noun} · ${dstr} ${tstr}`
+    const verb = erasing ? (locale === 'ar' ? 'حذف ' : 'remove ') : ''
+    return `${verb}${count} ${noun} · ${dstr} ${tstr}`
   })()
 
   return (
     <div className="select-none" data-testid="availability-grid">
-      <div className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)]">
+      <div ref={scrollRef} className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)]">
         <div
           ref={gridRef}
           className="grid touch-none"
@@ -158,13 +180,20 @@ export function AvailabilityGrid({
                       active
                         ? 'bg-[color-mix(in_srgb,var(--green-500)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-500)_38%,transparent)]'
                         : 'bg-[var(--surface)] hover:bg-[color-mix(in_srgb,var(--green-400)_15%,transparent)]',
-                      preview ? 'relative z-[1] outline outline-2 -outline-offset-2 outline-green-600' : '',
                     ].join(' ')}
                   />
                 )
               })}
             </div>
           ))}
+
+          {/* One outline around the whole drag box — no internal doubling. */}
+          {sel && (
+            <div
+              className={`pointer-events-none z-[3] rounded-[2px] border-2 ${drag!.mode === 'erase' ? 'border-gold-500' : 'border-green-700'}`}
+              style={{ gridColumn: `${sel.d0 + 2} / ${sel.d1 + 3}`, gridRow: `${sel.r0 + 2} / ${sel.r1 + 3}` }}
+            />
+          )}
         </div>
       </div>
       <p className="mt-2 text-[0.8rem] text-ink-faint">
