@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { DAYS, ROWS, SLOT_MIN, rowToMinutes, minutesToHHMM, type Grid } from './lib'
 
 export interface GridHandle {
@@ -39,32 +40,26 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
   grid: Grid
   onChange: (next: Grid) => void
   locale: 'en' | 'ar'
-}>(function AvailabilityGrid({ grid, onChange, locale }, ref) {
+  firstDay: number
+}>(function AvailabilityGrid({ grid, onChange, locale, firstDay }, ref) {
+  // Visual column c maps to real weekday dayOrder[c] (0 = Sun … 6 = Sat).
+  const dayOrder = Array.from({ length: DAYS }, (_, i) => (firstDay + i) % 7)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [tip, setTip] = useState<{ x: number; y: number } | null>(null)
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const days = DAY_LABELS[locale]
+  const days = dayOrder.map((d) => DAY_LABELS[locale][d])
 
-  function scrollRowToTop(row: number) {
-    const c = scrollRef.current
-    if (!c) return
-    const cell = c.querySelector(`[data-day="0"][data-row="${row}"]`) as HTMLElement | null
-    if (cell) c.scrollTop += cell.getBoundingClientRect().top - c.getBoundingClientRect().top - 44
-  }
-
-  // On load, scroll so midday is in view (the grid now spans all 24 hours).
-  useEffect(() => { scrollRowToTop(8) }, [])
-
-  // Expose scroll-to-first-slot to the parent (the "Total slots" pill).
+  // Expose scroll-to-first-slot to the parent (the "Total slots" pill). The grid
+  // is full-height with no inner scroller, so this scrolls the page.
   useImperativeHandle(ref, () => ({
     scrollToFirst() {
       let firstRow = -1
       for (let row = 0; row < ROWS && firstRow < 0; row++)
         for (let day = 0; day < DAYS; day++) if (grid[day][row]) { firstRow = row; break }
-      if (firstRow >= 0) scrollRowToTop(firstRow)
+      if (firstRow < 0) return
+      gridRef.current?.querySelector(`[data-day="0"][data-row="${firstRow}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     },
   }), [grid])
 
@@ -94,7 +89,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
   }
 
   function begin(cell: Cell) {
-    const mode: Drag['mode'] = grid[cell.day][cell.row] ? 'erase' : 'paint'
+    const mode: Drag['mode'] = grid[dayOrder[cell.day]][cell.row] ? 'erase' : 'paint'
     const d: Drag = { anchor: cell, current: cell, mode }
     dragRef.current = d
     setDrag(d)
@@ -122,8 +117,8 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
     if (!d) return
     const next = grid.map((col) => col.slice())
     const paint = d.mode === 'paint'
-    for (let day = 0; day < DAYS; day++)
-      for (let row = 0; row < ROWS; row++) if (inRect(d, day, row)) next[day][row] = paint
+    for (let col = 0; col < DAYS; col++)
+      for (let row = 0; row < ROWS; row++) if (inRect(d, col, row)) next[dayOrder[col]][row] = paint
     onChange(next)
   }
 
@@ -146,9 +141,9 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
     // Count only the slots that actually change: painted ones when erasing,
     // empty ones when painting (overlaps with already-painted don't count).
     let count = 0
-    for (let day = sel.d0; day <= sel.d1; day++)
+    for (let col = sel.d0; col <= sel.d1; col++)
       for (let row = sel.r0; row <= sel.r1; row++)
-        if (erasing ? grid[day][row] : !grid[day][row]) count++
+        if (erasing ? grid[dayOrder[col]][row] : !grid[dayOrder[col]][row]) count++
     const dstr = sel.d0 === sel.d1 ? days[sel.d0] : `${days[sel.d0]}–${days[sel.d1]}`
     const tstr = `${minutesToHHMM(rowToMinutes(sel.r0))}–${minutesToHHMM(rowToMinutes(sel.r1) + SLOT_MIN)}`
     const noun = locale === 'ar' ? 'موعد' : `slot${count !== 1 ? 's' : ''}`
@@ -158,7 +153,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
 
   return (
     <div className="select-none" data-testid="availability-grid">
-      <div ref={scrollRef} className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)] max-[560px]:mx-[calc(50%-50vw)] max-[560px]:w-screen max-[560px]:max-w-[100vw] max-[560px]:rounded-none max-[560px]:border-x-0">
+      <div className="rounded-lg border border-[color:var(--line)] overflow-hidden max-[560px]:mx-[calc(50%-50vw)] max-[560px]:w-screen max-[560px]:max-w-[100vw] max-[560px]:rounded-none max-[560px]:border-x-0">
         <div
           ref={gridRef}
           className="grid relative"
@@ -179,11 +174,11 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
           onPointerCancel={commit}
         >
           {/* header row */}
-          <div className="sticky top-0 z-20 bg-[var(--surface)] border-b border-[color:var(--line)] h-9" />
+          <div className="bg-[var(--surface)] border-b border-[color:var(--line)] h-9" />
           {days.map((d, i) => (
             <div
               key={i}
-              className="sticky top-0 z-20 bg-[var(--surface)] border-b border-s border-[color:var(--line)] grid place-items-center text-[0.78rem] font-semibold text-ink-soft h-9"
+              className="bg-[var(--surface)] border-b border-s border-[color:var(--line)] grid place-items-center text-[0.78rem] font-semibold text-ink-soft h-9"
             >
               {d}
             </div>
@@ -196,7 +191,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
                 {minutesToHHMM(rowToMinutes(row))}
               </div>
               {Array.from({ length: DAYS }, (_, day) => {
-                const on = grid[day][row]
+                const on = grid[dayOrder[day]][row]
                 const preview = drag && inRect(drag, day, row)
                 const painting = preview && drag!.mode === 'paint'
                 const erasing = preview && drag!.mode === 'erase'
@@ -233,14 +228,15 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
         </div>
       </div>
 
-      {info && tip && (
+      {info && tip && createPortal(
         <div
           className="fixed z-[70] -translate-x-1/2 -translate-y-1/2 pointer-events-none whitespace-nowrap rounded-full bg-[var(--ink)] text-sand-100 text-[0.78rem] font-semibold px-3 py-1.5 shadow-[var(--shadow-md)]"
           style={{ left: tip.x, top: tip.y }}
           data-testid="drag-total"
         >
           {info}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

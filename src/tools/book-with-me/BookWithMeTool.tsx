@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
@@ -49,6 +49,7 @@ const STR = {
     heroTitle: 'Free calendar booking service',
     intro: 'Provides a custom page for your customers to agree on a meeting time.',
     tzTitle: 'Timezone',
+    firstDayLabel: 'First day of week',
     tzSearch: 'Search timezones…',
     tzShown: 'Times shown in',
     totalSlots: 'Total slots',
@@ -112,6 +113,7 @@ const STR = {
     heroTitle: 'خدمة حجز مواعيد مجانية',
     intro: 'صفحة مخصّصة يتّفق من خلالها عملاؤك على وقت الاجتماع.',
     tzTitle: 'المنطقة الزمنية',
+    firstDayLabel: 'أول أيام الأسبوع',
     tzSearch: 'ابحث عن منطقة زمنية…',
     tzShown: 'الأوقات بتوقيت',
     totalSlots: 'إجمالي المواعيد',
@@ -218,6 +220,7 @@ export default function BookWithMeTool() {
   const [tzOpen, setTzOpen] = useState(false)
   const [tzq, setTzq] = useState('')
   const [pubMenu, setPubMenu] = useState(false)
+  const [dragId, setDragId] = useState<string | null>(null)
   const gridApi = useRef<GridHandle>(null)
   const totalSlots = grid.reduce((sum, col) => sum + col.filter(Boolean).length, 0)
   // Bigger section heading (a div, not h2, to dodge the unlayered-base rule).
@@ -264,15 +267,29 @@ export default function BookWithMeTool() {
   }
   const removeType = (id: string) => { if (cfg.meetingTypes.length > 1) setTypes(cfg.meetingTypes.filter((t) => t.id !== id)) }
   const editType = (id: string, patch: Partial<MeetingType>) => setTypes(cfg.meetingTypes.map((t) => (t.id === id ? { ...t, ...patch } : t)))
-  const dragIdx = useRef<number | null>(null)
-  const dropType = (to: number) => {
-    const from = dragIdx.current
-    dragIdx.current = null
-    if (from == null || from === to) return
+  // Pointer-based live reorder (works on touch + desktop; no HTML5 DnD).
+  const reorderId = useRef<string | null>(null)
+  const startReorder = (e: ReactPointerEvent, id: string) => {
+    reorderId.current = id
+    setDragId(id)
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  }
+  const onReorderMove = (e: ReactPointerEvent) => {
+    if (!reorderId.current) return
+    const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-mtid]')?.getAttribute('data-mtid')
+    if (!over || over === reorderId.current) return
     const arr = cfg.meetingTypes.slice()
+    const from = arr.findIndex((t) => t.id === reorderId.current)
+    const to = arr.findIndex((t) => t.id === over)
+    if (from < 0 || to < 0 || from === to) return
     const [moved] = arr.splice(from, 1)
     arr.splice(to, 0, moved)
     setTypes(arr)
+  }
+  const endReorder = (e: ReactPointerEvent) => {
+    reorderId.current = null
+    setDragId(null)
+    ;(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId)
   }
   async function shareLink() {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -369,11 +386,11 @@ export default function BookWithMeTool() {
             {cfg.meetingTypes.map((t, i) => {
               const many = cfg.meetingTypes.length > 1
               return (
-                <div key={t.id} className="flex flex-wrap items-center gap-2" data-testid={`mtype-${i}`}
-                  onDragOver={many ? (e) => e.preventDefault() : undefined} onDrop={many ? () => dropType(i) : undefined}>
+                <div key={t.id} data-mtid={t.id} data-testid={`mtype-${i}`}
+                  className={`flex flex-wrap items-center gap-2 rounded transition-opacity ${dragId === t.id ? 'opacity-50' : ''}`}>
                   {many && (
-                    <span draggable onDragStart={() => { dragIdx.current = i }} aria-label="reorder"
-                      className="cursor-grab active:cursor-grabbing text-sand-100/70 hover:text-sand-100 touch-none [&_svg]:size-4">
+                    <span aria-label="reorder" onPointerDown={(e) => startReorder(e, t.id)} onPointerMove={onReorderMove} onPointerUp={endReorder} onPointerCancel={endReorder}
+                      className="self-start mt-2 cursor-grab active:cursor-grabbing text-sand-100/70 hover:text-sand-100 touch-none select-none [&_svg]:size-4">
                       <GripIcon />
                     </span>
                   )}
@@ -386,7 +403,7 @@ export default function BookWithMeTool() {
                   <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
                   {many && (
                     <button type="button" aria-label="remove" onClick={() => removeType(t.id)}
-                      className="ms-auto bg-transparent border-0 cursor-pointer text-sand-100/80 hover:text-sand-100 text-[1.05rem] leading-none px-1">✕</button>
+                      className="self-start mt-2 ms-auto bg-transparent border-0 cursor-pointer text-sand-100/80 hover:text-sand-100 text-[1.05rem] leading-none px-1">✕</button>
                   )}
                 </div>
               )
@@ -404,7 +421,7 @@ export default function BookWithMeTool() {
           </div>
           <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5" onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
         </div>
-        <AvailabilityGrid ref={gridApi} grid={grid} onChange={updateGrid} locale={locale} />
+        <AvailabilityGrid ref={gridApi} grid={grid} onChange={updateGrid} locale={locale} firstDay={cfg.firstDay ?? 0} />
       </div>
 
       {saveState === 'error' && <p className="text-[0.82rem] text-gold-500">{s.saveErr}</p>}
@@ -488,6 +505,13 @@ export default function BookWithMeTool() {
       {tzOpen && (
         <Sheet data-testid="tz-sheet" onClose={() => { setTzOpen(false); setTzq('') }}>
           <SheetTitle>{s.tzTitle}</SheetTitle>
+          <label className="flex flex-col gap-1 mb-3">
+            <span className="text-[0.82rem] font-semibold text-ink-soft">{s.firstDayLabel}</span>
+            <select value={cfg.firstDay ?? 0} onChange={(e) => setCfg((c) => ({ ...c, firstDay: Number(e.target.value) }))} data-testid="first-day"
+              className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink px-3 py-2 text-[0.9rem] cursor-pointer">
+              {(locale === 'ar' ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']).map((name, d) => <option key={d} value={d}>{name}</option>)}
+            </select>
+          </label>
           <Input autoFocus placeholder={s.tzSearch} value={tzq} onChange={(e) => setTzq(e.target.value)} data-testid="tz-search" />
           <div className="overflow-y-auto mt-2 flex flex-col gap-0.5 min-h-0">
             {TZS.filter((z) => z.toLowerCase().includes(tzq.trim().toLowerCase())).slice(0, 250).map((z) => (

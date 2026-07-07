@@ -29,11 +29,28 @@ export interface MeetingType {
 export interface HostConfig {
   code: string
   tz: string
+  firstDay: number // first weekday shown in the grid, 0 = Sunday … 6 = Saturday
   meeting: MeetingConfig // primary meeting (mirrors meetingTypes[0]) — kept for the backend
   meetingTypes: MeetingType[]
   availability: AvailWindow[]
   notify: { push: boolean; telegram: boolean; email: boolean }
   pushSub?: unknown // this device's Web Push subscription, sent to the host record
+}
+
+/** The locale's first weekday (0 = Sun … 6 = Sat), from the user agent. */
+export function detectFirstDay(): number {
+  try {
+    const loc = new Intl.Locale(navigator.language) as Intl.Locale & {
+      weekInfo?: { firstDay: number }
+      getWeekInfo?: () => { firstDay: number }
+    }
+    // Intl weekInfo.firstDay is 1 = Monday … 7 = Sunday; map to 0 = Sun … 6 = Sat.
+    const fd = loc.weekInfo?.firstDay ?? loc.getWeekInfo?.().firstDay
+    if (fd) return fd % 7
+  } catch {
+    /* weekInfo unsupported */
+  }
+  return 0
 }
 
 // ---- Grid geometry ----------------------------------------------------------
@@ -215,6 +232,7 @@ export function defaultConfig(): HostConfig {
   return {
     code: makeCode(),
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh',
+    firstDay: detectFirstDay(),
     meeting: defaultMeeting(),
     meetingTypes: defaultMeetingTypes(),
     availability: [
@@ -238,6 +256,7 @@ export function loadConfig(): HostConfig {
       return {
         ...defaultConfig(),
         ...parsed,
+        firstDay: parsed.firstDay ?? detectFirstDay(),
         meeting,
         // migrate: derive a first meeting type from the legacy single meeting
         meetingTypes: parsed.meetingTypes?.length
