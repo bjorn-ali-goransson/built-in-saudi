@@ -61,6 +61,8 @@ jobs:
           gcloud functions deploy get-availability        "${common[@]}" --entry-point=getAvailability
           gcloud functions deploy book                    "${common[@]}" --entry-point=book
           gcloud functions deploy telegram-webhook        "${common[@]}" --entry-point=telegramWebhook
+          gcloud functions deploy delete-host             "${common[@]}" --entry-point=deleteHost
+          gcloud functions deploy my-data                 "${common[@]}" --entry-point=myData
           # CV Generator
           gcloud functions deploy cv-generate             "${common[@]}" --entry-point=cvGenerate
           gcloud functions deploy cv-refine               "${common[@]}" --entry-point=cvRefine

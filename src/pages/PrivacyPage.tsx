@@ -1,5 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
+import { Button, Spinner } from '../components/ui'
+import { myData, type MyDataReport } from '../lib/bookingApi'
+import { loadGis, GOOGLE_CLIENT_ID } from '../lib/cvApi'
 
 interface Section {
   h: string
@@ -139,7 +143,76 @@ export function PrivacyPage() {
   const { locale } = useLocale()
   const s = STR[locale]
   useDocumentMeta(locale, '/privacy', s.title, s.intro.slice(0, 155))
-  return <LegalDoc title={s.title} updated={s.updated} intro={s.intro} sections={s.sections} />
+  return (
+    <>
+      <LegalDoc title={s.title} updated={s.updated} intro={s.intro} sections={s.sections} />
+      <DeleteMyData locale={locale} />
+    </>
+  )
+}
+
+/** Sign in with Google to see everything stored for you, and delete it. */
+function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
+  const t = locale === 'ar'
+    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
+    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
+  const [idToken, setIdToken] = useState('')
+  const [report, setReport] = useState<MyDataReport | null>(null)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'deleting' | 'done' | 'error'>('idle')
+  const btnRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    loadGis().then((gis) => {
+      if (cancelled) return
+      gis.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (r) => {
+          setIdToken(r.credential)
+          setStatus('loading')
+          try { const res = await myData(r.credential); setReport(res.report); setStatus('idle') } catch { setStatus('error') }
+        },
+      })
+      if (btnRef.current) gis.renderButton(btnRef.current, { theme: 'outline', size: 'medium', text: 'signin_with' })
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  async function del() {
+    if (!idToken) return
+    setStatus('deleting')
+    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0 } : r)) } catch { setStatus('error') }
+  }
+
+  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0
+
+  return (
+    <div className="wrap max-w-[46rem] pb-[clamp(1.5rem,4vw,2.5rem)]">
+      <section className="flex flex-col gap-3 rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5">
+        <h2 className="font-display text-[1.2rem] text-ink">{t.h}</h2>
+        <p className="text-[0.95rem] text-ink-soft leading-relaxed">{t.p}</p>
+        {!report && <div ref={btnRef} data-testid="mydata-signin" className="[color-scheme:light]" />}
+        {status === 'loading' && <Spinner className="size-5" />}
+        {report && (
+          status === 'done' || empty ? (
+            <p className="text-[0.95rem] font-semibold text-green-700">{status === 'done' ? t.done : t.nothing}</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <ul className="text-[0.9rem] text-ink-soft flex flex-col gap-1 [&_b]:text-ink">
+                <li>{t.page}: <b>{report.bookingPage ? `✓ (${report.bookingPage.meetingTypes})` : t.none}</b></li>
+                <li>{t.bookings}: <b>{report.bookings}</b></li>
+                <li>{t.cv}: <b>{report.cvRuns}</b></li>
+              </ul>
+              <Button variant="primary" data-testid="mydata-delete" disabled={status === 'deleting'} onClick={del} className="self-start !bg-gold-500 !border-gold-500 hover:!bg-gold-400">
+                {status === 'deleting' ? t.deleting : t.del}
+              </Button>
+            </div>
+          )
+        )}
+        {status === 'error' && <p className="text-[0.9rem] text-gold-500">{t.err}</p>}
+      </section>
+    </div>
+  )
 }
 
 export function LegalDoc({ title, updated, intro, sections }: { title: string; updated: string; intro: string; sections: Section[] }) {

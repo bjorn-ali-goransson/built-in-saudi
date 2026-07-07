@@ -4,7 +4,7 @@ import { useLocale } from '../../i18n'
 import { BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
-import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
+import { connectGoogleUrl, saveSchedule, deleteHost } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
 import {
   loadConfig,
@@ -88,6 +88,11 @@ const STR = {
     previewLink: 'Preview',
     openPage: 'Open page',
     unpublish: 'Unpublish',
+    deletePage: 'Delete page',
+    deleteTitle: 'Delete this booking page?',
+    deleteBody: 'This permanently removes your booking link and every booking made through it. This can’t be undone.',
+    deleteConfirm: 'Delete page',
+    cancel: 'Cancel',
     alerts: 'Alerts',
     save: 'Save changes',
     saving: 'Saving…',
@@ -152,6 +157,11 @@ const STR = {
     previewLink: 'معاينة',
     openPage: 'افتح الصفحة',
     unpublish: 'إلغاء النشر',
+    deletePage: 'احذف الصفحة',
+    deleteTitle: 'حذف صفحة الحجز؟',
+    deleteBody: 'يحذف هذا رابط الحجز وكل الحجوزات التي تمّت عبره نهائيًا. لا يمكن التراجع.',
+    deleteConfirm: 'احذف الصفحة',
+    cancel: 'إلغاء',
     alerts: 'التنبيهات',
     save: 'حفظ التغييرات',
     saving: 'جارٍ الحفظ…',
@@ -220,6 +230,8 @@ export default function BookWithMeTool() {
   const [tzOpen, setTzOpen] = useState(false)
   const [tzq, setTzq] = useState('')
   const [pubMenu, setPubMenu] = useState(false)
+  const [delOpen, setDelOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const gridApi = useRef<GridHandle>(null)
   const totalSlots = grid.reduce((sum, col) => sum + col.filter(Boolean).length, 0)
@@ -311,7 +323,11 @@ export default function BookWithMeTool() {
         hsid: session.hsid,
         code: cfg.code,
         tz: cfg.tz,
+        firstDay: cfg.firstDay,
+        pageHeading: cfg.pageHeading,
+        pageText: cfg.pageText,
         meeting: cfg.meeting,
+        meetingTypes: cfg.meetingTypes,
         availability: cfg.availability,
         notify: cfg.notify,
         pushSub: cfg.pushSub,
@@ -369,6 +385,20 @@ export default function BookWithMeTool() {
     setSession(null)
     setPubMenu(false)
   }
+  async function deletePage() {
+    if (!session) return
+    setDeleting(true)
+    try {
+      await deleteHost(session.hsid)
+      localStorage.removeItem(HSID_KEY)
+      setSession(null)
+      setDelOpen(false)
+    } catch {
+      setSaveState('error')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const menuItem = 'flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.9rem] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap'
 
@@ -396,9 +426,9 @@ export default function BookWithMeTool() {
                     </span>
                   )}
                   <input value={t.name} onChange={(e) => editType(t.id, { name: e.target.value })} aria-label={s.meetingTypes}
-                    className="w-full max-w-[200px] rounded bg-white text-ink px-2.5 py-1.5 text-[0.82rem] border-0 outline-none" />
+                    className="w-full max-w-[200px] rounded bg-white text-ink px-2.5 h-8 py-0 text-[0.82rem] border-0 outline-none box-border" />
                   <select value={t.minutes} onChange={(e) => editType(t.id, { minutes: Number(e.target.value) })} aria-label={s.length}
-                    className="rounded bg-white text-ink px-2 py-1.5 text-[0.82rem] border-0 outline-none cursor-pointer">
+                    className="rounded bg-white text-ink px-2 h-8 py-0 text-[0.82rem] border-0 outline-none cursor-pointer box-border">
                     {[15, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} {s.min}</option>)}
                   </select>
                   <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
@@ -440,7 +470,8 @@ export default function BookWithMeTool() {
                     className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
                   {pubMenu && (
                     <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
-                      <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500`}>✕ {s.unpublish}</button>
+                      <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-ink-soft`}>✕ {s.unpublish}</button>
+                      <button type="button" data-testid="delete-page" onClick={() => { setPubMenu(false); setDelOpen(true) }} className={`${menuItem} text-gold-500 border-t border-[color:var(--line-soft)]`}>🗑 {s.deletePage}</button>
                     </div>
                   )}
                 </div>
@@ -524,6 +555,17 @@ export default function BookWithMeTool() {
               </button>
             ))}
           </div>
+        </Sheet>
+      )}
+
+      {delOpen && (
+        <Sheet data-testid="delete-sheet" onClose={() => setDelOpen(false)}>
+          <SheetTitle>{s.deleteTitle}</SheetTitle>
+          <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.deleteBody}</p>
+          <SheetActions>
+            <Button onClick={() => setDelOpen(false)}>{s.cancel}</Button>
+            <Button variant="primary" data-testid="delete-confirm" disabled={deleting} onClick={deletePage} className="!bg-gold-500 !border-gold-500 hover:!bg-gold-400">{deleting ? '…' : s.deleteConfirm}</Button>
+          </SheetActions>
         </Sheet>
       )}
     </Stack>

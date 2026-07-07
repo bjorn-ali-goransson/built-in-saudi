@@ -350,9 +350,9 @@ http('bookingGoogleCallback', async (req, res) => {
       },
       { merge: true },
     )
-    const hsid = signSession({ sub, email: id.email, name: id.name })
+    const hsid = signSession({ sub, email: id.email, name: id.name, picture: id.picture })
     const locale = st.locale === 'ar' ? 'ar' : 'en'
-    res.redirect(302, `${SITE}/${locale}/tools/book-with-me#hsid=${hsid}&code=${hostCode}`)
+    res.redirect(302, `${SITE}/${locale}/apps/book-me#hsid=${hsid}&code=${hostCode}`)
   } catch (e) {
     res.status(500).send(String((e && e.message) || e))
   }
@@ -364,7 +364,7 @@ http('saveSchedule', async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { hsid, code, tz, meeting, availability, notify, pushSub } = req.body || {}
+    const { hsid, code, tz, firstDay, pageHeading, pageText, meeting, meetingTypes, availability, notify, pushSub } = req.body || {}
     const sess = verifySession(hsid)
     if (!sess) return res.status(401).json({ error: 'invalid session' })
 
@@ -376,7 +376,11 @@ http('saveSchedule', async (req, res) => {
     const patch = { updatedAt: new Date() }
     if (code) patch.code = String(code)
     if (tz) patch.tz = String(tz)
+    if (typeof firstDay === 'number') patch.firstDay = firstDay
+    if (typeof pageHeading === 'string') patch.pageHeading = pageHeading
+    if (typeof pageText === 'string') patch.pageText = pageText
     if (meeting) patch.meeting = meeting
+    if (Array.isArray(meetingTypes)) patch.meetingTypes = meetingTypes
     if (Array.isArray(availability)) patch.availability = availability
     if (notify) patch.notify = notify
     if (pushSub && pushSub.endpoint) patch.pushSub = pushSub
@@ -424,13 +428,85 @@ http('getAvailability', async (req, res) => {
       ok: true,
       host: {
         name: host.name || null,
+        picture: host.picture || null,
         tz: host.tz || 'Asia/Riyadh',
         minutes: (host.meeting && host.meeting.minutes) || 45,
         title: (host.meeting && host.meeting.title) || 'Meeting',
         location: (host.meeting && host.meeting.location) || '',
+        pageHeading: host.pageHeading || '',
+        pageText: host.pageText || '',
+        meetingTypes: Array.isArray(host.meetingTypes) ? host.meetingTypes : [],
       },
       slots,
     })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// Verify a Google Identity Services id_token (client-side sign-in).
+async function verifyGoogle(idToken) {
+  if (!idToken) return null
+  try {
+    const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`)
+    if (!r.ok) return null
+    const p = await r.json()
+    if (p.aud !== CLIENT_ID) return null
+    if (p.exp && Date.now() / 1000 > Number(p.exp)) return null
+    return { sub: p.sub, email: p.email }
+  } catch {
+    return null
+  }
+}
+
+// POST { hsid } → delete this host's booking page and all its bookings.
+http('deleteHost', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const sess = verifySession((req.body || {}).hsid)
+    if (!sess || !sess.sub) return res.status(401).json({ error: 'invalid session' })
+    const bk = await db.collection(BOOKINGS).where('hostUid', '==', sess.sub).get()
+    const batch = db.batch()
+    bk.docs.forEach((d) => batch.delete(d.ref))
+    batch.delete(db.collection(HOSTS).doc(sess.sub))
+    await batch.commit()
+    res.json({ ok: true, deletedBookings: bk.size })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { idToken, del } → report (and optionally delete) everything we store for
+// this Google user across the site: booking page + bookings + CV usage counters.
+http('myData', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const { idToken, del } = req.body || {}
+    const user = await verifyGoogle(idToken)
+    if (!user || !user.sub) return res.status(401).json({ error: 'sign in first' })
+    const [hostDoc, bk, cvDoc] = await Promise.all([
+      db.collection(HOSTS).doc(user.sub).get(),
+      db.collection(BOOKINGS).where('hostUid', '==', user.sub).get(),
+      db.collection('cvUsage').doc(user.sub).get(),
+    ])
+    const report = {
+      email: user.email || null,
+      bookingPage: hostDoc.exists ? { code: hostDoc.get('code') || null, meetingTypes: ((hostDoc.get('meetingTypes')) || []).length } : null,
+      bookings: bk.size,
+      cvRuns: cvDoc.exists ? ((cvDoc.get('uploads')) || []).length : 0,
+    }
+    if (del) {
+      const batch = db.batch()
+      bk.docs.forEach((d) => batch.delete(d.ref))
+      if (hostDoc.exists) batch.delete(hostDoc.ref)
+      if (cvDoc.exists) batch.delete(cvDoc.ref)
+      await batch.commit()
+    }
+    res.json({ ok: true, report, deleted: !!del })
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) })
   }
@@ -514,17 +590,17 @@ http('book', async (req, res) => {
     if (notify.push !== false && host.pushSub && host.pushSub.endpoint) {
       try {
         await webpush.sendNotification(host.pushSub, JSON.stringify({
-          title: `New booking: ${name}`,
-          body: `${title} · ${whenHost}`,
+          title: `New booking: ${title}`,
+          body: `${name} · ${whenHost}`,
           tag: 'booking',
-          url: `${SITE}/en/tools/book-with-me`,
+          url: `${SITE}/en/apps/book-me`,
         }))
       } catch (e) { /* prune handled elsewhere */ }
     }
     if (notify.telegram !== false && host.telegramChatId) {
       await sendTelegram(
         host.telegramChatId,
-        `📅 <b>New booking</b>\n${name} (${email})\n${title} · ${whenHost}${note ? `\n\n${note}` : ''}`,
+        `<b>New booking: ${title}</b>\n${name} (${email})\n${whenHost}${note ? `\n\n${note}` : ''}`,
       )
     }
 
@@ -545,7 +621,7 @@ http('book', async (req, res) => {
       if (host.email) {
         await sendEmail({
           to: host.email,
-          subject: `New booking: ${name}`,
+          subject: `New booking: ${title} — ${name}`,
           html: `<p><b>${name}</b> (${email}) booked ${title}.</p><p><b>When:</b> ${whenHost}</p>${note ? `<p><b>Note:</b> ${note}</p>` : ''}`,
           ics,
         })

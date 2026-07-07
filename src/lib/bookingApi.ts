@@ -61,6 +61,36 @@ export async function book(input: {
   return { ok: true }
 }
 
+/** Delete the host's booking page + all its bookings. */
+export async function deleteHost(hsid: string): Promise<{ ok: boolean; deletedBookings?: number }> {
+  const r = await fetch(`${FN}/delete-host`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hsid }),
+  })
+  if (!r.ok) throw new Error(String(r.status))
+  return r.json()
+}
+
+export interface MyDataReport {
+  email: string | null
+  bookingPage: { code: string | null; meetingTypes: number } | null
+  bookings: number
+  cvRuns: number
+}
+
+/** Report (del=false) or delete (del=true) everything stored for this Google user. */
+export async function myData(idToken: string, del = false): Promise<{ ok: boolean; report: MyDataReport; deleted: boolean }> {
+  const r = await fetch(`${FN}/my-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, del }),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(data.error || String(r.status))
+  return data
+}
+
 /** Persist the host's schedule (requires the hsid session from OAuth callback). */
 export async function saveSchedule(input: Record<string, unknown>): Promise<{ ok: boolean }> {
   const r = await fetch(`${FN}/save-schedule`, {
