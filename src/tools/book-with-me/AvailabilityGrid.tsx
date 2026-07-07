@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { DAYS, ROWS, SLOT_MIN, rowToMinutes, minutesToHHMM, type Grid } from './lib'
+
+export interface GridHandle {
+  scrollToFirst: () => void
+}
 
 interface Cell {
   day: number
@@ -31,15 +35,11 @@ function cellAt(x: number, y: number): Cell | null {
   return { day: Number(c.dataset.day), row: Number(c.dataset.row) }
 }
 
-export function AvailabilityGrid({
-  grid,
-  onChange,
-  locale,
-}: {
+export const AvailabilityGrid = forwardRef<GridHandle, {
   grid: Grid
   onChange: (next: Grid) => void
   locale: 'en' | 'ar'
-}) {
+}>(function AvailabilityGrid({ grid, onChange, locale }, ref) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [tip, setTip] = useState<{ x: number; y: number } | null>(null)
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
@@ -48,13 +48,25 @@ export function AvailabilityGrid({
   const scrollRef = useRef<HTMLDivElement>(null)
   const days = DAY_LABELS[locale]
 
-  // On load, scroll so midday is in view (the grid now spans all 24 hours).
-  useEffect(() => {
+  function scrollRowToTop(row: number) {
     const c = scrollRef.current
     if (!c) return
-    const cell = c.querySelector('[data-day="0"][data-row="8"]') as HTMLElement | null
+    const cell = c.querySelector(`[data-day="0"][data-row="${row}"]`) as HTMLElement | null
     if (cell) c.scrollTop += cell.getBoundingClientRect().top - c.getBoundingClientRect().top - 44
-  }, [])
+  }
+
+  // On load, scroll so midday is in view (the grid now spans all 24 hours).
+  useEffect(() => { scrollRowToTop(8) }, [])
+
+  // Expose scroll-to-first-slot to the parent (the "Total slots" pill).
+  useImperativeHandle(ref, () => ({
+    scrollToFirst() {
+      let firstRow = -1
+      for (let row = 0; row < ROWS && firstRow < 0; row++)
+        for (let day = 0; day < DAYS; day++) if (grid[day][row]) { firstRow = row; break }
+      if (firstRow >= 0) scrollRowToTop(firstRow)
+    },
+  }), [grid])
 
   const cellRect = (c: Cell) =>
     gridRef.current?.querySelector(`[data-day="${c.day}"][data-row="${c.row}"]`)?.getBoundingClientRect()
@@ -235,4 +247,4 @@ export function AvailabilityGrid({
       )}
     </div>
   )
-}
+})

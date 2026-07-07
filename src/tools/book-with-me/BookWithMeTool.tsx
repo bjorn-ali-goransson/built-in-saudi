@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
-import { AvailabilityGrid } from './AvailabilityGrid'
+import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
 import {
@@ -50,6 +50,7 @@ const STR = {
     tzTitle: 'Timezone',
     tzSearch: 'Search timezones…',
     tzShown: 'Times shown in',
+    totalSlots: 'Total slots',
     availability: 'Your availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
     meetingTypes: 'Meeting types',
@@ -102,6 +103,7 @@ const STR = {
     tzTitle: 'المنطقة الزمنية',
     tzSearch: 'ابحث عن منطقة زمنية…',
     tzShown: 'الأوقات بتوقيت',
+    totalSlots: 'إجمالي المواعيد',
     availability: 'أوقات فراغك',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
     meetingTypes: 'أنواع الاجتماعات',
@@ -196,6 +198,8 @@ export default function BookWithMeTool() {
   const [tzOpen, setTzOpen] = useState(false)
   const [tzq, setTzq] = useState('')
   const [pubMenu, setPubMenu] = useState(false)
+  const gridApi = useRef<GridHandle>(null)
+  const totalSlots = grid.reduce((sum, col) => sum + col.filter(Boolean).length, 0)
   // Bigger section heading (a div, not h2, to dodge the unlayered-base rule).
   const H = 'font-display rtl:font-ar text-[1.2rem] font-semibold text-ink leading-tight'
 
@@ -348,10 +352,13 @@ export default function BookWithMeTool() {
       {/* 1 · Availability painter — no well; big heading; timezone pill + modal */}
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div role="heading" aria-level={2} className={H}>{s.availability}</div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div role="heading" aria-level={2} className={H}>{s.availability}</div>
+            <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]" onClick={() => gridApi.current?.scrollToFirst()} data-testid="total-slots">{s.totalSlots}: {totalSlots}</Pill>
+          </div>
           <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]" onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
         </div>
-        <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
+        <AvailabilityGrid ref={gridApi} grid={grid} onChange={updateGrid} locale={locale} />
       </div>
 
       {/* 2 · Where it happens + fine print — no well */}
