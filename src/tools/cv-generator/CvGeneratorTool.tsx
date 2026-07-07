@@ -456,67 +456,53 @@ export default function CvGeneratorTool() {
     <Stack data-testid="cv-generator" className="min-h-[70vh]">
       {status !== 'done' && (
         <>
-          {hero}
+          {(status === 'idle' || (status === 'extracting' && origPages.length === 0)) && hero}
 
-          {/* Loading. Once the PDF text is extracted, show it (so they can see we
-              read their CV) with a floating status; before that, a shimmer skeleton. */}
-          {(status === 'extracting' || status === 'generating') && (
-            status === 'generating' && origPages.length ? (
-              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
-                <PdfPages pages={origPages} className="absolute inset-0" />
-                {/* Scanning beam sweeping down the document, plus a soft top/bottom fade. */}
-                <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,var(--sand-50),transparent_18%,transparent_82%,var(--sand-50))]" />
-                <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
-                <div className="absolute inset-x-0 top-5 flex justify-center px-4 pointer-events-none">
-                  <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
-                    <Spinner className="size-[1.1rem]" label={s.building} />
-                    <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-6 py-6" data-testid="cv-loading">
-                <div className="w-full max-w-[19rem] rounded-lg border border-[color:var(--line-soft)] bg-[var(--surface)] shadow-[var(--shadow-sm)] p-5 flex flex-col gap-3.5">
-                  {(() => {
-                    const bar = 'rounded-[3px] bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
-                    const head = 'rounded-[3px] bg-[color-mix(in_srgb,var(--green-500)_28%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
-                    let d = 0
-                    const step = () => ({ animationDelay: `${(d++ * 0.12).toFixed(2)}s` })
-                    return (
-                      <>
-                        <div className={`${bar} h-5 w-1/2`} style={step()} />
-                        <div className={`${bar} h-2.5 w-2/3`} style={step()} />
-                        <div className="h-px bg-[color:var(--line-soft)] my-1" />
-                        {[0, 1, 2].map((sec) => (
-                          <div key={sec} className="flex flex-col gap-2">
-                            <div className={`${head} h-3 w-1/3`} style={step()} />
-                            <div className={`${bar} h-2 w-full`} style={step()} />
-                            <div className={`${bar} h-2 w-11/12`} style={step()} />
-                            <div className={`${bar} h-2 w-4/5`} style={step()} />
-                          </div>
-                        ))}
-                      </>
-                    )
-                  })()}
-                </div>
-                <div className="flex items-center gap-2.5 text-[0.95rem] font-medium text-ink-soft">
-                  <Spinner className="size-[1.15rem]" label={s.building} />
-                  <span>{s.extracting}</span>
-                </div>
-              </div>
-            )
+          {status === 'extracting' && origPages.length === 0 && (
+            <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>
           )}
 
-          {/* Sign-in appears once a CV is ready; generation then starts automatically */}
-          {text && !idToken && status !== 'generating' && (
-            <div className="flex flex-col gap-2">
-              <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
-              <p className="text-[0.8rem] text-ink-faint">{s.loginNote}</p>
+          {/* Immediate PDF preview (ready + generating). It blurs while we generate,
+              with a scanning beam + status pill on top. */}
+          {origPages.length > 0 && (status === 'ready' || status === 'generating') && (
+            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
+              <PdfPages pages={origPages} className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />
+              {status === 'generating' && (
+                <>
+                  <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_35%,transparent)]" />
+                  <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
+                  <div className="absolute inset-x-0 top-5 flex justify-center px-4 pointer-events-none">
+                    <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
+                      <Spinner className="size-[1.1rem]" label={s.building} />
+                      <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Non-PDF (docx/txt): nothing to preview, so a simple spinner while generating. */}
+          {status === 'generating' && origPages.length === 0 && (
+            <div className="py-24 flex flex-col items-center gap-4" data-testid="cv-loading">
+              <Spinner className="size-9" label={s.building} />
+              <span key={loadingStep} className="text-[0.95rem] font-medium text-ink-soft animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
             </div>
           )}
 
           {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
         </>
+      )}
+
+      {/* Sticky bottom sign-in — a CV is ready, waiting for a quick Google sign-in. */}
+      {text && !idToken && status !== 'done' && createPortal(
+        <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="wrap py-3 flex items-center gap-3 flex-wrap">
+            <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
+            <span className="text-[0.85rem] text-ink-faint flex-1 min-w-[12rem]">{s.loginNote}</span>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {status === 'done' && cv && (
