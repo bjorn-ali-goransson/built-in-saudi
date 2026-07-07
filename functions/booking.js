@@ -276,9 +276,8 @@ function openSlots(host, busy, now) {
         // Long meetings span hour boundaries — step continuously.
         for (let s = winStart; s + lenMs <= winEnd + 1; s += stepMs) add(s)
       } else {
-        // Sessions align to each whole hour; leftover time is the gap.
-        for (let h = winStart; h < winEnd; h += HOUR)
-          for (let s = h; s + lenMs <= h + HOUR + 1; s += stepMs) add(s)
+        // One booking per painted hour; the rest of the hour is the gap.
+        for (let h = winStart; h < winEnd; h += HOUR) add(h)
       }
     }
   }

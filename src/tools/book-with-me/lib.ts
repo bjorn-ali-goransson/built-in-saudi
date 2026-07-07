@@ -19,10 +19,18 @@ export interface MeetingConfig {
   location: string
 }
 
+export interface MeetingType {
+  id: string
+  name: string
+  minutes: number
+  meet: boolean // attach a Google Meet link to the booking
+}
+
 export interface HostConfig {
   code: string
   tz: string
-  meeting: MeetingConfig
+  meeting: MeetingConfig // primary meeting (mirrors meetingTypes[0]) — kept for the backend
+  meetingTypes: MeetingType[]
   availability: AvailWindow[]
   notify: { push: boolean; telegram: boolean; email: boolean }
   pushSub?: unknown // this device's Web Push subscription, sent to the host record
@@ -30,10 +38,10 @@ export interface HostConfig {
 
 // ---- Grid geometry ----------------------------------------------------------
 
-export const DAY_START_MIN = 6 * 60 // grid starts at 06:00
-export const DAY_END_MIN = 24 * 60 // …ends at 24:00
+export const DAY_START_MIN = 0 // grid covers the whole day, 00:00 …
+export const DAY_END_MIN = 24 * 60 // … to 24:00
 export const SLOT_MIN = 60 // one grid row = one whole hour (availability is hourly)
-export const ROWS = (DAY_END_MIN - DAY_START_MIN) / SLOT_MIN // 18
+export const ROWS = (DAY_END_MIN - DAY_START_MIN) / SLOT_MIN // 24
 export const DAYS = 7
 
 export type Grid = boolean[][] // [day 0..6][row 0..ROWS-1]
@@ -128,9 +136,8 @@ export function enumerateDaySlots(
       // Long meetings span hour boundaries — step continuously across the window.
       for (let s = winStart; s + len <= winEnd + 1; s += step) add(s)
     } else {
-      // Sessions align to each whole hour; any leftover time is the gap.
-      for (let h = winStart; h < winEnd; h += HOUR)
-        for (let s = h; s + len <= h + HOUR + 1; s += step) add(s)
+      // One meeting per painted hour; the rest of the hour is the gap.
+      for (let h = winStart; h < winEnd; h += HOUR) add(h)
     }
   }
   return slots
@@ -167,9 +174,8 @@ export function previewSlots(cfg: HostConfig, now: number = Date.now()): number[
       if (len > 60) {
         for (let m = winStartMin; m + len <= winEndMin; m += step) addAt(m)
       } else {
-        // Sessions align to each whole hour; leftover is the gap.
-        for (let h = winStartMin; h < winEndMin; h += 60)
-          for (let m = h; m + len <= h + 60; m += step) addAt(m)
+        // One meeting per painted hour.
+        for (let h = winStartMin; h < winEndMin; h += 60) addAt(h)
       }
     }
   }
@@ -201,11 +207,16 @@ export function makeCode(): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('')
 }
 
+export function defaultMeetingTypes(): MeetingType[] {
+  return [{ id: makeCode(), name: 'Meeting', minutes: 45, meet: false }]
+}
+
 export function defaultConfig(): HostConfig {
   return {
     code: makeCode(),
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh',
     meeting: defaultMeeting(),
+    meetingTypes: defaultMeetingTypes(),
     availability: [
       // A sensible starter: weekday mornings, so the grid isn't blank.
       { day: 1, start: '09:00', end: '12:00' },
@@ -223,10 +234,15 @@ export function loadConfig(): HostConfig {
     const raw = localStorage.getItem(BIS_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<HostConfig>
+      const meeting = { ...defaultMeeting(), ...(parsed.meeting || {}) }
       return {
         ...defaultConfig(),
         ...parsed,
-        meeting: { ...defaultMeeting(), ...(parsed.meeting || {}) },
+        meeting,
+        // migrate: derive a first meeting type from the legacy single meeting
+        meetingTypes: parsed.meetingTypes?.length
+          ? parsed.meetingTypes
+          : [{ id: makeCode(), name: meeting.title || 'Meeting', minutes: meeting.minutes || 45, meet: false }],
         notify: { push: false, telegram: false, email: true, ...(parsed.notify || {}) },
         // keep a stable code across reloads
         code: parsed.code || makeCode(),
