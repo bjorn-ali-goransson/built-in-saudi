@@ -143,14 +143,16 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
   const info = (() => {
     if (!sel || !drag) return null
     const erasing = drag.mode === 'erase'
+    // Count only the slots that actually change: painted ones when erasing,
+    // empty ones when painting (overlaps with already-painted don't count).
     let count = 0
     for (let day = sel.d0; day <= sel.d1; day++)
       for (let row = sel.r0; row <= sel.r1; row++)
-        if (!erasing || grid[day][row]) count++
+        if (erasing ? grid[day][row] : !grid[day][row]) count++
     const dstr = sel.d0 === sel.d1 ? days[sel.d0] : `${days[sel.d0]}–${days[sel.d1]}`
     const tstr = `${minutesToHHMM(rowToMinutes(sel.r0))}–${minutesToHHMM(rowToMinutes(sel.r1) + SLOT_MIN)}`
     const noun = locale === 'ar' ? 'موعد' : `slot${count !== 1 ? 's' : ''}`
-    const verb = erasing ? (locale === 'ar' ? 'حذف ' : 'remove ') : ''
+    const verb = erasing ? (locale === 'ar' ? 'حذف ' : 'remove ') : (locale === 'ar' ? 'إضافة ' : 'add ')
     return `${verb}${count} ${noun} · ${dstr} ${tstr}`
   })()
 

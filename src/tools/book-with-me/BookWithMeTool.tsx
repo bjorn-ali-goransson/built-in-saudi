@@ -393,7 +393,7 @@ export default function BookWithMeTool() {
             <div role="heading" aria-level={2} className={H}>{s.availability}</div>
             <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]" onClick={() => gridApi.current?.scrollToFirst()} data-testid="total-slots">{s.totalSlots}: {totalSlots}</Pill>
           </div>
-          <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]" onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
+          <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5" onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
         </div>
         <AvailabilityGrid ref={gridApi} grid={grid} onChange={updateGrid} locale={locale} />
       </div>
