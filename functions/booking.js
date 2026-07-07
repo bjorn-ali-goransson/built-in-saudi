@@ -124,21 +124,29 @@ async function accessTokenFor(refreshToken) {
   return (await r.json()).access_token
 }
 
+// Busy = ANY real (timed) event on the calendar, regardless of its Busy/Free
+// flag — most people never touch that flag and expect anything on their calendar
+// to block. We skip all-day events (date-only) and events the host declined.
 async function googleBusy(accessToken, calId, timeMinIso, timeMaxIso) {
-  const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ timeMin: timeMinIso, timeMax: timeMaxIso, items: [{ id: calId }] }),
-  })
-  if (!r.ok) throw new Error(`freeBusy ${r.status}`)
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`
+    + `?timeMin=${encodeURIComponent(timeMinIso)}&timeMax=${encodeURIComponent(timeMaxIso)}`
+    + '&singleEvents=true&orderBy=startTime&maxResults=2500'
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!r.ok) throw new Error(`events ${r.status}`)
   const data = await r.json()
-  const cal = (data.calendars && data.calendars[calId]) || {}
-  return (cal.busy || []).map((b) => ({ start: Date.parse(b.start), end: Date.parse(b.end) }))
+  const busy = []
+  for (const ev of data.items || []) {
+    if (ev.status === 'cancelled') continue
+    if (!ev.start || !ev.start.dateTime || !ev.end || !ev.end.dateTime) continue // skip all-day
+    if ((ev.attendees || []).some((a) => a.self && a.responseStatus === 'declined')) continue
+    busy.push({ start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime) })
+  }
+  return busy
 }
 
 async function insertEvent(accessToken, calId, event) {
   const r = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?sendUpdates=all`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?sendUpdates=all&conferenceDataVersion=1`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -169,7 +177,7 @@ async function sendEmail({ to, subject, html, ics }) {
     html,
   }
   if (ics) {
-    body.attachments = [{ filename: 'invite.ics', content: Buffer.from(ics).toString('base64') }]
+    body.attachments = [{ filename: 'invite.ics', content: Buffer.from(ics).toString('base64'), content_type: 'text/calendar; method=REQUEST; charset=utf-8' }]
   }
   await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -188,6 +196,7 @@ function buildICS({ uid, start, end, summary, description, location, organizerEm
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Built in Saudi//Book With Me//EN',
+    'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'BEGIN:VEVENT',
     `UID:${uid}`,
@@ -198,7 +207,10 @@ function buildICS({ uid, start, end, summary, description, location, organizerEm
     description ? `DESCRIPTION:${esc(description)}` : '',
     location ? `LOCATION:${esc(location)}` : '',
     organizerEmail ? `ORGANIZER:mailto:${organizerEmail}` : '',
-    attendeeEmail ? `ATTENDEE;RSVP=TRUE:mailto:${attendeeEmail}` : '',
+    attendeeEmail ? `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${attendeeEmail}` : '',
+    'SEQUENCE:0',
+    'STATUS:CONFIRMED',
+    'TRANSP:OPAQUE',
     'END:VEVENT',
     'END:VCALENDAR',
   ]
@@ -516,13 +528,17 @@ http('book', async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { code, startUtc, name, email, note } = req.body || {}
+    const { code, startUtc, name, email, note, typeId } = req.body || {}
     if (!startUtc || !name || !email) return res.status(400).json({ error: 'missing fields' })
     const host = await hostByCode(code)
     if (!host) return res.status(404).json({ error: 'not found' })
 
+    // The chosen meeting type drives the title, duration and whether we add a Meet.
+    const type = (Array.isArray(host.meetingTypes) ? host.meetingTypes : []).find((t) => t.id === typeId)
+    const minutes = (type && type.minutes) || (host.meeting && host.meeting.minutes) || 45
+    const wantMeet = !!(type && type.meet)
     const start = Number(startUtc)
-    const lenMs = ((host.meeting && host.meeting.minutes) || 45) * 60000
+    const lenMs = minutes * 60000
     const end = start + lenMs
     if (start < Date.now()) return res.status(400).json({ error: 'in the past' })
 
@@ -560,23 +576,30 @@ http('book', async (req, res) => {
       throw e
     })
 
-    const title = (host.meeting && host.meeting.title) || 'Meeting'
+    const title = (type && type.name) || (host.meeting && host.meeting.title) || 'Meeting'
     const location = (host.meeting && host.meeting.location) || ''
     const summary = `${title} — ${name}`
 
     // Create the Google Calendar event (best-effort; booking already persisted).
+    // Capture the auto-created Meet link so we can put it in the emails/.ics too.
+    let meetLink = ''
     if (host.google && host.google.refreshToken) {
       try {
         const at = await accessTokenFor(host.google.refreshToken)
-        const ev = await insertEvent(at, host.google.calendarId || 'primary', {
+        const event = {
           summary,
           description: note ? `Booked via Built in Saudi.\n\n${note}` : 'Booked via Built in Saudi.',
           location,
           start: { dateTime: new Date(start).toISOString() },
           end: { dateTime: new Date(end).toISOString() },
           attendees: [{ email: String(email), displayName: String(name) }],
-        })
-        if (ev && ev.id) await bRef.update({ gcalEventId: ev.id })
+        }
+        if (wantMeet) {
+          event.conferenceData = { createRequest: { requestId: bId, conferenceSolutionKey: { type: 'hangoutsMeet' } } }
+        }
+        const ev = await insertEvent(at, host.google.calendarId || 'primary', event)
+        if (ev && ev.hangoutLink) meetLink = ev.hangoutLink
+        if (ev && ev.id) await bRef.update({ gcalEventId: ev.id, ...(meetLink ? { meetLink } : {}) })
       } catch (e) {
         console.error('gcal insert failed:', String((e && e.message) || e))
       }
@@ -605,23 +628,27 @@ http('book', async (req, res) => {
     // Email the booker (and host) a confirmation with a real .ics.
     const ics = buildICS({
       uid: `${bId}@built-in-saudi.com`,
-      start, end, summary: title, description: note || '', location,
+      start, end, summary: title, description: [note, meetLink && `Google Meet: ${meetLink}`].filter(Boolean).join('\n\n'),
+      location: meetLink || location,
       organizerEmail: host.email, attendeeEmail: String(email),
     })
+    const meetHtml = meetLink ? `<p><b>Google Meet:</b> <a href="${meetLink}">${meetLink}</a></p>` : ''
     const whenBooker = new Date(start).toISOString()
     if (notify.email !== false) {
       await sendEmail({
         to: String(email),
         subject: `Confirmed: ${title}`,
-        html: `<p>Your ${title.toLowerCase()} is booked.</p><p><b>When:</b> ${whenBooker} (UTC)</p>${location ? `<p><b>Where:</b> ${location}</p>` : ''}<p>Added to your calendar via the attached invite.</p>`,
+        html: `<p>Your ${title.toLowerCase()} is booked.</p><p><b>When:</b> ${whenBooker} (UTC)</p>${location ? `<p><b>Where:</b> ${location}</p>` : ''}${meetHtml}<p>Added to your calendar via the attached invite.</p>`,
         ics,
       })
       if (host.email) {
         await sendEmail({
           to: host.email,
           subject: `New booking: ${title} — ${name}`,
-          html: `<p><b>${name}</b> (${email}) booked ${title}.</p><p><b>When:</b> ${whenHost}</p>${note ? `<p><b>Note:</b> ${note}</p>` : ''}`,
-          ics,
+          html: `<p><b>${name}</b> (${email}) booked ${title}.</p><p><b>When:</b> ${whenHost}</p>${meetHtml}${note ? `<p><b>Note:</b> ${note}</p>` : ''}`,
+          // Skip the .ics when the host has Calendar connected — the event is
+          // already on their calendar (avoids Gmail's "Unable to load event").
+          ics: host.google && host.google.refreshToken ? undefined : ics,
         })
       }
     }
