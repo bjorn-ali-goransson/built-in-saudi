@@ -2,7 +2,8 @@ import QRCode from 'qrcode'
 
 export type DotStyle = 'square' | 'dots' | 'rounded' | 'cube' | 'liquid' | 'emoji'
 export const DOT_STYLES: DotStyle[] = ['square', 'dots', 'rounded', 'cube', 'liquid', 'emoji']
-export type Frame = 'none' | 'card' | 'circle'
+export type Frame = 'none' | 'card' | 'panel' | 'bubble' | 'ribbon' | 'corner' | 'circle'
+export interface BorderStyle { width: number; style: 'solid' | 'dashed'; radius: number } // width/radius as fractions of the QR size
 const EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif'
 
 export interface RenderOpts {
@@ -18,6 +19,7 @@ export interface RenderOpts {
   frame?: Frame
   frameColor?: string
   label?: string
+  border?: BorderStyle
 }
 
 function shade(hex: string, amt: number): string {
@@ -122,14 +124,45 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
   const ctx = canvas.getContext('2d')!
 
   if (frame === 'none') {
+    const b = o.border
+    if (b && b.width > 0) {
+      const lw = Math.max(1, Math.round(q * b.width))
+      const pad = lw + Math.round(q * 0.015)
+      const w = q + pad * 2
+      canvas.width = w; canvas.height = w
+      const rad = Math.round(q * b.radius) + pad
+      ctx.fillStyle = o.bg
+      roundRect(ctx, 0, 0, w, w, rad); ctx.fill()
+      ctx.drawImage(qc, pad, pad)
+      ctx.strokeStyle = fc
+      ctx.lineWidth = lw
+      if (b.style === 'dashed') ctx.setLineDash([lw * 2.4, lw * 1.7])
+      roundRect(ctx, lw / 2, lw / 2, w - lw, w - lw, Math.max(0, rad - lw / 2))
+      ctx.stroke(); ctx.setLineDash([])
+      return w
+    }
     canvas.width = q; canvas.height = q
     ctx.drawImage(qc, 0, 0)
     return q
   }
 
   const labelH = label ? Math.round(q * 0.16) : 0
+  const label2 = label || 'SCAN ME'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+
+  // Shared badge helpers: a rounded white QR card, a triangle, a centred label.
+  const qcard = (x: number, y: number) => {
+    ctx.save(); roundRect(ctx, x, y, q, q, Math.round(q * 0.06)); ctx.clip(); ctx.drawImage(qc, x, y); ctx.restore()
+  }
+  const tri = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill()
+  }
+  const putLabel = (cx: number, cy: number, h: number, color: string) => {
+    ctx.fillStyle = color
+    ctx.font = `800 ${Math.round(h * 0.58)}px "Hanken Grotesk", system-ui, sans-serif`
+    ctx.fillText(label2, cx, cy)
+  }
 
   if (frame === 'card') {
     const pad = Math.round(q * 0.09)
@@ -149,23 +182,98 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     return w
   }
 
-  // circle badge — centre the QR + label as one group inside the disc
-  const gap = label ? Math.round(q * 0.05) : 0
-  const lh = label ? Math.round(q * 0.15) : 0
-  const groupH = q + gap + lh
-  const diam = Math.round(q * 1.52)
+  // Coloured panel with the label on a bar at the top.
+  if (frame === 'panel') {
+    const pad = Math.round(q * 0.09)
+    const lblH = Math.round(q * 0.2)
+    const w = q + pad * 2
+    const h = q + pad * 2 + lblH
+    canvas.width = w; canvas.height = h
+    ctx.fillStyle = fc
+    roundRect(ctx, 0, 0, w, h, Math.round(q * 0.1)); ctx.fill()
+    qcard(pad, lblH + pad)
+    putLabel(w / 2, pad / 2 + lblH / 2, lblH, '#ffffff')
+    return w
+  }
+
+  // Speech bubble: label bar under the QR with a downward pointer tail.
+  if (frame === 'bubble') {
+    const pad = Math.round(q * 0.08)
+    const lblH = Math.round(q * 0.2)
+    const tail = Math.round(q * 0.1)
+    const w = q + pad * 2
+    const bodyH = q + pad * 2 + lblH
+    canvas.width = w; canvas.height = bodyH + tail
+    ctx.fillStyle = fc
+    roundRect(ctx, 0, 0, w, bodyH, Math.round(q * 0.1)); ctx.fill()
+    tri(w / 2 - tail, bodyH - 1, w / 2 + tail, bodyH - 1, w / 2, bodyH + tail)
+    qcard(pad, pad)
+    putLabel(w / 2, q + pad + (pad + lblH) / 2, lblH, '#ffffff')
+    return w
+  }
+
+  // Fishtail ribbon banner across the lower part of the QR.
+  if (frame === 'ribbon') {
+    const ext = Math.round(q * 0.1)
+    const bh = Math.round(q * 0.22)
+    const notch = Math.round(bh * 0.42)
+    const w = q + ext * 2
+    const by = q - Math.round(bh * 0.4)
+    canvas.width = w; canvas.height = by + bh
+    qcard(ext, 0)
+    ctx.fillStyle = fc
+    ctx.beginPath()
+    ctx.moveTo(0, by); ctx.lineTo(w, by)
+    ctx.lineTo(w - notch, by + bh / 2); ctx.lineTo(w, by + bh)
+    ctx.lineTo(0, by + bh); ctx.lineTo(notch, by + bh / 2)
+    ctx.closePath(); ctx.fill()
+    putLabel(w / 2, by + bh / 2, bh, '#ffffff')
+    return w
+  }
+
+  // Corner brackets around the QR with the label beneath.
+  if (frame === 'corner') {
+    const m = Math.round(q * 0.09)
+    const lblH = Math.round(q * 0.18)
+    const w = q + m * 2
+    const h = q + m + lblH + Math.round(q * 0.05)
+    canvas.width = w; canvas.height = h
+    ctx.fillStyle = o.bg; ctx.fillRect(0, 0, w, h)
+    qcard(m, m)
+    const t = Math.max(2, Math.round(q * 0.03)), len = Math.round(q * 0.17), g = Math.round(q * 0.02)
+    ctx.fillStyle = fc
+    const Lx = m - g - t, Rx = m + q + g, Ty = m - g - t, By = m + q + g
+    ctx.fillRect(Lx, Ty, len, t); ctx.fillRect(Lx, Ty, t, len)
+    ctx.fillRect(Rx + t - len, Ty, len, t); ctx.fillRect(Rx, Ty, t, len)
+    ctx.fillRect(Lx, By, len, t); ctx.fillRect(Lx, By + t - len, t, len)
+    ctx.fillRect(Rx + t - len, By, len, t); ctx.fillRect(Rx, By + t - len, t, len)
+    putLabel(w / 2, m + q + Math.round(q * 0.02) + lblH / 2, lblH, fc)
+    return w
+  }
+
+  // circle badge — a generously sized disc so the white QR card sits fully
+  // inside (its corners never poke past the edge); the card + label are centred
+  // as one group, with the label riding the lower arc, text centred.
+  const cardPad = Math.round(q * 0.05)
+  const cardS = q + cardPad * 2
+  const lh = label ? Math.round(q * 0.14) : 0
+  const gap = label ? Math.round(q * 0.04) : 0
+  const diam = Math.round(cardS * 1.46 + lh * 1.25)
   canvas.width = diam; canvas.height = diam
   ctx.fillStyle = fc
   ctx.beginPath(); ctx.arc(diam / 2, diam / 2, diam / 2, 0, Math.PI * 2); ctx.fill()
-  const qx = Math.round((diam - q) / 2)
-  const qy = Math.round((diam - groupH) / 2)
+  const groupH = cardS + gap + lh
+  const top = Math.round((diam - groupH) / 2)
+  const cardX = Math.round((diam - cardS) / 2)
   ctx.fillStyle = o.bg
-  roundRect(ctx, qx - q * 0.04, qy - q * 0.04, q * 1.08, q * 1.08, q * 0.06); ctx.fill()
-  ctx.drawImage(qc, qx, qy)
+  roundRect(ctx, cardX, top, cardS, cardS, Math.round(q * 0.08)); ctx.fill()
+  ctx.drawImage(qc, cardX + cardPad, top + cardPad)
   if (label) {
     ctx.fillStyle = '#ffffff'
-    ctx.font = `800 ${Math.round(lh * 0.62)}px "Hanken Grotesk", system-ui, sans-serif`
-    ctx.fillText(label, diam / 2, qy + q + gap + lh / 2)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = `800 ${Math.round(lh * 0.72)}px "Hanken Grotesk", system-ui, sans-serif`
+    ctx.fillText(label, diam / 2, top + cardS + gap + lh / 2)
   }
   return diam
 }
