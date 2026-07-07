@@ -19,6 +19,8 @@ export interface RenderOpts {
   frame?: Frame
   frameColor?: string
   label?: string
+  labelColor?: string
+  labelTop?: boolean // place the label above the QR (default below)
   border?: BorderStyle
 }
 
@@ -148,6 +150,8 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
 
   const labelH = label ? Math.round(q * 0.16) : 0
   const label2 = label || 'SCAN ME'
+  const lc = o.labelColor || '#ffffff'
+  const top = !!o.labelTop
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
@@ -171,18 +175,19 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     canvas.width = w; canvas.height = h
     ctx.fillStyle = fc
     roundRect(ctx, 0, 0, w, h, Math.round(q * 0.09)); ctx.fill()
+    const qy = label && top ? h - pad - q : pad
     ctx.fillStyle = o.bg
-    roundRect(ctx, pad, pad, q, q, Math.round(q * 0.05)); ctx.fill()
-    ctx.drawImage(qc, pad, pad)
+    roundRect(ctx, pad, qy, q, q, Math.round(q * 0.05)); ctx.fill()
+    ctx.drawImage(qc, pad, qy)
     if (label) {
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = lc
       ctx.font = `700 ${Math.round(labelH * 0.5)}px "Hanken Grotesk", system-ui, sans-serif`
-      ctx.fillText(label, w / 2, q + pad * 2 + labelH / 2)
+      ctx.fillText(label, w / 2, top ? pad + labelH / 2 : h - pad - labelH / 2)
     }
     return w
   }
 
-  // Coloured panel with the label on a bar at the top.
+  // Coloured panel with the label on a bar (top by default).
   if (frame === 'panel') {
     const pad = Math.round(q * 0.09)
     const lblH = Math.round(q * 0.2)
@@ -191,8 +196,9 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     canvas.width = w; canvas.height = h
     ctx.fillStyle = fc
     roundRect(ctx, 0, 0, w, h, Math.round(q * 0.1)); ctx.fill()
-    qcard(pad, lblH + pad)
-    putLabel(w / 2, pad / 2 + lblH / 2, lblH, '#ffffff')
+    const barTop = !top // panel's label defaults to the top
+    qcard(pad, barTop ? lblH + pad : pad)
+    putLabel(w / 2, barTop ? pad / 2 + lblH / 2 : h - pad / 2 - lblH / 2, lblH, lc)
     return w
   }
 
@@ -208,7 +214,7 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     roundRect(ctx, 0, 0, w, bodyH, Math.round(q * 0.1)); ctx.fill()
     tri(w / 2 - tail, bodyH - 1, w / 2 + tail, bodyH - 1, w / 2, bodyH + tail)
     qcard(pad, pad)
-    putLabel(w / 2, q + pad + (pad + lblH) / 2, lblH, '#ffffff')
+    putLabel(w / 2, q + pad + (pad + lblH) / 2, lblH, lc)
     return w
   }
 
@@ -227,7 +233,7 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     ctx.lineTo(w - notch, by + bh / 2); ctx.lineTo(w, by + bh)
     ctx.lineTo(0, by + bh); ctx.lineTo(notch, by + bh / 2)
     ctx.closePath(); ctx.fill()
-    putLabel(w / 2, by + bh / 2, bh, '#ffffff')
+    putLabel(w / 2, by + bh / 2, bh, lc)
     return w
   }
 
@@ -247,7 +253,7 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     ctx.fillRect(Rx + t - len, Ty, len, t); ctx.fillRect(Rx, Ty, t, len)
     ctx.fillRect(Lx, By, len, t); ctx.fillRect(Lx, By + t - len, t, len)
     ctx.fillRect(Rx + t - len, By, len, t); ctx.fillRect(Rx, By + t - len, t, len)
-    putLabel(w / 2, m + q + Math.round(q * 0.02) + lblH / 2, lblH, fc)
+    putLabel(w / 2, m + q + Math.round(q * 0.02) + lblH / 2, lblH, o.labelColor || fc)
     return w
   }
 
@@ -263,17 +269,17 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
   ctx.fillStyle = fc
   ctx.beginPath(); ctx.arc(diam / 2, diam / 2, diam / 2, 0, Math.PI * 2); ctx.fill()
   const groupH = cardS + gap + lh
-  const top = Math.round((diam - groupH) / 2)
+  const cardTop = Math.round((diam - groupH) / 2)
   const cardX = Math.round((diam - cardS) / 2)
   ctx.fillStyle = o.bg
-  roundRect(ctx, cardX, top, cardS, cardS, Math.round(q * 0.08)); ctx.fill()
-  ctx.drawImage(qc, cardX + cardPad, top + cardPad)
+  roundRect(ctx, cardX, cardTop, cardS, cardS, Math.round(q * 0.08)); ctx.fill()
+  ctx.drawImage(qc, cardX + cardPad, cardTop + cardPad)
   if (label) {
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = lc
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.font = `800 ${Math.round(lh * 0.72)}px "Hanken Grotesk", system-ui, sans-serif`
-    ctx.fillText(label, diam / 2, top + cardS + gap + lh / 2)
+    ctx.fillText(label, diam / 2, cardTop + cardS + gap + lh / 2)
   }
   return diam
 }
