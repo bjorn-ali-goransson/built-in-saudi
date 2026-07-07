@@ -425,13 +425,26 @@ http('getAvailability', async (req, res) => {
       if (b.startUtc.toMillis() < now) continue
       busy.push({ start: b.startUtc.toMillis(), end: b.endUtc.toMillis() })
     }
+    let dbg = { hasToken: !!(host.google && host.google.refreshToken), calId: (host.google && host.google.calendarId) || 'primary' }
     if (host.google && host.google.refreshToken) {
       try {
         const at = await accessTokenFor(host.google.refreshToken)
         const gbusy = await googleBusy(at, host.google.calendarId || 'primary', new Date(now).toISOString(), new Date(horizonEnd).toISOString())
         busy.push(...gbusy)
+        dbg.busyCount = gbusy.length
+        if (req.body && req.body.debug) {
+          const durl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(host.google.calendarId || 'primary')}/events`
+            + `?timeMin=${encodeURIComponent(new Date(now).toISOString())}&timeMax=${encodeURIComponent(new Date(horizonEnd).toISOString())}&singleEvents=true&orderBy=startTime&maxResults=50`
+          const dr = await fetch(durl, { headers: { Authorization: `Bearer ${at}` } })
+          const dj = await dr.json()
+          dbg.rawStatus = dr.status
+          dbg.rawCount = (dj.items || []).length
+          dbg.rawError = dj.error || null
+          dbg.sample = (dj.items || []).slice(0, 8).map((e) => ({ status: e.status, summary: e.summary, start: e.start }))
+        }
       } catch (e) {
-        console.error('freebusy failed:', String((e && e.message) || e))
+        dbg.calErr = String((e && e.message) || e)
+        console.error('calendar busy failed:', String((e && e.message) || e))
       }
     }
     const slots = openSlots(host, busy, now)
@@ -449,6 +462,7 @@ http('getAvailability', async (req, res) => {
         meetingTypes: Array.isArray(host.meetingTypes) ? host.meetingTypes : [],
       },
       slots,
+      ...(req.body && req.body.debug ? { _debug: dbg } : {}),
     })
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) })
