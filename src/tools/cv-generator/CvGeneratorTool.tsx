@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack, Spinner } from '../../components/ui'
@@ -201,6 +202,7 @@ export default function CvGeneratorTool() {
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
+  const [origUrl, setOrigUrl] = useState('') // object URL of the uploaded PDF (for the "Original" flip)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -276,6 +278,8 @@ export default function CvGeneratorTool() {
     autoTried.current = false
     setErr('')
     setCv(null)
+    setShowOriginal(false)
+    setOrigUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? URL.createObjectURL(f) : '' })
     setStatus('extracting')
     try {
       const { extractText } = await import('./extract')
@@ -442,8 +446,11 @@ export default function CvGeneratorTool() {
               read their CV) with a floating status; before that, a shimmer skeleton. */}
           {(status === 'extracting' || status === 'generating') && (
             status === 'generating' && text ? (
-              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative" data-testid="cv-loading">
-                <iframe title="original" srcDoc={renderOriginalHtml(text)} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef] opacity-70" />
+              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden" data-testid="cv-loading">
+                <iframe title="original" srcDoc={renderOriginalHtml(text)} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef] opacity-60" />
+                {/* Scanning beam sweeping down the document, plus a soft top/bottom fade. */}
+                <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,var(--sand-50),transparent_18%,transparent_82%,var(--sand-50))]" />
+                <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
                 <div className="absolute inset-x-0 top-5 flex justify-center px-4 pointer-events-none">
                   <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
                     <Spinner className="size-[1.1rem]" label={s.building} />
@@ -498,22 +505,30 @@ export default function CvGeneratorTool() {
 
       {status === 'done' && cv && (
         <>
-          {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit */}
-          <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)]">
+          {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit.
+              The optimized iframe stays mounted (keeps inline edits); the original
+              PDF is overlaid when flipped. */}
+          <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative">
             <iframe
               ref={iframeRef}
               title={cvFilename(cv)}
               className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
-              srcDoc={showOriginal ? renderOriginalHtml(text) : renderCvHtml(cv, { preview: true })}
+              srcDoc={renderCvHtml(cv, { preview: true })}
             />
+            {showOriginal && origUrl && (
+              <iframe title="original PDF" src={origUrl} className="absolute inset-0 w-full h-full border-0 bg-[#e9ebef]" />
+            )}
           </div>
 
-          {/* Flip between the optimized CV and the original you uploaded */}
-          {text && (
-            <div className="fixed start-4 top-[4.75rem] z-50 flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)] overflow-hidden text-[0.82rem] font-semibold">
+          {/* Flip between the optimized CV and the original PDF. Only when we kept the
+              original (PDF uploads), and portaled to <body> so it pins to the top-left
+              instead of being dragged down by ToolPage's transform. */}
+          {origUrl && createPortal(
+            <div className="fixed start-4 top-[calc(68px+0.6rem)] max-[560px]:top-[calc(60px+0.6rem)] z-[55] flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] overflow-hidden text-[0.82rem] font-semibold">
               <button type="button" data-testid="cv-view-optimized" onClick={() => setShowOriginal(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
               <button type="button" data-testid="cv-view-original" onClick={() => setShowOriginal(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
-            </div>
+            </div>,
+            document.body,
           )}
 
           {/* Bottom bar: collapsed = Download + Make adjustments; expanded = the dialogue */}

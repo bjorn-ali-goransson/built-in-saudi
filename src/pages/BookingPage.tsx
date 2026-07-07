@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
-import { Button, Input, Textarea, Field, Stack, Panel, Pill, Sheet, SheetTitle, SheetActions } from '../components/ui'
+import { Button, Input, Textarea, Field, Stack, Panel, Pill, Sheet, SheetTitle, SheetActions, Spinner } from '../components/ui'
 import { GlobeIcon, ClockIcon, EditIcon } from '../components/icons'
 import { getAvailability, book, readHostSession, type HostMeta } from '../lib/bookingApi'
 import { bookingHeaderStore } from '../lib/bookingHeader'
@@ -92,6 +92,9 @@ export function BookingPage() {
   const [alertOpen, setAlertOpen] = useState(false)
   const [heading, setHeading] = useState('')
   const [text, setText] = useState('')
+  const headingRef = useRef('')
+  const textRef = useRef('')
+  useEffect(() => { headingRef.current = heading; textRef.current = text }, [heading, text])
   const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
   const [tz, setTz] = useState(localTz) // the booker's display timezone
   const [firstDay, setFirstDay] = useState(() => detectFirstDay())
@@ -241,6 +244,7 @@ export function BookingPage() {
     : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…' }
   const dayNames = useMemo(() => Array.from({ length: 7 }, (_, d) => new Intl.DateTimeFormat(lc, { weekday: 'long' }).format(new Date(2023, 0, 1 + d))), [lc])
   const tzShort = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz
+  const tzOffset = (z: string) => { try { return new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value ?? '' } catch { return '' } }
   const tzList = useMemo(() => { const q = tzq.trim().toLowerCase(); return q ? allTz.filter((z) => z.toLowerCase().includes(q)).slice(0, 60) : allTz.slice(0, 60) }, [allTz, tzq])
 
   // Month grid for the calendar (Gregorian layout; labels honour tz/first-day/calendar).
@@ -259,7 +263,12 @@ export function BookingPage() {
 
   return (
     <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[56rem] animate-[fadeUp_0.5s_ease_both]">
-      {status === 'loading' && <p className="text-ink-faint">{s.loading}</p>}
+      {status === 'loading' && (
+        <div className="flex flex-col items-center justify-center gap-4 py-24 text-ink-faint" role="status" aria-live="polite">
+          <Spinner className="size-9" label={s.loading} />
+          <span className="text-[0.9rem]">{s.loading}</span>
+        </div>
+      )}
       {status === 'not-found' && <Panel><p className="text-ink-soft">{s.notFound}</p></Panel>}
       {status === 'error' && <Panel><p className="text-ink-soft">{s.error}</p></Panel>}
 
@@ -274,18 +283,16 @@ export function BookingPage() {
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 {host.name && <span className="text-[0.82rem] font-semibold opacity-90">{host.name}</span>}
                 {preview
-                  ? <label className="flex items-center gap-1.5 rounded-md -mx-1.5 px-1.5 hover:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)]">
-                      <input value={heading} placeholder={L.headPh} data-testid="edit-heading" onChange={(e) => { setHeading(e.target.value); saveIntro(e.target.value, text) }}
-                        className="bg-transparent border-0 outline-none flex-1 min-w-0 font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_50%,transparent)]" />
-                      <EditIcon className="w-4 h-4 flex-none opacity-55" />
-                    </label>
+                  ? <span className="inline-flex items-baseline gap-1.5 font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight text-sand-100">
+                      <Editable initial={heading} placeholder={L.headPh} testid="edit-heading" onChange={(v) => { setHeading(v); saveIntro(v, textRef.current) }} className="" />
+                      <EditIcon className="w-4 h-4 flex-none opacity-55 self-center" />
+                    </span>
                   : <h1 className="font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{heading}</h1>}
                 {preview
-                  ? <label className="flex items-center gap-1.5 rounded-md -mx-1.5 px-1.5 hover:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)]">
-                      <input value={text} placeholder={L.textPh} data-testid="edit-text" onChange={(e) => { setText(e.target.value); saveIntro(heading, e.target.value) }}
-                        className="bg-transparent border-0 outline-none flex-1 min-w-0 text-[0.92rem] opacity-90 text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_45%,transparent)]" />
-                      <EditIcon className="w-3.5 h-3.5 flex-none opacity-55" />
-                    </label>
+                  ? <span className="inline-flex items-baseline gap-1.5 text-[0.92rem] opacity-90 text-sand-100">
+                      <Editable initial={text} placeholder={L.textPh} testid="edit-text" onChange={(v) => { setText(v); saveIntro(headingRef.current, v) }} className="" />
+                      <EditIcon className="w-3.5 h-3.5 flex-none opacity-55 self-center" />
+                    </span>
                   : text && <p className="text-[0.92rem] opacity-90 leading-relaxed">{text}</p>}
               </div>
             </div>
@@ -323,7 +330,7 @@ export function BookingPage() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-display text-[1.2rem] text-ink me-auto">{s.selectDate}</h2>
-                    <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.greg : L.hijri}</Pill>
+                    <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.hijri : L.greg}</Pill>
                     <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.yourTz(tz)} className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5"><GlobeIcon /> {tzShort}</Pill>
                   </div>
                   {gone && <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>}
@@ -447,24 +454,21 @@ export function BookingPage() {
               <SheetTitle>{L.tzTitle}</SheetTitle>
               <div className="flex flex-col gap-1.5">
                 <span className="text-[0.8rem] font-semibold text-ink-soft">{L.firstD}</span>
-                <div className="flex flex-wrap gap-1" data-testid="first-day">
-                  {dayNames.map((nm, d) => (
+                <div className="flex gap-1" data-testid="first-day">
+                  {[0, 1].map((d) => (
                     <button key={d} type="button" onClick={() => setFirstDay(d)}
-                      className={`px-2.5 py-1 rounded-md border text-[0.8rem] cursor-pointer ${firstDay === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{nm}</button>
+                      className={`px-3 py-1.5 rounded-md border text-[0.85rem] cursor-pointer ${firstDay === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{dayNames[d]}</button>
                   ))}
                 </div>
-              </div>
-              <div className="flex gap-1.5">
-                {(['greg', 'hijri'] as const).map((c) => (
-                  <button key={c} type="button" onClick={() => setCal(c)}
-                    className={`px-3 py-1.5 rounded-md border text-[0.85rem] cursor-pointer ${cal === c ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{c === 'greg' ? L.greg : L.hijri}</button>
-                ))}
               </div>
               <Input value={tzq} onChange={(e) => setTzq(e.target.value)} placeholder={L.search} data-testid="tz-search" />
               <div className="flex flex-col max-h-[40vh] overflow-y-auto -mx-1">
                 {tzList.map((z) => (
                   <button key={z} type="button" onClick={() => { setTz(z); setTzOpen(false); setTzq('') }}
-                    className={`text-start px-3 py-2 rounded-md text-[0.85rem] cursor-pointer border-0 bg-transparent ${z === tz ? 'text-green-700 font-semibold bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>{z.replace(/_/g, ' ')}</button>
+                    className={`flex items-center justify-between gap-3 text-start px-3 py-2 rounded-md text-[0.85rem] cursor-pointer border-0 bg-transparent ${z === tz ? 'text-green-700 font-semibold bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>
+                    <span className="truncate">{z.replace(/_/g, ' ')}</span>
+                    <span className="flex-none text-[0.76rem] text-ink-faint font-mono">{tzOffset(z)}</span>
+                  </button>
                 ))}
               </div>
             </Sheet>
@@ -472,5 +476,28 @@ export function BookingPage() {
         </Stack>
       )}
     </div>
+  )
+}
+
+/** An inline, auto-sizing editable text node (contentEditable) so a trailing edit
+ *  icon hugs the text instead of being pushed to the row's edge. Uncontrolled
+ *  after mount to keep the caret stable. */
+function Editable({ initial, onChange, className, placeholder, testid }: {
+  initial: string; onChange: (v: string) => void; className: string; placeholder: string; testid: string
+}) {
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => { if (ref.current) ref.current.textContent = initial /* set once */ }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <span
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      spellCheck={false}
+      data-testid={testid}
+      data-ph={placeholder}
+      onInput={(e) => onChange(e.currentTarget.textContent || '')}
+      className={`outline-none empty:before:content-[attr(data-ph)] empty:before:opacity-50 ${className}`}
+    />
   )
 }

@@ -404,14 +404,12 @@ http('getAvailability', async (req, res) => {
 
     // Busy = existing confirmed bookings + (if connected) Google free/busy.
     const busy = []
-    const bk = await db
-      .collection(BOOKINGS)
-      .where('hostUid', '==', host.id)
-      .where('startUtc', '>=', new Date(now))
-      .get()
+    // Single-field query (no composite index needed); filter to future in code.
+    const bk = await db.collection(BOOKINGS).where('hostUid', '==', host.id).get()
     for (const d of bk.docs) {
       const b = d.data()
-      if (b.status === 'cancelled') continue
+      if (b.status === 'cancelled' || !b.startUtc) continue
+      if (b.startUtc.toMillis() < now) continue
       busy.push({ start: b.startUtc.toMillis(), end: b.endUtc.toMillis() })
     }
     if (host.google && host.google.refreshToken) {
