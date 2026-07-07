@@ -244,7 +244,13 @@ export default function BookWithMeTool() {
   function setTypes(next: MeetingType[]) {
     setCfg((c) => ({ ...c, meetingTypes: next, meeting: { ...c.meeting, minutes: next[0]?.minutes ?? 45, title: next[0]?.name ?? 'Meeting' } }))
   }
-  const addType = () => setTypes([...cfg.meetingTypes, { id: makeCode(), name: locale === 'ar' ? 'اجتماع' : 'Meeting', minutes: 30, meet: true }])
+  const addType = () => {
+    const names = locale === 'ar'
+      ? ['اجتماع', 'استشارة', 'مكالمة', 'جلسة', 'مقابلة']
+      : ['Meeting', 'Consultation', 'Call', 'Session', 'Interview']
+    const name = names[cfg.meetingTypes.length] || names[0]
+    setTypes([...cfg.meetingTypes, { id: makeCode(), name, minutes: 30, meet: true }])
+  }
   const removeType = (id: string) => { if (cfg.meetingTypes.length > 1) setTypes(cfg.meetingTypes.filter((t) => t.id !== id)) }
   const editType = (id: string, patch: Partial<MeetingType>) => setTypes(cfg.meetingTypes.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   const dragIdx = useRef<number | null>(null)
