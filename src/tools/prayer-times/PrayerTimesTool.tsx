@@ -451,9 +451,6 @@ export default function PrayerTimesTool() {
               <li className={`flex items-center gap-[0.8rem] max-[560px]:gap-[0.6rem] py-[0.7rem] px-[0.9rem] max-[560px]:py-[0.55rem] max-[560px]:px-[0.8rem] rounded-md border ${highlight ? 'bg-[color-mix(in_srgb,var(--green-400)_14%,transparent)] border-[color-mix(in_srgb,var(--green-500)_35%,transparent)]' : 'bg-[color-mix(in_srgb,var(--sand-100)_55%,var(--surface))] border-transparent'}`} data-testid={`prow-${it.key}`}>
                 <span className="font-semibold text-[1.05rem] max-[560px]:text-base text-green-700 min-w-[6rem] max-[560px]:min-w-0">{s.prayers[it.key]}</span>
                 <span className="font-mono text-[1.05rem] text-ink ms-auto whitespace-nowrap">{fmtTime(it.time)}</span>
-                {highlight && !active && (
-                  <span className="text-[0.78rem] font-semibold text-green-600 bg-[var(--surface)] border border-[var(--line)] rounded-full py-[0.2rem] px-[0.6rem] whitespace-nowrap max-[560px]:hidden">{s.next} · {s.inTime(countdown.h, countdown.m)}</span>
-                )}
               </li>
             </Fragment>
           )
