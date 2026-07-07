@@ -462,10 +462,10 @@ export function BookingPage() {
                 </div>
               </div>
               <Input value={tzq} onChange={(e) => setTzq(e.target.value)} placeholder={L.search} data-testid="tz-search" />
-              <div className="flex flex-col max-h-[40vh] overflow-y-auto -mx-1">
+              <div className="flex flex-col max-h-[40vh] overflow-y-auto">
                 {tzList.map((z) => (
                   <button key={z} type="button" onClick={() => { setTz(z); setTzOpen(false); setTzq('') }}
-                    className={`flex items-center justify-between gap-3 text-start px-3 py-2 rounded-md text-[0.85rem] cursor-pointer border-0 bg-transparent ${z === tz ? 'text-green-700 font-semibold bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>
+                    className={`flex items-center justify-between gap-3 text-start px-[0.85rem] py-2 rounded-md text-[0.85rem] cursor-pointer border-0 bg-transparent ${z === tz ? 'text-green-700 font-semibold bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>
                     <span className="truncate">{z.replace(/_/g, ' ')}</span>
                     <span className="flex-none text-[0.76rem] text-ink-faint font-mono">{tzOffset(z)}</span>
                   </button>
