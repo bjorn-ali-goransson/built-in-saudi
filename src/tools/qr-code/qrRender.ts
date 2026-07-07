@@ -162,9 +162,14 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
   const tri = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => {
     ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill()
   }
-  const putLabel = (cx: number, cy: number, h: number, color: string) => {
+  const putLabel = (cx: number, cy: number, h: number, color: string, maxW?: number) => {
     ctx.fillStyle = color
-    ctx.font = `800 ${Math.round(h * 0.58)}px "Hanken Grotesk", system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    let fs = Math.round(h * 0.58)
+    const font = () => `800 ${fs}px "Hanken Grotesk", system-ui, sans-serif`
+    ctx.font = font()
+    if (maxW) while (fs > 6 && ctx.measureText(label2).width > maxW) { fs -= 1; ctx.font = font() }
     ctx.fillText(label2, cx, cy)
   }
 
@@ -233,7 +238,7 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     ctx.lineTo(w - notch, by + bh / 2); ctx.lineTo(w, by + bh)
     ctx.lineTo(0, by + bh); ctx.lineTo(notch, by + bh / 2)
     ctx.closePath(); ctx.fill()
-    putLabel(w / 2, by + bh / 2, bh, lc)
+    putLabel(w / 2, by + bh / 2, bh, lc, w - notch * 2 - Math.round(q * 0.06))
     return w
   }
 
