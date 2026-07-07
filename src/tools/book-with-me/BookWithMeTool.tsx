@@ -46,15 +46,16 @@ function readSession(): Session | null {
 const STR = {
   en: {
     heroTitle: 'Free calendar booking service',
-    intro: 'Provides a shareable link for your customers to agree on a meeting time.',
+    intro: 'Provides a custom page for your customers to agree on a meeting time.',
     tzTitle: 'Timezone',
     tzSearch: 'Search timezones…',
     tzShown: 'Times shown in',
     totalSlots: 'Total slots',
     availability: 'Your availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
-    meetingTypes: 'Meeting types',
+    meetingTypes: 'Type of meeting',
     addType: 'Add meeting type',
+    add: 'Add',
     meet: 'Google Meet',
     share: 'Share',
     fineHint: 'One booking per painted hour · bookable up to 30 days ahead · 4h minimum notice.',
@@ -99,15 +100,16 @@ const STR = {
   },
   ar: {
     heroTitle: 'خدمة حجز مواعيد مجانية',
-    intro: 'رابط قابل للمشاركة يتّفق من خلاله عملاؤك على وقت الاجتماع.',
+    intro: 'صفحة مخصّصة يتّفق من خلالها عملاؤك على وقت الاجتماع.',
     tzTitle: 'المنطقة الزمنية',
     tzSearch: 'ابحث عن منطقة زمنية…',
     tzShown: 'الأوقات بتوقيت',
     totalSlots: 'إجمالي المواعيد',
     availability: 'أوقات فراغك',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
-    meetingTypes: 'أنواع الاجتماعات',
+    meetingTypes: 'نوع الاجتماع',
     addType: 'أضف نوع اجتماع',
+    add: 'أضف',
     meet: 'Google Meet',
     share: 'مشاركة',
     fineHint: 'حجز واحد لكل ساعة مرسومة · الحجز حتى ٣٠ يومًا مقدمًا · بمهلة ٤ ساعات على الأقل.',
@@ -235,7 +237,7 @@ export default function BookWithMeTool() {
   function setTypes(next: MeetingType[]) {
     setCfg((c) => ({ ...c, meetingTypes: next, meeting: { ...c.meeting, minutes: next[0]?.minutes ?? 45, title: next[0]?.name ?? 'Meeting' } }))
   }
-  const addType = () => setTypes([...cfg.meetingTypes, { id: makeCode(), name: locale === 'ar' ? 'اجتماع' : 'Meeting', minutes: 30, meet: false }])
+  const addType = () => setTypes([...cfg.meetingTypes, { id: makeCode(), name: locale === 'ar' ? 'اجتماع' : 'Meeting', minutes: 30, meet: true }])
   const removeType = (id: string) => { if (cfg.meetingTypes.length > 1) setTypes(cfg.meetingTypes.filter((t) => t.id !== id)) }
   const editType = (id: string, patch: Partial<MeetingType>) => setTypes(cfg.meetingTypes.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   const moveType = (i: number, dir: number) => {
@@ -323,25 +325,29 @@ export default function BookWithMeTool() {
             <p className="text-[0.95rem] leading-relaxed opacity-90">{s.intro}</p>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-[0.82rem] font-semibold opacity-90">{s.meetingTypes}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[0.82rem] font-semibold opacity-90">{s.meetingTypes}</span>
+              <button type="button" onClick={addType} data-testid="add-type"
+                className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--sand-100)_16%,transparent)] border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] text-sand-100 px-2.5 py-[0.15rem] text-[0.75rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_26%,transparent)]">＋ {s.add}</button>
+            </div>
             {cfg.meetingTypes.map((t, i) => (
               <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-md bg-[color-mix(in_srgb,var(--sand-100)_14%,transparent)] p-2" data-testid={`mtype-${i}`}>
                 <input value={t.name} onChange={(e) => editType(t.id, { name: e.target.value })} aria-label={s.meetingTypes}
-                  className="grow min-w-[8rem] rounded bg-white text-ink px-2.5 py-1.5 text-[0.9rem] border-0 outline-none" />
+                  className="w-full max-w-[200px] rounded bg-white text-ink px-2.5 py-1.5 text-[0.9rem] border-0 outline-none" />
                 <select value={t.minutes} onChange={(e) => editType(t.id, { minutes: Number(e.target.value) })} aria-label={s.length}
                   className="rounded bg-white text-ink px-2 py-1.5 text-[0.9rem] border-0 outline-none cursor-pointer">
                   {[15, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} {s.min}</option>)}
                 </select>
                 <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
-                <div className="flex items-center gap-1 ms-auto [&>button]:size-7 [&>button]:grid [&>button]:place-items-center [&>button]:rounded [&>button]:border-0 [&>button]:cursor-pointer [&>button]:text-sand-100 [&>button]:bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] [&>button:disabled]:opacity-40">
-                  <button type="button" aria-label="move up" onClick={() => moveType(i, -1)} disabled={i === 0}>↑</button>
-                  <button type="button" aria-label="move down" onClick={() => moveType(i, 1)} disabled={i === cfg.meetingTypes.length - 1}>↓</button>
-                  <button type="button" aria-label="remove" onClick={() => removeType(t.id)} disabled={cfg.meetingTypes.length <= 1}>✕</button>
-                </div>
+                {cfg.meetingTypes.length > 1 && (
+                  <div className="flex items-center gap-1 ms-auto [&>button]:size-7 [&>button]:grid [&>button]:place-items-center [&>button]:rounded [&>button]:border-0 [&>button]:cursor-pointer [&>button]:text-sand-100 [&>button]:bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] [&>button:disabled]:opacity-40">
+                    <button type="button" aria-label="move up" onClick={() => moveType(i, -1)} disabled={i === 0}>↑</button>
+                    <button type="button" aria-label="move down" onClick={() => moveType(i, 1)} disabled={i === cfg.meetingTypes.length - 1}>↓</button>
+                    <button type="button" aria-label="remove" onClick={() => removeType(t.id)}>✕</button>
+                  </div>
+                )}
               </div>
             ))}
-            <button type="button" onClick={addType} data-testid="add-type"
-              className="self-start inline-flex items-center gap-1.5 rounded-md border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] bg-transparent text-sand-100 px-3 py-1.5 text-[0.85rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_16%,transparent)]">＋ {s.addType}</button>
           </div>
         </div>
       </div>
