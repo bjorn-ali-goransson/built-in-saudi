@@ -7,6 +7,24 @@ export interface HostMeta {
   minutes: number
   title: string
   location: string
+  picture?: string | null
+  pageHeading?: string
+  pageText?: string
+  meetingTypes?: { id: string; name: string; minutes: number; meet: boolean }[]
+}
+
+/** Read the host's own Google session (name/picture) — used by the preview page. */
+export function readHostSession(): { name?: string; email?: string; picture?: string } | null {
+  try {
+    const hsid = localStorage.getItem('bis-bookwith-hsid')
+    if (!hsid) return null
+    const b64 = hsid.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')
+    const body = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')))
+    if (body.exp && Date.now() > body.exp) return null
+    return { name: body.name, email: body.email, picture: body.picture }
+  } catch {
+    return null
+  }
 }
 
 export interface AvailabilityResponse {

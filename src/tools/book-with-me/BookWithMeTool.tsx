@@ -346,7 +346,8 @@ export default function BookWithMeTool() {
   }
 
   function openPreview() {
-    window.open(`/${locale}/book/${cfg.code}?preview=1`, '_blank', 'noopener')
+    // Same tab (not a new window); the preview page has an Edit button back here.
+    window.location.href = `/${locale}/book/${cfg.code}?preview=1`
   }
 
   async function copyLink() {

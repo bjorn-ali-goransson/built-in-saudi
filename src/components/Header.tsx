@@ -1,5 +1,7 @@
+import { useSyncExternalStore } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool } from '../i18n'
+import { bookingHeaderStore } from '../lib/bookingHeader'
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
 import { PalmLogo } from './PalmLogo'
@@ -15,10 +17,11 @@ export function Header() {
   // tool's name (app-bar) on a tool page, else the site name.
   const isHome = /^\/(en|ar)\/?$/.test(location.pathname)
   const isBooking = /\/book\//.test(location.pathname)
+  const bookingTitle = useSyncExternalStore(bookingHeaderStore.subscribe, bookingHeaderStore.get, bookingHeaderStore.get)
   const match = location.pathname.match(/\/apps\/([^/]+)/)
   const currentTool = match ? getTool(match[1]) : null
   const context = isBooking
-    ? locale === 'ar' ? 'احجز اجتماعًا' : 'Book a meeting'
+    ? bookingTitle || (locale === 'ar' ? 'احجز اجتماعًا' : 'Book a meeting')
     : currentTool && currentTool.component ? localizeTool(currentTool, locale).name : ''
   const siteName = locale === 'ar' ? 'بُنِيَ في السعودية' : 'Built in Saudi'
 
