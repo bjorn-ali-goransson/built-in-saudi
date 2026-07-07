@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon } from '../../components/icons'
+import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
@@ -84,6 +85,9 @@ const STR = {
     copy: 'Copy link',
     copied: 'Copied!',
     previewLink: 'Preview',
+    openPage: 'Open page',
+    unpublish: 'Unpublish',
+    alerts: 'Alerts',
     save: 'Save changes',
     saving: 'Saving…',
     saved: 'Saved ✓',
@@ -138,6 +142,9 @@ const STR = {
     copy: 'نسخ الرابط',
     copied: 'تم النسخ!',
     previewLink: 'معاينة',
+    openPage: 'افتح الصفحة',
+    unpublish: 'إلغاء النشر',
+    alerts: 'التنبيهات',
     save: 'حفظ التغييرات',
     saving: 'جارٍ الحفظ…',
     saved: 'تم الحفظ ✓',
@@ -240,11 +247,14 @@ export default function BookWithMeTool() {
   const addType = () => setTypes([...cfg.meetingTypes, { id: makeCode(), name: locale === 'ar' ? 'اجتماع' : 'Meeting', minutes: 30, meet: true }])
   const removeType = (id: string) => { if (cfg.meetingTypes.length > 1) setTypes(cfg.meetingTypes.filter((t) => t.id !== id)) }
   const editType = (id: string, patch: Partial<MeetingType>) => setTypes(cfg.meetingTypes.map((t) => (t.id === id ? { ...t, ...patch } : t)))
-  const moveType = (i: number, dir: number) => {
+  const dragIdx = useRef<number | null>(null)
+  const dropType = (to: number) => {
+    const from = dragIdx.current
+    dragIdx.current = null
+    if (from == null || from === to) return
     const arr = cfg.meetingTypes.slice()
-    const j = i + dir
-    if (j < 0 || j >= arr.length) return
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
     setTypes(arr)
   }
   async function shareLink() {
@@ -315,39 +325,57 @@ export default function BookWithMeTool() {
     }
   }
 
+  // Open the live booking page (and push any pending edits in the background).
+  function openLive() {
+    window.open(link, '_blank', 'noopener')
+    if (session) publish()
+  }
+  // Return to the unpublished state on this device.
+  function unpublish() {
+    localStorage.removeItem(HSID_KEY)
+    setSession(null)
+    setPubMenu(false)
+  }
+
+  const menuItem = 'flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.9rem] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap'
+
   return (
     <Stack data-testid="book-with-me" className="pb-24">
       {/* Intro hero — Publish (white) + Preview (text link), inside the box */}
       <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
         <div className="wrap py-[clamp(1.3rem,4vw,1.8rem)] flex flex-col gap-3 max-w-[44rem]">
-          <div className="flex flex-col gap-1">
-            <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
-            <p className="text-[0.95rem] leading-relaxed opacity-90">{s.intro}</p>
-          </div>
+          <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className="text-[0.82rem] font-semibold opacity-90">{s.meetingTypes}</span>
               <button type="button" onClick={addType} data-testid="add-type"
-                className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--sand-100)_16%,transparent)] border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] text-sand-100 px-2.5 py-[0.15rem] text-[0.75rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_26%,transparent)]">＋ {s.add}</button>
+                className="inline-flex items-center gap-1 rounded-full bg-transparent border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] text-sand-100 px-2.5 py-[0.15rem] text-[0.75rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_16%,transparent)]">＋ {s.add}</button>
             </div>
-            {cfg.meetingTypes.map((t, i) => (
-              <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-md bg-[color-mix(in_srgb,var(--sand-100)_14%,transparent)] p-2" data-testid={`mtype-${i}`}>
-                <input value={t.name} onChange={(e) => editType(t.id, { name: e.target.value })} aria-label={s.meetingTypes}
-                  className="w-full max-w-[200px] rounded bg-white text-ink px-2.5 py-1.5 text-[0.9rem] border-0 outline-none" />
-                <select value={t.minutes} onChange={(e) => editType(t.id, { minutes: Number(e.target.value) })} aria-label={s.length}
-                  className="rounded bg-white text-ink px-2 py-1.5 text-[0.9rem] border-0 outline-none cursor-pointer">
-                  {[15, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} {s.min}</option>)}
-                </select>
-                <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
-                {cfg.meetingTypes.length > 1 && (
-                  <div className="flex items-center gap-1 ms-auto [&>button]:size-7 [&>button]:grid [&>button]:place-items-center [&>button]:rounded [&>button]:border-0 [&>button]:cursor-pointer [&>button]:text-sand-100 [&>button]:bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] [&>button:disabled]:opacity-40">
-                    <button type="button" aria-label="move up" onClick={() => moveType(i, -1)} disabled={i === 0}>↑</button>
-                    <button type="button" aria-label="move down" onClick={() => moveType(i, 1)} disabled={i === cfg.meetingTypes.length - 1}>↓</button>
-                    <button type="button" aria-label="remove" onClick={() => removeType(t.id)}>✕</button>
-                  </div>
-                )}
-              </div>
-            ))}
+            {cfg.meetingTypes.map((t, i) => {
+              const many = cfg.meetingTypes.length > 1
+              return (
+                <div key={t.id} className="flex flex-wrap items-center gap-2" data-testid={`mtype-${i}`}
+                  onDragOver={many ? (e) => e.preventDefault() : undefined} onDrop={many ? () => dropType(i) : undefined}>
+                  {many && (
+                    <span draggable onDragStart={() => { dragIdx.current = i }} aria-label="reorder"
+                      className="cursor-grab active:cursor-grabbing text-sand-100/70 hover:text-sand-100 touch-none [&_svg]:size-4">
+                      <GripIcon />
+                    </span>
+                  )}
+                  <input value={t.name} onChange={(e) => editType(t.id, { name: e.target.value })} aria-label={s.meetingTypes}
+                    className="w-full max-w-[200px] rounded bg-white text-ink px-2.5 py-1.5 text-[0.82rem] border-0 outline-none" />
+                  <select value={t.minutes} onChange={(e) => editType(t.id, { minutes: Number(e.target.value) })} aria-label={s.length}
+                    className="rounded bg-white text-ink px-2 py-1.5 text-[0.82rem] border-0 outline-none cursor-pointer">
+                    {[15, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} {s.min}</option>)}
+                  </select>
+                  <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
+                  {many && (
+                    <button type="button" aria-label="remove" onClick={() => removeType(t.id)}
+                      className="ms-auto bg-transparent border-0 cursor-pointer text-sand-100/80 hover:text-sand-100 text-[1.05rem] leading-none px-1">✕</button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -366,27 +394,34 @@ export default function BookWithMeTool() {
 
       {saveState === 'error' && <p className="text-[0.82rem] text-gold-500">{s.saveErr}</p>}
 
-      {/* Sticky publish bar: Publish (▾ Preview / Copy), Share icon, Alerts pill */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] max-[560px]:pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="wrap py-2.5 flex items-center gap-2">
-          <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
-            <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!rounded-e-none">
-              {session ? (saveState === 'saving' ? s.saving : saveState === 'saved' ? s.saved : s.save) : s.publishCta}
-            </Button>
-            <button type="button" aria-label={s.previewLink} aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
-              className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
-            {pubMenu && (
-              <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
-                <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap"><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>
-                <button type="button" data-testid="copy-link" onClick={() => { copyLink(); setPubMenu(false) }} className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap"><CopyIcon /> {copied ? s.copied : s.copy}</button>
-              </div>
-            )}
+      {/* Sticky publish bar — portaled to <body> so ToolPage's fadeUp transform
+          doesn't trap the fixed positioning (that broke sticky on desktop). */}
+      {createPortal(
+        <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="wrap py-2.5 flex items-center gap-2">
+            <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
+              {session ? (
+                <Button variant="primary" onClick={openLive} data-testid="open-page" className="!rounded-e-none !text-[0.9rem]">{s.openPage} <ExternalLinkIcon className="w-4 h-4" /></Button>
+              ) : (
+                <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!rounded-e-none !text-[0.9rem]">{saveState === 'saving' ? s.saving : s.publishCta}</Button>
+              )}
+              <button type="button" aria-label="menu" aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
+                className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
+              {pubMenu && (
+                <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
+                  {!session && <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className={`${menuItem} text-ink-soft`}><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>}
+                  <button type="button" data-testid="copy-link" onClick={() => { copyLink(); setPubMenu(false) }} className={`${menuItem} text-ink-soft ${!session ? 'border-t border-[color:var(--line-soft)]' : ''}`}><CopyIcon /> {copied ? s.copied : s.copy}</button>
+                  {session && <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500 border-t border-[color:var(--line-soft)]`}>✕ {s.unpublish}</button>}
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={shareLink} data-testid="share-link" aria-label={s.share} title={s.share}
+              className="inline-flex items-center justify-center size-10 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-500 hover:text-green-700 cursor-pointer [&_svg]:size-5"><ShareIcon /></button>
+            <Pill className="ms-auto !text-[0.9rem]" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alerts}</Pill>
           </div>
-          <button type="button" onClick={shareLink} data-testid="share-link" aria-label={s.share} title={s.share}
-            className="inline-flex items-center justify-center size-10 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-500 hover:text-green-700 cursor-pointer [&_svg]:size-5"><ShareIcon /></button>
-          <Pill className="ms-auto" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alertsTitle}</Pill>
-        </div>
-      </div>
+        </div>,
+        document.body,
+      )}
 
       {alertsOpen && (
         <Sheet data-testid="alerts-sheet" onClose={() => setAlertsOpen(false)}>
