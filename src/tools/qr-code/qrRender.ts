@@ -149,20 +149,23 @@ export function renderQR(canvas: HTMLCanvasElement, o: RenderOpts): number {
     return w
   }
 
-  // circle badge
-  const diam = Math.round(q * 1.5)
+  // circle badge — centre the QR + label as one group inside the disc
+  const gap = label ? Math.round(q * 0.05) : 0
+  const lh = label ? Math.round(q * 0.15) : 0
+  const groupH = q + gap + lh
+  const diam = Math.round(q * 1.52)
   canvas.width = diam; canvas.height = diam
   ctx.fillStyle = fc
   ctx.beginPath(); ctx.arc(diam / 2, diam / 2, diam / 2, 0, Math.PI * 2); ctx.fill()
-  const qx = (diam - q) / 2
-  const qy = (diam - q) / 2 - (label ? Math.round(q * 0.12) : 0)
+  const qx = Math.round((diam - q) / 2)
+  const qy = Math.round((diam - groupH) / 2)
   ctx.fillStyle = o.bg
   roundRect(ctx, qx - q * 0.04, qy - q * 0.04, q * 1.08, q * 1.08, q * 0.06); ctx.fill()
   ctx.drawImage(qc, qx, qy)
   if (label) {
     ctx.fillStyle = '#ffffff'
-    ctx.font = `800 ${Math.round(q * 0.11)}px "Hanken Grotesk", system-ui, sans-serif`
-    ctx.fillText(label, diam / 2, qy + q + q * 0.19)
+    ctx.font = `800 ${Math.round(lh * 0.62)}px "Hanken Grotesk", system-ui, sans-serif`
+    ctx.fillText(label, diam / 2, qy + q + gap + lh / 2)
   }
   return diam
 }
