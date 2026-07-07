@@ -25,6 +25,7 @@ interface Session {
   hsid: string
   email?: string
   name?: string
+  cal?: boolean // whether the host granted Google Calendar access
 }
 
 /** Decode our HMAC session token's (base64url) payload for display only. */
@@ -38,7 +39,7 @@ function readSession(): Session | null {
       localStorage.removeItem(HSID_KEY)
       return null
     }
-    return { hsid, email: body.email, name: body.name }
+    return { hsid, email: body.email, name: body.name, cal: body.cal }
   } catch {
     return null
   }
@@ -86,6 +87,8 @@ const STR = {
     copy: 'Copy link',
     copied: 'Copied!',
     previewLink: 'Preview',
+    calWarn: 'Google Calendar isn’t connected, so your existing events won’t block booking times and new bookings won’t be added to your calendar. Reconnect and allow Calendar access.',
+    reconnect: 'Reconnect Calendar',
     openPage: 'Open page',
     unpublish: 'Unpublish',
     deletePage: 'Delete page',
@@ -155,6 +158,8 @@ const STR = {
     copy: 'نسخ الرابط',
     copied: 'تم النسخ!',
     previewLink: 'معاينة',
+    calWarn: 'تقويم Google غير مربوط، لذا لن تحجب مواعيدك الحالية أوقات الحجز ولن تُضاف الحجوزات الجديدة إلى تقويمك. أعد الربط واسمح بالوصول إلى التقويم.',
+    reconnect: 'إعادة ربط التقويم',
     openPage: 'افتح الصفحة',
     unpublish: 'إلغاء النشر',
     deletePage: 'احذف الصفحة',
@@ -442,6 +447,14 @@ export default function BookWithMeTool() {
           </div>
         </div>
       </div>
+
+      {session && session.cal === false && (
+        <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="cal-warning">
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.calWarn}</span>
+          <button type="button" data-testid="reconnect-cal" onClick={() => { window.location.href = connectGoogleUrl(cfg.code, locale) }}
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.reconnect}</button>
+        </div>
+      )}
 
       {/* 1 · Availability painter — no well; big heading; timezone pill + modal */}
       <div className="flex flex-col gap-2.5">

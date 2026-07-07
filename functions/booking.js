@@ -133,7 +133,7 @@ async function googleBusy(accessToken, calId, timeMinIso, timeMaxIso) {
     + `?timeMin=${encodeURIComponent(timeMinIso)}&timeMax=${encodeURIComponent(timeMaxIso)}`
     + '&singleEvents=true&orderBy=startTime&maxResults=2500'
   const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
-  if (!r.ok) throw new Error(`events ${r.status}: ${(await r.text()).slice(0, 300)}`)
+  if (!r.ok) throw new Error(`events ${r.status}`)
   const data = await r.json()
   const busy = []
   for (const ev of data.items || []) {
@@ -346,6 +346,9 @@ http('bookingGoogleCallback', async (req, res) => {
     // Keep the previously-stored refresh token if Google didn't send a new one
     // (it only returns it on the first consent).
     const refreshToken = tokens.refresh_token || (existing.google && existing.google.refreshToken) || null
+    // Did the host actually grant Calendar access? Google's granular consent lets
+    // them untick it; without it we can't read busy times or create events.
+    const calGranted = /\/auth\/calendar/.test(String(tokens.scope || '')) || (existing.google && existing.google.calGranted) || false
     // Assign a code: keep existing, else the local code from state (if free), else a fresh one.
     let hostCode = existing.code || st.code || crypto.randomBytes(4).toString('hex')
     if (!existing.code && st.code) {
@@ -358,12 +361,12 @@ http('bookingGoogleCallback', async (req, res) => {
         email: id.email || existing.email || null,
         name: id.name || existing.name || null,
         picture: id.picture || existing.picture || null,
-        google: { refreshToken, calendarId: (existing.google && existing.google.calendarId) || 'primary', connectedAt: new Date() },
+        google: { refreshToken, calendarId: (existing.google && existing.google.calendarId) || 'primary', calGranted, connectedAt: new Date() },
         updatedAt: new Date(),
       },
       { merge: true },
     )
-    const hsid = signSession({ sub, email: id.email, name: id.name, picture: id.picture })
+    const hsid = signSession({ sub, email: id.email, name: id.name, picture: id.picture, cal: calGranted })
     const locale = st.locale === 'ar' ? 'ar' : 'en'
     res.redirect(302, `${SITE}/${locale}/apps/book-me#hsid=${hsid}&code=${hostCode}`)
   } catch (e) {
@@ -425,21 +428,12 @@ http('getAvailability', async (req, res) => {
       if (b.startUtc.toMillis() < now) continue
       busy.push({ start: b.startUtc.toMillis(), end: b.endUtc.toMillis() })
     }
-    let dbg = { hasToken: !!(host.google && host.google.refreshToken), calId: (host.google && host.google.calendarId) || 'primary' }
     if (host.google && host.google.refreshToken) {
       try {
         const at = await accessTokenFor(host.google.refreshToken)
-        if (req.body && req.body.debug) {
-          try {
-            const ti = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(at)}`).then((x) => x.json())
-            dbg.scopes = ti.scope || ti.error || null
-          } catch (e) { dbg.scopeErr = String((e && e.message) || e) }
-        }
         const gbusy = await googleBusy(at, host.google.calendarId || 'primary', new Date(now).toISOString(), new Date(horizonEnd).toISOString())
         busy.push(...gbusy)
-        dbg.busyCount = gbusy.length
       } catch (e) {
-        dbg.calErr = String((e && e.message) || e)
         console.error('calendar busy failed:', String((e && e.message) || e))
       }
     }
@@ -458,7 +452,6 @@ http('getAvailability', async (req, res) => {
         meetingTypes: Array.isArray(host.meetingTypes) ? host.meetingTypes : [],
       },
       slots,
-      ...(req.body && req.body.debug ? { _debug: dbg } : {}),
     })
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) })
