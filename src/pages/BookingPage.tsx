@@ -7,7 +7,7 @@ import { Button, Input, Textarea, Field, Stack, Panel, Pill, Sheet, SheetTitle, 
 import { GlobeIcon, ClockIcon, EditIcon } from '../components/icons'
 import { getAvailability, book, readHostSession, type HostMeta } from '../lib/bookingApi'
 import { bookingHeaderStore } from '../lib/bookingHeader'
-import { loadConfig, saveConfig, previewSlots } from '../tools/book-with-me/lib'
+import { loadConfig, saveConfig, previewSlots, detectFirstDay } from '../tools/book-with-me/lib'
 
 const STR = {
   en: {
@@ -92,8 +92,15 @@ export function BookingPage() {
   const [alertOpen, setAlertOpen] = useState(false)
   const [heading, setHeading] = useState('')
   const [text, setText] = useState('')
-
   const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
+  const [tz, setTz] = useState(localTz) // the booker's display timezone
+  const [firstDay, setFirstDay] = useState(() => detectFirstDay())
+  const [cal, setCal] = useState<'greg' | 'hijri'>('greg')
+  const [tzOpen, setTzOpen] = useState(false)
+  const [tzq, setTzq] = useState('')
+  const allTz = useMemo<string[]>(() => {
+    try { return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf('timeZone') } catch { return [localTz] }
+  }, [localTz])
   const pageTitle = host?.name ? (locale === 'ar' ? `احجز اجتماعًا مع ${host.name}` : `Book a meeting with ${host.name}`) : (heading || s.withHost)
   useDocumentMeta(locale, `/book/${code}`, pageTitle)
 
@@ -140,37 +147,42 @@ export function BookingPage() {
     }
   }, [code, preview])
 
+  const lc = locale === 'ar' ? 'ar-SA' : 'en-GB'
+  const calOpt = cal === 'hijri' ? ({ calendar: 'islamic-umalqura' } as const) : {}
   const dayFmt = useMemo(
-    () => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
-    [locale],
+    () => new Intl.DateTimeFormat(lc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz, ...calOpt }),
+    [lc, tz, cal], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const timeFmt = useMemo(
-    () => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { hour: '2-digit', minute: '2-digit' }),
-    [locale],
+    () => new Intl.DateTimeFormat(lc, { hour: '2-digit', minute: '2-digit', timeZone: tz }),
+    [lc, tz],
   )
+  const monthFmt = useMemo(() => new Intl.DateTimeFormat(lc, { month: 'long', year: 'numeric', timeZone: tz, ...calOpt }), [lc, tz, cal]) // eslint-disable-line react-hooks/exhaustive-deps
+  const dayNumFmt = useMemo(() => new Intl.DateTimeFormat(lc, { day: 'numeric', timeZone: tz, ...calOpt }), [lc, tz, cal]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Stable 'YYYY-MM-DD' key for the booker's chosen timezone (so slots group into
+  // the right calendar day even when they view another zone).
+  const dayKeyFmt = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }), [tz])
 
-  // Group slots by the booker's local calendar day.
   const grouped = useMemo(() => {
     const byDay = new Map<string, number[]>()
     for (const ms of slots) {
-      const key = new Date(ms).toDateString()
+      const key = dayKeyFmt.format(new Date(ms))
       if (!byDay.has(key)) byDay.set(key, [])
       byDay.get(key)!.push(ms)
     }
     return [...byDay.entries()]
-  }, [slots])
+  }, [slots, dayKeyFmt])
 
   const byDay = useMemo(() => new Map(grouped), [grouped])
   const availableDays = useMemo(() => new Set(grouped.map(([k]) => k)), [grouped])
-  const monthFmt = useMemo(() => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { month: 'long', year: 'numeric' }), [locale])
 
   // Default to the first available day once slots arrive.
   useEffect(() => {
     if (!slots.length) return
     const first = new Date(slots[0])
-    setSelectedDay(first.toDateString())
+    setSelectedDay(dayKeyFmt.format(first))
     setViewMonth(new Date(first.getFullYear(), first.getMonth(), 1))
-  }, [slots])
+  }, [slots, dayKeyFmt])
 
   // Meeting types (all of them in preview; one on the live page for now).
   const types = useMemo(() => {
@@ -225,18 +237,25 @@ export function BookingPage() {
   }
 
   const L = locale === 'ar'
-    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي' }
-    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text' }
+    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي', greg: 'ميلادي', hijri: 'هجري', tzTitle: 'المنطقة الزمنية والتقويم', firstD: 'أول أيام الأسبوع', search: 'ابحث عن منطقة…' }
+    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…' }
+  const dayNames = useMemo(() => Array.from({ length: 7 }, (_, d) => new Intl.DateTimeFormat(lc, { weekday: 'long' }).format(new Date(2023, 0, 1 + d))), [lc])
+  const tzShort = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz
+  const tzList = useMemo(() => { const q = tzq.trim().toLowerCase(); return q ? allTz.filter((z) => z.toLowerCase().includes(q)).slice(0, 60) : allTz.slice(0, 60) }, [allTz, tzq])
 
-  // Month grid for the calendar.
+  // Month grid for the calendar (Gregorian layout; labels honour tz/first-day/calendar).
   const vy = viewMonth.getFullYear()
   const vm = viewMonth.getMonth()
-  const firstWd = new Date(vy, vm, 1).getDay()
+  const firstWd = (new Date(vy, vm, 1).getDay() - firstDay + 7) % 7
   const daysInMonth = new Date(vy, vm + 1, 0).getDate()
   const monthCells = [...Array.from({ length: firstWd }, () => 0), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const weekdays = [...s.weekdays.slice(firstDay), ...s.weekdays.slice(0, firstDay)]
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const cellKey = (day: number) => `${vy}-${pad(vm + 1)}-${pad(day)}`
   const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0)
   const canPrev = new Date(vy, vm, 1).getTime() > thisMonth.getTime()
   const selTimes = selectedDay ? byDay.get(selectedDay) ?? [] : []
+  const selDayLabel = selTimes.length ? dayFmt.format(new Date(selTimes[0])) : ''
 
   return (
     <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[56rem] animate-[fadeUp_0.5s_ease_both]">
@@ -302,7 +321,11 @@ export function BookingPage() {
                 </Panel>
               ) : selected == null ? (
                 <div className="flex flex-col gap-4">
-                  <h2 className="font-display text-[1.2rem] text-ink">{s.selectDate}</h2>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="font-display text-[1.2rem] text-ink me-auto">{s.selectDate}</h2>
+                    <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.greg : L.hijri}</Pill>
+                    <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.yourTz(tz)} className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5"><GlobeIcon /> {tzShort}</Pill>
+                  </div>
                   {gone && <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>}
                   {grouped.length === 0 ? (
                     <Panel><p className="text-ink-soft">{s.none}</p></Panel>
@@ -318,10 +341,10 @@ export function BookingPage() {
                           </div>
                         </div>
                         <div className="grid grid-cols-7 gap-y-1 text-center">
-                          {s.weekdays.map((d, i) => <span key={i} className="text-[0.68rem] font-semibold text-ink-faint pb-1">{d}</span>)}
+                          {weekdays.map((d, i) => <span key={i} className="text-[0.68rem] font-semibold text-ink-faint pb-1">{d}</span>)}
                           {monthCells.map((day, i) => {
                             if (!day) return <span key={i} />
-                            const key = new Date(vy, vm, day).toDateString()
+                            const key = cellKey(day)
                             const avail = availableDays.has(key)
                             const isSel = selectedDay === key
                             return (
@@ -332,18 +355,17 @@ export function BookingPage() {
                                       : avail ? 'bg-[color-mix(in_srgb,var(--green-400)_16%,transparent)] text-green-700 font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--green-400)_28%,transparent)]'
                                         : 'text-ink-faint/45 cursor-default'
                                   }`}>
-                                  {day}
+                                  {cal === 'hijri' ? dayNumFmt.format(new Date(vy, vm, day)) : day}
                                 </button>
                               </div>
                             )
                           })}
                         </div>
-                        <Pill className="self-start !cursor-default" title={s.yourTz(localTz)}><GlobeIcon /> {localTz}</Pill>
                       </div>
 
                       {/* Times for the selected day */}
                       <div className="flex flex-col gap-2 min-w-0">
-                        {selectedDay && <span className="text-[0.92rem] font-semibold text-ink">{dayFmt.format(new Date(selectedDay))}</span>}
+                        {selDayLabel && <span className="text-[0.92rem] font-semibold text-ink">{selDayLabel}</span>}
                         <div className="flex flex-col gap-2 md:max-h-[26rem] md:overflow-y-auto md:pe-1">
                           {selTimes.length === 0
                             ? <p className="text-ink-faint text-[0.9rem]">{s.none}</p>
@@ -416,6 +438,35 @@ export function BookingPage() {
                 </div>
               </div>
               <SheetActions><Button variant="primary" onClick={() => setAlertOpen(false)}>{s.back}</Button></SheetActions>
+            </Sheet>
+          )}
+
+          {/* Timezone + calendar + first-day (same picker as the edit page) */}
+          {tzOpen && (
+            <Sheet data-testid="tz-sheet" onClose={() => { setTzOpen(false); setTzq('') }}>
+              <SheetTitle>{L.tzTitle}</SheetTitle>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[0.8rem] font-semibold text-ink-soft">{L.firstD}</span>
+                <div className="flex flex-wrap gap-1" data-testid="first-day">
+                  {dayNames.map((nm, d) => (
+                    <button key={d} type="button" onClick={() => setFirstDay(d)}
+                      className={`px-2.5 py-1 rounded-md border text-[0.8rem] cursor-pointer ${firstDay === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{nm}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                {(['greg', 'hijri'] as const).map((c) => (
+                  <button key={c} type="button" onClick={() => setCal(c)}
+                    className={`px-3 py-1.5 rounded-md border text-[0.85rem] cursor-pointer ${cal === c ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{c === 'greg' ? L.greg : L.hijri}</button>
+                ))}
+              </div>
+              <Input value={tzq} onChange={(e) => setTzq(e.target.value)} placeholder={L.search} data-testid="tz-search" />
+              <div className="flex flex-col max-h-[40vh] overflow-y-auto -mx-1">
+                {tzList.map((z) => (
+                  <button key={z} type="button" onClick={() => { setTz(z); setTzOpen(false); setTzq('') }}
+                    className={`text-start px-3 py-2 rounded-md text-[0.85rem] cursor-pointer border-0 bg-transparent ${z === tz ? 'text-green-700 font-semibold bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>{z.replace(/_/g, ' ')}</button>
+                ))}
+              </div>
             </Sheet>
           )}
         </Stack>
