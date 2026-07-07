@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
+import { BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
@@ -94,6 +94,12 @@ const STR = {
     saveErr: 'Couldn’t save — try again.',
     alertsTitle: 'Booking alerts',
     alertsNote: 'Get pinged the moment someone books. Your booker always receives an email confirmation.',
+    shareDisabled: 'Publish your page first, then you can share the link.',
+    emailPrev: 'Preview of your alert',
+    emailNew: 'New booking',
+    emailSample: 'Sara A.',
+    emailWhen: 'Sunday · 14:00–14:45',
+    emailCal: 'Added to your Google Calendar · invite sent',
     push: 'Push to this device',
     telegram: 'Telegram DM',
     email: 'Email me too',
@@ -151,6 +157,12 @@ const STR = {
     saveErr: 'تعذّر الحفظ — حاول مرة أخرى.',
     alertsTitle: 'تنبيهات الحجز',
     alertsNote: 'تصلك تنبيهات لحظة الحجز. ويستلم الحاجز دائمًا تأكيدًا بالبريد.',
+    shareDisabled: 'انشر صفحتك أولاً، ثم يمكنك مشاركة الرابط.',
+    emailPrev: 'معاينة التنبيه',
+    emailNew: 'حجز جديد',
+    emailSample: 'سارة أ.',
+    emailWhen: 'الأحد · ١٤:٠٠–١٤:٤٥',
+    emailCal: 'أُضيف إلى تقويم Google · وأُرسلت الدعوة',
     push: 'إشعار لهذا الجهاز',
     telegram: 'رسالة تيليجرام',
     email: 'أرسل لي بريدًا أيضًا',
@@ -199,7 +211,6 @@ export default function BookWithMeTool() {
   const s = STR[locale]
   const [cfg, setCfg] = useState<HostConfig>(() => loadConfig())
   const [grid, setGrid] = useState<Grid>(() => windowsToGrid(cfg.availability))
-  const [copied, setCopied] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [alertsOpen, setAlertsOpen] = useState(false)
@@ -324,8 +335,6 @@ export default function BookWithMeTool() {
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
     } catch {
       /* ignore */
     }
@@ -407,23 +416,25 @@ export default function BookWithMeTool() {
           <div className="wrap py-2.5 flex items-center gap-2">
             <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
               {session ? (
-                <Button variant="primary" onClick={openLive} data-testid="open-page" className="!rounded-e-none !text-[0.9rem]">{s.openPage} <ExternalLinkIcon className="w-4 h-4" /></Button>
+                <Button variant="primary" onClick={openLive} data-testid="open-page" className="!h-9 !py-0 !rounded-e-none !text-[0.9rem]">{s.openPage} <ExternalLinkIcon className="w-4 h-4" /></Button>
               ) : (
-                <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!rounded-e-none !text-[0.9rem]">{saveState === 'saving' ? s.saving : s.publishCta}</Button>
+                <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!h-9 !py-0 !rounded-e-none !text-[0.9rem]">{saveState === 'saving' ? s.saving : s.publishCta}</Button>
               )}
               <button type="button" aria-label="menu" aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
                 className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
               {pubMenu && (
                 <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
-                  {!session && <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className={`${menuItem} text-ink-soft`}><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>}
-                  <button type="button" data-testid="copy-link" onClick={() => { copyLink(); setPubMenu(false) }} className={`${menuItem} text-ink-soft ${!session ? 'border-t border-[color:var(--line-soft)]' : ''}`}><CopyIcon /> {copied ? s.copied : s.copy}</button>
-                  {session && <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500 border-t border-[color:var(--line-soft)]`}>✕ {s.unpublish}</button>}
+                  {session ? (
+                    <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500`}>✕ {s.unpublish}</button>
+                  ) : (
+                    <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className={`${menuItem} text-ink-soft`}><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>
+                  )}
                 </div>
               )}
             </div>
-            <button type="button" onClick={shareLink} data-testid="share-link" aria-label={s.share} title={s.share}
-              className="inline-flex items-center justify-center size-10 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-500 hover:text-green-700 cursor-pointer [&_svg]:size-5"><ShareIcon /></button>
-            <Pill className="ms-auto !text-[0.9rem]" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alerts}</Pill>
+            <button type="button" onClick={shareLink} data-testid="share-link" disabled={!session} aria-label={s.share} title={session ? s.share : s.shareDisabled}
+              className="inline-flex items-center justify-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer hover:border-green-500 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-[color:var(--line)] disabled:hover:text-ink-soft [&_svg]:size-5"><ShareIcon /></button>
+            <Pill className="ms-auto inline-flex items-center !h-9 !py-0 !text-[0.9rem] [&_svg]:size-4" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alerts}</Pill>
           </div>
         </div>,
         document.body,
@@ -456,6 +467,17 @@ export default function BookWithMeTool() {
               {s.email}
             </Check>
             <p className="text-[0.8rem] text-ink-faint">{s.alertsNote}</p>
+
+            {/* A mock of the alert email that goes out on a booking. */}
+            <div className="rounded-md border border-[color:var(--line)] overflow-hidden">
+              <div className="bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-ink-faint border-b border-[color:var(--line-soft)]">{s.emailPrev}</div>
+              <div className="p-3 flex flex-col gap-1.5">
+                <span className="font-display rtl:font-ar text-[1.05rem] text-green-700">🎉 {s.emailNew}</span>
+                <span className="text-[0.9rem] text-ink"><strong>{s.emailSample}</strong> · {cfg.meetingTypes[0]?.name || 'Meeting'} ({cfg.meetingTypes[0]?.minutes ?? 45} {s.min})</span>
+                <span className="text-[0.85rem] text-ink-soft">{s.emailWhen}</span>
+                <span className="text-[0.78rem] text-ink-faint">{s.emailCal}</span>
+              </div>
+            </div>
           </Stack>
           <SheetActions>
             <Button variant="primary" onClick={() => setAlertsOpen(false)}>{s.done}</Button>

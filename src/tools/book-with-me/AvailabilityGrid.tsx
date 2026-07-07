@@ -158,10 +158,10 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
 
   return (
     <div className="select-none" data-testid="availability-grid">
-      <div ref={scrollRef} className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)]">
+      <div ref={scrollRef} className="max-h-[58vh] overflow-y-auto rounded-lg border border-[color:var(--line)] max-[560px]:mx-[calc(50%-50vw)] max-[560px]:w-screen max-[560px]:max-w-[100vw] max-[560px]:rounded-none max-[560px]:border-x-0">
         <div
           ref={gridRef}
-          className="grid touch-none relative"
+          className="grid relative"
           style={{ gridTemplateColumns: `3.4rem repeat(${DAYS}, minmax(0, 1fr))` }}
           onPointerDown={(e) => {
             const cell = cellAt(e.clientX, e.clientY)
@@ -192,7 +192,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
           {/* body: one CSS row per hour */}
           {Array.from({ length: ROWS }, (_, row) => (
             <div key={row} className="contents">
-              <div className="pe-2 flex items-start justify-end text-[0.7rem] tabular-nums text-ink-faint -translate-y-[0.5em]">
+              <div className="pe-2 flex items-start justify-end text-[0.7rem] tabular-nums text-ink-faint -translate-y-[0.5em] touch-pan-y">
                 {minutesToHHMM(rowToMinutes(row))}
               </div>
               {Array.from({ length: DAYS }, (_, day) => {
@@ -209,7 +209,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
                     data-testid={`cell-${day}-${row}`}
                     aria-label={`${days[day]} ${minutesToHHMM(rowToMinutes(row))}`}
                     className={[
-                      'h-9 cursor-crosshair border-s border-[color:var(--line-soft)] transition-colors',
+                      'h-9 cursor-crosshair touch-none border-s border-[color:var(--line-soft)] transition-colors',
                       row < ROWS - 1 ? 'border-b border-b-[color:var(--line-soft)]' : '',
                       active
                         ? 'bg-[color-mix(in_srgb,var(--green-500)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-500)_38%,transparent)]'
