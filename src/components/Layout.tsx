@@ -47,13 +47,14 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         <a href="#main" className="absolute left-4 top-[-3rem] z-[100] bg-green-700 text-sand-100 px-[0.9rem] py-2 rounded-sm transition-[top] duration-200 focus:top-4">
           {locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to content'}
         </a>
-        <Header />
+        {/* The booking page is a standalone, chrome-free view (its own intro box). */}
+        {!/\/book\//.test(location.pathname) && <Header />}
         <main id="main" className="flex-1 shrink-0 basis-auto [overflow-x:clip] max-[560px]:pb-[5.5rem]">
           <Suspense fallback={<div className="wrap py-20 flex justify-center"><Spinner /></div>}>
             <Outlet />
           </Suspense>
         </main>
-        <Footer />
+        {!/\/book\//.test(location.pathname) && <Footer />}
         <NotificationBell />
         <LanguageSuggestion />
         <UpdatedToast />

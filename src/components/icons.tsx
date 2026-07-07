@@ -231,6 +231,14 @@ export function ExternalLinkIcon({ className }: P) {
   )
 }
 
+export function EditIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
 export function ClockIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

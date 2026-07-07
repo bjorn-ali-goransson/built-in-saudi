@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
-import { Button, Input, Textarea, Field, Stack, Panel, Pill } from '../components/ui'
-import { GlobeIcon, ClockIcon } from '../components/icons'
-import { getAvailability, book, type HostMeta } from '../lib/bookingApi'
-import { loadConfig, previewSlots } from '../tools/book-with-me/lib'
+import { Button, Input, Textarea, Field, Stack, Panel, Pill, Sheet, SheetTitle, SheetActions } from '../components/ui'
+import { GlobeIcon, ClockIcon, EditIcon } from '../components/icons'
+import { getAvailability, book, readHostSession, type HostMeta } from '../lib/bookingApi'
+import { bookingHeaderStore } from '../lib/bookingHeader'
+import { loadConfig, saveConfig, previewSlots } from '../tools/book-with-me/lib'
 
 const STR = {
   en: {
@@ -72,7 +73,7 @@ export function BookingPage() {
   const preview = searchParams.get('preview') === '1'
   const { locale } = useLocale()
   const s = STR[locale]
-  useDocumentMeta(locale, `/book/${code}`)
+  const navigate = useNavigate()
 
   const [status, setStatus] = useState<Status>('loading')
   const [host, setHost] = useState<HostMeta | null>(null)
@@ -84,11 +85,16 @@ export function BookingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [gone, setGone] = useState(false)
-  const [bannerOpen, setBannerOpen] = useState(true)
   const [viewMonth, setViewMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [typeId, setTypeId] = useState<string | null>(null)
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [heading, setHeading] = useState('')
+  const [text, setText] = useState('')
 
   const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
+  const pageTitle = host?.name ? (locale === 'ar' ? `احجز اجتماعًا مع ${host.name}` : `Book a meeting with ${host.name}`) : (heading || s.withHost)
+  useDocumentMeta(locale, `/book/${code}`, pageTitle)
 
   useEffect(() => {
     let cancelled = false
@@ -96,7 +102,19 @@ export function BookingPage() {
     // no backend call — works before publishing/connecting Google.
     if (preview) {
       const cfg = loadConfig()
-      setHost({ name: null, tz: cfg.tz, minutes: cfg.meeting.minutes, title: cfg.meeting.title, location: cfg.meeting.location })
+      const sess = readHostSession()
+      const first = cfg.meetingTypes[0]
+      setHost({
+        name: sess?.name || null,
+        tz: cfg.tz,
+        minutes: first?.minutes ?? cfg.meeting.minutes,
+        title: first?.name ?? cfg.meeting.title,
+        location: cfg.meeting.location,
+        picture: sess?.picture || null,
+        meetingTypes: cfg.meetingTypes,
+      })
+      setHeading(cfg.pageHeading || s.withHost)
+      setText(cfg.pageText || '')
       setSlots(previewSlots(cfg))
       setStatus('ready')
       return
@@ -107,6 +125,8 @@ export function BookingPage() {
       .then((r) => {
         if (cancelled) return
         setHost(r.host)
+        setHeading(r.host.pageHeading || (r.host.name ? `Book a meeting with ${r.host.name}` : s.withHost))
+        setText(r.host.pageText || s.intro)
         setSlots(r.slots)
         setStatus('ready')
       })
@@ -151,6 +171,31 @@ export function BookingPage() {
     setViewMonth(new Date(first.getFullYear(), first.getMonth(), 1))
   }, [slots])
 
+  // Meeting types (all of them in preview; one on the live page for now).
+  const types = useMemo(() => {
+    if (host?.meetingTypes?.length) return host.meetingTypes
+    if (host) return [{ id: 'default', name: host.title, minutes: host.minutes, meet: false }]
+    return []
+  }, [host])
+  const selType = types.find((t) => t.id === typeId) ?? types[0] ?? null
+
+  useEffect(() => { if (types.length && !typeId) setTypeId(types[0].id) }, [types, typeId])
+
+  // Navbar title "Book a meeting with <name>" + robots noindex (never index a booking page).
+  const withName = (n: string) => (locale === 'ar' ? `احجز اجتماعًا مع ${n}` : `Book a meeting with ${n}`)
+  useEffect(() => {
+    bookingHeaderStore.set(host?.name ? withName(host.name) : '')
+    return () => bookingHeaderStore.set('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [host, locale])
+  useEffect(() => {
+    const m = document.createElement('meta')
+    m.name = 'robots'
+    m.content = 'noindex, nofollow'
+    document.head.appendChild(m)
+    return () => { m.remove() }
+  }, [])
+
   async function submit() {
     if (!code || selected == null || !name.trim() || !email.trim()) return
     setSubmitting(true)
@@ -173,6 +218,15 @@ export function BookingPage() {
     }
   }
 
+  // Persist edits to the intro heading/text (preview = same browser as host).
+  function saveIntro(h: string, t: string) {
+    try { const cfg = loadConfig(); saveConfig({ ...cfg, pageHeading: h, pageText: t }) } catch { /* ignore */ }
+  }
+
+  const L = locale === 'ar'
+    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي' }
+    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text' }
+
   // Month grid for the calendar.
   const vy = viewMonth.getFullYear()
   const vm = viewMonth.getMonth()
@@ -190,24 +244,43 @@ export function BookingPage() {
       {status === 'error' && <Panel><p className="text-ink-soft">{s.error}</p></Panel>}
 
       {status === 'ready' && host && (
-        <Stack>
-          {preview && bannerOpen && (
-            <div className="flex items-center gap-2 border-s-2 border-gold-400 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-2 py-2 text-[0.85rem] text-ink-soft" role="status" data-testid="preview-banner">
-              <span className="flex-1">{s.previewBanner}</span>
-              <button type="button" aria-label={s.dismiss} onClick={() => setBannerOpen(false)} data-testid="dismiss-banner"
-                className="flex-none grid place-items-center size-6 rounded-md text-ink-faint hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] border-0 bg-transparent cursor-pointer">✕</button>
+        <Stack className={preview ? 'pb-16' : ''}>
+          {/* Editable intro box — replaces the (hidden) navbar */}
+          <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
+            <div className="wrap py-[clamp(1.3rem,4vw,1.9rem)] max-w-[52rem] flex items-center gap-4">
+              {host.picture
+                ? <img src={host.picture} alt="" referrerPolicy="no-referrer" className="size-14 rounded-full object-cover flex-none border-2 border-[color-mix(in_srgb,var(--sand-100)_40%,transparent)]" />
+                : <span className="grid place-items-center size-14 rounded-full bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] font-display text-[1.5rem] font-bold flex-none" style={{ color: 'var(--sand-100)' }}>{(host.name || 'B').trim().charAt(0).toUpperCase()}</span>}
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                {host.name && <span className="text-[0.82rem] font-semibold opacity-90">{host.name}</span>}
+                {preview
+                  ? <input value={heading} placeholder={L.headPh} data-testid="edit-heading" onChange={(e) => { setHeading(e.target.value); saveIntro(e.target.value, text) }}
+                      className="bg-transparent border-0 outline-none w-full font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_50%,transparent)]" />
+                  : <h1 className="font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{heading}</h1>}
+                {preview
+                  ? <input value={text} placeholder={L.textPh} data-testid="edit-text" onChange={(e) => { setText(e.target.value); saveIntro(heading, e.target.value) }}
+                      className="bg-transparent border-0 outline-none w-full text-[0.92rem] opacity-90 text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_45%,transparent)]" />
+                  : text && <p className="text-[0.92rem] opacity-90 leading-relaxed">{text}</p>}
+              </div>
             </div>
-          )}
+          </div>
 
           <div className="grid gap-6 md:grid-cols-[minmax(0,14rem)_1fr] md:divide-x rtl:md:divide-x-reverse divide-[color:var(--line-soft)]">
-            {/* Calendly-style aside: avatar + who + what */}
+            {/* Aside: meeting types + duration */}
             <aside className="flex flex-col gap-3 md:pe-6">
-              <span className="grid place-items-center size-12 rounded-full bg-green-600 text-sand-100 font-display text-[1.3rem] font-bold" aria-hidden="true">
-                {(host.name || 'B').trim().charAt(0).toUpperCase()}
-              </span>
-              {host.name && <span className="text-[0.9rem] font-semibold text-ink-soft">{host.name}</span>}
-              <h1 className="font-display text-[1.4rem] leading-tight text-ink">{host.title}</h1>
-              <span className="inline-flex items-center gap-1.5 text-[0.9rem] text-ink-soft"><ClockIcon className="w-4 h-4" /> {host.minutes} {s.mins}</span>
+              {types.length > 1 ? (
+                <div className="flex flex-col gap-1.5" data-testid="type-list">
+                  {types.map((t) => (
+                    <button key={t.id} type="button" onClick={() => setTypeId(t.id)} data-testid={`type-${t.id}`}
+                      className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-[0.9rem] text-start cursor-pointer transition-colors ${selType?.id === t.id ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] text-green-700 font-semibold' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>
+                      <span className="truncate">{t.name}</span><span className="text-ink-faint text-[0.8rem] flex-none">{t.minutes}{locale === 'ar' ? 'د' : 'm'}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <h2 className="font-display text-[1.3rem] leading-tight text-ink">{selType?.name}</h2>
+              )}
+              {selType && <span className="inline-flex items-center gap-1.5 text-[0.9rem] text-ink-soft"><ClockIcon className="w-4 h-4" /> {selType.minutes} {s.mins}</span>}
               {host.location && <span className="text-[0.85rem] text-ink-faint">{host.location}</span>}
             </aside>
 
@@ -298,15 +371,44 @@ export function BookingPage() {
                   <Button
                     variant="primary"
                     data-testid="confirm-booking"
-                    disabled={preview || submitting || !name.trim() || !email.trim()}
-                    onClick={submit}
+                    disabled={submitting || !name.trim() || !email.trim()}
+                    onClick={() => (preview ? setAlertOpen(true) : submit())}
                   >
-                    {preview ? s.previewDisabled : submitting ? s.booking : s.confirm}
+                    {submitting ? s.booking : s.confirm}
                   </Button>
                 </Panel>
               )}
             </div>
           </div>
+
+          {/* Preview: edit-back bar (Edit returns to the tool) */}
+          {preview && (
+            <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
+              <div className="wrap py-2.5 flex items-center gap-3">
+                <Button variant="primary" data-testid="edit-back" onClick={() => navigate(`/${locale}/apps/book-me`)} className="!h-9 !py-0 !text-[0.9rem] hover:!translate-y-0"><EditIcon className="w-4 h-4" /> {L.edit}</Button>
+                <span className="text-[0.8rem] text-ink-faint">{s.previewBanner}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Preview: the alert the host would receive (no emojis, type in subject) */}
+          {alertOpen && (
+            <Sheet onClose={() => setAlertOpen(false)} data-testid="alert-modal">
+              <SheetTitle>{L.alertTitle}</SheetTitle>
+              <div className="rounded-md border border-[color:var(--line)] overflow-hidden">
+                <div className="bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] px-3 py-2 text-[0.82rem] border-b border-[color:var(--line-soft)]">
+                  <span className="text-ink-faint">{L.subject}: </span>
+                  <span className="font-semibold text-ink">New booking: {selType?.name} — {name || L.someone}</span>
+                </div>
+                <div className="p-3 flex flex-col gap-1.5 text-[0.88rem]">
+                  <span className="text-ink"><b>{name || L.someone}</b> ({email || '—'}) booked {selType?.name}.</span>
+                  {selected != null && <span className="text-ink-soft">{dayFmt.format(new Date(selected))} · {timeFmt.format(new Date(selected))}</span>}
+                  {note && <span className="text-ink-faint">Note: {note}</span>}
+                </div>
+              </div>
+              <SheetActions><Button variant="primary" onClick={() => setAlertOpen(false)}>{s.back}</Button></SheetActions>
+            </Sheet>
+          )}
         </Stack>
       )}
     </div>

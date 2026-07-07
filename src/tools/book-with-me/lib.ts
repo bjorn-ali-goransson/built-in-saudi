@@ -30,6 +30,8 @@ export interface HostConfig {
   code: string
   tz: string
   firstDay: number // first weekday shown in the grid, 0 = Sunday … 6 = Saturday
+  pageHeading: string // editable intro heading on the booking page
+  pageText: string // editable intro subtext on the booking page
   meeting: MeetingConfig // primary meeting (mirrors meetingTypes[0]) — kept for the backend
   meetingTypes: MeetingType[]
   availability: AvailWindow[]
@@ -233,6 +235,8 @@ export function defaultConfig(): HostConfig {
     code: makeCode(),
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh',
     firstDay: detectFirstDay(),
+    pageHeading: 'Book a meeting',
+    pageText: 'Pick a time that works for you — you’ll get a calendar invite by email.',
     meeting: defaultMeeting(),
     meetingTypes: defaultMeetingTypes(),
     availability: [
