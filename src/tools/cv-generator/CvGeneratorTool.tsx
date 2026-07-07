@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack, Spinner } from '../../components/ui'
-import { DownloadIcon, MicIcon } from '../../components/icons'
+import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
 import { renderCvHtml, renderPrintDoc } from './template'
 import { cvToDocxBlob } from './docx'
@@ -35,6 +35,9 @@ const STR = {
     result: 'Your CV',
     pdf: 'Save as PDF',
     word: 'Save as Word',
+    saveForLater: 'Save for later',
+    savedForLater: 'Saved on this device — resume it anytime.',
+    resumeSaved: 'Resume your saved CV',
     changesTitle: 'Improvements made',
     qLabel: (i: number, n: number) => `Question ${i} of ${n}`,
     answerPh: 'Type or speak your answer…',
@@ -72,6 +75,9 @@ const STR = {
     result: 'سيرتك',
     pdf: 'حفظ PDF',
     word: 'حفظ Word',
+    saveForLater: 'احفظ للاحقًا',
+    savedForLater: 'حُفظت على هذا الجهاز — استأنفها متى شئت.',
+    resumeSaved: 'استأنف سيرتك المحفوظة',
     changesTitle: 'التحسينات المُطبَّقة',
     qLabel: (i: number, n: number) => `سؤال ${i} من ${n}`,
     answerPh: 'اكتب أو انطق إجابتك…',
@@ -179,6 +185,10 @@ export default function CvGeneratorTool() {
   const [queue, setQueue] = useState<string[]>([])
   const [qIndex, setQIndex] = useState(0)
   const [toast, setToast] = useState('')
+  // A CV the user saved to this device to finish later.
+  const [saved, setSaved] = useState<Cv | null>(() => {
+    try { const r = localStorage.getItem('bis-cv-saved'); return r ? (JSON.parse(r).cv as Cv) : null } catch { return null }
+  })
   const [answerText, setAnswerText] = useState('')
   const [instruction, setInstruction] = useState('')
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
@@ -358,6 +368,21 @@ export default function CvGeneratorTool() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
+  function saveForLater() {
+    if (!cv) return
+    try { localStorage.setItem('bis-cv-saved', JSON.stringify({ cv, savedAt: Date.now() })) } catch { /* storage full */ }
+    setSaved(cv)
+    setSaveMenu(false)
+    setToast(s.savedForLater)
+  }
+  function resumeSaved() {
+    if (!saved) return
+    setCv(saved)
+    setQueue([])
+    setQIndex(0)
+    setStatus('done')
+  }
+
   // Full-bleed green intro, docked flush to the navbar (cancels the page's top padding).
   const hero = (
     <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
@@ -365,12 +390,20 @@ export default function CvGeneratorTool() {
         <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
         <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem]">{s.heroBody}</p>
         {status === 'idle' && (
-          <label className="inline-flex self-start mt-1">
-            <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
-            <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-white text-green-700 px-4 py-2 text-[0.9rem] font-semibold hover:bg-sand-100">
-              {s.choose}
-            </span>
-          </label>
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            <label className="inline-flex self-start">
+              <input type="file" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf" className="sr-only" onChange={onFile} data-testid="cv-file" />
+              <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-white text-green-700 px-4 py-2 text-[0.9rem] font-semibold hover:bg-sand-100">
+                {s.choose}
+              </span>
+            </label>
+            {saved && (
+              <button type="button" onClick={resumeSaved} data-testid="cv-resume"
+                className="inline-flex items-center gap-2 bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">
+                <BookmarkIcon /> {s.resumeSaved}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -460,10 +493,14 @@ export default function CvGeneratorTool() {
                     <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
                       className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
                     {saveMenu && (
-                      <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden">
+                      <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[12rem]">
                         <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
                           className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
                           <DownloadIcon /> {s.word}
+                        </button>
+                        <button type="button" data-testid="cv-save-later" onClick={saveForLater}
+                          className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">
+                          <BookmarkIcon /> {s.saveForLater}
                         </button>
                       </div>
                     )}

@@ -14,7 +14,7 @@ export const cvGeneratorTool: Tool = {
     'cv', 'resume', 'résumé', 'cv generator', 'resume builder', 'ats', 'job', 'career', 'pdf', 'word',
     'سيرة ذاتية', 'سيرة', 'ريزيومي', 'منشئ السيرة', 'وظيفة', 'توظيف',
   ],
-  status: 'beta',
+  status: 'stable',
   Icon: CvIcon,
   component: lazyTool(() => import('./CvGeneratorTool')),
   ar: {

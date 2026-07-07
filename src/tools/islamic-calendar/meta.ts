@@ -1,6 +1,6 @@
 import { lazyTool } from '../../lib/lazyTool'
 import type { Tool } from '../types'
-import { MoonIcon } from '../../components/icons'
+import { IslamicCalendarIcon } from '../../components/icons'
 
 export const islamicCalendarTool: Tool = {
   id: 'islamic-calendar',
@@ -12,7 +12,7 @@ export const islamicCalendarTool: Tool = {
   category: 'Saudi / Local',
   keywords: ['islamic calendar', 'hijri', 'month', 'moon', 'white days', 'ayyam al beed', 'ramadan', 'eid', 'umm al-qura', 'تقويم', 'هجري', 'الأيام البيض', 'رمضان'],
   status: 'stable',
-  Icon: MoonIcon,
+  Icon: IslamicCalendarIcon,
   component: lazyTool(() => import('./IslamicCalendarTool')),
   ar: {
     name: 'التقويم الإسلامي',

@@ -28,6 +28,18 @@ const PRESETS: Preset[] = [
   { en: 'Lagoon', ar: 'بحيري', dot: 'rounded', fg: '#0e7490', bg: '#ecfeff', frame: 'none', border: { width: 0.022, style: 'dashed', radius: 0.05 } },
 ]
 
+// Named colour-pair presets for the palette.
+const PALETTES: { en: string; ar: string; fg: string; bg: string }[] = [
+  { en: 'Spring', ar: 'الربيع', fg: '#2f6b3a', bg: '#eef7ee' },
+  { en: 'Summer', ar: 'الصيف', fg: '#c2820a', bg: '#fffdf2' },
+  { en: 'Mountains & rivers', ar: 'جبال وأنهار', fg: '#1f4e5f', bg: '#eef5f6' },
+  { en: 'Desert', ar: 'الصحراء', fg: '#9c5a2c', bg: '#fbf2e6' },
+  { en: 'Bubbly', ar: 'فقاعات', fg: '#c026a3', bg: '#fdf2fb' },
+  { en: 'Midnight', ar: 'منتصف الليل', fg: '#e5e7eb', bg: '#0f172a' },
+  { en: 'Ocean', ar: 'المحيط', fg: '#0e7490', bg: '#ecfeff' },
+  { en: 'Berry', ar: 'التوت', fg: '#9d174d', bg: '#fff1f5' },
+]
+
 const SAMPLE = 'https://built-in-saudi.com'
 const EMOJIS = ['⭐', '❤️', '🔥', '🌙', '🕌', '🐫', '🌴', '☕', '⚡', '💎', '🌟', '🍀', '🎁', '🚀', '🌸', '👍', '✨', '🧡', '🐍', '🎯']
 
@@ -55,7 +67,7 @@ export default function QrCodeTool() {
   const ar = locale === 'ar'
   const L = ar
     ? { title: 'أنشئ رمز باركود', body: 'الصق رابطًا واحصل على باركود أنيق ومخصّص. لا يُرفع أي شيء.', surprise: 'تنسيق مفاجئ', appearance: 'المظهر', settings: 'الإعدادات', theme: 'السمة', palette: 'لوحة الألوان', primary: 'اللون الأساسي', secondary: 'اللون الثانوي', border: 'الإطار', margin: 'الهامش', addCenter: 'شعار في المنتصف', centerOn: 'شعار في المنتصف' }
-    : { title: 'Make a QR code', body: 'Paste a link and get a crisp, custom QR. Nothing is uploaded.', surprise: 'Surprise styling', appearance: 'Appearance', settings: 'Settings', theme: 'Theme', palette: 'Colour palette', primary: 'Primary colour', secondary: 'Secondary colour', border: 'Border', margin: 'Margin', addCenter: 'Add centre logo', centerOn: 'Centre logo' }
+    : { title: 'Make a QR code', body: '', surprise: 'Surprise styling', appearance: 'Appearance', settings: 'Settings', theme: 'Theme', palette: 'Color palette', primary: 'Primary color', secondary: 'Secondary color', border: 'Border', margin: 'Margin', addCenter: 'Add centre logo', centerOn: 'Centre logo' }
 
   const BORDERS: { key: string; name: string; b: BorderStyle }[] = [
     { key: 'none', name: ar ? 'بلا' : 'None', b: NO_BORDER },
@@ -161,7 +173,6 @@ export default function QrCodeTool() {
         <div className="wrap py-[clamp(1.4rem,4vw,2rem)] flex flex-col gap-4 items-start max-w-[44rem]">
           <div className="flex flex-col gap-1">
             <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{L.title}</h1>
-            <p className="text-[0.95rem] leading-relaxed opacity-90">{L.body}</p>
           </div>
           <input
             type="url" inputMode="url" placeholder={q.placeholderUrl} data-testid="qr-url" value={link} autoComplete="off"
@@ -231,15 +242,25 @@ export default function QrCodeTool() {
           )}
         </div>
 
-        {/* Colour palette (was "Theme") — named primary/secondary, no surprise */}
+        {/* Color palette — named presets + a plain colour square per colour */}
         <div className="flex flex-col gap-2">
           <FieldLabel>{L.palette}</FieldLabel>
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="inline-flex items-center gap-2 text-[0.85rem] text-ink-soft">
-              <input type="color" value={fg} onChange={(e) => setFg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={L.primary} />{L.primary}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {PALETTES.map((p, i) => (
+              <button key={i} type="button" className={optCard(fg === p.fg && bg === p.bg)} data-testid={`qr-palette-${i}`} onClick={() => { setFg(p.fg); setBg(p.bg) }}>
+                <span className="flex w-full h-8 rounded-[3px] overflow-hidden border border-[color:var(--line-soft)]">
+                  <span className="flex-1" style={{ background: p.bg }} /><span className="flex-1" style={{ background: p.fg }} />
+                </span>
+                <span className={optName}>{ar ? p.ar : p.en}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2.5 mt-1">
+            <label className="flex items-center gap-2 text-[0.85rem] text-ink-soft">
+              <input type="color" value={fg} onChange={(e) => setFg(e.target.value)} className="w-9 h-9 p-0 border-0 bg-transparent cursor-pointer appearance-none [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-none [&::-webkit-color-swatch-wrapper]:p-0" aria-label={L.primary} />{L.primary}
             </label>
-            <label className="inline-flex items-center gap-2 text-[0.85rem] text-ink-soft">
-              <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={L.secondary} />{L.secondary}
+            <label className="flex items-center gap-2 text-[0.85rem] text-ink-soft">
+              <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="w-9 h-9 p-0 border-0 bg-transparent cursor-pointer appearance-none [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-none [&::-webkit-color-swatch-wrapper]:p-0" aria-label={L.secondary} />{L.secondary}
             </label>
           </div>
         </div>

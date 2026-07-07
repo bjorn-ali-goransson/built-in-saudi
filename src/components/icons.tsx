@@ -210,6 +210,27 @@ export function CalendarCheckIcon({ className }: P) {
   )
 }
 
+// Calendar with a crescent-moon badge in the bottom-left, on a bg-filled disc.
+export function IslamicCalendarIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 3v3M16 3v3" />
+      <circle cx="7.8" cy="16" r="5" fill="var(--bg)" />
+      <circle cx="7.8" cy="16" r="5" />
+      <path d="M9.2 13.1a3.1 3.1 0 1 0 0 5.8 3.9 3.9 0 0 1 0-5.8Z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function BookmarkIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -14,7 +14,7 @@ export const bookWithMeTool: Tool = {
     'calendly', 'booking', 'meeting', 'schedule', 'appointment', 'availability', 'calendar',
     'book a meeting', 'حجز', 'اجتماع', 'موعد', 'جدولة', 'رابط حجز', 'كالندلي',
   ],
-  status: 'beta',
+  status: 'stable',
   Icon: CalendarCheckIcon,
   component: lazyTool(() => import('./BookWithMeTool')),
   ar: {
