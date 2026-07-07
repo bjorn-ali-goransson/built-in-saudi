@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { BellIcon, CogIcon } from '../../components/icons'
+import { Spinner } from '../../components/ui'
 import { Button, Pill, Select, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { pushSupported, currentSubscription, enablePush, disablePush, touchSubscription } from '../../lib/push'
 import { alertsHelp } from './alertsHelp'
@@ -433,7 +434,7 @@ export default function PrayerTimesTool() {
       {geoError && <p className="text-[color:var(--danger)] text-[0.9rem]">{geoError}</p>}
 
       {/* Prayer times — flush, no card/well (nativization) */}
-      {locating && <p className="text-[0.85rem] text-ink-faint mb-[0.6rem]" data-testid="pray-locating">{s.locating}</p>}
+      {locating && <div className="flex justify-center py-2 mb-[0.6rem]" data-testid="pray-locating"><Spinner label={s.locating} /></div>}
       <ul className={`list-none p-0 m-0 grid gap-2 ${locating ? 'opacity-[0.55] animate-[pulse_1.2s_ease-in-out_infinite]' : ''}`} data-testid="prayer-list">
         {timeline.map((it, i) => {
           const prev = timeline[i - 1]
