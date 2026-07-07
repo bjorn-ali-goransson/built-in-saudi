@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
@@ -113,7 +114,7 @@ export function BookingPage() {
         picture: sess?.picture || null,
         meetingTypes: cfg.meetingTypes,
       })
-      setHeading(cfg.pageHeading || s.withHost)
+      setHeading(cfg.pageHeading || (sess?.name ? (locale === 'ar' ? `احجز اجتماعًا مع ${sess.name}` : `Book a meeting with ${sess.name}`) : s.withHost))
       setText(cfg.pageText || '')
       setSlots(previewSlots(cfg))
       setStatus('ready')
@@ -254,12 +255,18 @@ export function BookingPage() {
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 {host.name && <span className="text-[0.82rem] font-semibold opacity-90">{host.name}</span>}
                 {preview
-                  ? <input value={heading} placeholder={L.headPh} data-testid="edit-heading" onChange={(e) => { setHeading(e.target.value); saveIntro(e.target.value, text) }}
-                      className="bg-transparent border-0 outline-none w-full font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_50%,transparent)]" />
+                  ? <label className="flex items-center gap-1.5 rounded-md -mx-1.5 px-1.5 hover:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)]">
+                      <input value={heading} placeholder={L.headPh} data-testid="edit-heading" onChange={(e) => { setHeading(e.target.value); saveIntro(e.target.value, text) }}
+                        className="bg-transparent border-0 outline-none flex-1 min-w-0 font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_50%,transparent)]" />
+                      <EditIcon className="w-4 h-4 flex-none opacity-55" />
+                    </label>
                   : <h1 className="font-display rtl:font-ar text-[clamp(1.3rem,4vw,1.8rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{heading}</h1>}
                 {preview
-                  ? <input value={text} placeholder={L.textPh} data-testid="edit-text" onChange={(e) => { setText(e.target.value); saveIntro(heading, e.target.value) }}
-                      className="bg-transparent border-0 outline-none w-full text-[0.92rem] opacity-90 text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_45%,transparent)]" />
+                  ? <label className="flex items-center gap-1.5 rounded-md -mx-1.5 px-1.5 hover:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--sand-100)_12%,transparent)]">
+                      <input value={text} placeholder={L.textPh} data-testid="edit-text" onChange={(e) => { setText(e.target.value); saveIntro(heading, e.target.value) }}
+                        className="bg-transparent border-0 outline-none flex-1 min-w-0 text-[0.92rem] opacity-90 text-sand-100 placeholder:text-[color-mix(in_srgb,var(--sand-100)_45%,transparent)]" />
+                      <EditIcon className="w-3.5 h-3.5 flex-none opacity-55" />
+                    </label>
                   : text && <p className="text-[0.92rem] opacity-90 leading-relaxed">{text}</p>}
               </div>
             </div>
@@ -381,14 +388,16 @@ export function BookingPage() {
             </div>
           </div>
 
-          {/* Preview: edit-back bar (Edit returns to the tool) */}
-          {preview && (
-            <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
+          {/* Preview: edit-back bar (Edit returns to the tool). Portaled to <body>
+              so an ancestor transform doesn't turn position:fixed into absolute. */}
+          {preview && createPortal(
+            <div className="fixed inset-x-0 bottom-0 z-[60] bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
               <div className="wrap py-2.5 flex items-center gap-3">
                 <Button variant="primary" data-testid="edit-back" onClick={() => navigate(`/${locale}/apps/book-me`)} className="!h-9 !py-0 !text-[0.9rem] hover:!translate-y-0"><EditIcon className="w-4 h-4" /> {L.edit}</Button>
                 <span className="text-[0.8rem] text-ink-faint">{s.previewBanner}</span>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
 
           {/* Preview: the alert the host would receive (no emojis, type in subject) */}

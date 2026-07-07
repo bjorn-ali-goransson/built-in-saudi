@@ -190,6 +190,16 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
 
 /** Wrap an already-rendered .resume element's HTML into a print/PDF document
  *  (A4, no preview scaling) — used to export exactly what the user edited. */
+/** Render the original extracted CV text as a plain, readable document (for the
+ *  "show original" toggle in the result view). */
+export function renderOriginalHtml(text: string): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">`
+    + `<style>html,body{background:#e9ebef;margin:0;padding:0}`
+    + `#o{width:210mm;max-width:100%;margin:0 auto;background:#fff;box-shadow:0 2px 12px rgba(20,30,50,.13)}`
+    + `pre{white-space:pre-wrap;word-wrap:break-word;margin:0;padding:22mm 18mm;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:12.5px;line-height:1.55;color:#1b2230}</style></head>`
+    + `<body><div id="o"><pre>${esc(text)}</pre></div></body></html>`
+}
+
 export function renderPrintDoc(resumeHtml: string, name = 'CV'): string {
   const head = `<meta charset="utf-8"><title>${esc(name)}</title>`
     + `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`

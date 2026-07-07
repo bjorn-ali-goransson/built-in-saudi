@@ -235,7 +235,7 @@ export function defaultConfig(): HostConfig {
     code: makeCode(),
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh',
     firstDay: detectFirstDay(),
-    pageHeading: 'Book a meeting',
+    pageHeading: '', // empty → the page shows "Book a meeting with <name>"
     pageText: 'Pick a time that works for you — you’ll get a calendar invite by email.',
     meeting: defaultMeeting(),
     meetingTypes: defaultMeetingTypes(),

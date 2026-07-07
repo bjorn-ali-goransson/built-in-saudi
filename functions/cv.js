@@ -202,7 +202,7 @@ http('cvRefine', async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { idToken, cv: current, instruction, kind, context } = req.body || {}
+    const { idToken, cv: current, instruction, kind, context, sourceText } = req.body || {}
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
@@ -228,9 +228,13 @@ http('cvRefine', async (req, res) => {
     const prev = typeof context === 'string' && context.trim()
       ? `\n\nYour most recent change to this CV was: "${String(context).slice(0, 400)}". The candidate may be reacting to it — if so, correct it accordingly.`
       : ''
+    // The original extracted CV text, so a tweak can pull back anything the first pass missed.
+    const src = typeof sourceText === 'string' && sourceText.trim()
+      ? `\n\nFor reference, the ORIGINAL CV text the candidate uploaded (use it to recover any detail that may have been dropped, but keep obeying every rule):\n${String(sourceText).slice(0, 12000)}`
+      : ''
     const { cv, questions, summary } = await callOpenAI(
       REFINE_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 30000)}${prev}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
+      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}${prev}${src}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
     )
     if (isAnswer) answerCount += 1
     else polishCount += 1

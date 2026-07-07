@@ -37,7 +37,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2 flex-none">
-          {!isHome && <ShareButton />}
+          {!isBooking && <ShareButton />}
           <Link
             to={swapLocaleInPath(location.pathname, other)}
             className="lang-toggle inline-flex items-center justify-center h-9 border border-[color:var(--line)] rounded-full px-[0.9rem] text-[0.85rem] leading-none font-semibold text-ink-soft no-underline hover:text-green-700 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)]"

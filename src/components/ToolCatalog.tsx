@@ -25,7 +25,7 @@ export function CategorySections({ sections, indexOf, onNavigate }: { sections: 
   return (
     <>
       {sections.map((sec) => (
-        <div key={sec.key} className="mb-10 max-[560px]:mb-8">
+        <div key={sec.key} className="mb-7 max-[560px]:mb-6">
           <div className="flex items-center gap-3 mb-[1.1rem]">
             {/* A div (not <h2>) so the unlayered base h1–h4 rule in theme.css
                 doesn't override these utility classes — cascade layers mean

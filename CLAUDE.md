@@ -50,10 +50,11 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
      `component`, an icon, category, keywords, and a good tagline/description.
    - `<Name>Tool.tsx` — the tool UI, **default export**.
 2. Register it in `src/tools/index.ts` (order = catalog order).
-3. Routing (`/:lang/tools/:id`), the home catalog card, and fuzzy search pick it
-   up automatically.
+3. Routing (`/:lang/apps/:id`; the routes are **`/apps`**, and the UI calls them
+   "apps" not "tools" — legacy `/tools/:id` 301-redirects), the home catalog card,
+   and fuzzy search pick it up automatically.
 4. **When the tool goes LIVE:** add its `en`/`ar` name + description to
-   `src/i18n/seo.ts` so the prerender plugin emits static `/<locale>/tools/<id>/`
+   `src/i18n/seo.ts` so the prerender plugin emits static `/<locale>/apps/<id>/`
    HTML with correct head + content. Add its `/en` + `/ar` URLs to
    `public/sitemap.xml`.
 5. Work from its spec in `docs/tools/<id>.md`; keep the spec's checklist honest.
@@ -177,20 +178,33 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **Ḍuḥā** (sunrise+20), and **morning/evening adhkār** (sunrise / Maghrib+15) — all
   additive `prefs` booleans; `subscribe` **merges** prefs so Prayer Times and Adhkar
   each own their toggles. See [`functions/README.md`](./functions/README.md).
-- **Book With Me backend** (`functions/booking.js`, same stack): Calendly-style
-  scheduling — `booking-google-start`/`-callback`, `save-schedule`,
-  `get-availability`, `book`, `telegram-webhook`. Firestore `bookingHosts` +
-  `bookings`. One Google OAuth flow signs the host in **and** grabs an offline
+- **Book Me backend** (`functions/booking.js`, same stack; tool id is now
+  **`book-me`**, folder still `src/tools/book-with-me/`): Calendly-style scheduling
+  — `booking-google-start`/`-callback`, `save-schedule`, `get-availability`,
+  `book`, `telegram-webhook`, plus **`delete-host`** (deletes the host record +
+  all its bookings) and **`my-data`** (see the data-deletion note below). Firestore
+  `bookingHosts` (keyed by Google `sub`; holds `meetingTypes`, `firstDay`,
+  `pageHeading`/`pageText`, `picture`, availability, notify) + `bookings` (linked by
+  `hostUid`). One Google OAuth flow signs the host in **and** grabs an offline
   refresh token (calendar free/busy + auto-created events); host sessions are our
-  own HMAC token (`SENDER_SECRET`). No new npm deps — Google/Resend/Telegram over
-  `fetch`, hand-written `.ics`. Booking link is **path-based**
-  (`built-in-saudi.com/book/<code>`; subdomain deferred, no Cloudflare). On booking:
-  Web Push + Telegram DM (bot `@BuiltInSaudi_bot`) + Resend email w/ `.ics`. Extra
-  env: `GOOGLE_OAUTH_CLIENT_ID` (var), `GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/
-  `TELEGRAM_BOT_TOKEN` (secrets). One-time `setWebhook` after deploy. See
-  [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
+  own HMAC token (`SENDER_SECRET`) which now also carries the avatar `picture` so
+  the same-tab **preview** can render it. No new npm deps — Google/Resend/Telegram
+  over `fetch`, hand-written `.ics`. Booking link is **path-based**
+  (`built-in-saudi.com/book/<code>`; subdomain deferred, no Cloudflare) and renders
+  as a **standalone, chrome-free page** (Layout hides Header/Footer on `/book/`) with
+  an editable green intro box + a month calendar. On booking: Web Push + Telegram DM
+  (bot `@BuiltInSaudi_bot`) + Resend email w/ `.ics` — **no emojis, meeting type in
+  the subject**. Extra env: `GOOGLE_OAUTH_CLIENT_ID` (var),
+  `GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/`TELEGRAM_BOT_TOKEN` (secrets).
+  One-time `setWebhook` after deploy. See [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
+- **"Delete my data" is one consolidated endpoint** (`my-data` in `functions/booking.js`,
+  surfaced on the **Privacy page**): sign in with Google → it reports and deletes
+  **everything** stored for that user across the whole site. **Whenever you add any
+  new per-user server-side storage, update `my-data` to report + delete it too** (and
+  mention it in the Privacy page copy). Today it covers `bookingHosts/{sub}`,
+  `bookings` where `hostUid == sub`, and `cvUsage/{sub}`.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all eleven functions on any `functions/**` change, authenticating **keylessly
+  deploys all thirteen functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

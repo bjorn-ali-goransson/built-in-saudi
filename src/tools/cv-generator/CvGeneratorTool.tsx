@@ -4,7 +4,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
-import { renderCvHtml, renderPrintDoc } from './template'
+import { renderCvHtml, renderPrintDoc, renderOriginalHtml } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
 
@@ -36,6 +36,8 @@ const STR = {
     result: 'Your CV',
     pdf: 'Save as PDF',
     word: 'Save as Word',
+    optimized: 'Optimized',
+    original: 'Original',
     saveForLater: 'Save for later',
     savedForLater: 'Saved on this device — resume it anytime.',
     resumeSaved: 'Resume your saved CV',
@@ -77,6 +79,8 @@ const STR = {
     result: 'سيرتك',
     pdf: 'حفظ PDF',
     word: 'حفظ Word',
+    optimized: 'المُحسّنة',
+    original: 'الأصلية',
     saveForLater: 'احفظ للاحقًا',
     savedForLater: 'حُفظت على هذا الجهاز — استأنفها متى شئت.',
     resumeSaved: 'استأنف سيرتك المحفوظة',
@@ -196,6 +200,7 @@ export default function CvGeneratorTool() {
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
+  const [showOriginal, setShowOriginal] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -314,7 +319,7 @@ export default function CvGeneratorTool() {
     setBusy('answer')
     setErr('')
     try {
-      const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current)
+      const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current, text)
       setCv(r.cv)
       setAnswersLeft(r.answersLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
@@ -337,7 +342,7 @@ export default function CvGeneratorTool() {
     setBusy('polish')
     setErr('')
     try {
-      const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current)
+      const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current, text)
       setCv(r.cv)
       setPolishLeft(r.polishLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
@@ -433,39 +438,50 @@ export default function CvGeneratorTool() {
         <>
           {hero}
 
-          {/* Loading: a shimmering CV skeleton + cycling status */}
+          {/* Loading. Once the PDF text is extracted, show it (so they can see we
+              read their CV) with a floating status; before that, a shimmer skeleton. */}
           {(status === 'extracting' || status === 'generating') && (
-            <div className="flex flex-col items-center gap-6 py-6" data-testid="cv-loading">
-              <div className="w-full max-w-[19rem] rounded-lg border border-[color:var(--line-soft)] bg-[var(--surface)] shadow-[var(--shadow-sm)] p-5 flex flex-col gap-3.5">
-                {(() => {
-                  const bar = 'rounded-[3px] bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
-                  const head = 'rounded-[3px] bg-[color-mix(in_srgb,var(--green-500)_28%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
-                  let d = 0
-                  const step = () => ({ animationDelay: `${(d++ * 0.12).toFixed(2)}s` })
-                  return (
-                    <>
-                      <div className={`${bar} h-5 w-1/2`} style={step()} />
-                      <div className={`${bar} h-2.5 w-2/3`} style={step()} />
-                      <div className="h-px bg-[color:var(--line-soft)] my-1" />
-                      {[0, 1, 2].map((sec) => (
-                        <div key={sec} className="flex flex-col gap-2">
-                          <div className={`${head} h-3 w-1/3`} style={step()} />
-                          <div className={`${bar} h-2 w-full`} style={step()} />
-                          <div className={`${bar} h-2 w-11/12`} style={step()} />
-                          <div className={`${bar} h-2 w-4/5`} style={step()} />
-                        </div>
-                      ))}
-                    </>
-                  )
-                })()}
+            status === 'generating' && text ? (
+              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative" data-testid="cv-loading">
+                <iframe title="original" srcDoc={renderOriginalHtml(text)} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef] opacity-70" />
+                <div className="absolute inset-x-0 top-5 flex justify-center px-4 pointer-events-none">
+                  <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
+                    <Spinner className="size-[1.1rem]" label={s.building} />
+                    <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2.5 text-[0.95rem] font-medium text-ink-soft">
-                <Spinner className="size-[1.15rem]" label={s.building} />
-                <span key={status === 'generating' ? loadingStep : 'x'} className="animate-[fadeUp_0.4s_ease]">
-                  {status === 'extracting' ? s.extracting : s.steps[loadingStep]}
-                </span>
+            ) : (
+              <div className="flex flex-col items-center gap-6 py-6" data-testid="cv-loading">
+                <div className="w-full max-w-[19rem] rounded-lg border border-[color:var(--line-soft)] bg-[var(--surface)] shadow-[var(--shadow-sm)] p-5 flex flex-col gap-3.5">
+                  {(() => {
+                    const bar = 'rounded-[3px] bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
+                    const head = 'rounded-[3px] bg-[color-mix(in_srgb,var(--green-500)_28%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
+                    let d = 0
+                    const step = () => ({ animationDelay: `${(d++ * 0.12).toFixed(2)}s` })
+                    return (
+                      <>
+                        <div className={`${bar} h-5 w-1/2`} style={step()} />
+                        <div className={`${bar} h-2.5 w-2/3`} style={step()} />
+                        <div className="h-px bg-[color:var(--line-soft)] my-1" />
+                        {[0, 1, 2].map((sec) => (
+                          <div key={sec} className="flex flex-col gap-2">
+                            <div className={`${head} h-3 w-1/3`} style={step()} />
+                            <div className={`${bar} h-2 w-full`} style={step()} />
+                            <div className={`${bar} h-2 w-11/12`} style={step()} />
+                            <div className={`${bar} h-2 w-4/5`} style={step()} />
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </div>
+                <div className="flex items-center gap-2.5 text-[0.95rem] font-medium text-ink-soft">
+                  <Spinner className="size-[1.15rem]" label={s.building} />
+                  <span>{s.extracting}</span>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* Sign-in appears once a CV is ready; generation then starts automatically */}
@@ -488,9 +504,17 @@ export default function CvGeneratorTool() {
               ref={iframeRef}
               title={cvFilename(cv)}
               className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
-              srcDoc={renderCvHtml(cv, { preview: true })}
+              srcDoc={showOriginal ? renderOriginalHtml(text) : renderCvHtml(cv, { preview: true })}
             />
           </div>
+
+          {/* Flip between the optimized CV and the original you uploaded */}
+          {text && (
+            <div className="fixed start-4 top-[4.75rem] z-50 flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)] overflow-hidden text-[0.82rem] font-semibold">
+              <button type="button" data-testid="cv-view-optimized" onClick={() => setShowOriginal(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
+              <button type="button" data-testid="cv-view-original" onClick={() => setShowOriginal(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
+            </div>
+          )}
 
           {/* Bottom bar: collapsed = Download + Make adjustments; expanded = the dialogue */}
           <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
