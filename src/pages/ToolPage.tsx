@@ -21,7 +21,7 @@ function LoadedTool({ tool }: { tool: Tool }) {
   const { locale } = useLocale()
   const l = localizeTool(tool, locale)
   // The tool name now lives in the app-bar (Header); the page goes straight to the tool.
-  useDocumentMeta(locale, `/tools/${tool.id}`, l.name, l.description)
+  useDocumentMeta(locale, `/apps/${tool.id}`, l.name, l.description)
 
   const ToolComponent = tool.component!
   return (

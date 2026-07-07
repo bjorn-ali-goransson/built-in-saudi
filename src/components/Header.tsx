@@ -15,7 +15,7 @@ export function Header() {
   // tool's name (app-bar) on a tool page, else the site name.
   const isHome = /^\/(en|ar)\/?$/.test(location.pathname)
   const isBooking = /\/book\//.test(location.pathname)
-  const match = location.pathname.match(/\/tools\/([^/]+)/)
+  const match = location.pathname.match(/\/apps\/([^/]+)/)
   const currentTool = match ? getTool(match[1]) : null
   const context = isBooking
     ? locale === 'ar' ? 'احجز اجتماعًا' : 'Book a meeting'

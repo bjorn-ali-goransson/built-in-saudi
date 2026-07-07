@@ -27,7 +27,7 @@ function setHreflangs(subPath: string) {
 
 /**
  * Set title, description, canonical, og:* and hreflang alternates for a page.
- * `subPath` is like '' (home) or '/tools/qr-code'. `title`/`description` override
+ * `subPath` is like '' (home) or '/apps/qr-code'. `title`/`description` override
  * the locale defaults (used by tool pages).
  */
 export function useDocumentMeta(locale: Locale, subPath = '', title?: string, description?: string) {

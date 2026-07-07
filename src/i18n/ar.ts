@@ -4,11 +4,11 @@ import type { Dict } from './en'
 // Note: QR code is colloquially "باركود" in Saudi usage.
 export const ar: Dict = {
   dir: 'rtl',
-  nav: { tools: 'الأدوات', source: 'المصدر' },
+  nav: { tools: 'التطبيقات', source: 'المصدر' },
 
   hero: {
     kicker: 'بُنِيَ في السعودية',
-    title1: 'أدواتٌ صغيرةٌ ودقيقة.',
+    title1: 'تطبيقاتٌ صغيرةٌ ودقيقة.',
     title2: 'بلا إعلانات، بلا مقابل.',
     lede:
       'الأدوات اليومية التي تبحث عنها دائمًا — الباركود، والمُحوِّلات، والمُولِّدات — مجموعةٌ في صندوق أدوات واحد وصادق. مجانية وسريعة وخاصة: لا يُرفع أي شيء، وكل شيء يعمل داخل متصفحك.',
@@ -20,15 +20,15 @@ export const ar: Dict = {
   catalog: {
     title: 'صندوق الأدوات',
     count: (live: number, soon: number) => `${live} متاحة · ${soon} قادمة`,
-    searchPlaceholder: 'ابحث عن أداة — جرّب «واي فاي»، «PDF»، «تحويل»…',
-    searchAria: 'ابحث عن أداة',
+    searchPlaceholder: 'ابحث عن تطبيق — جرّب «واي فاي»، «PDF»، «تحويل»…',
+    searchAria: 'ابحث عن تطبيق',
     clear: 'مسح البحث',
-    empty: (q: string) => `لا توجد أدوات تطابق «${q}» بعد — لكن صندوق الأدوات ينمو.`,
+    empty: (q: string) => `لا توجد تطبيقات تطابق «${q}» بعد — لكن المجموعة تنمو.`,
   },
 
   card: { comingSoon: 'قريباً', beta: 'تجريبي', open: 'افتح' },
 
-  toolPage: { breadcrumb: 'الأدوات' },
+  toolPage: { breadcrumb: 'التطبيقات' },
 
   footer: {
     ethos: 'مجاني ومفتوح. بياناتك لا تغادر جهازك — كل أداة تعمل بالكامل داخل متصفحك.',

@@ -48,7 +48,7 @@ export function dismissHint() {
 }
 
 // ── Path helpers ────────────────────────────────────────────
-/** Build a locale-prefixed path. `sub` is like '' or '/tools/qr-code'. */
+/** Build a locale-prefixed path. `sub` is like '' or '/apps/qr-code'. */
 export function localePath(locale: Locale, sub = ''): string {
   return `/${locale}${sub}`
 }

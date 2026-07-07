@@ -3,11 +3,11 @@
 
 export const en = {
   dir: 'ltr' as 'ltr' | 'rtl',
-  nav: { tools: 'Tools', source: 'Source' },
+  nav: { tools: 'Apps', source: 'Source' },
 
   hero: {
     kicker: 'BUILT IN SAUDI',
-    title1: 'Sharp little tools.',
+    title1: 'Sharp little apps.',
     title2: 'No ads. No catch.',
     lede:
       'The everyday utilities you keep googling — QR codes, converters, generators — gathered into one honest toolbox. Free, fast, and private: nothing is uploaded, everything runs in your browser.',
@@ -19,15 +19,15 @@ export const en = {
   catalog: {
     title: 'The toolbox',
     count: (live: number, soon: number) => `${live} live · ${soon} on the way`,
-    searchPlaceholder: 'Search tools — try “wifi”, “pdf”, “convert”…',
-    searchAria: 'Search tools',
+    searchPlaceholder: 'Search apps — try “wifi”, “pdf”, “convert”…',
+    searchAria: 'Search apps',
     clear: 'Clear search',
-    empty: (q: string) => `No tools match “${q}” yet — but the toolbox is growing.`,
+    empty: (q: string) => `No apps match “${q}” yet — but the collection is growing.`,
   },
 
   card: { comingSoon: 'Coming soon', beta: 'Beta', open: 'Open' },
 
-  toolPage: { breadcrumb: 'Tools' },
+  toolPage: { breadcrumb: 'Apps' },
 
   footer: {
     ethos:

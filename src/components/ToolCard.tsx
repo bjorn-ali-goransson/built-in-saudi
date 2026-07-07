@@ -73,7 +73,7 @@ export function ToolCard({ tool }: Props) {
   }
 
   return (
-    <Link className={live} to={localePath(locale, `/tools/${tool.id}`)} data-testid={`tool-${tool.id}`}>
+    <Link className={live} to={localePath(locale, `/apps/${tool.id}`)} data-testid={`tool-${tool.id}`}>
       {inner}
     </Link>
   )

@@ -50,7 +50,7 @@ function homeContent(locale: Loc): string {
   const items = liveToolSeo
     .map((tool) => {
       const ts = tool[locale]
-      return `<li><a href="/${locale}/tools/${tool.id}">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
+      return `<li><a href="/${locale}/apps/${tool.id}">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
     })
     .join('')
   // Home is app-list-only (the hero copy was removed); keep a single H1 for SEO.
@@ -108,7 +108,7 @@ function prerenderPlugin(): Plugin {
 
         for (const tool of liveToolSeo) {
           const ts = tool[locale]
-          const sub = `/tools/${tool.id}`
+          const sub = `/apps/${tool.id}`
           let page = applyHead(shell, { locale, dir, title: `${ts.name}${suffix[locale]}`, desc: ts.description, canonical: `${ORIGIN}/${locale}${sub}`, sub })
           page = injectContent(page, toolContent(locale, tool))
           write(`${locale}${sub}`, page)

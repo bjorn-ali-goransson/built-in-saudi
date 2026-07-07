@@ -45,8 +45,8 @@ function readSession(): Session | null {
 
 const STR = {
   en: {
-    heroTitle: 'Book Me',
-    intro: 'Set when you’re free, share one link, let people self-book.',
+    heroTitle: 'Free calendar booking service',
+    intro: 'Provides a shareable link for your customers to agree on a meeting time.',
     tzTitle: 'Timezone',
     tzSearch: 'Search timezones…',
     tzShown: 'Times shown in',
@@ -97,8 +97,8 @@ const STR = {
     soon: 'Your schedule saves on this device until you publish.',
   },
   ar: {
-    heroTitle: 'احجز معي',
-    intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم.',
+    heroTitle: 'خدمة حجز مواعيد مجانية',
+    intro: 'رابط قابل للمشاركة يتّفق من خلاله عملاؤك على وقت الاجتماع.',
     tzTitle: 'المنطقة الزمنية',
     tzSearch: 'ابحث عن منطقة زمنية…',
     tzShown: 'الأوقات بتوقيت',

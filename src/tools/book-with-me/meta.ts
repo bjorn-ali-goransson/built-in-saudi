@@ -3,7 +3,7 @@ import type { Tool } from '../types'
 import { CalendarCheckIcon } from '../../components/icons'
 
 export const bookWithMeTool: Tool = {
-  id: 'book-with-me',
+  id: 'book-me',
   name: 'Book Me',
   nameAr: 'احجز معي',
   tagline: 'Share one link; let people self-book a meeting.',
