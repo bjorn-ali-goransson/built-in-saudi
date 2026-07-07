@@ -35,7 +35,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
       {
         h: 'Book With Me — Google Calendar data',
         p: [
-          'With your explicit consent, Book With Me uses the Google Calendar “events” and “free/busy” scopes for two purposes only: (1) to read your busy times so the booking page never offers a slot when you are busy, and (2) to create a calendar event when someone books with you. We store a refresh token to perform these actions on your behalf.',
+          'With your explicit consent, Book With Me uses the Google Calendar “events” scope for two purposes only: (1) to read your events so the booking page never offers a slot when you already have something on your calendar, and (2) to create a calendar event when someone books with you (including a Google Meet link if you enabled it). We never modify or delete your existing events, and we store a refresh token only to perform these two actions on your behalf.',
           'Built in Saudi’s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We do not sell this data, do not use it for advertising, and do not share it with third parties except as needed to provide the feature (Google itself).',
           'You can revoke our access at any time from your Google Account’s security settings (Third-party access), or by contacting us to delete your host record.',
         ],

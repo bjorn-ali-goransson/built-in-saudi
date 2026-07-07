@@ -39,8 +39,9 @@ const OAUTH_SCOPES = [
   'openid',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  // calendar.events covers both reading events (to compute busy times) and
+  // creating the booking event — so no separate free/busy scope is needed.
   'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/calendar.freebusy',
 ].join(' ')
 
 // ---- CORS (browser-facing endpoints) ---------------------------------------
