@@ -53,11 +53,11 @@ function hslHex(h: number, s: number, l: number): string {
 const sameBorder = (a: BorderStyle, b: BorderStyle) => a.width === b.width && a.style === b.style && a.radius === b.radius
 
 // A small non-interactive QR preview rendered to its own canvas.
-function MiniQR({ dot, fg, bg, frame, px, emoji, label, border }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number; emoji?: string; label?: string; border?: BorderStyle }) {
+function MiniQR({ dot, fg, bg, frame, px, emoji, label, border, labelTop }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number; emoji?: string; label?: string; border?: BorderStyle; labelTop?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, emoji, ecLevel: 'M', frame, frameColor: fg, label: label ?? '', border })
-  }, [dot, fg, bg, frame, emoji, label, border])
+    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, emoji, ecLevel: 'M', frame, frameColor: fg, label: label ?? '', labelTop, border })
+  }, [dot, fg, bg, frame, emoji, label, border, labelTop])
   return <canvas ref={ref} className="rounded-[4px]" style={{ width: px, height: 'auto' }} aria-hidden="true" />
 }
 
@@ -66,8 +66,8 @@ export default function QrCodeTool() {
   const q = t.qr
   const ar = locale === 'ar'
   const L = ar
-    ? { title: 'أنشئ رمز باركود', body: 'الصق رابطًا واحصل على باركود أنيق ومخصّص. لا يُرفع أي شيء.', surprise: 'تنسيق مفاجئ', appearance: 'المظهر', settings: 'الإعدادات', theme: 'السمة', palette: 'لوحة الألوان', primary: 'اللون الأساسي', secondary: 'اللون الثانوي', border: 'الإطار', margin: 'الهامش', addCenter: 'شعار في المنتصف', centerOn: 'شعار في المنتصف' }
-    : { title: 'Make a QR code', body: '', surprise: 'Surprise styling', appearance: 'Appearance', settings: 'Settings', theme: 'Theme', palette: 'Color palette', primary: 'Primary color', secondary: 'Secondary color', border: 'Border', margin: 'Margin', addCenter: 'Add centre logo', centerOn: 'Centre logo' }
+    ? { title: 'أنشئ رمز باركود', body: 'الصق رابطًا واحصل على باركود أنيق ومخصّص. لا يُرفع أي شيء.', surprise: 'تنسيق مفاجئ', appearance: 'المظهر', settings: 'الإعدادات', theme: 'السمة', palette: 'لوحة الألوان', primary: 'اللون الأساسي', secondary: 'اللون الثانوي', border: 'الإطار', margin: 'الهامش', addCenter: 'شعار في المنتصف', centerOn: 'شعار في المنتصف', text: 'النص', textColor: 'لون النص', white: 'أبيض', primaryC: 'أساسي', placement: 'الموضع', top: 'أعلى', bottom: 'أسفل' }
+    : { title: 'Make a QR code', body: '', surprise: 'Surprise styling', appearance: 'Appearance', settings: 'Settings', theme: 'Theme', palette: 'Color palette', primary: 'Primary color', secondary: 'Secondary color', border: 'Border', margin: 'Margin', addCenter: 'Add centre logo', centerOn: 'Centre logo', text: 'Text', textColor: 'Text color', white: 'White', primaryC: 'Primary', placement: 'Placement', top: 'Top', bottom: 'Bottom' }
 
   const BORDERS: { key: string; name: string; b: BorderStyle }[] = [
     { key: 'none', name: ar ? 'بلا' : 'None', b: NO_BORDER },
@@ -100,6 +100,8 @@ export default function QrCodeTool() {
   const [frame, setFrame] = useState<Frame>('none')
   const [border, setBorder] = useState<BorderStyle>(NO_BORDER)
   const [label, setLabel] = useState('SCAN ME')
+  const [labelColor, setLabelColor] = useState('#ffffff')
+  const [labelTop, setLabelTop] = useState(false)
   const [sizePx, setSizePx] = useState(512)
   const [margin, setMargin] = useState(2)
   const [logo, setLogo] = useState<HTMLImageElement | null>(null)
@@ -125,8 +127,8 @@ export default function QrCodeTool() {
     const c = canvasRef.current
     if (!c) return
     if (!value) { c.width = c.height = 0; return }
-    renderQR(c, { value, size: sizePx, margin, fg, bg, dot, emoji, ecLevel: logo ? 'H' : 'M', logo, frame, frameColor: fg, label, border })
-  }, [value, sizePx, margin, fg, bg, dot, emoji, logo, frame, label, border])
+    renderQR(c, { value, size: sizePx, margin, fg, bg, dot, emoji, ecLevel: logo ? 'H' : 'M', logo, frame, frameColor: fg, label, labelColor, labelTop, border })
+  }, [value, sizePx, margin, fg, bg, dot, emoji, logo, frame, label, labelColor, labelTop, border])
 
   function applyPreset(p: Preset) { setDot(p.dot); setFg(p.fg); setBg(p.bg); setFrame(p.frame); setBorder(p.border) }
   // Frame (card/circle) and a standalone border are alternative containers — pick one.
@@ -202,6 +204,27 @@ export default function QrCodeTool() {
       <div className="max-w-xl mx-auto w-full flex flex-col gap-5">
         {/* ── Appearance ─────────────────────────────── */}
         <span className={sectionHead}>{L.appearance}</span>
+
+        {/* Text — the first setting: the label, its colour and placement */}
+        <div className="flex flex-col gap-2">
+          <FieldLabel>{L.text}</FieldLabel>
+          <Input value={label} maxLength={16} placeholder="SCAN ME" data-testid="qr-label" onChange={(e) => setLabel(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[0.78rem] text-ink-faint">{L.textColor}</span>
+              <button type="button" data-testid="qr-textcolor-white" onClick={() => setLabelColor('#ffffff')} className={`px-2.5 py-1 rounded-md border text-[0.78rem] font-semibold cursor-pointer ${labelColor === '#ffffff' ? 'border-green-600 text-green-700 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)]' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{L.white}</button>
+              <button type="button" data-testid="qr-textcolor-primary" onClick={() => setLabelColor(fg)} className={`px-2.5 py-1 rounded-md border text-[0.78rem] font-semibold cursor-pointer ${labelColor === fg ? 'border-green-600 text-green-700 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)]' : 'border-[color:var(--line)] text-ink-soft hover:border-green-500'}`}>{L.primaryC}</button>
+              <input type="color" value={labelColor} onChange={(e) => setLabelColor(e.target.value)} className="w-8 h-8 p-0 border-0 bg-transparent cursor-pointer appearance-none [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-none [&::-webkit-color-swatch-wrapper]:p-0" aria-label={L.textColor} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[0.78rem] text-ink-faint">{L.placement}</span>
+              <Seg role="group">
+                <SegButton active={!labelTop} onClick={() => setLabelTop(false)}>{L.bottom}</SegButton>
+                <SegButton active={labelTop} onClick={() => setLabelTop(true)}>{L.top}</SegButton>
+              </Seg>
+            </div>
+          </div>
+        </div>
 
         {/* Theme (was "Style") — named, previewed, fully parameterized */}
         <div className="flex flex-col gap-2">
@@ -284,15 +307,12 @@ export default function QrCodeTool() {
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {FRAMES.map((f) => (
               <button key={f.key} className={optCard(frame === f.key)} data-testid={`qr-frame-${f.key}`} onClick={() => chooseFrame(f.key)}>
-                <MiniQR dot={dot === 'emoji' ? 'square' : dot} fg={fg} bg={bg} frame={f.key} label={f.key !== 'none' ? (label || 'SCAN') : ''} px={54} />
+                <MiniQR dot={dot === 'emoji' ? 'square' : dot} fg={fg} bg={bg} frame={f.key} label={f.key !== 'none' ? (label || 'SCAN') : ''} labelTop={labelTop} px={54} />
                 <span className={optName}>{f.name}</span>
               </button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {frame !== 'none' && (
-              <Input className="flex-1 min-w-[8rem] max-w-[12rem]" value={label} maxLength={16} placeholder="SCAN ME" data-testid="qr-label" onChange={(e) => setLabel(e.target.value)} />
-            )}
             {logo
               ? <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" onClick={() => { setLogo(null); setLogoName('') }}>✕ {L.centerOn} · {logoName.slice(0, 10)}</button>
               : <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" data-testid="qr-add-logo" onClick={() => logoInput.current?.click()}>＋ {L.addCenter}</button>}
