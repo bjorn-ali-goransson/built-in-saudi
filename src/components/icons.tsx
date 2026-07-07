@@ -223,6 +223,14 @@ export function IslamicCalendarIcon({ className }: P) {
   )
 }
 
+export function ExternalLinkIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M14 5h5v5M19 5l-8 8M18 13.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5.5" />
+    </svg>
+  )
+}
+
 export function BookmarkIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

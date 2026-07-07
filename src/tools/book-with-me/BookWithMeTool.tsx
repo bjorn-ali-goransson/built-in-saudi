@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { CopyIcon, BellIcon } from '../../components/icons'
+import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon } from '../../components/icons'
 import { Button, Input, Field, Stack, Seg, SegButton, Panel, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
@@ -45,6 +45,9 @@ const STR = {
   en: {
     heroTitle: 'Book Me',
     intro: 'Set when you’re free, share one link, let people self-book.',
+    tzTitle: 'Timezone',
+    tzSearch: 'Search timezones…',
+    tzShown: 'Times shown in',
     availability: 'Your availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
     meeting: 'Meeting settings',
@@ -88,6 +91,9 @@ const STR = {
   ar: {
     heroTitle: 'احجز معي',
     intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم.',
+    tzTitle: 'المنطقة الزمنية',
+    tzSearch: 'ابحث عن منطقة زمنية…',
+    tzShown: 'الأوقات بتوقيت',
     availability: 'أوقات فراغك',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
     meeting: 'إعدادات الاجتماع',
@@ -152,6 +158,18 @@ function tzLabel(tz: string): string {
   }
 }
 
+/** Compact pill label: "Riyadh · GMT+3". */
+function shortTz(tz: string): string {
+  const city = tz.split('/').pop()?.replace(/_/g, ' ') || tz
+  try {
+    const parts = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date())
+    const off = parts.find((p) => p.type === 'timeZoneName')?.value
+    return off ? `${city} · ${off}` : city
+  } catch {
+    return city
+  }
+}
+
 export default function BookWithMeTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -162,6 +180,10 @@ export default function BookWithMeTool() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [pushDenied, setPushDenied] = useState(false)
+  const [tzOpen, setTzOpen] = useState(false)
+  const [tzq, setTzq] = useState('')
+  // Bigger section heading (a div, not h2, to dodge the unlayered-base rule).
+  const H = 'font-display rtl:font-ar text-[1.2rem] font-semibold text-ink leading-tight'
 
   // On return from the Google OAuth callback the dashboard URL carries
   // #hsid=<session>&code=<hostCode>. Capture it, then clear the hash.
@@ -270,29 +292,24 @@ export default function BookWithMeTool() {
             <button type="button" onClick={publish} data-testid="publish-hero"
               className="rounded-md bg-white text-green-700 px-4 py-2.5 text-[0.9rem] font-semibold border-0 cursor-pointer hover:bg-sand-100">{s.publishCta}</button>
             <button type="button" onClick={openPreview} data-testid="preview-hero"
-              className="self-center bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">{s.previewLink}</button>
+              className="self-center inline-flex items-center gap-1.5 bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">{s.previewLink} <ExternalLinkIcon className="w-4 h-4" /></button>
           </div>
         </div>
       </div>
 
-      {/* 1 · Availability painter — no well; timezone is a right-aligned pill */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.availability}</span>
-          <label className="relative inline-flex flex-none" title={s.tzNote(tzLabel(cfg.tz))}>
-            <select value={cfg.tz} onChange={(e) => setCfg((c) => ({ ...c, tz: e.target.value }))} data-testid="tz-select"
-              className="appearance-none rounded-full border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft text-[0.76rem] font-semibold ps-3 pe-7 py-1 cursor-pointer hover:border-green-500 max-w-[13rem] truncate">
-              {TZS.map((z) => <option key={z} value={z}>{z}</option>)}
-            </select>
-            <span className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-ink-faint text-[0.6rem]" aria-hidden="true">▾</span>
-          </label>
+      {/* 1 · Availability painter — no well; big heading; timezone pill + modal */}
+      <div className="flex flex-col gap-2.5">
+        <div role="heading" aria-level={2} className={H}>{s.availability}</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.8rem] text-ink-faint">{s.tzShown}</span>
+          <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
         </div>
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
       </div>
 
-      {/* 2 · Meeting settings */}
-      <Panel>
-        <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.meeting}</span>
+      {/* 2 · Meeting settings — no well, big heading */}
+      <div className="flex flex-col gap-4">
+        <div role="heading" aria-level={2} className={H}>{s.meeting}</div>
 
         <div className="flex flex-col gap-2">
           <span className="text-[0.82rem] font-semibold text-ink-soft">{s.length}</span>
@@ -351,7 +368,7 @@ export default function BookWithMeTool() {
               onChange={(e) => setMeeting('location', e.target.value)} />
           </Field>
         </div>
-      </Panel>
+      </div>
 
       {/* 3 · Publish & share — after the schedule, Google-Docs style */}
       <Panel>
@@ -432,6 +449,22 @@ export default function BookWithMeTool() {
           <SheetActions>
             <Button variant="primary" onClick={() => setAlertsOpen(false)}>{s.done}</Button>
           </SheetActions>
+        </Sheet>
+      )}
+
+      {tzOpen && (
+        <Sheet data-testid="tz-sheet" onClose={() => { setTzOpen(false); setTzq('') }}>
+          <SheetTitle>{s.tzTitle}</SheetTitle>
+          <Input autoFocus placeholder={s.tzSearch} value={tzq} onChange={(e) => setTzq(e.target.value)} data-testid="tz-search" />
+          <div className="overflow-y-auto mt-2 flex flex-col gap-0.5 min-h-0">
+            {TZS.filter((z) => z.toLowerCase().includes(tzq.trim().toLowerCase())).slice(0, 250).map((z) => (
+              <button key={z} type="button" data-testid={`tz-opt-${z}`}
+                onClick={() => { setCfg((c) => ({ ...c, tz: z })); setTzOpen(false); setTzq('') }}
+                className={`text-start px-3 py-2 rounded-md text-[0.9rem] cursor-pointer hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] ${z === cfg.tz ? 'text-green-700 font-semibold' : 'text-ink-soft'}`}>
+                {z.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
         </Sheet>
       )}
     </Stack>
