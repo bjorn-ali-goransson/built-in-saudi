@@ -230,9 +230,6 @@ export default function BookWithMeTool() {
     setCfg((c) => ({ ...c, availability: gridToWindows(next) }))
   }
 
-  function setMeeting<K extends keyof HostConfig['meeting']>(key: K, val: HostConfig['meeting'][K]) {
-    setCfg((c) => ({ ...c, meeting: { ...c.meeting, [key]: val } }))
-  }
 
   // Meeting types — the primary (first) mirrors into `meeting` for the backend.
   function setTypes(next: MeetingType[]) {
@@ -361,15 +358,7 @@ export default function BookWithMeTool() {
         <AvailabilityGrid ref={gridApi} grid={grid} onChange={updateGrid} locale={locale} />
       </div>
 
-      {/* 2 · Where it happens + fine print — no well */}
-      <div className="flex flex-col gap-2">
-        <div role="heading" aria-level={2} className={H}>{s.whereTitle}</div>
-        <span className="text-[0.78rem] text-ink-faint">{s.locationHelp}</span>
-        <Input value={cfg.meeting.location} placeholder={s.locationPh} data-testid="location"
-          onChange={(e) => setMeeting('location', e.target.value)} />
-        <p className="text-[0.78rem] text-ink-faint mt-1">{s.fineHint}</p>
-        {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
-      </div>
+      {saveState === 'error' && <p className="text-[0.82rem] text-gold-500">{s.saveErr}</p>}
 
       {/* Sticky publish bar: Publish (▾ Preview / Copy), Share icon, Alerts pill */}
       <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] max-[560px]:pb-[env(safe-area-inset-bottom,0px)]">

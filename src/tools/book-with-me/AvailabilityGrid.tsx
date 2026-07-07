@@ -230,11 +230,6 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
           )}
         </div>
       </div>
-      <p className="mt-2 text-[0.8rem] text-ink-faint">
-        {locale === 'ar'
-          ? 'اسحب لرسم أوقات فراغك · اسحب فوق وقت مُحدَّد لمسحه'
-          : 'Drag to paint when you’re free · drag over a filled block to erase.'}
-      </p>
 
       {info && tip && (
         <div
