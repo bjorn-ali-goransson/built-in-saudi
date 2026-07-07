@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { Button, Input, Textarea, Field, Stack, Panel, Pill } from '../components/ui'
-import { GlobeIcon } from '../components/icons'
+import { GlobeIcon, ClockIcon } from '../components/icons'
 import { getAvailability, book, type HostMeta } from '../lib/bookingApi'
 import { loadConfig, previewSlots } from '../tools/book-with-me/lib'
 
@@ -18,6 +18,8 @@ const STR = {
     yourTz: (tz: string) => `Times shown in your timezone (${tz})`,
     none: 'No open times in the coming weeks. Check back soon.',
     pick: 'Pick a time',
+    selectDate: 'Select a date & time',
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     name: 'Your name',
     email: 'Your email',
     note: 'Anything to share? (optional)',
@@ -43,6 +45,8 @@ const STR = {
     yourTz: (tz: string) => `الأوقات معروضة بتوقيتك (${tz})`,
     none: 'لا أوقات متاحة في الأسابيع القادمة. عُد قريبًا.',
     pick: 'اختر وقتًا',
+    selectDate: 'اختر التاريخ والوقت',
+    weekdays: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
     name: 'اسمك',
     email: 'بريدك الإلكتروني',
     note: 'شيء تودّ مشاركته؟ (اختياري)',
@@ -81,6 +85,8 @@ export function BookingPage() {
   const [done, setDone] = useState(false)
   const [gone, setGone] = useState(false)
   const [bannerOpen, setBannerOpen] = useState(true)
+  const [viewMonth, setViewMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
 
@@ -133,6 +139,18 @@ export function BookingPage() {
     return [...byDay.entries()]
   }, [slots])
 
+  const byDay = useMemo(() => new Map(grouped), [grouped])
+  const availableDays = useMemo(() => new Set(grouped.map(([k]) => k)), [grouped])
+  const monthFmt = useMemo(() => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { month: 'long', year: 'numeric' }), [locale])
+
+  // Default to the first available day once slots arrive.
+  useEffect(() => {
+    if (!slots.length) return
+    const first = new Date(slots[0])
+    setSelectedDay(first.toDateString())
+    setViewMonth(new Date(first.getFullYear(), first.getMonth(), 1))
+  }, [slots])
+
   async function submit() {
     if (!code || selected == null || !name.trim() || !email.trim()) return
     setSubmitting(true)
@@ -155,8 +173,18 @@ export function BookingPage() {
     }
   }
 
+  // Month grid for the calendar.
+  const vy = viewMonth.getFullYear()
+  const vm = viewMonth.getMonth()
+  const firstWd = new Date(vy, vm, 1).getDay()
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate()
+  const monthCells = [...Array.from({ length: firstWd }, () => 0), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0)
+  const canPrev = new Date(vy, vm, 1).getTime() > thisMonth.getTime()
+  const selTimes = selectedDay ? byDay.get(selectedDay) ?? [] : []
+
   return (
-    <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[46rem] animate-[fadeUp_0.5s_ease_both]">
+    <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[56rem] animate-[fadeUp_0.5s_ease_both]">
       {status === 'loading' && <p className="text-ink-faint">{s.loading}</p>}
       {status === 'not-found' && <Panel><p className="text-ink-soft">{s.notFound}</p></Panel>}
       {status === 'error' && <Panel><p className="text-ink-soft">{s.error}</p></Panel>}
@@ -171,20 +199,19 @@ export function BookingPage() {
             </div>
           )}
 
-          <div className="grid gap-6 md:grid-cols-[minmax(0,15rem)_1fr]">
-            {/* Calendly-style aside: who + what + timezone */}
-            <aside className="flex flex-col gap-2.5 md:sticky md:top-24 md:self-start">
-              {host.name && <span className="text-[0.85rem] font-semibold text-ink-soft">{host.name}</span>}
-              <div className="flex flex-wrap items-center gap-2">
-                <Pill>{host.title}</Pill>
-                <span className="font-mono text-[0.85rem] text-ink-soft">{host.minutes} {s.mins}</span>
-              </div>
+          <div className="grid gap-6 md:grid-cols-[minmax(0,14rem)_1fr] md:divide-x rtl:md:divide-x-reverse divide-[color:var(--line-soft)]">
+            {/* Calendly-style aside: avatar + who + what */}
+            <aside className="flex flex-col gap-3 md:pe-6">
+              <span className="grid place-items-center size-12 rounded-full bg-green-600 text-sand-100 font-display text-[1.3rem] font-bold" aria-hidden="true">
+                {(host.name || 'B').trim().charAt(0).toUpperCase()}
+              </span>
+              {host.name && <span className="text-[0.9rem] font-semibold text-ink-soft">{host.name}</span>}
+              <h1 className="font-display text-[1.4rem] leading-tight text-ink">{host.title}</h1>
+              <span className="inline-flex items-center gap-1.5 text-[0.9rem] text-ink-soft"><ClockIcon className="w-4 h-4" /> {host.minutes} {s.mins}</span>
               {host.location && <span className="text-[0.85rem] text-ink-faint">{host.location}</span>}
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.intro}</p>
-              <Pill className="self-start !cursor-default" title={s.yourTz(localTz)}><GlobeIcon /> {localTz}</Pill>
             </aside>
 
-            <div className="min-w-0">
+            <div className="min-w-0 md:ps-6">
               {done ? (
                 <Panel data-testid="booking-done">
                   <h2 className="font-display text-[1.4rem] text-green-700">{s.booked}</h2>
@@ -194,32 +221,63 @@ export function BookingPage() {
                   </p>
                 </Panel>
               ) : selected == null ? (
-                <>
-                  {gone && <p className="text-[0.9rem] text-gold-500 mb-2" role="status">{s.gone}</p>}
+                <div className="flex flex-col gap-4">
+                  <h2 className="font-display text-[1.2rem] text-ink">{s.selectDate}</h2>
+                  {gone && <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>}
                   {grouped.length === 0 ? (
                     <Panel><p className="text-ink-soft">{s.none}</p></Panel>
                   ) : (
-                    <Stack>
-                      {grouped.map(([key, times]) => (
-                        <div key={key} className="flex flex-col gap-2">
-                          <h2 className="text-[0.95rem] font-semibold text-ink">{dayFmt.format(new Date(times[0]))}</h2>
-                          <div className="flex flex-wrap gap-2">
-                            {times.map((ms) => (
-                              <button
-                                key={ms}
-                                data-testid="slot"
-                                onClick={() => { setSelected(ms); setGone(false) }}
-                                className="font-mono text-[0.9rem] px-3 py-2 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-600 hover:text-green-700 hover:bg-[color-mix(in_srgb,var(--green-400)_8%,transparent)] transition-colors"
-                              >
+                    <div className="grid gap-6 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+                      {/* Month calendar */}
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-ink">{monthFmt.format(viewMonth)}</span>
+                          <div className="flex gap-1 [&_button]:size-8 [&_button]:grid [&_button]:place-items-center [&_button]:rounded-full [&_button]:border-0 [&_button]:bg-transparent [&_button]:text-ink-soft [&_button]:cursor-pointer [&_button:hover]:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)] [&_button:disabled]:opacity-30 [&_button:disabled]:cursor-default">
+                            <button type="button" aria-label="prev month" disabled={!canPrev} onClick={() => setViewMonth(new Date(vy, vm - 1, 1))}>‹</button>
+                            <button type="button" aria-label="next month" onClick={() => setViewMonth(new Date(vy, vm + 1, 1))}>›</button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-y-1 text-center">
+                          {s.weekdays.map((d, i) => <span key={i} className="text-[0.68rem] font-semibold text-ink-faint pb-1">{d}</span>)}
+                          {monthCells.map((day, i) => {
+                            if (!day) return <span key={i} />
+                            const key = new Date(vy, vm, day).toDateString()
+                            const avail = availableDays.has(key)
+                            const isSel = selectedDay === key
+                            return (
+                              <div key={i} className="grid place-items-center py-0.5">
+                                <button type="button" disabled={!avail} data-testid={avail ? 'cal-day' : undefined} onClick={() => setSelectedDay(key)}
+                                  className={`size-9 grid place-items-center rounded-full text-[0.85rem] transition-colors ${
+                                    isSel ? 'bg-green-600 text-sand-100 font-bold'
+                                      : avail ? 'bg-[color-mix(in_srgb,var(--green-400)_16%,transparent)] text-green-700 font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--green-400)_28%,transparent)]'
+                                        : 'text-ink-faint/45 cursor-default'
+                                  }`}>
+                                  {day}
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <Pill className="self-start !cursor-default" title={s.yourTz(localTz)}><GlobeIcon /> {localTz}</Pill>
+                      </div>
+
+                      {/* Times for the selected day */}
+                      <div className="flex flex-col gap-2 min-w-0">
+                        {selectedDay && <span className="text-[0.92rem] font-semibold text-ink">{dayFmt.format(new Date(selectedDay))}</span>}
+                        <div className="flex flex-col gap-2 md:max-h-[26rem] md:overflow-y-auto md:pe-1">
+                          {selTimes.length === 0
+                            ? <p className="text-ink-faint text-[0.9rem]">{s.none}</p>
+                            : selTimes.map((ms) => (
+                              <button key={ms} data-testid="slot" onClick={() => { setSelected(ms); setGone(false) }}
+                                className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-green-700 hover:border-green-600 hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] transition-colors">
                                 {timeFmt.format(new Date(ms))}
                               </button>
                             ))}
-                          </div>
                         </div>
-                      ))}
-                    </Stack>
+                      </div>
+                    </div>
                   )}
-                </>
+                </div>
               ) : (
                 <Panel>
                   <div className="flex items-center justify-between gap-2">

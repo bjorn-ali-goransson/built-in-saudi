@@ -372,7 +372,7 @@ export default function BookWithMeTool() {
   const menuItem = 'flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.9rem] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap'
 
   return (
-    <Stack data-testid="book-with-me" className="pb-24">
+    <Stack data-testid="book-with-me">
       {/* Intro hero — Publish (white) + Preview (text link), inside the box */}
       <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
         <div className="wrap py-[clamp(1.3rem,4vw,1.8rem)] flex flex-col gap-3 max-w-[44rem]">
@@ -431,26 +431,27 @@ export default function BookWithMeTool() {
       {createPortal(
         <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
           <div className="wrap py-2.5 flex items-center gap-2">
-            <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
-              {session ? (
-                <Button variant="primary" onClick={openLive} data-testid="open-page" className="!h-9 !py-0 !rounded-e-none !text-[0.9rem]">{s.openPage} <ExternalLinkIcon className="w-4 h-4" /></Button>
-              ) : (
-                <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!h-9 !py-0 !rounded-e-none !text-[0.9rem]">{saveState === 'saving' ? s.saving : s.publishCta}</Button>
-              )}
-              <button type="button" aria-label="menu" aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
-                className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
-              {pubMenu && (
-                <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
-                  {session ? (
-                    <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500`}>✕ {s.unpublish}</button>
-                  ) : (
-                    <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className={`${menuItem} text-ink-soft`}><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>
+            {session ? (
+              <>
+                <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
+                  <Button variant="primary" onClick={openLive} data-testid="open-page" className="!h-9 !py-0 !rounded-e-none !text-[0.9rem] !shadow-none hover:!translate-y-0 hover:!shadow-none">{s.openPage} <ExternalLinkIcon className="w-4 h-4" /></Button>
+                  <button type="button" aria-label="menu" aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
+                    className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
+                  {pubMenu && (
+                    <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
+                      <button type="button" data-testid="unpublish" onClick={unpublish} className={`${menuItem} text-gold-500`}>✕ {s.unpublish}</button>
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            <button type="button" onClick={shareLink} data-testid="share-link" disabled={!session} aria-label={s.share} title={session ? s.share : s.shareDisabled}
-              className="inline-flex items-center justify-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer hover:border-green-500 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-[color:var(--line)] disabled:hover:text-ink-soft [&_svg]:size-5"><ShareIcon /></button>
+                <button type="button" onClick={shareLink} data-testid="share-link" aria-label={s.share} title={s.share}
+                  className="inline-flex items-center justify-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer hover:border-green-500 hover:text-green-700 [&_svg]:size-5"><ShareIcon /></button>
+              </>
+            ) : (
+              <>
+                <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!h-9 !py-0 !text-[0.9rem] hover:!translate-y-0">{saveState === 'saving' ? s.saving : s.publishCta}</Button>
+                <Button variant="default" onClick={openPreview} data-testid="preview-link" className="!h-9 !py-0 !text-[0.9rem] hover:!translate-y-0">{s.previewLink}</Button>
+              </>
+            )}
             <Pill className="ms-auto inline-flex items-center !h-9 !py-0 !text-[0.9rem] [&_svg]:size-4" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alerts}</Pill>
           </div>
         </div>,
