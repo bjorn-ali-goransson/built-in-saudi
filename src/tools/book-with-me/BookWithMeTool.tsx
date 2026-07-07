@@ -299,10 +299,9 @@ export default function BookWithMeTool() {
 
       {/* 1 · Availability painter — no well; big heading; timezone pill + modal */}
       <div className="flex flex-col gap-2.5">
-        <div role="heading" aria-level={2} className={H}>{s.availability}</div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.8rem] text-ink-faint">{s.tzShown}</span>
-          <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div role="heading" aria-level={2} className={H}>{s.availability}</div>
+          <Pill className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]" onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.tzNote(tzLabel(cfg.tz))}><GlobeIcon /> {shortTz(cfg.tz)}</Pill>
         </div>
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
       </div>

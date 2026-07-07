@@ -7,6 +7,7 @@ import { Header } from './Header'
 import { Footer } from './Footer'
 import { LanguageSuggestion } from './LanguageSuggestion'
 import { NotificationBell } from './NotificationBell'
+import { Spinner } from './ui'
 import { UpdatedToast } from './UpdatedToast'
 import { useVersionCheck } from '../lib/useVersionCheck'
 import { clearStaleNotifications } from '../lib/push'
@@ -48,7 +49,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         </a>
         <Header />
         <main id="main" className="flex-1 shrink-0 basis-auto [overflow-x:clip] max-[560px]:pb-[5.5rem]">
-          <Suspense fallback={<div className="wrap py-16 text-ink-faint font-mono">…</div>}>
+          <Suspense fallback={<div className="wrap py-20 flex justify-center"><Spinner /></div>}>
             <Outlet />
           </Suspense>
         </main>
