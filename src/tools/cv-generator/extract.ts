@@ -34,6 +34,26 @@ async function fromPdf(buf: ArrayBuffer): Promise<string> {
   return pages.join('\n\n')
 }
 
+/** Render each PDF page to a PNG data URL — reliable everywhere (plain <img>),
+ *  unlike an <iframe> that leans on the browser's native PDF viewer. */
+export async function renderPdfPages(file: File, scale = 1.6): Promise<string[]> {
+  if (!(file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf')) return []
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const out: string[] = []
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(viewport.width)
+    canvas.height = Math.ceil(viewport.height)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise
+    out.push(canvas.toDataURL('image/png'))
+  }
+  return out
+}
+
 async function fromDocx(buf: ArrayBuffer): Promise<string> {
   const res = await mammoth.extractRawText({ arrayBuffer: buf })
   return String(res.value || '')

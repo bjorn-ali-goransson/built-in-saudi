@@ -177,6 +177,20 @@ function ChatInput({
   )
 }
 
+/** The uploaded PDF rendered as page images (reliable everywhere, unlike an
+ *  <iframe> that depends on the browser's native PDF viewer). */
+function PdfPages({ pages, className = '' }: { pages: string[]; className?: string }) {
+  return (
+    <div className={`overflow-y-auto bg-[#e9ebef] ${className}`}>
+      <div className="flex flex-col items-center gap-3 py-4 px-2">
+        {pages.map((src, i) => (
+          <img key={i} src={src} alt="" className="w-full max-w-[210mm] bg-white shadow-[var(--shadow-sm)]" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function CvGeneratorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -202,7 +216,7 @@ export default function CvGeneratorTool() {
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
-  const [origUrl, setOrigUrl] = useState('') // object URL of the uploaded PDF (for the "Original" flip)
+  const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -279,14 +293,16 @@ export default function CvGeneratorTool() {
     setErr('')
     setCv(null)
     setShowOriginal(false)
-    setOrigUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? URL.createObjectURL(f) : '' })
+    setOrigPages([])
     setStatus('extracting')
     try {
-      const { extractText } = await import('./extract')
+      const { extractText, renderPdfPages } = await import('./extract')
       const t = await extractText(f)
       if (!t || t.length < 60) { setErr(s.tooShort); setStatus('idle'); return }
       setText(t)
       setStatus('ready')
+      // Render the PDF to page images for the reading view + Original flip (best-effort).
+      renderPdfPages(f).then(setOrigPages).catch(() => setOrigPages([]))
     } catch {
       setErr(s.extractErr)
       setStatus('idle')
@@ -445,9 +461,9 @@ export default function CvGeneratorTool() {
           {/* Loading. Once the PDF text is extracted, show it (so they can see we
               read their CV) with a floating status; before that, a shimmer skeleton. */}
           {(status === 'extracting' || status === 'generating') && (
-            status === 'generating' && origUrl ? (
-              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden" data-testid="cv-loading">
-                <iframe title="your CV" src={`${origUrl}#toolbar=0&navpanes=0&view=FitH`} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]" />
+            status === 'generating' && origPages.length ? (
+              <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
+                <PdfPages pages={origPages} className="absolute inset-0" />
                 {/* Scanning beam sweeping down the document, plus a soft top/bottom fade. */}
                 <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,var(--sand-50),transparent_18%,transparent_82%,var(--sand-50))]" />
                 <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
@@ -515,15 +531,15 @@ export default function CvGeneratorTool() {
               className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
               srcDoc={renderCvHtml(cv, { preview: true })}
             />
-            {showOriginal && origUrl && (
-              <iframe title="original PDF" src={origUrl} className="absolute inset-0 w-full h-full border-0 bg-[#e9ebef]" />
+            {showOriginal && origPages.length > 0 && (
+              <PdfPages pages={origPages} className="absolute inset-0 h-full" />
             )}
           </div>
 
-          {/* Flip between the optimized CV and the original PDF. Only when we kept the
-              original (PDF uploads), and portaled to <body> so it pins to the top-left
-              instead of being dragged down by ToolPage's transform. */}
-          {origUrl && createPortal(
+          {/* Flip between the optimized CV and the original PDF. Only when we rendered
+              the original (PDF uploads), and portaled to <body> so it pins to the
+              top-left instead of being dragged down by ToolPage's transform. */}
+          {origPages.length > 0 && createPortal(
             <div className="fixed start-4 top-[calc(68px+0.6rem)] max-[560px]:top-[calc(60px+0.6rem)] z-[55] flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] overflow-hidden text-[0.82rem] font-semibold">
               <button type="button" data-testid="cv-view-optimized" onClick={() => setShowOriginal(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
               <button type="button" data-testid="cv-view-original" onClick={() => setShowOriginal(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
