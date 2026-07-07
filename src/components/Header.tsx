@@ -14,9 +14,12 @@ export function Header() {
   // other page the launcher opens the menu, followed by the name: the current
   // tool's name (app-bar) on a tool page, else the site name.
   const isHome = /^\/(en|ar)\/?$/.test(location.pathname)
+  const isBooking = /\/book\//.test(location.pathname)
   const match = location.pathname.match(/\/tools\/([^/]+)/)
   const currentTool = match ? getTool(match[1]) : null
-  const context = currentTool && currentTool.component ? localizeTool(currentTool, locale).name : ''
+  const context = isBooking
+    ? locale === 'ar' ? 'احجز اجتماعًا' : 'Book a meeting'
+    : currentTool && currentTool.component ? localizeTool(currentTool, locale).name : ''
   const siteName = locale === 'ar' ? 'بُنِيَ في السعودية' : 'Built in Saudi'
 
   return (

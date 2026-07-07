@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon } from '../../components/icons'
-import { Button, Input, Field, Stack, Seg, SegButton, Panel, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
+import { CopyIcon, BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon } from '../../components/icons'
+import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
@@ -12,8 +12,10 @@ import {
   windowsToGrid,
   BOOKING_LINK_BASE,
   TELEGRAM_BOT,
+  makeCode,
   type HostConfig,
   type Grid,
+  type MeetingType,
 } from './lib'
 
 const HSID_KEY = 'bis-bookwith-hsid'
@@ -50,6 +52,12 @@ const STR = {
     tzShown: 'Times shown in',
     availability: 'Your availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
+    meetingTypes: 'Meeting types',
+    addType: 'Add meeting type',
+    meet: 'Google Meet',
+    share: 'Share',
+    fineHint: 'One booking per painted hour · bookable up to 30 days ahead · 4h minimum notice.',
+    whereTitle: 'Where it happens',
     meeting: 'Meeting settings',
     length: 'Length',
     lengthHint: 'Each available hour is divided into sessions of this length (e.g. 30 min → two per hour; 45 min → one, with a gap).',
@@ -96,6 +104,12 @@ const STR = {
     tzShown: 'الأوقات بتوقيت',
     availability: 'أوقات فراغك',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
+    meetingTypes: 'أنواع الاجتماعات',
+    addType: 'أضف نوع اجتماع',
+    meet: 'Google Meet',
+    share: 'مشاركة',
+    fineHint: 'حجز واحد لكل ساعة مرسومة · الحجز حتى ٣٠ يومًا مقدمًا · بمهلة ٤ ساعات على الأقل.',
+    whereTitle: 'أين سيُعقد',
     meeting: 'إعدادات الاجتماع',
     length: 'المدة',
     lengthHint: 'تُقسَّم كل ساعة متاحة إلى جلسات بهذه المدة (مثلاً ٣٠ دقيقة ← جلستان في الساعة؛ ٤٥ دقيقة ← جلسة واحدة مع فاصل).',
@@ -136,7 +150,6 @@ const STR = {
   },
 }
 
-const LENGTHS = [15, 30, 45, 60]
 
 // Full IANA zone list where available, else a sensible fallback.
 const TZS: string[] = (() => {
@@ -182,6 +195,7 @@ export default function BookWithMeTool() {
   const [pushDenied, setPushDenied] = useState(false)
   const [tzOpen, setTzOpen] = useState(false)
   const [tzq, setTzq] = useState('')
+  const [pubMenu, setPubMenu] = useState(false)
   // Bigger section heading (a div, not h2, to dodge the unlayered-base rule).
   const H = 'font-display rtl:font-ar text-[1.2rem] font-semibold text-ink leading-tight'
 
@@ -216,7 +230,26 @@ export default function BookWithMeTool() {
     setCfg((c) => ({ ...c, meeting: { ...c.meeting, [key]: val } }))
   }
 
-  const isCustomLength = useMemo(() => !LENGTHS.includes(cfg.meeting.minutes), [cfg.meeting.minutes])
+  // Meeting types — the primary (first) mirrors into `meeting` for the backend.
+  function setTypes(next: MeetingType[]) {
+    setCfg((c) => ({ ...c, meetingTypes: next, meeting: { ...c.meeting, minutes: next[0]?.minutes ?? 45, title: next[0]?.name ?? 'Meeting' } }))
+  }
+  const addType = () => setTypes([...cfg.meetingTypes, { id: makeCode(), name: locale === 'ar' ? 'اجتماع' : 'Meeting', minutes: 30, meet: false }])
+  const removeType = (id: string) => { if (cfg.meetingTypes.length > 1) setTypes(cfg.meetingTypes.filter((t) => t.id !== id)) }
+  const editType = (id: string, patch: Partial<MeetingType>) => setTypes(cfg.meetingTypes.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+  const moveType = (i: number, dir: number) => {
+    const arr = cfg.meetingTypes.slice()
+    const j = i + dir
+    if (j < 0 || j >= arr.length) return
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    setTypes(arr)
+  }
+  async function shareLink() {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: cfg.meetingTypes[0]?.name || 'Book Me', url: link }) } catch { /* cancelled */ }
+    } else copyLink()
+  }
+
 
   async function publish() {
     if (!session) {
@@ -280,7 +313,7 @@ export default function BookWithMeTool() {
   }
 
   return (
-    <Stack data-testid="book-with-me">
+    <Stack data-testid="book-with-me" className="pb-24">
       {/* Intro hero — Publish (white) + Preview (text link), inside the box */}
       <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
         <div className="wrap py-[clamp(1.3rem,4vw,1.8rem)] flex flex-col gap-3 max-w-[44rem]">
@@ -288,11 +321,26 @@ export default function BookWithMeTool() {
             <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
             <p className="text-[0.95rem] leading-relaxed opacity-90">{s.intro}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={publish} data-testid="publish-hero"
-              className="rounded-md bg-white text-green-700 px-4 py-2.5 text-[0.9rem] font-semibold border-0 cursor-pointer hover:bg-sand-100">{s.publishCta}</button>
-            <button type="button" onClick={openPreview} data-testid="preview-hero"
-              className="self-center inline-flex items-center gap-1.5 bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">{s.previewLink} <ExternalLinkIcon className="w-4 h-4" /></button>
+          <div className="flex flex-col gap-2">
+            <span className="text-[0.82rem] font-semibold opacity-90">{s.meetingTypes}</span>
+            {cfg.meetingTypes.map((t, i) => (
+              <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-md bg-[color-mix(in_srgb,var(--sand-100)_14%,transparent)] p-2" data-testid={`mtype-${i}`}>
+                <input value={t.name} onChange={(e) => editType(t.id, { name: e.target.value })} aria-label={s.meetingTypes}
+                  className="grow min-w-[8rem] rounded bg-white text-ink px-2.5 py-1.5 text-[0.9rem] border-0 outline-none" />
+                <select value={t.minutes} onChange={(e) => editType(t.id, { minutes: Number(e.target.value) })} aria-label={s.length}
+                  className="rounded bg-white text-ink px-2 py-1.5 text-[0.9rem] border-0 outline-none cursor-pointer">
+                  {[15, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} {s.min}</option>)}
+                </select>
+                <label className="inline-flex items-center gap-1.5 text-[0.82rem] cursor-pointer"><input type="checkbox" checked={t.meet} onChange={(e) => editType(t.id, { meet: e.target.checked })} /> {s.meet}</label>
+                <div className="flex items-center gap-1 ms-auto [&>button]:size-7 [&>button]:grid [&>button]:place-items-center [&>button]:rounded [&>button]:border-0 [&>button]:cursor-pointer [&>button]:text-sand-100 [&>button]:bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] [&>button:disabled]:opacity-40">
+                  <button type="button" aria-label="move up" onClick={() => moveType(i, -1)} disabled={i === 0}>↑</button>
+                  <button type="button" aria-label="move down" onClick={() => moveType(i, 1)} disabled={i === cfg.meetingTypes.length - 1}>↓</button>
+                  <button type="button" aria-label="remove" onClick={() => removeType(t.id)} disabled={cfg.meetingTypes.length <= 1}>✕</button>
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={addType} data-testid="add-type"
+              className="self-start inline-flex items-center gap-1.5 rounded-md border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] bg-transparent text-sand-100 px-3 py-1.5 text-[0.85rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_16%,transparent)]">＋ {s.addType}</button>
           </div>
         </div>
       </div>
@@ -306,116 +354,37 @@ export default function BookWithMeTool() {
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
       </div>
 
-      {/* 2 · Meeting settings — no well, big heading */}
-      <div className="flex flex-col gap-4">
-        <div role="heading" aria-level={2} className={H}>{s.meeting}</div>
+      {/* 2 · Where it happens + fine print — no well */}
+      <div className="flex flex-col gap-2">
+        <div role="heading" aria-level={2} className={H}>{s.whereTitle}</div>
+        <span className="text-[0.78rem] text-ink-faint">{s.locationHelp}</span>
+        <Input value={cfg.meeting.location} placeholder={s.locationPh} data-testid="location"
+          onChange={(e) => setMeeting('location', e.target.value)} />
+        <p className="text-[0.78rem] text-ink-faint mt-1">{s.fineHint}</p>
+        {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
+      </div>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-[0.82rem] font-semibold text-ink-soft">{s.length}</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <Seg role="group">
-              {LENGTHS.map((n) => (
-                <SegButton
-                  key={n}
-                  active={cfg.meeting.minutes === n}
-                  data-testid={`length-${n}`}
-                  onClick={() => setMeeting('minutes', n)}
-                >
-                  {n} {s.min}
-                </SegButton>
-              ))}
-            </Seg>
-            <Input
-              className="font-mono w-24"
-              type="number"
-              min="5"
-              step="5"
-              aria-label={s.length}
-              value={isCustomLength ? cfg.meeting.minutes : ''}
-              placeholder="…"
-              onChange={(e) => setMeeting('minutes', Math.max(5, Number(e.target.value) || 5))}
-            />
+      {/* Sticky publish bar: Publish (▾ Preview / Copy), Share icon, Alerts pill */}
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] max-[560px]:pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="wrap py-2.5 flex items-center gap-2">
+          <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
+            <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule" className="!rounded-e-none">
+              {session ? (saveState === 'saving' ? s.saving : saveState === 'saved' ? s.saved : s.save) : s.publishCta}
+            </Button>
+            <button type="button" aria-label={s.previewLink} aria-expanded={pubMenu} onClick={() => setPubMenu((v) => !v)}
+              className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
+            {pubMenu && (
+              <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[11rem]">
+                <button type="button" data-testid="preview-link" onClick={() => { openPreview(); setPubMenu(false) }} className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap"><ExternalLinkIcon className="w-4 h-4" /> {s.previewLink}</button>
+                <button type="button" data-testid="copy-link" onClick={() => { copyLink(); setPubMenu(false) }} className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap"><CopyIcon /> {copied ? s.copied : s.copy}</button>
+              </div>
+            )}
           </div>
-          <span className="text-[0.78rem] text-ink-faint">{s.lengthHint}</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label={`${s.gap} (${s.min})`}>
-            <Input className="font-mono" type="number" min="0" step="5" value={cfg.meeting.gapMinutes}
-              data-testid="gap"
-              onChange={(e) => setMeeting('gapMinutes', Math.max(0, Number(e.target.value) || 0))} />
-          </Field>
-          <Field label={`${s.notice} (${s.hours})`}>
-            <Input className="font-mono" type="number" min="0" value={cfg.meeting.minNoticeHours}
-              onChange={(e) => setMeeting('minNoticeHours', Math.max(0, Number(e.target.value) || 0))} />
-          </Field>
-          <Field label={`${s.horizon} (${s.days})`}>
-            <Input className="font-mono" type="number" min="1" value={cfg.meeting.horizonDays}
-              onChange={(e) => setMeeting('horizonDays', Math.max(1, Number(e.target.value) || 1))} />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label={s.title}>
-            <span className="text-[0.78rem] text-ink-faint">{s.titleHelp}</span>
-            <Input value={cfg.meeting.title} placeholder={s.titlePh}
-              onChange={(e) => setMeeting('title', e.target.value)} />
-          </Field>
-          <Field label={s.location}>
-            <span className="text-[0.78rem] text-ink-faint">{s.locationHelp}</span>
-            <Input value={cfg.meeting.location} placeholder={s.locationPh}
-              onChange={(e) => setMeeting('location', e.target.value)} />
-          </Field>
+          <button type="button" onClick={shareLink} data-testid="share-link" aria-label={s.share} title={s.share}
+            className="inline-flex items-center justify-center size-10 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-500 hover:text-green-700 cursor-pointer [&_svg]:size-5"><ShareIcon /></button>
+          <Pill className="ms-auto" data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}><BellIcon /> {s.alertsTitle}</Pill>
         </div>
       </div>
-
-      {/* 3 · Publish & share — after the schedule, Google-Docs style */}
-      <Panel>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.shareTitle}</span>
-          <span
-            data-testid="publish-status"
-            className={`inline-flex items-center gap-1.5 text-[0.78rem] font-semibold px-2.5 py-1 rounded-full ${
-              session
-                ? 'bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)] text-green-700'
-                : 'bg-[color-mix(in_srgb,var(--sand-100)_60%,transparent)] text-ink-faint'
-            }`}
-          >
-            {session && <span className="size-1.5 rounded-full bg-green-600" />}
-            {session ? s.published : s.private}
-          </span>
-        </div>
-
-        {session ? (
-          <>
-            <span className="text-[0.82rem] text-ink-faint">{s.connectedAs(session.email || session.name || '')}</span>
-            <div className="flex flex-wrap gap-2">
-              <Input className="font-mono grow min-w-0 text-[0.85rem]" readOnly value={link}
-                data-testid="booking-link" onFocus={(e) => e.currentTarget.select()} />
-              <Button variant="primary" onClick={copyLink} data-testid="copy-link">
-                <CopyIcon /> {copied ? s.copied : s.copy}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
-              <Button variant="primary" onClick={publish} disabled={saveState === 'saving'} data-testid="save-schedule">
-                {saveState === 'saving' ? s.saving : saveState === 'saved' ? s.saved : s.save}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <p className="text-[0.82rem] text-ink-faint">{s.publishNote}</p>
-        )}
-      </Panel>
-
-      {/* 4 · Booking alerts — a pill that opens a settings sheet */}
-      <div className="flex items-center gap-2">
-        <Pill data-testid="alerts-pill" onClick={() => setAlertsOpen(true)}>
-          <BellIcon /> {s.alertsTitle}
-        </Pill>
-      </div>
-
-      <p className="text-[0.82rem] text-ink-faint">{s.soon}</p>
 
       {alertsOpen && (
         <Sheet data-testid="alerts-sheet" onClose={() => setAlertsOpen(false)}>

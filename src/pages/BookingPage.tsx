@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { Button, Input, Textarea, Field, Stack, Panel, Pill } from '../components/ui'
+import { GlobeIcon } from '../components/icons'
 import { getAvailability, book, type HostMeta } from '../lib/bookingApi'
 import { loadConfig, previewSlots } from '../tools/book-with-me/lib'
 
@@ -27,8 +28,10 @@ const STR = {
     bookedBody: 'A confirmation with a calendar invite is on its way to your email.',
     gone: 'That slot was just taken. Please pick another.',
     at: 'at',
+    intro: 'Pick a time that works for you — you’ll get a calendar invite by email.',
     previewBanner: 'Preview — this is exactly what visitors see. Bookings are disabled here.',
     previewDisabled: 'Disabled in preview',
+    dismiss: 'Dismiss',
   },
   ar: {
     loading: 'جارٍ تحميل الأوقات…',
@@ -50,8 +53,10 @@ const STR = {
     bookedBody: 'رسالة تأكيد مع دعوة تقويم في طريقها إلى بريدك.',
     gone: 'حُجز هذا الوقت للتو. اختر وقتًا آخر.',
     at: 'الساعة',
+    intro: 'اختر وقتًا يناسبك — ستصلك دعوة تقويم عبر البريد.',
     previewBanner: 'معاينة — هذا تمامًا ما يراه الزوار. الحجز معطّل هنا.',
     previewDisabled: 'معطّل في المعاينة',
+    dismiss: 'إغلاق',
   },
 }
 
@@ -75,6 +80,7 @@ export function BookingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [gone, setGone] = useState(false)
+  const [bannerOpen, setBannerOpen] = useState(true)
 
   const localTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, [])
 
@@ -149,8 +155,6 @@ export function BookingPage() {
     }
   }
 
-  const heading = host?.name ? s.withMe(host.name) : s.withHost
-
   return (
     <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[46rem] animate-[fadeUp_0.5s_ease_both]">
       {status === 'loading' && <p className="text-ink-faint">{s.loading}</p>}
@@ -159,85 +163,92 @@ export function BookingPage() {
 
       {status === 'ready' && host && (
         <Stack>
-          {preview && (
-            <div className="border-s-2 border-gold-400 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] px-3 py-2 text-[0.85rem] text-ink-soft" role="status" data-testid="preview-banner">
-              {s.previewBanner}
+          {preview && bannerOpen && (
+            <div className="flex items-center gap-2 border-s-2 border-gold-400 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-2 py-2 text-[0.85rem] text-ink-soft" role="status" data-testid="preview-banner">
+              <span className="flex-1">{s.previewBanner}</span>
+              <button type="button" aria-label={s.dismiss} onClick={() => setBannerOpen(false)} data-testid="dismiss-banner"
+                className="flex-none grid place-items-center size-6 rounded-md text-ink-faint hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] border-0 bg-transparent cursor-pointer">✕</button>
             </div>
           )}
-          <div className="flex flex-col gap-1">
-            <h1 className="font-display text-[clamp(1.5rem,4vw,2rem)] text-ink">{heading}</h1>
-            <div className="flex flex-wrap items-center gap-2 text-[0.9rem] text-ink-soft">
-              <Pill>{host.title}</Pill>
-              <span className="font-mono">{host.minutes} {s.mins}</span>
-              {host.location && <span className="text-ink-faint">· {host.location}</span>}
+
+          <div className="grid gap-6 md:grid-cols-[minmax(0,15rem)_1fr]">
+            {/* Calendly-style aside: who + what + timezone */}
+            <aside className="flex flex-col gap-2.5 md:sticky md:top-24 md:self-start">
+              {host.name && <span className="text-[0.85rem] font-semibold text-ink-soft">{host.name}</span>}
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill>{host.title}</Pill>
+                <span className="font-mono text-[0.85rem] text-ink-soft">{host.minutes} {s.mins}</span>
+              </div>
+              {host.location && <span className="text-[0.85rem] text-ink-faint">{host.location}</span>}
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.intro}</p>
+              <Pill className="self-start !cursor-default" title={s.yourTz(localTz)}><GlobeIcon /> {localTz}</Pill>
+            </aside>
+
+            <div className="min-w-0">
+              {done ? (
+                <Panel data-testid="booking-done">
+                  <h2 className="font-display text-[1.4rem] text-green-700">{s.booked}</h2>
+                  <p className="text-ink-soft">{s.bookedBody}</p>
+                  <p className="text-ink-faint text-[0.9rem]">
+                    {selected != null && `${dayFmt.format(new Date(selected))} ${s.at} ${timeFmt.format(new Date(selected))}`}
+                  </p>
+                </Panel>
+              ) : selected == null ? (
+                <>
+                  {gone && <p className="text-[0.9rem] text-gold-500 mb-2" role="status">{s.gone}</p>}
+                  {grouped.length === 0 ? (
+                    <Panel><p className="text-ink-soft">{s.none}</p></Panel>
+                  ) : (
+                    <Stack>
+                      {grouped.map(([key, times]) => (
+                        <div key={key} className="flex flex-col gap-2">
+                          <h2 className="text-[0.95rem] font-semibold text-ink">{dayFmt.format(new Date(times[0]))}</h2>
+                          <div className="flex flex-wrap gap-2">
+                            {times.map((ms) => (
+                              <button
+                                key={ms}
+                                data-testid="slot"
+                                onClick={() => { setSelected(ms); setGone(false) }}
+                                className="font-mono text-[0.9rem] px-3 py-2 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-600 hover:text-green-700 hover:bg-[color-mix(in_srgb,var(--green-400)_8%,transparent)] transition-colors"
+                              >
+                                {timeFmt.format(new Date(ms))}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </Stack>
+                  )}
+                </>
+              ) : (
+                <Panel>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-ink">
+                      {dayFmt.format(new Date(selected))} · {timeFmt.format(new Date(selected))}
+                    </span>
+                    <Button onClick={() => setSelected(null)}>{s.back}</Button>
+                  </div>
+                  <Field label={s.name}>
+                    <Input value={name} data-testid="booker-name" onChange={(e) => setName(e.target.value)} autoFocus />
+                  </Field>
+                  <Field label={s.email}>
+                    <Input type="email" value={email} data-testid="booker-email" onChange={(e) => setEmail(e.target.value)} />
+                  </Field>
+                  <Field label={s.note}>
+                    <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
+                  </Field>
+                  <Button
+                    variant="primary"
+                    data-testid="confirm-booking"
+                    disabled={preview || submitting || !name.trim() || !email.trim()}
+                    onClick={submit}
+                  >
+                    {preview ? s.previewDisabled : submitting ? s.booking : s.confirm}
+                  </Button>
+                </Panel>
+              )}
             </div>
           </div>
-
-          {done ? (
-            <Panel data-testid="booking-done">
-              <h2 className="font-display text-[1.4rem] text-green-700">{s.booked}</h2>
-              <p className="text-ink-soft">{s.bookedBody}</p>
-              <p className="text-ink-faint text-[0.9rem]">
-                {selected != null && `${dayFmt.format(new Date(selected))} ${s.at} ${timeFmt.format(new Date(selected))}`}
-              </p>
-            </Panel>
-          ) : selected == null ? (
-            <>
-              <p className="text-[0.85rem] text-ink-faint">{s.yourTz(localTz)}</p>
-              {gone && (
-                <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>
-              )}
-              {grouped.length === 0 ? (
-                <Panel><p className="text-ink-soft">{s.none}</p></Panel>
-              ) : (
-                <Stack>
-                  {grouped.map(([key, times]) => (
-                    <div key={key} className="flex flex-col gap-2">
-                      <h2 className="text-[0.95rem] font-semibold text-ink">{dayFmt.format(new Date(times[0]))}</h2>
-                      <div className="flex flex-wrap gap-2">
-                        {times.map((ms) => (
-                          <button
-                            key={ms}
-                            data-testid="slot"
-                            onClick={() => { setSelected(ms); setGone(false) }}
-                            className="font-mono text-[0.9rem] px-3 py-2 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft hover:border-green-600 hover:text-green-700 transition-colors"
-                          >
-                            {timeFmt.format(new Date(ms))}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </Stack>
-              )}
-            </>
-          ) : (
-            <Panel>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-ink">
-                  {dayFmt.format(new Date(selected))} · {timeFmt.format(new Date(selected))}
-                </span>
-                <Button onClick={() => setSelected(null)}>{s.back}</Button>
-              </div>
-              <Field label={s.name}>
-                <Input value={name} data-testid="booker-name" onChange={(e) => setName(e.target.value)} autoFocus />
-              </Field>
-              <Field label={s.email}>
-                <Input type="email" value={email} data-testid="booker-email" onChange={(e) => setEmail(e.target.value)} />
-              </Field>
-              <Field label={s.note}>
-                <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
-              </Field>
-              <Button
-                variant="primary"
-                data-testid="confirm-booking"
-                disabled={preview || submitting || !name.trim() || !email.trim()}
-                onClick={submit}
-              >
-                {preview ? s.previewDisabled : submitting ? s.booking : s.confirm}
-              </Button>
-            </Panel>
-          )}
         </Stack>
       )}
     </div>
