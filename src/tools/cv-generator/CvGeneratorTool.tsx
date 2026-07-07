@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Stack } from '../../components/ui'
+import { Button, Input, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon, MicIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
 import { renderCvHtml, renderPrintDoc } from './template'
@@ -396,8 +396,8 @@ export default function CvGeneratorTool() {
           {status !== 'idle' && (
             <div className="flex flex-col gap-2">
               {fileName && <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>}
-              {status === 'extracting' && <p className="text-[0.85rem] text-ink-faint">{s.extracting}</p>}
-              {status === 'generating' && <p className="text-[0.85rem] text-ink-faint">{s.building}</p>}
+              {status === 'extracting' && <div className="flex items-center gap-2 text-[0.85rem] text-ink-faint"><Spinner className="size-4" label={s.extracting} /> {s.extracting}</div>}
+              {status === 'generating' && <div className="flex items-center gap-2 text-[0.85rem] text-ink-faint"><Spinner className="size-4" label={s.building} /> {s.building}</div>}
             </div>
           )}
 

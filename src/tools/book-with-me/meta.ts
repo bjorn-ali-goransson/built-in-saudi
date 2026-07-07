@@ -4,7 +4,7 @@ import { CalendarCheckIcon } from '../../components/icons'
 
 export const bookWithMeTool: Tool = {
   id: 'book-with-me',
-  name: 'Book With Me',
+  name: 'Book Me',
   nameAr: 'احجز معي',
   tagline: 'Share one link; let people self-book a meeting.',
   description:

@@ -5,7 +5,7 @@ import { categoryLabel, type Locale } from '../i18n'
 // Curated home sections, shared by the HomePage catalog and the AppLauncher so
 // the two stay identical. The first two are hand-picked groupings that cut
 // across the tools' own `category`; the rest fall back to their category order.
-const RECOMMENDED = ['cv-generator', 'qr-code', 'prayer-times', 'islamic-calendar', 'qibla']
+const RECOMMENDED = ['cv-generator', 'book-with-me', 'qr-code', 'prayer-times', 'islamic-calendar', 'qibla']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
 const CATEGORY_ORDER = ['Saudi / Local', 'Text', 'Converters', 'Calculators', 'Images', 'PDF', 'Files', 'Developer', 'Generators', 'Design', 'Business']
 

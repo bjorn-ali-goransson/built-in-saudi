@@ -43,8 +43,9 @@ function readSession(): Session | null {
 
 const STR = {
   en: {
+    heroTitle: 'Book Me',
     intro: 'Set when you’re free, share one link, let people self-book.',
-    availability: 'Your weekly availability',
+    availability: 'Your availability',
     tzNote: (tz: string) => `Times are in your current timezone — ${tz}. Availability maps to your Google Calendar in this zone; visitors see and book slots in their own timezone.`,
     meeting: 'Meeting settings',
     length: 'Length',
@@ -85,8 +86,9 @@ const STR = {
     soon: 'Your schedule saves on this device until you publish.',
   },
   ar: {
+    heroTitle: 'احجز معي',
     intro: 'حدِّد أوقات فراغك، وشارك رابطًا واحدًا، ودَع الناس يحجزون بأنفسهم.',
-    availability: 'أوقات فراغك الأسبوعية',
+    availability: 'أوقات فراغك',
     tzNote: (tz: string) => `الأوقات بتوقيتك الحالي — ${tz}. تُطابَق الأوقات مع تقويم جوجل بهذا التوقيت؛ ويرى الزوار ويحجزون بتوقيتهم الخاص.`,
     meeting: 'إعدادات الاجتماع',
     length: 'المدة',
@@ -129,6 +131,15 @@ const STR = {
 }
 
 const LENGTHS = [15, 30, 45, 60]
+
+// Full IANA zone list where available, else a sensible fallback.
+const TZS: string[] = (() => {
+  try {
+    const sv = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf
+    if (sv) return sv('timeZone')
+  } catch { /* older browsers */ }
+  return ['Asia/Riyadh', 'Asia/Dubai', 'Africa/Cairo', 'Europe/London', 'Europe/Istanbul', 'America/New_York', 'America/Los_Angeles', 'Asia/Karachi', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney', 'UTC']
+})()
 
 /** "Asia/Riyadh (GMT+3)" — the IANA zone plus its current offset. */
 function tzLabel(tz: string): string {
@@ -248,16 +259,36 @@ export default function BookWithMeTool() {
 
   return (
     <Stack data-testid="book-with-me">
-      <p className="text-[0.95rem] text-ink-soft">{s.intro}</p>
+      {/* Intro hero — Publish (white) + Preview (text link), inside the box */}
+      <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
+        <div className="wrap py-[clamp(1.3rem,4vw,1.8rem)] flex flex-col gap-3 max-w-[44rem]">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{s.heroTitle}</h1>
+            <p className="text-[0.95rem] leading-relaxed opacity-90">{s.intro}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button type="button" onClick={publish} data-testid="publish-hero"
+              className="rounded-md bg-white text-green-700 px-4 py-2.5 text-[0.9rem] font-semibold border-0 cursor-pointer hover:bg-sand-100">{s.publishCta}</button>
+            <button type="button" onClick={openPreview} data-testid="preview-hero"
+              className="self-center bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">{s.previewLink}</button>
+          </div>
+        </div>
+      </div>
 
-      {/* 1 · Availability painter — the centerpiece */}
-      <Panel>
-        <div className="flex flex-col gap-1">
+      {/* 1 · Availability painter — no well; timezone is a right-aligned pill */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]">{s.availability}</span>
-          <span className="text-[0.8rem] text-ink-faint" data-testid="tz-note">{s.tzNote(tzLabel(cfg.tz))}</span>
+          <label className="relative inline-flex flex-none" title={s.tzNote(tzLabel(cfg.tz))}>
+            <select value={cfg.tz} onChange={(e) => setCfg((c) => ({ ...c, tz: e.target.value }))} data-testid="tz-select"
+              className="appearance-none rounded-full border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft text-[0.76rem] font-semibold ps-3 pe-7 py-1 cursor-pointer hover:border-green-500 max-w-[13rem] truncate">
+              {TZS.map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <span className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-ink-faint text-[0.6rem]" aria-hidden="true">▾</span>
+          </label>
         </div>
         <AvailabilityGrid grid={grid} onChange={updateGrid} locale={locale} />
-      </Panel>
+      </div>
 
       {/* 2 · Meeting settings */}
       <Panel>
@@ -348,7 +379,6 @@ export default function BookWithMeTool() {
               <Button variant="primary" onClick={copyLink} data-testid="copy-link">
                 <CopyIcon /> {copied ? s.copied : s.copy}
               </Button>
-              <Button onClick={openPreview} data-testid="preview-link">{s.previewLink}</Button>
             </div>
             <div className="flex items-center gap-2">
               {saveState === 'error' && <span className="text-[0.82rem] text-gold-500">{s.saveErr}</span>}
@@ -358,13 +388,7 @@ export default function BookWithMeTool() {
             </div>
           </>
         ) : (
-          <>
-            <p className="text-[0.82rem] text-ink-faint">{s.publishNote}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="primary" onClick={publish} data-testid="connect-google">{s.publishCta}</Button>
-              <Button onClick={openPreview} data-testid="preview-link">{s.previewLink}</Button>
-            </div>
-          </>
+          <p className="text-[0.82rem] text-ink-faint">{s.publishNote}</p>
         )}
       </Panel>
 
