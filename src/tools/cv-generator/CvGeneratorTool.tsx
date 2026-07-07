@@ -31,6 +31,7 @@ const STR = {
     loginNote: 'Quick sign-in to build it — free, just to keep bots out.',
     build: 'Build my CV',
     building: 'Building your CV…',
+    steps: ['Reading your CV…', 'Highlighting your impact…', 'Trimming the noise…', 'Tuning it for the 10-second scan…', 'Formatting your new CV…'],
     genErr: 'Something went wrong. Please try again.',
     result: 'Your CV',
     pdf: 'Save as PDF',
@@ -71,6 +72,7 @@ const STR = {
     loginNote: 'تسجيل دخول سريع للبناء — مجاني، فقط لمنع الروبوتات.',
     build: 'ابنِ سيرتي',
     building: 'جارٍ بناء سيرتك…',
+    steps: ['نقرأ سيرتك…', 'نُبرز إنجازاتك…', 'نحذف الحشو…', 'نضبطها لمسحٍ في ١٠ ثوانٍ…', 'ننسّق سيرتك الجديدة…'],
     genErr: 'حدث خطأ ما. حاول مرة أخرى.',
     result: 'سيرتك',
     pdf: 'حفظ PDF',
@@ -176,7 +178,6 @@ export default function CvGeneratorTool() {
   const [idToken, setIdToken] = useState<string | null>(null)
   const [gisReady, setGisReady] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
-  const [fileName, setFileName] = useState('')
   const [text, setText] = useState('')
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
@@ -185,6 +186,7 @@ export default function CvGeneratorTool() {
   const [queue, setQueue] = useState<string[]>([])
   const [qIndex, setQIndex] = useState(0)
   const [toast, setToast] = useState('')
+  const [loadingStep, setLoadingStep] = useState(0)
   // A CV the user saved to this device to finish later.
   const [saved, setSaved] = useState<Cv | null>(() => {
     try { const r = localStorage.getItem('bis-cv-saved'); return r ? (JSON.parse(r).cv as Cv) : null } catch { return null }
@@ -248,6 +250,13 @@ export default function CvGeneratorTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, idToken])
 
+  // Cycle the "building" status messages while generating.
+  useEffect(() => {
+    if (status !== 'generating') { setLoadingStep(0); return }
+    const t = setInterval(() => setLoadingStep((i) => (i + 1) % 5), 2200)
+    return () => clearInterval(t)
+  }, [status])
+
   // Auto-dismiss the change toast.
   useEffect(() => {
     if (!toast) return
@@ -260,7 +269,6 @@ export default function CvGeneratorTool() {
     e.target.value = ''
     if (!f) return
     autoTried.current = false
-    setFileName(f.name)
     setErr('')
     setCv(null)
     setStatus('extracting')
@@ -425,12 +433,38 @@ export default function CvGeneratorTool() {
         <>
           {hero}
 
-          {/* Status (the upload button now lives inside the hero) */}
-          {status !== 'idle' && (
-            <div className="flex flex-col gap-2">
-              {fileName && <span className="text-[0.85rem] text-ink-faint font-mono truncate max-w-[22rem]">{fileName}</span>}
-              {status === 'extracting' && <div className="flex items-center gap-2 text-[0.85rem] text-ink-faint"><Spinner className="size-4" label={s.extracting} /> {s.extracting}</div>}
-              {status === 'generating' && <div className="flex items-center gap-2 text-[0.85rem] text-ink-faint"><Spinner className="size-4" label={s.building} /> {s.building}</div>}
+          {/* Loading: a shimmering CV skeleton + cycling status */}
+          {(status === 'extracting' || status === 'generating') && (
+            <div className="flex flex-col items-center gap-6 py-6" data-testid="cv-loading">
+              <div className="w-full max-w-[19rem] rounded-lg border border-[color:var(--line-soft)] bg-[var(--surface)] shadow-[var(--shadow-sm)] p-5 flex flex-col gap-3.5">
+                {(() => {
+                  const bar = 'rounded-[3px] bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
+                  const head = 'rounded-[3px] bg-[color-mix(in_srgb,var(--green-500)_28%,transparent)] animate-[pulse_1.5s_ease-in-out_infinite]'
+                  let d = 0
+                  const step = () => ({ animationDelay: `${(d++ * 0.12).toFixed(2)}s` })
+                  return (
+                    <>
+                      <div className={`${bar} h-5 w-1/2`} style={step()} />
+                      <div className={`${bar} h-2.5 w-2/3`} style={step()} />
+                      <div className="h-px bg-[color:var(--line-soft)] my-1" />
+                      {[0, 1, 2].map((sec) => (
+                        <div key={sec} className="flex flex-col gap-2">
+                          <div className={`${head} h-3 w-1/3`} style={step()} />
+                          <div className={`${bar} h-2 w-full`} style={step()} />
+                          <div className={`${bar} h-2 w-11/12`} style={step()} />
+                          <div className={`${bar} h-2 w-4/5`} style={step()} />
+                        </div>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
+              <div className="flex items-center gap-2.5 text-[0.95rem] font-medium text-ink-soft">
+                <Spinner className="size-[1.15rem]" label={s.building} />
+                <span key={status === 'generating' ? loadingStep : 'x'} className="animate-[fadeUp_0.4s_ease]">
+                  {status === 'extracting' ? s.extracting : s.steps[loadingStep]}
+                </span>
+              </div>
             </div>
           )}
 
