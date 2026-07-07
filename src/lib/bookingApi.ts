@@ -50,6 +50,7 @@ export async function book(input: {
   name: string
   email: string
   note?: string
+  typeId?: string
 }): Promise<{ ok: boolean; conflict?: boolean }> {
   const r = await fetch(`${FN}/book`, {
     method: 'POST',

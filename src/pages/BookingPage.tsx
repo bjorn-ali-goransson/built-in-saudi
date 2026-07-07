@@ -28,7 +28,7 @@ const STR = {
     confirm: 'Confirm booking',
     back: 'Back',
     booking: 'Booking…',
-    booked: 'You’re booked! 🎉',
+    booked: 'You’re booked!',
     bookedBody: 'A confirmation with a calendar invite is on its way to your email.',
     gone: 'That slot was just taken. Please pick another.',
     at: 'at',
@@ -55,7 +55,7 @@ const STR = {
     confirm: 'تأكيد الحجز',
     back: 'رجوع',
     booking: 'جارٍ الحجز…',
-    booked: 'تم حجزك! 🎉',
+    booked: 'تم حجزك!',
     bookedBody: 'رسالة تأكيد مع دعوة تقويم في طريقها إلى بريدك.',
     gone: 'حُجز هذا الوقت للتو. اختر وقتًا آخر.',
     at: 'الساعة',
@@ -217,7 +217,7 @@ export function BookingPage() {
     setSubmitting(true)
     setGone(false)
     try {
-      const r = await book({ code, startUtc: selected, name: name.trim(), email: email.trim(), note: note.trim() })
+      const r = await book({ code, startUtc: selected, name: name.trim(), email: email.trim(), note: note.trim(), typeId: selType?.id })
       if (r.conflict) {
         // Slot taken — drop it and bounce back to the list.
         setSlots((prev) => prev.filter((x) => x !== selected))
@@ -301,7 +301,7 @@ export function BookingPage() {
           <div className="grid gap-6 md:grid-cols-[minmax(0,14rem)_1fr] md:divide-x rtl:md:divide-x-reverse divide-[color:var(--line-soft)]">
             {/* Aside: meeting types + duration */}
             <aside className="flex flex-col gap-3 md:pe-6">
-              {types.length > 1 ? (
+              {types.length > 1 && !done ? (
                 <div className="flex flex-col gap-1.5" data-testid="type-list">
                   {types.map((t) => (
                     <button key={t.id} type="button" onClick={() => setTypeId(t.id)} data-testid={`type-${t.id}`}
