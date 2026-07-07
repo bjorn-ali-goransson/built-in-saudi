@@ -9,23 +9,21 @@ interface Props {
   index: number
 }
 
-export function ToolCard({ tool, index }: Props) {
+export function ToolCard({ tool }: Props) {
   const { locale, t } = useLocale()
   const l = localizeTool(tool, locale)
-  const num = String(index + 1).padStart(2, '0')
   const comingSoon = tool.status === 'coming-soon'
   const Icon = tool.Icon
 
   const inner = (
     <>
-      <div className="flex items-center justify-between max-[560px]:hidden">
-        <span className="font-mono text-[0.8rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_30%,transparent)] tracking-[0.05em]">{num}</span>
-        {tool.status !== 'stable' && (
+      {tool.status !== 'stable' && (
+        <div className="flex items-center justify-end max-[560px]:hidden">
           <StatusBadge status={tool.status}>
             {comingSoon ? t.card.comingSoon : t.card.beta}
           </StatusBadge>
-        )}
-      </div>
+        </div>
+      )}
 
       <span
         className={`grid place-items-center w-[46px] h-[46px] rounded-[12px] mt-1 transition-[background,color] duration-200 [&_svg]:size-6 max-[560px]:mx-auto max-[560px]:w-[58px] max-[560px]:h-[58px] max-[560px]:rounded-2xl max-[560px]:bg-green-600 max-[560px]:text-sand-100 max-[560px]:shadow-[var(--shadow-sm)] max-[560px]:[&_svg]:w-7 max-[560px]:[&_svg]:h-7 ${
