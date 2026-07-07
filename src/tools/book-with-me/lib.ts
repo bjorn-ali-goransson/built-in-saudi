@@ -208,7 +208,7 @@ export function makeCode(): string {
 }
 
 export function defaultMeetingTypes(): MeetingType[] {
-  return [{ id: makeCode(), name: 'Meeting', minutes: 45, meet: false }]
+  return [{ id: makeCode(), name: 'Meeting', minutes: 45, meet: true }]
 }
 
 export function defaultConfig(): HostConfig {
