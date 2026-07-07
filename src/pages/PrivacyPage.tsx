@@ -70,7 +70,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
       },
       {
         h: 'Contact',
-        p: ['Questions or deletion requests: hello@built-in-saudi.com.'],
+        p: ['Questions or deletion requests: bjorn.a.goransson@gmail.com.'],
       },
     ],
   },
@@ -133,7 +133,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
       },
       {
         h: 'التواصل',
-        p: ['للأسئلة أو طلبات الحذف: hello@built-in-saudi.com.'],
+        p: ['للأسئلة أو طلبات الحذف: bjorn.a.goransson@gmail.com.'],
       },
     ],
   },

@@ -46,7 +46,7 @@ const STR = {
       },
       {
         h: 'Contact',
-        p: ['Questions: hello@built-in-saudi.com.'],
+        p: ['Questions: bjorn.a.goransson@gmail.com.'],
       },
     ],
   },
@@ -93,7 +93,7 @@ const STR = {
       },
       {
         h: 'التواصل',
-        p: ['للأسئلة: hello@built-in-saudi.com.'],
+        p: ['للأسئلة: bjorn.a.goransson@gmail.com.'],
       },
     ],
   },

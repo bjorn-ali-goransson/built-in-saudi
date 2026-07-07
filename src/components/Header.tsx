@@ -17,6 +17,14 @@ export function Header() {
   // tool's name (app-bar) on a tool page, else the site name.
   const isHome = /^\/(en|ar)\/?$/.test(location.pathname)
   const isBooking = /\/book\//.test(location.pathname)
+  // Show a Log out on the Book Me editor when the host has a saved session.
+  const onBookMe = /\/apps\/book-me(\/|$)/.test(location.pathname)
+  let bookSession = false
+  if (onBookMe) { try { bookSession = !!localStorage.getItem('bis-bookwith-hsid') } catch { /* prerender */ } }
+  function bookLogout() {
+    try { localStorage.removeItem('bis-bookwith-hsid') } catch { /* ignore */ }
+    window.location.reload()
+  }
   const bookingTitle = useSyncExternalStore(bookingHeaderStore.subscribe, bookingHeaderStore.get, bookingHeaderStore.get)
   const match = location.pathname.match(/\/apps\/([^/]+)/)
   const currentTool = match ? getTool(match[1]) : null
@@ -37,6 +45,16 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2 flex-none">
+          {bookSession && (
+            <button
+              type="button"
+              onClick={bookLogout}
+              data-testid="book-logout"
+              className="inline-flex items-center justify-center h-9 border border-[color:var(--line)] rounded-full px-[0.9rem] text-[0.85rem] leading-none font-semibold text-ink-soft hover:text-gold-500 hover:border-[color-mix(in_srgb,var(--color-gold-400)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-gold-400)_10%,transparent)] bg-transparent cursor-pointer"
+            >
+              {locale === 'ar' ? 'تسجيل الخروج' : 'Log out'}
+            </button>
+          )}
           {!isBooking && <ShareButton />}
           <Link
             to={swapLocaleInPath(location.pathname, other)}
