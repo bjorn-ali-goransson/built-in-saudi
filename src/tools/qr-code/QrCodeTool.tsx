@@ -3,7 +3,7 @@ import { LinkIcon, TextIcon, WifiIcon, MailIcon, PhoneIcon, DownloadIcon, ShareI
 import { useLocale } from '../../i18n'
 import { type QrContentType, type WifiFields, type EmailFields, normalizeUrl, buildWifi, buildEmail, buildPhone } from './build'
 import { renderQR, type DotStyle, type Frame, DOT_STYLES } from './qrRender'
-import { Button, Input, Textarea, Select, Field, FieldLabel, Check, Stack, Seg, SegButton } from '../../components/ui'
+import { Input, Textarea, Select, Field, FieldLabel, Check, Seg, SegButton } from '../../components/ui'
 
 const TYPE_DEFS: { id: QrContentType; Icon: typeof LinkIcon }[] = [
   { id: 'link', Icon: LinkIcon }, { id: 'text', Icon: TextIcon }, { id: 'wifi', Icon: WifiIcon },
@@ -39,17 +39,20 @@ function hslHex(h: number, s: number, l: number): string {
 }
 
 // A small non-interactive QR preview rendered to its own canvas.
-function MiniQR({ dot, fg, bg, frame, px, emoji }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number; emoji?: string }) {
+function MiniQR({ dot, fg, bg, frame, px, emoji, label }: { dot: DotStyle; fg: string; bg: string; frame: Frame; px: number; emoji?: string; label?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, emoji, ecLevel: 'M', frame, frameColor: fg, label: '' })
-  }, [dot, fg, bg, frame, emoji])
+    if (ref.current) renderQR(ref.current, { value: SAMPLE, size: 120, margin: 1, fg, bg, dot, emoji, ecLevel: 'M', frame, frameColor: fg, label: label ?? '' })
+  }, [dot, fg, bg, frame, emoji, label])
   return <canvas ref={ref} className="rounded-[4px]" style={{ width: px, height: 'auto' }} aria-hidden="true" />
 }
 
 export default function QrCodeTool() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const q = t.qr
+  const L = locale === 'ar'
+    ? { title: 'أنشئ رمز باركود', body: 'الصق رابطًا واحصل على باركود أنيق ومخصّص — بألوان وأنماط وإطارات. لا يُرفع أي شيء.', surprise: 'تنسيق مفاجئ', appearance: 'المظهر', settings: 'الإعدادات' }
+    : { title: 'Make a QR code', body: 'Paste a link and get a crisp, custom QR — colours, styles and frames. Nothing is uploaded.', surprise: 'Surprise styling', appearance: 'Appearance', settings: 'Settings' }
 
   const [type, setType] = useState<QrContentType>('link')
   const [link, setLink] = useState('https://built-in-saudi.com')
@@ -94,6 +97,13 @@ export default function QrCodeTool() {
 
   function applyPreset(p: Preset) { setDot(p.dot); setFg(p.fg); setBg(p.bg); setFrame(p.frame) }
   function randomTheme() { const h = Math.floor(Math.random() * 360); setFg(hslHex(h, 70, 26)); setBg(hslHex((h + 8) % 360, 55, 96)) }
+  function surprise() {
+    const dots = DOT_STYLES.filter((d) => d !== 'emoji')
+    setDot(dots[Math.floor(Math.random() * dots.length)])
+    const frames: Frame[] = ['none', 'none', 'card', 'circle']
+    setFrame(frames[Math.floor(Math.random() * frames.length)])
+    randomTheme()
+  }
 
   function onLogo(f: File | undefined) {
     if (!f || !f.type.startsWith('image/')) return
@@ -114,147 +124,172 @@ export default function QrCodeTool() {
     })
   }
 
+  const iconBtn = 'inline-flex items-center justify-center size-11 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer hover:border-green-500 hover:text-green-700 disabled:opacity-40 disabled:cursor-default [&_svg]:size-5'
+  const sectionHead = 'text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-green-700 mt-1'
+
   return (
-    <Stack className="max-w-xl mx-auto" data-testid="qr-code">
-      <Field label={q.fieldUrl}>
-        <Input type="url" inputMode="url" placeholder={q.placeholderUrl} data-testid="qr-url"
-          value={link} autoComplete="off" onChange={(e) => { setLink(e.target.value); setType('link') }} />
-      </Field>
-
-      <div className="grid place-items-center p-4 rounded-md border border-[color:var(--line)] bg-sand-100 min-h-[200px]">
-        {hasCode
-          ? <canvas ref={canvasRef} data-testid="qr-canvas" className="w-full max-w-[280px] h-auto" />
-          : <span className="text-ink-faint text-[0.92rem]">{q.empty}</span>}
-      </div>
-
-      <div className="flex gap-2">
-        <Button variant="primary" className="flex-1 justify-center" data-testid="qr-share" onClick={share} disabled={!hasCode}><ShareIcon /> {copied ? q.copied : q.share}</Button>
-        <Button className="flex-1 justify-center" onClick={downloadPng} disabled={!hasCode}><DownloadIcon /> {q.download}</Button>
-      </div>
-
-      {/* Preset thumbnail strip */}
-      <div className="flex flex-col gap-2">
-        <FieldLabel>{q.style}</FieldLabel>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {PRESETS.map((p, i) => (
-            <button key={i} className="flex-none rounded-md border-2 border-[color:var(--line-soft)] hover:border-green-500 aria-[current=true]:border-green-600 p-1 bg-white"
-              aria-current={dot === p.dot && fg === p.fg && frame === p.frame} data-testid={`qr-preset-${i}`} onClick={() => applyPreset(p)}>
-              <MiniQR dot={p.dot} fg={p.fg} bg={p.bg} frame={p.frame} px={56} />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Pattern (dot style) with live examples */}
-      <div className="flex flex-col gap-2">
-        <FieldLabel>{q.dotStyle}</FieldLabel>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {DOT_STYLES.map((d) => (
-            <button key={d} className={`flex flex-col items-center gap-1 rounded-md border-2 p-1.5 ${dot === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)]' : 'border-[color:var(--line-soft)] hover:border-green-500'}`}
-              data-testid={`qr-dot-${d}`} onClick={() => setDot(d)}>
-              <MiniQR dot={d} fg={fg} bg={bg} frame="none" px={44} emoji={emoji} />
-              <span className="text-[0.66rem] text-ink-soft leading-tight text-center">{q.dots[d]}</span>
-            </button>
-          ))}
-        </div>
-        {dot === 'emoji' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Input className="w-16 text-center text-[1.2rem]" value={emoji} maxLength={4} data-testid="qr-emoji" onChange={(e) => setEmoji(e.target.value || '⭐')} aria-label={q.dots.emoji} />
-            <Button className="px-3" data-testid="qr-emoji-random" onClick={() => setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)])}>🎲 {q.randomTheme}</Button>
-            <div className="flex flex-wrap gap-1">
-              {EMOJIS.slice(0, 10).map((em) => (
-                <button key={em} className="w-8 h-8 rounded-md border border-[color:var(--line-soft)] hover:border-green-500 text-[1.1rem] leading-none" onClick={() => setEmoji(em)} aria-label={em}>{em}</button>
-              ))}
-            </div>
+    <div className="flex flex-col gap-5" data-testid="qr-code">
+      {/* Green intro hero with the URL + surprise-styling */}
+      <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
+        <div className="wrap py-[clamp(1.3rem,4vw,1.9rem)] flex flex-col gap-3 max-w-[40rem]">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display rtl:font-ar text-[clamp(1.4rem,4vw,1.9rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>{L.title}</h1>
+            <p className="text-[0.95rem] leading-relaxed opacity-90">{L.body}</p>
           </div>
-        )}
-      </div>
-
-      {/* Theme */}
-      <div className="flex flex-col gap-2">
-        <FieldLabel>{q.theme}</FieldLabel>
-        <div className="flex flex-wrap items-center gap-2">
-          {THEMES.map(([f, b], i) => (
-            <button key={i} className="w-8 h-8 rounded-full border border-[color:var(--line)] grid place-items-center aria-[current=true]:ring-2 aria-[current=true]:ring-green-600 aria-[current=true]:ring-offset-1"
-              style={{ background: b }} aria-current={fg === f && bg === b} aria-label={`theme ${i + 1}`} data-testid={`qr-theme-${i}`} onClick={() => { setFg(f); setBg(b) }}>
-              <span className="w-4 h-4 rounded-full" style={{ background: f }} />
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="url" inputMode="url" placeholder={q.placeholderUrl} data-testid="qr-url" value={link} autoComplete="off"
+              onChange={(e) => { setLink(e.target.value); setType('link') }}
+              className="grow min-w-0 rounded-md border-0 bg-white text-ink px-3.5 py-2.5 text-[0.95rem] outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-[color-mix(in_srgb,var(--sand-100)_60%,transparent)]"
+            />
+            <button type="button" onClick={surprise} data-testid="qr-surprise"
+              className="flex-none rounded-md bg-[color-mix(in_srgb,var(--sand-100)_18%,transparent)] border border-[color-mix(in_srgb,var(--sand-100)_45%,transparent)] text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--sand-100)_28%,transparent)]">
+              {L.surprise}
             </button>
-          ))}
-          <Button className="px-3" data-testid="qr-random" onClick={randomTheme}>🎲 {q.randomTheme}</Button>
-          <label className="inline-flex items-center gap-1 ms-1"><input type="color" value={fg} onChange={(e) => setFg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={q.foreground} /></label>
-          <label className="inline-flex items-center gap-1"><input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={q.background} /></label>
+          </div>
         </div>
       </div>
 
-      {/* Frame + label + logo */}
-      <div className="flex flex-col gap-2">
-        <FieldLabel>{q.frame}</FieldLabel>
-        <div className="flex flex-wrap items-center gap-2">
-          <Seg role="group">
+      <div className="max-w-xl mx-auto w-full flex flex-col gap-5">
+        {/* QR preview (no well) + icon actions beside it */}
+        <div className="flex items-center justify-center gap-4 min-h-[180px]">
+          {hasCode ? (
+            <>
+              <canvas ref={canvasRef} data-testid="qr-canvas" className="w-full max-w-[240px] h-auto" />
+              <div className="flex flex-col gap-2 flex-none">
+                <button type="button" className={iconBtn} data-testid="qr-share" onClick={share} disabled={!hasCode} aria-label={copied ? q.copied : q.share} title={copied ? q.copied : q.share}>
+                  {copied ? <span className="text-green-700 font-bold" aria-hidden="true">✓</span> : <ShareIcon />}
+                </button>
+                <button type="button" className={iconBtn} onClick={downloadPng} disabled={!hasCode} aria-label={q.download} title={q.download}>
+                  <DownloadIcon />
+                </button>
+              </div>
+            </>
+          ) : (
+            <span className="text-ink-faint text-[0.92rem]">{q.empty}</span>
+          )}
+        </div>
+
+        {/* ── Appearance ─────────────────────────────── */}
+        <span className={sectionHead}>{L.appearance}</span>
+
+        <div className="flex flex-col gap-2">
+          <FieldLabel>{q.style}</FieldLabel>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {PRESETS.map((p, i) => (
+              <button key={i} className="flex-none rounded-md border-2 border-[color:var(--line-soft)] hover:border-green-500 aria-[current=true]:border-green-600 p-1 bg-white"
+                aria-current={dot === p.dot && fg === p.fg && frame === p.frame} data-testid={`qr-preset-${i}`} onClick={() => applyPreset(p)}>
+                <MiniQR dot={p.dot} fg={p.fg} bg={p.bg} frame={p.frame} px={56} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <FieldLabel>{q.dotStyle}</FieldLabel>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {DOT_STYLES.map((d) => (
+              <button key={d} className={`flex flex-col items-center gap-1 rounded-md border-2 p-1.5 ${dot === d ? 'border-green-600 bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)]' : 'border-[color:var(--line-soft)] hover:border-green-500'}`}
+                data-testid={`qr-dot-${d}`} onClick={() => setDot(d)}>
+                <MiniQR dot={d} fg={fg} bg={bg} frame="none" px={44} emoji={emoji} />
+                <span className="text-[0.66rem] text-ink-soft leading-tight text-center">{q.dots[d]}</span>
+              </button>
+            ))}
+          </div>
+          {dot === 'emoji' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Input className="w-16 text-center text-[1.2rem]" value={emoji} maxLength={4} data-testid="qr-emoji" onChange={(e) => setEmoji(e.target.value || '⭐')} aria-label={q.dots.emoji} />
+              <div className="flex flex-wrap gap-1">
+                {EMOJIS.slice(0, 12).map((em) => (
+                  <button key={em} className="w-8 h-8 rounded-md border border-[color:var(--line-soft)] hover:border-green-500 text-[1.1rem] leading-none" onClick={() => setEmoji(em)} aria-label={em}>{em}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <FieldLabel>{q.theme}</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            {THEMES.map(([f, b], i) => (
+              <button key={i} className="w-8 h-8 rounded-full border border-[color:var(--line)] grid place-items-center aria-[current=true]:ring-2 aria-[current=true]:ring-green-600 aria-[current=true]:ring-offset-1"
+                style={{ background: b }} aria-current={fg === f && bg === b} aria-label={`theme ${i + 1}`} data-testid={`qr-theme-${i}`} onClick={() => { setFg(f); setBg(b) }}>
+                <span className="w-4 h-4 rounded-full" style={{ background: f }} />
+              </button>
+            ))}
+            <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 hover:text-green-700 cursor-pointer" data-testid="qr-random" onClick={randomTheme}>{q.randomTheme}</button>
+            <label className="inline-flex items-center gap-1 ms-1"><input type="color" value={fg} onChange={(e) => setFg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={q.foreground} /></label>
+            <label className="inline-flex items-center gap-1"><input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="w-8 h-8 rounded border border-[color:var(--line)] p-0 bg-transparent cursor-pointer" aria-label={q.background} /></label>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <FieldLabel>{q.frame}</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
             {(['none', 'card', 'circle'] as Frame[]).map((f) => (
-              <SegButton key={f} active={frame === f} data-testid={`qr-frame-${f}`} onClick={() => setFrame(f)}>{f === 'none' ? '—' : f === 'card' ? '▢' : '◯'}</SegButton>
+              <button key={f} className={`flex-none rounded-md border-2 p-1 bg-white ${frame === f ? 'border-green-600' : 'border-[color:var(--line-soft)] hover:border-green-500'}`}
+                data-testid={`qr-frame-${f}`} onClick={() => setFrame(f)} aria-current={frame === f}>
+                <MiniQR dot={dot === 'emoji' ? 'square' : dot} fg={fg} bg={bg} frame={f} px={54} label={f !== 'none' ? (label || 'SCAN') : ''} />
+              </button>
+            ))}
+            {frame !== 'none' && (
+              <Input className="flex-1 min-w-[8rem] max-w-[12rem]" value={label} maxLength={16} placeholder="SCAN ME" data-testid="qr-label" onChange={(e) => setLabel(e.target.value)} />
+            )}
+            {logo
+              ? <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" onClick={() => { setLogo(null); setLogoName('') }}>✕ {q.removeLogo} · {logoName.slice(0, 10)}</button>
+              : <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" data-testid="qr-add-logo" onClick={() => logoInput.current?.click()}>＋ {q.addLogo}</button>}
+            <input ref={logoInput} type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
+          </div>
+        </div>
+
+        {/* ── Settings ───────────────────────────────── */}
+        <span className={sectionHead}>{L.settings}</span>
+
+        <div className="flex flex-col gap-[0.4rem]">
+          <FieldLabel>{q.type}</FieldLabel>
+          <Seg className="flex-wrap" role="group">
+            {TYPE_DEFS.map((d) => (
+              <SegButton key={d.id} active={type === d.id} className="[&_svg]:size-[15px] inline-flex items-center gap-1" onClick={() => setType(d.id)}><d.Icon /> {q.types[d.id]}</SegButton>
             ))}
           </Seg>
-          {frame !== 'none' && (
-            <Input className="flex-1 min-w-[8rem] max-w-[12rem]" value={label} maxLength={16} placeholder="SCAN ME" data-testid="qr-label" onChange={(e) => setLabel(e.target.value)} />
-          )}
-          {logo
-            ? <Button className="px-3" onClick={() => { setLogo(null); setLogoName('') }}>✕ {q.removeLogo} · {logoName.slice(0, 10)}</Button>
-            : <Button className="px-3" data-testid="qr-add-logo" onClick={() => logoInput.current?.click()}>＋ {q.addLogo}</Button>}
-          <input ref={logoInput} type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
         </div>
+
+        {type === 'text' && <Field label={q.fieldText}><Textarea rows={3} value={text} placeholder={q.placeholderText} onChange={(e) => setText(e.target.value)} /></Field>}
+        {type === 'wifi' && (
+          <div className="grid gap-3">
+            <Field label={q.fieldSsid}><Input value={wifi.ssid} placeholder={q.placeholderSsid} onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })} /></Field>
+            <Field label={q.fieldPassword}><Input value={wifi.password} disabled={wifi.encryption === 'nopass'} onChange={(e) => setWifi({ ...wifi, password: e.target.value })} /></Field>
+            <Field label={q.fieldSecurity}>
+              <Select value={wifi.encryption} onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as WifiFields['encryption'] })}>
+                <option value="WPA">{q.secWpa}</option><option value="WEP">{q.secWep}</option><option value="nopass">{q.secNone}</option>
+              </Select></Field>
+            <Check><input type="checkbox" checked={wifi.hidden} onChange={(e) => setWifi({ ...wifi, hidden: e.target.checked })} />{q.hidden}</Check>
+          </div>
+        )}
+        {type === 'email' && (
+          <div className="grid gap-3">
+            <Field label={q.fieldTo}><Input type="email" value={email.to} placeholder={q.placeholderEmail} onChange={(e) => setEmail({ ...email, to: e.target.value })} /></Field>
+            <Field label={q.fieldSubject}><Input value={email.subject} onChange={(e) => setEmail({ ...email, subject: e.target.value })} /></Field>
+            <Field label={q.fieldMessage}><Textarea rows={2} value={email.body} onChange={(e) => setEmail({ ...email, body: e.target.value })} /></Field>
+          </div>
+        )}
+        {type === 'phone' && <Field label={q.fieldPhone}><Input type="tel" inputMode="tel" value={phone} placeholder={q.placeholderPhone} onChange={(e) => setPhone(e.target.value)} /></Field>}
+
+        <div className="flex flex-col gap-[0.4rem]">
+          <FieldLabel>{q.size}</FieldLabel>
+          <Seg className="flex-wrap" role="group">
+            {SIZES.map((s) => <SegButton key={s.key} active={sizePx === s.px} onClick={() => setSizePx(s.px)}>{q[s.key]}</SegButton>)}
+            <SegButton active={!SIZES.some((s) => s.px === sizePx)} onClick={() => setSizePx(640)}>{q.sizeCustom}</SegButton>
+          </Seg>
+          {!SIZES.some((s) => s.px === sizePx) && (
+            <input className="mt-2" type="range" min={128} max={2048} step={64} value={sizePx} onChange={(e) => setSizePx(Number(e.target.value))} aria-label={`${q.size} ${sizePx}px`} />
+          )}
+        </div>
+        <Field label={<>{q.quietZone} · {margin}</>}>
+          <input type="range" min={0} max={6} step={1} value={margin} onChange={(e) => setMargin(Number(e.target.value))} /></Field>
+
+        <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {q.privacy}</p>
       </div>
-
-      {/* Advanced */}
-      <details className="border-t border-[color:var(--line-soft)] pt-3">
-        <summary className="cursor-pointer font-semibold text-ink-soft text-[0.9rem] select-none">{q.advanced}</summary>
-        <Stack className="pt-3">
-          <div className="flex flex-col gap-[0.4rem]">
-            <FieldLabel>{q.type}</FieldLabel>
-            <Seg className="flex-wrap" role="group">
-              {TYPE_DEFS.map((d) => (
-                <SegButton key={d.id} active={type === d.id} className="[&_svg]:size-[15px] inline-flex items-center gap-1" onClick={() => setType(d.id)}><d.Icon /> {q.types[d.id]}</SegButton>
-              ))}
-            </Seg>
-          </div>
-
-          {type === 'text' && <Field label={q.fieldText}><Textarea rows={3} value={text} placeholder={q.placeholderText} onChange={(e) => setText(e.target.value)} /></Field>}
-          {type === 'wifi' && (
-            <div className="grid gap-3">
-              <Field label={q.fieldSsid}><Input value={wifi.ssid} placeholder={q.placeholderSsid} onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })} /></Field>
-              <Field label={q.fieldPassword}><Input value={wifi.password} disabled={wifi.encryption === 'nopass'} onChange={(e) => setWifi({ ...wifi, password: e.target.value })} /></Field>
-              <Field label={q.fieldSecurity}>
-                <Select value={wifi.encryption} onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as WifiFields['encryption'] })}>
-                  <option value="WPA">{q.secWpa}</option><option value="WEP">{q.secWep}</option><option value="nopass">{q.secNone}</option>
-                </Select></Field>
-              <Check><input type="checkbox" checked={wifi.hidden} onChange={(e) => setWifi({ ...wifi, hidden: e.target.checked })} />{q.hidden}</Check>
-            </div>
-          )}
-          {type === 'email' && (
-            <div className="grid gap-3">
-              <Field label={q.fieldTo}><Input type="email" value={email.to} placeholder={q.placeholderEmail} onChange={(e) => setEmail({ ...email, to: e.target.value })} /></Field>
-              <Field label={q.fieldSubject}><Input value={email.subject} onChange={(e) => setEmail({ ...email, subject: e.target.value })} /></Field>
-              <Field label={q.fieldMessage}><Textarea rows={2} value={email.body} onChange={(e) => setEmail({ ...email, body: e.target.value })} /></Field>
-            </div>
-          )}
-          {type === 'phone' && <Field label={q.fieldPhone}><Input type="tel" inputMode="tel" value={phone} placeholder={q.placeholderPhone} onChange={(e) => setPhone(e.target.value)} /></Field>}
-
-          <div className="flex flex-col gap-[0.4rem]">
-            <FieldLabel>{q.size}</FieldLabel>
-            <Seg className="flex-wrap" role="group">
-              {SIZES.map((s) => <SegButton key={s.key} active={sizePx === s.px} onClick={() => setSizePx(s.px)}>{q[s.key]}</SegButton>)}
-              <SegButton active={!SIZES.some((s) => s.px === sizePx)} onClick={() => setSizePx(640)}>{q.sizeCustom}</SegButton>
-            </Seg>
-            {!SIZES.some((s) => s.px === sizePx) && (
-              <input className="mt-2" type="range" min={128} max={2048} step={64} value={sizePx} onChange={(e) => setSizePx(Number(e.target.value))} aria-label={`${q.size} ${sizePx}px`} />
-            )}
-          </div>
-          <Field label={<>{q.quietZone} · {margin}</>}>
-            <input type="range" min={0} max={6} step={1} value={margin} onChange={(e) => setMargin(Number(e.target.value))} /></Field>
-        </Stack>
-      </details>
-
-      <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {q.privacy}</p>
-    </Stack>
+    </div>
   )
 }
