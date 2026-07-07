@@ -131,12 +131,11 @@ export default function IslamicCalendarTool() {
           const primary = mode === 'hijri' ? c.hd : c.greg.getDate()
           const secondary = mode === 'hijri' ? c.greg.getDate() : c.hd
           return (
-            <button key={c.greg.toDateString()} className={`cal2__cell relative aspect-square flex flex-col items-center justify-center gap-px border rounded-[5px] cursor-pointer p-[2px] transition-[border-color] duration-[120ms] hover:border-green-500 ${today ? 'bg-green-600 border-green-700' : white ? 'bg-[var(--surface)] border-gold-400' : 'bg-[var(--surface)] border-[color:var(--line-soft)]'} ${isSel ? 'outline outline-2 outline-green-500 -outline-offset-1' : ''}`}
+            <button key={c.greg.toDateString()} className={`cal2__cell relative aspect-square flex flex-col items-center justify-center gap-px border rounded-[5px] cursor-pointer p-[2px] transition-[border-color] duration-[120ms] hover:border-green-500 ${today ? 'bg-green-600 border-green-700' : 'bg-[var(--surface)] border-[color:var(--line-soft)]'} ${isSel ? 'outline outline-2 outline-green-500 -outline-offset-1' : ''}`}
               data-testid={`cal-day-${c.hm}-${c.hd}`} onClick={() => setSel(c)}>
+              {white && <span className={`inline-block w-[9px] h-[9px] rounded-full border-[1.5px] ${today ? 'border-[color-mix(in_srgb,var(--sand-100)_75%,transparent)]' : 'border-[color:var(--ink-faint)]'}`} aria-hidden="true" />}
               <span className={`text-[1rem] font-bold leading-none ${today ? 'text-sand-100' : holiday ? 'text-gold-500' : ''}`}>{primary}</span>
-              {white ? <span className="text-[0.72rem] leading-none" aria-hidden="true">🌕</span> : <span className="text-[0.72rem] leading-none" />}
               <span className={`text-[0.6rem] leading-none ${today ? 'text-[color-mix(in_srgb,var(--sand-100)_80%,transparent)]' : 'text-ink-faint'}`}>{secondary}</span>
-              {holiday && <span className="absolute bottom-[3px] w-[5px] h-[5px] rounded-full bg-gold-500" aria-hidden="true" />}
             </button>
           )
         })}
@@ -145,7 +144,7 @@ export default function IslamicCalendarTool() {
       {sel && (
         <div className="flex flex-col gap-[0.35rem] px-4 py-[0.9rem] border border-[color:var(--line-soft)] rounded-md bg-[var(--surface)] [&_strong]:text-[1.05rem] [&_strong]:text-green-700" data-testid="cal-detail">
           <strong>{HIJRI_MONTHS[locale][sel.hm - 1]} {sel.hd}, {sel.hy} {locale === 'ar' ? 'هـ' : 'AH'}</strong>
-          <span>{dateFmt.format(sel.greg)}{sel.hd >= 13 && sel.hd <= 15 ? ' · 🌕' : ''}</span>
+          <span className="inline-flex items-center gap-1.5">{dateFmt.format(sel.greg)}{sel.hd >= 13 && sel.hd <= 15 && <span className="inline-block w-[9px] h-[9px] rounded-full border-[1.5px] border-[color:var(--ink-faint)]" aria-hidden="true" />}</span>
           {HOLIDAYS[`${sel.hm}-${sel.hd}`] && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--gold-400)_25%,transparent)] text-gold-500">{s.events[HOLIDAYS[`${sel.hm}-${sel.hd}`]]}</span>}
           {sel.hd >= 13 && sel.hd <= 15 && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--green-400)_15%,transparent)] text-green-700">{s.whiteDays}</span>}
         </div>
@@ -153,7 +152,7 @@ export default function IslamicCalendarTool() {
 
       <div className="flex flex-wrap gap-[0.9rem] text-[0.8rem] text-ink-soft [&_span]:inline-flex [&_span]:items-center [&_span]:gap-[0.4rem]">
         <span><i className="w-3 h-3 rounded inline-block bg-green-600" /> {s.todayLegend}</span>
-        <span>🌕 {s.whiteDays}</span>
+        <span><i className="w-[10px] h-[10px] rounded-full border-[1.5px] border-[color:var(--ink-faint)] inline-block" /> {s.whiteDays}</span>
         <span><i className="w-3 h-3 rounded inline-block bg-gold-500" /> {s.holiday}</span>
       </div>
 
