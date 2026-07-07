@@ -5,7 +5,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
-import { renderCvHtml, renderPrintDoc, renderOriginalHtml } from './template'
+import { renderCvHtml, renderPrintDoc } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
 
@@ -445,9 +445,9 @@ export default function CvGeneratorTool() {
           {/* Loading. Once the PDF text is extracted, show it (so they can see we
               read their CV) with a floating status; before that, a shimmer skeleton. */}
           {(status === 'extracting' || status === 'generating') && (
-            status === 'generating' && text ? (
+            status === 'generating' && origUrl ? (
               <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden" data-testid="cv-loading">
-                <iframe title="original" srcDoc={renderOriginalHtml(text)} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef] opacity-60" />
+                <iframe title="your CV" src={`${origUrl}#toolbar=0&navpanes=0&view=FitH`} className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]" />
                 {/* Scanning beam sweeping down the document, plus a soft top/bottom fade. */}
                 <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,var(--sand-50),transparent_18%,transparent_82%,var(--sand-50))]" />
                 <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
