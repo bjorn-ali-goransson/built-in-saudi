@@ -53,7 +53,7 @@ export function ToolCard({ tool, index }: Props) {
   )
 
   const base =
-    'group relative flex flex-col gap-[0.55rem] pt-[1.35rem] px-[1.35rem] pb-[1.15rem] no-underline rounded-lg overflow-hidden isolate max-[560px]:p-[0.4rem_0.2rem] max-[560px]:items-center max-[560px]:text-center max-[560px]:gap-[0.45rem] max-[560px]:bg-none max-[560px]:border-none max-[560px]:shadow-none max-[560px]:overflow-visible'
+    'group relative flex flex-col gap-[0.55rem] pt-[1.35rem] px-[1.35rem] pb-[1.15rem] no-underline rounded-lg overflow-hidden isolate max-[560px]:p-[0.4rem_0.2rem] max-[560px]:items-center max-[560px]:text-center max-[560px]:gap-[0.45rem] max-[560px]:bg-transparent max-[560px]:border-none max-[560px]:shadow-none max-[560px]:overflow-visible'
 
   if (comingSoon) {
     return (
@@ -64,7 +64,7 @@ export function ToolCard({ tool, index }: Props) {
   }
 
   const live =
-    `${base} text-ink bg-[var(--surface)] border border-[color:var(--line-soft)] shadow-[var(--shadow-sm)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-lg)] hover:border-[color-mix(in_srgb,var(--green-500)_30%,transparent)] max-[560px]:hover:transform-none max-[560px]:hover:shadow-none max-[560px]:hover:border-none before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-gold-400 before:origin-left before:scale-x-0 before:z-[2] before:transition-transform before:duration-300 hover:before:scale-x-100 max-[560px]:before:hidden`
+    `${base} text-ink bg-[var(--surface)] border border-[color:var(--line-soft)] shadow-[var(--shadow-sm)] transition-[box-shadow,border-color] duration-200 hover:shadow-[var(--shadow-md)] hover:border-[color-mix(in_srgb,var(--green-500)_28%,transparent)] max-[560px]:hover:shadow-none max-[560px]:hover:border-none`
 
   if (tool.href) {
     return (
