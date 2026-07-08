@@ -4,7 +4,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { Button, Input, Textarea, Field, Stack, Panel, Pill, Sheet, SheetTitle, SheetActions, Spinner } from '../components/ui'
-import { GlobeIcon, ClockIcon, EditIcon } from '../components/icons'
+import { GlobeIcon, ClockIcon, EditIcon, RefreshIcon } from '../components/icons'
 import { getAvailability, book, readHostSession, type HostMeta } from '../lib/bookingApi'
 import { bookingHeaderStore } from '../lib/bookingHeader'
 import { loadConfig, saveConfig, previewSlots, detectFirstDay } from '../tools/book-with-me/lib'
@@ -101,6 +101,7 @@ export function BookingPage() {
   const [cal, setCal] = useState<'greg' | 'hijri'>('greg')
   const [tzOpen, setTzOpen] = useState(false)
   const [tzq, setTzq] = useState('')
+  const [reloading, setReloading] = useState(false)
   const allTz = useMemo<string[]>(() => {
     try { return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf('timeZone') } catch { return [localTz] }
   }, [localTz])
@@ -148,7 +149,20 @@ export function BookingPage() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, preview])
+
+  // Re-fetch availability without a full-page reload (blurs the grid meanwhile).
+  function reload() {
+    if (reloading) return
+    if (preview) { setSlots(previewSlots(loadConfig())); return }
+    if (!code) return
+    setReloading(true)
+    getAvailability(code)
+      .then((r) => { setHost(r.host); setSlots(r.slots) })
+      .catch(() => {})
+      .finally(() => setReloading(false))
+  }
 
   const lc = locale === 'ar' ? 'ar-SA' : 'en-GB'
   const calOpt = cal === 'hijri' ? ({ calendar: 'islamic-umalqura' } as const) : {}
@@ -240,8 +254,8 @@ export function BookingPage() {
   }
 
   const L = locale === 'ar'
-    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي', greg: 'ميلادي', hijri: 'هجري', tzTitle: 'المنطقة الزمنية والتقويم', firstD: 'أول أيام الأسبوع', search: 'ابحث عن منطقة…' }
-    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…' }
+    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي', greg: 'ميلادي', hijri: 'هجري', tzTitle: 'المنطقة الزمنية والتقويم', firstD: 'أول أيام الأسبوع', search: 'ابحث عن منطقة…', reload: 'تحديث الأوقات' }
+    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…', reload: 'Refresh availability' }
   const dayNames = useMemo(() => Array.from({ length: 7 }, (_, d) => new Intl.DateTimeFormat(lc, { weekday: 'long' }).format(new Date(2023, 0, 1 + d))), [lc])
   const tzShort = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz
   const tzOffset = (z: string) => { try { return new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value ?? '' } catch { return '' } }
@@ -264,9 +278,43 @@ export function BookingPage() {
   return (
     <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] max-w-[56rem] animate-[fadeUp_0.5s_ease_both]">
       {status === 'loading' && (
-        <div className="flex flex-col items-center justify-center gap-4 py-24 text-ink-faint" role="status" aria-live="polite">
-          <Spinner className="size-9" label={s.loading} />
-          <span className="text-[0.9rem]">{s.loading}</span>
+        <div className="relative" data-testid="booking-skeleton" role="status" aria-label={s.loading}>
+          {(() => {
+            const bar = 'rounded bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]'
+            const sand = 'rounded bg-[color-mix(in_srgb,var(--sand-100)_22%,transparent)]'
+            return (
+              <div className="animate-[pulse_1.6s_ease-in-out_infinite]">
+                {/* intro box */}
+                <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600">
+                  <div className="wrap py-[clamp(1.3rem,4vw,1.9rem)] max-w-[52rem] flex items-center gap-4">
+                    <div className={`${sand} size-14 !rounded-full flex-none`} />
+                    <div className="flex flex-col gap-2 flex-1 min-w-0">
+                      <div className={`${sand} h-6 w-2/3`} />
+                      <div className={`${sand} h-3 w-1/2 opacity-70`} />
+                    </div>
+                  </div>
+                </div>
+                {/* two-column */}
+                <div className="grid gap-6 md:grid-cols-[minmax(0,14rem)_1fr] mt-6">
+                  <div className="flex flex-col gap-2">
+                    {[0, 1, 2].map((i) => <div key={i} className={`${bar} h-9`} />)}
+                  </div>
+                  <div className="grid gap-6 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+                    <div className="flex flex-col gap-3">
+                      <div className={`${bar} h-5 w-32`} />
+                      <div className="grid grid-cols-7 gap-y-1">
+                        {Array.from({ length: 35 }).map((_, i) => <div key={i} className="grid place-items-center py-0.5"><div className={`${bar} size-9 !rounded-full`} /></div>)}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {Array.from({ length: 6 }).map((_, i) => <div key={i} className={`${bar} h-12`} />)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+          <div className="absolute inset-0 grid place-items-center pointer-events-none"><Spinner className="size-9" /></div>
         </div>
       )}
       {status === 'not-found' && <Panel><p className="text-ink-soft">{s.notFound}</p></Panel>}
@@ -332,8 +380,12 @@ export function BookingPage() {
                     <h2 className="font-display text-[1.2rem] text-ink me-auto">{s.selectDate}</h2>
                     <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.hijri : L.greg}</Pill>
                     <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.yourTz(tz)} className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5"><GlobeIcon /> {tzShort}</Pill>
+                    <Pill onClick={reload} data-testid="reload-pill" aria-label={L.reload} title={L.reload} className="!py-[0.22rem] !px-[0.5rem] [&_svg]:size-3.5"><RefreshIcon className={reloading ? 'animate-spin' : ''} /></Pill>
                   </div>
                   {gone && <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>}
+                  <div className="relative">
+                  {reloading && <div className="absolute inset-0 z-10 grid place-items-center pointer-events-none" role="status"><Spinner className="size-8" /></div>}
+                  <div className={reloading ? 'blur-[3px] opacity-60 pointer-events-none transition-[filter,opacity] duration-200' : 'transition-[filter,opacity] duration-200'}>
                   {grouped.length === 0 ? (
                     <Panel><p className="text-ink-soft">{s.none}</p></Panel>
                   ) : (
@@ -386,6 +438,8 @@ export function BookingPage() {
                       </div>
                     </div>
                   )}
+                  </div>
+                  </div>
                 </div>
               ) : (
                 <Panel>
