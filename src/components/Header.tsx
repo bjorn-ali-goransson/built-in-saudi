@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool } from '../i18n'
 import { bookingHeaderStore } from '../lib/bookingHeader'
+import { connectGoogleUrl } from '../lib/bookingApi'
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
 import { PalmLogo } from './PalmLogo'
@@ -25,6 +26,11 @@ export function Header() {
     try { localStorage.removeItem('bis-bookwith-hsid') } catch { /* ignore */ }
     window.location.reload()
   }
+  function bookLogin() {
+    let code = ''
+    try { code = (JSON.parse(localStorage.getItem('bis-bookwith') || '{}').code) || '' } catch { /* ignore */ }
+    window.location.href = connectGoogleUrl(code, locale)
+  }
   const bookingTitle = useSyncExternalStore(bookingHeaderStore.subscribe, bookingHeaderStore.get, bookingHeaderStore.get)
   const match = location.pathname.match(/\/apps\/([^/]+)/)
   const currentTool = match ? getTool(match[1]) : null
@@ -45,6 +51,16 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2 flex-none">
+          {onBookMe && !bookSession && (
+            <button
+              type="button"
+              onClick={bookLogin}
+              data-testid="book-login"
+              className="inline-flex items-center justify-center h-9 rounded-full px-[0.9rem] text-[0.85rem] leading-none font-semibold text-sand-100 bg-green-600 hover:bg-green-700 border-0 cursor-pointer"
+            >
+              {locale === 'ar' ? 'تسجيل الدخول' : 'Log in'}
+            </button>
+          )}
           {bookSession && (
             <button
               type="button"

@@ -14,6 +14,7 @@ const STR = {
     loading: 'Loading availability…',
     notFound: 'This booking link doesn’t exist.',
     error: 'Couldn’t load availability. Please try again.',
+    hostCalendar: 'This booking page is temporarily unavailable — the host hasn’t connected their calendar. Please check back later.',
     withMe: (n: string) => `Book a meeting with ${n}`,
     withHost: 'Book a meeting',
     mins: 'min',
@@ -41,6 +42,7 @@ const STR = {
     loading: 'جارٍ تحميل الأوقات…',
     notFound: 'رابط الحجز هذا غير موجود.',
     error: 'تعذّر تحميل الأوقات. حاول مرة أخرى.',
+    hostCalendar: 'صفحة الحجز غير متاحة حاليًا — لم يربط المُضيف تقويمه. يُرجى المحاولة لاحقًا.',
     withMe: (n: string) => `احجز اجتماعًا مع ${n}`,
     withHost: 'احجز اجتماعًا',
     mins: 'دقيقة',
@@ -66,7 +68,7 @@ const STR = {
   },
 }
 
-type Status = 'loading' | 'ready' | 'not-found' | 'error'
+type Status = 'loading' | 'ready' | 'not-found' | 'error' | 'host-calendar'
 
 export function BookingPage() {
   const { code } = useParams()
@@ -79,6 +81,7 @@ export function BookingPage() {
   const [status, setStatus] = useState<Status>('loading')
   const [host, setHost] = useState<HostMeta | null>(null)
   const [slots, setSlots] = useState<number[]>([])
+  const [taken, setTaken] = useState<number[]>([])
   const [selected, setSelected] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -140,11 +143,12 @@ export function BookingPage() {
         setHeading(r.host.pageHeading || (r.host.name ? `Book a meeting with ${r.host.name}` : s.withHost))
         setText(r.host.pageText || s.intro)
         setSlots(r.slots)
+        setTaken(r.taken || [])
         setStatus('ready')
       })
       .catch((e) => {
         if (cancelled) return
-        setStatus(e.message === 'not-found' ? 'not-found' : 'error')
+        setStatus(e.message === 'not-found' ? 'not-found' : e.message === 'host-calendar' ? 'host-calendar' : 'error')
       })
     return () => {
       cancelled = true
@@ -159,8 +163,8 @@ export function BookingPage() {
     if (!code) return
     setReloading(true)
     getAvailability(code)
-      .then((r) => { setHost(r.host); setSlots(r.slots) })
-      .catch(() => {})
+      .then((r) => { setHost(r.host); setSlots(r.slots); setTaken(r.taken || []) })
+      .catch((e) => { if ((e as Error).message === 'host-calendar') setStatus('host-calendar') })
       .finally(() => setReloading(false))
   }
 
@@ -192,6 +196,12 @@ export function BookingPage() {
 
   const byDay = useMemo(() => new Map(grouped), [grouped])
   const availableDays = useMemo(() => new Set(grouped.map(([k]) => k)), [grouped])
+  const takenByDay = useMemo(() => {
+    const m = new Map<string, number[]>()
+    for (const ms of taken) { const k = dayKeyFmt.format(new Date(ms)); if (!m.has(k)) m.set(k, []); m.get(k)!.push(ms) }
+    return m
+  }, [taken, dayKeyFmt])
+  const daysWithSlots = useMemo(() => new Set([...availableDays, ...takenByDay.keys()]), [availableDays, takenByDay])
 
   // Default to the first available day on first load only — don't move the user's
   // chosen day/month when availability is refreshed (reload).
@@ -255,8 +265,8 @@ export function BookingPage() {
   }
 
   const L = locale === 'ar'
-    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي', greg: 'ميلادي', hijri: 'هجري', tzTitle: 'المنطقة الزمنية والتقويم', firstD: 'أول أيام الأسبوع', search: 'ابحث عن منطقة…', reload: 'تحديث الأوقات' }
-    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…', reload: 'Refresh availability' }
+    ? { edit: 'تعديل', alertTitle: 'التنبيه الذي سيصلك', subject: 'الموضوع', someone: 'أحدهم', headPh: 'العنوان', textPh: 'نص تعريفي', greg: 'ميلادي', hijri: 'هجري', tzTitle: 'المنطقة الزمنية والتقويم', firstD: 'أول أيام الأسبوع', search: 'ابحث عن منطقة…', reload: 'تحديث الأوقات', taken: 'غير متاح' }
+    : { edit: 'Edit', alertTitle: 'The alert you’ll receive', subject: 'Subject', someone: 'Someone', headPh: 'Heading', textPh: 'Intro text', greg: 'Gregorian', hijri: 'Hijri', tzTitle: 'Timezone & calendar', firstD: 'First day of week', search: 'Search timezones…', reload: 'Refresh availability', taken: 'Unavailable' }
   const dayNames = useMemo(() => Array.from({ length: 7 }, (_, d) => new Intl.DateTimeFormat(lc, { weekday: 'long' }).format(new Date(2023, 0, 1 + d))), [lc])
   const tzShort = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz
   const tzOffset = (z: string) => { try { return new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value ?? '' } catch { return '' } }
@@ -273,7 +283,8 @@ export function BookingPage() {
   const cellKey = (day: number) => `${vy}-${pad(vm + 1)}-${pad(day)}`
   const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0)
   const canPrev = new Date(vy, vm, 1).getTime() > thisMonth.getTime()
-  const selTimes = selectedDay ? byDay.get(selectedDay) ?? [] : []
+  const openSet = new Set(selectedDay ? byDay.get(selectedDay) ?? [] : [])
+  const selTimes = selectedDay ? [...(byDay.get(selectedDay) ?? []), ...(takenByDay.get(selectedDay) ?? [])].sort((a, b) => a - b) : []
   const selDayLabel = selTimes.length ? dayFmt.format(new Date(selTimes[0])) : ''
 
   return (
@@ -320,6 +331,7 @@ export function BookingPage() {
       )}
       {status === 'not-found' && <Panel><p className="text-ink-soft">{s.notFound}</p></Panel>}
       {status === 'error' && <Panel><p className="text-ink-soft">{s.error}</p></Panel>}
+      {status === 'host-calendar' && <Panel data-testid="host-calendar-error"><p className="text-ink-soft">{s.hostCalendar}</p></Panel>}
 
       {status === 'ready' && host && (
         <Stack className={preview ? 'pb-16' : ''}>
@@ -387,7 +399,7 @@ export function BookingPage() {
                   <div className="relative">
                   {reloading && <div className="absolute inset-0 z-10 grid place-items-center pointer-events-none" role="status"><Spinner className="size-8" /></div>}
                   <div className={reloading ? 'blur-[3px] opacity-60 pointer-events-none transition-[filter,opacity] duration-200' : 'transition-[filter,opacity] duration-200'}>
-                  {grouped.length === 0 ? (
+                  {daysWithSlots.size === 0 ? (
                     <Panel><p className="text-ink-soft">{s.none}</p></Panel>
                   ) : (
                     <div className="grid gap-6 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
@@ -406,14 +418,17 @@ export function BookingPage() {
                             if (!day) return <span key={i} />
                             const key = cellKey(day)
                             const avail = availableDays.has(key)
+                            const someTaken = takenByDay.has(key)
+                            const selectable = avail || someTaken
                             const isSel = selectedDay === key
                             return (
                               <div key={i} className="grid place-items-center py-0.5">
-                                <button type="button" disabled={!avail} data-testid={avail ? 'cal-day' : undefined} onClick={() => setSelectedDay(key)}
+                                <button type="button" disabled={!selectable} data-testid={avail ? 'cal-day' : undefined} onClick={() => setSelectedDay(key)}
                                   className={`size-9 grid place-items-center rounded-full text-[0.85rem] transition-colors ${
                                     isSel ? 'bg-green-600 text-sand-100 font-bold'
                                       : avail ? 'bg-[color-mix(in_srgb,var(--green-400)_16%,transparent)] text-green-700 font-semibold cursor-pointer hover:bg-[color-mix(in_srgb,var(--green-400)_28%,transparent)]'
-                                        : 'text-ink-faint/45 cursor-default'
+                                        : someTaken ? 'bg-[color-mix(in_srgb,var(--ink)_6%,transparent)] text-ink-soft cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_11%,transparent)]'
+                                          : 'text-ink-faint/45 cursor-default'
                                   }`}>
                                   {cal === 'hijri' ? dayNumFmt.format(new Date(vy, vm, day)) : day}
                                 </button>
@@ -430,10 +445,17 @@ export function BookingPage() {
                           {selTimes.length === 0
                             ? <p className="text-ink-faint text-[0.9rem]">{s.none}</p>
                             : selTimes.map((ms) => (
-                              <button key={ms} data-testid="slot" onClick={() => { setSelected(ms); setGone(false) }}
-                                className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-green-700 hover:border-green-600 hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] transition-colors">
-                                {timeFmt.format(new Date(ms))}
-                              </button>
+                              openSet.has(ms) ? (
+                                <button key={ms} data-testid="slot" onClick={() => { setSelected(ms); setGone(false) }}
+                                  className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-green-700 hover:border-green-600 hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] transition-colors">
+                                  {timeFmt.format(new Date(ms))}
+                                </button>
+                              ) : (
+                                <div key={ms} data-testid="slot-taken" aria-disabled="true" title={L.taken}
+                                  className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-dashed border-[color:var(--line-soft)] bg-[color-mix(in_srgb,var(--ink)_4%,transparent)] text-ink-faint line-through cursor-not-allowed select-none">
+                                  {timeFmt.format(new Date(ms))}
+                                </div>
+                              )
                             ))}
                         </div>
                       </div>

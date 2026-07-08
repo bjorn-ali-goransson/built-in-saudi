@@ -133,7 +133,13 @@ async function googleBusy(accessToken, calId, timeMinIso, timeMaxIso) {
     + `?timeMin=${encodeURIComponent(timeMinIso)}&timeMax=${encodeURIComponent(timeMaxIso)}`
     + '&singleEvents=true&orderBy=startTime&maxResults=2500'
   const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
-  if (!r.ok) throw new Error(`events ${r.status}`)
+  if (!r.ok) {
+    const body = await r.text().catch(() => '')
+    const e = new Error(`events ${r.status}`)
+    // Distinguish "no Calendar permission granted" from transient errors.
+    e.scopeError = r.status === 403 && /insufficientPermissions|insufficient authentication scopes/i.test(body)
+    throw e
+  }
   const data = await r.json()
   const busy = []
   for (const ev of data.items || []) {
@@ -428,6 +434,7 @@ http('getAvailability', async (req, res) => {
       if (b.startUtc.toMillis() < now) continue
       busy.push({ start: b.startUtc.toMillis(), end: b.endUtc.toMillis() })
     }
+    let calScopeMissing = false
     if (host.google && host.google.refreshToken) {
       try {
         const at = await accessTokenFor(host.google.refreshToken)
@@ -435,11 +442,21 @@ http('getAvailability', async (req, res) => {
         busy.push(...gbusy)
       } catch (e) {
         console.error('calendar busy failed:', String((e && e.message) || e))
+        if (e && e.scopeError) calScopeMissing = true
       }
     }
+    // Without Calendar access the availability is meaningless (can't see the host's
+    // real events), so the page must not half-work — surface a clear error.
+    if (calScopeMissing || !(host.google && host.google.refreshToken)) {
+      return res.json({ ok: false, error: 'host-calendar' })
+    }
     const slots = openSlots(host, busy, now)
+    // All potential slots (ignoring busy) minus the open ones = the taken ones,
+    // so the booking page can show unavailable times greyed out.
+    const taken = openSlots(host, [], now).filter((s) => !slots.includes(s))
     res.json({
       ok: true,
+      taken,
       host: {
         name: host.name || null,
         picture: host.picture || null,
