@@ -571,6 +571,36 @@ http('hostStatus', async (req, res) => {
   }
 })
 
+// POST { hsid } → the host's saved schedule config (the source of truth for the
+// live page), so the editor can detect drift from a local copy.
+http('getConfig', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const sess = verifySession((req.body || {}).hsid)
+    if (!sess || !sess.sub) return res.status(401).json({ error: 'invalid session' })
+    const host = (await db.collection(HOSTS).doc(sess.sub).get()).data()
+    if (!host) return res.json({ ok: true, config: null })
+    res.json({
+      ok: true,
+      config: {
+        code: host.code || null,
+        tz: host.tz || null,
+        firstDay: typeof host.firstDay === 'number' ? host.firstDay : null,
+        pageHeading: host.pageHeading || '',
+        pageText: host.pageText || '',
+        meeting: host.meeting || null,
+        meetingTypes: Array.isArray(host.meetingTypes) ? host.meetingTypes : [],
+        availability: Array.isArray(host.availability) ? host.availability : [],
+        notify: host.notify || null,
+      },
+    })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
 // POST { code, startUtc, name, email, note } → book (transactional), notify.
 http('book', async (req, res) => {
   cors(req, res)

@@ -182,7 +182,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **`book-me`**, folder still `src/tools/book-with-me/`): Calendly-style scheduling
   — `booking-google-start`/`-callback`, `save-schedule`, `get-availability`,
   `book`, `telegram-webhook`, plus **`delete-host`** (deletes the host record +
-  all its bookings) and **`my-data`** (see the data-deletion note below). Firestore
+  all its bookings), **`my-data`** (see the data-deletion note below),
+  **`host-status`** (is the stored token still connected + does it have Calendar
+  scope — the editor warns/reconnects), and **`get-config`** (the saved schedule,
+  so the editor can detect drift from its local copy). Firestore
   `bookingHosts` (keyed by Google `sub`; holds `meetingTypes`, `firstDay`,
   `pageHeading`/`pageText`, `picture`, availability, notify) + `bookings` (linked by
   `hostUid`). One Google OAuth flow signs the host in **and** grabs an offline
@@ -204,7 +207,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   mention it in the Privacy page copy). Today it covers `bookingHosts/{sub}`,
   `bookings` where `hostUid == sub`, and `cvUsage/{sub}`.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all thirteen functions on any `functions/**` change, authenticating **keylessly
+  deploys all seventeen functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

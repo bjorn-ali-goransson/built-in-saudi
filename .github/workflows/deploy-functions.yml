@@ -64,6 +64,7 @@ jobs:
           gcloud functions deploy delete-host             "${common[@]}" --entry-point=deleteHost
           gcloud functions deploy my-data                 "${common[@]}" --entry-point=myData
           gcloud functions deploy host-status             "${common[@]}" --entry-point=hostStatus
+          gcloud functions deploy get-config              "${common[@]}" --entry-point=getConfig
           # CV Generator
           gcloud functions deploy cv-generate             "${common[@]}" --entry-point=cvGenerate
           gcloud functions deploy cv-refine               "${common[@]}" --entry-point=cvRefine

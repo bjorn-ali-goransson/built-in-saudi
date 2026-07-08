@@ -4,7 +4,7 @@ import { useLocale } from '../../i18n'
 import { BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
-import { connectGoogleUrl, saveSchedule, deleteHost, hostStatus } from '../../lib/bookingApi'
+import { connectGoogleUrl, saveSchedule, deleteHost, hostStatus, getConfig } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
 import {
   loadConfig,
@@ -17,6 +17,8 @@ import {
   type HostConfig,
   type Grid,
   type MeetingType,
+  type MeetingConfig,
+  type AvailWindow,
 } from './lib'
 
 const HSID_KEY = 'bis-bookwith-hsid'
@@ -43,6 +45,26 @@ function readSession(): Session | null {
   } catch {
     return null
   }
+}
+
+type ConfigLike = Partial<Pick<HostConfig, 'tz' | 'firstDay' | 'pageHeading' | 'pageText' | 'meeting' | 'meetingTypes' | 'availability' | 'notify'>>
+
+/** Normalised, order-stable serialization of the schedule-relevant config, so a
+ *  local copy and the saved backend copy can be compared for drift. */
+function serializeCfg(c: ConfigLike | null | undefined): string {
+  if (!c) return ''
+  const m = (c.meeting || {}) as MeetingConfig
+  const n = c.notify || { push: false, telegram: false, email: false }
+  return JSON.stringify({
+    tz: c.tz || '',
+    firstDay: c.firstDay ?? 0,
+    pageHeading: c.pageHeading || '',
+    pageText: c.pageText || '',
+    meeting: { minutes: m.minutes, gapMinutes: m.gapMinutes, bufferBefore: m.bufferBefore, bufferAfter: m.bufferAfter, horizonDays: m.horizonDays, minNoticeHours: m.minNoticeHours, title: m.title, location: m.location || '' },
+    meetingTypes: (c.meetingTypes || []).map((t: MeetingType) => ({ id: t.id, name: t.name, minutes: t.minutes, meet: !!t.meet })),
+    availability: (c.availability || []).map((w: AvailWindow) => ({ day: w.day, start: w.start, end: w.end })),
+    notify: { push: !!n.push, telegram: !!n.telegram, email: !!n.email },
+  })
 }
 
 const STR = {
@@ -90,6 +112,11 @@ const STR = {
     calWarn: 'Google Calendar isn’t connected, so your existing events won’t block booking times and new bookings won’t be added to your calendar. Reconnect and allow Calendar access.',
     reconnectExpired: 'Your Google connection has expired or was revoked — your booking page won’t work until you reconnect.',
     reconnect: 'Reconnect Calendar',
+    syncConflict: 'The changes on this device differ from your saved booking page. Which version should we keep?',
+    keepLocal: 'Keep my changes',
+    useServer: 'Use saved version',
+    saveError: 'Couldn’t save your changes to your live page — they aren’t published yet.',
+    retry: 'Retry',
     openPage: 'Open page',
     unpublish: 'Unpublish',
     deletePage: 'Delete page',
@@ -162,6 +189,11 @@ const STR = {
     calWarn: 'تقويم Google غير مربوط، لذا لن تحجب مواعيدك الحالية أوقات الحجز ولن تُضاف الحجوزات الجديدة إلى تقويمك. أعد الربط واسمح بالوصول إلى التقويم.',
     reconnectExpired: 'انتهت صلاحية ربط Google أو تم إلغاؤه — لن تعمل صفحة الحجز حتى تعيد الربط.',
     reconnect: 'إعادة ربط التقويم',
+    syncConflict: 'تختلف التغييرات على هذا الجهاز عن صفحة الحجز المحفوظة. أي نسخة نُبقي؟',
+    keepLocal: 'أبقِ تغييراتي',
+    useServer: 'استخدم النسخة المحفوظة',
+    saveError: 'تعذّر حفظ تغييراتك على صفحتك المنشورة — لم تُنشر بعد.',
+    retry: 'إعادة المحاولة',
     openPage: 'افتح الصفحة',
     unpublish: 'إلغاء النشر',
     deletePage: 'احذف الصفحة',
@@ -240,6 +272,9 @@ export default function BookWithMeTool() {
   const [delOpen, setDelOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [tokenStatus, setTokenStatus] = useState<'unknown' | 'ok' | 'nocal' | 'disconnected'>('unknown')
+  const [syncState, setSyncState] = useState<'loading' | 'ok' | 'conflict'>('ok')
+  const [serverCfg, setServerCfg] = useState<ConfigLike | null>(null)
+  const savedSnapshotRef = useRef('')
   const [dragId, setDragId] = useState<string | null>(null)
   const gridApi = useRef<GridHandle>(null)
   const totalSlots = grid.reduce((sum, col) => sum + col.filter(Boolean).length, 0)
@@ -277,25 +312,92 @@ export default function BookWithMeTool() {
     saveConfig(cfg)
   }, [cfg])
 
-  // When logged in, keep the published page in sync automatically — push the
-  // local schedule to the backend (debounced). This also runs on load, so a grid
-  // edited before this existed (still only in localStorage) gets synced.
+  // On login, compare the local copy against the SAVED backend config. The
+  // backend is the source of truth — if the local copy drifts, surface a conflict
+  // and let the host choose, rather than silently overwriting a good save.
+  useEffect(() => {
+    if (!session) { setSyncState('ok'); savedSnapshotRef.current = ''; return }
+    let cancelled = false
+    setSyncState('loading')
+    getConfig(session.hsid)
+      .then((r) => {
+        if (cancelled) return
+        const server = r.config as ConfigLike | null
+        const hasServer = !!(server && Array.isArray(server.availability) && (server.availability.length > 0 || server.meeting))
+        if (!hasServer) {
+          // Nothing meaningful saved yet — adopt local; it'll push on first change.
+          savedSnapshotRef.current = ''
+          setSyncState('ok')
+          return
+        }
+        const serverSer = serializeCfg(server)
+        savedSnapshotRef.current = serverSer // don't auto-push until resolved
+        if (serverSer === serializeCfg(cfg)) {
+          setSyncState('ok')
+        } else {
+          setServerCfg(server)
+          setSyncState('conflict')
+        }
+      })
+      .catch(() => { if (!cancelled) { savedSnapshotRef.current = serializeCfg(cfg); setSyncState('ok') } })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
+
+  // Persist to the backend when logged in, in sync, and the config actually
+  // changed from the last successful save (debounced). Save failures surface.
   const pushTimer = useRef<number | null>(null)
   useEffect(() => {
-    if (!session) return
+    if (!session || syncState !== 'ok') return
+    const cur = serializeCfg(cfg)
+    if (cur === savedSnapshotRef.current) return
     if (pushTimer.current) clearTimeout(pushTimer.current)
+    const payload = {
+      hsid: session.hsid, code: cfg.code, tz: cfg.tz, firstDay: cfg.firstDay,
+      pageHeading: cfg.pageHeading, pageText: cfg.pageText, meeting: cfg.meeting,
+      meetingTypes: cfg.meetingTypes, availability: cfg.availability, notify: cfg.notify, pushSub: cfg.pushSub,
+    }
     pushTimer.current = window.setTimeout(() => {
       setSaveState('saving')
-      saveSchedule({
-        hsid: session.hsid, code: cfg.code, tz: cfg.tz, firstDay: cfg.firstDay,
-        pageHeading: cfg.pageHeading, pageText: cfg.pageText, meeting: cfg.meeting,
-        meetingTypes: cfg.meetingTypes, availability: cfg.availability, notify: cfg.notify, pushSub: cfg.pushSub,
-      })
-        .then(() => { setSaveState('saved'); setTimeout(() => setSaveState('idle'), 1500) })
+      saveSchedule(payload)
+        .then(() => { savedSnapshotRef.current = cur; setSaveState('saved'); setTimeout(() => setSaveState('idle'), 1500) })
         .catch(() => setSaveState('error'))
     }, 700)
     return () => { if (pushTimer.current) clearTimeout(pushTimer.current) }
-  }, [cfg, session])
+  }, [cfg, session, syncState])
+
+  // Conflict resolution + manual retry.
+  function keepLocal() { setSyncState('ok') } // auto-save then pushes local over the saved copy
+  function useServer() {
+    if (!serverCfg) return
+    const applied: HostConfig = {
+      ...cfg,
+      tz: serverCfg.tz || cfg.tz,
+      firstDay: serverCfg.firstDay ?? cfg.firstDay,
+      pageHeading: serverCfg.pageHeading ?? '',
+      pageText: serverCfg.pageText ?? '',
+      meeting: serverCfg.meeting || cfg.meeting,
+      meetingTypes: serverCfg.meetingTypes?.length ? serverCfg.meetingTypes : cfg.meetingTypes,
+      availability: serverCfg.availability || [],
+      notify: serverCfg.notify ? { push: !!serverCfg.notify.push, telegram: !!serverCfg.notify.telegram, email: !!serverCfg.notify.email } : cfg.notify,
+    }
+    setCfg(applied)
+    setGrid(windowsToGrid(applied.availability))
+    savedSnapshotRef.current = serializeCfg(applied)
+    setSyncState('ok')
+  }
+  function retrySave() {
+    if (!session) return
+    const cur = serializeCfg(cfg)
+    setSaveState('saving')
+    saveSchedule({
+      hsid: session.hsid, code: cfg.code, tz: cfg.tz, firstDay: cfg.firstDay,
+      pageHeading: cfg.pageHeading, pageText: cfg.pageText, meeting: cfg.meeting,
+      meetingTypes: cfg.meetingTypes, availability: cfg.availability, notify: cfg.notify, pushSub: cfg.pushSub,
+    })
+      .then(() => { savedSnapshotRef.current = cur; setSaveState('saved'); setTimeout(() => setSaveState('idle'), 1500) })
+      .catch(() => setSaveState('error'))
+  }
 
   const link = `${BOOKING_LINK_BASE}/${cfg.code}`
 
@@ -487,6 +589,24 @@ export default function BookWithMeTool() {
           <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{tokenStatus === 'disconnected' ? s.reconnectExpired : s.calWarn}</span>
           <button type="button" data-testid="reconnect-cal" onClick={() => { window.location.href = connectGoogleUrl(cfg.code, locale) }}
             className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.reconnect}</button>
+        </div>
+      )}
+
+      {syncState === 'conflict' && (
+        <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="sync-conflict">
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.syncConflict}</span>
+          <button type="button" data-testid="keep-local" onClick={keepLocal}
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-green-600 text-sand-100 text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-green-700">{s.keepLocal}</button>
+          <button type="button" data-testid="use-server" onClick={useServer}
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-transparent text-ink-soft text-[0.82rem] font-semibold border border-[color:var(--line)] cursor-pointer hover:border-green-500">{s.useServer}</button>
+        </div>
+      )}
+
+      {session && syncState === 'ok' && saveState === 'error' && (
+        <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="save-error">
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.saveError}</span>
+          <button type="button" data-testid="retry-save" onClick={retrySave}
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.retry}</button>
         </div>
       )}
 

@@ -65,6 +65,17 @@ export async function book(input: {
   return { ok: true }
 }
 
+/** Fetch the host's saved schedule config (source of truth for the live page). */
+export async function getConfig(hsid: string): Promise<{ ok: boolean; config: Record<string, unknown> | null }> {
+  const r = await fetch(`${FN}/get-config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hsid }),
+  })
+  if (!r.ok) throw new Error(String(r.status))
+  return r.json()
+}
+
 /** Check the host's stored Google token: still connected + Calendar granted. */
 export async function hostStatus(hsid: string): Promise<{ ok: boolean; connected: boolean; calendar: boolean }> {
   const r = await fetch(`${FN}/host-status`, {
