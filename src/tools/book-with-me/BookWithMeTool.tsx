@@ -137,8 +137,11 @@ const STR = {
     emailPrev: 'Preview of your alert',
     emailNew: 'New booking',
     emailSample: 'Sara A.',
+    emailAddr: 'sara.a@gmail.com',
+    emailBooked: 'booked',
+    emailWhenLabel: 'When',
     emailWhen: 'Sunday · 14:00–14:45',
-    emailCal: 'Added to your Google Calendar · invite sent',
+    emailMeet: 'Google Meet link included',
     push: 'Push to this device',
     telegram: 'Telegram DM',
     email: 'Email me too',
@@ -214,8 +217,11 @@ const STR = {
     emailPrev: 'معاينة التنبيه',
     emailNew: 'حجز جديد',
     emailSample: 'سارة أ.',
+    emailAddr: 'sara.a@gmail.com',
+    emailBooked: 'حجزت',
+    emailWhenLabel: 'الوقت',
     emailWhen: 'الأحد · ١٤:٠٠–١٤:٤٥',
-    emailCal: 'أُضيف إلى تقويم Google · وأُرسلت الدعوة',
+    emailMeet: 'يتضمّن رابط Google Meet',
     push: 'إشعار لهذا الجهاز',
     telegram: 'رسالة تيليجرام',
     email: 'أرسل لي بريدًا أيضًا',
@@ -687,16 +693,24 @@ export default function BookWithMeTool() {
             </Check>
             <p className="text-[0.8rem] text-ink-faint">{s.alertsNote}</p>
 
-            {/* A mock of the alert email that goes out on a booking. */}
-            <div className="rounded-md border border-[color:var(--line)] overflow-hidden">
-              <div className="bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-ink-faint border-b border-[color:var(--line-soft)]">{s.emailPrev}</div>
-              <div className="p-3 flex flex-col gap-1.5">
-                <span className="font-display rtl:font-ar text-[1.05rem] text-green-700">🎉 {s.emailNew}</span>
-                <span className="text-[0.9rem] text-ink"><strong>{s.emailSample}</strong> · {cfg.meetingTypes[0]?.name || 'Meeting'} ({cfg.meetingTypes[0]?.minutes ?? 45} {s.min})</span>
-                <span className="text-[0.85rem] text-ink-soft">{s.emailWhen}</span>
-                <span className="text-[0.78rem] text-ink-faint">{s.emailCal}</span>
-              </div>
-            </div>
+            {/* Mirrors the real host alert (push / Telegram / email) sent on a booking. */}
+            {(() => {
+              const type = cfg.meetingTypes[0]?.name || 'Meeting'
+              const bookedLine = locale === 'ar'
+                ? `${s.emailBooked} ${s.emailSample} (${s.emailAddr}) — ${type}`
+                : `${s.emailSample} (${s.emailAddr}) ${s.emailBooked} ${type}.`
+              return (
+                <div className="rounded-md border border-[color:var(--line)] overflow-hidden">
+                  <div className="bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-ink-faint border-b border-[color:var(--line-soft)]">{s.emailPrev}</div>
+                  <div className="p-3 flex flex-col gap-1.5">
+                    <span className="font-display rtl:font-ar text-[1.05rem] text-green-700">{s.emailNew}: {type} — {s.emailSample}</span>
+                    <span className="text-[0.9rem] text-ink">{bookedLine}</span>
+                    <span className="text-[0.85rem] text-ink-soft"><strong>{s.emailWhenLabel}:</strong> {s.emailWhen}</span>
+                    {cfg.meetingTypes[0]?.meet && <span className="text-[0.78rem] text-ink-faint">{s.emailMeet}</span>}
+                  </div>
+                </div>
+              )
+            })()}
           </Stack>
           <SheetActions>
             <Button variant="primary" onClick={() => setAlertsOpen(false)}>{s.done}</Button>
