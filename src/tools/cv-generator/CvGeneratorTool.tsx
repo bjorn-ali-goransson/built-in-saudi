@@ -22,7 +22,7 @@ const STR = {
   en: {
     heroTitle: 'Optimize your CV',
     heroBody: 'This tool rewrites the CV you already have and asks a couple of quick questions to fill any gaps.',
-    dataNote: 'How we use your data:',
+    dataNote: 'How we use your data (we don’t):',
     privacyLink: 'Privacy',
     termsLink: 'Terms',
     choose: 'Upload your CV',
@@ -564,7 +564,10 @@ export default function CvGeneratorTool() {
             </button>
           </div>
 
-          {/* Bottom bar: collapsed = Download + Make adjustments; expanded = the dialogue */}
+          {/* Bottom bar — portaled to <body> so `fixed inset-x-0` bleeds full-width
+              (ToolPage's transform otherwise resolves it against the tool box). The
+              inner .wrap keeps the buttons at the page max-width. */}
+          {createPortal(
           <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
             <div className="wrap py-2.5">
               {adjustOpen ? (
@@ -619,7 +622,9 @@ export default function CvGeneratorTool() {
                 </div>
               )}
             </div>
-          </div>
+          </div>,
+          document.body,
+          )}
 
           {err && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
         </>

@@ -391,9 +391,9 @@ export function BookingPage() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-display text-[1.2rem] text-ink me-auto">{s.selectDate}</h2>
-                    <Pill onClick={reload} data-testid="reload-pill" aria-label={L.reload} title={L.reload} className="!py-[0.22rem] !px-[0.55rem] !text-[0.74rem] [&_svg]:size-3.5"><RefreshIcon className={reloading ? 'animate-spin' : ''} /></Pill>
-                    <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.hijri : L.greg}</Pill>
-                    <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.yourTz(tz)} className="!py-[0.22rem] !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5"><GlobeIcon /> {tzShort}</Pill>
+                    <Pill onClick={reload} data-testid="reload-pill" aria-label={L.reload} title={L.reload} className="!h-[1.75rem] !py-0 !px-[0.6rem] !text-[0.74rem] [&_svg]:size-3.5"><RefreshIcon className={reloading ? 'animate-spin' : ''} /></Pill>
+                    <Pill onClick={() => setCal((c) => (c === 'greg' ? 'hijri' : 'greg'))} data-testid="cal-toggle" className="!h-[1.75rem] !py-0 !px-[0.7rem] !text-[0.74rem]">{cal === 'hijri' ? L.hijri : L.greg}</Pill>
+                    <Pill onClick={() => setTzOpen(true)} data-testid="tz-pill" title={s.yourTz(tz)} className="!h-[1.75rem] !py-0 !px-[0.7rem] !text-[0.74rem] [&_svg]:size-3.5"><GlobeIcon /> {tzShort}</Pill>
                   </div>
                   {gone && <p className="text-[0.9rem] text-gold-500" role="status">{s.gone}</p>}
                   <div className="relative">
