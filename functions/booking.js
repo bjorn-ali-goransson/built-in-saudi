@@ -543,6 +543,34 @@ http('myData', async (req, res) => {
   }
 })
 
+// POST { hsid } → is the host's stored Google token still usable, and does it
+// actually have Calendar access? Lets the editor warn if a reconnect is needed.
+http('hostStatus', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const sess = verifySession((req.body || {}).hsid)
+    if (!sess || !sess.sub) return res.status(401).json({ error: 'invalid session' })
+    const host = (await db.collection(HOSTS).doc(sess.sub).get()).data()
+    if (!host || !host.google || !host.google.refreshToken) return res.json({ ok: true, connected: false, calendar: false })
+    // Refresh the token and read its granted scopes — the reliable signal.
+    let connected = false
+    let calendar = false
+    try {
+      const at = await accessTokenFor(host.google.refreshToken)
+      connected = true
+      const ti = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(at)}`).then((r) => (r.ok ? r.json() : null))
+      calendar = !!(ti && /\/auth\/calendar/.test(String(ti.scope || '')))
+    } catch {
+      connected = false // refresh token revoked/expired
+    }
+    res.json({ ok: true, connected, calendar })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
 // POST { code, startUtc, name, email, note } → book (transactional), notify.
 http('book', async (req, res) => {
   cors(req, res)

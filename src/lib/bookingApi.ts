@@ -65,6 +65,17 @@ export async function book(input: {
   return { ok: true }
 }
 
+/** Check the host's stored Google token: still connected + Calendar granted. */
+export async function hostStatus(hsid: string): Promise<{ ok: boolean; connected: boolean; calendar: boolean }> {
+  const r = await fetch(`${FN}/host-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hsid }),
+  })
+  if (!r.ok) throw new Error(String(r.status))
+  return r.json()
+}
+
 /** Delete the host's booking page + all its bookings. */
 export async function deleteHost(hsid: string): Promise<{ ok: boolean; deletedBookings?: number }> {
   const r = await fetch(`${FN}/delete-host`, {

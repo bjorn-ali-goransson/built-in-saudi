@@ -4,7 +4,7 @@ import { useLocale } from '../../i18n'
 import { BellIcon, ExternalLinkIcon, GlobeIcon, ShareIcon, GripIcon } from '../../components/icons'
 import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
-import { connectGoogleUrl, saveSchedule, deleteHost } from '../../lib/bookingApi'
+import { connectGoogleUrl, saveSchedule, deleteHost, hostStatus } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
 import {
   loadConfig,
@@ -88,6 +88,7 @@ const STR = {
     copied: 'Copied!',
     previewLink: 'Preview',
     calWarn: 'Google Calendar isn’t connected, so your existing events won’t block booking times and new bookings won’t be added to your calendar. Reconnect and allow Calendar access.',
+    reconnectExpired: 'Your Google connection has expired or was revoked — your booking page won’t work until you reconnect.',
     reconnect: 'Reconnect Calendar',
     openPage: 'Open page',
     unpublish: 'Unpublish',
@@ -159,6 +160,7 @@ const STR = {
     copied: 'تم النسخ!',
     previewLink: 'معاينة',
     calWarn: 'تقويم Google غير مربوط، لذا لن تحجب مواعيدك الحالية أوقات الحجز ولن تُضاف الحجوزات الجديدة إلى تقويمك. أعد الربط واسمح بالوصول إلى التقويم.',
+    reconnectExpired: 'انتهت صلاحية ربط Google أو تم إلغاؤه — لن تعمل صفحة الحجز حتى تعيد الربط.',
     reconnect: 'إعادة ربط التقويم',
     openPage: 'افتح الصفحة',
     unpublish: 'إلغاء النشر',
@@ -237,6 +239,7 @@ export default function BookWithMeTool() {
   const [pubMenu, setPubMenu] = useState(false)
   const [delOpen, setDelOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState<'unknown' | 'ok' | 'nocal' | 'disconnected'>('unknown')
   const [dragId, setDragId] = useState<string | null>(null)
   const gridApi = useRef<GridHandle>(null)
   const totalSlots = grid.reduce((sum, col) => sum + col.filter(Boolean).length, 0)
@@ -257,6 +260,17 @@ export default function BookWithMeTool() {
     }
     setSession(readSession())
   }, [])
+
+  // Verify the stored Google token whenever we have a session — is it still
+  // connected and does it actually have Calendar access?
+  useEffect(() => {
+    if (!session) { setTokenStatus('unknown'); return }
+    let cancelled = false
+    hostStatus(session.hsid)
+      .then((r) => { if (!cancelled) setTokenStatus(r.connected ? (r.calendar ? 'ok' : 'nocal') : 'disconnected') })
+      .catch(() => { /* leave as unknown on network error */ })
+    return () => { cancelled = true }
+  }, [session])
 
   // Persist locally whenever config changes.
   useEffect(() => {
@@ -448,9 +462,9 @@ export default function BookWithMeTool() {
         </div>
       </div>
 
-      {session && session.cal === false && (
+      {session && (tokenStatus === 'nocal' || tokenStatus === 'disconnected') && (
         <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="cal-warning">
-          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.calWarn}</span>
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{tokenStatus === 'disconnected' ? s.reconnectExpired : s.calWarn}</span>
           <button type="button" data-testid="reconnect-cal" onClick={() => { window.location.href = connectGoogleUrl(cfg.code, locale) }}
             className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.reconnect}</button>
         </div>
