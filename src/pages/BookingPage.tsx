@@ -452,7 +452,7 @@ export function BookingPage() {
                                 </button>
                               ) : (
                                 <div key={ms} data-testid="slot-taken" aria-disabled="true" title={L.taken}
-                                  className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-dashed border-[color:var(--line-soft)] bg-[color-mix(in_srgb,var(--ink)_4%,transparent)] text-ink-faint line-through cursor-not-allowed select-none">
+                                  className="w-full text-center font-semibold text-[0.95rem] px-4 py-3 rounded-md border border-dashed border-[color:var(--line-soft)] bg-[color-mix(in_srgb,var(--ink)_4%,transparent)] text-ink-faint cursor-not-allowed select-none">
                                   {timeFmt.format(new Date(ms))}
                                 </div>
                               )
