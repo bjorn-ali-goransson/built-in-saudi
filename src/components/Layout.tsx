@@ -1,5 +1,6 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useSyncExternalStore } from 'react'
 import { Navigate, Outlet, ScrollRestoration, useLocation, useParams } from 'react-router-dom'
+import { hideFooterStore } from '../lib/hideFooter'
 import {
   isLocale, LocaleProvider, detectLocale, getStoredLocale, dicts, type Locale,
 } from '../i18n'
@@ -26,6 +27,7 @@ export function Layout() {
 
 function LocalizedLayout({ locale }: { locale: Locale }) {
   const t = dicts[locale]
+  const hideFooter = useSyncExternalStore(hideFooterStore.subscribe, hideFooterStore.get, hideFooterStore.get)
   useVersionCheck()
 
   useEffect(() => {
@@ -54,7 +56,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
             <Outlet />
           </Suspense>
         </main>
-        {!/\/book\//.test(location.pathname) && <Footer />}
+        {!/\/book\//.test(location.pathname) && !hideFooter && <Footer />}
         <NotificationBell />
         <LanguageSuggestion />
         <UpdatedToast />

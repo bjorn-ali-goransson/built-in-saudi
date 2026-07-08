@@ -5,6 +5,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
+import { hideFooterStore } from '../../lib/hideFooter'
 import { renderCvHtml, renderPrintDoc } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
@@ -39,6 +40,8 @@ const STR = {
     word: 'Save as Word',
     optimized: 'Optimized',
     original: 'Original',
+    fullscreen: 'Fullscreen',
+    exitFs: 'Exit fullscreen',
     saveForLater: 'Save for later',
     savedForLater: 'Saved on this device — resume it anytime.',
     resumeSaved: 'Resume your saved CV',
@@ -82,6 +85,8 @@ const STR = {
     word: 'حفظ Word',
     optimized: 'المُحسّنة',
     original: 'الأصلية',
+    fullscreen: 'ملء الشاشة',
+    exitFs: 'إنهاء ملء الشاشة',
     saveForLater: 'احفظ للاحقًا',
     savedForLater: 'حُفظت على هذا الجهاز — استأنفها متى شئت.',
     resumeSaved: 'استأنف سيرتك المحفوظة',
@@ -216,7 +221,9 @@ export default function CvGeneratorTool() {
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
+  const [fs, setFs] = useState(false) // preview is in browser fullscreen
   const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
+  const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -259,6 +266,25 @@ export default function CvGeneratorTool() {
       activeRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [qIndex, status])
+
+  // Hide the site footer while the immersive result preview is on screen.
+  useEffect(() => {
+    hideFooterStore.set(status === 'done')
+    return () => hideFooterStore.set(false)
+  }, [status])
+
+  // Track browser fullscreen so the preview iframe fills the screen.
+  useEffect(() => {
+    const h = () => setFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', h)
+    return () => document.removeEventListener('fullscreenchange', h)
+  }, [])
+  function toggleFullscreen() {
+    const el = previewRef.current
+    if (!el) return
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else el.requestFullscreen?.().catch(() => {})
+  }
 
   // Generate automatically as soon as we have both the CV text and a signed-in
   // user — once per uploaded file. The autoTried guard stops a failed attempt
@@ -345,6 +371,7 @@ export default function CvGeneratorTool() {
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setAnswerText('')
       setQIndex((i) => i + 1)
+      setAdjustOpen(false) // back to the Download / Make adjustments bar
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
@@ -367,6 +394,7 @@ export default function CvGeneratorTool() {
       setPolishLeft(r.polishLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setInstruction('')
+      setAdjustOpen(false) // back to the Download / Make adjustments bar
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
@@ -510,28 +538,31 @@ export default function CvGeneratorTool() {
           {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit.
               The optimized iframe stays mounted (keeps inline edits); the original
               PDF is overlaid when flipped. */}
-          <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative">
+          <div ref={previewRef} className={`mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden bg-[#e9ebef] ${fs ? 'h-[100dvh]' : 'h-[calc(100dvh-11rem)] min-h-[22rem]'}`}>
             <iframe
               ref={iframeRef}
               title={cvFilename(cv)}
-              className="block w-full h-[calc(100dvh-11rem)] min-h-[22rem] border-0 bg-[#e9ebef]"
+              className="block w-full h-full border-0 bg-[#e9ebef]"
               srcDoc={renderCvHtml(cv, { preview: true })}
             />
             {showOriginal && origPages.length > 0 && (
               <PdfPages pages={origPages} className="absolute inset-0 h-full" />
             )}
-          </div>
 
-          {/* Flip between the optimized CV and the original PDF. Only when we rendered
-              the original (PDF uploads), and portaled to <body> so it pins to the
-              top-left instead of being dragged down by ToolPage's transform. */}
-          {origPages.length > 0 && createPortal(
-            <div className="fixed start-4 top-[calc(68px+0.6rem)] max-[560px]:top-[calc(60px+0.6rem)] z-[55] flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] overflow-hidden text-[0.82rem] font-semibold">
-              <button type="button" data-testid="cv-view-optimized" onClick={() => setShowOriginal(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
-              <button type="button" data-testid="cv-view-original" onClick={() => setShowOriginal(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
-            </div>,
-            document.body,
-          )}
+            {/* Controls live INSIDE the preview so they stay visible in fullscreen. */}
+            {origPages.length > 0 && (
+              <div className="absolute start-3 top-3 z-10 flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] overflow-hidden text-[0.82rem] font-semibold">
+                <button type="button" data-testid="cv-view-optimized" onClick={() => setShowOriginal(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
+                <button type="button" data-testid="cv-view-original" onClick={() => setShowOriginal(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showOriginal ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
+              </div>
+            )}
+            <button type="button" onClick={toggleFullscreen} data-testid="cv-fullscreen" aria-label={fs ? s.exitFs : s.fullscreen} title={fs ? s.exitFs : s.fullscreen}
+              className="absolute end-3 top-3 z-10 grid place-items-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
+              {fs
+                ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-[1.15rem]" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+                : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-[1.15rem]" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>}
+            </button>
+          </div>
 
           {/* Bottom bar: collapsed = Download + Make adjustments; expanded = the dialogue */}
           <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
@@ -580,7 +611,9 @@ export default function CvGeneratorTool() {
                       </div>
                     )}
                   </div>
-                  <Button onClick={() => setAdjustOpen(true)} data-testid="cv-adjust-open">
+                  <Button onClick={() => setAdjustOpen(true)} data-testid="cv-adjust-open"
+                    disabled={polishLeft <= 0 && !currentQ}
+                    title={polishLeft <= 0 && !currentQ ? s.noPolish : undefined}>
                     {s.makeAdjustments}{currentQ ? ` · ${queue.length - qIndex}` : ''}
                   </Button>
                 </div>
