@@ -107,18 +107,25 @@ function rich(text: string, base: RunOpts = {}): string {
     .join('')
 }
 
-interface ParaOpts { align?: 'center' | 'right'; before?: number; after?: number; indent?: number }
+// Right tab stop at the content edge (page 11906 − left/right margins 907 each).
+const RIGHT_TAB = 10092
+const tab = () => '<w:r><w:tab/></w:r>'
+
+interface ParaOpts { align?: 'center' | 'right'; before?: number; after?: number; indent?: number; border?: boolean; tabRight?: boolean }
 function para(runs: string, o: ParaOpts = {}): string {
+  // pPr children must follow the OOXML schema order: pBdr, tabs, spacing, ind, jc.
   const ppr: string[] = []
-  if (o.align) ppr.push(`<w:jc w:val="${o.align}"/>`)
-  if (o.indent) ppr.push(`<w:ind w:left="${o.indent}"/>`)
+  if (o.border) ppr.push('<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="6" w:color="D3D8DD"/></w:pBdr>')
+  if (o.tabRight) ppr.push(`<w:tabs><w:tab w:val="right" w:pos="${RIGHT_TAB}"/></w:tabs>`)
   if (o.before != null || o.after != null) ppr.push(`<w:spacing w:before="${o.before ?? 0}" w:after="${o.after ?? 0}"/>`)
+  if (o.indent) ppr.push(`<w:ind w:left="${o.indent}"/>`)
+  if (o.align) ppr.push(`<w:jc w:val="${o.align}"/>`)
   const pr = ppr.length ? `<w:pPr>${ppr.join('')}</w:pPr>` : ''
   return `<w:p>${pr}${runs}</w:p>`
 }
 
 function heading(title: string): string {
-  return para(run(title, { b: true, caps: true, color: ACCENT, sz: 19 }), { before: 240, after: 60 })
+  return para(run(title, { b: true, caps: true, color: ACCENT, sz: 19 }), { before: 240, after: 80, border: true })
 }
 
 function dates(a?: string, b?: string): string {
@@ -157,12 +164,13 @@ function buildBody(cv: Cv): string {
   if (cv.experience.length) {
     P.push(heading('Experience'))
     for (const j of cv.experience) {
+      const jd = dates(j.startYear, j.endYear)
       P.push(para(
         run(j.role, { b: true, color: INK, sz: 21 })
         + run(', ' + j.company, { color: ACCENT, sz: 21 })
         + (j.location ? run(' (' + j.location + ')', { color: MUTED, sz: 21 }) : '')
-        + (dates(j.startYear, j.endYear) ? run('    —    ' + dates(j.startYear, j.endYear), { color: MUTED, sz: 18 }) : ''),
-        { before: 80, after: 20 },
+        + (jd ? tab() + run(jd, { color: MUTED, sz: 18 }) : ''),
+        { before: 80, after: 20, tabRight: !!jd },
       ))
       for (const b of j.bullets) {
         P.push(para(run('•   ', { color: ACCENT2, sz: 21 }) + rich(b, { color: INK_SOFT, sz: 21 }), { indent: 260, after: 10 }))
@@ -184,8 +192,8 @@ function buildBody(cv: Cv): string {
       P.push(para(
         run(t.title, { b: true, color: INK, sz: 21 })
         + (t.detail ? run(' · ' + t.detail, { color: MUTED, sz: 21 }) : '')
-        + (t.year ? run('    ' + t.year, { color: MUTED, sz: 18 }) : ''),
-        { after: 20 },
+        + (t.year ? tab() + run(t.year, { color: MUTED, sz: 18 }) : ''),
+        { after: 20, tabRight: !!t.year },
       ))
     }
   }
@@ -199,8 +207,8 @@ function buildBody(cv: Cv): string {
       P.push(para(
         run(e.degree, { b: true, color: INK, sz: 21 })
         + (e.institution ? run(' · ' + e.institution, { color: MUTED, sz: 21 }) : '')
-        + (e.year ? run('    ' + e.year, { color: MUTED, sz: 18 }) : ''),
-        { after: 20 },
+        + (e.year ? tab() + run(e.year, { color: MUTED, sz: 18 }) : ''),
+        { after: 20, tabRight: !!e.year },
       ))
     }
   }
