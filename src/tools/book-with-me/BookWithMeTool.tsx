@@ -36,7 +36,9 @@ function readSession(): Session | null {
     const hsid = localStorage.getItem(HSID_KEY)
     if (!hsid) return null
     const b64 = hsid.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')
-    const body = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')))
+    const bin = atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '='))
+    // Decode as UTF-8 (atob gives Latin-1) so names like "Björn" aren't mangled.
+    const body = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))))
     if (body.exp && Date.now() > body.exp) {
       localStorage.removeItem(HSID_KEY)
       return null

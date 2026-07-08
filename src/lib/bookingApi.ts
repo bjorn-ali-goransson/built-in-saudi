@@ -19,7 +19,10 @@ export function readHostSession(): { name?: string; email?: string; picture?: st
     const hsid = localStorage.getItem('bis-bookwith-hsid')
     if (!hsid) return null
     const b64 = hsid.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')
-    const body = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')))
+    const bin = atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '='))
+    // atob yields a Latin-1 binary string; decode as UTF-8 so non-ASCII names
+    // (e.g. "Björn") aren't mangled.
+    const body = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))))
     if (body.exp && Date.now() > body.exp) return null
     return { name: body.name, email: body.email, picture: body.picture }
   } catch {
