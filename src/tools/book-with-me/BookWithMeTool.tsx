@@ -277,6 +277,27 @@ export default function BookWithMeTool() {
     saveConfig(cfg)
   }, [cfg])
 
+  // When logged in, keep the published page in sync automatically — push schedule
+  // changes to the backend (debounced) so edits don't need a manual re-publish.
+  const pushTimer = useRef<number | null>(null)
+  const skipFirstPush = useRef(true)
+  useEffect(() => {
+    if (!session) return
+    if (skipFirstPush.current) { skipFirstPush.current = false; return }
+    if (pushTimer.current) clearTimeout(pushTimer.current)
+    pushTimer.current = window.setTimeout(() => {
+      setSaveState('saving')
+      saveSchedule({
+        hsid: session.hsid, code: cfg.code, tz: cfg.tz, firstDay: cfg.firstDay,
+        pageHeading: cfg.pageHeading, pageText: cfg.pageText, meeting: cfg.meeting,
+        meetingTypes: cfg.meetingTypes, availability: cfg.availability, notify: cfg.notify, pushSub: cfg.pushSub,
+      })
+        .then(() => { setSaveState('saved'); setTimeout(() => setSaveState('idle'), 1500) })
+        .catch(() => setSaveState('error'))
+    }, 700)
+    return () => { if (pushTimer.current) clearTimeout(pushTimer.current) }
+  }, [cfg, session])
+
   const link = `${BOOKING_LINK_BASE}/${cfg.code}`
 
   function updateGrid(next: Grid) {

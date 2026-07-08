@@ -153,7 +153,9 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
 
   return (
     <div className="select-none" data-testid="availability-grid">
-      <div className="rounded-lg border border-[color:var(--line)] overflow-hidden max-[560px]:mx-[calc(50%-50vw)] max-[560px]:w-screen max-[560px]:max-w-[100vw] max-[560px]:rounded-none max-[560px]:border-x-0">
+      {/* No overflow-hidden here: it would create a scroll container and break the
+          sticky weekday header. Corner cells are rounded individually instead. */}
+      <div className="rounded-lg border border-[color:var(--line)] max-[560px]:mx-[calc(50%-50vw)] max-[560px]:w-screen max-[560px]:max-w-[100vw] max-[560px]:rounded-none max-[560px]:border-x-0">
         <div
           ref={gridRef}
           className="grid relative"
@@ -173,12 +175,12 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
           onPointerUp={commit}
           onPointerCancel={commit}
         >
-          {/* header row */}
-          <div className="bg-[var(--surface)] border-b border-[color:var(--line)] h-9" />
+          {/* header row — sticky below the navbar while the page scrolls */}
+          <div className="bg-[var(--surface)] border-b border-[color:var(--line)] h-9 sticky top-[68px] max-[560px]:top-[60px] z-20 rounded-tl-lg max-[560px]:rounded-none" />
           {days.map((d, i) => (
             <div
               key={i}
-              className="bg-[var(--surface)] border-b border-s border-[color:var(--line)] grid place-items-center text-[0.78rem] font-semibold text-ink-soft h-9"
+              className={`bg-[var(--surface)] border-b border-s border-[color:var(--line)] grid place-items-center text-[0.78rem] font-semibold text-ink-soft h-9 sticky top-[68px] max-[560px]:top-[60px] z-20 ${i === days.length - 1 ? 'rounded-tr-lg max-[560px]:rounded-none' : ''}`}
             >
               {d}
             </div>
@@ -206,6 +208,7 @@ export const AvailabilityGrid = forwardRef<GridHandle, {
                     className={[
                       'h-9 cursor-crosshair touch-none border-s border-[color:var(--line-soft)] transition-colors',
                       row < ROWS - 1 ? 'border-b border-b-[color:var(--line-soft)]' : '',
+                      row === ROWS - 1 && day === DAYS - 1 ? 'rounded-br-lg max-[560px]:rounded-none' : '',
                       active
                         ? 'bg-[color-mix(in_srgb,var(--green-500)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-500)_38%,transparent)]'
                         : 'bg-[var(--surface)] hover:bg-[color-mix(in_srgb,var(--green-400)_15%,transparent)]',
