@@ -31,6 +31,7 @@ export interface AvailabilityResponse {
   ok: true
   host: HostMeta
   slots: number[] // open start times, epoch ms (UTC)
+  taken?: number[] // busy/booked start times within availability, shown greyed out
 }
 
 export async function getAvailability(code: string): Promise<AvailabilityResponse> {
@@ -41,7 +42,9 @@ export async function getAvailability(code: string): Promise<AvailabilityRespons
   })
   if (r.status === 404) throw new Error('not-found')
   if (!r.ok) throw new Error('failed')
-  return r.json()
+  const data = await r.json()
+  if (data && data.ok === false) throw new Error(data.error === 'host-calendar' ? 'host-calendar' : 'failed')
+  return data
 }
 
 export async function book(input: {

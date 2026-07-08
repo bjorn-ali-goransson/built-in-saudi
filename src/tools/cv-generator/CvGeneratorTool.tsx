@@ -538,7 +538,7 @@ export default function CvGeneratorTool() {
           {/* Immersive full-bleed preview, docked flush to the navbar, scaled to fit.
               The optimized iframe stays mounted (keeps inline edits); the original
               PDF is overlaid when flipped. */}
-          <div ref={previewRef} className={`mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden bg-[#e9ebef] ${fs ? 'h-[100dvh]' : 'h-[calc(100dvh-11rem)] min-h-[22rem]'}`}>
+          <div ref={previewRef} className={`mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden bg-[#e9ebef] ${fs ? 'h-[100dvh]' : 'h-[calc(100dvh-8.5rem)] max-[560px]:h-[calc(100dvh-8rem)] min-h-[22rem]'}`}>
             <iframe
               ref={iframeRef}
               title={cvFilename(cv)}
