@@ -277,13 +277,12 @@ export default function BookWithMeTool() {
     saveConfig(cfg)
   }, [cfg])
 
-  // When logged in, keep the published page in sync automatically — push schedule
-  // changes to the backend (debounced) so edits don't need a manual re-publish.
+  // When logged in, keep the published page in sync automatically — push the
+  // local schedule to the backend (debounced). This also runs on load, so a grid
+  // edited before this existed (still only in localStorage) gets synced.
   const pushTimer = useRef<number | null>(null)
-  const skipFirstPush = useRef(true)
   useEffect(() => {
     if (!session) return
-    if (skipFirstPush.current) { skipFirstPush.current = false; return }
     if (pushTimer.current) clearTimeout(pushTimer.current)
     pushTimer.current = window.setTimeout(() => {
       setSaveState('saving')
