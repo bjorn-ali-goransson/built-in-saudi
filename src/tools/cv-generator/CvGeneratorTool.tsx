@@ -205,6 +205,7 @@ export default function CvGeneratorTool() {
   const [text, setText] = useState('')
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
+  const [errDetail, setErrDetail] = useState('') // technical diagnostics shown under an upload error
   const [answersLeft, setAnswersLeft] = useState(0)
   const [polishLeft, setPolishLeft] = useState(0)
   const [queue, setQueue] = useState<string[]>([])
@@ -311,26 +312,47 @@ export default function CvGeneratorTool() {
     return () => clearTimeout(t)
   }, [toast])
 
+  // Technical diagnostics shown under an upload error, so a screenshot is enough
+  // to report the real cause (worker blocked, chunk 404, browser, etc.).
+  function diag(what: string, f: File, pdfver: string): string {
+    const build = document.querySelector('meta[name="build"]')?.getAttribute('content') || '?'
+    return [
+      what.slice(0, 240),
+      `file: ${f.name} · ${f.type || 'no-type'} · ${Math.round(f.size / 1024)}KB`,
+      `pdf.js ${pdfver} · build ${build}`,
+      navigator.userAgent,
+    ].join('\n')
+  }
+
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     e.target.value = ''
     if (!f) return
     autoTried.current = false
     setErr('')
+    setErrDetail('')
     setCv(null)
     setShowOriginal(false)
     setOrigPages([])
     setStatus('extracting')
+    let pdfver = '?'
     try {
-      const { extractText, renderPdfPages } = await import('./extract')
-      const t = await extractText(f)
-      if (!t || t.length < 60) { setErr(s.tooShort); setStatus('idle'); return }
+      const ex = await import('./extract')
+      pdfver = ex.pdfVersion
+      const t = await ex.extractText(f)
+      if (!t || t.length < 60) {
+        setErr(s.tooShort)
+        setErrDetail(diag(`extracted ${t?.length ?? 0} chars`, f, pdfver))
+        setStatus('idle')
+        return
+      }
       setText(t)
       setStatus('ready')
       // Render the PDF to page images for the reading view + Original flip (best-effort).
-      renderPdfPages(f).then(setOrigPages).catch(() => setOrigPages([]))
-    } catch {
+      ex.renderPdfPages(f).then(setOrigPages).catch(() => setOrigPages([]))
+    } catch (err) {
       setErr(s.extractErr)
+      setErrDetail(diag(`${(err as Error)?.name || 'Error'}: ${(err as Error)?.message || String(err)}`, f, pdfver))
       setStatus('idle')
     }
   }
@@ -519,6 +541,9 @@ export default function CvGeneratorTool() {
           )}
 
           {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
+          {errDetail && (
+            <pre data-testid="cv-error-diag" className="whitespace-pre-wrap break-words select-all font-mono text-[0.68rem] leading-snug text-ink-faint bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] border border-[color:var(--line-soft)] rounded-md p-2.5 max-w-full">{errDetail}</pre>
+          )}
         </>
       )}
 

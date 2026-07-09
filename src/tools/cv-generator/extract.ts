@@ -9,6 +9,10 @@ import mammoth from 'mammoth/mammoth.browser'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
+/** pdf.js version + the worker URL — surfaced in the on-screen error diagnostics. */
+export const pdfVersion = pdfjs.version
+export const pdfWorkerUrl = workerUrl
+
 async function fromPdf(buf: ArrayBuffer): Promise<string> {
   const doc = await pdfjs.getDocument({ data: buf }).promise
   const pages: string[] = []
