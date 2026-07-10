@@ -52,6 +52,7 @@ const STR = {
     duhaLabel: 'Ḍuḥā prayer', duhaHint: 'Remind me when Ḍuḥā begins (after sunrise)',
     followLabel: 'Follow me when I travel', followHint: 'If you move far from here, alerts switch to your current location',
     followToast: (place: string) => `You’ve travelled — alerts now use ${place}.`,
+    alertsMoved: (place: string) => `Prayer alerts now use ${place}.`,
     beforeLabel: 'Alert before', atAdhan: 'At adhan', minShort: (m: number) => `${m} min`,
     alertsFailed: 'We couldn’t turn on alerts just yet', alertsFixHint: 'Try this:',
     notifyNote: 'We’ll store your location to send alerts. Turn off anytime.',
@@ -86,6 +87,7 @@ const STR = {
     duhaLabel: 'صلاة الضحى', duhaHint: 'ذكّرني عند دخول وقت الضحى (بعد الشروق)',
     followLabel: 'تابِعني أثناء السفر', followHint: 'إذا ابتعدت كثيرًا عن هنا، تنتقل التنبيهات إلى موقعك الحالي',
     followToast: (place: string) => `لقد سافرت — أصبحت التنبيهات على توقيت ${place}.`,
+    alertsMoved: (place: string) => `أصبحت تنبيهات الصلاة على توقيت ${place}.`,
     beforeLabel: 'التنبيه قبل', atAdhan: 'عند الأذان', minShort: (m: number) => `${m} د`,
     alertsFailed: 'تعذّر تفعيل التنبيهات حتى الآن', alertsFixHint: 'جرّب هذا:',
     notifyNote: 'سنحفظ موقعك لإرسال التنبيهات. يمكنك الإيقاف في أي وقت.',
@@ -339,6 +341,7 @@ export default function PrayerTimesTool() {
     setGeoError('')
     setLoc({ lat: c.lat, lng: c.lng, tz: c.tz, label: locale === 'ar' ? c.ar : c.en })
     saveLoc({ mode: 'city', cityId: id })
+    repointAlerts(c.lat, c.lng, c.tz, locale === 'ar' ? c.ar : c.en)
   }
 
   // Reflect subscription state; renew the inactivity window (max once/12h).
@@ -378,6 +381,18 @@ export default function PrayerTimesTool() {
     } finally { setPushBusy(false) }
   }
 
+  // When the location changes and alerts are on, re-point the subscription to it
+  // and confirm with a toast. No-op if alerts are off.
+  async function repointAlerts(lat: number, lng: number, tz: string, place: string | undefined) {
+    if (pushOn !== true) return
+    setPushBusy(true)
+    try {
+      await enablePush({ lat, lng, tz, place }, locale,
+        { minutesBefore: prefs.minutesBefore, iqamaAlert: prefs.iqamaAlert, duha: prefs.duha, prayers: DAILY })
+    } finally { setPushBusy(false) }
+    setFollowToast(s.alertsMoved(place || s.myLocation))
+  }
+
   async function disableAlerts() {
     setPushBusy(true)
     try { await disablePush(); setPushOn(false); setSettingsOpen(false) }
@@ -411,12 +426,19 @@ export default function PrayerTimesTool() {
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
         setCityId('')
-        setLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude, tz, label: s.myLocation })
-        saveLoc({ mode: 'geo', lat: pos.coords.latitude, lng: pos.coords.longitude, tz })
-        resolveGeoLabel(pos.coords.latitude, pos.coords.longitude, tz)
+        setLoc({ lat, lng, tz, label: s.myLocation })
+        saveLoc({ mode: 'geo', lat, lng, tz })
+        resolveGeoLabel(lat, lng, tz)
         setLocating(false)
+        // If alerts are on, move them to here too (with a resolved place name).
+        if (pushOn === true) {
+          reverseGeocode(lat, lng, locale)
+            .then((n) => repointAlerts(lat, lng, tz, n ? n.split(/[،,]/)[0].trim() : undefined))
+            .catch(() => repointAlerts(lat, lng, tz, undefined))
+        }
       },
       () => { setGeoError(s.geoError); setLocating(false) },
       { timeout: 10000 },
@@ -449,7 +471,7 @@ export default function PrayerTimesTool() {
         let place: string | undefined
         try { const n = await reverseGeocode(lat, lng, locale); place = n ? n.split(/[،,]/)[0].trim() : undefined } catch { /* ignore */ }
         await enablePush({ lat, lng, tz, place }, locale, { minutesBefore: prefs.minutesBefore, iqamaAlert: prefs.iqamaAlert, duha: prefs.duha, prayers: DAILY })
-        setFollowToast(place || s.myLocation)
+        setFollowToast(s.followToast(place || s.myLocation))
       }, () => {}, { timeout: 10000, maximumAge: 600000 })
     })()
   }
@@ -550,7 +572,7 @@ export default function PrayerTimesTool() {
 
       {followToast && (
         <div className="fixed inset-x-3 bottom-4 z-[70] mx-auto max-w-[26rem] bg-green-600 text-sand-100 px-4 py-3 rounded-lg shadow-[var(--shadow-md)] text-[0.9rem] leading-snug animate-[fadeUp_0.3s_ease]" role="status" data-testid="follow-toast">
-          {s.followToast(followToast)}
+          {followToast}
         </div>
       )}
     </div>
