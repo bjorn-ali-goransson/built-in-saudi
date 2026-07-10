@@ -6,6 +6,7 @@ import { Button, Input, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
+import { inAppBrowser } from '../../lib/inAppBrowser'
 import { renderCvHtml, renderPrintDoc } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
@@ -30,6 +31,10 @@ const STR = {
     extracted: (n: number) => `Got it — read ${n.toLocaleString()} characters.`,
     tooShort: 'Couldn’t read enough text. Try a text-based PDF or a .docx.',
     extractErr: 'Couldn’t read that file. Try a PDF, .docx or .txt.',
+    inAppWarn: (app: string) => `You’re in ${app}’s in-app browser, which can’t read PDFs here. Open this page in Safari or Chrome — tap ⋯ (or Share) and choose “Open in browser”.`,
+    browserErr: 'Something went wrong reading your file. This can happen on an older browser, or an app’s built-in browser (like LinkedIn). Open this page in a full browser and try again.',
+    openInBrowser: 'Open in a browser',
+    linkCopied: 'Link copied — paste it into Safari or Chrome.',
     loginNote: 'Quick sign-in to build it — free, just to keep bots out.',
     build: 'Build my CV',
     building: 'Building your CV…',
@@ -75,6 +80,10 @@ const STR = {
     extracted: (n: number) => `تمّ — قُرئ ${n.toLocaleString()} حرفًا.`,
     tooShort: 'تعذّرت قراءة نص كافٍ. جرّب PDF نصيًا أو .docx.',
     extractErr: 'تعذّرت قراءة الملف. جرّب PDF أو .docx أو .txt.',
+    inAppWarn: (app: string) => `أنت داخل متصفح ${app}، الذي لا يستطيع قراءة ملفات PDF هنا. افتح الصفحة في Safari أو Chrome — اضغط ⋯ (أو مشاركة) واختر «فتح في المتصفح».`,
+    browserErr: 'حدث خطأ أثناء قراءة ملفك. قد يحدث هذا في متصفح قديم أو في متصفح تطبيق مُضمَّن (مثل LinkedIn). افتح الصفحة في متصفح كامل وحاول مجددًا.',
+    openInBrowser: 'افتح في متصفح',
+    linkCopied: 'نُسخ الرابط — الصقه في Safari أو Chrome.',
     loginNote: 'تسجيل دخول سريع للبناء — مجاني، فقط لمنع الروبوتات.',
     build: 'ابنِ سيرتي',
     building: 'جارٍ بناء سيرتك…',
@@ -199,6 +208,7 @@ function PdfPages({ pages, className = '' }: { pages: string[]; className?: stri
 export default function CvGeneratorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
+  const inApp = inAppBrowser() // e.g. "LinkedIn" if in an in-app WebView
   const [idToken, setIdToken] = useState<string | null>(null)
   const [gisReady, setGisReady] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
@@ -206,6 +216,7 @@ export default function CvGeneratorTool() {
   const [cv, setCv] = useState<Cv | null>(null)
   const [err, setErr] = useState('')
   const [errDetail, setErrDetail] = useState('') // technical diagnostics shown under an upload error
+  const [browserFallback, setBrowserFallback] = useState(false) // show the "open in browser" fallback
   const [answersLeft, setAnswersLeft] = useState(0)
   const [polishLeft, setPolishLeft] = useState(0)
   const [queue, setQueue] = useState<string[]>([])
@@ -342,6 +353,7 @@ export default function CvGeneratorTool() {
       const t = await ex.extractText(f)
       if (!t || t.length < 60) {
         setErr(s.tooShort)
+        setBrowserFallback(false)
         setErrDetail(diag(`extracted ${t?.length ?? 0} chars`, f, pdfver))
         setStatus('idle')
         return
@@ -351,10 +363,19 @@ export default function CvGeneratorTool() {
       // Render the PDF to page images for the reading view + Original flip (best-effort).
       ex.renderPdfPages(f).then(setOrigPages).catch(() => setOrigPages([]))
     } catch (err) {
-      setErr(s.extractErr)
+      // Extraction threw — most often an old/in-app browser missing a JS API.
+      setErr(s.browserErr)
+      setBrowserFallback(true)
       setErrDetail(diag(`${(err as Error)?.name || 'Error'}: ${(err as Error)?.message || String(err)}`, f, pdfver))
       setStatus('idle')
     }
+  }
+
+  // Fallback for old / in-app browsers: copy the link and try to open it fresh.
+  async function openInBrowser() {
+    const url = window.location.href
+    try { await navigator.clipboard.writeText(url); setToast(s.linkCopied) } catch { /* ignore */ }
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   async function generate() {
@@ -508,6 +529,12 @@ export default function CvGeneratorTool() {
         <>
           {(status === 'idle' || (status === 'extracting' && origPages.length === 0)) && hero}
 
+          {inApp && status === 'idle' && (
+            <div className="flex items-start gap-2 border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="inapp-warn">
+              <span className="text-[0.85rem] text-ink leading-snug">{s.inAppWarn(inApp)}</span>
+            </div>
+          )}
+
           {status === 'extracting' && origPages.length === 0 && (
             <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>
           )}
@@ -540,9 +567,16 @@ export default function CvGeneratorTool() {
             </div>
           )}
 
-          {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
-          {errDetail && (
-            <pre data-testid="cv-error-diag" className="whitespace-pre-wrap break-words select-all font-mono text-[0.68rem] leading-snug text-ink-faint bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] border border-[color:var(--line-soft)] rounded-md p-2.5 max-w-full">{errDetail}</pre>
+          {err && (
+            <div className="flex flex-col gap-2.5 border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-3 py-3 rounded-e-md" data-testid="cv-error">
+              <p className="text-[0.9rem] text-ink leading-snug">{err}</p>
+              {browserFallback && (
+                <Button variant="primary" data-testid="open-in-browser" onClick={openInBrowser} className="self-start !h-9">{s.openInBrowser}</Button>
+              )}
+              {errDetail && (
+                <pre data-testid="cv-error-diag" className="whitespace-pre-wrap break-words select-all font-mono text-[0.68rem] leading-snug text-ink-faint bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] border border-[color:var(--line-soft)] rounded-md p-2.5 max-w-full">{errDetail}</pre>
+              )}
+            </div>
           )}
         </>
       )}
