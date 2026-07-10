@@ -6,23 +6,54 @@ const MSG = {
   ar: 'تم التحديث',
 }
 
-/** Shows a brief toast after an auto-reload triggered by a new deploy / stale chunk. */
+const LAST_BUILD_KEY = 'bis-last-build'
+
+/**
+ * Shows a brief "what changed" toast after a new deploy. Two triggers:
+ *  1. an auto-reload from useVersionCheck (post-reload sessionStorage flag), or
+ *  2. a *fresh* visit onto a build newer than the last one we saw — even without
+ *     a reload — by comparing <meta name="build"> to a localStorage record.
+ */
 export function UpdatedToast() {
   const { locale } = useLocale()
-  const [show, setShow] = useState(() => {
-    try { return sessionStorage.getItem('bis-reloaded') != null } catch { return false }
-  })
-  const [notes] = useState(() => {
-    try { return sessionStorage.getItem('bis-update-notes') || '' } catch { return '' }
-  })
+  const [show, setShow] = useState(false)
+  const [notes, setNotes] = useState('')
 
   useEffect(() => {
-    if (!show) return
+    const build = document.querySelector('meta[name="build"]')?.getAttribute('content') || ''
+
+    // (1) Post-reload flow from useVersionCheck.
+    let reloaded = false
+    let sessionNotes = ''
     try {
+      reloaded = sessionStorage.getItem('bis-reloaded') != null
+      sessionNotes = sessionStorage.getItem('bis-update-notes') || ''
       sessionStorage.removeItem('bis-reloaded')
       sessionStorage.removeItem('bis-chunk-reload')
       sessionStorage.removeItem('bis-update-notes')
     } catch { /* ignore */ }
+
+    // (2) Fresh visit onto a newer build than the last one we recorded.
+    let lastBuild = ''
+    try { lastBuild = localStorage.getItem(LAST_BUILD_KEY) || '' } catch { /* ignore */ }
+    const freshUpdate = !!build && !!lastBuild && lastBuild !== build
+    try { if (build) localStorage.setItem(LAST_BUILD_KEY, build) } catch { /* ignore */ }
+
+    if (reloaded) {
+      setNotes(sessionNotes)
+      setShow(true)
+    } else if (freshUpdate) {
+      setShow(true)
+      // Notes come from version.json, which matches this build on a fresh load.
+      fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && d.notes) setNotes(String(d.notes)) })
+        .catch(() => { /* offline / transient — show the plain toast */ })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!show) return
     const id = window.setTimeout(() => setShow(false), notes ? 7000 : 4000)
     return () => window.clearTimeout(id)
   }, [show, notes])
