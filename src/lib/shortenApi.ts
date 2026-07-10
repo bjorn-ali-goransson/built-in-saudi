@@ -19,6 +19,11 @@ export async function shortenUrl(idToken: string, url: string): Promise<ShortLin
     body: JSON.stringify({ idToken, url }),
   })
   const d = await r.json().catch(() => ({}))
+  if (r.status === 429) {
+    const e = new Error('rate-limited') as Error & { retryAfter?: number }
+    e.retryAfter = typeof d.retryAfter === 'number' ? d.retryAfter : 3600000
+    throw e
+  }
   if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
   return { code: d.code, short: d.short, url: d.url, hits: 0, createdAt: Date.now(), expiresAt: d.expiresAt }
 }

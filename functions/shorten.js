@@ -11,6 +11,7 @@ const LINKS = 'shortLinks'
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || ''
 const SITE = 'https://built-in-saudi.com'
 const RETENTION_MS = 183 * 86400000 // ~6 months
+const RATE_MS = 3600000 // one new link per hour per user (abuse guard)
 const MAX_URL = 2048
 
 function cors(req, res) {
@@ -61,6 +62,21 @@ http('shorten', async (req, res) => {
     const clean = target.toString().slice(0, MAX_URL)
     // Don't shorten our own short links (loop guard).
     if (clean.startsWith(`${SITE}/s/`)) return res.status(400).json({ error: 'already a short link' })
+
+    // Rate limit: one new link per hour per user. Query the user's links and
+    // find the newest createdAt in code (avoids a composite index).
+    const mine = await db.collection(LINKS).where('owner', '==', user.sub).get()
+    let newest = 0
+    mine.forEach((doc) => {
+      const c = doc.get('createdAt')
+      const ms = c && c.toMillis ? c.toMillis() : 0
+      if (ms > newest) newest = ms
+    })
+    const wait = newest + RATE_MS - Date.now()
+    if (wait > 0) {
+      res.set('Retry-After', String(Math.ceil(wait / 1000)))
+      return res.status(429).json({ error: 'rate-limited', retryAfter: wait })
+    }
 
     let code = null
     for (let i = 0; i < 6; i++) {

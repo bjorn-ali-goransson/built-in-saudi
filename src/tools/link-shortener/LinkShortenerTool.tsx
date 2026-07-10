@@ -23,6 +23,8 @@ const STR = {
     expires: (d: string) => `Expires ${d}`,
     empty: 'Your short links will appear here.',
     err: 'Couldn’t shorten that link.',
+    rate: (m: string) => `You can create one link per hour — try again in ${m}.`,
+    minutes: (n: number) => (n <= 1 ? 'a minute' : `${n} minutes`),
     dataNote: 'How we use your data:',
     privacy: 'Privacy',
     terms: 'Terms',
@@ -43,6 +45,8 @@ const STR = {
     expires: (d: string) => `تنتهي ${d}`,
     empty: 'ستظهر روابطك القصيرة هنا.',
     err: 'تعذّر اختصار هذا الرابط.',
+    rate: (m: string) => `يمكنك إنشاء رابط واحد كل ساعة — حاول مجددًا بعد ${m}.`,
+    minutes: (n: number) => (n <= 1 ? 'دقيقة' : `${n} دقيقة`),
     dataNote: 'كيف نستخدم بياناتك:',
     privacy: 'الخصوصية',
     terms: 'الشروط',
@@ -95,7 +99,12 @@ export default function LinkShortenerTool() {
       setUrl('')
       copy(link.short, link.code)
     } catch (e) {
-      setErr((e as Error).message || s.err)
+      const err = e as Error & { retryAfter?: number }
+      if (err.message === 'rate-limited' && typeof err.retryAfter === 'number') {
+        setErr(s.rate(s.minutes(Math.ceil(err.retryAfter / 60000))))
+      } else {
+        setErr(err.message || s.err)
+      }
     } finally {
       setBusy(false)
     }
