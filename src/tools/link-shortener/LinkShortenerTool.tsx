@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Stack, Spinner } from '../../components/ui'
+import { Button, Input, Stack, Spinner, Sheet, SheetTitle } from '../../components/ui'
 import { LinkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID } from '../../lib/cvApi'
 import { shortenUrl, myLinks, deleteLink, type ShortLink } from '../../lib/shortenApi'
@@ -28,6 +28,8 @@ const STR = {
     err: 'Couldn’t shorten that link.',
     rate: (m: string) => `You can create one link per hour — try again in ${m}.`,
     minutes: (n: number) => (n <= 1 ? 'a minute' : `${n} minutes`),
+    loginTitle: 'Sign in to shorten',
+    loginBody: 'Creating a short link needs a Google sign-in — it ties the link to you so you can manage or delete it later. Your link is shortened as soon as you sign in.',
     dataNote: 'How we use your data:',
     privacy: 'Privacy',
     terms: 'Terms',
@@ -52,6 +54,8 @@ const STR = {
     err: 'تعذّر اختصار هذا الرابط.',
     rate: (m: string) => `يمكنك إنشاء رابط واحد كل ساعة — حاول مجددًا بعد ${m}.`,
     minutes: (n: number) => (n <= 1 ? 'دقيقة' : `${n} دقيقة`),
+    loginTitle: 'سجّل الدخول للاختصار',
+    loginBody: 'يتطلب إنشاء رابط قصير تسجيل الدخول بحساب Google — لربط الرابط بك لتتمكن من إدارته أو حذفه لاحقًا. سيُختصر رابطك فور تسجيل دخولك.',
     dataNote: 'كيف نستخدم بياناتك:',
     privacy: 'الخصوصية',
     terms: 'الشروط',
@@ -68,18 +72,29 @@ export default function LinkShortenerTool() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState('')
+  const [showLogin, setShowLogin] = useState(false)
   const btnRef = useRef<HTMLDivElement>(null)
+  const modalBtnRef = useRef<HTMLDivElement>(null)
+  const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
+  const pendingRef = useRef('') // URL awaiting a shorten once the user signs in
+  // Latest doShorten, so the once-registered GIS callback runs the current one.
+  const doShortenRef = useRef<(token: string, u: string) => void>(() => {})
 
   useEffect(() => {
     let cancelled = false
     loadGis().then((gis) => {
       if (cancelled) return
+      gisRef.current = gis
       gis.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (r: { credential: string }) => {
           setIdToken(r.credential)
+          setShowLogin(false)
           setLoadingLinks(true)
           myLinks(r.credential).then((l) => setLinks(l)).catch(() => {}).finally(() => setLoadingLinks(false))
+          const p = pendingRef.current
+          pendingRef.current = ''
+          if (p) doShortenRef.current(r.credential, p)
         },
       })
       if (btnRef.current) gis.renderButton(btnRef.current, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' })
@@ -88,18 +103,24 @@ export default function LinkShortenerTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Render the Google button inside the login modal when it opens.
+  useEffect(() => {
+    if (showLogin && gisRef.current && modalBtnRef.current) {
+      gisRef.current.renderButton(modalBtnRef.current, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' })
+    }
+  }, [showLogin])
+
   const dateFmt = new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
   async function copy(text: string, code: string) {
     try { await navigator.clipboard.writeText(text); setCopied(code); setTimeout(() => setCopied((c) => (c === code ? '' : c)), 1500) } catch { /* ignore */ }
   }
 
-  async function shorten() {
-    const u = url.trim()
-    if (!idToken || !u || busy) return
+  async function doShorten(token: string, u: string) {
+    if (!token || !u) return
     setBusy(true); setErr('')
     try {
-      const link = await shortenUrl(idToken, u)
+      const link = await shortenUrl(token, u)
       setLinks((prev) => [link, ...prev])
       setUrl('')
       copy(link.short, link.code)
@@ -113,6 +134,14 @@ export default function LinkShortenerTool() {
     } finally {
       setBusy(false)
     }
+  }
+  doShortenRef.current = doShorten
+
+  function shorten() {
+    const u = url.trim()
+    if (!u || busy) return
+    if (!idToken) { pendingRef.current = u; setErr(''); setShowLogin(true); return }
+    doShorten(idToken, u)
   }
 
   function remove(code: string) {
@@ -135,7 +164,7 @@ export default function LinkShortenerTool() {
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={s.ph} data-testid="link-url"
           className="flex-1 min-w-[14rem]" onKeyDown={(e) => { if (e.key === 'Enter') shorten() }}
           inputMode="url" type="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} dir="ltr" />
-        <Button variant="primary" onClick={shorten} disabled={!idToken || busy || !url.trim()} data-testid="link-shorten">
+        <Button variant="primary" onClick={shorten} disabled={busy || !url.trim()} data-testid="link-shorten">
           {busy ? s.shortening : s.shorten}
         </Button>
       </div>
@@ -186,6 +215,16 @@ export default function LinkShortenerTool() {
           </div>
         </div>,
         document.body,
+      )}
+
+      {/* Login prompt when a signed-out visitor tries to shorten. Signing in
+          here closes the modal and shortens the pending URL automatically. */}
+      {showLogin && (
+        <Sheet onClose={() => setShowLogin(false)}>
+          <SheetTitle>{s.loginTitle}</SheetTitle>
+          <p className="text-[0.92rem] text-ink-soft leading-relaxed">{s.loginBody}</p>
+          <div ref={modalBtnRef} className="[color-scheme:light] flex justify-center py-1" data-testid="link-login-modal" />
+        </Sheet>
       )}
     </Stack>
   )
