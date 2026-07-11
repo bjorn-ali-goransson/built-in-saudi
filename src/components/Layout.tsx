@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useSyncExternalStore } from 'react'
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Navigate, Outlet, ScrollRestoration, useLocation, useParams } from 'react-router-dom'
 import { hideFooterStore } from '../lib/hideFooter'
 import {
@@ -48,6 +48,22 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
   // page has zoomed out to fit an over-wide element.
   const [debug, setDebug] = useState(false)
   const [dbg, setDbg] = useState({ text: '', font: 13 })
+  const [hiddenCount, setHiddenCount] = useState(0)
+  const hiddenRef = useRef<HTMLElement[]>([])
+  const widestEl = (): HTMLElement | null => {
+    let el: HTMLElement | null = null, max = 0
+    document.querySelectorAll<HTMLElement>('body *').forEach((n) => {
+      if (n.closest('[data-debug-ui]') || n.style.display === 'none') return
+      const w = n.getBoundingClientRect().width
+      if (w > max && w < 1e5) { max = w; el = n }
+    })
+    return el
+  }
+  const hideWidest = () => {
+    const el = widestEl()
+    if (el) { el.style.setProperty('display', 'none', 'important'); hiddenRef.current.push(el); setHiddenCount(hiddenRef.current.length) }
+  }
+  const resetHidden = () => { hiddenRef.current.forEach((el) => el.style.removeProperty('display')); hiddenRef.current = []; setHiddenCount(0) }
   useEffect(() => {
     const sync = () => setDebug(window.location.hash.toLowerCase().includes('debug'))
     sync()
@@ -63,6 +79,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
       const de = document.documentElement
       let wideEl: Element | null = null, wMax = 0, tallEl: Element | null = null, hMax = 0
       document.querySelectorAll('body *').forEach((el) => {
+        if ((el as HTMLElement).closest('[data-debug-ui]')) return
         const r = (el as HTMLElement).getBoundingClientRect()
         if (r.width > wMax && r.width < 1e5) { wMax = r.width; wideEl = el }
         if (r.height > hMax && r.height < 1e5) { hMax = r.height; tallEl = el }
@@ -104,7 +121,13 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         </main>
         {!/\/book\//.test(location.pathname) && !hideFooter && <Footer />}
         {debug && (
-          <pre style={{ fontSize: `${dbg.font}px` }} className="fixed top-1 left-1 z-[99999] m-0 bg-black/90 text-lime-300 px-2 py-1 rounded leading-tight whitespace-pre pointer-events-none max-w-[98vw] overflow-hidden" dir="ltr">{dbg.text}</pre>
+          <div data-debug-ui dir="ltr" style={{ fontSize: `${dbg.font}px` }} className="fixed top-1 left-1 z-[99999] flex flex-col gap-1 items-start max-w-[98vw]">
+            <pre className="m-0 bg-black/90 text-lime-300 px-2 py-1 rounded leading-tight whitespace-pre overflow-hidden max-w-full">{dbg.text}{hiddenCount ? `\nhidden ${hiddenCount}` : ''}</pre>
+            <div className="flex gap-1">
+              <button type="button" onClick={hideWidest} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">hide widest</button>
+              <button type="button" onClick={resetHidden} className="bg-neutral-700 text-white px-2 py-0.5 rounded border-0 cursor-pointer">reset</button>
+            </div>
+          </div>
         )}
         <NotificationBell />
         <LanguageSuggestion />
