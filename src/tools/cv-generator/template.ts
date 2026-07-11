@@ -156,40 +156,21 @@ export function renderCvHtml(cv: Cv, opts: { preview?: boolean } = {}): string {
     + `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`
     + `<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`
   if (opts.preview) {
-    // Scale the whole A4 page down to the viewport width (never up) so the
-    // preview shows the real, uniform proportions of the printed result.
-    // CSS zoom (not transform) so it scales the layout box too — then margin:auto
-    // centres it and there's no stray whitespace beside the page.
-    // The .resume is contenteditable so edits flow straight into the exported PDF.
-    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}[contenteditable]{outline:none}`
-    const editable = inner.replace('<main class="resume">', '<main class="resume" contenteditable="true" spellcheck="false">')
+    // Read-only, true-to-print preview: the Cv JSON is the single source of
+    // truth (the download renders the same JSON via react-pdf, see CvPdf.tsx),
+    // so the preview mirrors it exactly. Scale the whole A4 page down to the
+    // viewport width (never up) with CSS zoom (scales the layout box too) so the
+    // proportions match the printed result; margin:auto centres it.
+    const pcss = `html,body{background:#e9ebef;margin:0;padding:0}#cvfit{width:210mm;margin:0 auto}.resume{box-shadow:0 2px 12px rgba(20,30,50,.13)}`
     const scr = `<script>(function(){
       function f(){var p=210*96/25.4,el=document.getElementById('cvfit');if(!el)return;el.style.zoom=Math.min(1,document.documentElement.clientWidth/p)}
       window.addEventListener('resize',f);window.addEventListener('load',f);document.addEventListener('DOMContentLoaded',f);setTimeout(f,60);setTimeout(f,400);
-      document.addEventListener('keydown',function(e){
-        if(e.key!=='Enter'||e.shiftKey||e.ctrlKey||e.metaKey)return;
-        var sel=window.getSelection();if(!sel||!sel.rangeCount)return;
-        var n=sel.anchorNode,li=n&&n.nodeType===1?n:(n&&n.parentElement);
-        while(li&&li.tagName!=='LI'){if(li.tagName==='BODY'){li=null;break}li=li.parentElement}
-        if(!li)return;
-        e.preventDefault();
-        var range=sel.getRangeAt(0);
-        var after=range.cloneRange();after.selectNodeContents(li);after.setStart(range.endContainer,range.endOffset);
-        var frag=after.extractContents();
-        var newLi=document.createElement('li');
-        if((''+frag.textContent).trim()){newLi.appendChild(frag)}else{newLi.appendChild(document.createElement('br'))}
-        if(!(''+li.textContent).trim()){li.appendChild(document.createElement('br'))}
-        li.parentNode.insertBefore(newLi,li.nextSibling);
-        var r2=document.createRange();r2.setStart(newLi,0);r2.collapse(true);sel.removeAllRanges();sel.addRange(r2);
-      });
     })();<\/script>`
-    return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${editable}</div>${scr}</body></html>`
+    return `<!doctype html><html lang="en"><head>${head}<style>${CSS}${pcss}</style></head><body><div id="cvfit">${inner}</div>${scr}</body></html>`
   }
   return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${inner}</body></html>`
 }
 
-/** Wrap an already-rendered .resume element's HTML into a print/PDF document
- *  (A4, no preview scaling) — used to export exactly what the user edited. */
 /** Render the original extracted CV text as a plain, readable document (for the
  *  "show original" toggle in the result view). */
 export function renderOriginalHtml(text: string): string {
@@ -200,9 +181,3 @@ export function renderOriginalHtml(text: string): string {
     + `<body><div id="o"><pre>${esc(text)}</pre></div></body></html>`
 }
 
-export function renderPrintDoc(resumeHtml: string, name = 'CV'): string {
-  const head = `<meta charset="utf-8"><title>${esc(name)}</title>`
-    + `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`
-    + `<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`
-  return `<!doctype html><html lang="en"><head>${head}<style>${CSS}</style></head><body>${resumeHtml}</body></html>`
-}

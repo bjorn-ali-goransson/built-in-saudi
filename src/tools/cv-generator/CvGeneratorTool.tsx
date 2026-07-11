@@ -7,7 +7,7 @@ import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
 import { inAppBrowser } from '../../lib/inAppBrowser'
-import { renderCvHtml, renderPrintDoc } from './template'
+import { renderCvHtml } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
 
@@ -232,6 +232,7 @@ export default function CvGeneratorTool() {
   const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [fs, setFs] = useState(false) // preview is in browser fullscreen
   const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
@@ -445,20 +446,27 @@ export default function CvGeneratorTool() {
     }
   }
 
-  function exportPdf() {
-    if (!cv) return
-    const w = window.open('', '_blank')
-    if (!w) return
-    // Export exactly what the user sees/edited: pull the live (edited) .resume
-    // out of the preview iframe; fall back to a fresh render if unavailable.
-    const edited = iframeRef.current?.contentDocument?.querySelector('.resume') as HTMLElement | null
-    const html = edited
-      ? renderPrintDoc(edited.outerHTML.replace(/ contenteditable="[^"]*"/g, '').replace(/ spellcheck="[^"]*"/g, ''), cvFilename(cv))
-      : renderCvHtml(cv)
-    w.document.write(html)
-    w.document.title = cvFilename(cv)
-    w.document.close()
-    setTimeout(() => { w.focus(); w.print() }, 500)
+  // Vector, selectable-text PDF rendered from the Cv JSON via react-pdf (see
+  // CvPdf.tsx). Dynamically imported so @react-pdf/renderer + fonts load only on
+  // the first download, not with the tool.
+  async function exportPdf() {
+    if (!cv || pdfBusy) return
+    setPdfBusy(true)
+    try {
+      const { cvToPdfBlob } = await import('./CvPdf')
+      const blob = await cvToPdfBlob(cv)
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `${cvFilename(cv)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    } catch (e) {
+      setErr((e as Error).message || 'PDF export failed')
+    } finally {
+      setPdfBusy(false)
+    }
   }
 
   function exportWord() {
@@ -654,9 +662,9 @@ export default function CvGeneratorTool() {
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <div className="relative flex items-stretch rounded-md shadow-[var(--shadow-sm)]">
-                    <button type="button" onClick={exportPdf} data-testid="cv-pdf"
-                      className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer">
-                      <DownloadIcon /> {s.pdf}
+                    <button type="button" onClick={exportPdf} data-testid="cv-pdf" disabled={pdfBusy}
+                      className="inline-flex items-center gap-2 rounded-s-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer disabled:opacity-70 disabled:cursor-wait">
+                      {pdfBusy ? <Spinner className="size-4" /> : <DownloadIcon />} {s.pdf}
                     </button>
                     <button type="button" aria-label={s.word} aria-expanded={saveMenu} onClick={() => setSaveMenu((v) => !v)}
                       className="inline-flex items-center rounded-e-md bg-green-700 text-sand-100 px-2.5 text-base border-0 border-s border-[color:color-mix(in_srgb,var(--sand-100)_30%,transparent)] hover:bg-green-600 cursor-pointer">▾</button>
