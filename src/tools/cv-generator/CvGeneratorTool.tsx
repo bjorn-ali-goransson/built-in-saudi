@@ -64,7 +64,8 @@ const STR = {
     dlPdf: 'Download PDF',
     dlWord: 'Download Word',
     customize: 'Customize',
-    targetJd: 'Target job description',
+    targetJd: 'Customise for job description',
+    jdSaveNote: 'When you customise, your CV is saved to your account so you can reopen it on any device — kept 6 months, and you can delete it anytime on the',
     shortenTitle: 'Make it shorter',
     shortenLead: 'A tighter CV lands better — recruiters skim in seconds. Condense to:',
     pagesWord: (n: number) => `${n} page${n > 1 ? 's' : ''}`,
@@ -144,7 +145,8 @@ const STR = {
     dlPdf: 'تنزيل PDF',
     dlWord: 'تنزيل Word',
     customize: 'تخصيص',
-    targetJd: 'استهدف وصفًا وظيفيًا',
+    targetJd: 'خصّص لوصف وظيفي',
+    jdSaveNote: 'عند التخصيص، تُحفظ سيرتك في حسابك لتفتحها من أي جهاز — لمدة ٦ أشهر، ويمكنك حذفها في أي وقت من',
     shortenTitle: 'اجعلها أقصر',
     shortenLead: 'السيرة الأقصر أفضل — يمسح المسؤولون بسرعة. اختصر إلى:',
     pagesWord: (n: number) => `${n} صفحة`,
@@ -228,10 +230,8 @@ export default function CvGeneratorTool() {
   const [jdOpen, setJdOpen] = useState(false)
   const [jdText, setJdText] = useState('')
   const [jdBusy, setJdBusy] = useState(false)
-  const [serverSaveOpen, setServerSaveOpen] = useState(false) // "Save for later" opt-in dialog (cross-device)
   const [serverSaving, setServerSaving] = useState(false)
   const [serverSaved, setServerSaved] = useState(false) // this CV is saved to the account
-  const serverBtnRef = useRef<HTMLDivElement>(null) // Google button inside the server-save modal
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
@@ -241,7 +241,7 @@ export default function CvGeneratorTool() {
   const autoTried = useRef(false)
   // The previous change summary, sent as context so the user can correct it.
   const lastChangeRef = useRef('')
-  const pendingTailorRef = useRef(false) // open the JD modal right after a save-for-later
+  const pendingActionRef = useRef<'' | 'save' | 'tailor'>('') // finish this after a sign-in
 
   // Load + init Google Identity Services once (but don't force sign-in yet).
   useEffect(() => {
@@ -281,26 +281,23 @@ export default function CvGeneratorTool() {
     }
   }, [signinFallback, gisReady, idToken, status, origPages])
 
-  // Render the Google button inside the server-save modal when not signed in.
-  useEffect(() => {
-    if (!gisReady || idToken || !gisRef.current) return
-    if (serverSaveOpen && serverBtnRef.current) {
-      serverBtnRef.current.innerHTML = ''
-      gisRef.current.renderButton(serverBtnRef.current, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' })
-    }
-  }, [gisReady, idToken, serverSaveOpen])
-
   // Navbar Log in / Log out (rendered by the shared Header via cvHeaderStore).
   const login = useCallback(() => { try { gisRef.current?.prompt() } catch { /* ignore */ } }, [])
   const logout = useCallback(() => { setIdToken(null); try { gisRef.current?.disableAutoSelect() } catch { /* ignore */ } }, [])
   useEffect(() => { cvHeaderStore.set({ active: true, signedIn: !!idToken, login, logout }) }, [idToken, login, logout])
   useEffect(() => () => cvHeaderStore.set({ active: false, signedIn: false, login: () => {}, logout: () => {} }), [])
 
-  // On sign-in, pull any server-saved CV: enable Resume, auto-resume from the
-  // landing, and finish a save the user kicked off from the modal.
+  // On sign-in, finish whatever the user was doing (save / customise), or pull
+  // any server-saved CV to enable Resume + auto-resume from the landing.
   useEffect(() => {
     if (!idToken) return
-    if (serverSaveOpen && cv) { doServerSave(); return }
+    if (pendingActionRef.current && cv) {
+      const act = pendingActionRef.current
+      pendingActionRef.current = ''
+      if (act === 'save') doServerSave()
+      else if (act === 'tailor') setJdOpen(true)
+      return
+    }
     let cancelled = false
     getSavedCv(idToken).then((serverCv) => {
       if (cancelled || !serverCv) return
@@ -492,8 +489,11 @@ export default function CvGeneratorTool() {
   // the saved copy. Also cached in localStorage so the device Resume works.
   function onSaveForLater(on: boolean) {
     if (!cv) return
-    if (on) { setErr(''); setServerSaveOpen(true) } // confirm via the dialog
-    else if (serverSaved) {
+    setSaveMenu(false)
+    if (on) {
+      if (idToken) doServerSave()
+      else { pendingActionRef.current = 'save'; login() } // sign in, then save
+    } else if (serverSaved) {
       setServerSaved(false)
       if (idToken) deleteCvServer(idToken)
       try { localStorage.removeItem('bis-cv-saved') } catch { /* ignore */ }
@@ -509,9 +509,7 @@ export default function CvGeneratorTool() {
       await saveCvServer(idToken, cv)
       writeLocal(cv)
       setServerSaved(true)
-      setServerSaveOpen(false)
       setToast(s.serverSavedMsg)
-      if (pendingTailorRef.current) { pendingTailorRef.current = false; setJdOpen(true) }
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
@@ -519,13 +517,15 @@ export default function CvGeneratorTool() {
     }
   }
 
-  // Tailor the generated CV to a pasted job description (ephemeral; shown via the
-  // preview switch alongside the generated version).
+  // Tailor the CV to a pasted job description. Customising also saves the CV to
+  // the account (so it can be reopened), which the JD dialog tells the user.
   async function tailor() {
     if (!idToken || !cv || !jdText.trim() || jdBusy) return
     setJdBusy(true)
     setErr('')
     try {
+      // Save the base CV to the account as part of customising.
+      try { await saveCvServer(idToken, cv); writeLocal(cv); setServerSaved(true) } catch { /* non-fatal */ }
       const r = await tailorCv(idToken, cv, jdText.trim())
       setTailoredCv(r.cv)
       setShowAlt(true)
@@ -669,10 +669,10 @@ export default function CvGeneratorTool() {
 
       {status === 'done' && cv && (
         <>
-          {/* Immersive full-bleed preview, docked flush to the navbar, scaled to
-              fit. Renders the Cv JSON read-only (source of truth); the tailored
-              version or the uploaded original is shown via the switch. */}
-          <div ref={previewRef} className={`mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden bg-[#e9ebef] ${fs ? 'h-[100dvh]' : 'h-[calc(100dvh-8.5rem)] max-[560px]:h-[calc(100dvh-8rem)] min-h-[22rem]'}`}>
+          {/* Immersive preview as a FIXED layer below the navbar (not in flow), so
+              the page has nothing to scroll — mobile `100dvh` + touch-scroll used to
+              leave a huge scrollable gray area. Renders the Cv JSON read-only. */}
+          <div ref={previewRef} className={`overflow-hidden bg-[#e9ebef] ${fs ? 'fixed inset-0 z-50' : 'fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30'}`}>
             <iframe
               ref={iframeRef}
               title={cvFilename(activeCv || cv)}
@@ -725,7 +725,7 @@ export default function CvGeneratorTool() {
             {/* Customize (bottom-right): Insert JD / Tell me what to change / Make shorter. */}
             {/* Target job description (bottom-right): tailor the CV to a JD. Requires
                 the CV to be saved first (so it can be reopened + tailored later). */}
-            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (serverSaved && idToken) setJdOpen(true); else { pendingTailorRef.current = true; setServerSaveOpen(true) } }}
+            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (idToken) setJdOpen(true); else { pendingActionRef.current = 'tailor'; login() } }}
               className="absolute end-3 bottom-3 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
               {s.targetJd}
             </button>
@@ -741,34 +741,16 @@ export default function CvGeneratorTool() {
           </div>
 
 
-          {serverSaveOpen && (
-            <Sheet onClose={() => { if (!serverSaving) setServerSaveOpen(false) }}>
-              <SheetTitle>{s.serverSaveTitle}</SheetTitle>
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">
-                {s.serverSaveBody}{' '}
-                <Link to={localePath(locale, '/privacy')} className="underline hover:text-green-600">{s.privacyWord}</Link>{s.serverSaveTail}
-              </p>
-              {!idToken && <div ref={serverBtnRef} className="[color-scheme:light] flex justify-center py-1" data-testid="cv-server-signin" />}
-              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
-              {idToken && (
-                <SheetActions>
-                  <Button variant="primary" onClick={doServerSave} disabled={serverSaving} data-testid="cv-server-save">
-                    {serverSaving ? s.serverSaving : s.serverSaveBtn}
-                  </Button>
-                  <Button onClick={() => setServerSaveOpen(false)} disabled={serverSaving} data-testid="cv-server-cancel">
-                    {s.cancel}
-                  </Button>
-                </SheetActions>
-              )}
-            </Sheet>
-          )}
-
           {jdOpen && (
             <Sheet onClose={() => { if (!jdBusy) setJdOpen(false) }}>
               <SheetTitle>{s.jdTitle}</SheetTitle>
               <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.jdBody}</p>
               <Textarea value={jdText} onChange={(e) => setJdText(e.target.value)} placeholder={s.jdPh}
-                data-testid="cv-jd-text" className="min-h-[38vh] resize-y" autoFocus />
+                data-testid="cv-jd-text" className="min-h-[34vh] resize-y" autoFocus />
+              <p className="text-[0.78rem] text-ink-faint leading-relaxed">
+                {s.jdSaveNote}{' '}
+                <Link to={localePath(locale, '/privacy')} className="underline hover:text-green-600">{s.privacyWord}</Link>{s.serverSaveTail}
+              </p>
               {err && <p className="text-[0.85rem] text-gold-500" data-testid="cv-jd-err">{err}</p>}
               <SheetActions>
                 <Button variant="primary" onClick={tailor} disabled={jdBusy || jdText.trim().length < 40} data-testid="cv-jd-submit">
