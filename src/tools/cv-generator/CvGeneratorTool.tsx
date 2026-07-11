@@ -263,6 +263,7 @@ export default function CvGeneratorTool() {
   const [saveMenu, setSaveMenu] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [signinFallback, setSigninFallback] = useState(false) // show the Google button when One-Tap can't display
   const [showAlt, setShowAlt] = useState(false) // preview shows the alternate view (tailored CV, or the uploaded original)
   const [fs, setFs] = useState(false) // preview is in browser fullscreen
   const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
@@ -304,13 +305,25 @@ export default function CvGeneratorTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Render the Google button whenever the sign-in prompt is on screen.
+  // The big green CTA drives sign-in via One-Tap; only if that can't display do
+  // we fall back to the rendered Google button.
+  function startGenerate() {
+    setSigninFallback(false)
+    try {
+      gisRef.current?.prompt((n: unknown) => {
+        const m = n as { isNotDisplayed?: () => boolean; isSkippedMoment?: () => boolean }
+        if (m && (m.isNotDisplayed?.() || m.isSkippedMoment?.())) setSigninFallback(true)
+      })
+    } catch { setSigninFallback(true) }
+  }
+
+  // Render the fallback Google button when One-Tap couldn't show.
   useEffect(() => {
-    if (gisReady && !idToken && btnRef.current && gisRef.current) {
+    if (signinFallback && gisReady && !idToken && btnRef.current && gisRef.current) {
       btnRef.current.innerHTML = ''
       gisRef.current.renderButton(btnRef.current, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill' })
     }
-  }, [gisReady, idToken, text, status])
+  }, [signinFallback, gisReady, idToken, status, origPages])
 
   // Render the Google button inside the server-save modal when not signed in.
   useEffect(() => {
@@ -420,6 +433,7 @@ export default function CvGeneratorTool() {
     setTailoredCv(null)
     setServerSaved(false)
     setPersist(false)
+    setSigninFallback(false)
     setOrigPages([])
     setStatus('extracting')
     let pdfver = '?'
@@ -681,7 +695,11 @@ export default function CvGeneratorTool() {
       <div className="w-[min(92vw,26rem)] bg-[var(--surface)] rounded-lg shadow-[var(--shadow-md)] border border-[color:var(--line)] p-6 flex flex-col items-center gap-4 text-center animate-[fadeUp_0.25s_ease]">
         <h3 className="font-display rtl:font-ar text-[1.25rem] font-semibold text-ink leading-tight">{s.readyTitle}</h3>
         <p className="text-[0.92rem] text-ink-soft leading-relaxed">{s.readyBody}</p>
-        <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
+        <button type="button" onClick={startGenerate} data-testid="cv-generate-cta"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-green-600 text-sand-100 px-4 py-3 text-[1rem] font-semibold hover:bg-green-700 border-0 cursor-pointer shadow-[var(--shadow-sm)]">
+          {s.build}
+        </button>
+        {signinFallback && <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />}
         <p className="text-[0.78rem] text-ink-faint">{s.readyNote}</p>
       </div>
     </div>
@@ -689,7 +707,7 @@ export default function CvGeneratorTool() {
 
 
   return (
-    <Stack data-testid="cv-generator" className="min-h-[70vh]">
+    <Stack data-testid="cv-generator">
       {status !== 'done' && (
         <>
           {(status === 'idle' || (status === 'extracting' && origPages.length === 0)) && hero}
