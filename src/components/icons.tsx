@@ -266,6 +266,14 @@ export function BookmarkIcon({ className }: P) {
   )
 }
 
+export function CloudIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M7 18a4 4 0 0 1-.5-7.97 5.5 5.5 0 0 1 10.6-1.06A4.5 4.5 0 0 1 17 18H7Z" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

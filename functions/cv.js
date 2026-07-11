@@ -10,6 +10,8 @@ import firestore from '@google-cloud/firestore'
 const { Firestore } = firestore
 const db = new Firestore()
 const USAGE = 'cvUsage'
+const SAVED = 'cvSaved' // opt-in server copy of a user's CV (resume on any device)
+const SAVE_RETENTION_MS = 183 * 24 * 60 * 60 * 1000 // ~6 months
 
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || ''
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
@@ -282,6 +284,64 @@ http('cvTailor', async (req, res) => {
     )
     await ref.set({ tailors: [...recent, now], email: user.email, updatedAt: new Date() }, { merge: true })
     res.json({ ok: true, cv, tailorsLeft: TAILOR_LIMIT - recent.length - 1 })
+  } catch (e) {
+    fail(res, e)
+  }
+})
+
+// POST { idToken, cv } → { ok }. Opt-in: store the CV so the user can resume it
+// on any device. One per user (overwrite). Kept 6 months, then lazily deleted.
+http('cvSave', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const { idToken, cv } = req.body || {}
+    const user = await verifyGoogle(idToken)
+    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
+    if (!cv || typeof cv !== 'object') return res.status(400).json({ error: 'missing CV' })
+    const now = Date.now()
+    await db.collection(SAVED).doc(user.sub).set({
+      cv: normalize(cv), savedAt: new Date(now), expiresAt: new Date(now + SAVE_RETENTION_MS), email: user.email || null,
+    })
+    res.json({ ok: true })
+  } catch (e) {
+    fail(res, e)
+  }
+})
+
+// POST { idToken } → { ok }. Remove the user's server-saved CV (opt-out).
+http('cvDelete', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const user = await verifyGoogle((req.body || {}).idToken)
+    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
+    await db.collection(SAVED).doc(user.sub).delete()
+    res.json({ ok: true })
+  } catch (e) {
+    fail(res, e)
+  }
+})
+
+// POST { idToken } → { ok, cv }. The user's saved CV (null if none / expired).
+http('cvGet', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const user = await verifyGoogle((req.body || {}).idToken)
+    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
+    const ref = db.collection(SAVED).doc(user.sub)
+    const snap = await ref.get()
+    if (!snap.exists) return res.json({ ok: true, cv: null })
+    const d = snap.data()
+    if (d.expiresAt && d.expiresAt.toMillis && d.expiresAt.toMillis() < Date.now()) {
+      ref.delete().catch(() => {})
+      return res.json({ ok: true, cv: null })
+    }
+    res.json({ ok: true, cv: d.cv || null })
   } catch (e) {
     fail(res, e)
   }

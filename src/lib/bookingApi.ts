@@ -106,6 +106,7 @@ export interface MyDataReport {
   bookingPage: { code: string | null; meetingTypes: number } | null
   bookings: number
   cvRuns: number
+  savedCv?: boolean
   shortLinks?: number
 }
 

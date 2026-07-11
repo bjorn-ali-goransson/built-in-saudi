@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
-import { DownloadIcon, MicIcon, BookmarkIcon } from '../../components/icons'
-import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv, tailorCv } from '../../lib/cvApi'
+import { Button, Input, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions, Check } from '../../components/ui'
+import { DownloadIcon, MicIcon, BookmarkIcon, CloudIcon } from '../../components/icons'
+import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv, tailorCv, saveCvServer, getSavedCv, deleteCvServer } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
 import { inAppBrowser } from '../../lib/inAppBrowser'
 import { renderCvHtml } from './template'
@@ -36,6 +36,9 @@ const STR = {
     openInBrowser: 'Open in a browser',
     linkCopied: 'Link copied — paste it into Safari or Chrome.',
     loginNote: 'Quick sign-in to build it — free, just to keep bots out.',
+    readyTitle: 'Your CV is ready to generate',
+    readyBody: 'We’ll rewrite it into a clean, recruiter-ready CV — then you can tailor it to a specific job description. You’ll need to sign in first.',
+    readyNote: 'Free — signing in just keeps bots out.',
     build: 'Build my CV',
     building: 'Building your CV…',
     steps: ['Reading your CV…', 'Highlighting your impact…', 'Trimming the noise…', 'Tuning it for the 10-second scan…', 'Formatting your new CV…'],
@@ -60,6 +63,12 @@ const STR = {
     jdSubmit: 'Tailor my CV',
     jdWorking: 'Tailoring…',
     jdDone: 'Tailored to the job — use the switch to compare with your generated CV.',
+    serverSaveTitle: 'Save to your account?',
+    serverSaveBody: 'It’s saved on this device. Also save it to your Google account so you can resume on any device? We keep it for 6 months and you can delete it anytime.',
+    serverSaveBtn: 'Save to my account',
+    serverSaving: 'Saving…',
+    serverSavedMsg: 'Saved to your account — resume it on any device.',
+    resumeSigninNote: 'Saved a CV to your account? Sign in to pick it up here.',
     changesTitle: 'Improvements made',
     qLabel: (i: number, n: number) => `Question ${i} of ${n}`,
     answerPh: 'Type or speak your answer…',
@@ -95,6 +104,9 @@ const STR = {
     openInBrowser: 'افتح في متصفح',
     linkCopied: 'نُسخ الرابط — الصقه في Safari أو Chrome.',
     loginNote: 'تسجيل دخول سريع للبناء — مجاني، فقط لمنع الروبوتات.',
+    readyTitle: 'سيرتك جاهزة للتحويل',
+    readyBody: 'سنعيد كتابتها في سيرة أنيقة جاهزة لمسؤول التوظيف — ثم يمكنك تخصيصها لوصف وظيفي محدد. عليك تسجيل الدخول أولًا.',
+    readyNote: 'مجاني — تسجيل الدخول فقط لمنع الروبوتات.',
     build: 'ابنِ سيرتي',
     building: 'جارٍ بناء سيرتك…',
     steps: ['نقرأ سيرتك…', 'نُبرز إنجازاتك…', 'نحذف الحشو…', 'نضبطها لمسحٍ في ١٠ ثوانٍ…', 'ننسّق سيرتك الجديدة…'],
@@ -119,6 +131,12 @@ const STR = {
     jdSubmit: 'خصّص سيرتي',
     jdWorking: 'جارٍ التخصيص…',
     jdDone: 'خُصّصت للوظيفة — استخدم المُبدّل للمقارنة بسيرتك المُنشأة.',
+    serverSaveTitle: 'الحفظ في حسابك؟',
+    serverSaveBody: 'حُفظت على هذا الجهاز. هل تريد حفظها أيضًا في حساب Google لاستئنافها على أي جهاز؟ نحتفظ بها ٦ أشهر ويمكنك حذفها متى شئت.',
+    serverSaveBtn: 'احفظ في حسابي',
+    serverSaving: 'جارٍ الحفظ…',
+    serverSavedMsg: 'حُفظت في حسابك — استأنفها على أي جهاز.',
+    resumeSigninNote: 'حفظت سيرة في حسابك؟ سجّل الدخول لاستئنافها هنا.',
     changesTitle: 'التحسينات المُطبَّقة',
     qLabel: (i: number, n: number) => `سؤال ${i} من ${n}`,
     answerPh: 'اكتب أو انطق إجابتك…',
@@ -260,6 +278,12 @@ export default function CvGeneratorTool() {
   const [jdOpen, setJdOpen] = useState(false)
   const [jdText, setJdText] = useState('')
   const [jdBusy, setJdBusy] = useState(false)
+  const [persist, setPersist] = useState(false) // "Save for later" checkbox: keep this CV in localStorage
+  const [serverSaveOpen, setServerSaveOpen] = useState(false) // modal offering cross-device (server) save
+  const [serverSaving, setServerSaving] = useState(false)
+  const [serverSaved, setServerSaved] = useState(false) // this session's CV is also on the server
+  const serverBtnRef = useRef<HTMLDivElement>(null) // Google button inside the server-save modal
+  const heroSigninRef = useRef<HTMLDivElement>(null) // Google button on the landing (resume on another device)
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<{ renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } | null>(null)
@@ -293,9 +317,40 @@ export default function CvGeneratorTool() {
   useEffect(() => {
     if (gisReady && !idToken && btnRef.current && gisRef.current) {
       btnRef.current.innerHTML = ''
-      gisRef.current.renderButton(btnRef.current, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' })
+      gisRef.current.renderButton(btnRef.current, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill' })
     }
   }, [gisReady, idToken, text, status])
+
+  // Render the Google buttons inside the server-save modal / on the landing.
+  useEffect(() => {
+    if (!gisReady || idToken || !gisRef.current) return
+    if (serverSaveOpen && serverBtnRef.current) {
+      serverBtnRef.current.innerHTML = ''
+      gisRef.current.renderButton(serverBtnRef.current, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' })
+    }
+    if (status === 'idle' && heroSigninRef.current) {
+      heroSigninRef.current.innerHTML = ''
+      gisRef.current.renderButton(heroSigninRef.current, { theme: 'outline', size: 'medium', text: 'signin_with', shape: 'pill' })
+    }
+  }, [gisReady, idToken, serverSaveOpen, status])
+
+  // On sign-in, pull any server-saved CV: enable Resume, auto-resume from the
+  // landing, and finish a save the user kicked off from the modal.
+  useEffect(() => {
+    if (!idToken) return
+    if (serverSaveOpen && cv) { doServerSave(); return }
+    let cancelled = false
+    getSavedCv(idToken).then((serverCv) => {
+      if (cancelled || !serverCv) return
+      setSaved(serverCv)
+      if (status === 'idle' && !cv && !text) {
+        setCv(serverCv); setTailoredCv(null); setShowAlt(false); setOrigPages([])
+        setQueue([]); setQIndex(0); setServerSaved(true); setPersist(true); setStatus('done')
+      }
+    }).catch(() => {})
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idToken])
 
   // Auto-scroll to the active question / polish section after each step.
   useEffect(() => {
@@ -370,6 +425,8 @@ export default function CvGeneratorTool() {
     setCv(null)
     setShowAlt(false)
     setTailoredCv(null)
+    setServerSaved(false)
+    setPersist(false)
     setOrigPages([])
     setStatus('extracting')
     let pdfver = '?'
@@ -413,6 +470,8 @@ export default function CvGeneratorTool() {
       setCv(r.cv)
       setTailoredCv(null)
       setShowAlt(false)
+      setServerSaved(false)
+      setPersist(false)
       setAnswersLeft(r.answersLeft)
       setPolishLeft(r.polishLeft)
       setQueue(r.questions)
@@ -438,6 +497,7 @@ export default function CvGeneratorTool() {
     try {
       const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current, text)
       setCv(r.cv)
+      syncPersist(r.cv)
       setAnswersLeft(r.answersLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setAnswerText('')
@@ -462,6 +522,7 @@ export default function CvGeneratorTool() {
     try {
       const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current, text)
       setCv(r.cv)
+      syncPersist(r.cv)
       setPolishLeft(r.polishLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setInstruction('')
@@ -515,12 +576,49 @@ export default function CvGeneratorTool() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
-  function saveForLater() {
-    if (!activeCv) return
-    try { localStorage.setItem('bis-cv-saved', JSON.stringify({ cv: activeCv, savedAt: Date.now() })) } catch { /* storage full */ }
-    setSaved(activeCv)
-    setSaveMenu(false)
-    setToast(s.savedForLater)
+  function writeLocal(next: Cv) {
+    try { localStorage.setItem('bis-cv-saved', JSON.stringify({ cv: next, savedAt: Date.now() })) } catch { /* storage full */ }
+    setSaved(next)
+  }
+
+  // "Save for later" checkbox (three modes):
+  //  • off  → nothing is persisted (localStorage cleared, server copy removed).
+  //  • on   → the CV is kept in localStorage (offline, no sign-in), and we offer
+  //           an opt-in server save so it can be resumed on any device.
+  function togglePersist(on: boolean) {
+    if (!cv) return
+    setPersist(on)
+    if (on) {
+      writeLocal(cv)
+      setToast(s.savedForLater)
+      if (!serverSaved) { setErr(''); setServerSaveOpen(true) } // ask about the cloud
+    } else {
+      try { localStorage.removeItem('bis-cv-saved') } catch { /* ignore */ }
+      setSaved(null)
+      if (serverSaved && idToken) { deleteCvServer(idToken); setServerSaved(false) }
+    }
+  }
+
+  async function doServerSave() {
+    if (!idToken || !cv || serverSaving) return
+    setServerSaving(true)
+    setErr('')
+    try {
+      await saveCvServer(idToken, cv)
+      setServerSaved(true)
+      setServerSaveOpen(false)
+      setToast(s.serverSavedMsg)
+    } catch (e) {
+      setErr((e as Error).message || s.genErr)
+    } finally {
+      setServerSaving(false)
+    }
+  }
+
+  // Keep the persisted copies current after a refine, per the user's choices.
+  function syncPersist(next: Cv) {
+    if (persist) writeLocal(next)
+    if (serverSaved && idToken) saveCvServer(idToken, next).catch(() => {})
   }
 
   // Tailor the generated CV to a pasted job description (ephemeral; shown via the
@@ -545,10 +643,12 @@ export default function CvGeneratorTool() {
     if (!saved) return
     setCv(saved)
     // A restored CV has no original upload and no tailored version — the preview
-    // switch stays hidden until the user customises for a job.
+    // switch stays hidden until the user customises for a job. It's already
+    // persisted, so the "Save for later" box comes back checked.
     setTailoredCv(null)
     setShowAlt(false)
     setOrigPages([])
+    setPersist(true)
     setQueue([])
     setQIndex(0)
     setStatus('done')
@@ -576,6 +676,26 @@ export default function CvGeneratorTool() {
             )}
           </div>
         )}
+        {status === 'idle' && !idToken && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1">
+            <div ref={heroSigninRef} className="[color-scheme:light]" data-testid="cv-hero-signin" />
+            <span className="text-[0.82rem] opacity-90">{s.resumeSigninNote}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // Shown over the (softly blurred) uploaded CV once it's read: the CV is ready,
+  // sign in to generate it. The Google button (btnRef) is the real CTA — clicking
+  // it signs in, which auto-starts generation.
+  const readyCard = (
+    <div className="absolute inset-0 z-10 grid place-items-center p-4">
+      <div className="w-[min(92vw,26rem)] bg-[var(--surface)] rounded-lg shadow-[var(--shadow-md)] border border-[color:var(--line)] p-6 flex flex-col items-center gap-4 text-center animate-[fadeUp_0.25s_ease]">
+        <h3 className="font-display rtl:font-ar text-[1.25rem] font-semibold text-ink leading-tight">{s.readyTitle}</h3>
+        <p className="text-[0.92rem] text-ink-soft leading-relaxed">{s.readyBody}</p>
+        <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
+        <p className="text-[0.78rem] text-ink-faint">{s.readyNote}</p>
       </div>
     </div>
   )
@@ -606,11 +726,12 @@ export default function CvGeneratorTool() {
             <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>
           )}
 
-          {/* Immediate PDF preview (ready + generating). It blurs while we generate,
-              with a scanning beam + status pill on top. */}
+          {/* Immediate PDF preview (ready + generating). It blurs while we generate
+              — and, before sign-in, sits softly blurred behind the "ready to
+              generate" card. */}
           {origPages.length > 0 && (status === 'ready' || status === 'generating') && (
             <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
-              <PdfPages pages={origPages} className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />
+              <PdfPages pages={origPages} className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : status === 'ready' && !idToken ? 'blur-[3px] scale-[1.01]' : ''}`} />
               {status === 'generating' && (
                 <>
                   <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_35%,transparent)]" />
@@ -623,10 +744,19 @@ export default function CvGeneratorTool() {
                   </div>
                 </>
               )}
+              {status === 'ready' && !idToken && (
+                <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
+              )}
+              {status === 'ready' && !idToken && readyCard}
             </div>
           )}
 
-          {/* Non-PDF (docx/txt): nothing to preview, so a simple spinner while generating. */}
+          {/* Non-PDF (docx/txt): no preview to blur — show the card / spinner alone. */}
+          {origPages.length === 0 && status === 'ready' && !idToken && (
+            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem] bg-[#e9ebef]" data-testid="cv-loading">
+              {readyCard}
+            </div>
+          )}
           {status === 'generating' && origPages.length === 0 && (
             <div className="py-24 flex flex-col items-center gap-4" data-testid="cv-loading">
               <Spinner className="size-9" label={s.building} />
@@ -646,17 +776,6 @@ export default function CvGeneratorTool() {
             </div>
           )}
         </>
-      )}
-
-      {/* Sticky bottom sign-in — a CV is ready, waiting for a quick Google sign-in. */}
-      {text && !idToken && status !== 'done' && createPortal(
-        <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
-          <div className="wrap py-3 flex items-center gap-3 flex-wrap">
-            <div ref={btnRef} className="[color-scheme:light]" data-testid="google-signin" />
-            <span className="text-[0.85rem] text-ink-faint flex-1 min-w-[12rem]">{s.loginNote}</span>
-          </div>
-        </div>,
-        document.body,
       )}
 
       {status === 'done' && cv && (
@@ -694,10 +813,11 @@ export default function CvGeneratorTool() {
                     className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
                     <DownloadIcon /> {s.word}
                   </button>
-                  <button type="button" data-testid="cv-save-later" onClick={saveForLater}
-                    className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">
-                    <BookmarkIcon /> {s.saveForLater}
-                  </button>
+                  <Check className="w-full px-4 py-2.5 border-t border-[color:var(--line-soft)] whitespace-nowrap">
+                    <input type="checkbox" checked={persist} onChange={(e) => togglePersist(e.target.checked)} data-testid="cv-save-later" />
+                    <span>{s.saveForLater}</span>
+                    {serverSaved && <CloudIcon className="w-4 h-4 text-green-600" />}
+                  </Check>
                 </div>
               )}
               <button type="button" onClick={() => setSaveMenu((v) => !v)} aria-label={s.saveOptions} aria-expanded={saveMenu} data-testid="cv-save-menu"
@@ -765,7 +885,23 @@ export default function CvGeneratorTool() {
           document.body,
           )}
 
-          {err && !jdOpen && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
+          {err && !jdOpen && !serverSaveOpen && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
+
+          {serverSaveOpen && (
+            <Sheet onClose={() => { if (!serverSaving) setServerSaveOpen(false) }}>
+              <SheetTitle>{s.serverSaveTitle}</SheetTitle>
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.serverSaveBody}</p>
+              {!idToken && <div ref={serverBtnRef} className="[color-scheme:light] flex justify-center py-1" data-testid="cv-server-signin" />}
+              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
+              {idToken && (
+                <SheetActions>
+                  <Button variant="primary" onClick={doServerSave} disabled={serverSaving} data-testid="cv-server-save">
+                    {serverSaving ? s.serverSaving : s.serverSaveBtn}
+                  </Button>
+                </SheetActions>
+              )}
+            </Sheet>
+          )}
 
           {jdOpen && (
             <Sheet onClose={() => { if (!jdBusy) setJdOpen(false) }}>

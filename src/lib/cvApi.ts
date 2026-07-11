@@ -78,6 +78,38 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
   return parseResult(data)
 }
 
+/** Opt-in: save the CV to the user's account so they can resume on any device. */
+export async function saveCvServer(idToken: string, cv: Cv): Promise<void> {
+  const r = await fetch(`${FN}/cv-save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, cv }),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+}
+
+/** Remove the user's server-saved CV (opt-out). */
+export async function deleteCvServer(idToken: string): Promise<void> {
+  await fetch(`${FN}/cv-delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  }).catch(() => { /* ignore */ })
+}
+
+/** Fetch the user's server-saved CV (null if none). */
+export async function getSavedCv(idToken: string): Promise<Cv | null> {
+  const r = await fetch(`${FN}/cv-get`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  })
+  if (!r.ok) return null
+  const data = await r.json().catch(() => ({}))
+  return data && data.cv ? (data.cv as Cv) : null
+}
+
 /** Tailor the generated CV to a specific job description (separate 24h budget). */
 export async function tailorCv(idToken: string, cv: Cv, jobDescription: string): Promise<{ cv: Cv; tailorsLeft: number }> {
   const r = await fetch(`${FN}/cv-tailor`, {

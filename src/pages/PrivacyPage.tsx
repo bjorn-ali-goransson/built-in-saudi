@@ -44,7 +44,8 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'CV Generator',
         p: [
           'Your CV file is read inside your browser — the file itself is never uploaded to us. Only the extracted plain text is sent to our server, which passes it to OpenAI to rewrite it into the structured result and to apply any answers or edits you make.',
-          'We do not store the content of your CV on our servers. We keep only a small per-user counter (tied to your Google account) to enforce the free limits and prevent abuse — such as how many CVs you generated today and how many edits you have made.',
+          'We do not store the content of your CV on our servers — unless you tick “Save for later”. By default we keep only a small per-user counter (tied to your Google account) to enforce the free limits and prevent abuse — such as how many CVs you generated today and how many edits you have made.',
+          'If you tick “Save for later”, your CV is saved on your device; and if you then choose “Save to my account”, the resulting CV (as structured text, never the original file you uploaded) is stored on our servers so you can resume it on any device. It is kept for 6 months, and you can remove it anytime by unticking the box or via “Delete my data” below.',
           'Sign-in here uses Google only to confirm you are a real person (your name and email). This tool requests no Google Calendar, Drive or other scopes.',
           'The extracted text is processed by OpenAI purely to generate your CV. Per OpenAI’s API policy, data sent through the API is not used to train their models. We send only the CV text you provide, nothing more.',
         ],
@@ -115,7 +116,8 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'منشئ السيرة الذاتية',
         p: [
           'يُقرأ ملف سيرتك داخل متصفحك — ولا يُرفع الملف نفسه إلينا أبدًا. يُرسَل النص المستخرج فقط إلى خادمنا، الذي يمرّره إلى OpenAI لإعادة كتابته في النتيجة المنظّمة ولتطبيق أي إجابات أو تعديلات تجريها.',
-          'لا نخزّن محتوى سيرتك على خوادمنا. نحتفظ فقط بعدّاد صغير لكل مستخدم (مرتبط بحساب جوجل) لفرض الحدود المجانية ومنع الإساءة — مثل عدد السير التي أنشأتها اليوم وعدد التعديلات.',
+          'لا نخزّن محتوى سيرتك على خوادمنا — إلا إذا فعّلت «احفظ للاحقًا». افتراضيًا نحتفظ فقط بعدّاد صغير لكل مستخدم (مرتبط بحساب جوجل) لفرض الحدود المجانية ومنع الإساءة — مثل عدد السير التي أنشأتها اليوم وعدد التعديلات.',
+          'إذا فعّلت «احفظ للاحقًا»، تُحفظ سيرتك على جهازك؛ وإن اخترت بعدها «احفظ في حسابي»، تُخزَّن السيرة الناتجة (كنصّ منظَّم، وليس الملف الأصلي الذي رفعته) على خوادمنا لتستأنفها على أي جهاز. تُحفظ لمدة ٦ أشهر، ويمكنك إزالتها في أي وقت بإلغاء تفعيل الخانة أو عبر «احذف بياناتي» أدناه.',
           'تسجيل الدخول هنا يستخدم جوجل فقط للتأكد أنك شخص حقيقي (اسمك وبريدك). ولا تطلب هذه الأداة أي صلاحيات تقويم أو Drive أو غيرها.',
           'يُعالَج النص المستخرج بواسطة OpenAI لإنشاء سيرتك فقط. ووفق سياسة واجهة OpenAI، لا تُستخدم البيانات المُرسَلة عبر الواجهة لتدريب نماذجها. ونرسل نص سيرتك فقط لا غير.',
         ],
@@ -170,8 +172,8 @@ export function PrivacyPage() {
 /** Sign in with Google to see everything stored for you, and delete it. */
 function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   const t = locale === 'ar'
-    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', links: 'روابط مختصرة', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
-    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', links: 'Short links', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
+    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
+    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
   const [idToken, setIdToken] = useState('')
   const [report, setReport] = useState<MyDataReport | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'deleting' | 'done' | 'error'>('idle')
@@ -197,10 +199,10 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   async function del() {
     if (!idToken) return
     setStatus('deleting')
-    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, shortLinks: 0 } : r)) } catch { setStatus('error') }
+    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0 } : r)) } catch { setStatus('error') }
   }
 
-  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && (report.shortLinks || 0) === 0
+  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0
 
   return (
     <div className="wrap max-w-[46rem] pb-[clamp(1.5rem,4vw,2.5rem)]">
@@ -218,6 +220,7 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
                 <li>{t.page}: <b>{report.bookingPage ? `✓ (${report.bookingPage.meetingTypes})` : t.none}</b></li>
                 <li>{t.bookings}: <b>{report.bookings}</b></li>
                 <li>{t.cv}: <b>{report.cvRuns}</b></li>
+                {report.savedCv && <li>{t.savedCv}: <b>✓</b></li>}
                 <li>{t.links}: <b>{report.shortLinks || 0}</b></li>
               </ul>
               <Button variant="primary" data-testid="mydata-delete" disabled={status === 'deleting'} onClick={del} className="self-start !bg-gold-500 !border-gold-500 hover:!bg-gold-400">
