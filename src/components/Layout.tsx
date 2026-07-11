@@ -50,17 +50,21 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
   const [dbg, setDbg] = useState({ text: '', font: 13 })
   const [hiddenCount, setHiddenCount] = useState(0)
   const hiddenRef = useRef<HTMLElement[]>([])
-  const widestEl = (): HTMLElement | null => {
-    let el: HTMLElement | null = null, max = 0
+  // Find the element with the extreme value of a metric: width / height /
+  // right-edge / bottom-edge. Right/bottom catch elements that PUSH the scroll
+  // area out via position/margins without being "wide" themselves.
+  const extremeEl = (metric: 'w' | 'h' | 'r' | 'b'): { el: HTMLElement | null; val: number } => {
+    let el: HTMLElement | null = null, max = -Infinity
     document.querySelectorAll<HTMLElement>('body *').forEach((n) => {
       if (n.closest('[data-debug-ui]') || n.style.display === 'none') return
-      const w = n.getBoundingClientRect().width
-      if (w > max && w < 1e5) { max = w; el = n }
+      const r = n.getBoundingClientRect()
+      const v = metric === 'w' ? r.width : metric === 'h' ? r.height : metric === 'r' ? r.right : r.bottom
+      if (v > max && v < 1e6) { max = v; el = n }
     })
-    return el
+    return { el, val: max }
   }
-  const hideWidest = () => {
-    const el = widestEl()
+  const hide = (metric: 'w' | 'h' | 'r' | 'b') => {
+    const { el } = extremeEl(metric)
     if (el) { el.style.setProperty('display', 'none', 'important'); hiddenRef.current.push(el); setHiddenCount(hiddenRef.current.length) }
   }
   const resetHidden = () => { hiddenRef.current.forEach((el) => el.style.removeProperty('display')); hiddenRef.current = []; setHiddenCount(0) }
@@ -123,8 +127,11 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         {debug && (
           <div data-debug-ui dir="ltr" style={{ fontSize: `${dbg.font}px` }} className="fixed top-1 left-1 z-[99999] flex flex-col gap-1 items-start max-w-[98vw]">
             <pre className="m-0 bg-black/90 text-lime-300 px-2 py-1 rounded leading-tight whitespace-pre overflow-hidden max-w-full">{dbg.text}{hiddenCount ? `\nhidden ${hiddenCount}` : ''}</pre>
-            <div className="flex gap-1">
-              <button type="button" onClick={hideWidest} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">hide widest</button>
+            <div className="flex flex-wrap gap-1">
+              <button type="button" onClick={() => hide('w')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">widest</button>
+              <button type="button" onClick={() => hide('h')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">tallest</button>
+              <button type="button" onClick={() => hide('r')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">→ far</button>
+              <button type="button" onClick={() => hide('b')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">↓ far</button>
               <button type="button" onClick={resetHidden} className="bg-neutral-700 text-white px-2 py-0.5 rounded border-0 cursor-pointer">reset</button>
             </div>
           </div>

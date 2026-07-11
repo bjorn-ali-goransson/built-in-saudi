@@ -614,9 +614,14 @@ export default function CvGeneratorTool() {
           )}
 
           {/* Blurred PDF backdrop — while generating (scan beam), or during the
-              brief signed-in "ready" moment before auto-generate kicks in. */}
-          {origPages.length > 0 && (status === 'generating' || (status === 'ready' && !!idToken)) && (
-            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
+              brief signed-in "ready" moment before auto-generate kicks in.
+              FIXED + portaled to <body> (like the done preview) — an in-flow
+              `w-screen`/`100dvh` layer used to overflow horizontally by a hair,
+              which made mobile Chrome auto-zoom-out into a runaway feedback loop
+              (scale → 0.25, giant scroll area). `fixed` is viewport-relative and
+              can't overflow the document. */}
+          {origPages.length > 0 && (status === 'generating' || (status === 'ready' && !!idToken)) && createPortal(
+            <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden" data-testid="cv-loading">
               <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />
               {status === 'generating' && (
                 <>
@@ -630,7 +635,8 @@ export default function CvGeneratorTool() {
                   </div>
                 </>
               )}
-            </div>
+            </div>,
+            document.body,
           )}
           {(status === 'generating' || (status === 'ready' && !!idToken)) && origPages.length === 0 && (
             <div className="py-24 flex flex-col items-center gap-4" data-testid="cv-loading">
@@ -640,10 +646,11 @@ export default function CvGeneratorTool() {
           )}
 
           {/* Ready + not signed in: the sign-in card, over the softly blurred PDF
-              once it's ready. One stable container so the card never remounts
-              when the PDF pages finish loading (was causing a flash). */}
-          {status === 'ready' && !idToken && (
-            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem] bg-[#e9ebef]" data-testid="cv-loading">
+              once it's ready. FIXED + portaled (same overflow reason as above).
+              One stable container so the card never remounts when the PDF pages
+              finish loading (was causing a flash). */}
+          {status === 'ready' && !idToken && createPortal(
+            <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden bg-[#e9ebef]" data-testid="cv-loading">
               {origPages.length > 0 && (
                 <>
                   <PdfPages pages={origPages} cover className="absolute inset-0 blur-[3px] scale-[1.01]" />
@@ -651,7 +658,8 @@ export default function CvGeneratorTool() {
                 </>
               )}
               {readyCard}
-            </div>
+            </div>,
+            document.body,
           )}
 
           {err && (
