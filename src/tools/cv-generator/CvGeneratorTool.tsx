@@ -23,7 +23,7 @@ const STR = {
   en: {
     heroTitle: 'Optimize your CV',
     heroBody: 'This tool rewrites the CV you already have and asks a couple of quick questions to fill any gaps.',
-    dataNote: 'How we use your data (we don’t):',
+    dataNote: 'How we use your data:',
     privacyLink: 'Privacy',
     termsLink: 'Terms',
     choose: 'Upload your CV',
