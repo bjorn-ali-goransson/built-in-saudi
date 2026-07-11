@@ -1,23 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions, Check } from '../../components/ui'
-import { DownloadIcon, MicIcon, BookmarkIcon, CloudIcon } from '../../components/icons'
-import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv, tailorCv, saveCvServer, getSavedCv, deleteCvServer } from '../../lib/cvApi'
+import { Button, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions, Check } from '../../components/ui'
+import { DownloadIcon, BookmarkIcon, CloudIcon } from '../../components/icons'
+import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, tailorCv, saveCvServer, getSavedCv, deleteCvServer } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
 import { cvHeaderStore } from '../../lib/cvHeader'
 import { inAppBrowser } from '../../lib/inAppBrowser'
 import { renderCvHtml } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
-
-// Minimal Web Speech API surface (optional voice input).
-type SR = { lang: string; interimResults: boolean; onresult: ((e: unknown) => void) | null; onend: (() => void) | null; start(): void; stop(): void }
-const SpeechRecCtor: (new () => SR) | undefined =
-  typeof window !== 'undefined'
-    ? ((window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }).SpeechRecognition ||
-       (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition)
-    : undefined
 
 const STR = {
   en: {
@@ -72,9 +64,7 @@ const STR = {
     dlPdf: 'Download PDF',
     dlWord: 'Download Word',
     customize: 'Customize',
-    insertJd: 'Insert Job Description',
-    tellChange: 'Tell me what to change',
-    makeShorter: 'Make shorter',
+    targetJd: 'Target job description',
     shortenTitle: 'Make it shorter',
     shortenLead: 'A tighter CV lands better — recruiters skim in seconds. Condense to:',
     pagesWord: (n: number) => `${n} page${n > 1 ? 's' : ''}`,
@@ -154,9 +144,7 @@ const STR = {
     dlPdf: 'تنزيل PDF',
     dlWord: 'تنزيل Word',
     customize: 'تخصيص',
-    insertJd: 'أدخل الوصف الوظيفي',
-    tellChange: 'أخبرني بما تريد تغييره',
-    makeShorter: 'اجعلها أقصر',
+    targetJd: 'استهدف وصفًا وظيفيًا',
     shortenTitle: 'اجعلها أقصر',
     shortenLead: 'السيرة الأقصر أفضل — يمسح المسؤولون بسرعة. اختصر إلى:',
     pagesWord: (n: number) => `${n} صفحة`,
@@ -188,74 +176,6 @@ const STR = {
 
 type Status = 'idle' | 'extracting' | 'ready' | 'generating' | 'done'
 
-/** Text field with an optional speech-to-text mic + a send button. */
-function ChatInput({
-  value, setValue, onSend, placeholder, busy, sendLabel, testid, locale,
-}: {
-  value: string
-  setValue: (v: string) => void
-  onSend: () => void
-  placeholder: string
-  busy: boolean
-  sendLabel: string
-  testid: string
-  locale: 'en' | 'ar'
-}) {
-  const recRef = useRef<SR | null>(null)
-  const [listening, setListening] = useState(false)
-  const voiceLabel = STR[locale].voice
-
-  function toggleMic() {
-    if (!SpeechRecCtor) return
-    if (listening) {
-      recRef.current?.stop()
-      setListening(false)
-      return
-    }
-    const rec = new SpeechRecCtor()
-    rec.lang = locale === 'ar' ? 'ar-SA' : 'en-US'
-    rec.interimResults = false
-    rec.onresult = (e: unknown) => {
-      const t = (e as { results?: Array<Array<{ transcript?: string }>> })?.results?.[0]?.[0]?.transcript || ''
-      if (t) setValue(value ? `${value} ${t}` : t)
-    }
-    rec.onend = () => setListening(false)
-    try {
-      rec.start()
-      recRef.current = rec
-      setListening(true)
-    } catch {
-      setListening(false)
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <div className="relative grow min-w-0 flex items-center">
-        <Input
-          className={SpeechRecCtor ? 'pe-11' : ''}
-          value={value}
-          placeholder={placeholder}
-          data-testid={testid}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') onSend() }}
-        />
-        {SpeechRecCtor && (
-          <button
-            type="button"
-            aria-label={voiceLabel}
-            aria-pressed={listening}
-            onClick={toggleMic}
-            className={`absolute end-1.5 inline-flex items-center justify-center size-8 rounded-full border-0 bg-transparent cursor-pointer ${listening ? 'text-green-600 bg-[color-mix(in_srgb,var(--green-400)_20%,transparent)]' : 'text-ink-faint hover:text-ink-soft'}`}
-          >
-            <MicIcon className="size-[18px]" />
-          </button>
-        )}
-      </div>
-      <Button variant="primary" onClick={onSend} disabled={busy || !value.trim()}>{sendLabel}</Button>
-    </div>
-  )
-}
 
 /** The uploaded PDF rendered as page images (reliable everywhere, unlike an
  *  <iframe> that depends on the browser's native PDF viewer). */
@@ -292,21 +212,13 @@ export default function CvGeneratorTool() {
   const [err, setErr] = useState('')
   const [errDetail, setErrDetail] = useState('') // technical diagnostics shown under an upload error
   const [browserFallback, setBrowserFallback] = useState(false) // show the "open in browser" fallback
-  const [answersLeft, setAnswersLeft] = useState(0)
-  const [polishLeft, setPolishLeft] = useState(0)
-  const [queue, setQueue] = useState<string[]>([])
-  const [qIndex, setQIndex] = useState(0)
   const [toast, setToast] = useState('')
   const [loadingStep, setLoadingStep] = useState(0)
   // A CV the user saved to this device to finish later.
   const [saved, setSaved] = useState<Cv | null>(() => {
     try { const r = localStorage.getItem('bis-cv-saved'); return r ? (JSON.parse(r).cv as Cv) : null } catch { return null }
   })
-  const [answerText, setAnswerText] = useState('')
-  const [instruction, setInstruction] = useState('')
-  const [busy, setBusy] = useState<'' | 'answer' | 'polish'>('')
   const [saveMenu, setSaveMenu] = useState(false)
-  const [adjustOpen, setAdjustOpen] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
   const [signinFallback, setSigninFallback] = useState(false) // show the Google button when One-Tap can't display
   const [showAlt, setShowAlt] = useState(false) // preview shows the alternate view (tailored CV, or the uploaded original)
@@ -316,11 +228,6 @@ export default function CvGeneratorTool() {
   const [jdOpen, setJdOpen] = useState(false)
   const [jdText, setJdText] = useState('')
   const [jdBusy, setJdBusy] = useState(false)
-  const [cvFill, setCvFill] = useState<number | null>(null) // rendered CV height ÷ one A4 page
-  const [customizeMenu, setCustomizeMenu] = useState(false) // Customize dropdown (bottom-right)
-  const [shortenOpen, setShortenOpen] = useState(false)
-  const [shortening, setShortening] = useState(false)
-  const [shortenTarget, setShortenTarget] = useState(1)
   const [serverSaveOpen, setServerSaveOpen] = useState(false) // "Save for later" opt-in dialog (cross-device)
   const [serverSaving, setServerSaving] = useState(false)
   const [serverSaved, setServerSaved] = useState(false) // this CV is saved to the account
@@ -328,13 +235,13 @@ export default function CvGeneratorTool() {
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
-  const activeRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   // Guards the auto-generate effect so a failed generation never re-triggers it
   // (which would hammer the API). Reset only when a new file is uploaded.
   const autoTried = useRef(false)
   // The previous change summary, sent as context so the user can correct it.
   const lastChangeRef = useRef('')
+  const pendingTailorRef = useRef(false) // open the JD modal right after a save-for-later
 
   // Load + init Google Identity Services once (but don't force sign-in yet).
   useEffect(() => {
@@ -400,19 +307,12 @@ export default function CvGeneratorTool() {
       setSaved(serverCv)
       if (status === 'idle' && !cv && !text) {
         setCv(serverCv); setTailoredCv(null); setShowAlt(false); setOrigPages([])
-        setQueue([]); setQIndex(0); setServerSaved(true); setStatus('done')
+        setServerSaved(true); setStatus('done')
       }
     }).catch(() => {})
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idToken])
-
-  // Auto-scroll to the active question / polish section after each step.
-  useEffect(() => {
-    if (status === 'done' && activeRef.current) {
-      activeRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [qIndex, status])
 
   // Hide the site footer while the immersive result preview is on screen, and
   // lock document scroll: the done view is a full-screen preview + a fixed bottom
@@ -490,7 +390,6 @@ export default function CvGeneratorTool() {
     setTailoredCv(null)
     setServerSaved(false)
     setSigninFallback(false)
-    setCvFill(null)
     setOrigPages([])
     setStatus('extracting')
     let pdfver = '?'
@@ -535,16 +434,8 @@ export default function CvGeneratorTool() {
       setTailoredCv(null)
       setShowAlt(false)
       setServerSaved(false)
-      setCvFill(null)
-      setAnswersLeft(r.answersLeft)
-      setPolishLeft(r.polishLeft)
-      setQueue(r.questions)
-      setQIndex(0)
       setToast('')
-      setAdjustOpen(false)
       lastChangeRef.current = ''
-      setAnswerText('')
-      setInstruction('')
       setStatus('done')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
@@ -552,53 +443,6 @@ export default function CvGeneratorTool() {
     }
   }
 
-  const currentQ = status === 'done' && qIndex < queue.length && answersLeft > 0 ? queue[qIndex] : null
-
-  async function answer() {
-    if (!idToken || !cv || !currentQ || !answerText.trim() || busy) return
-    setBusy('answer')
-    setErr('')
-    try {
-      const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current, text)
-      setCv(r.cv)
-      syncSaved(r.cv)
-      setAnswersLeft(r.answersLeft)
-      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
-      setAnswerText('')
-      setQIndex((i) => i + 1) // next question stays in the open modal
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setBusy('')
-    }
-  }
-
-  function skip() {
-    setAnswerText('')
-    setQIndex((i) => i + 1)
-  }
-
-  async function polish() {
-    if (!idToken || !cv || !instruction.trim() || polishLeft <= 0 || busy) return
-    setBusy('polish')
-    setErr('')
-    try {
-      const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current, text)
-      setCv(r.cv)
-      syncSaved(r.cv)
-      setPolishLeft(r.polishLeft)
-      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
-      setInstruction('') // stay open for another tweak
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setBusy('')
-    }
-  }
-
-  // Vector, selectable-text PDF rendered from the Cv JSON via react-pdf (see
-  // CvPdf.tsx). Dynamically imported so @react-pdf/renderer + fonts load only on
-  // the first download, not with the tool.
   // The CV currently on screen — the tailored version when the user is viewing
   // it, else the generated one. Downloads and "save" act on what you see.
   const activeCv = tailoredCv && showAlt ? tailoredCv : cv
@@ -606,8 +450,6 @@ export default function CvGeneratorTool() {
   // version once it exists (it wins over the original), else the uploaded
   // original (only available right after an upload). Null → no switch shown.
   const altKind: 'tailored' | 'original' | null = tailoredCv ? 'tailored' : origPages.length > 0 ? 'original' : null
-  // Current rendered page count (rounded up), for the "Make shorter" target.
-  const curPages = Math.max(1, Math.ceil((cvFill ?? 1) - 0.05))
 
   async function exportPdf() {
     if (!activeCv || pdfBusy) return
@@ -669,37 +511,11 @@ export default function CvGeneratorTool() {
       setServerSaved(true)
       setServerSaveOpen(false)
       setToast(s.serverSavedMsg)
+      if (pendingTailorRef.current) { pendingTailorRef.current = false; setJdOpen(true) }
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
       setServerSaving(false)
-    }
-  }
-
-  // Keep the saved copies current after a refine, once saved.
-  function syncSaved(next: Cv) {
-    if (!serverSaved) return
-    writeLocal(next)
-    if (idToken) saveCvServer(idToken, next).catch(() => {})
-  }
-
-  // "Make shorter": condense the CV to a target page count (fewer than current).
-  async function shorten() {
-    if (!idToken || !cv || shortening) return
-    setShortening(true)
-    setErr('')
-    try {
-      const r = await refineCv(idToken, cv, `Make my CV shorter — condense it to about ${shortenTarget} page${shortenTarget > 1 ? 's' : ''} or fewer while keeping every strong achievement.`, 'shorten', lastChangeRef.current, text)
-      setCv(r.cv)
-      syncSaved(r.cv)
-      setPolishLeft(r.polishLeft)
-      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
-      setShortenOpen(false)
-      setCvFill(null)
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setShortening(false)
     }
   }
 
@@ -721,21 +537,6 @@ export default function CvGeneratorTool() {
       setJdBusy(false)
     }
   }
-  // Measure how much of one A4 page the rendered CV fills (via the read-only
-  // preview iframe) so we can offer an "add more detail" round when it's short.
-  function measureFill() {
-    try {
-      const doc = iframeRef.current?.contentDocument
-      const r = doc?.querySelector('.resume') as HTMLElement | null
-      const fit = doc?.getElementById('cvfit') as HTMLElement | null
-      if (!r || !fit) return
-      const z = fit.style.zoom
-      fit.style.zoom = '' // measure unscaled
-      const h = r.getBoundingClientRect().height
-      fit.style.zoom = z
-      if (h > 0) setCvFill(h / ((297 * 96) / 25.4)) // ÷ one A4 page height in px
-    } catch { /* not ready — ignore */ }
-  }
 
   function resumeSaved() {
     if (!saved) return
@@ -747,9 +548,6 @@ export default function CvGeneratorTool() {
     setShowAlt(false)
     setOrigPages([])
     setServerSaved(true)
-    setCvFill(null)
-    setQueue([])
-    setQIndex(0)
     setStatus('done')
   }
 
@@ -880,7 +678,6 @@ export default function CvGeneratorTool() {
               title={cvFilename(activeCv || cv)}
               className="block w-full h-full border-0 bg-[#e9ebef]"
               srcDoc={renderCvHtml(tailoredCv && showAlt ? tailoredCv : cv, { preview: true })}
-              onLoad={() => { measureFill(); window.setTimeout(measureFill, 600) }}
             />
             {showAlt && altKind === 'original' && origPages.length > 0 && (
               <PdfPages pages={origPages} className="absolute inset-0 h-full" />
@@ -915,31 +712,19 @@ export default function CvGeneratorTool() {
                   </Check>
                 </div>
               )}
-              <button type="button" onClick={() => { setSaveMenu((v) => !v); setCustomizeMenu(false) }} aria-expanded={saveMenu} data-testid="cv-save-menu"
+              <button type="button" onClick={() => setSaveMenu((v) => !v)} aria-expanded={saveMenu} data-testid="cv-save-menu"
                 className="inline-flex items-center gap-1.5 h-9 rounded-md bg-green-600 text-sand-100 px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:bg-green-700 border-0 cursor-pointer">
                 <DownloadIcon className="size-4" /> {s.save}
               </button>
             </div>
 
             {/* Customize (bottom-right): Insert JD / Tell me what to change / Make shorter. */}
-            <div className="absolute end-3 bottom-3 z-10">
-              {customizeMenu && (
-                <div className="absolute bottom-full end-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[14rem] text-end">
-                  <button type="button" data-testid="cv-customize-jd" onClick={() => { setCustomizeMenu(false); setErr(''); setJdOpen(true) }}
-                    className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">{s.insertJd}</button>
-                  <button type="button" data-testid="cv-adjust-open" onClick={() => { setCustomizeMenu(false); setErr(''); setAdjustOpen(true) }}
-                    className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">{s.tellChange}{currentQ ? ` · ${queue.length - qIndex}` : ''}</button>
-                  {curPages > 1 && (
-                    <button type="button" data-testid="cv-make-shorter" onClick={() => { setCustomizeMenu(false); setErr(''); setShortenTarget(Math.max(1, curPages - 1)); setShortenOpen(true) }}
-                      className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">{s.makeShorter}</button>
-                  )}
-                </div>
-              )}
-              <button type="button" onClick={() => { setCustomizeMenu((v) => !v); setSaveMenu(false) }} aria-expanded={customizeMenu} data-testid="cv-customize"
-                className="inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
-                {s.customize}
-              </button>
-            </div>
+            {/* Target job description (bottom-right): tailor the CV to a JD. Requires
+                the CV to be saved first (so it can be reopened + tailored later). */}
+            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (serverSaved) setJdOpen(true); else { pendingTailorRef.current = true; setServerSaveOpen(true) } }}
+              className="absolute end-3 bottom-3 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
+              {s.targetJd}
+            </button>
 
             <button type="button" onClick={toggleFullscreen} data-testid="cv-fullscreen" aria-label={fs ? s.exitFs : s.fullscreen} title={fs ? s.exitFs : s.fullscreen}
               className="absolute end-3 top-3 z-10 grid place-items-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
@@ -949,48 +734,6 @@ export default function CvGeneratorTool() {
             </button>
           </div>
 
-          {/* "Tell me what to change": AI gap questions (if any), then free polish. */}
-          {adjustOpen && (
-            <Sheet onClose={() => setAdjustOpen(false)}>
-              <SheetTitle>{currentQ ? s.qLabel(qIndex + 1, queue.length) : s.polishTitle}</SheetTitle>
-              {currentQ ? (
-                <div className="flex flex-col gap-3" ref={activeRef}>
-                  <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
-                  <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
-                    busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
-                  <button type="button" className="self-start text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
-                </div>
-              ) : polishLeft > 0 ? (
-                <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
-                  busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
-              ) : (
-                <p className="text-[0.85rem] text-ink-faint">{s.noPolish}</p>
-              )}
-              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
-            </Sheet>
-          )}
-
-          {/* "Make shorter": condense to a target page count. */}
-          {shortenOpen && (
-            <Sheet onClose={() => { if (!shortening) setShortenOpen(false) }}>
-              <SheetTitle>{s.shortenTitle}</SheetTitle>
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.shortenLead}</p>
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: curPages - 1 }, (_, i) => i + 1).map((n) => (
-                  <button key={n} type="button" onClick={() => setShortenTarget(n)} data-testid={`cv-shorten-${n}`}
-                    className={`px-4 py-2 rounded-md text-[0.9rem] font-semibold border cursor-pointer ${shortenTarget === n ? 'bg-green-600 text-sand-100 border-green-700' : 'bg-[var(--surface)] text-ink-soft border-[color:var(--line)] hover:border-green-500'}`}>
-                    {s.pagesWord(n)}
-                  </button>
-                ))}
-              </div>
-              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
-              <SheetActions>
-                <Button variant="primary" onClick={shorten} disabled={shortening} data-testid="cv-shorten-submit">
-                  {shortening ? s.shortening : s.shortenBtn}
-                </Button>
-              </SheetActions>
-            </Sheet>
-          )}
 
           {serverSaveOpen && (
             <Sheet onClose={() => { if (!serverSaving) setServerSaveOpen(false) }}>
