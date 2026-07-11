@@ -5,6 +5,8 @@ import { imageCropperTool } from './image-cropper/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfSplitTool } from './pdf-split/meta'
+import { pdfSignTool } from './pdf-sign/meta'
+import { pdfFillTool } from './pdf-fill/meta'
 import { invoiceGeneratorTool } from './invoice-generator/meta'
 import { colorToolsTool } from './color-tools/meta'
 import { qrCodeTool } from './qr-code/meta'
@@ -53,6 +55,8 @@ export const tools: Tool[] = [
   imagesToPdfTool,
   pdfMergeTool,
   pdfSplitTool,
+  pdfSignTool,
+  pdfFillTool,
   invoiceGeneratorTool,
   prayerTimesTool,
   islamicCalendarTool,

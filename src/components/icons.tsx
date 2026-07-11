@@ -516,3 +516,21 @@ export function ExpandIcon({ className }: P) {
     </svg>
   )
 }
+
+export function SignatureIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 17c2.5 0 3-9 4.5-9S9 15 10.5 15 12 9 13.5 9 15 13 16.5 13c1 0 1.6-1 2.5-2" />
+      <path d="M3 21h18" />
+    </svg>
+  )
+}
+
+export function FormIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </svg>
+  )
+}

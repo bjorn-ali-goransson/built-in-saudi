@@ -74,6 +74,16 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'دمج PDF', description: 'ادمج عدة ملفات PDF في ملف واحد بالترتيب — إعادة ترتيب وحذف وعدد صفحات. يعمل داخل متصفحك؛ لا تُرفع مستنداتك أبدًا.' },
   },
   {
+    id: 'pdf-sign',
+    en: { name: 'Sign PDF', description: 'Sign a PDF by hand in your browser: draw your signature with a finger or mouse, then drag, pinch and place it exactly — with a magnifier for precise positioning. Powered by pdf-lib; your document is never uploaded.' },
+    ar: { name: 'توقيع PDF', description: 'وقّع ملف PDF بخط يدك داخل متصفحك: ارسم توقيعك بإصبعك أو بالفأرة، ثم اسحبه واقرِصه وضعه بدقة — مع عدسة مكبّرة لضبطٍ مثالي. يعمل عبر pdf-lib؛ لا يُرفع مستندك أبدًا.' },
+  },
+  {
+    id: 'pdf-fill',
+    en: { name: 'Fill PDF Form', description: 'Fill PDF forms in your browser. Interactive fields are detected automatically — clean web form for well-named ones, editable boxes on the page otherwise — and field-less PDFs let you drop text anywhere. Export a filled, optionally flattened PDF; never uploaded.' },
+    ar: { name: 'تعبئة نموذج PDF', description: 'عبّئ نماذج PDF داخل متصفحك. تُكتشف الحقول التفاعلية تلقائيًا — نموذج ويب أنيق للأسماء الواضحة، ومربعات على الصفحة لغيرها — والملفات بلا حقول تتيح إضافة نص أينما شئت. صدّر ملفًا معبّأً وقابلًا للتثبيت؛ دون رفعه أبدًا.' },
+  },
+  {
     id: 'images-to-pdf',
     en: { name: 'Images to PDF', description: 'Combine JPG/PNG images into a single PDF, one per page — reorder, fit-to-image or A4/Letter with a margin. Built in your browser; never uploaded.' },
     ar: { name: 'الصور إلى PDF', description: 'ادمج صور JPG/PNG في PDF واحد، صورة لكل صفحة — إعادة ترتيب، وملاءمة الصورة أو A4/Letter بهامش. داخل متصفحك؛ لا تُرفع أبدًا.' },

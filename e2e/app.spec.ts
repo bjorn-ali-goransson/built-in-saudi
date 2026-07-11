@@ -309,3 +309,16 @@ test.describe('shell', () => {
     await expect(page.locator('html')).toHaveAttribute('translate', 'no')
   })
 })
+
+test.describe('pdf sign + fill', () => {
+  test('sign: loads with a signature pad and a document dropzone', async ({ page }) => {
+    await page.goto('/en/tools/pdf-sign')
+    await expect(page.getByTestId('sign-pad')).toBeVisible()
+    await expect(page.getByTestId('sign-drop')).toBeVisible()
+  })
+
+  test('fill: loads with a form dropzone', async ({ page }) => {
+    await page.goto('/en/tools/pdf-fill')
+    await expect(page.getByTestId('fill-drop')).toBeVisible()
+  })
+})
