@@ -80,7 +80,7 @@ export function Header() {
               type="button"
               onClick={cvAuth.login}
               data-testid="cv-login"
-              className="inline-flex items-center justify-center h-9 rounded-full px-[0.9rem] text-[0.85rem] leading-none font-semibold text-sand-100 bg-green-600 hover:bg-green-700 border-0 cursor-pointer"
+              className="inline-flex items-center justify-center h-9 border border-[color:var(--line)] rounded-full px-[0.9rem] text-[0.85rem] leading-none font-semibold text-ink-soft hover:text-green-700 hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] bg-transparent cursor-pointer"
             >
               {locale === 'ar' ? 'تسجيل الدخول' : 'Log in'}
             </button>
