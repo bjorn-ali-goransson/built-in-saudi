@@ -18,8 +18,6 @@ export function Footer() {
             <Link to={localePath(locale, '/terms')} className="font-semibold text-ink-soft no-underline hover:text-green-600" data-testid="footer-terms">{t.footer.terms}</Link>
           </p>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 items-center [&_a]:no-underline [&_a]:font-semibold [&_a]:text-ink-soft [&_a]:text-[0.92rem] [&_a:hover]:text-green-600" aria-label="Footer">
-            <Link to={localePath(locale)} data-testid="footer-all-tools">{t.footer.allTools}</Link>
-            <a href="https://github.com/bjorn-ali-goransson/built-in-saudi" target="_blank" rel="noreferrer noopener" data-testid="footer-github">{t.footer.github}</a>
             <a href="https://github.com/bjorn-ali-goransson/built-in-saudi/issues/new" target="_blank" rel="noreferrer noopener" data-testid="footer-report-issue">{t.footer.reportIssue}</a>
           </nav>
         </div>
