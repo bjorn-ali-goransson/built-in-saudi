@@ -78,26 +78,31 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
     if (!debug) return
     document.documentElement.setAttribute('data-debug', '')
     const label = (el: Element | null) =>
-      el ? `${(el as HTMLElement).tagName}.${((el as HTMLElement).getAttribute('class') || '(none)').split(/\s+/).slice(0, 3).join('.')}`.slice(0, 46) : '—'
+      el ? `${(el as HTMLElement).tagName}.${((el as HTMLElement).getAttribute('class') || '(none)').split(/\s+/).slice(0, 4).join('.')}`.slice(0, 60) : '—'
     const tick = () => {
       const de = document.documentElement
-      let wideEl: Element | null = null, wMax = 0, tallEl: Element | null = null, hMax = 0
+      let wideEl: Element | null = null, wMax = 0
+      let rightEl: Element | null = null, rMax = -1e9, downEl: Element | null = null, bMax = -1e9
       document.querySelectorAll('body *').forEach((el) => {
         if ((el as HTMLElement).closest('[data-debug-ui]')) return
         const r = (el as HTMLElement).getBoundingClientRect()
         if (r.width > wMax && r.width < 1e5) { wMax = r.width; wideEl = el }
-        if (r.height > hMax && r.height < 1e5) { hMax = r.height; tallEl = el }
+        if (r.right > rMax && r.right < 1e6) { rMax = r.right; rightEl = el }
+        if (r.bottom > bMax && r.bottom < 1e6) { bMax = r.bottom; downEl = el }
       })
       document.querySelectorAll('[data-debug-wide]').forEach((el) => el.removeAttribute('data-debug-wide'))
-      if (wideEl) (wideEl as HTMLElement).setAttribute('data-debug-wide', '')
+      if (rightEl) (rightEl as HTMLElement).setAttribute('data-debug-wide', '')
+      const rr = rightEl ? (rightEl as HTMLElement).getBoundingClientRect() : null
       const vv = window.visualViewport
       setDbg({
-        font: Math.min(48, Math.round(13 / (vv?.scale || 1))),
+        font: Math.min(40, Math.round(12 / (vv?.scale || 1))),
         text: [
           `scale ${(vv?.scale ?? 1).toFixed(2)}  vw ${window.innerWidth}  scrollW ${de.scrollWidth}  Δ${de.scrollWidth - window.innerWidth}`,
-          `vh ${window.innerHeight}  scrollH ${de.scrollHeight}  Δ${de.scrollHeight - window.innerHeight}`,
-          `WIDEST ${Math.round(wMax)}px  ${label(wideEl)}`,
-          `tallest ${Math.round(hMax)}px  ${label(tallEl)}`,
+          `vh ${window.innerHeight}  scrollH ${de.scrollHeight}`,
+          `WIDEST ${Math.round(wMax)}  ${label(wideEl)}`,
+          `→FAR right ${Math.round(rMax)}${rr ? ` (L ${Math.round(rr.left)} W ${Math.round(rr.width)})` : ''}`,
+          `   ${label(rightEl)}`,
+          `↓FAR bottom ${Math.round(bMax)}  ${label(downEl)}`,
         ].join('\n'),
       })
     }
@@ -126,7 +131,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         {!/\/book\//.test(location.pathname) && !hideFooter && <Footer />}
         {debug && (
           <div data-debug-ui dir="ltr" style={{ fontSize: `${dbg.font}px` }} className="fixed top-1 left-1 z-[99999] flex flex-col gap-1 items-start max-w-[98vw]">
-            <pre className="m-0 bg-black/90 text-lime-300 px-2 py-1 rounded leading-tight whitespace-pre overflow-hidden max-w-full">{dbg.text}{hiddenCount ? `\nhidden ${hiddenCount}` : ''}</pre>
+            <pre className="m-0 bg-black/90 text-lime-300 px-2 py-1 rounded leading-tight whitespace-pre-wrap break-all max-w-[92vw]">{dbg.text}{hiddenCount ? `\nhidden ${hiddenCount}` : ''}</pre>
             <div className="flex flex-wrap gap-1">
               <button type="button" onClick={() => hide('w')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">widest</button>
               <button type="button" onClick={() => hide('h')} className="bg-fuchsia-600 text-white px-2 py-0.5 rounded border-0 cursor-pointer font-bold">tallest</button>
