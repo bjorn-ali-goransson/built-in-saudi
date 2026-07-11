@@ -125,7 +125,7 @@ export async function tailorCv(idToken: string, cv: Cv, jobDescription: string):
 
 /** Apply one message — an answer to an AI question ('answer') or a free tweak ('polish').
  *  `context` is the previous change summary so the user can correct it ("no, like this"). */
-export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish' | 'elaborate', context = '', sourceText = ''): Promise<CvResult> {
+export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish' | 'elaborate' | 'shorten', context = '', sourceText = ''): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -21,9 +21,10 @@ const SITE = 'https://built-in-saudi.com'
 const UPLOAD_LIMIT = 2 // fresh generations per rolling 24h per user
 const OWNER_EMAIL = 'bjorn.a.goransson@gmail.com' // exempt from all rate limits
 const ANSWER_LIMIT = 5 // answers to the AI's own gap questions (quality-critical)
-const POLISH_LIMIT = 3 // user-initiated free-form tweaks
+const POLISH_LIMIT = 1 // user-initiated free-form "tell me what to change" tweaks
 const ELABORATE_LIMIT = 2 // "add more detail" rounds when the CV is under a page
-const TAILOR_LIMIT = 3 // job-description tailorings per rolling 24h per user
+const SHORTEN_LIMIT = 2 // "make shorter" rounds
+const TAILOR_LIMIT = 1 // job-description tailorings per rolling 24h per user
 const QUESTION_CAP = 5 // most questions the model may surface at once
 const WINDOW_MS = 24 * 60 * 60 * 1000
 
@@ -93,7 +94,9 @@ The CV object shape (omit a section with an empty array; omit optional strings b
 
 Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions": [ up to 5 short strings ] }`
 
-const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}`
+const LENGTH_RULE = `\n\nLENGTH — IMPORTANT: The result must fill close to a FULL A4 page. A one-page CV should carry roughly 300+ words of body content (not counting the name, headline and contact line). If the source material is thin, do NOT return a sparse half-page — instead elaborate PROFESSIONALLY and truthfully: expand each role's responsibilities into specific, credible bullets, draw out scope/scale/tools/impact that is implied by the material, and enrich the summary and skills. NEVER invent employers, job titles, dates, metrics or skills that aren't supported — but a confident, well-filled single page reads far better than a short one, so err toward fuller, richer phrasing grounded in what's there.`
+
+const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}${LENGTH_RULE}`
 
 const TAILOR_SYSTEM = `You are an elite technical résumé editor tailoring a candidate's CV to ONE specific job. You are given the candidate's current CV as JSON and the target JOB DESCRIPTION. Produce a version of the CV optimised for THIS job:
 - Rewrite the "summary" and the "role" headline to target this position, mirroring the job's language and priorities (honestly, never dishonestly).
@@ -199,7 +202,7 @@ http('cvGenerate', async (req, res) => {
 
     const { cv, questions } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
     // Record the successful upload and reset both budgets for this new CV.
-    await ref.set({ uploads: [...recent, now], answerCount: 0, polishCount: 0, elaborateCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
+    await ref.set({ uploads: [...recent, now], answerCount: 0, polishCount: 0, elaborateCount: 0, shortenCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
     res.json({ ok: true, cv, questions, answersLeft: ANSWER_LIMIT, polishLeft: POLISH_LIMIT })
   } catch (e) {
     fail(res, e)
@@ -221,11 +224,13 @@ http('cvRefine', async (req, res) => {
 
     const isAnswer = kind === 'answer'
     const isElaborate = kind === 'elaborate'
+    const isShorten = kind === 'shorten'
     const ref = db.collection(USAGE).doc(user.sub)
     const d = (await ref.get()).data() || {}
     let answerCount = Number(d.answerCount || 0)
     let polishCount = Number(d.polishCount || 0)
     let elaborateCount = Number(d.elaborateCount || 0)
+    let shortenCount = Number(d.shortenCount || 0)
     const isOwner = user.email === OWNER_EMAIL
     if (!isOwner && isAnswer && answerCount >= ANSWER_LIMIT) {
       return res.status(429).json({ error: `You’ve answered the maximum of ${ANSWER_LIMIT} questions for this CV.` })
@@ -233,15 +238,20 @@ http('cvRefine', async (req, res) => {
     if (!isOwner && isElaborate && elaborateCount >= ELABORATE_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${ELABORATE_LIMIT} “add more detail” rounds for this CV.` })
     }
-    if (!isOwner && !isAnswer && !isElaborate && polishCount >= POLISH_LIMIT) {
-      return res.status(429).json({ error: `You’ve used all ${POLISH_LIMIT} polish requests for this CV. Upload again to start fresh.` })
+    if (!isOwner && isShorten && shortenCount >= SHORTEN_LIMIT) {
+      return res.status(429).json({ error: `You’ve used all ${SHORTEN_LIMIT} “make shorter” rounds for this CV.` })
+    }
+    if (!isOwner && !isAnswer && !isElaborate && !isShorten && polishCount >= POLISH_LIMIT) {
+      return res.status(429).json({ error: `You’ve used your ${POLISH_LIMIT === 1 ? 'one change' : `${POLISH_LIMIT} changes`} for this CV. Upload again to start fresh.` })
     }
 
     const lead = isAnswer
       ? 'The candidate is ANSWERING one or more of your questions'
       : isElaborate
         ? 'The CV currently fills LESS THAN ONE PAGE. Expand it to better fill a full page — WITHOUT inventing anything: restore useful detail from the original that the first pass trimmed, add specific, credible detail to experience bullets (responsibilities, scope, tools, measurable impact), enrich the summary, and round out the skills. Every addition must be grounded in the original CV or a reasonable, truthful elaboration of what is already there — never fabricate employers, dates, metrics or skills. Keep it signal-first, not padded with filler'
-        : 'The candidate asks you to change something (a polish request)'
+        : isShorten
+          ? 'The candidate wants a SHORTER CV — follow the target in their instruction. Condense: cut the least-important detail, merge or trim the weakest bullets, tighten wording, and drop low-signal items, while KEEPING every strong achievement and all key roles. Do not remove whole positions unless clearly irrelevant, and never invent anything'
+          : 'The candidate asks you to change something (a polish request)'
     // The previous change, so the candidate can react to it ("no, not like that, like this").
     const prev = typeof context === 'string' && context.trim()
       ? `\n\nYour most recent change to this CV was: "${String(context).slice(0, 400)}". The candidate may be reacting to it — if so, correct it accordingly.`
@@ -256,9 +266,10 @@ http('cvRefine', async (req, res) => {
     )
     if (isAnswer) answerCount += 1
     else if (isElaborate) elaborateCount += 1
+    else if (isShorten) shortenCount += 1
     else polishCount += 1
-    await ref.update({ answerCount, polishCount, elaborateCount, updatedAt: new Date() })
-    res.json({ ok: true, cv, questions, summary, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount })
+    await ref.update({ answerCount, polishCount, elaborateCount, shortenCount, updatedAt: new Date() })
+    res.json({ ok: true, cv, questions, summary, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount })
   } catch (e) {
     fail(res, e)
   }

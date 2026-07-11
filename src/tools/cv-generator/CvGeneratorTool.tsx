@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { createPortal } from 'react-dom'
-import { useLocale } from '../../i18n'
+import { Link } from 'react-router-dom'
+import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions, Check } from '../../components/ui'
 import { DownloadIcon, MicIcon, BookmarkIcon, CloudIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, refineCv, tailorCv, saveCvServer, getSavedCv, deleteCvServer } from '../../lib/cvApi'
@@ -34,7 +34,7 @@ const STR = {
     linkCopied: 'Link copied — paste it into Safari or Chrome.',
     loginNote: 'Quick sign-in to build it — free, just to keep bots out.',
     readyTitle: 'Your CV is ready to generate',
-    readyBody: 'We’ll rewrite it into a clean, recruiter-ready CV — then you can tailor it to a specific job description. You’ll need to sign in first.',
+    readyBody: 'We’ll rewrite it into a clean, recruiter-ready CV. You’ll need to sign in first.',
     readyNote: 'Free — signing in just keeps bots out.',
     build: 'Build my CV',
     building: 'Building your CV…',
@@ -60,11 +60,26 @@ const STR = {
     jdSubmit: 'Tailor my CV',
     jdWorking: 'Tailoring…',
     jdDone: 'Tailored to the job — use the switch to compare with your generated CV.',
-    serverSaveTitle: 'Save to your account?',
-    serverSaveBody: 'It’s saved on this device. Also save it to your Google account so you can resume on any device? We keep it for 6 months and you can delete it anytime.',
-    serverSaveBtn: 'Save to my account',
+    serverSaveTitle: 'Save for later',
+    serverSaveBody: 'You’ll be able to open your CV from any device and tailor it to specific job descriptions. It’s kept for 6 months, and you can delete your data anytime on the',
+    privacyWord: 'Privacy page',
+    serverSaveTail: '.',
+    serverSaveBtn: 'Save',
+    cancel: 'Cancel',
     serverSaving: 'Saving…',
     serverSavedMsg: 'Saved to your account — resume it on any device.',
+    save: 'Save',
+    dlPdf: 'Download PDF',
+    dlWord: 'Download Word',
+    customize: 'Customize',
+    insertJd: 'Insert Job Description',
+    tellChange: 'Tell me what to change',
+    makeShorter: 'Make shorter',
+    shortenTitle: 'Make it shorter',
+    shortenLead: 'A tighter CV lands better — recruiters skim in seconds. Condense to:',
+    pagesWord: (n: number) => `${n} page${n > 1 ? 's' : ''}`,
+    shortenBtn: 'Shorten',
+    shortening: 'Shortening…',
     changesTitle: 'Improvements made',
     qLabel: (i: number, n: number) => `Question ${i} of ${n}`,
     answerPh: 'Type or speak your answer…',
@@ -101,7 +116,7 @@ const STR = {
     linkCopied: 'نُسخ الرابط — الصقه في Safari أو Chrome.',
     loginNote: 'تسجيل دخول سريع للبناء — مجاني، فقط لمنع الروبوتات.',
     readyTitle: 'سيرتك جاهزة للتحويل',
-    readyBody: 'سنعيد كتابتها في سيرة أنيقة جاهزة لمسؤول التوظيف — ثم يمكنك تخصيصها لوصف وظيفي محدد. عليك تسجيل الدخول أولًا.',
+    readyBody: 'سنعيد كتابتها في سيرة أنيقة جاهزة لمسؤول التوظيف. عليك تسجيل الدخول أولًا.',
     readyNote: 'مجاني — تسجيل الدخول فقط لمنع الروبوتات.',
     build: 'ابنِ سيرتي',
     building: 'جارٍ بناء سيرتك…',
@@ -127,11 +142,26 @@ const STR = {
     jdSubmit: 'خصّص سيرتي',
     jdWorking: 'جارٍ التخصيص…',
     jdDone: 'خُصّصت للوظيفة — استخدم المُبدّل للمقارنة بسيرتك المُنشأة.',
-    serverSaveTitle: 'الحفظ في حسابك؟',
-    serverSaveBody: 'حُفظت على هذا الجهاز. هل تريد حفظها أيضًا في حساب Google لاستئنافها على أي جهاز؟ نحتفظ بها ٦ أشهر ويمكنك حذفها متى شئت.',
-    serverSaveBtn: 'احفظ في حسابي',
+    serverSaveTitle: 'احفظ للاحقًا',
+    serverSaveBody: 'ستتمكن من فتح سيرتك من أي جهاز وتخصيصها لوصف وظيفي محدد. تُحفظ لمدة ٦ أشهر، ويمكنك حذف بياناتك في أي وقت من',
+    privacyWord: 'صفحة الخصوصية',
+    serverSaveTail: '.',
+    serverSaveBtn: 'حفظ',
+    cancel: 'إلغاء',
     serverSaving: 'جارٍ الحفظ…',
     serverSavedMsg: 'حُفظت في حسابك — استأنفها على أي جهاز.',
+    save: 'حفظ',
+    dlPdf: 'تنزيل PDF',
+    dlWord: 'تنزيل Word',
+    customize: 'تخصيص',
+    insertJd: 'أدخل الوصف الوظيفي',
+    tellChange: 'أخبرني بما تريد تغييره',
+    makeShorter: 'اجعلها أقصر',
+    shortenTitle: 'اجعلها أقصر',
+    shortenLead: 'السيرة الأقصر أفضل — يمسح المسؤولون بسرعة. اختصر إلى:',
+    pagesWord: (n: number) => `${n} صفحة`,
+    shortenBtn: 'اختصار',
+    shortening: 'جارٍ الاختصار…',
     changesTitle: 'التحسينات المُطبَّقة',
     qLabel: (i: number, n: number) => `سؤال ${i} من ${n}`,
     answerPh: 'اكتب أو انطق إجابتك…',
@@ -287,12 +317,13 @@ export default function CvGeneratorTool() {
   const [jdText, setJdText] = useState('')
   const [jdBusy, setJdBusy] = useState(false)
   const [cvFill, setCvFill] = useState<number | null>(null) // rendered CV height ÷ one A4 page
-  const [elaborating, setElaborating] = useState(false)
-  const [elaborateDone, setElaborateDone] = useState(false) // suppress the suggestion after a round
-  const [persist, setPersist] = useState(false) // "Save for later" checkbox: keep this CV in localStorage
-  const [serverSaveOpen, setServerSaveOpen] = useState(false) // modal offering cross-device (server) save
+  const [customizeMenu, setCustomizeMenu] = useState(false) // Customize dropdown (bottom-right)
+  const [shortenOpen, setShortenOpen] = useState(false)
+  const [shortening, setShortening] = useState(false)
+  const [shortenTarget, setShortenTarget] = useState(1)
+  const [serverSaveOpen, setServerSaveOpen] = useState(false) // "Save for later" opt-in dialog (cross-device)
   const [serverSaving, setServerSaving] = useState(false)
-  const [serverSaved, setServerSaved] = useState(false) // this session's CV is also on the server
+  const [serverSaved, setServerSaved] = useState(false) // this CV is saved to the account
   const serverBtnRef = useRef<HTMLDivElement>(null) // Google button inside the server-save modal
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
@@ -369,7 +400,7 @@ export default function CvGeneratorTool() {
       setSaved(serverCv)
       if (status === 'idle' && !cv && !text) {
         setCv(serverCv); setTailoredCv(null); setShowAlt(false); setOrigPages([])
-        setQueue([]); setQIndex(0); setServerSaved(true); setPersist(true); setStatus('done')
+        setQueue([]); setQIndex(0); setServerSaved(true); setStatus('done')
       }
     }).catch(() => {})
     return () => { cancelled = true }
@@ -458,10 +489,8 @@ export default function CvGeneratorTool() {
     setShowAlt(false)
     setTailoredCv(null)
     setServerSaved(false)
-    setPersist(false)
     setSigninFallback(false)
     setCvFill(null)
-    setElaborateDone(false)
     setOrigPages([])
     setStatus('extracting')
     let pdfver = '?'
@@ -506,9 +535,7 @@ export default function CvGeneratorTool() {
       setTailoredCv(null)
       setShowAlt(false)
       setServerSaved(false)
-      setPersist(false)
       setCvFill(null)
-      setElaborateDone(false)
       setAnswersLeft(r.answersLeft)
       setPolishLeft(r.polishLeft)
       setQueue(r.questions)
@@ -534,12 +561,11 @@ export default function CvGeneratorTool() {
     try {
       const r = await refineCv(idToken, cv, `Question: ${currentQ}\nAnswer: ${answerText.trim()}`, 'answer', lastChangeRef.current, text)
       setCv(r.cv)
-      syncPersist(r.cv)
+      syncSaved(r.cv)
       setAnswersLeft(r.answersLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
       setAnswerText('')
-      setQIndex((i) => i + 1)
-      setAdjustOpen(false) // back to the Download / Make adjustments bar
+      setQIndex((i) => i + 1) // next question stays in the open modal
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
@@ -559,11 +585,10 @@ export default function CvGeneratorTool() {
     try {
       const r = await refineCv(idToken, cv, instruction.trim(), 'polish', lastChangeRef.current, text)
       setCv(r.cv)
-      syncPersist(r.cv)
+      syncSaved(r.cv)
       setPolishLeft(r.polishLeft)
       if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
-      setInstruction('')
-      setAdjustOpen(false) // back to the Download / Make adjustments bar
+      setInstruction('') // stay open for another tweak
     } catch (e) {
       setErr((e as Error).message || s.genErr)
     } finally {
@@ -581,9 +606,8 @@ export default function CvGeneratorTool() {
   // version once it exists (it wins over the original), else the uploaded
   // original (only available right after an upload). Null → no switch shown.
   const altKind: 'tailored' | 'original' | null = tailoredCv ? 'tailored' : origPages.length > 0 ? 'original' : null
-  // Suggest an elaboration round when the generated CV fills under 90% of a page
-  // (only when viewing the base CV and we have the original to draw from).
-  const shortCv = status === 'done' && !!idToken && !!text && !(tailoredCv && showAlt) && cvFill !== null && cvFill < 0.9 && !elaborateDone
+  // Current rendered page count (rounded up), for the "Make shorter" target.
+  const curPages = Math.max(1, Math.ceil((cvFill ?? 1) - 0.05))
 
   async function exportPdf() {
     if (!activeCv || pdfBusy) return
@@ -621,21 +645,17 @@ export default function CvGeneratorTool() {
     setSaved(next)
   }
 
-  // "Save for later" checkbox (three modes):
-  //  • off  → nothing is persisted (localStorage cleared, server copy removed).
-  //  • on   → the CV is kept in localStorage (offline, no sign-in), and we offer
-  //           an opt-in server save so it can be resumed on any device.
-  function togglePersist(on: boolean) {
+  // "Save for later" checkbox → save to the account (server) so the CV can be
+  // resumed on any device. Checking opens the opt-in dialog; unchecking removes
+  // the saved copy. Also cached in localStorage so the device Resume works.
+  function onSaveForLater(on: boolean) {
     if (!cv) return
-    setPersist(on)
-    if (on) {
-      writeLocal(cv)
-      setToast(s.savedForLater)
-      if (!serverSaved) { setErr(''); setServerSaveOpen(true) } // ask about the cloud
-    } else {
+    if (on) { setErr(''); setServerSaveOpen(true) } // confirm via the dialog
+    else if (serverSaved) {
+      setServerSaved(false)
+      if (idToken) deleteCvServer(idToken)
       try { localStorage.removeItem('bis-cv-saved') } catch { /* ignore */ }
       setSaved(null)
-      if (serverSaved && idToken) { deleteCvServer(idToken); setServerSaved(false) }
     }
   }
 
@@ -645,6 +665,7 @@ export default function CvGeneratorTool() {
     setErr('')
     try {
       await saveCvServer(idToken, cv)
+      writeLocal(cv)
       setServerSaved(true)
       setServerSaveOpen(false)
       setToast(s.serverSavedMsg)
@@ -655,10 +676,31 @@ export default function CvGeneratorTool() {
     }
   }
 
-  // Keep the persisted copies current after a refine, per the user's choices.
-  function syncPersist(next: Cv) {
-    if (persist) writeLocal(next)
-    if (serverSaved && idToken) saveCvServer(idToken, next).catch(() => {})
+  // Keep the saved copies current after a refine, once saved.
+  function syncSaved(next: Cv) {
+    if (!serverSaved) return
+    writeLocal(next)
+    if (idToken) saveCvServer(idToken, next).catch(() => {})
+  }
+
+  // "Make shorter": condense the CV to a target page count (fewer than current).
+  async function shorten() {
+    if (!idToken || !cv || shortening) return
+    setShortening(true)
+    setErr('')
+    try {
+      const r = await refineCv(idToken, cv, `Make my CV shorter — condense it to about ${shortenTarget} page${shortenTarget > 1 ? 's' : ''} or fewer while keeping every strong achievement.`, 'shorten', lastChangeRef.current, text)
+      setCv(r.cv)
+      syncSaved(r.cv)
+      setPolishLeft(r.polishLeft)
+      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
+      setShortenOpen(false)
+      setCvFill(null)
+    } catch (e) {
+      setErr((e as Error).message || s.genErr)
+    } finally {
+      setShortening(false)
+    }
   }
 
   // Tailor the generated CV to a pasted job description (ephemeral; shown via the
@@ -695,37 +737,17 @@ export default function CvGeneratorTool() {
     } catch { /* not ready — ignore */ }
   }
 
-  // One more AI round that expands a too-short CV with truthful detail.
-  async function elaborate() {
-    if (!idToken || !cv || elaborating) return
-    setElaborating(true)
-    setErr('')
-    try {
-      const r = await refineCv(idToken, cv, 'Please expand my CV with more detail so it better fills a full page.', 'elaborate', lastChangeRef.current, text)
-      setCv(r.cv)
-      syncPersist(r.cv)
-      if (r.summary) { setToast(r.summary); lastChangeRef.current = r.summary }
-      setElaborateDone(true)
-      setCvFill(null)
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setElaborating(false)
-    }
-  }
-
   function resumeSaved() {
     if (!saved) return
     setCv(saved)
     // A restored CV has no original upload and no tailored version — the preview
-    // switch stays hidden until the user customises for a job. It's already
-    // persisted, so the "Save for later" box comes back checked.
+    // switch stays hidden until the user customises for a job. It came from a
+    // saved copy, so the "Save for later" box shows checked.
     setTailoredCv(null)
     setShowAlt(false)
     setOrigPages([])
-    setPersist(true)
+    setServerSaved(true)
     setCvFill(null)
-    setElaborateDone(false)
     setQueue([])
     setQIndex(0)
     setStatus('done')
@@ -792,12 +814,11 @@ export default function CvGeneratorTool() {
             <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>
           )}
 
-          {/* Immediate PDF preview (ready + generating). It blurs while we generate
-              — and, before sign-in, sits softly blurred behind the "ready to
-              generate" card. */}
-          {origPages.length > 0 && (status === 'ready' || status === 'generating') && (
+          {/* Blurred PDF backdrop — while generating (scan beam), or during the
+              brief signed-in "ready" moment before auto-generate kicks in. */}
+          {origPages.length > 0 && (status === 'generating' || (status === 'ready' && !!idToken)) && (
             <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem]" data-testid="cv-loading">
-              <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : status === 'ready' && !idToken ? 'blur-[3px] scale-[1.01]' : ''}`} />
+              <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />
               {status === 'generating' && (
                 <>
                   <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_35%,transparent)]" />
@@ -810,23 +831,27 @@ export default function CvGeneratorTool() {
                   </div>
                 </>
               )}
-              {status === 'ready' && !idToken && (
-                <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
-              )}
-              {status === 'ready' && !idToken && readyCard}
-            </div>
-          )}
-
-          {/* Non-PDF (docx/txt): no preview to blur — show the card / spinner alone. */}
-          {origPages.length === 0 && status === 'ready' && !idToken && (
-            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem] bg-[#e9ebef]" data-testid="cv-loading">
-              {readyCard}
             </div>
           )}
           {status === 'generating' && origPages.length === 0 && (
             <div className="py-24 flex flex-col items-center gap-4" data-testid="cv-loading">
               <Spinner className="size-9" label={s.building} />
               <span key={loadingStep} className="text-[0.95rem] font-medium text-ink-soft animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
+            </div>
+          )}
+
+          {/* Ready + not signed in: the sign-in card, over the softly blurred PDF
+              once it's ready. One stable container so the card never remounts
+              when the PDF pages finish loading (was causing a flash). */}
+          {status === 'ready' && !idToken && (
+            <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] relative overflow-hidden h-[calc(100dvh-11rem)] min-h-[22rem] bg-[#e9ebef]" data-testid="cv-loading">
+              {origPages.length > 0 && (
+                <>
+                  <PdfPages pages={origPages} cover className="absolute inset-0 blur-[3px] scale-[1.01]" />
+                  <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
+                </>
+              )}
+              {readyCard}
             </div>
           )}
 
@@ -871,25 +896,48 @@ export default function CvGeneratorTool() {
               </div>
             )}
 
-            {/* Save menu (bottom-left), mirroring the fullscreen button: an icon
-                that opens Word / Save-for-later upward. */}
+            {/* Save (bottom-left): a green CTA opening downloads + Save-for-later. */}
             <div className="absolute start-3 bottom-3 z-10">
               {saveMenu && (
-                <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[12rem]">
+                <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[13rem]">
+                  <button type="button" data-testid="cv-pdf" disabled={pdfBusy} onClick={exportPdf}
+                    className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-wait">
+                    {pdfBusy ? <Spinner className="size-4" /> : <DownloadIcon />} {s.dlPdf}
+                  </button>
                   <button type="button" data-testid="cv-word" onClick={() => { exportWord(); setSaveMenu(false) }}
                     className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
-                    <DownloadIcon /> {s.word}
+                    <DownloadIcon /> {s.dlWord}
                   </button>
                   <Check className="w-full px-4 py-2.5 border-t border-[color:var(--line-soft)] whitespace-nowrap">
-                    <input type="checkbox" checked={persist} onChange={(e) => togglePersist(e.target.checked)} data-testid="cv-save-later" />
+                    <input type="checkbox" checked={serverSaved} onChange={(e) => onSaveForLater(e.target.checked)} data-testid="cv-save-later" />
                     <span>{s.saveForLater}</span>
                     {serverSaved && <CloudIcon className="w-4 h-4 text-green-600" />}
                   </Check>
                 </div>
               )}
-              <button type="button" onClick={() => setSaveMenu((v) => !v)} aria-label={s.saveOptions} aria-expanded={saveMenu} data-testid="cv-save-menu"
-                className="grid place-items-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
-                <BookmarkIcon className="size-[1.15rem]" />
+              <button type="button" onClick={() => { setSaveMenu((v) => !v); setCustomizeMenu(false) }} aria-expanded={saveMenu} data-testid="cv-save-menu"
+                className="inline-flex items-center gap-1.5 h-9 rounded-md bg-green-600 text-sand-100 px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:bg-green-700 border-0 cursor-pointer">
+                <DownloadIcon className="size-4" /> {s.save}
+              </button>
+            </div>
+
+            {/* Customize (bottom-right): Insert JD / Tell me what to change / Make shorter. */}
+            <div className="absolute end-3 bottom-3 z-10">
+              {customizeMenu && (
+                <div className="absolute bottom-full end-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[14rem] text-end">
+                  <button type="button" data-testid="cv-customize-jd" onClick={() => { setCustomizeMenu(false); setErr(''); setJdOpen(true) }}
+                    className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">{s.insertJd}</button>
+                  <button type="button" data-testid="cv-adjust-open" onClick={() => { setCustomizeMenu(false); setErr(''); setAdjustOpen(true) }}
+                    className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">{s.tellChange}{currentQ ? ` · ${queue.length - qIndex}` : ''}</button>
+                  {curPages > 1 && (
+                    <button type="button" data-testid="cv-make-shorter" onClick={() => { setCustomizeMenu(false); setErr(''); setShortenTarget(Math.max(1, curPages - 1)); setShortenOpen(true) }}
+                      className="block w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 border-t border-[color:var(--line-soft)] bg-transparent cursor-pointer whitespace-nowrap">{s.makeShorter}</button>
+                  )}
+                </div>
+              )}
+              <button type="button" onClick={() => { setCustomizeMenu((v) => !v); setSaveMenu(false) }} aria-expanded={customizeMenu} data-testid="cv-customize"
+                className="inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
+                {s.customize}
               </button>
             </div>
 
@@ -901,80 +949,65 @@ export default function CvGeneratorTool() {
             </button>
           </div>
 
-          {/* Bottom bar — portaled to <body> so `fixed inset-x-0` bleeds full-width
-              (ToolPage's transform otherwise resolves it against the tool box). The
-              inner .wrap keeps the buttons at the page max-width. */}
-          {createPortal(
-          <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)]">
-            <div className="wrap py-2.5">
-              {adjustOpen ? (
-                <div ref={activeRef} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-green-700">
-                      {currentQ ? s.qLabel(qIndex + 1, queue.length) : s.polishTitle}
-                    </span>
-                    <button type="button" className="text-[0.82rem] font-semibold text-ink-soft underline bg-transparent border-0 cursor-pointer p-0" onClick={() => setAdjustOpen(false)} data-testid="cv-adjust-close">{s.closeAdjust}</button>
-                  </div>
-                  {currentQ ? (
-                    <>
-                      <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
-                      <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
-                        busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
-                      <button type="button" className="self-start text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
-                    </>
-                  ) : polishLeft > 0 ? (
-                    <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
-                      busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
-                  ) : (
-                    <p className="text-[0.8rem] text-ink-faint">{s.noPolish}</p>
-                  )}
+          {/* "Tell me what to change": AI gap questions (if any), then free polish. */}
+          {adjustOpen && (
+            <Sheet onClose={() => setAdjustOpen(false)}>
+              <SheetTitle>{currentQ ? s.qLabel(qIndex + 1, queue.length) : s.polishTitle}</SheetTitle>
+              {currentQ ? (
+                <div className="flex flex-col gap-3" ref={activeRef}>
+                  <p className="text-[0.95rem] text-ink leading-snug">{currentQ}</p>
+                  <ChatInput value={answerText} setValue={setAnswerText} onSend={answer} placeholder={s.answerPh}
+                    busy={busy === 'answer'} sendLabel={busy === 'answer' ? s.sending : s.send} testid="cv-answer" locale={locale} />
+                  <button type="button" className="self-start text-[0.78rem] text-ink-faint underline bg-transparent border-0 cursor-pointer p-0" onClick={skip} data-testid="cv-skip">{s.skip}</button>
                 </div>
+              ) : polishLeft > 0 ? (
+                <ChatInput value={instruction} setValue={setInstruction} onSend={polish} placeholder={s.polishPh}
+                  busy={busy === 'polish'} sendLabel={busy === 'polish' ? s.applying : s.apply} testid="cv-instruction" locale={locale} />
               ) : (
-                <div className="flex flex-col gap-2">
-                  {shortCv && (
-                    <div className="flex items-center justify-between gap-3 flex-wrap rounded-md bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] border border-[color:color-mix(in_srgb,var(--green-500)_30%,transparent)] px-3 py-1.5" data-testid="cv-short-hint">
-                      <span className="text-[0.85rem] text-ink-soft">{s.shortHint}</span>
-                      <button type="button" onClick={elaborate} disabled={elaborating} data-testid="cv-elaborate"
-                        className="inline-flex items-center gap-1.5 rounded-md bg-green-600 text-sand-100 px-3 py-1.5 text-[0.82rem] font-semibold hover:bg-green-700 border-0 cursor-pointer disabled:opacity-70 disabled:cursor-wait flex-none">
-                        {elaborating && <Spinner className="size-3.5" />}{elaborating ? s.adding : s.addDetail}
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={exportPdf} data-testid="cv-pdf" disabled={pdfBusy}
-                        className="inline-flex items-center gap-2 rounded-md bg-green-600 text-sand-100 px-4 py-2.5 text-[0.9rem] font-semibold hover:bg-green-700 border-0 cursor-pointer disabled:opacity-70 disabled:cursor-wait shadow-[var(--shadow-sm)]">
-                        {pdfBusy ? <Spinner className="size-4" /> : <DownloadIcon />} {s.pdf}
-                      </button>
-                      <Button onClick={() => { setErr(''); setJdOpen(true) }} data-testid="cv-customize-jd">
-                        {s.customizeJd}
-                      </Button>
-                    </div>
-                    <Button onClick={() => setAdjustOpen(true)} data-testid="cv-adjust-open"
-                      disabled={polishLeft <= 0 && !currentQ}
-                      title={polishLeft <= 0 && !currentQ ? s.noPolish : undefined}>
-                      {s.makeAdjustments}{currentQ ? ` · ${queue.length - qIndex}` : ''}
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-[0.85rem] text-ink-faint">{s.noPolish}</p>
               )}
-            </div>
-          </div>,
-          document.body,
+              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
+            </Sheet>
           )}
 
-          {err && !jdOpen && !serverSaveOpen && <p className="fixed inset-x-0 bottom-1 text-center text-[0.8rem] text-gold-500 z-50">{err}</p>}
+          {/* "Make shorter": condense to a target page count. */}
+          {shortenOpen && (
+            <Sheet onClose={() => { if (!shortening) setShortenOpen(false) }}>
+              <SheetTitle>{s.shortenTitle}</SheetTitle>
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.shortenLead}</p>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: curPages - 1 }, (_, i) => i + 1).map((n) => (
+                  <button key={n} type="button" onClick={() => setShortenTarget(n)} data-testid={`cv-shorten-${n}`}
+                    className={`px-4 py-2 rounded-md text-[0.9rem] font-semibold border cursor-pointer ${shortenTarget === n ? 'bg-green-600 text-sand-100 border-green-700' : 'bg-[var(--surface)] text-ink-soft border-[color:var(--line)] hover:border-green-500'}`}>
+                    {s.pagesWord(n)}
+                  </button>
+                ))}
+              </div>
+              {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
+              <SheetActions>
+                <Button variant="primary" onClick={shorten} disabled={shortening} data-testid="cv-shorten-submit">
+                  {shortening ? s.shortening : s.shortenBtn}
+                </Button>
+              </SheetActions>
+            </Sheet>
+          )}
 
           {serverSaveOpen && (
             <Sheet onClose={() => { if (!serverSaving) setServerSaveOpen(false) }}>
               <SheetTitle>{s.serverSaveTitle}</SheetTitle>
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.serverSaveBody}</p>
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">
+                {s.serverSaveBody}{' '}
+                <Link to={localePath(locale, '/privacy')} className="underline hover:text-green-600">{s.privacyWord}</Link>{s.serverSaveTail}
+              </p>
               {!idToken && <div ref={serverBtnRef} className="[color-scheme:light] flex justify-center py-1" data-testid="cv-server-signin" />}
               {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
               {idToken && (
                 <SheetActions>
                   <Button variant="primary" onClick={doServerSave} disabled={serverSaving} data-testid="cv-server-save">
                     {serverSaving ? s.serverSaving : s.serverSaveBtn}
+                  </Button>
+                  <Button onClick={() => setServerSaveOpen(false)} disabled={serverSaving} data-testid="cv-server-cancel">
+                    {s.cancel}
                   </Button>
                 </SheetActions>
               )}
