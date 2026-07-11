@@ -84,6 +84,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'تعبئة نموذج PDF', description: 'عبّئ نماذج PDF داخل متصفحك. تُكتشف الحقول التفاعلية تلقائيًا — نموذج ويب أنيق للأسماء الواضحة، ومربعات على الصفحة لغيرها — والملفات بلا حقول تتيح إضافة نص أينما شئت. صدّر ملفًا معبّأً وقابلًا للتثبيت؛ دون رفعه أبدًا.' },
   },
   {
+    id: 'pdf-edit',
+    en: { name: 'Edit PDF', description: 'A rudimentary in-browser PDF editor: select and move or delete images, delete existing text runs, and add new text with resize handles and line breaks. Edits the PDF content streams with pdf-lib and never uploads your file. Existing text can’t be re-typed and selections are approximate.' },
+    ar: { name: 'تحرير PDF', description: 'محرّر PDF مبدئي داخل المتصفح: حدّد الصور وحرّكها أو احذفها، احذف مقاطع النص الموجودة، وأضِف نصًا جديدًا بمقابض لتغيير الحجم وفواصل أسطر. يحرّر محتوى الملف عبر pdf-lib ولا يرفع ملفك أبدًا. لا يمكن إعادة كتابة النص الموجود والتحديدات تقريبية.' },
+  },
+  {
     id: 'images-to-pdf',
     en: { name: 'Images to PDF', description: 'Combine JPG/PNG images into a single PDF, one per page — reorder, fit-to-image or A4/Letter with a margin. Built in your browser; never uploaded.' },
     ar: { name: 'الصور إلى PDF', description: 'ادمج صور JPG/PNG في PDF واحد، صورة لكل صفحة — إعادة ترتيب، وملاءمة الصورة أو A4/Letter بهامش. داخل متصفحك؛ لا تُرفع أبدًا.' },

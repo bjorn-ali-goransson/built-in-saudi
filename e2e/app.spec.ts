@@ -321,4 +321,9 @@ test.describe('pdf sign + fill', () => {
     await page.goto('/en/tools/pdf-fill')
     await expect(page.getByTestId('fill-drop')).toBeVisible()
   })
+
+  test('edit: loads with a dropzone', async ({ page }) => {
+    await page.goto('/en/tools/pdf-edit')
+    await expect(page.getByTestId('edit-drop')).toBeVisible()
+  })
 })

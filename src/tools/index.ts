@@ -7,6 +7,7 @@ import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfSplitTool } from './pdf-split/meta'
 import { pdfSignTool } from './pdf-sign/meta'
 import { pdfFillTool } from './pdf-fill/meta'
+import { pdfEditTool } from './pdf-edit/meta'
 import { invoiceGeneratorTool } from './invoice-generator/meta'
 import { colorToolsTool } from './color-tools/meta'
 import { qrCodeTool } from './qr-code/meta'
@@ -57,6 +58,7 @@ export const tools: Tool[] = [
   pdfSplitTool,
   pdfSignTool,
   pdfFillTool,
+  pdfEditTool,
   invoiceGeneratorTool,
   prayerTimesTool,
   islamicCalendarTool,
