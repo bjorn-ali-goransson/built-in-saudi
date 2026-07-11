@@ -70,15 +70,7 @@
   *, *::before, *::after { box-sizing: border-box; }
   * { margin: 0; }
 
-  /* Clip horizontal overflow at the root so an off-screen injected element can't
-     widen the document and trigger mobile Chrome's auto-zoom-out (which spiralled
-     into scale 0.25 + a giant scroll area). Concretely: Google Identity Services
-     appends #g_a11y_announcement ("Signed in as …", a screen-reader status) at
-     left:10000px — position:absolute, so `clip` removes it from the scrollable
-     width while leaving it in the accessibility tree. `overflow-x: clip` (not
-     `hidden`) keeps overflow-y visible → no scroll container → sticky header,
-     `position: sticky`, and legit per-tool horizontal scrollers all still work. */
-  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
   body {
     font-family: var(--font-body);
@@ -104,6 +96,24 @@
 
   :focus-visible { outline: 2.5px solid var(--green-500); outline-offset: 2px; border-radius: 4px; }
 }
+/* Google Identity Services (the CV sign-in) appends #g_a11y_announcement — a
+   screen-reader live region ("Signed in as …") — as a direct child of <body>,
+   positioned absolute at left:10000px. That widened the document to ~10000px on
+   mobile, so Chrome auto-zoomed-out to "fit" it (scale → 0.25, giant scroll area,
+   and sticky once triggered). Root-level overflow can't clip it (root-overflow
+   propagation + its containing block is the ICB, and it lives outside #root), so
+   pin it here as a correct zero-impact sr-only. `position: fixed` takes it out of
+   the document's scrollable width; it stays in the a11y tree so it's still
+   announced. Google's id has been stable for years. */
+#g_a11y_announcement {
+  position: fixed !important;
+  inset: auto auto 0 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+}
+
 /* The search inputs show focus on their wrapping pill (focus-within ring), so
    suppress the input's own outline. Needs to be here (unlayered) — a Tailwind
    `focus-visible:outline-none` utility lives in @layer utilities and would lose
