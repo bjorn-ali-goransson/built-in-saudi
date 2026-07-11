@@ -615,11 +615,10 @@ export default function CvGeneratorTool() {
 
           {/* Blurred PDF backdrop — while generating (scan beam), or during the
               brief signed-in "ready" moment before auto-generate kicks in.
-              FIXED + portaled to <body> (like the done preview) — an in-flow
-              `w-screen`/`100dvh` layer used to overflow horizontally by a hair,
-              which made mobile Chrome auto-zoom-out into a runaway feedback loop
-              (scale → 0.25, giant scroll area). `fixed` is viewport-relative and
-              can't overflow the document. */}
+              FIXED + portaled to <body> so it fills the screen and flows straight
+              into the done preview (also fixed), with no in-flow 100dvh element
+              leaving a scrollable gap. (The mobile zoom-out root cause was a
+              separate GIS off-screen element — see overflow-x: clip in theme.css.) */}
           {origPages.length > 0 && (status === 'generating' || (status === 'ready' && !!idToken)) && createPortal(
             <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden" data-testid="cv-loading">
               <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />

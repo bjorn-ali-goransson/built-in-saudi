@@ -70,7 +70,15 @@
   *, *::before, *::after { box-sizing: border-box; }
   * { margin: 0; }
 
-  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  /* Clip horizontal overflow at the root so an off-screen injected element can't
+     widen the document and trigger mobile Chrome's auto-zoom-out (which spiralled
+     into scale 0.25 + a giant scroll area). Concretely: Google Identity Services
+     appends #g_a11y_announcement ("Signed in as …", a screen-reader status) at
+     left:10000px — position:absolute, so `clip` removes it from the scrollable
+     width while leaving it in the accessibility tree. `overflow-x: clip` (not
+     `hidden`) keeps overflow-y visible → no scroll container → sticky header,
+     `position: sticky`, and legit per-tool horizontal scrollers all still work. */
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
 
   body {
     font-family: var(--font-body);
