@@ -721,7 +721,7 @@ export default function CvGeneratorTool() {
             {/* Customize (bottom-right): Insert JD / Tell me what to change / Make shorter. */}
             {/* Target job description (bottom-right): tailor the CV to a JD. Requires
                 the CV to be saved first (so it can be reopened + tailored later). */}
-            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (serverSaved) setJdOpen(true); else { pendingTailorRef.current = true; setServerSaveOpen(true) } }}
+            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (serverSaved && idToken) setJdOpen(true); else { pendingTailorRef.current = true; setServerSaveOpen(true) } }}
               className="absolute end-3 bottom-3 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
               {s.targetJd}
             </button>
