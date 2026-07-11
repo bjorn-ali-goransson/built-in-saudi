@@ -85,8 +85,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'pdf-edit',
-    en: { name: 'Edit PDF', description: 'A rudimentary in-browser PDF editor: select and move or delete images, delete existing text runs, and add new text with resize handles and line breaks. Edits the PDF content streams with pdf-lib and never uploads your file. Existing text can’t be re-typed and selections are approximate.' },
-    ar: { name: 'تحرير PDF', description: 'محرّر PDF مبدئي داخل المتصفح: حدّد الصور وحرّكها أو احذفها، احذف مقاطع النص الموجودة، وأضِف نصًا جديدًا بمقابض لتغيير الحجم وفواصل أسطر. يحرّر محتوى الملف عبر pdf-lib ولا يرفع ملفك أبدًا. لا يمكن إعادة كتابة النص الموجود والتحديدات تقريبية.' },
+    en: { name: 'Edit PDF', description: 'A rudimentary in-browser PDF editor: select and move or delete images, and add new text with resize handles and line breaks. Edits the PDF content streams with pdf-lib and never uploads your file. Existing text can’t be edited or removed yet.' },
+    ar: { name: 'تحرير PDF', description: 'محرّر PDF مبدئي داخل المتصفح: حدّد الصور وحرّكها أو احذفها، وأضِف نصًا جديدًا بمقابض لتغيير الحجم وفواصل أسطر. يحرّر محتوى الملف عبر pdf-lib ولا يرفع ملفك أبدًا. لا يمكن تعديل أو حذف النص الموجود بعد.' },
   },
   {
     id: 'images-to-pdf',
