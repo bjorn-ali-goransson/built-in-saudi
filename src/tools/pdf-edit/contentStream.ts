@@ -240,21 +240,33 @@ export async function loadEditable(data: ArrayBuffer): Promise<{ pdf: PDFDocumen
   return { pdf, pages }
 }
 
-/** Apply deletions + image moves to a page's content string. `moves` maps an
- *  object id → (dxPt, dyPt) translation to inject at its block start. */
-export function applyEdits(pc: PageContent, deleted: Set<string>, moves: Map<string, { dx: number; dy: number }>): string {
-  // Build an edit list of {start, end, replacement}; apply from the end so
-  // earlier offsets stay valid.
+/** A manipulated image: target centre + unrotated size (normalised, top-left
+ *  origin) + screen-clockwise rotation in radians. */
+export interface ImgXf { cx: number; cy: number; w: number; h: number; rot: number }
+
+/** Apply deletions + image transforms (move/scale/rotate) to a page's content.
+ *  For a transformed image we inject one `cm` at its draw block that maps the
+ *  original placement to the target box (scale·rotate·translate about centres). */
+export function applyEdits(pc: PageContent, deleted: Set<string>, transforms: Map<string, ImgXf>): string {
   type Edit = { start: number; end: number; rep: string }
   const edits: Edit[] = []
+  const W = pc.wPt, H = pc.hPt
+  const fmt = (n: number) => (Object.is(n, -0) ? 0 : n).toFixed(4)
   for (const o of pc.objects) {
     if (deleted.has(o.id)) { edits.push({ start: o.delStart, end: o.delEnd, rep: '' }); continue }
-    if (o.kind === 'image' && o.insertAt != null && moves.has(o.id)) {
-      const { dx, dy } = moves.get(o.id)!
-      edits.push({ start: o.insertAt, end: o.insertAt, rep: `\n1 0 0 1 ${dx.toFixed(2)} ${dy.toFixed(2)} cm` })
+    if (o.kind === 'image' && o.insertAt != null && transforms.has(o.id)) {
+      const t = transforms.get(o.id)!
+      const sx = o.w ? t.w / o.w : 1, sy = o.h ? t.h / o.h : 1
+      const R = -t.rot // screen y-down is flipped vs PDF y-up
+      const cos = Math.cos(R), sin = Math.sin(R)
+      const a = sx * cos, b = sx * sin, c = -sy * sin, d = sy * cos
+      const ocx = (o.x + o.w / 2) * W, ocy = H - (o.y + o.h / 2) * H
+      const tcx = t.cx * W, tcy = H - t.cy * H
+      const e = tcx - (ocx * a + ocy * c), f = tcy - (ocx * b + ocy * d)
+      edits.push({ start: o.insertAt, end: o.insertAt, rep: `\n${fmt(a)} ${fmt(b)} ${fmt(c)} ${fmt(d)} ${fmt(e)} ${fmt(f)} cm` })
     }
   }
-  edits.sort((a, b) => b.start - a.start)
+  edits.sort((x, y) => y.start - x.start)
   let out = pc.content
   for (const ed of edits) out = out.slice(0, ed.start) + ed.rep + out.slice(ed.end)
   return out

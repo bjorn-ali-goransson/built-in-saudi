@@ -3,10 +3,9 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, InfoIcon } from '../../components/icons'
 import { Stack, Button, Spinner } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
-import type { PageContent, EditObject } from './contentStream'
+import type { PageContent, EditObject, ImgXf } from './contentStream'
 
 type TextBox = { id: string; page: number; x: number; y: number; w: number; h: number; text: string; size: number }
-type Move = { dx: number; dy: number }
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const
 type Handle = typeof HANDLES[number]
 
@@ -17,7 +16,7 @@ const STR = {
     addText: 'Add text', del: 'Delete', undo: 'Undo delete', size: 'Font',
     page: 'Page', of: 'of', image: 'image', text: 'text', moved: 'moved', typeHere: 'Type…',
     export: 'Download edited PDF', working: 'Preparing…', another: 'Edit another', locked: 'This PDF is locked / encrypted.',
-    tapImg: 'Tap an image or text to select · drag an image to move · handles resize new text · pinch to zoom',
+    tapImg: 'Tap an image to select, then drag to move · corner/side dots resize · top dot rotates · pinch to zoom',
     privacy: 'Edited on your device — your PDF is never uploaded.',
   },
   ar: {
@@ -26,7 +25,7 @@ const STR = {
     addText: 'أضف نصًا', del: 'حذف', undo: 'تراجع', size: 'الخط',
     page: 'صفحة', of: 'من', image: 'صورة', text: 'نص', moved: 'مُحرّك', typeHere: 'اكتب…',
     export: 'تنزيل PDF المعدّل', working: 'جارٍ التحضير…', another: 'عدّل آخر', locked: 'هذا الملف مقفل / مشفّر.',
-    tapImg: 'اضغط صورة أو نصًا للتحديد · اسحب الصورة لتحريكها · المقابض تغيّر حجم النص الجديد · اقرص للتكبير',
+    tapImg: 'اضغط صورة للتحديد ثم اسحبها للتحريك · النقاط الجانبية للتحجيم · النقطة العلوية للتدوير · اقرص للتكبير',
     privacy: 'يُعدّل على جهازك — لا يُرفع ملفك أبدًا.',
   },
 }
@@ -43,7 +42,7 @@ export default function PdfEditTool() {
   const [pc, setPc] = useState<PageContent[] | null>(null)
   const [pi, setPi] = useState(0)
   const [deleted, setDeleted] = useState<Set<string>>(new Set())
-  const [moves, setMoves] = useState<Map<string, Move>>(new Map())
+  const [xf, setXf] = useState<Map<string, ImgXf>>(new Map())
   const [texts, setTexts] = useState<TextBox[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -53,10 +52,7 @@ export default function PdfEditTool() {
   const lastSize = useRef(14)
   const pageBoxRef = useRef<HTMLDivElement>(null)
   const pageImgRef = useRef<HTMLImageElement>(null)
-  const cloneRef = useRef<HTMLImageElement>(null)
   const clips = useRef<Map<string, string>>(new Map())
-  const dragRef = useRef<{ id: string; sx: number; sy: number; baseDx: number; baseDy: number; rw: number; rh: number } | null>(null)
-  const [dragId, setDragId] = useState<string | null>(null)
 
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
   const nrm = (e: React.PointerEvent) => {
@@ -66,7 +62,7 @@ export default function PdfEditTool() {
 
   async function onFile(f: File | null | undefined) {
     if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
-    setBusy(true); setErr(''); setOut(null); setDeleted(new Set()); setMoves(new Map()); setTexts([]); setSel(null); setPi(0)
+    setBusy(true); setErr(''); setOut(null); setDeleted(new Set()); setXf(new Map()); setTexts([]); setSel(null); setPi(0); clips.current = new Map()
     try {
       const [{ renderPdf }, { loadEditable }] = await Promise.all([import('../../lib/pdfRender'), import('./contentStream')])
       const [rendered, editable] = await Promise.all([renderPdf(await f.arrayBuffer()), loadEditable(await f.arrayBuffer())])
@@ -79,11 +75,15 @@ export default function PdfEditTool() {
   const pageObjects = (pc?.[pi]?.objects || [])
   const curTexts = texts.filter((t) => t.page === pi)
 
-  // ---- image select / delete / move -------------------------------------------
-  // Moving drags a REAL cropped <img> clone imperatively (no React state per
-  // pointermove → smooth on mobile); the original spot is covered white and the
-  // clone lands at the new position on drop.
+  // ---- image select / delete / move / resize / rotate -------------------------
+  // Images become a bounding box (real cropped bitmap) with 8 resize handles + a
+  // rotate handle. The original spot is covered white once manipulated; the box
+  // shows the cropped clip so you see the real image. Gesture maths run in
+  // pixels (rotation-aware) then store a normalised centre/size/rotation.
   const g = useRef<{ mode: 'tb' | 'resize'; id: string; handle?: Handle; nx: number; ny: number; o: { x: number; y: number; w: number; h: number } } | null>(null)
+  const gi = useRef<{ mode: 'move' | 'resize' | 'rotate'; id: string; handle?: Handle; sx: number; sy: number; rw: number; rh: number; cxpx: number; cypx: number; start: ImgXf } | null>(null)
+
+  const xfOf = (o: EditObject): ImgXf => xf.get(o.id) || { cx: o.x + o.w / 2, cy: o.y + o.h / 2, w: o.w, h: o.h, rot: 0 }
 
   function cropImage(o: EditObject): string | null {
     const img = pageImgRef.current
@@ -95,27 +95,44 @@ export default function PdfEditTool() {
     ctx.drawImage(img, o.x * nw, o.y * nh, o.w * nw, o.h * nh, 0, 0, cw, ch)
     try { return cv.toDataURL('image/png') } catch { return null }
   }
-  function imgDown(e: React.PointerEvent, o: EditObject) {
+  function imgStart(e: React.PointerEvent, o: EditObject, mode: 'move' | 'resize' | 'rotate', handle?: Handle) {
     e.stopPropagation(); e.preventDefault()
     setSel(o.id)
     if (deleted.has(o.id)) return
-    pageBoxRef.current!.setPointerCapture(e.pointerId) // stable target: the clone unmounts the hit box
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     if (!clips.current.has(o.id)) { const c = cropImage(o); if (c) clips.current.set(o.id, c) }
-    const m = moves.get(o.id) || { dx: 0, dy: 0 }
     const r = pageBoxRef.current!.getBoundingClientRect()
-    dragRef.current = { id: o.id, sx: e.clientX, sy: e.clientY, baseDx: m.dx, baseDy: m.dy, rw: r.width, rh: r.height }
-    setDragId(o.id)
+    const st = xfOf(o)
+    gi.current = { mode, id: o.id, handle, sx: e.clientX, sy: e.clientY, rw: r.width, rh: r.height, cxpx: r.left + st.cx * r.width, cypx: r.top + st.cy * r.height, start: st }
   }
-  function imgDragMove(e: React.PointerEvent) {
-    const d = dragRef.current
-    if (!d || !cloneRef.current) return
+  function imgMove(e: React.PointerEvent) {
+    const d = gi.current
+    if (!d) return
     e.preventDefault()
-    const dx = (d.baseDx * d.rw) + (e.clientX - d.sx)
-    const dy = (d.baseDy * d.rh) + (e.clientY - d.sy)
-    cloneRef.current.style.transform = `translate(${dx}px, ${dy}px)`
+    const st = d.start
+    const dxPx = e.clientX - d.sx, dyPx = e.clientY - d.sy
+    let next: ImgXf
+    if (d.mode === 'move') {
+      next = { ...st, cx: st.cx + dxPx / d.rw, cy: st.cy + dyPx / d.rh }
+    } else if (d.mode === 'rotate') {
+      const a0 = Math.atan2(d.sy - d.cypx, d.sx - d.cxpx)
+      const a1 = Math.atan2(e.clientY - d.cypx, e.clientX - d.cxpx)
+      next = { ...st, rot: st.rot + (a1 - a0) }
+    } else {
+      const c = Math.cos(st.rot), s = Math.sin(st.rot)
+      const lx = dxPx * c + dyPx * s, ly = -dxPx * s + dyPx * c // into the box's local frame
+      const W0 = st.w * d.rw, H0 = st.h * d.rh
+      const sX = d.handle!.includes('e') ? 1 : d.handle!.includes('w') ? -1 : 0
+      const sY = d.handle!.includes('s') ? 1 : d.handle!.includes('n') ? -1 : 0
+      const nW = Math.max(14, W0 + sX * lx), nH = Math.max(14, H0 + sY * ly)
+      const lsx = (sX * (nW - W0)) / 2, lsy = (sY * (nH - H0)) / 2 // centre shifts half the growth
+      const csx = lsx * c - lsy * s, csy = lsx * s + lsy * c
+      next = { cx: st.cx + csx / d.rw, cy: st.cy + csy / d.rh, w: nW / d.rw, h: nH / d.rh, rot: st.rot }
+    }
+    setXf((cur) => { const m = new Map(cur); m.set(d.id, next); return m }); setOut(null)
   }
   function toggleDelete(id: string) {
-    setDeleted((cur) => { const s2 = new Set(cur); s2.has(id) ? s2.delete(id) : s2.add(id); return s2 }); setOut(null); setDragId(null); dragRef.current = null
+    setDeleted((cur) => { const s2 = new Set(cur); s2.has(id) ? s2.delete(id) : s2.add(id); return s2 }); setOut(null)
   }
 
   // ---- inserted text boxes ----------------------------------------------------
@@ -161,17 +178,7 @@ export default function PdfEditTool() {
       return { ...t, x, y, w, h }
     })); setOut(null)
   }
-  function up(e?: React.PointerEvent) {
-    const d = dragRef.current
-    if (d && e) {
-      const dx = d.baseDx + (e.clientX - d.sx) / d.rw
-      const dy = d.baseDy + (e.clientY - d.sy) / d.rh
-      setMoves((cur) => { const m = new Map(cur); m.set(d.id, { dx, dy }); return m }); setOut(null)
-    }
-    dragRef.current = null
-    if (dragId) setDragId(null)
-    g.current = null
-  }
+  function up() { gi.current = null; g.current = null }
   function setFont(id: string, d: number) {
     setTexts((c) => c.map((t) => { if (t.id !== id) return t; const size = clamp(t.size + d, 6, 96); lastSize.current = size; return { ...t, size } })); setOut(null)
   }
@@ -185,8 +192,8 @@ export default function PdfEditTool() {
       const { applyEdits, writePage } = await import('./contentStream')
       const pdf = await PDFDocument.load(await file.arrayBuffer())
       for (const page of pc) {
-        const hasEdit = page.objects.some((o) => deleted.has(o.id) || moves.has(o.id))
-        if (hasEdit) writePage(pdf, page.page, applyEdits(page, deleted, moves))
+        const hasEdit = page.objects.some((o) => deleted.has(o.id) || xf.has(o.id))
+        if (hasEdit) writePage(pdf, page.page, applyEdits(page, deleted, xf))
       }
       if (texts.some((t) => t.text.trim())) {
         const font = await pdf.embedFont(StandardFonts.Helvetica)
@@ -246,41 +253,48 @@ export default function PdfEditTool() {
           <div className="bg-[#e9ebef] rounded-md p-2">
             <div ref={pageBoxRef} className="relative mx-auto bg-white shadow-[var(--shadow-sm)]"
               style={{ width: `min(100%, ${aspect * 78}vh)`, aspectRatio: `${aspect}` }}
-              onPointerDown={() => setSel(null)} onPointerMove={(e) => { imgDragMove(e); tbMove(e) }} onPointerUp={up} onPointerCancel={up}>
+              onPointerDown={() => setSel(null)} onPointerMove={(e) => { imgMove(e); tbMove(e) }} onPointerUp={up} onPointerCancel={up}>
               <img ref={pageImgRef} src={pages[pi].url} alt="" className="absolute inset-0 w-full h-full pointer-events-none select-none" draggable={false} crossOrigin="anonymous" />
 
-              {/* images — select, delete, or drag to move (real cropped clone) */}
+              {/* images — bounding box with 8 resize handles + a rotate handle */}
               {pageObjects.filter((o) => o.kind === 'image').map((o) => {
-                const m = moves.get(o.id)
-                const dx = m?.dx || 0, dy = m?.dy || 0
-                const moved = !!(dx || dy)
+                const t = xf.get(o.id)
                 const isDel = deleted.has(o.id)
-                const dragging = dragId === o.id
                 const on = sel === o.id
                 const clip = clips.current.get(o.id)
+                const b = t || { cx: o.x + o.w / 2, cy: o.y + o.h / 2, w: o.w, h: o.h, rot: 0 }
                 const orig = { left: `${o.x * 100}%`, top: `${o.y * 100}%`, width: `${o.w * 100}%`, height: `${o.h * 100}%` }
-                const cur = { left: `${(o.x + dx) * 100}%`, top: `${(o.y + dy) * 100}%`, width: `${o.w * 100}%`, height: `${o.h * 100}%` }
+                const box = { left: `${(b.cx - b.w / 2) * 100}%`, top: `${(b.cy - b.h / 2) * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, transform: `rotate(${b.rot}rad)`, transformOrigin: 'center' }
+                if (isDel) return (
+                  <div key={o.id}>
+                    <div className="absolute bg-white pointer-events-none" style={orig} />
+                    <button type="button" onClick={() => toggleDelete(o.id)} data-testid="edit-undo" title={s.undo}
+                      className="absolute outline outline-1 outline-[color:var(--danger)] bg-transparent cursor-pointer" style={orig} />
+                  </div>
+                )
                 return (
                   <div key={o.id}>
-                    {(isDel || moved || dragging) && <div className="absolute bg-white pointer-events-none" style={orig} />}
-                    {isDel ? (
-                      <button type="button" onClick={() => toggleDelete(o.id)} data-testid="edit-undo" title={s.undo}
-                        className="absolute outline outline-1 outline-[color:var(--danger)] bg-transparent cursor-pointer" style={orig} />
-                    ) : dragging && clip ? (
-                      <img ref={cloneRef} src={clip} alt="" draggable={false}
-                        className="absolute pointer-events-none select-none shadow-[var(--shadow-md)] opacity-95"
-                        style={{ ...orig, transform: `translate(${(dragRef.current?.baseDx || 0) * (dragRef.current?.rw || 0)}px, ${(dragRef.current?.baseDy || 0) * (dragRef.current?.rh || 0)}px)` }} />
-                    ) : (
-                      <div data-testid="edit-obj-image"
-                        className={`absolute cursor-move touch-none ${on ? 'outline outline-2 outline-green-600' : 'hover:outline hover:outline-1 hover:outline-green-500'}`}
-                        style={cur} onPointerDown={(e) => imgDown(e, o)}>
-                        {moved && clip && <img src={clip} alt="" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" />}
-                        {on && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); toggleDelete(o.id) }} aria-label={s.del}
-                            className="absolute -right-2 -top-2 w-6 h-6 rounded-full bg-[var(--danger)] text-white text-[0.7rem] grid place-items-center border-2 border-white cursor-pointer">✕</button>
-                        )}
-                      </div>
-                    )}
+                    {t && <div className="absolute bg-white pointer-events-none" style={orig} />}
+                    <div data-testid="edit-obj-image"
+                      className={`absolute cursor-move touch-none ${on ? 'outline outline-2 outline-green-600' : 'hover:outline hover:outline-1 hover:outline-green-500'}`}
+                      style={box} onPointerDown={(e) => imgStart(e, o, 'move')}>
+                      {t && clip && <img src={clip} alt="" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ objectFit: 'fill' }} />}
+                      {on && (
+                        <>
+                          {HANDLES.map((h) => (
+                            <span key={h} data-handle={h} onPointerDown={(e) => imgStart(e, o, 'resize', h)}
+                              className="absolute w-3 h-3 bg-white border-2 border-green-600 rounded-full touch-none"
+                              style={{ left: h.includes('w') ? '-6px' : h.includes('e') ? 'calc(100% - 6px)' : 'calc(50% - 6px)', top: h.includes('n') ? '-6px' : h.includes('s') ? 'calc(100% - 6px)' : 'calc(50% - 6px)', cursor: `${h}-resize` }} />
+                          ))}
+                          {/* rotate handle above the top edge */}
+                          <span className="absolute left-1/2 -top-6 w-px h-6 bg-green-600 pointer-events-none" />
+                          <span data-handle="rot" onPointerDown={(e) => imgStart(e, o, 'rotate')}
+                            className="absolute left-1/2 -top-6 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-green-600 border-2 border-white rounded-full touch-none cursor-grab" aria-label="rotate" />
+                          <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); toggleDelete(o.id) }} aria-label={s.del}
+                            className="absolute -right-2 -bottom-2 w-6 h-6 rounded-full bg-[var(--danger)] text-white text-[0.7rem] grid place-items-center border-2 border-white cursor-pointer">✕</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )
               })}
