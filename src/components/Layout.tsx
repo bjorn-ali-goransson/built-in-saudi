@@ -43,6 +43,28 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
     return () => document.removeEventListener('visibilitychange', run)
   }, [])
 
+  // #debug — outline every box + log scroll diagnostics (which element overflows).
+  useEffect(() => {
+    const sync = () => {
+      const on = window.location.hash.toLowerCase().includes('debug')
+      document.documentElement.toggleAttribute('data-debug', on)
+      if (!on) return
+      const se = document.scrollingElement || document.documentElement
+      let tallest: Element | null = null, max = 0
+      document.querySelectorAll('body *').forEach((el) => {
+        const h = (el as HTMLElement).getBoundingClientRect().height
+        if (h > max && h < 1e6) { max = h; tallest = el }
+      })
+      // eslint-disable-next-line no-console
+      console.log('[debug] scrollHeight', se.scrollHeight, 'innerHeight', window.innerHeight,
+        'overflow', se.scrollHeight - window.innerHeight, 'tallest', Math.round(max),
+        tallest && (tallest as HTMLElement).tagName + '.' + ((tallest as HTMLElement).getAttribute('class') || '').slice(0, 60))
+    }
+    sync()
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [])
+
   return (
     <LocaleProvider locale={locale}>
       <div className="flex flex-col min-h-[100dvh]">

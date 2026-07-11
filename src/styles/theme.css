@@ -108,6 +108,12 @@
   .wrap { padding-inline: max(clamp(1.1rem, 4vw, 2.5rem), env(safe-area-inset-left)); }
 }
 
+/* #debug — outline every box (outline, so no layout impact) to spot what's
+   overflowing / scrolling. Toggled by adding #debug to the URL (see Layout). */
+html[data-debug] * { outline: 1px solid color-mix(in srgb, red 24%, transparent); outline-offset: -1px; }
+html[data-debug] iframe { outline: 2px solid color-mix(in srgb, blue 65%, transparent); }
+html[data-debug] body { outline: 3px solid color-mix(in srgb, lime 70%, transparent); outline-offset: -3px; }
+
 /* Motion — keyframes referenced by `animate-[…]` utilities in components. */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse { 50% { opacity: 0.3; } }
