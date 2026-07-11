@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useSyncExternalStore } from 'react'
+import { Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { Navigate, Outlet, ScrollRestoration, useLocation, useParams } from 'react-router-dom'
 import { hideFooterStore } from '../lib/hideFooter'
 import {
