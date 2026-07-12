@@ -39,6 +39,7 @@ import { metadataTool } from './metadata/meta'
 import { bookWithMeTool } from './book-with-me/meta'
 import { cvGeneratorTool } from './cv-generator/meta'
 import { linkShortenerTool } from './link-shortener/meta'
+import { callsTool } from './calls/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -48,6 +49,7 @@ import { linkShortenerTool } from './link-shortener/meta'
  */
 export const tools: Tool[] = [
   bookWithMeTool,
+  callsTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,

@@ -213,8 +213,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   target URL; expired ⇒ 404 + lazy delete), `my-links`, `delete-link`. The public
   redirect is a **top-level `/s/:code` route** (`ShortLinkPage`, no locale/chrome)
   that resolves + `location.replace`. Same GIS client ID as the CV tool.
+- **Calls signaling** (`functions/call.js`): `call-signal` — a metadata-only relay
+  for the P2P **Private Call** tool (`src/tools/calls/`). It only shuttles the WebRTC
+  handshake (offer/answer/ICE + join/leave) between peers in an ephemeral Firestore
+  `callRooms/{code}` doc (2h TTL, polled); it **never sees audio/video/whiteboard/
+  chat/files** — those flow directly peer-to-peer. No auth (public by random code),
+  no per-user storage (so `my-data` untouched). STUN is public; **no TURN** (strict
+  NATs can't connect). Media/data via WebRTC (mesh, small groups); the invite is a
+  shareable image (QR + code + PNG-metadata) from `src/tools/calls/invite.ts`.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all twenty-five functions on any `functions/**` change, authenticating **keylessly
+  deploys all twenty-six functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

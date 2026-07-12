@@ -75,6 +75,7 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   Calculators: { en: 'Calculators', ar: 'حاسبات' },
   PDF: { en: 'PDF', ar: 'PDF' },
   Business: { en: 'Business', ar: 'أعمال' },
+  Communication: { en: 'Communication', ar: 'تواصل' },
   'Saudi / Local': { en: 'Saudi / Local', ar: 'أدوات سعودية' },
 }
 

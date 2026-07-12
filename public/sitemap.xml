@@ -38,6 +38,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/link-shortener"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/calls</loc>
+    <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calls"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calls"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/calls</loc>
+    <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calls"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calls"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/qr-code</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>

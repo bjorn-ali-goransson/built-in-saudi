@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'calls',
+    en: { name: 'Private Call', description: 'Start a private, peer-to-peer video call from one shareable invite image (QR + link). Video, screen-share, a shared whiteboard, chat and file-drop go straight between browsers over WebRTC — only the initial handshake touches a tiny relay that never sees your call. Public STUN, no recording, small groups.' },
+    ar: { name: 'مكالمة خاصة', description: 'ابدأ مكالمة فيديو خاصة مباشرة بين الأجهزة من صورة دعوة واحدة (رمز QR + رابط). الفيديو ومشاركة الشاشة والسبورة المشتركة والدردشة وإرسال الملفات تنتقل مباشرة بين المتصفحات عبر WebRTC — فقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك. STUN عام، بلا تسجيل، لمجموعات صغيرة.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

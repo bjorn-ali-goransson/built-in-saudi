@@ -77,3 +77,5 @@ jobs:
           gcloud functions deploy resolve-link            "${common[@]}" --entry-point=resolveLink
           gcloud functions deploy my-links                "${common[@]}" --entry-point=myLinks
           gcloud functions deploy delete-link             "${common[@]}" --entry-point=deleteLink
+
+          gcloud functions deploy call-signal             "${common[@]}" --entry-point=callSignal

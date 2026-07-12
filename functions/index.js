@@ -10,6 +10,8 @@ import './booking.js'
 import './cv.js'
 // Link shortener (shorten, resolveLink, myLinks, deleteLink).
 import './shorten.js'
+// P2P Calls signaling relay (callSignal) — handshake only, never call content.
+import './call.js'
 
 const { Firestore } = firestore
 const db = new Firestore()
