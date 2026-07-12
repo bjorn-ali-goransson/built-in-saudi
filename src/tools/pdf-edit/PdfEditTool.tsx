@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { UploadIcon, DownloadIcon, InfoIcon } from '../../components/icons'
+import { UploadIcon, DownloadIcon, InfoIcon, TrashIcon } from '../../components/icons'
 import { Stack, Button, Spinner } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import type { PageContent, EditObject, ImgXf } from './contentStream'
@@ -328,7 +328,7 @@ export default function PdfEditTool() {
                           <span data-handle="rot" onPointerDown={(e) => imgStart(e, o, 'rotate')}
                             className="absolute left-1/2 -top-6 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-green-600 border-2 border-white rounded-full touch-none cursor-grab" aria-label="rotate" />
                           <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); toggleDelete(o.id) }} aria-label={s.del}
-                            className="absolute -right-2 -bottom-2 w-6 h-6 rounded-full bg-[var(--danger)] text-white text-[0.7rem] grid place-items-center border-2 border-white cursor-pointer">✕</button>
+                            className="absolute -right-2 -bottom-2 w-7 h-7 rounded-full bg-[var(--danger)] text-white grid place-items-center border-2 border-white cursor-pointer shadow-[var(--shadow-sm)] [&_svg]:w-4 [&_svg]:h-4"><TrashIcon /></button>
                         </>
                       )}
                     </div>
@@ -371,7 +371,7 @@ export default function PdfEditTool() {
                           <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => setFont(t.id, -1)} className="w-6 h-6 rounded-sm bg-ink text-sand-100 border-0 cursor-pointer">−</button>
                           <span className="text-[0.7rem] bg-ink text-sand-100 rounded-sm px-1.5 h-6 inline-flex items-center">{t.size}</span>
                           <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => setFont(t.id, 1)} className="w-6 h-6 rounded-sm bg-ink text-sand-100 border-0 cursor-pointer">＋</button>
-                          <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => delText(t.id)} className="w-6 h-6 rounded-sm bg-[var(--danger)] text-white border-0 cursor-pointer">✕</button>
+                          <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => delText(t.id)} aria-label={s.del} className="w-6 h-6 rounded-sm bg-[var(--danger)] text-white border-0 cursor-pointer grid place-items-center [&_svg]:w-4 [&_svg]:h-4"><TrashIcon /></button>
                         </span>
                       </>
                     )}

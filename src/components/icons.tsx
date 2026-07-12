@@ -526,6 +526,14 @@ export function SignatureIcon({ className }: P) {
   )
 }
 
+export function TrashIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 7h16M9 7V5.2a1.2 1.2 0 0 1 1.2-1.2h3.6A1.2 1.2 0 0 1 15 5.2V7M6.5 7l.8 12.1a1.2 1.2 0 0 0 1.2 1.1h7a1.2 1.2 0 0 0 1.2-1.1L18 7M10 11v6M14 11v6" />
+    </svg>
+  )
+}
+
 export function FormIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
