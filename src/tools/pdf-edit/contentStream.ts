@@ -24,6 +24,13 @@ function mul(m: Mat, n: Mat): Mat {
     m[4] * n[1] + m[5] * n[3] + n[5],
   ]
 }
+function inv(m: Mat): Mat {
+  const [a, b, c, d, e, f] = m
+  const det = a * d - b * c
+  if (Math.abs(det) < 1e-9) return [1, 0, 0, 1, 0, 0]
+  const ia = d / det, ib = -b / det, ic = -c / det, id = a / det
+  return [ia, ib, ic, id, -(e * ia + f * ic), -(e * ib + f * id)]
+}
 
 export interface EditObject {
   id: string
@@ -32,6 +39,7 @@ export interface EditObject {
   x: number; y: number; w: number; h: number // normalised, top-left origin
   delStart: number; delEnd: number            // byte span to remove on delete
   insertAt?: number                            // where to inject a move-cm (images)
+  outer?: Mat                                  // CTM active at the image's draw block (for correct move space)
   str?: string                                 // best-effort text (label only)
 }
 
@@ -149,7 +157,7 @@ function parsePage(content: string, page: number, wPt: number, hPt: number, imag
   let ctm: Mat = [...ID]
   let tm: Mat = [...ID], tlm: Mat = [...ID], fontSize = 12, leading = 0
   const gstack: { ctm: Mat; qStart: number; imgs: EditObject[] }[] = []
-  let block: { qStart: number; imgs: EditObject[] } | null = null
+  let block: { ctm: Mat; qStart: number; imgs: EditObject[] } | null = null
   const ops: Tok[] = [] // operand buffer
   let uid = 0
   const nums = () => ops.filter((o) => o.t === 'num').map((o) => Number(o.v))
@@ -193,6 +201,7 @@ function parsePage(content: string, page: number, wPt: number, hPt: number, imag
             id: `o${page}_${uid++}`, kind: 'image', page,
             x: x0 / wPt, y: 1 - y1 / hPt, w: Math.abs(a) / wPt, h: Math.abs(d) / hPt,
             delStart: block.qStart, delEnd: tk.e, insertAt: block.qStart + 1,
+            outer: [...block.ctm] as Mat, // coordinate space at this image's block
           }
           block.imgs.push(im)
           objs.push(im)
@@ -263,7 +272,13 @@ export function applyEdits(pc: PageContent, deleted: Set<string>, transforms: Ma
       const ocx = (o.x + o.w / 2) * W, ocy = H - (o.y + o.h / 2) * H
       const tcx = t.cx * W, tcy = H - t.cy * H
       const e = tcx - (ocx * a + ocy * c), f = tcy - (ocx * b + ocy * d)
-      edits.push({ start: o.insertAt, end: o.insertAt, rep: `\n${fmt(a)} ${fmt(b)} ${fmt(c)} ${fmt(d)} ${fmt(e)} ${fmt(f)} cm` })
+      // `Tp` is the transform in PAGE space; the image's draw block may run under
+      // an outer CTM (page flip / unit scale), so inject Tp conjugated into that
+      // space: OUTER · Tp · OUTER⁻¹. (Identity outer → Tp unchanged.)
+      const Tp: Mat = [a, b, c, d, e, f]
+      const O = o.outer || [1, 0, 0, 1, 0, 0]
+      const [ia, ib, ic, id, ie, iff] = mul(mul(O, Tp), inv(O))
+      edits.push({ start: o.insertAt, end: o.insertAt, rep: `\n${fmt(ia)} ${fmt(ib)} ${fmt(ic)} ${fmt(id)} ${fmt(ie)} ${fmt(iff)} cm` })
     }
   }
   edits.sort((x, y) => y.start - x.start)
