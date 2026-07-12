@@ -2,25 +2,31 @@ import { useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Stack, Button, Spinner, Seg, SegButton } from '../../components/ui'
-import { LEVELS } from './compress'
+import { LEVELS, IMG_LEVELS, type LevelKey } from './compress'
 
-type LevelKey = keyof typeof LEVELS
+type Mode = 'images' | 'pages'
 
 const STR = {
   en: {
     drop: 'Drop a PDF, or tap to choose', reading: 'Reading…', pages: 'pages', original: 'Original',
-    level: 'Compression', strong: 'Smaller file', balanced: 'Balanced', light: 'Better quality',
-    note: 'Compresses by re-rendering pages as images — great for scanned or photo-heavy PDFs. Text becomes part of the image (not selectable).',
+    modeImages: 'Keep text', modePages: 'Smallest', level: 'Compression',
+    strong: 'Smaller file', balanced: 'Balanced', light: 'Better quality',
+    noteImages: 'Recompresses the embedded photos/JPEGs and keeps your text selectable — best when a PDF is large because of images.',
+    notePages: 'Re-renders every page as an image: maximum shrink, great for scans. Text becomes part of the image (not selectable).',
     compress: 'Compress PDF', working: 'Compressing', download: 'Download compressed PDF', again: 'Compress another',
-    saved: 'saved', bigger: 'This PDF is already efficient — the compressed copy isn’t smaller. Try “Smaller file”, or keep the original.',
+    saved: 'saved', bigger: 'Already efficient — the compressed copy isn’t smaller. Try another level, or keep the original.',
+    noImages: 'No recompressible JPEG images found. Switch to “Smallest” to re-render the pages instead.',
     locked: 'This PDF is locked / encrypted.', privacy: 'Compressed on your device — your PDF is never uploaded.',
   },
   ar: {
     drop: 'أفلت ملف PDF أو اضغط للاختيار', reading: 'جارٍ القراءة…', pages: 'صفحة', original: 'الأصلي',
-    level: 'الضغط', strong: 'ملف أصغر', balanced: 'متوازن', light: 'جودة أعلى',
-    note: 'يضغط بإعادة رسم الصفحات كصور — مثالي للملفات الممسوحة أو المليئة بالصور. يصبح النص جزءًا من الصورة (غير قابل للتحديد).',
+    modeImages: 'إبقاء النص', modePages: 'الأصغر', level: 'الضغط',
+    strong: 'ملف أصغر', balanced: 'متوازن', light: 'جودة أعلى',
+    noteImages: 'يعيد ضغط الصور/JPEG المضمّنة ويُبقي نصّك قابلًا للتحديد — الأفضل حين يكبر الملف بسبب الصور.',
+    notePages: 'يعيد رسم كل صفحة كصورة: أقصى تصغير، مثالي للملفات الممسوحة. يصبح النص جزءًا من الصورة (غير قابل للتحديد).',
     compress: 'ضغط PDF', working: 'جارٍ الضغط', download: 'تنزيل الملف المضغوط', again: 'ضغط ملف آخر',
-    saved: 'توفير', bigger: 'هذا الملف فعّال أصلًا — النسخة المضغوطة ليست أصغر. جرّب «ملف أصغر» أو احتفظ بالأصل.',
+    saved: 'توفير', bigger: 'الملف فعّال أصلًا — النسخة المضغوطة ليست أصغر. جرّب مستوى آخر أو احتفظ بالأصل.',
+    noImages: 'لا توجد صور JPEG قابلة لإعادة الضغط. بدّل إلى «الأصغر» لإعادة رسم الصفحات.',
     locked: 'هذا الملف مقفل / مشفّر.', privacy: 'يُضغط على جهازك — لا يُرفع ملفك أبدًا.',
   },
 }
@@ -32,15 +38,19 @@ export default function PdfCompressTool() {
   const s = STR[locale]
   const [file, setFile] = useState<File | null>(null)
   const [pageCount, setPageCount] = useState<number | null>(null)
+  const [mode, setMode] = useState<Mode>('images')
   const [level, setLevel] = useState<LevelKey>('balanced')
   const [busy, setBusy] = useState(false)
   const [prog, setProg] = useState<{ done: number; total: number } | null>(null)
   const [err, setErr] = useState('')
+  const [hint, setHint] = useState('')
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
+
+  const reset = (keepFile: boolean) => { setOut(null); setErr(''); setHint(''); if (!keepFile) { setFile(null); setPageCount(null) } }
 
   async function onFile(f: File | null | undefined) {
     if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
-    setBusy(true); setErr(''); setOut(null); setPageCount(null)
+    setBusy(true); reset(false)
     try {
       const { PDFDocument } = await import('pdf-lib')
       const doc = await PDFDocument.load(await f.arrayBuffer(), { updateMetadata: false })
@@ -52,10 +62,14 @@ export default function PdfCompressTool() {
 
   async function run() {
     if (!file) return
-    setBusy(true); setErr(''); setOut(null); setProg({ done: 0, total: pageCount || 1 })
+    setBusy(true); setErr(''); setHint(''); setOut(null); setProg({ done: 0, total: pageCount || 1 })
     try {
-      const { compressPdf } = await import('./compress')
-      const blob = await compressPdf(file, LEVELS[level], (done, total) => setProg({ done, total }))
+      const { compressPdf, recompressImages } = await import('./compress')
+      const onP = (done: number, total: number) => setProg({ done, total })
+      const blob = mode === 'images'
+        ? await recompressImages(file, IMG_LEVELS[level], onP)
+        : await compressPdf(file, LEVELS[level], onP)
+      if (!blob) { setHint(s.noImages); return }
       setOut((p) => { if (p) URL.revokeObjectURL(p.url); return { url: URL.createObjectURL(blob), size: blob.size } })
     } catch {
       setErr(s.locked)
@@ -84,15 +98,23 @@ export default function PdfCompressTool() {
           </div>
 
           <div className="flex flex-col gap-2">
+            <Seg data-testid="cmp-mode">
+              <SegButton active={mode === 'images'} onClick={() => { setMode('images'); reset(true) }}>{s.modeImages}</SegButton>
+              <SegButton active={mode === 'pages'} onClick={() => { setMode('pages'); reset(true) }}>{s.modePages}</SegButton>
+            </Seg>
+            <p className="text-[0.8rem] text-ink-faint leading-relaxed">{mode === 'images' ? s.noteImages : s.notePages}</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
             <span className="text-[0.85rem] font-medium text-ink-soft">{s.level}</span>
             <Seg>
-              <SegButton active={level === 'strong'} onClick={() => { setLevel('strong'); setOut(null) }}>{s.strong}</SegButton>
-              <SegButton active={level === 'balanced'} onClick={() => { setLevel('balanced'); setOut(null) }}>{s.balanced}</SegButton>
-              <SegButton active={level === 'light'} onClick={() => { setLevel('light'); setOut(null) }}>{s.light}</SegButton>
+              <SegButton active={level === 'strong'} onClick={() => { setLevel('strong'); reset(true) }}>{s.strong}</SegButton>
+              <SegButton active={level === 'balanced'} onClick={() => { setLevel('balanced'); reset(true) }}>{s.balanced}</SegButton>
+              <SegButton active={level === 'light'} onClick={() => { setLevel('light'); reset(true) }}>{s.light}</SegButton>
             </Seg>
           </div>
 
-          <p className="text-[0.8rem] text-ink-faint leading-relaxed">{s.note}</p>
+          {hint && <p className="text-[0.85rem] text-gold-500" data-testid="cmp-hint">{hint}</p>}
 
           {!out ? (
             <div className="flex items-center gap-3">
@@ -108,7 +130,7 @@ export default function PdfCompressTool() {
                   <DownloadIcon /> {s.download} · {fmtSize(out.size)}
                 </Button>
                 {pct > 0 && <span className="text-[0.95rem] font-semibold text-green-600">−{pct}% {s.saved}</span>}
-                <Button onClick={() => { setFile(null); setOut(null); setPageCount(null) }}>{s.again}</Button>
+                <Button onClick={() => reset(false)}>{s.again}</Button>
               </div>
               {pct <= 0 && <p className="text-[0.85rem] text-gold-500">{s.bigger}</p>}
             </div>

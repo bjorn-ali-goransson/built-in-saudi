@@ -6,9 +6,9 @@ export const pdfCompressTool: Tool = {
   id: 'pdf-compress',
   name: 'Compress PDF',
   nameAr: 'ضغط PDF',
-  tagline: 'Shrink a PDF right in your browser — nothing uploaded.',
+  tagline: 'Shrink a PDF in your browser — keep your text, or go smallest.',
   description:
-    'Make a PDF smaller in your browser: pick a compression level and it re-renders each page as an optimised JPEG and rebuilds the file — great for scanned or photo-heavy PDFs. See the size saved before you download. Runs with pdf.js + pdf-lib, so your document is never uploaded. Text becomes part of the image (not selectable).',
+    'Make a PDF smaller in your browser. “Keep text” recompresses the embedded photos/JPEGs and leaves your text selectable; “Smallest” re-renders each page as an optimised image for maximum shrink (great for scans). See the size saved before you download. Runs with pdf.js + pdf-lib, so your document is never uploaded.',
   category: 'PDF',
   keywords: ['pdf', 'compress', 'shrink', 'reduce', 'smaller', 'optimize', 'compress pdf', 'ضغط', 'ضغط pdf', 'تصغير', 'تقليل حجم'],
   status: 'stable',
@@ -16,8 +16,8 @@ export const pdfCompressTool: Tool = {
   component: lazyTool(() => import('./PdfCompressTool')),
   ar: {
     name: 'ضغط PDF',
-    tagline: 'صغّر ملف PDF داخل متصفحك — دون رفعه.',
+    tagline: 'صغّر ملف PDF داخل متصفحك — أبقِ نصّك أو اذهب للأصغر.',
     description:
-      'صغّر حجم ملف PDF داخل متصفحك: اختر مستوى الضغط فيُعيد رسم كل صفحة كصورة JPEG محسّنة ويعيد بناء الملف — مثالي للملفات الممسوحة أو المليئة بالصور. شاهد حجم التوفير قبل التنزيل. يعمل عبر pdf.js و pdf-lib، فلا يُرفع مستندك أبدًا. يصبح النص جزءًا من الصورة (غير قابل للتحديد).',
+      'صغّر حجم ملف PDF داخل متصفحك. «إبقاء النص» يعيد ضغط الصور/JPEG المضمّنة ويُبقي نصّك قابلًا للتحديد؛ و«الأصغر» يعيد رسم كل صفحة كصورة محسّنة لأقصى تصغير (مثالي للملفات الممسوحة). شاهد حجم التوفير قبل التنزيل. يعمل عبر pdf.js و pdf-lib، فلا يُرفع مستندك أبدًا.',
   },
 }
