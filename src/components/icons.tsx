@@ -526,6 +526,16 @@ export function SignatureIcon({ className }: P) {
   )
 }
 
+export function CompressIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M5 12h14" />
+      <path d="M12 3v6M9 6l3 3 3-3" />
+      <path d="M12 21v-6M9 18l3-3 3 3" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
