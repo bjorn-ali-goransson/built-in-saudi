@@ -14,7 +14,7 @@ const MIN_W = 0.07
 const STR = {
   en: {
     signStep: '1 · Your signature', signHere: 'Sign here with your finger or mouse', clear: 'Clear',
-    saved: 'Saved signature', useSaved: 'Use saved', redraw: 'Draw again', sigNote: 'Kept only on this device.',
+    saved: 'Saved signature', useSaved: 'Use saved', redraw: 'Draw again', dlSig: 'Download PNG', sigNote: 'Kept only on this device.',
     docStep: '2 · Your document', drop: 'Drop a PDF, or tap to choose', reading: 'Reading…',
     add: 'Place signature', size: 'Size', del: 'Remove', page: 'Page', of: 'of', tapHint: 'Drag to move · pinch or drag the corner to resize',
     needSig: 'Draw your signature above first.', place: 'Tap “Place signature”, then drag it where it belongs.',
@@ -23,7 +23,7 @@ const STR = {
   },
   ar: {
     signStep: '١ · توقيعك', signHere: 'وقّع هنا بإصبعك أو بالفأرة', clear: 'مسح',
-    saved: 'توقيع محفوظ', useSaved: 'استخدم المحفوظ', redraw: 'ارسم من جديد', sigNote: 'يُحفظ على جهازك فقط.',
+    saved: 'توقيع محفوظ', useSaved: 'استخدم المحفوظ', redraw: 'ارسم من جديد', dlSig: 'تنزيل PNG', sigNote: 'يُحفظ على جهازك فقط.',
     docStep: '٢ · مستندك', drop: 'أفلت ملف PDF أو اضغط للاختيار', reading: 'جارٍ القراءة…',
     add: 'ضع التوقيع', size: 'الحجم', del: 'إزالة', page: 'صفحة', of: 'من', tapHint: 'اسحب للتحريك · اقرص أو اسحب الزاوية لتغيير الحجم',
     needSig: 'ارسم توقيعك بالأعلى أولًا.', place: 'اضغط «ضع التوقيع» ثم اسحبه إلى مكانه.',
@@ -225,6 +225,7 @@ export default function PdfSignTool() {
             <div className="h-16 min-w-[8rem] max-w-[16rem] rounded-md border border-[color:var(--line)] bg-white grid place-items-center px-3">
               <img src={sig.url} alt="" className="max-h-12 max-w-full" />
             </div>
+            <Button href={sig.url} download="signature.png" data-testid="sign-download-png"><DownloadIcon /> {s.dlSig}</Button>
             <Button onClick={() => { setRedraw(true); setSig(null) }}>{s.redraw}</Button>
             <span className="text-[0.8rem] text-ink-faint">{s.sigNote}</span>
           </div>
