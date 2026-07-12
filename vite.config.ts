@@ -83,8 +83,13 @@ function prerenderPlugin(): Plugin {
       let notes = ''
       try {
         const msg = execSync('git log -1 --pretty=%B', { encoding: 'utf8' })
-        const m = msg.match(/^Changelog:\s*(.+)$/im)
-        notes = (m ? m[1] : msg.split('\n')[0]).trim().slice(0, 180)
+        // Take everything after `Changelog:` up to the first blank line (so a
+        // wrapped changelog isn't cut mid-sentence), else the commit subject.
+        const ci = msg.search(/^Changelog:/im)
+        const raw = ci >= 0
+          ? msg.slice(msg.indexOf(':', ci) + 1).split(/\n[ \t]*\n/)[0]
+          : msg.split('\n')[0]
+        notes = raw.replace(/\s+/g, ' ').trim().slice(0, 180)
       } catch { /* no git in this environment — leave notes empty */ }
       let shell = readFileSync(join(dist, 'index.html'), 'utf8')
       shell = shell.replace('</head>', `<meta name="build" content="${build}" /></head>`)
