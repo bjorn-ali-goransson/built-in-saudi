@@ -86,6 +86,10 @@ import { writerTool } from './writer/meta'
 import { flashcardsTool } from './flashcards/meta'
 import { kanbanTool } from './kanban/meta'
 import { tierListTool } from './tier-list/meta'
+import { readmeGeneratorTool } from './readme-generator/meta'
+import { markdownTableTool } from './markdown-table/meta'
+import { fakeDataTool } from './fake-data/meta'
+import { slugifyTool } from './slugify/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -125,7 +129,11 @@ export const tools: Tool[] = [
   robotsTxtTool,
   gitignoreTool,
   jsonToTypesTool,
+  readmeGeneratorTool,
+  markdownTableTool,
+  fakeDataTool,
   readabilityTool,
+  slugifyTool,
   writerTool,
   flashcardsTool,
   kanbanTool,

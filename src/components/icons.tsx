@@ -896,3 +896,29 @@ export function TierIcon({ className }: P) {
     </svg>
   )
 }
+
+export function MarkdownIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M6 15V9l3 3 3-3v6M17 9v5m0 0-1.8-2M17 14l1.8-2" />
+    </svg>
+  )
+}
+
+export function SeedIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 4h6M4 8h6M4 12h4" />
+      <path d="M14 14a4 4 0 1 1 6 3.5C18 19 16 20 13 20c0-3 1-5 1-6z" />
+    </svg>
+  )
+}
+
+export function SlugIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9 15l6-6M10.5 6.5l1-1a3.5 3.5 0 0 1 5 5l-2 2M13.5 17.5l-1 1a3.5 3.5 0 0 1-5-5l2-2" />
+    </svg>
+  )
+}

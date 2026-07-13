@@ -578,12 +578,38 @@ test.describe('tools', () => {
     await expect(page.getByTestId('tl-tier-S')).toBeVisible()
   })
 
+  test('readme generator: renders the project title as an H1', async ({ page }) => {
+    await page.goto('/en/apps/readme-generator')
+    await page.getByTestId('rm-name').fill('Awesome Lib')
+    await expect(page.getByTestId('rm-output')).toContainText('# Awesome Lib')
+  })
+
+  test('markdown table: builds a GFM table from CSV', async ({ page }) => {
+    await page.goto('/en/apps/markdown-table')
+    await page.getByTestId('mdt-input').fill('a,b\n1,2')
+    await expect(page.getByTestId('mdt-output')).toContainText('| a')
+    await expect(page.getByTestId('mdt-output')).toContainText('| 1')
+  })
+
+  test('fake data: generates the requested rows as JSON', async ({ page }) => {
+    await page.goto('/en/apps/fake-data')
+    await page.getByTestId('fd-count').fill('3')
+    await page.getByTestId('fd-generate').click()
+    await expect(page.getByTestId('fd-output')).toContainText('"name"')
+  })
+
+  test('slugify: makes a URL slug', async ({ page }) => {
+    await page.goto('/en/apps/slugify')
+    await page.getByTestId('sl-input').fill('Hello, World! 2026')
+    await expect(page.getByTestId('sl-output')).toHaveText('hello-world-2026')
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')
     await expect(kursi).toBeVisible()
-    await kursi.click() // count 1 → done
-    await expect(kursi).toContainText('Done')
+    await kursi.click() // count 1 → done (the card dims once complete)
+    await expect(kursi).toHaveClass(/opacity-70/)
     await page.getByTestId('adhkar-evening').click()
     await expect(page.getByTestId('dhikr-amsayna-evening')).toBeVisible()
   })

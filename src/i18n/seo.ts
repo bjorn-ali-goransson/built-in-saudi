@@ -274,6 +274,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'صانع قوائم التصنيف', description: 'أضِف تسميات للأشياء التي تريد ترتيبها، ثم اسحبها إلى فئات S وA وB وC وD لبناء قائمة تصنيف كلاسيكية — ونزّلها كصورة للمشاركة. تُحفظ في هذا المتصفح؛ لا يُرفع أي شيء.' },
   },
   {
+    id: 'readme-generator',
+    en: { name: 'README Generator', description: 'Fill in your project’s name, description, features, install and usage steps and licence to generate a clean, well-structured README.md — with a live preview of the Markdown — ready to copy or download. Runs entirely in your browser.' },
+    ar: { name: 'مولّد README', description: 'أدخل اسم مشروعك ووصفه ومزاياه وخطوات التثبيت والاستخدام والرخصة لتوليد ملف README.md نظيف ومنظّم — مع معاينة حيّة لصيغة Markdown — جاهز للنسخ أو التنزيل. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'markdown-table',
+    en: { name: 'Markdown Table Generator', description: 'Paste comma- or tab-separated data (copied straight from a spreadsheet works) and get a neatly padded GitHub-flavoured Markdown table, with a choice of column alignment. Runs entirely in your browser.' },
+    ar: { name: 'مولّد جداول Markdown', description: 'الصق بياناتٍ مفصولة بفواصل أو بعلامات جدولة (النسخ المباشر من جدول بيانات يعمل) لتحصل على جدول Markdown مرتّب بنمط GitHub، مع خيار محاذاة الأعمدة. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'fake-data',
+    en: { name: 'Fake Data Generator', description: 'Generate realistic-looking sample records — names, emails, phones, cities, companies, dates and IDs — for seeding tests, mockups and demos. Pick the fields and count, then export as JSON or CSV. Runs entirely in your browser.' },
+    ar: { name: 'مولّد بيانات وهمية', description: 'ولّد سجلّات عيّنة واقعية المظهر — أسماء وبُرد إلكترونية وهواتف ومدن وشركات وتواريخ ومعرّفات — لتغذية الاختبارات والنماذج والعروض. اختر الحقول والعدد، ثم صدّر JSON أو CSV. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'slugify',
+    en: { name: 'Slugify', description: 'Convert a title or heading into a clean, URL-safe slug — lowercased, accents stripped, spaces and punctuation turned into hyphens, with a basic Arabic-to-Latin transliteration. Choose the separator and case. Runs entirely in your browser.' },
+    ar: { name: 'مولّد الروابط اللطيفة', description: 'حوّل عنوانًا إلى «سلَگ» نظيف آمن للروابط — أحرف صغيرة، بلا تشكيل، والمسافات وعلامات الترقيم تصبح شرطات، مع تحويل تقريبي من العربية إلى اللاتينية. اختر الفاصل والحالة. يعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
