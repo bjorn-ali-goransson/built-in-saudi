@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, PenIcon, ScreenShareIcon, FileIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo } from './rtc'
 
@@ -33,7 +33,7 @@ const STR = {
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Send files', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
-    youEnded: 'You have left the call', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
+    youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
@@ -47,7 +47,7 @@ const STR = {
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'إرسال ملفات', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
-    youEnded: 'غادرت المكالمة', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
+    youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
@@ -79,10 +79,10 @@ function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting:
 }
 
 // A borderless toolbar icon button: shaded on hover, extra-shaded when active.
-function IconBtn({ onClick, title, active, danger, children, testid, badge }: { onClick: () => void; title: string; active?: boolean; danger?: boolean; children: ReactNode; testid?: string; badge?: number }) {
+function IconBtn({ onClick, title, active, danger, children, testid, badge, big }: { onClick: () => void; title: string; active?: boolean; danger?: boolean; children: ReactNode; testid?: string; badge?: number; big?: boolean }) {
   return (
     <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testid}
-      className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border-0 cursor-pointer transition-colors [&_svg]:w-[18px] [&_svg]:h-[18px] ${
+      className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border-0 cursor-pointer transition-colors ${big ? '[&_svg]:w-[23px] [&_svg]:h-[23px]' : '[&_svg]:w-[18px] [&_svg]:h-[18px]'} ${
         danger ? 'bg-transparent text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_15%,transparent)]'
           : active ? 'bg-[color-mix(in_srgb,var(--ink)_15%,transparent)] text-ink'
             : 'bg-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] hover:text-ink'}`}>
@@ -136,7 +136,7 @@ export default function CallsTool() {
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
   const [graceEndsAt, setGraceEndsAt] = useState<number | null>(null) // host-disconnect deadline
   const hadHost = useRef(false)
-  const [ended, setEnded] = useState<{ reason: 'left' | 'nuked'; count: number }>({ reason: 'nuked', count: 0 })
+  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone'; count: number }>({ reason: 'gone', count: 0 })
 
   const rtc = useRef<CallRoom | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -156,6 +156,7 @@ export default function CallsTool() {
   const [chat, setChat] = useState<ChatItem[]>([])
   const [msg, setMsg] = useState('')
   const [toast, setToast] = useState('')
+  const [selfAspect, setSelfAspect] = useState(1) // our whiteboard canvas w/h
   const fileRef = useRef<HTMLInputElement>(null)
   const rosterRef = useRef<Map<string, PeerInfo>>(new Map())
 
@@ -235,7 +236,7 @@ export default function CallsTool() {
         const who = targetIsMe ? s.you : (rosterRef.current.get(targetId)?.name || '•')
         setToast(`${by} ${s.mutedBy} ${who}`); setTimeout(() => setToast(''), 3500)
       },
-      onClosed: () => { rtc.current = null; setEnded({ reason: 'nuked', count: 0 }); setPhase('ended') },
+      onClosed: () => { rtc.current = null; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
     })
     rtc.current = r
     return r
@@ -287,7 +288,7 @@ export default function CallsTool() {
     if (!isGuest) {
       // Host: if nobody else is here, nuke the empty room; otherwise just leave
       // (the meeting continues; the host can Rejoin from the ended screen).
-      if (others === 0) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }; setEnded({ reason: 'nuked', count: 0 }) }
+      if (others === 0) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }; setEnded({ reason: 'ended', count: 0 }) }
       else { rtc.current?.leave(); setEnded({ reason: 'left', count: others }) }
       rtc.current = null; resetLive(); setPhase('ended')
     } else {
@@ -295,7 +296,7 @@ export default function CallsTool() {
       history.replaceState(null, '', localePath(locale, '/apps/calls'))
     }
   }
-  function rejoin() { setEnded({ reason: 'nuked', count: 0 }); setPhase('lobby'); startHost() }
+  function rejoin() { setEnded({ reason: 'gone', count: 0 }); setPhase('lobby'); startHost() }
   const newCall = () => window.location.assign(localePath(locale, '/apps/calls'))
 
   // Host-disconnect grace (guests only): if the host vanishes, count down 2 minutes
@@ -310,7 +311,7 @@ export default function CallsTool() {
   useEffect(() => {
     if (graceEndsAt == null) return
     const iv = window.setInterval(() => {
-      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setEnded({ reason: 'nuked', count: 0 }); setPhase('ended') }
+      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
       else setGraceTick((t) => t + 1)
     }, 1000)
     return () => window.clearInterval(iv)
@@ -349,11 +350,21 @@ export default function CallsTool() {
   }
 
   // ---- whiteboard ----
-  function wbPt(e: React.PointerEvent) { const r = wbRef.current!.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height } }
+  // Coordinates are centred and aspect-preserving: the shorter side spans [-0.5,0.5]
+  // and the longer side extends beyond, so a stroke looks the same shape on every
+  // screen. Each client sees a different window; the non-common area is faded.
+  const halfExtents = (a: number) => [0.5 * Math.max(a, 1), 0.5 * Math.max(1 / a, 1)] as const
+  function wbPt(e: React.PointerEvent) {
+    const c = wbRef.current!; const r = c.getBoundingClientRect()
+    const [hx, hy] = halfExtents(r.width / r.height)
+    return { x: ((e.clientX - r.left) / r.width - 0.5) * 2 * hx, y: ((e.clientY - r.top) / r.height - 0.5) * 2 * hy }
+  }
   function drawSeg(seg: number[], color: string, width: number) {
     const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
+    const [hx, hy] = halfExtents(c.width / c.height)
+    const px = (u: number) => (u / (2 * hx) + 0.5) * c.width, py = (v: number) => (v / (2 * hy) + 0.5) * c.height
     x.strokeStyle = color; x.lineWidth = width; x.lineCap = 'round'
-    x.beginPath(); x.moveTo(seg[0] * c.width, seg[1] * c.height); x.lineTo(seg[2] * c.width, seg[3] * c.height); x.stroke()
+    x.beginPath(); x.moveTo(px(seg[0]), py(seg[1])); x.lineTo(px(seg[2]), py(seg[3])); x.stroke()
   }
   function wbDown(e: React.PointerEvent) { (e.target as HTMLElement).setPointerCapture(e.pointerId); drawing.current = wbPt(e) }
   function wbMove(e: React.PointerEvent) { if (!drawing.current) return; const p = wbPt(e); const seg = [drawing.current.x, drawing.current.y, p.x, p.y]; drawSeg(seg, '#e11', 3); rtc.current?.broadcast({ t: 'wb', op: 'stroke', stroke: seg, color: '#e11', width: 3 }); drawing.current = p }
@@ -362,7 +373,7 @@ export default function CallsTool() {
   // Size the whiteboard to its container in the live layout, and on resize.
   useEffect(() => {
     if (phase !== 'live') return
-    const fit = () => { const c = wbRef.current; if (c && (c.width !== c.clientWidth || c.height !== c.clientHeight)) { c.width = c.clientWidth; c.height = c.clientHeight } }
+    const fit = () => { const c = wbRef.current; if (!c) return; if (c.width !== c.clientWidth || c.height !== c.clientHeight) { c.width = c.clientWidth; c.height = c.clientHeight }; const a = c.clientWidth / (c.clientHeight || 1); setSelfAspect(a); rtc.current?.setAspect(a) }
     const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
     return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
   }, [phase, view, showParticipants, showChat, showFiles, files.length])
@@ -402,7 +413,7 @@ export default function CallsTool() {
             </>
           ) : (
             <>
-              <p className="text-[1.05rem] text-sand-100/90">{s.ended}</p>
+              <p className="text-[1.1rem] font-display">{ended.reason === 'ended' ? s.youEndedMeeting : s.ended}</p>
               <Button variant="primary" onClick={newCall}>{s.createNew}</Button>
             </>
           )}
@@ -467,6 +478,12 @@ export default function CallsTool() {
   const presenterPeer = inCallPeers.find(([, i]) => i.sharing)
   const presenterStream = sharing ? screenStream : (presenterPeer ? peers.get(presenterPeer[0]) : null)
   const presenting = !!presenterStream
+  // Whiteboard: fade the part of our canvas that isn't in everyone's common view.
+  const selfHx = 0.5 * Math.max(selfAspect, 1), selfHy = 0.5 * Math.max(1 / selfAspect, 1)
+  const asp = [selfAspect, ...inCallPeers.map(([, i]) => i.aspect || 1)]
+  const cx = Math.min(...asp.map((a) => 0.5 * Math.max(a, 1))), cy = Math.min(...asp.map((a) => 0.5 * Math.max(1 / a, 1)))
+  const fadeX = (0.5 - cx / (2 * selfHx)) * 100, fadeY = (0.5 - cy / (2 * selfHy)) * 100
+  const showFade = view === 'board' && !presenting && (fadeX > 0.5 || fadeY > 0.5)
   const graceLeft = graceEndsAt ? Math.max(0, graceEndsAt - Date.now()) : 0
   const graceMMSS = `${Math.floor(graceLeft / 60000)}:${String(Math.floor((graceLeft % 60000) / 1000)).padStart(2, '0')}`
 
@@ -477,20 +494,21 @@ export default function CallsTool() {
       onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pickFiles(e.dataTransfer.files) }}>
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
-        <div className="flex items-center gap-0.5">
-          {editingName
-            ? <input value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
-                className="h-9 w-[8.5rem] sm:w-40 px-2.5 rounded-md border border-green-500 bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none" />
-            : <button type="button" onClick={() => setEditingName(true)} title={s.editName} data-testid="call-name-display"
-                className="h-9 max-w-[9rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink truncate hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start">{name || '—'}</button>}
-          <IconBtn onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} testid="call-shuffle"><RefreshIcon /></IconBtn>
-        </div>
-        <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
+        {editingName
+          ? <div className="relative">
+              <input value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
+                className="h-9 w-[8.5rem] sm:w-44 ps-2.5 pe-8 rounded-md border border-green-500 bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none" />
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
+                className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><RefreshIcon /></button>
+            </div>
+          : <button type="button" onClick={() => setEditingName(true)} title={s.editName} data-testid="call-name-display"
+              className="h-9 max-w-[10rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink truncate hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start">{name || '—'}</button>}
+        <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><ShareIcon /></IconBtn>
 
         <div className="flex-1" />
 
-        <IconBtn onClick={() => setView('board')} active={view === 'board'} title={s.board} testid="call-board"><PenIcon /></IconBtn>
+        <IconBtn onClick={() => setView('board')} active={view === 'board'} title={s.board} testid="call-board"><WhiteboardIcon /></IconBtn>
         {files.length > 0 && <IconBtn onClick={toggleFiles} active={showFiles} title={s.filesTitle} testid="call-files-btn" badge={unseen.f || undefined}><FileIcon /></IconBtn>}
         <IconBtn onClick={toggleScreen} active={sharing} title={s.screen}><ScreenShareIcon /></IconBtn>
         <IconBtn onClick={() => fileRef.current?.click()} title={s.sendFiles} testid="call-files"><UploadIcon /></IconBtn>
@@ -542,6 +560,7 @@ export default function CallsTool() {
             </div>
           )}
           <canvas ref={wbRef} className="absolute inset-0 w-full h-full cursor-crosshair touch-none" onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
+          {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           <button type="button" onClick={() => clearBoard()} title={s.clear} aria-label={s.clear}
             className="absolute bottom-3 start-3 grid place-items-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-ink-soft shadow-[var(--shadow-sm)] hover:text-[var(--danger)] cursor-pointer"><TrashIcon className="w-4 h-4" /></button>
         </main>

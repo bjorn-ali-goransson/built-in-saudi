@@ -14,7 +14,7 @@ const ICE: RTCIceServer[] = [
 
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
-export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean }
+export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
@@ -25,7 +25,7 @@ export type DataMsg =
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
-  | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean }
+  | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
   | { c: 'admit' }
   | { c: 'fmute'; target: string; by: string }
 
@@ -73,6 +73,7 @@ export class CallRoom {
   private muted = true // privacy-first: start muted with the camera off
   private cam = false
   private screenOn = false
+  private aspect = 1 // our whiteboard canvas w/h — shared so peers can fade the non-common area
   inCall = false // we've enabled our own media
   local: MediaStream | null = null
   private camTrack: MediaStreamTrack | null = null
@@ -195,13 +196,13 @@ export class CallRoom {
       if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
       let m: Record<string, unknown>
       try { m = JSON.parse(e.data) } catch { return }
-      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
+      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing, aspect: Number(m.aspect) || 1 }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
       else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
       else if (m.c === 'fmute') { const target = String(m.target || ''); const me = target === this.me; if (me) this.toggleMic(false); this.h.onMuteNotice?.(String(m.by || ''), target, me) }
       else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
     }
   }
-  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn } as Ctrl)) }
+  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn, aspect: this.aspect } as Ctrl)) }
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
 
   // ---- app-facing send (only to peers actually in the call) ------------------
@@ -222,6 +223,8 @@ export class CallRoom {
   toggleCam(on: boolean) { this.cam = on; this.local?.getVideoTracks().forEach((t) => (t.enabled = on)); this.broadcastInfo() }
   /** Ask another participant's client to mute itself; everyone is notified. */
   forceMute(target: string) { const msg = JSON.stringify({ c: 'fmute', target, by: this.name } as Ctrl); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(msg) }
+  /** Tell peers our whiteboard's aspect ratio so they can fade what we can't see. */
+  setAspect(a: number) { if (a > 0 && Math.abs(a - this.aspect) > 0.01) { this.aspect = a; this.broadcastInfo() } }
   private replaceVideo(track: MediaStreamTrack | null) {
     for (const p of this.peers.values()) { const sender = p.pc.getSenders().find((s) => s.track?.kind === 'video'); if (sender) sender.replaceTrack(track).catch(() => {}) }
   }

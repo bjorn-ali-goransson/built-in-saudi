@@ -923,6 +923,15 @@ export function SlugIcon({ className }: P) {
   )
 }
 
+export function WhiteboardIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M6 10c1.5-2 3-2 4 0s2.5 2 4 0M12 20v-3M9 20h6" />
+    </svg>
+  )
+}
+
 export function EndCallIcon({ className }: P) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" width={24} height={24} className={className} aria-hidden="true">
