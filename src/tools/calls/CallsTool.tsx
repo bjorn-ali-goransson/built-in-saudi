@@ -22,6 +22,7 @@ const KUNYA: [string, string][] = [
   ['Rakan', 'راكان'], ['Ziyad', 'زياد'], ['Talal', 'طلال'], ['Waleed', 'وليد'], ['Sultan', 'سلطان'],
   ['Mishal', 'مشعل'], ['Badr', 'بدر'], ['Tariq', 'طارق'], ['Ayman', 'أيمن'], ['Sami', 'سامي'],
   ['Marwan', 'مروان'], ['Rayan', 'ريان'], ['Anas', 'أنس'], ['Layth', 'ليث'], ['Zaid', 'زيد'],
+  ['Rabee', 'ربيع'],
 ]
 const randName = (ar: boolean) => { const b = crypto.getRandomValues(new Uint8Array(1)); const p = KUNYA[b[0] % KUNYA.length]; return ar ? `أبو ${p[1]}` : `Abu ${p[0]}` }
 
@@ -95,15 +96,15 @@ function IconBtn({ onClick, title, active, danger, children, testid, badge, big 
   )
 }
 
-// A participant square: webcam if their camera is on, else a user icon; name + mute state.
+// A participant square. The <video> stays mounted whenever there's a stream (so
+// audio always plays even with the camera off); the avatar just overlays it.
 function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string }) {
   const ref = useRef<HTMLVideoElement>(null)
-  useEffect(() => { if (ref.current && stream && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
+  useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
   return (
     <div className="group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)]">
-      {camOn && stream
-        ? <video ref={ref} autoPlay playsInline muted={self} className={`w-full h-full object-cover ${self ? '-scale-x-100' : ''}`} />
-        : <div className="w-full h-full grid place-items-center text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
+      {stream && <video ref={ref} autoPlay playsInline muted={self} className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
+      {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
         {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className="w-3.5 h-3.5 shrink-0" />}
         <span className="truncate flex-1">{name}{self ? ' ·' : ''}</span>
@@ -173,6 +174,8 @@ export default function CallsTool() {
   const [penW, setPenW] = useState(0.01) // stroke width as a fraction of the board
   const [textAt, setTextAt] = useState<{ u: number; v: number; x: number; y: number } | null>(null)
   const [textVal, setTextVal] = useState('')
+  const textInputRef = useRef<HTMLInputElement>(null)
+  const textReady = useRef(false)
   const incoming = useRef<Map<string, { name: string; mime: string; parts: ArrayBuffer[] }>>(new Map())
   const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
   const panelRef = useRef({ p: true, c: false, f: false }) // which panels are open (for notify)
@@ -431,6 +434,14 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, view, showParticipants, showChat, showFiles, files.length])
 
+  // Focus the text box a tick after it opens (autoFocus gets blurred by the click
+  // that placed it, since the canvas isn't focusable). Ignore that first blur.
+  useEffect(() => {
+    if (!textAt) { textReady.current = false; return }
+    const t = window.setTimeout(() => { textReady.current = true; textInputRef.current?.focus() }, 60)
+    return () => window.clearTimeout(t)
+  }, [textAt])
+
   // A screen-share gets a fresh annotation whiteboard on top (and back to a clean
   // board when it ends). Everyone observes the same share state, so all clear.
   const anyoneSharing = sharing || [...roster].some(([, i]) => i.inCall && i.sharing)
@@ -599,7 +610,7 @@ export default function CallsTool() {
         )}
 
         {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
-        <main className={`flex-1 relative min-w-0 ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
+        <main className={`flex-1 relative min-w-0 overflow-hidden ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
           {presenting && presenterStream && (
             <StreamVideo stream={presenterStream} muted className="absolute inset-0 w-full h-full object-contain" />
           )}
@@ -615,7 +626,7 @@ export default function CallsTool() {
           <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-none ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {textAt && (
-            <input autoFocus value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={commitText} data-testid="wb-textinput"
+            <input ref={textInputRef} value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={() => { if (textReady.current) commitText() }} data-testid="wb-textinput"
               onKeyDown={(e) => { if (e.key === 'Enter') commitText(); else if (e.key === 'Escape') { setTextAt(null); setTextVal('') } }}
               style={{ left: textAt.x, top: textAt.y, color: penColor }} className="absolute z-20 bg-transparent border-b-2 border-current outline-none text-[1.1rem] font-semibold min-w-[6rem] px-0.5" />
           )}
