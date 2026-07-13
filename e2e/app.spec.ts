@@ -285,6 +285,45 @@ test.describe('tools', () => {
     expect(await page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
   })
 
+  test('regex tester: highlights matches and counts them', async ({ page }) => {
+    await page.goto('/en/apps/regex-tester')
+    await page.getByTestId('re-pattern').fill('\\d+')
+    await page.getByTestId('re-input').fill('a1 b22 c333')
+    await expect(page.getByTestId('re-count')).toContainText('3')
+    await expect(page.getByTestId('re-output').locator('mark').first()).toHaveText('1')
+  })
+
+  test('jwt decoder: decodes header and payload', async ({ page }) => {
+    await page.goto('/en/apps/jwt-decoder')
+    // {"alg":"HS256","typ":"JWT"}.{"sub":"1234567890","name":"John Doe"}
+    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.abc'
+    await page.getByTestId('jwt-input').fill(jwt)
+    await expect(page.getByTestId('jwt-header')).toContainText('HS256')
+    await expect(page.getByTestId('jwt-payload')).toContainText('John Doe')
+  })
+
+  test('cron explainer: describes an expression and lists next runs', async ({ page }) => {
+    await page.goto('/en/apps/cron-explainer')
+    await page.getByTestId('cron-input').fill('0 0 * * *')
+    await expect(page.getByTestId('cron-desc')).toContainText('00:00')
+    await expect(page.getByTestId('cron-next').locator('li').first()).toBeVisible()
+  })
+
+  test('text diff: flags an added line', async ({ page }) => {
+    await page.goto('/en/apps/text-diff')
+    await page.getByTestId('diff-a').fill('one\ntwo')
+    await page.getByTestId('diff-b').fill('one\ntwo\nthree')
+    await expect(page.getByTestId('diff-output')).toContainText('three')
+    await expect(page.getByTestId('diff-output').getByText('+', { exact: false }).first()).toBeVisible()
+  })
+
+  test('unix timestamp: converts epoch 0 to 1970 UTC', async ({ page }) => {
+    await page.goto('/en/apps/unix-timestamp')
+    await page.getByTestId('ts-input').fill('0')
+    await expect(page.getByTestId('ts-out')).toContainText('1970')
+    await expect(page.getByTestId('ts-now')).toBeVisible()
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

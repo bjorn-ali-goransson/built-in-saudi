@@ -41,6 +41,11 @@ import { cvGeneratorTool } from './cv-generator/meta'
 import { linkShortenerTool } from './link-shortener/meta'
 import { callsTool } from './calls/meta'
 import { promptAnalyzerTool } from './prompt-analyzer/meta'
+import { regexTesterTool } from './regex-tester/meta'
+import { jwtDecoderTool } from './jwt-decoder/meta'
+import { cronExplainerTool } from './cron-explainer/meta'
+import { textDiffTool } from './text-diff/meta'
+import { unixTimestampTool } from './unix-timestamp/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -52,6 +57,11 @@ export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
   promptAnalyzerTool,
+  regexTesterTool,
+  jwtDecoderTool,
+  cronExplainerTool,
+  textDiffTool,
+  unixTimestampTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,

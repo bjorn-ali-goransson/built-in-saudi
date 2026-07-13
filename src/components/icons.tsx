@@ -571,3 +571,39 @@ export function FormIcon({ className }: P) {
     </svg>
   )
 }
+
+export function RegexIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 4v8M8.5 6l7 4M15.5 6l-7 4" />
+      <rect x="4" y="15" width="4" height="4" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function TokenIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 3v18M7 6l10 12M17 6 7 18" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  )
+}
+
+export function DiffIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 3v6M3 6h6M15 18h6" />
+      <path d="M4.5 15.5 9 20l10.5-10.5" />
+    </svg>
+  )
+}
+
+export function EpochIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}

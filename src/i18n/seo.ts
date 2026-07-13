@@ -49,6 +49,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي مع سرد المشكلات. تحليل واحد كل ٢٤ ساعة.' },
   },
   {
+    id: 'regex-tester',
+    en: { name: 'Regex Tester', description: 'Write a regular expression and see every match highlighted in your test text as you type, with capture groups and a live match count. Uses the native JavaScript engine, entirely in your browser — nothing is uploaded.' },
+    ar: { name: 'مختبِر التعابير النمطية', description: 'اكتب تعبيرًا نمطيًا وشاهد كل مطابقة مُظلّلة في نصك أثناء الكتابة، مع مجموعات الالتقاط وعدّ حيّ للمطابقات. يستخدم محرّك JavaScript بالكامل في متصفحك — لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'jwt-decoder',
+    en: { name: 'JWT Decoder', description: 'Paste a JSON Web Token to decode its header and payload into readable JSON, with expiry and issued-at times shown in local time. Decoding happens entirely in your browser — the token is never uploaded and the signature is not verified.' },
+    ar: { name: 'مفكّك رموز JWT', description: 'الصق رمز JSON Web Token لفكّ ترويسته وحمولته إلى JSON مقروء، مع أوقات الانتهاء والإصدار بالتوقيت المحلي. يتم الفكّ بالكامل في متصفحك — لا يُرفع الرمز ولا يُتحقَّق من التوقيع.' },
+  },
+  {
+    id: 'cron-explainer',
+    en: { name: 'Cron Explainer', description: 'Paste a 5-field cron expression and get a plain-language description of when it runs, plus the next several run times in your local timezone. Supports ranges, steps and lists, computed in your browser.' },
+    ar: { name: 'مفسّر Cron', description: 'الصق تعبير cron المكوَّن من خمسة حقول لتحصل على وصف واضح لموعد تشغيله وأوقات التشغيل القادمة بتوقيتك المحلي. يدعم النطاقات والخطوات والقوائم، ويُحسب في متصفحك.' },
+  },
+  {
+    id: 'text-diff',
+    en: { name: 'Text Diff', description: 'Paste two versions of a text and see a line-by-line diff — additions, removals and unchanged lines colour-coded, with a count of what changed. Runs entirely in your browser; nothing is uploaded.' },
+    ar: { name: 'مقارنة النصوص', description: 'الصق نسختين من نصّ لترى الفروق سطرًا بسطر — الإضافات والحذوفات والأسطر غير المتغيّرة بألوان مميّزة، مع عدّ لما تغيّر. يعمل بالكامل في متصفحك؛ لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'unix-timestamp',
+    en: { name: 'Unix Timestamp', description: 'Convert a Unix timestamp (seconds or milliseconds) to a readable date and back, in both your local timezone and UTC, with a live current-time readout. Runs entirely in your browser.' },
+    ar: { name: 'الطابع الزمني يونكس', description: 'حوّل طابعًا زمنيًا يونكس (بالثواني أو المللي ثانية) إلى تاريخ مقروء والعكس، بتوقيتك المحلي وبتوقيت UTC، مع عرض حيّ للوقت الحالي. يعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
