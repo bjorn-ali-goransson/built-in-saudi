@@ -324,6 +324,38 @@ test.describe('tools', () => {
     await expect(page.getByTestId('ts-now')).toBeVisible()
   })
 
+  test('url encoder: percent-encodes a component', async ({ page }) => {
+    await page.goto('/en/apps/url-encoder')
+    await page.getByTestId('ue-input').fill('a b&c=d')
+    await expect(page.getByTestId('ue-output')).toHaveValue('a%20b%26c%3Dd')
+  })
+
+  test('base converter: 255 decimal is ff hex and 11111111 binary', async ({ page }) => {
+    await page.goto('/en/apps/base-converter')
+    await page.getByTestId('base-dec').fill('255')
+    await expect(page.getByTestId('base-hex')).toHaveValue('ff')
+    await expect(page.getByTestId('base-bin')).toHaveValue('11111111')
+  })
+
+  test('csv to json: keys rows by header', async ({ page }) => {
+    await page.goto('/en/apps/csv-json')
+    await page.getByTestId('cj-input').fill('a,b\n1,2')
+    await expect(page.getByTestId('cj-output')).toContainText('"a": "1"')
+  })
+
+  test('list tools: dedupes and sorts', async ({ page }) => {
+    await page.goto('/en/apps/list-tools')
+    await page.getByTestId('list-input').fill('banana\napple\nbanana')
+    await expect(page.getByTestId('list-output')).toHaveValue('apple\nbanana')
+  })
+
+  test('contrast checker: black on white is 21:1', async ({ page }) => {
+    await page.goto('/en/apps/color-contrast')
+    await page.getByTestId('cc-text').fill('#000000')
+    await page.getByTestId('cc-bg').fill('#ffffff')
+    await expect(page.getByTestId('cc-ratio')).toHaveText('21.00')
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

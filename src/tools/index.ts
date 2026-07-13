@@ -46,6 +46,11 @@ import { jwtDecoderTool } from './jwt-decoder/meta'
 import { cronExplainerTool } from './cron-explainer/meta'
 import { textDiffTool } from './text-diff/meta'
 import { unixTimestampTool } from './unix-timestamp/meta'
+import { urlEncoderTool } from './url-encoder/meta'
+import { baseConverterTool } from './base-converter/meta'
+import { csvJsonTool } from './csv-json/meta'
+import { listToolsTool } from './list-tools/meta'
+import { colorContrastTool } from './color-contrast/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -62,6 +67,11 @@ export const tools: Tool[] = [
   cronExplainerTool,
   textDiffTool,
   unixTimestampTool,
+  urlEncoderTool,
+  baseConverterTool,
+  csvJsonTool,
+  listToolsTool,
+  colorContrastTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,

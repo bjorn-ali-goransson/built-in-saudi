@@ -74,6 +74,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'الطابع الزمني يونكس', description: 'حوّل طابعًا زمنيًا يونكس (بالثواني أو المللي ثانية) إلى تاريخ مقروء والعكس، بتوقيتك المحلي وبتوقيت UTC، مع عرض حيّ للوقت الحالي. يعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'url-encoder',
+    en: { name: 'URL & HTML Encoder', description: 'Encode or decode text for URLs (percent-encoding, whole-URL or component) and HTML (entities like &amp; and &#39;), both directions, as you type. Runs entirely in your browser — nothing is uploaded.' },
+    ar: { name: 'مُرمِّز الروابط وHTML', description: 'رمِّز أو فُكّ ترميز النص للروابط (ترميز النسبة المئوية، رابط كامل أو جزء) ولـHTML (كيانات مثل &amp; و&#39;) في الاتجاهين أثناء الكتابة. يعمل بالكامل في متصفحك — لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'base-converter',
+    en: { name: 'Number Base Converter', description: 'Convert a number between binary, octal, decimal, hexadecimal and any base from 2 to 36, all at once and in real time. Arbitrary-precision, so large values stay exact. Runs entirely in your browser.' },
+    ar: { name: 'محوّل أنظمة الأعداد', description: 'حوّل عددًا بين الثنائي والثماني والعشري والست عشري وأي أساس من 2 إلى 36 دفعةً واحدة وفي الوقت الحقيقي، بدقة عالية للقيم الكبيرة. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'csv-json',
+    en: { name: 'CSV ⇄ JSON', description: 'Paste CSV to get an array of JSON objects keyed by the header row, or paste JSON to get CSV back. Handles quoted fields, commas and newlines inside values. Parsed in your browser — nothing is uploaded.' },
+    ar: { name: 'CSV ⇄ JSON', description: 'الصق CSV لتحصل على مصفوفة كائنات JSON مفهرسة بصف الترويسة، أو الصق JSON لتحصل على CSV. يتعامل مع الحقول المقتبسة والفواصل والأسطر داخل القيم. يُحلَّل في متصفحك — لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'list-tools',
+    en: { name: 'List Tools', description: 'Paste a list, one item per line, and clean it up: sort alphabetically or numerically, remove duplicates and blank lines, trim whitespace, change case, reverse or shuffle, with live before/after counts. Runs entirely in your browser.' },
+    ar: { name: 'أدوات القوائم', description: 'الصق قائمة، عنصرًا في كل سطر، ونظّفها: رتّب أبجديًا أو رقميًا، أزل المكرّرات والأسطر الفارغة، شذّب المسافات، غيّر الحالة، اعكس أو اخلط، مع عدّادات قبل وبعد. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'color-contrast',
+    en: { name: 'Contrast Checker', description: 'Pick a text and background colour and see their WCAG 2.1 contrast ratio, with clear pass/fail badges for AA and AAA at normal and large text sizes, plus a live preview. Runs entirely in your browser.' },
+    ar: { name: 'فاحص التباين', description: 'اختر لون النص والخلفية لترى نسبة التباين وفق WCAG 2.1، مع شارات نجاح/رسوب لمستويي AA وAAA لأحجام النص العادية والكبيرة، ومعاينة حيّة. يعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

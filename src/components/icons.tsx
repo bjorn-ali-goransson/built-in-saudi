@@ -607,3 +607,39 @@ export function EpochIcon({ className }: P) {
     </svg>
   )
 }
+
+export function BinaryIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4" y="3" width="6" height="8" rx="1" />
+      <rect x="14" y="13" width="6" height="8" rx="1" />
+      <path d="M6 21h4M6 17v4M16 3v8M14 11h4" />
+    </svg>
+  )
+}
+
+export function TableIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18M3 15h18M9 4v16M15 4v16" />
+    </svg>
+  )
+}
+
+export function ListIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+    </svg>
+  )
+}
+
+export function ContrastIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
