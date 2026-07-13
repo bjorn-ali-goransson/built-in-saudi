@@ -870,3 +870,29 @@ export function GitIcon({ className }: P) {
     </svg>
   )
 }
+
+export function CardsIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="7" y="4" width="13" height="16" rx="2" transform="rotate(6 13.5 12)" />
+      <rect x="4" y="4" width="13" height="16" rx="2" />
+      <path d="M7.5 9h6M7.5 12h6" />
+    </svg>
+  )
+}
+
+export function KanbanIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="5" height="16" rx="1" /><rect x="9.5" y="4" width="5" height="10" rx="1" /><rect x="16" y="4" width="5" height="13" rx="1" />
+    </svg>
+  )
+}
+
+export function TierIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="4.5" rx="1" /><rect x="3" y="9.75" width="18" height="4.5" rx="1" opacity="0.7" /><rect x="3" y="15.5" width="18" height="4.5" rx="1" opacity="0.45" />
+    </svg>
+  )
+}

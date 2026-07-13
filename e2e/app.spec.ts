@@ -543,6 +543,41 @@ test.describe('tools', () => {
     await expect(page.getByTestId('jt-output')).toContainText('string[]')
   })
 
+  test('writer: counts words as you type', async ({ page }) => {
+    await page.goto('/en/apps/writer')
+    await page.getByTestId('wr-input').fill('one two three four')
+    await expect(page.getByTestId('wr-words')).toContainText('4')
+  })
+
+  test('flashcards: add a card then study it', async ({ page }) => {
+    await page.goto('/en/apps/flashcards')
+    await page.getByTestId('fc-front').fill('Capital of KSA')
+    await page.getByTestId('fc-back').fill('Riyadh')
+    await page.getByTestId('fc-add').click()
+    await page.getByTestId('fc-study').click()
+    await expect(page.getByTestId('fc-face')).toHaveText('Capital of KSA')
+    await page.getByTestId('fc-card').click()
+    await expect(page.getByTestId('fc-face')).toHaveText('Riyadh')
+  })
+
+  test('kanban: add a card and move it to Doing', async ({ page }) => {
+    await page.goto('/en/apps/kanban')
+    await page.getByTestId('kb-input-todo').fill('Write the spec')
+    await page.getByTestId('kb-add-todo').click()
+    const card = page.getByTestId('kb-card').filter({ hasText: 'Write the spec' })
+    await expect(card).toBeVisible()
+    await card.getByLabel('move right').click()
+    await expect(page.getByTestId('kanban')).toContainText('Write the spec')
+  })
+
+  test('tier list: add an item into the pool', async ({ page }) => {
+    await page.goto('/en/apps/tier-list')
+    await page.getByTestId('tl-input').fill('Coffee')
+    await page.getByTestId('tl-add').click()
+    await expect(page.getByTestId('tl-pool')).toContainText('Coffee')
+    await expect(page.getByTestId('tl-tier-S')).toBeVisible()
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

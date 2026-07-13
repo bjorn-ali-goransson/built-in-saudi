@@ -82,6 +82,10 @@ import { metaTagsTool } from './meta-tags/meta'
 import { robotsTxtTool } from './robots-txt/meta'
 import { gitignoreTool } from './gitignore/meta'
 import { jsonToTypesTool } from './json-to-types/meta'
+import { writerTool } from './writer/meta'
+import { flashcardsTool } from './flashcards/meta'
+import { kanbanTool } from './kanban/meta'
+import { tierListTool } from './tier-list/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -122,10 +126,14 @@ export const tools: Tool[] = [
   gitignoreTool,
   jsonToTypesTool,
   readabilityTool,
+  writerTool,
+  flashcardsTool,
+  kanbanTool,
   randomPickerTool,
   diceRollerTool,
   countdownTool,
   typingTestTool,
+  tierListTool,
   imageToAsciiTool,
   memeGeneratorTool,
   faviconGeneratorTool,

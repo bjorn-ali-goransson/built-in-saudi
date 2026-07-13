@@ -254,6 +254,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'JSON إلى TypeScript', description: 'الصق كائن أو مصفوفة JSON لتحصل على واجهات TypeScript مستنبطة منها — تصبح الكائنات المتداخلة واجهات خاصة بها، وتُصنَّف المصفوفات، وتصير المفاتيح الغائبة من بعض العناصر اختيارية. تعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'writer',
+    en: { name: 'Distraction-Free Writer', description: 'A clean, full-width writing pad with a live word and character count and reading time. Your text autosaves to this browser as you type, and you can download it as .txt or .md any time. Nothing uploaded.' },
+    ar: { name: 'محرّر بلا تشتيت', description: 'لوح كتابة نظيف بعرض كامل مع عدّاد حيّ للكلمات والأحرف وزمن القراءة. يُحفظ نصّك تلقائيًا في هذا المتصفح أثناء الكتابة، ويمكنك تنزيله كـ.txt أو .md في أي وقت. لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'flashcards',
+    en: { name: 'Flashcards', description: 'Build a deck of flip cards — a prompt on the front, the answer on the back — then study it: flip, go through in order or shuffled. Your deck is saved in this browser, nothing uploaded.' },
+    ar: { name: 'البطاقات التعليمية', description: 'ابنِ مجموعة بطاقات قابلة للقلب — سؤال في الوجه وإجابة في الظهر — ثم ذاكِرها: اقلب، وتنقّل بالترتيب أو بالخلط. تُحفظ مجموعتك في هذا المتصفح، دون رفع أي شيء.' },
+  },
+  {
+    id: 'kanban',
+    en: { name: 'Kanban Board', description: 'A lightweight personal Kanban board — add cards to To-do, Doing and Done and move them across as work progresses. The whole board is saved in this browser, nothing uploaded.' },
+    ar: { name: 'لوحة كانبان', description: 'لوحة كانبان شخصية خفيفة — أضِف بطاقات إلى «للعمل» و«قيد التنفيذ» و«منجز» وانقلها مع تقدّم العمل. تُحفظ اللوحة كاملةً في هذا المتصفح، دون رفع أي شيء.' },
+  },
+  {
+    id: 'tier-list',
+    en: { name: 'Tier List Maker', description: 'Add labels for the things you want to rank, then drag them into S, A, B, C and D tiers to build a classic tier list — and download it as an image to share. Saved in this browser; nothing uploaded.' },
+    ar: { name: 'صانع قوائم التصنيف', description: 'أضِف تسميات للأشياء التي تريد ترتيبها، ثم اسحبها إلى فئات S وA وB وC وD لبناء قائمة تصنيف كلاسيكية — ونزّلها كصورة للمشاركة. تُحفظ في هذا المتصفح؛ لا يُرفع أي شيء.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
