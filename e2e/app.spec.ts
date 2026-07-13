@@ -426,6 +426,40 @@ test.describe('tools', () => {
     await expect(page.getByTestId('wd-working')).toHaveText('5')
   })
 
+  test('cubic bezier: preset updates the CSS value', async ({ page }) => {
+    await page.goto('/en/apps/cubic-bezier')
+    await page.getByTestId('cb-preset-linear').click()
+    await expect(page.getByTestId('cb-output')).toHaveText('cubic-bezier(0, 0, 1, 1)')
+  })
+
+  test('box shadow: outputs a box-shadow rule', async ({ page }) => {
+    await page.goto('/en/apps/box-shadow')
+    await expect(page.getByTestId('bs-output')).toContainText('box-shadow:')
+    await expect(page.getByTestId('bs-preview')).toBeVisible()
+  })
+
+  test('gradient: linear by default, switches to radial', async ({ page }) => {
+    await page.goto('/en/apps/gradient-generator')
+    await expect(page.getByTestId('gg-output')).toContainText('linear-gradient(')
+    await page.getByTestId('gg-radial').click()
+    await expect(page.getByTestId('gg-output')).toContainText('radial-gradient(')
+  })
+
+  test('ip subnet: /24 network, broadcast and 254 hosts', async ({ page }) => {
+    await page.goto('/en/apps/ip-subnet')
+    await page.getByTestId('ipc-input').fill('192.168.1.10/24')
+    await expect(page.getByTestId('ipc-network')).toHaveText('192.168.1.0/24')
+    await expect(page.getByTestId('ipc-broadcast')).toHaveText('192.168.1.255')
+    await expect(page.getByTestId('ipc-hosts')).toHaveText('254')
+  })
+
+  test('user-agent: detects Firefox from a pasted UA', async ({ page }) => {
+    await page.goto('/en/apps/user-agent')
+    await page.getByTestId('ua-input').fill('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0')
+    await expect(page.getByTestId('ua-browser')).toContainText('Firefox')
+    await expect(page.getByTestId('ua-os')).toContainText('Windows')
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

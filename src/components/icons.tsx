@@ -706,3 +706,48 @@ export function CakeIcon({ className }: P) {
     </svg>
   )
 }
+
+export function CurveIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 21C3 21 4 5 21 3" />
+      <circle cx="3" cy="21" r="1.6" /><circle cx="21" cy="3" r="1.6" />
+    </svg>
+  )
+}
+
+export function ShadowIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="3" width="13" height="13" rx="2" />
+      <path d="M20 8v10a2 2 0 0 1-2 2H8" opacity="0.5" />
+    </svg>
+  )
+}
+
+export function GradientIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 15l18-8M3 20l18-8" opacity="0.5" />
+    </svg>
+  )
+}
+
+export function NetworkIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="9" y="2" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="16" y="16" width="6" height="6" rx="1" />
+      <path d="M12 8v4M12 12H5v4M12 12h7v4" />
+    </svg>
+  )
+}
+
+export function DeviceIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2" y="4" width="14" height="11" rx="2" /><rect x="17" y="8" width="5" height="12" rx="1.5" />
+      <path d="M2 18h9M6 15v3" />
+    </svg>
+  )
+}

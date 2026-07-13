@@ -144,6 +144,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'حاسبة أيام العمل', description: 'احسب أيام العمل بين تاريخين باستثناء نهاية الأسبوع — الجمعة والسبت للسعودية أو السبت والأحد لغيرها — مع مجاميع للأيام الكلية وأيام العطلة. تعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'cubic-bezier',
+    en: { name: 'Cubic Bezier Editor', description: 'Drag the two control points to shape a CSS cubic-bezier easing curve, watch a live animation play it back, start from presets like ease-in-out, and copy the ready-to-paste value. Runs entirely in your browser.' },
+    ar: { name: 'محرّر منحنى بيزييه', description: 'اسحب نقطتي التحكّم لتشكيل منحنى تنعيم CSS من نوع cubic-bezier، وشاهد حركة حيّة تعيده، وابدأ من قوالب مثل ease-in-out، وانسخ القيمة الجاهزة للّصق. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'box-shadow',
+    en: { name: 'Box Shadow Generator', description: 'Adjust offset, blur, spread, colour, opacity and inset to design a CSS box-shadow, see it on a live preview tile, and copy the exact rule. Runs entirely in your browser.' },
+    ar: { name: 'مولّد ظل الصندوق', description: 'اضبط الإزاحة والتمويه والانتشار واللون والشفافية والظل الداخلي لتصميم ظل CSS، وشاهده على بلاطة معاينة حيّة، وانسخ القاعدة بدقّة. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'gradient-generator',
+    en: { name: 'CSS Gradient Generator', description: 'Design a CSS gradient from multiple colour stops — linear at any angle or radial — see it fill a live preview, and copy the exact background rule. Runs entirely in your browser.' },
+    ar: { name: 'مولّد تدرّجات CSS', description: 'صمّم تدرّج CSS من عدّة محطّات ألوان — خطّي بأي زاوية أو شعاعي — وشاهده يملأ معاينة حيّة، وانسخ قاعدة الخلفية بدقّة. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'ip-subnet',
+    en: { name: 'IP Subnet Calculator', description: 'Enter an IPv4 address with a CIDR prefix (e.g. 192.168.1.10/24) to get the network and broadcast addresses, the usable host range, the subnet mask and wildcard, and the number of usable hosts. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة الشبكات الفرعية', description: 'أدخل عنوان IPv4 مع بادئة CIDR (مثل 192.168.1.10/24) لتحصل على عنواني الشبكة والبثّ، ونطاق المضيفين، وقناع الشبكة والقناع البديل، وعدد المضيفين. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'user-agent',
+    en: { name: 'User-Agent Parser', description: 'Read your own browser’s user-agent string, or paste any other, and see the detected browser, rendering engine, operating system and device type broken out. Parsed locally — your UA is never sent anywhere.' },
+    ar: { name: 'محلّل وكيل المستخدم', description: 'اقرأ نص وكيل المستخدم لمتصفحك، أو الصق أي نص آخر، لترى المتصفح ومحرّك العرض ونظام التشغيل ونوع الجهاز مفصّلة. يُحلَّل محليًا — لا يُرسل وكيلك إلى أي مكان.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

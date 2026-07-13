@@ -60,6 +60,11 @@ import { endOfServiceTool } from './end-of-service/meta'
 import { zakatCalculatorTool } from './zakat-calculator/meta'
 import { ageCalculatorTool } from './age-calculator/meta'
 import { workingDaysTool } from './working-days/meta'
+import { cubicBezierTool } from './cubic-bezier/meta'
+import { boxShadowTool } from './box-shadow/meta'
+import { gradientGeneratorTool } from './gradient-generator/meta'
+import { ipSubnetTool } from './ip-subnet/meta'
+import { userAgentTool } from './user-agent/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -90,6 +95,11 @@ export const tools: Tool[] = [
   zakatCalculatorTool,
   ageCalculatorTool,
   workingDaysTool,
+  cubicBezierTool,
+  boxShadowTool,
+  gradientGeneratorTool,
+  ipSubnetTool,
+  userAgentTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,

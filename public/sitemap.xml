@@ -52,6 +52,76 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/cubic-bezier</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cubic-bezier"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/cubic-bezier</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cubic-bezier"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/box-shadow</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/box-shadow"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/box-shadow"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/box-shadow"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/box-shadow</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/box-shadow"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/box-shadow"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/box-shadow"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/gradient-generator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gradient-generator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/gradient-generator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gradient-generator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/ip-subnet</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ip-subnet"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/ip-subnet</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ip-subnet"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/user-agent</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/user-agent"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/user-agent"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/user-agent"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/user-agent</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/user-agent"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/user-agent"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/user-agent"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/end-of-service</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/end-of-service"/>
