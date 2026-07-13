@@ -78,6 +78,10 @@ import { screenRecorderTool } from './screen-recorder/meta'
 import { photoBoothTool } from './photo-booth/meta'
 import { imageRedactTool } from './image-redact/meta'
 import { fileEncryptTool } from './file-encrypt/meta'
+import { metaTagsTool } from './meta-tags/meta'
+import { robotsTxtTool } from './robots-txt/meta'
+import { gitignoreTool } from './gitignore/meta'
+import { jsonToTypesTool } from './json-to-types/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -113,6 +117,10 @@ export const tools: Tool[] = [
   gradientGeneratorTool,
   ipSubnetTool,
   userAgentTool,
+  metaTagsTool,
+  robotsTxtTool,
+  gitignoreTool,
+  jsonToTypesTool,
   readabilityTool,
   randomPickerTool,
   diceRollerTool,

@@ -843,3 +843,30 @@ export function RedactIcon({ className }: P) {
     </svg>
   )
 }
+
+export function TagIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 11V5a2 2 0 0 1 2-2h6l9 9a2 2 0 0 1 0 2.8l-5.2 5.2a2 2 0 0 1-2.8 0z" />
+      <circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function RobotIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4" y="8" width="16" height="11" rx="2" />
+      <path d="M12 4v4M9 13h.01M15 13h.01M9 16h6" /><circle cx="12" cy="3" r="1" />
+    </svg>
+  )
+}
+
+export function GitIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><circle cx="18" cy="9" r="2.5" />
+      <path d="M6 8.5v7M18 11.5c0 3-3 3.5-6 3.5" />
+    </svg>
+  )
+}

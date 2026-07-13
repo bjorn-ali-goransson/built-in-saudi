@@ -234,6 +234,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مشفّر الملفات', description: 'شفّر أي ملف بكلمة مرور باستخدام AES-256-GCM (بمفتاح مشتقّ عبر PBKDF2)، ثم فُكّ تشفيره لاحقًا بالكلمة نفسها. لا يغادر الملف ولا كلمة المرور متصفحك — تشفير قياسي حقيقي على جهازك.' },
   },
   {
+    id: 'meta-tags',
+    en: { name: 'Meta Tag Generator', description: 'Fill in a page’s title, description, URL and preview image to generate the full set of SEO, Open Graph and Twitter Card meta tags — with a live social-share preview — ready to paste into your <head>. Runs entirely in your browser.' },
+    ar: { name: 'مولّد وسوم Meta', description: 'أدخل عنوان الصفحة ووصفها ورابطها وصورة المعاينة لتوليد مجموعة وسوم SEO وOpen Graph وبطاقة تويتر كاملة — مع معاينة حيّة — جاهزة للّصق في <head>. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'robots-txt',
+    en: { name: 'robots.txt Generator', description: 'Generate a valid robots.txt: allow or block crawlers, add disallowed paths, set a crawl-delay and point to your sitemap — then copy or download the file. Runs entirely in your browser.' },
+    ar: { name: 'مولّد robots.txt', description: 'ولّد ملف robots.txt صالحًا: اسمح أو امنع الزواحف، وأضِف مسارات ممنوعة، وحدّد مهلة الزحف، وأشِر إلى خريطة موقعك — ثم انسخ الملف أو نزّله. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'gitignore',
+    en: { name: '.gitignore Generator', description: 'Pick the languages, tools and editors you use and get a combined .gitignore with the usual build artefacts, dependency folders and OS/editor cruft — ready to copy or download. Runs entirely in your browser.' },
+    ar: { name: 'مولّد .gitignore', description: 'اختر اللغات والأدوات والمحرّرات التي تستخدمها لتحصل على ملف .gitignore مدمج يشمل مخرجات البناء ومجلّدات الاعتماديات وفوضى النظام والمحرّر — جاهز للنسخ أو التنزيل. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'json-to-types',
+    en: { name: 'JSON to TypeScript', description: 'Paste a JSON object or array and get clean TypeScript interfaces inferred from it — nested objects become their own interfaces, arrays are typed, and keys missing from some items become optional. Runs entirely in your browser.' },
+    ar: { name: 'JSON إلى TypeScript', description: 'الصق كائن أو مصفوفة JSON لتحصل على واجهات TypeScript مستنبطة منها — تصبح الكائنات المتداخلة واجهات خاصة بها، وتُصنَّف المصفوفات، وتصير المفاتيح الغائبة من بعض العناصر اختيارية. تعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

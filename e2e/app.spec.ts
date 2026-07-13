@@ -519,6 +519,30 @@ test.describe('tools', () => {
     await expect(page.getByTestId('fe-drop')).toBeVisible()
   })
 
+  test('meta tags: generates OG tags from the title', async ({ page }) => {
+    await page.goto('/en/apps/meta-tags')
+    await page.getByTestId('mt-title').fill('My Great Page')
+    await expect(page.getByTestId('mt-output')).toContainText('og:title" content="My Great Page"')
+  })
+
+  test('robots.txt: block-all disallows everything', async ({ page }) => {
+    await page.goto('/en/apps/robots-txt')
+    await page.getByTestId('rb-block').click()
+    await expect(page.getByTestId('rb-output')).toContainText('Disallow: /')
+  })
+
+  test('gitignore: includes selected Node rules', async ({ page }) => {
+    await page.goto('/en/apps/gitignore')
+    await expect(page.getByTestId('gi-output')).toContainText('node_modules/')
+  })
+
+  test('json to types: infers interfaces from a sample', async ({ page }) => {
+    await page.goto('/en/apps/json-to-types')
+    await expect(page.getByTestId('jt-output')).toContainText('interface Root')
+    await expect(page.getByTestId('jt-output')).toContainText('interface Address')
+    await expect(page.getByTestId('jt-output')).toContainText('string[]')
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')
