@@ -7,9 +7,9 @@ import { useLocale, localePath, localizeTool } from '../i18n'
 
 export const TOOL_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem] max-[560px]:grid-cols-4 max-[560px]:gap-[0.9rem_0.5rem]'
 // Denser grid for non-recommended sections: small row tiles on desktop (capped
-// at 4 columns so titles + a short description have room), the same 4-up icon
+// at 3 columns so titles + a short description have room), the same 4-up icon
 // grid on mobile.
-export const COMPACT_GRID = 'grid grid-cols-4 gap-[0.9rem_0.5rem] min-[560px]:grid-cols-2 min-[560px]:gap-[0.55rem] sm:grid-cols-3 lg:grid-cols-4'
+export const COMPACT_GRID = 'grid grid-cols-4 gap-[0.9rem_0.5rem] min-[560px]:grid-cols-2 min-[560px]:gap-[0.55rem] sm:grid-cols-3'
 
 // Close the launcher (or run any nav side-effect) once a card link is followed.
 function linkClick(onNavigate?: () => void) {
@@ -49,8 +49,10 @@ function CompactToolCard({ tool }: { tool: Tool }) {
         )}
       </span>
       <span className="min-w-0 flex-1 flex flex-col gap-[0.1rem] max-[560px]:flex-none max-[560px]:w-full max-[560px]:items-center">
-        <span className={`block truncate max-w-full text-[0.9rem] font-medium leading-tight max-[560px]:text-[0.72rem] max-[560px]:text-center max-[560px]:whitespace-normal ${comingSoon ? 'text-ink-faint' : 'text-ink'}`}>{l.name}</span>
-        <span className="block truncate max-w-full text-[0.72rem] leading-tight text-ink-faint max-[560px]:hidden">{l.tagline}</span>
+        <span title={l.name} className={`block truncate max-w-full text-[0.9rem] font-medium leading-tight max-[560px]:text-[0.72rem] max-[560px]:text-center max-[560px]:whitespace-normal ${comingSoon ? 'text-ink-faint' : 'text-ink'}`}>{l.name}</span>
+        {/* Truncated on desktop; on hover the row un-truncates and wraps to show
+            the full description (the tile grows within its grid row). */}
+        <span title={l.tagline} className="block truncate group-hover:whitespace-normal group-hover:[overflow:visible] max-w-full text-[0.72rem] leading-tight text-ink-faint max-[560px]:hidden">{l.tagline}</span>
       </span>
     </>
   )
