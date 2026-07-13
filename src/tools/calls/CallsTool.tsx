@@ -33,6 +33,7 @@ const STR = {
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Send files', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
+    youEnded: 'You have left the call', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
@@ -46,6 +47,7 @@ const STR = {
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'إرسال ملفات', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
+    youEnded: 'غادرت المكالمة', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
@@ -134,6 +136,7 @@ export default function CallsTool() {
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
   const [graceEndsAt, setGraceEndsAt] = useState<number | null>(null) // host-disconnect deadline
   const hadHost = useRef(false)
+  const [ended, setEnded] = useState<{ reason: 'left' | 'nuked'; count: number }>({ reason: 'nuked', count: 0 })
 
   const rtc = useRef<CallRoom | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -232,7 +235,7 @@ export default function CallsTool() {
         const who = targetIsMe ? s.you : (rosterRef.current.get(targetId)?.name || '•')
         setToast(`${by} ${s.mutedBy} ${who}`); setTimeout(() => setToast(''), 3500)
       },
-      onClosed: () => { rtc.current = null; setPhase('ended') },
+      onClosed: () => { rtc.current = null; setEnded({ reason: 'nuked', count: 0 }); setPhase('ended') },
     })
     rtc.current = r
     return r
@@ -278,12 +281,21 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); knownInCall.current.clear() }
   function hangup() {
-    if (!isGuest) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ } } // host ends → nuke the room
-    else rtc.current?.leave()
-    rtc.current = null; setPhase('lobby'); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board')
-    history.replaceState(null, '', localePath(locale, '/apps/calls'))
+    const others = inCallPeers.length
+    if (!isGuest) {
+      // Host: if nobody else is here, nuke the empty room; otherwise just leave
+      // (the meeting continues; the host can Rejoin from the ended screen).
+      if (others === 0) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }; setEnded({ reason: 'nuked', count: 0 }) }
+      else { rtc.current?.leave(); setEnded({ reason: 'left', count: others }) }
+      rtc.current = null; resetLive(); setPhase('ended')
+    } else {
+      rtc.current?.leave(); rtc.current = null; resetLive(); setPhase('lobby')
+      history.replaceState(null, '', localePath(locale, '/apps/calls'))
+    }
   }
+  function rejoin() { setEnded({ reason: 'nuked', count: 0 }); setPhase('lobby'); startHost() }
   const newCall = () => window.location.assign(localePath(locale, '/apps/calls'))
 
   // Host-disconnect grace (guests only): if the host vanishes, count down 2 minutes
@@ -298,7 +310,7 @@ export default function CallsTool() {
   useEffect(() => {
     if (graceEndsAt == null) return
     const iv = window.setInterval(() => {
-      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setPhase('ended') }
+      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setEnded({ reason: 'nuked', count: 0 }); setPhase('ended') }
       else setGraceTick((t) => t + 1)
     }, 1000)
     return () => window.clearInterval(iv)
@@ -355,6 +367,11 @@ export default function CallsTool() {
     return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
   }, [phase, view, showParticipants, showChat, showFiles, files.length])
 
+  // A screen-share gets a fresh annotation whiteboard on top (and back to a clean
+  // board when it ends). Everyone observes the same share state, so all clear.
+  const anyoneSharing = sharing || [...roster].some(([, i]) => i.inCall && i.sharing)
+  useEffect(() => { const c = wbRef.current; c?.getContext('2d')?.clearRect(0, 0, c.width, c.height) }, [anyoneSharing])
+
   async function shareInvite(code = room) {
     const url = `${SITE}${localePath(locale, '/apps/calls')}?room=${code}`
     try { await navigator.clipboard.writeText(url); setToast(s.copied); setTimeout(() => setToast(''), 2500) } catch { /* */ }
@@ -373,9 +390,22 @@ export default function CallsTool() {
   if (phase === 'ended') {
     return (
       <Stack data-testid="calls">
-        <div className="max-w-[30rem] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-6 flex flex-col items-start gap-4" data-testid="call-ended">
-          <p className="text-[1.05rem] text-ink">{s.ended}</p>
-          <Button variant="primary" onClick={newCall}>{s.newCall}</Button>
+        <div className="max-w-[30rem] rounded-lg border border-green-900/40 bg-green-950 text-sand-100 p-6 flex flex-col gap-4" data-testid="call-ended">
+          {ended.reason === 'left' ? (
+            <>
+              <p className="text-[1.15rem] font-display">{s.youEnded}</p>
+              {ended.count > 0 && <p className="text-[0.9rem] text-sand-100/75">{s.stillThere(ended.count)}</p>}
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="primary" onClick={rejoin} data-testid="call-rejoin">{s.rejoin}</Button>
+                <Button onClick={newCall}>{s.createNew}</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[1.05rem] text-sand-100/90">{s.ended}</p>
+              <Button variant="primary" onClick={newCall}>{s.createNew}</Button>
+            </>
+          )}
         </div>
       </Stack>
     )
