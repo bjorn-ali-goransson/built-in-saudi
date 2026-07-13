@@ -51,7 +51,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pa.getByTestId('call-name').fill('Alice')
   await pa.getByTestId('call-start').click()
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  const room = (await pa.locator('.font-mono').first().textContent())!.trim()
+  const room = new URL(pa.url()).searchParams.get('room') || '' // code is reflected into the URL
   expect(room.length).toBeGreaterThan(4)
 
   // B asks to join → lands in the waiting lobby, NOT in the call yet
@@ -68,15 +68,15 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   // now B is admitted into the call
   await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
 
-  // both should see 2 video tiles (their own + the peer) once connected
-  await expect(pa.locator('video')).toHaveCount(2, { timeout: 25_000 })
-  await expect(pb.locator('video')).toHaveCount(2, { timeout: 25_000 })
+  // each sees the other as a participant tile (cameras are off by default)
+  await expect(pa.getByTestId('call-participants-panel')).toContainText('Bob', { timeout: 25_000 })
+  await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice', { timeout: 25_000 })
 
   // A opens chat and sends; B receives over the data channel
-  await pa.getByRole('button', { name: /Chat/ }).click()
+  await pa.getByRole('button', { name: 'Chat', exact: true }).click()
   await pa.getByPlaceholder('Message…').fill('hello-from-alice')
   await pa.getByRole('button', { name: 'Send', exact: true }).click()
-  await pb.getByRole('button', { name: /Chat/ }).click()
+  await pb.getByRole('button', { name: 'Chat', exact: true }).click()
   await expect(pb.getByText('hello-from-alice')).toBeVisible({ timeout: 15_000 })
 
   await a.close(); await b.close()

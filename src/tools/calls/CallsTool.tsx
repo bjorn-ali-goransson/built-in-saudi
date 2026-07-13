@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, PenIcon, ScreenShareIcon } from '../../components/icons'
+import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo } from './rtc'
 
 const SITE = 'https://built-in-saudi.com'
@@ -27,6 +29,8 @@ const STR = {
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
+    participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Send files', muteMe: 'Mute me', unmuteMe: 'Unmute',
+    camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
   ar: {
@@ -36,19 +40,10 @@ const STR = {
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
+    participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'إرسال ملفات', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
+    camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
-}
-
-function Video({ stream, muted, mirror, label }: { stream: MediaStream; muted?: boolean; mirror?: boolean; label: string }) {
-  const ref = useRef<HTMLVideoElement>(null)
-  useEffect(() => { if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
-  return (
-    <div className="relative rounded-md overflow-hidden bg-black aspect-video">
-      <video ref={ref} autoPlay playsInline muted={muted} className={`w-full h-full object-cover ${mirror ? '-scale-x-100' : ''}`} />
-      <span className="absolute left-1.5 bottom-1.5 text-[0.7rem] bg-black/55 text-white px-1.5 py-0.5 rounded">{label}</span>
-    </div>
-  )
 }
 
 const initials = (nm: string) => nm.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '•'
@@ -66,6 +61,43 @@ function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting:
           <Button variant="primary" onClick={() => admit(id)} data-testid="call-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0">{admitLabel}</Button>
         </div>
       ))}
+    </div>
+  )
+}
+
+// A toolbar icon button with a native tooltip.
+function IconBtn({ onClick, title, active, danger, children, testid, badge }: { onClick: () => void; title: string; active?: boolean; danger?: boolean; children: ReactNode; testid?: string; badge?: number }) {
+  return (
+    <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testid}
+      className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border cursor-pointer transition-colors [&_svg]:w-[18px] [&_svg]:h-[18px] ${
+        danger ? 'bg-[var(--danger)] text-white border-[var(--danger)] hover:brightness-110'
+          : active ? 'bg-green-600 text-sand-100 border-green-600'
+            : 'bg-[var(--surface)] text-ink-soft border-[color:var(--line)] hover:border-green-500 hover:text-ink'}`}>
+      {children}
+      {badge ? <span className="absolute -top-1.5 -end-1.5 min-w-[16px] h-4 px-1 rounded-full bg-gold-500 text-white text-[0.6rem] font-bold grid place-items-center">{badge}</span> : null}
+    </button>
+  )
+}
+
+// A participant square: webcam if their camera is on, else a user icon; name + mute state.
+function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  useEffect(() => { if (ref.current && stream && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
+  return (
+    <div className="group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)]">
+      {camOn && stream
+        ? <video ref={ref} autoPlay playsInline muted={self} className={`w-full h-full object-cover ${self ? '-scale-x-100' : ''}`} />
+        : <div className="w-full h-full grid place-items-center text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
+      <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
+        {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className="w-3.5 h-3.5 shrink-0" />}
+        <span className="truncate flex-1">{name}{self ? ' ·' : ''}</span>
+        {!self && onMute && !muted && (
+          <button type="button" onClick={onMute} title={muteLabel} aria-label={muteLabel}
+            className="opacity-0 group-hover:opacity-100 grid place-items-center w-5 h-5 rounded bg-white/15 hover:bg-white/30 border-0 cursor-pointer transition-opacity">
+            <MicOffIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -91,11 +123,16 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
-  const [panel, setPanel] = useState<'none' | 'board' | 'chat'>('none')
+  const [showParticipants, setShowParticipants] = useState(true)
+  const [showChat, setShowChat] = useState(false)
+  const [view, setView] = useState<'board' | 'file'>('board')
+  const [files, setFiles] = useState<{ id: string; name: string; url: string; mime: string; from: string }[]>([])
+  const [selected, setSelected] = useState<string>('')
   const [chat, setChat] = useState<ChatItem[]>([])
   const [msg, setMsg] = useState('')
   const [toast, setToast] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const rosterRef = useRef<Map<string, PeerInfo>>(new Map())
 
   // whiteboard
   const wbRef = useRef<HTMLCanvasElement>(null)
@@ -117,9 +154,12 @@ export default function CallsTool() {
     return () => window.clearInterval(iv)
   }, [])
 
+  rosterRef.current = roster
   const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
   // The people the host still needs to let in (guests who haven't joined yet).
   const waiting = [...roster].filter(([, i]) => i.role === 'guest' && !i.inCall)
+  // In-call participants (excludes those still knocking in the lobby).
+  const inCallPeers = [...roster].filter(([, i]) => i.inCall)
 
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') setChat((c) => [...c, { from: id, name: m.name, text: m.text }])
@@ -128,6 +168,7 @@ export default function CallsTool() {
     else if (m.t === 'file-end') {
       const f = incoming.current.get(m.id); if (!f) return
       const url = URL.createObjectURL(new Blob(f.parts, { type: f.mime || 'application/octet-stream' }))
+      setFiles((fs) => [...fs, { id: m.id, name: f.name, url, mime: f.mime, from: nameOf(id) }])
       setChat((c) => [...c, { from: id, name: nameOf(id), fileName: f.name, url }])
       incoming.current.delete(m.id)
     }
@@ -144,6 +185,11 @@ export default function CallsTool() {
       onData, onFileChunk,
       onPeerInfo: (id, info) => { seen.current.set(id, Date.now()); setRoster((r2) => new Map(r2).set(id, info)) },
       onAdmitted: () => setPhase('live'), // rtc enables our media itself
+      onMuteNotice: (by, targetId, targetIsMe) => {
+        if (targetIsMe) setMic(false)
+        const who = targetIsMe ? s.you : (rosterRef.current.get(targetId)?.name || '•')
+        setToast(`${by} ${s.mutedBy} ${who}`); setTimeout(() => setToast(''), 3500)
+      },
     })
     rtc.current = r
     return r
@@ -191,7 +237,17 @@ export default function CallsTool() {
     else { const st = await rtc.current?.shareScreen(); if (st) { setSharing(true) } }
   }
   function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
-  function pickFiles(fl: FileList | null) { if (!fl) return; for (const f of fl) { rtc.current?.sendFile(f); setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name }]) } }
+  function pickFiles(fl: FileList | null) {
+    if (!fl) return
+    for (const f of fl) {
+      rtc.current?.sendFile(f)
+      const id = `me-${Date.now()}-${f.name}`, url = URL.createObjectURL(f)
+      setFiles((fs) => [...fs, { id, name: f.name, url, mime: f.type, from: s.you }])
+      setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name, url }])
+    }
+  }
+  function openFile(id: string) { setSelected(id); setView('file') }
+  function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
 
   // ---- whiteboard ----
   function wbPt(e: React.PointerEvent) { const r = wbRef.current!.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height } }
@@ -204,7 +260,13 @@ export default function CallsTool() {
   function wbMove(e: React.PointerEvent) { if (!drawing.current) return; const p = wbPt(e); const seg = [drawing.current.x, drawing.current.y, p.x, p.y]; drawSeg(seg, '#e11', 3); rtc.current?.broadcast({ t: 'wb', op: 'stroke', stroke: seg, color: '#e11', width: 3 }); drawing.current = p }
   function wbUp() { drawing.current = null }
   function clearBoard(broadcast = true) { const c = wbRef.current; c?.getContext('2d')?.clearRect(0, 0, c.width, c.height); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear' }) }
-  useEffect(() => { if (panel !== 'board') return; const c = wbRef.current; if (c) { c.width = c.clientWidth; c.height = c.clientHeight } }, [panel])
+  // Size the whiteboard to its container in the live layout, and on resize.
+  useEffect(() => {
+    if (phase !== 'live') return
+    const fit = () => { const c = wbRef.current; if (c && (c.width !== c.clientWidth || c.height !== c.clientHeight)) { c.width = c.clientWidth; c.height = c.clientHeight } }
+    const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
+    return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
+  }, [phase, view, showParticipants, showChat, files.length])
 
   async function shareInvite(code = room) {
     const url = `${SITE}${localePath(locale, '/apps/calls')}?room=${code}`
@@ -271,67 +333,105 @@ export default function CallsTool() {
     )
   }
 
-  const tiles = [local && { id: 'me', stream: local, me: true }, ...[...peers].map(([id, stream]) => ({ id, stream, me: false }))].filter(Boolean) as { id: string; stream: MediaStream; me: boolean }[]
+  const selectedFile = files.find((f) => f.id === selected)
+  const participantCount = 1 + inCallPeers.length
 
-  return (
-    <div className="flex flex-col gap-3" data-testid="calls-live">
-      {/* video grid */}
-      <div className={`grid gap-2 ${tiles.length <= 1 ? 'grid-cols-1' : 'grid-cols-2'} ${panel !== 'none' ? 'max-h-[42vh] overflow-hidden' : ''}`}>
-        {tiles.map((t) => <Video key={t.id} stream={t.stream} muted={t.me} mirror={t.me && !sharing} label={t.me ? (name ? `${name} · ${s.you}` : s.you) : nameOf(t.id)} />)}
-      </div>
-      {tiles.length <= 1 && <p className="text-[0.85rem] text-ink-faint text-center">{s.waiting}</p>}
-
-      {/* Host: people knocking while the call is live (only the host gets these). */}
-      {!isGuest && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
-
-      {/* controls */}
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        <Button onClick={toggleMic} className={mic ? '' : '!bg-[var(--danger)] !text-white'}>{s.mic}{mic ? '' : ' ✕'}</Button>
-        <Button onClick={toggleCam} className={cam ? '' : '!bg-[var(--danger)] !text-white'}>{s.cam}{cam ? '' : ' ✕'}</Button>
-        <Button onClick={toggleScreen} className={sharing ? '!bg-green-600 !text-sand-100' : ''}>{sharing ? s.stopScreen : s.screen}</Button>
-        <Button onClick={() => setPanel(panel === 'board' ? 'none' : 'board')} className={panel === 'board' ? '!bg-green-600 !text-sand-100' : ''}>{s.board}</Button>
-        <Button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={panel === 'chat' ? '!bg-green-600 !text-sand-100' : ''}>{s.chat}{chat.length ? ` · ${chat.length}` : ''}</Button>
-        <Button onClick={invite} data-testid="call-invite"><ShareIcon className="w-4 h-4" /> {s.invite}</Button>
-        <Button variant="primary" onClick={hangup} className="!bg-[var(--danger)]">{s.leave}</Button>
-      </div>
-      <p className="text-[0.75rem] text-ink-faint text-center font-mono">{room}</p>
-
-      {/* whiteboard */}
-      {panel === 'board' && (
-        <div className="flex flex-col gap-2">
-          <div className="relative border border-[color:var(--line)] rounded-md bg-white h-[46vh] touch-none">
-            <canvas ref={wbRef} className="absolute inset-0 w-full h-full cursor-crosshair" onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
-          </div>
-          <Button className="self-start" onClick={() => clearBoard()}><TrashIcon className="w-4 h-4" /> {s.clear}</Button>
+  // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
+  // transformed ancestor would otherwise become its containing block).
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex flex-col bg-[var(--bg)]" data-testid="calls-live"
+      onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pickFiles(e.dataTransfer.files) }}>
+      {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
+      <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
+        <div className="relative">
+          <input value={name} onChange={(e) => setName(e.target.value)} aria-label={s.yourName} data-testid="call-name"
+            className="h-9 w-[8.5rem] sm:w-40 ps-2.5 pe-8 rounded-md border border-[color:var(--line)] bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none focus:border-green-500" />
+          <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
+            className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink cursor-pointer"><RefreshIcon className="w-4 h-4" /></button>
         </div>
-      )}
+        <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
+        <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><ShareIcon /></IconBtn>
 
-      {/* chat + files */}
-      {panel === 'chat' && (
-        <div className="flex flex-col gap-2 border border-[color:var(--line)] rounded-md bg-[var(--surface)] p-3">
-          <div className="flex flex-col gap-1.5 max-h-[32vh] overflow-y-auto text-[0.9rem]">
-            {chat.map((m, i) => (
-              <div key={i} className={m.from === 'me' ? 'text-right' : ''}>
-                <span className="text-[0.72rem] text-ink-faint">{m.name}</span>{' '}
-                {m.url ? <a href={m.url} download={m.fileName} className="text-green-700 underline inline-flex items-center gap-1"><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
-                  : m.fileName ? <span className="text-ink-faint">↑ {m.fileName}</span>
-                    : <span className="text-ink">{m.text}</span>}
-              </div>
+        <div className="flex-1" />
+
+        <IconBtn onClick={() => setView('board')} active={view === 'board'} title={s.board} testid="call-board"><PenIcon /></IconBtn>
+        <IconBtn onClick={toggleScreen} active={sharing} title={s.screen}><ScreenShareIcon /></IconBtn>
+        <IconBtn onClick={() => fileRef.current?.click()} title={s.sendFiles} testid="call-files"><UploadIcon /></IconBtn>
+        <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
+        <IconBtn onClick={() => { setShowParticipants((v) => !v); setShowChat(false) }} active={showParticipants} title={s.participants} testid="call-participants" badge={participantCount}><UsersIcon /></IconBtn>
+        <IconBtn onClick={() => { setShowChat((v) => !v); setShowParticipants(false) }} active={showChat} title={s.chat} badge={chat.length || undefined}><ChatIcon /></IconBtn>
+        <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
+        <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
+        <IconBtn onClick={toggleMic} active={mic} danger={!mic} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
+      </header>
+
+      {/* ---- body ---- */}
+      <div className="flex-1 flex min-h-0">
+        {/* files list (left) */}
+        {files.length > 0 && (
+          <aside className="w-48 sm:w-56 shrink-0 border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 flex flex-col gap-1" data-testid="call-filelist">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1 py-1">{s.filesTitle} · {files.length}</p>
+            {files.map((f) => (
+              <button key={f.id} type="button" onClick={() => openFile(f.id)}
+                className={`text-start rounded-md px-2 py-1.5 text-[0.82rem] truncate border cursor-pointer ${selected === f.id && view === 'file' ? 'bg-green-600 text-sand-100 border-green-600' : 'bg-transparent border-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>
+                {f.name}<span className="block text-[0.68rem] opacity-70 truncate">{f.from}</span>
+              </button>
             ))}
-          </div>
-          <button type="button" onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pickFiles(e.dataTransfer.files) }}
-            className="flex items-center justify-center gap-2 py-2 border-2 border-dashed border-[color:var(--line)] rounded-md text-[0.82rem] text-ink-faint cursor-pointer hover:border-green-500">
-            <UploadIcon className="w-4 h-4" /> {s.dropFiles}
-            <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
-          </button>
-          <div className="flex gap-2">
-            <Input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} />
-            <Button variant="primary" onClick={sendChat}>{s.send}</Button>
-          </div>
-        </div>
-      )}
+          </aside>
+        )}
 
-      {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
-    </div>
+        {/* main stage: file preview (behind) + whiteboard (always drawable on top) */}
+        <main className={`flex-1 relative min-w-0 ${view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_88%,black)]' : 'bg-white'}`}>
+          {view === 'file' && selectedFile && (
+            <div className="absolute inset-0 grid place-items-center p-4 overflow-auto">
+              {selectedFile.mime.startsWith('image/')
+                ? <img src={selectedFile.url} alt={selectedFile.name} className="max-w-full max-h-full object-contain" />
+                : <a href={selectedFile.url} download={selectedFile.name} className="flex flex-col items-center gap-2 text-sand-100/80">
+                    <DownloadIcon className="w-8 h-8" /><span className="text-[0.9rem]">{selectedFile.name}</span><span className="text-[0.78rem] opacity-70">{s.noPreview}</span>
+                  </a>}
+            </div>
+          )}
+          <canvas ref={wbRef} className="absolute inset-0 w-full h-full cursor-crosshair touch-none" onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
+          <button type="button" onClick={() => clearBoard()} title={s.clear} aria-label={s.clear}
+            className="absolute bottom-3 start-3 grid place-items-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-ink-soft shadow-[var(--shadow-sm)] hover:text-[var(--danger)] cursor-pointer"><TrashIcon className="w-4 h-4" /></button>
+        </main>
+
+        {/* right dock: participants or chat */}
+        {showParticipants && (
+          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5" data-testid="call-participants-panel">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1">{s.participants} · {participantCount}</p>
+            {!isGuest && waiting.length > 0 && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
+            <div className="grid grid-cols-2 gap-2">
+              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
+              {inCallPeers.map(([id, info]) => (
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} />
+              ))}
+            </div>
+          </aside>
+        )}
+        {showChat && (
+          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col" data-testid="call-chat-panel">
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
+              {chat.map((m, i) => (
+                <div key={i} className={m.from === 'me' ? 'text-end' : ''}>
+                  <span className="text-[0.72rem] text-ink-faint">{m.name}</span>{' '}
+                  {m.url ? <a href={m.url} download={m.fileName} className="text-green-700 underline inline-flex items-center gap-1"><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
+                    : m.fileName ? <span className="text-ink-faint">↑ {m.fileName}</span>
+                      : <span className="text-ink">{m.text}</span>}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 p-2 border-t border-[color:var(--line)]">
+              <Input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} className="flex-1" />
+              <Button variant="primary" onClick={sendChat}>{s.send}</Button>
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] bg-green-700 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
+    </div>,
+    document.body,
   )
 }

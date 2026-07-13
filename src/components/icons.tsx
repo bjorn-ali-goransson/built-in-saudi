@@ -922,3 +922,64 @@ export function SlugIcon({ className }: P) {
     </svg>
   )
 }
+
+export function EndCallIcon({ className }: P) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" width={24} height={24} className={className} aria-hidden="true">
+      <path d="M12 9c-2.3 0-4.5.4-6.4 1.1-.6.2-1 .8-1 1.5v1.7c0 .5.3 1 .8 1.2l2 .8c.5.2 1 0 1.3-.4l.9-1.4c1.6-.4 3.2-.4 4.8 0l.9 1.4c.3.4.8.6 1.3.4l2-.8c.5-.2.8-.7.8-1.2v-1.7c0-.7-.4-1.3-1-1.5C16.5 9.4 14.3 9 12 9Z" transform="rotate(135 12 12)" />
+    </svg>
+  )
+}
+
+export function UsersIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="9" cy="8" r="3" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-3-4.9" />
+    </svg>
+  )
+}
+
+export function ChatIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+      <path d="M8 9.5h8M8 12.5h5" />
+    </svg>
+  )
+}
+
+export function MicOffIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9 9v2a3 3 0 0 0 4.5 2.6M15 11V6a3 3 0 0 0-5.9-.7" />
+      <path d="M5 11a7 7 0 0 0 10.3 6.2M19 11a7 7 0 0 1-1 3.6M12 18.5V22M8 22h8M3 3l18 18" />
+    </svg>
+  )
+}
+
+export function PenIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M15 4.5 19.5 9 8.5 20l-5 1 1-5z" /><path d="M13 6.5 17.5 11" />
+    </svg>
+  )
+}
+
+export function ScreenShareIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
+      <path d="M12 12V7.5M9.5 9.5 12 7l2.5 2.5" />
+    </svg>
+  )
+}
+
+export function CamOffIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M15 10.5V8a1 1 0 0 0-1-1H6.5M3 7v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2.5" />
+      <path d="m16 10 5-3v10l-3-1.8M3 3l18 18" />
+    </svg>
+  )
+}

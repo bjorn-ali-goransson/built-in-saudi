@@ -14,7 +14,7 @@ const ICE: RTCIceServer[] = [
 
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
-export interface PeerInfo { name: string; role: Role; inCall: boolean }
+export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean }
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
@@ -23,8 +23,11 @@ export type DataMsg =
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
 
-// Control messages (JSON, `c`) — lobby presence + admission, peer-to-peer.
-type Ctrl = { c: 'info'; name: string; role: Role; inCall: boolean } | { c: 'admit' }
+// Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
+type Ctrl =
+  | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean }
+  | { c: 'admit' }
+  | { c: 'fmute'; target: string; by: string }
 
 export interface CallHandlers {
   onLocal?(stream: MediaStream): void
@@ -33,10 +36,12 @@ export interface CallHandlers {
   onLeave?(id: string): void
   onData?(id: string, msg: DataMsg): void
   onFileChunk?(id: string, chunk: ArrayBuffer): void
-  /** A peer told us who they are / their lobby state (over the data channel). */
+  /** A peer told us who they are / their lobby + mic/cam state (over the data channel). */
   onPeerInfo?(id: string, info: PeerInfo): void
   /** Guest only: the host admitted us — media is now enabling; switch to the call. */
   onAdmitted?(): void
+  /** Someone muted someone (by name → target id). If target is us, we're muted too. */
+  onMuteNotice?(by: string, targetId: string, targetIsMe: boolean): void
 }
 
 interface Peer {
@@ -63,6 +68,8 @@ export class CallRoom {
   private name = ''
   private role: Role = 'guest'
   private heartbeat: number | undefined
+  private muted = true // privacy-first: start muted with the camera off
+  private cam = false
   inCall = false // we've enabled our own media
   local: MediaStream | null = null
   private camTrack: MediaStreamTrack | null = null
@@ -181,12 +188,13 @@ export class CallRoom {
       if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
       let m: Record<string, unknown>
       try { m = JSON.parse(e.data) } catch { return }
-      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
+      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
       else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
+      else if (m.c === 'fmute') { const target = String(m.target || ''); const me = target === this.me; if (me) this.toggleMic(false); this.h.onMuteNotice?.(String(m.by || ''), target, me) }
       else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
     }
   }
-  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall } as Ctrl)) }
+  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam } as Ctrl)) }
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
 
   // ---- app-facing send (only to peers actually in the call) ------------------
@@ -203,8 +211,10 @@ export class CallRoom {
   }
 
   // ---- media controls --------------------------------------------------------
-  toggleMic(on: boolean) { this.local?.getAudioTracks().forEach((t) => (t.enabled = on)) }
-  toggleCam(on: boolean) { this.local?.getVideoTracks().forEach((t) => (t.enabled = on)) }
+  toggleMic(on: boolean) { this.muted = !on; this.local?.getAudioTracks().forEach((t) => (t.enabled = on)); this.broadcastInfo() }
+  toggleCam(on: boolean) { this.cam = on; this.local?.getVideoTracks().forEach((t) => (t.enabled = on)); this.broadcastInfo() }
+  /** Ask another participant's client to mute itself; everyone is notified. */
+  forceMute(target: string) { const msg = JSON.stringify({ c: 'fmute', target, by: this.name } as Ctrl); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(msg) }
   private replaceVideo(track: MediaStreamTrack | null) {
     for (const p of this.peers.values()) { const sender = p.pc.getSenders().find((s) => s.track?.kind === 'video'); if (sender) sender.replaceTrack(track).catch(() => {}) }
   }
