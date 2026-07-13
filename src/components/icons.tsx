@@ -923,6 +923,23 @@ export function SlugIcon({ className }: P) {
   )
 }
 
+export function EraserIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M8 20H5.5L3 17.5a2 2 0 0 1 0-2.8l9-9a2 2 0 0 1 2.8 0l4.7 4.7a2 2 0 0 1 0 2.8L13 20H8z" />
+      <path d="M8 20 20 20M8.5 9.5 15 16" />
+    </svg>
+  )
+}
+
+export function UndoIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9 7 4 12l5 5" /><path d="M4 12h11a5 5 0 0 1 0 10h-1" />
+    </svg>
+  )
+}
+
 export function WhiteboardIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -2,9 +2,12 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
-import { CallRoom, type DataMsg, type PeerInfo } from './rtc'
+import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
+
+const oid = () => Math.random().toString(36).slice(2, 10)
+const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
 
 const SITE = 'https://built-in-saudi.com'
 const NAME_KEY = 'bis-call-name'
@@ -160,9 +163,16 @@ export default function CallsTool() {
   const fileRef = useRef<HTMLInputElement>(null)
   const rosterRef = useRef<Map<string, PeerInfo>>(new Map())
 
-  // whiteboard
+  // whiteboard (object model synced P2P)
   const wbRef = useRef<HTMLCanvasElement>(null)
-  const drawing = useRef<{ x: number; y: number } | null>(null)
+  const objects = useRef<WbObj[]>([]) // all drawable objects, in z-order
+  const myStack = useRef<string[]>([]) // ids I added, for per-user undo
+  const drawing = useRef<WbObj | null>(null) // stroke currently being drawn
+  const [tool, setTool] = useState<'pen' | 'eraser' | 'text'>('pen')
+  const [penColor, setPenColor] = useState(WB_COLORS[0])
+  const [penW, setPenW] = useState(0.01) // stroke width as a fraction of the board
+  const [textAt, setTextAt] = useState<{ u: number; v: number; x: number; y: number } | null>(null)
+  const [textVal, setTextVal] = useState('')
   const incoming = useRef<Map<string, { name: string; mime: string; parts: ArrayBuffer[] }>>(new Map())
   const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
   const panelRef = useRef({ p: true, c: false, f: false }) // which panels are open (for notify)
@@ -201,7 +211,13 @@ export default function CallsTool() {
 
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setChat((c) => [...c, { from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
-    else if (m.t === 'wb') { if (m.op === 'clear') clearBoard(false); else if (m.stroke) drawSeg(m.stroke, m.color || '#e11', m.width || 3) }
+    else if (m.t === 'wb') {
+      if (m.op === 'clear') { objects.current = []; redraw() }
+      else if (m.op === 'start') { objects.current.push({ id: m.id, kind: 'stroke', pts: [...m.pt], color: m.color, width: m.width, erase: m.erase }) }
+      else if (m.op === 'point') { const o = objects.current.find((x) => x.id === m.id); if (o && o.kind === 'stroke') { o.pts.push(...m.pt); drawLastSeg(o) } }
+      else if (m.op === 'text') { objects.current.push(m.obj); redraw() }
+      else if (m.op === 'remove') { objects.current = objects.current.filter((x) => x.id !== m.id); redraw() }
+    }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
       const f = incoming.current.get(m.id); if (!f) return
@@ -359,29 +375,66 @@ export default function CallsTool() {
     const [hx, hy] = halfExtents(r.width / r.height)
     return { x: ((e.clientX - r.left) / r.width - 0.5) * 2 * hx, y: ((e.clientY - r.top) / r.height - 0.5) * 2 * hy }
   }
-  function drawSeg(seg: number[], color: string, width: number) {
-    const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
-    const [hx, hy] = halfExtents(c.width / c.height)
-    const px = (u: number) => (u / (2 * hx) + 0.5) * c.width, py = (v: number) => (v / (2 * hy) + 0.5) * c.height
-    x.strokeStyle = color; x.lineWidth = width; x.lineCap = 'round'
-    x.beginPath(); x.moveTo(px(seg[0]), py(seg[1])); x.lineTo(px(seg[2]), py(seg[3])); x.stroke()
+  function mapper(c: HTMLCanvasElement) {
+    const [hx, hy] = halfExtents(c.width / c.height); const sc = Math.min(c.width, c.height)
+    return { sc, px: (u: number) => (u / (2 * hx) + 0.5) * c.width, py: (v: number) => (v / (2 * hy) + 0.5) * c.height }
   }
-  function wbDown(e: React.PointerEvent) { (e.target as HTMLElement).setPointerCapture(e.pointerId); drawing.current = wbPt(e) }
-  function wbMove(e: React.PointerEvent) { if (!drawing.current) return; const p = wbPt(e); const seg = [drawing.current.x, drawing.current.y, p.x, p.y]; drawSeg(seg, '#e11', 3); rtc.current?.broadcast({ t: 'wb', op: 'stroke', stroke: seg, color: '#e11', width: 3 }); drawing.current = p }
+  function drawObj(x: CanvasRenderingContext2D, m: ReturnType<typeof mapper>, o: WbObj) {
+    if (o.kind === 'stroke') {
+      x.save(); if (o.erase) x.globalCompositeOperation = 'destination-out'
+      x.strokeStyle = o.color; x.lineWidth = Math.max(1, o.width * m.sc); x.lineCap = 'round'; x.lineJoin = 'round'
+      x.beginPath(); for (let i = 0; i < o.pts.length; i += 2) { const X = m.px(o.pts[i]), Y = m.py(o.pts[i + 1]); i === 0 ? x.moveTo(X, Y) : x.lineTo(X, Y) }
+      if (o.pts.length === 2) { x.lineTo(m.px(o.pts[0]) + 0.1, m.py(o.pts[1])) } // a dot
+      x.stroke(); x.restore()
+    } else {
+      x.fillStyle = o.color; x.font = `600 ${Math.max(10, o.size * m.sc)}px 'Hanken Grotesk', system-ui, sans-serif`; x.textBaseline = 'top'
+      x.fillText(o.text, m.px(o.u), m.py(o.v))
+    }
+  }
+  function drawLastSeg(o: WbObj) {
+    if (o.kind !== 'stroke') return; const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
+    const m = mapper(c); const n = o.pts.length; if (n < 4) return
+    x.save(); if (o.erase) x.globalCompositeOperation = 'destination-out'
+    x.strokeStyle = o.color; x.lineWidth = Math.max(1, o.width * m.sc); x.lineCap = 'round'; x.lineJoin = 'round'
+    x.beginPath(); x.moveTo(m.px(o.pts[n - 4]), m.py(o.pts[n - 3])); x.lineTo(m.px(o.pts[n - 2]), m.py(o.pts[n - 1])); x.stroke(); x.restore()
+  }
+  function redraw() {
+    const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
+    const m = mapper(c); x.clearRect(0, 0, c.width, c.height); for (const o of objects.current) drawObj(x, m, o)
+  }
+  function wbDown(e: React.PointerEvent) {
+    if (tool === 'text') { const c = wbRef.current!; const r = c.getBoundingClientRect(); const p = wbPt(e); setTextAt({ u: p.x, v: p.y, x: e.clientX - r.left, y: e.clientY - r.top }); setTextVal(''); return }
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    const p = wbPt(e); const id = oid(); const erase = tool === 'eraser'
+    const o: WbObj = { id, kind: 'stroke', pts: [p.x, p.y], color: erase ? '#000' : penColor, width: penW, erase }
+    objects.current.push(o); myStack.current.push(id); drawing.current = o
+    rtc.current?.broadcast({ t: 'wb', op: 'start', id, pt: [p.x, p.y], color: o.color, width: penW, erase })
+  }
+  function wbMove(e: React.PointerEvent) {
+    const o = drawing.current; if (!o || o.kind !== 'stroke') return
+    const p = wbPt(e); o.pts.push(p.x, p.y); drawLastSeg(o); rtc.current?.broadcast({ t: 'wb', op: 'point', id: o.id, pt: [p.x, p.y] })
+  }
   function wbUp() { drawing.current = null }
-  function clearBoard(broadcast = true) { const c = wbRef.current; c?.getContext('2d')?.clearRect(0, 0, c.width, c.height); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear' }) }
+  function commitText() {
+    const t = textVal.trim()
+    if (t && textAt) { const o: WbObj = { id: oid(), kind: 'text', u: textAt.u, v: textAt.v, text: t, color: penColor, size: 0.035 }; objects.current.push(o); myStack.current.push(o.id); rtc.current?.broadcast({ t: 'wb', op: 'text', obj: o }); redraw() }
+    setTextAt(null); setTextVal('')
+  }
+  function undo() { const id = myStack.current.pop(); if (!id) return; objects.current = objects.current.filter((o) => o.id !== id); redraw(); rtc.current?.broadcast({ t: 'wb', op: 'remove', id }) }
+  function clearBoard(broadcast = true) { objects.current = []; myStack.current = []; redraw(); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear' }) }
   // Size the whiteboard to its container in the live layout, and on resize.
   useEffect(() => {
     if (phase !== 'live') return
-    const fit = () => { const c = wbRef.current; if (!c) return; if (c.width !== c.clientWidth || c.height !== c.clientHeight) { c.width = c.clientWidth; c.height = c.clientHeight }; const a = c.clientWidth / (c.clientHeight || 1); setSelfAspect(a); rtc.current?.setAspect(a) }
+    const fit = () => { const c = wbRef.current; if (!c) return; if (c.width !== c.clientWidth || c.height !== c.clientHeight) { c.width = c.clientWidth; c.height = c.clientHeight }; const a = c.clientWidth / (c.clientHeight || 1); setSelfAspect(a); rtc.current?.setAspect(a); redraw() }
     const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
     return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, view, showParticipants, showChat, showFiles, files.length])
 
   // A screen-share gets a fresh annotation whiteboard on top (and back to a clean
   // board when it ends). Everyone observes the same share state, so all clear.
   const anyoneSharing = sharing || [...roster].some(([, i]) => i.inCall && i.sharing)
-  useEffect(() => { const c = wbRef.current; c?.getContext('2d')?.clearRect(0, 0, c.width, c.height) }, [anyoneSharing])
+  useEffect(() => { clearBoard(false) /* eslint-disable-line react-hooks/exhaustive-deps */ }, [anyoneSharing])
 
   async function shareInvite(code = room) {
     const url = `${SITE}${localePath(locale, '/apps/calls')}?room=${code}`
@@ -559,10 +612,37 @@ export default function CallsTool() {
                   </a>}
             </div>
           )}
-          <canvas ref={wbRef} className="absolute inset-0 w-full h-full cursor-crosshair touch-none" onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
+          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-none ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
-          <button type="button" onClick={() => clearBoard()} title={s.clear} aria-label={s.clear}
-            className="absolute bottom-3 start-3 grid place-items-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-ink-soft shadow-[var(--shadow-sm)] hover:text-[var(--danger)] cursor-pointer"><TrashIcon className="w-4 h-4" /></button>
+          {textAt && (
+            <input autoFocus value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={commitText} data-testid="wb-textinput"
+              onKeyDown={(e) => { if (e.key === 'Enter') commitText(); else if (e.key === 'Escape') { setTextAt(null); setTextVal('') } }}
+              style={{ left: textAt.x, top: textAt.y, color: penColor }} className="absolute z-20 bg-transparent border-b-2 border-current outline-none text-[1.1rem] font-semibold min-w-[6rem] px-0.5" />
+          )}
+
+          {/* whiteboard tools */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1 max-w-[calc(100%-1rem)] overflow-x-auto" data-testid="wb-tools">
+            {[0.005, 0.011, 0.022].map((w, i) => (
+              <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
+                className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 ${tool === 'pen' && penW === w ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>
+                <span className="rounded-full" style={{ width: `${5 + i * 4}px`, height: `${5 + i * 4}px`, background: penColor }} />
+              </button>
+            ))}
+            <span className="w-px h-5 bg-[color:var(--line)] mx-0.5 shrink-0" />
+            {WB_COLORS.map((col) => (
+              <button key={col} type="button" onClick={() => setPenColor(col)} aria-label={col} title={col}
+                className={`w-6 h-6 rounded-full cursor-pointer border-2 shrink-0 ${penColor === col ? 'border-[color:var(--ink)]' : 'border-transparent'}`} style={{ background: col }} />
+            ))}
+            <span className="w-px h-5 bg-[color:var(--line)] mx-0.5 shrink-0" />
+            <button type="button" onClick={() => setTool('eraser')} title="Eraser" aria-label="Eraser" data-testid="wb-eraser"
+              className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 [&_svg]:w-[18px] [&_svg]:h-[18px] ${tool === 'eraser' ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-ink' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}><EraserIcon /></button>
+            <button type="button" onClick={() => setTool('text')} title="Text" aria-label="Text" data-testid="wb-text"
+              className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 font-display font-bold text-[1.05rem] ${tool === 'text' ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-ink' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>T</button>
+            <button type="button" onClick={undo} title="Undo" aria-label="Undo" data-testid="wb-undo"
+              className="grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] [&_svg]:w-[18px] [&_svg]:h-[18px]"><UndoIcon /></button>
+            <button type="button" onClick={() => clearBoard()} title={s.clear} aria-label={s.clear} data-testid="wb-clear"
+              className="grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 text-ink-soft hover:text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] [&_svg]:w-[17px] [&_svg]:h-[17px]"><TrashIcon /></button>
+          </div>
         </main>
 
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}

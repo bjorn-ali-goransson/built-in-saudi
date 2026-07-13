@@ -16,10 +16,20 @@ export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
 
+// A whiteboard object (a pen/eraser stroke or a text label). Coords are in the
+// centred, aspect-preserving board space; width/size are fractions of the board.
+export type WbObj =
+  | { id: string; kind: 'stroke'; pts: number[]; color: string; width: number; erase?: boolean }
+  | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number }
+
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
   | { t: 'chat'; name: string; text: string }
-  | { t: 'wb'; op: 'stroke' | 'clear'; stroke?: number[]; color?: string; width?: number }
+  | { t: 'wb'; op: 'start'; id: string; pt: number[]; color: string; width: number; erase: boolean }
+  | { t: 'wb'; op: 'point'; id: string; pt: number[] }
+  | { t: 'wb'; op: 'text'; obj: WbObj }
+  | { t: 'wb'; op: 'remove'; id: string }
+  | { t: 'wb'; op: 'clear' }
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
 
