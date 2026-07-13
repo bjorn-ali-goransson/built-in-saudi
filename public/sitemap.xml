@@ -52,6 +52,76 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/loan-calculator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/loan-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/loan-calculator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/loan-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/percentage-calculator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/percentage-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/percentage-calculator</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/percentage-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/split-bill</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/split-bill"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/split-bill"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/split-bill</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/split-bill"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/split-bill"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/aspect-ratio</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/aspect-ratio"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/aspect-ratio</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/aspect-ratio"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/pomodoro</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/pomodoro</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/url-encoder</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/url-encoder"/>

@@ -51,6 +51,11 @@ import { baseConverterTool } from './base-converter/meta'
 import { csvJsonTool } from './csv-json/meta'
 import { listToolsTool } from './list-tools/meta'
 import { colorContrastTool } from './color-contrast/meta'
+import { loanCalculatorTool } from './loan-calculator/meta'
+import { percentageCalculatorTool } from './percentage-calculator/meta'
+import { splitBillTool } from './split-bill/meta'
+import { aspectRatioTool } from './aspect-ratio/meta'
+import { pomodoroTool } from './pomodoro/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -72,6 +77,11 @@ export const tools: Tool[] = [
   csvJsonTool,
   listToolsTool,
   colorContrastTool,
+  loanCalculatorTool,
+  percentageCalculatorTool,
+  splitBillTool,
+  aspectRatioTool,
+  pomodoroTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,

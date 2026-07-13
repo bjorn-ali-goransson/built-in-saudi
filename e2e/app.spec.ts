@@ -356,6 +356,42 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cc-ratio')).toHaveText('21.00')
   })
 
+  test('loan calculator: zero-interest monthly is amount/months', async ({ page }) => {
+    await page.goto('/en/apps/loan-calculator')
+    await page.getByTestId('loan-amount').fill('12000')
+    await page.getByTestId('loan-rate').fill('0')
+    await page.getByTestId('loan-years').fill('1')
+    await expect(page.getByTestId('loan-monthly')).toHaveText('1,000')
+  })
+
+  test('percentage calculator: 15% of 200 is 30', async ({ page }) => {
+    await page.goto('/en/apps/percentage-calculator')
+    await page.getByTestId('pc-q1-p').fill('15')
+    await page.getByTestId('pc-q1-of').fill('200')
+    await expect(page.getByTestId('pc-q1-result')).toHaveText('30')
+  })
+
+  test('bill splitter: 240 across 4 is 60 each', async ({ page }) => {
+    await page.goto('/en/apps/split-bill')
+    await page.getByTestId('sb-bill').fill('240')
+    await page.getByTestId('sb-tip').fill('0')
+    await page.getByTestId('sb-people').fill('4')
+    await expect(page.getByTestId('sb-per')).toHaveText('60.00')
+  })
+
+  test('aspect ratio: 16:9 width 1920 gives height 1080', async ({ page }) => {
+    await page.goto('/en/apps/aspect-ratio')
+    await page.getByTestId('ar-preset-16x9').click()
+    await page.getByTestId('ar-width').fill('1920')
+    await expect(page.getByTestId('ar-height')).toHaveValue('1080')
+  })
+
+  test('pomodoro: renders the timer at 25:00', async ({ page }) => {
+    await page.goto('/en/apps/pomodoro')
+    await expect(page.getByTestId('pom-time')).toHaveText('25:00')
+    await expect(page.getByTestId('pom-toggle')).toBeVisible()
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

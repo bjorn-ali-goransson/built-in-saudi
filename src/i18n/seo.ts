@@ -99,6 +99,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'فاحص التباين', description: 'اختر لون النص والخلفية لترى نسبة التباين وفق WCAG 2.1، مع شارات نجاح/رسوب لمستويي AA وAAA لأحجام النص العادية والكبيرة، ومعاينة حيّة. يعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'loan-calculator',
+    en: { name: 'Loan Calculator', description: 'Work out the monthly payment on a loan or mortgage from the amount, annual interest rate and term, with total interest, total repaid and a year-by-year amortization breakdown. A neutral maths tool, not financial advice. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة القروض', description: 'احسب القسط الشهري لقرض أو تمويل عقاري من المبلغ ونسبة الفائدة السنوية والمدة، مع إجمالي الفائدة والمبلغ المسدَّد وجدول إطفاء سنوي. أداة حسابية محايدة وليست نصيحة مالية. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'percentage-calculator',
+    en: { name: 'Percentage Calculator', description: 'Answer the common percentage questions instantly: what is X% of Y, X is what percent of Y, and the percentage increase or decrease from one number to another. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة النسبة المئوية', description: 'أجب فورًا عن أسئلة النسب الشائعة: كم يساوي X% من Y، وX يمثّل أي نسبة من Y، ونسبة الزيادة أو النقص من رقم إلى آخر. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'split-bill',
+    en: { name: 'Bill Splitter', description: 'Split a restaurant or group bill fairly: add an optional tip percentage, set how many people are paying, and see the per-person share and the grand total. Runs entirely in your browser.' },
+    ar: { name: 'مقسّم الفاتورة', description: 'قسّم فاتورة مطعم أو مجموعة بإنصاف: أضف نسبة بقشيش اختيارية، وحدّد عدد الدافعين، وشاهد نصيب كل شخص والمجموع الكلي. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'aspect-ratio',
+    en: { name: 'Aspect Ratio Calculator', description: 'Lock an aspect ratio and solve for the missing dimension: enter a width to get the matching height or vice-versa, pick common presets like 16:9 or 4:3, and read the simplified ratio. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة نسبة الأبعاد', description: 'ثبّت نسبة الأبعاد واحسب البُعد الناقص: أدخل العرض لتحصل على الارتفاع المطابق أو العكس، اختر قوالب شائعة مثل 16:9 أو 4:3، واقرأ النسبة المبسّطة. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'pomodoro',
+    en: { name: 'Pomodoro Timer', description: 'A distraction-free Pomodoro timer: work in focused sprints, take short and long breaks, and let it cycle automatically with a gentle chime and a round counter. Custom lengths are remembered on your device. Runs entirely in your browser.' },
+    ar: { name: 'مؤقّت بومودورو', description: 'مؤقّت بومودورو خالٍ من التشتيت: اعمل في جلسات مركّزة، وخذ فترات راحة قصيرة وطويلة، ودعه يتنقّل تلقائيًا مع نغمة لطيفة وعدّاد جولات. تُحفظ مدّتك المخصّصة على جهازك. يعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
