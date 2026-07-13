@@ -508,6 +508,17 @@ test.describe('tools', () => {
     await expect(page.getByTestId('stego-drop')).toBeVisible()
   })
 
+  test('media/privacy tools render their entry points', async ({ page }) => {
+    await page.goto('/en/apps/screen-recorder')
+    await expect(page.getByTestId('screen-recorder')).toBeVisible()
+    await page.goto('/en/apps/photo-booth')
+    await expect(page.getByTestId('pb-start')).toBeVisible()
+    await page.goto('/en/apps/image-redact')
+    await expect(page.getByTestId('redact-drop')).toBeVisible()
+    await page.goto('/en/apps/file-encrypt')
+    await expect(page.getByTestId('fe-drop')).toBeVisible()
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

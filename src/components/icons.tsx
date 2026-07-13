@@ -814,3 +814,32 @@ export function StegoIcon({ className }: P) {
     </svg>
   )
 }
+
+export function RecordIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2" y="4" width="20" height="14" rx="2" />
+      <circle cx="12" cy="11" r="3.5" fill="currentColor" stroke="none" />
+      <path d="M8 22h8" />
+    </svg>
+  )
+}
+
+export function CameraIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 8a2 2 0 0 1 2-2h1.5l1-1.5h5l1 1.5H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="12.5" r="3.5" />
+    </svg>
+  )
+}
+
+export function RedactIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <rect x="7" y="9" width="10" height="3.2" rx="0.6" fill="currentColor" stroke="none" />
+      <path d="M7 15.5h6" opacity="0.5" />
+    </svg>
+  )
+}

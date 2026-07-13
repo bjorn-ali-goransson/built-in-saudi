@@ -52,6 +52,62 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/screen-recorder</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/screen-recorder"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/screen-recorder</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/screen-recorder"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/photo-booth</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/photo-booth"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/photo-booth"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/photo-booth"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/photo-booth</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/photo-booth"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/photo-booth"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/photo-booth"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/image-redact</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-redact"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-redact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-redact"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/image-redact</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-redact"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-redact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-redact"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/file-encrypt</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-encrypt"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/file-encrypt</loc>
+    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-encrypt"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/image-to-ascii</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-to-ascii"/>

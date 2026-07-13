@@ -214,6 +214,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'إخفاء نص في صورة', description: 'أخفِ رسالة نصية داخل صورة بتعديل البتات الأقل أهمية في بكسلاتها — تبدو الصورة دون تغيير — ثم اكشفها لاحقًا من ملف PNG المحفوظ. كل شيء يجري على جهازك؛ لا يُرفع أي شيء.' },
   },
   {
+    id: 'screen-recorder',
+    en: { name: 'Screen Recorder', description: 'Record a screen, window or browser tab — optionally with your microphone — straight to a video file you can download. Captured and saved entirely on your device; nothing is uploaded or streamed.' },
+    ar: { name: 'مسجّل الشاشة', description: 'سجّل شاشة أو نافذة أو تبويبًا — مع المايك اختياريًا — مباشرةً إلى ملف فيديو يمكنك تنزيله. يُلتقط ويُحفظ بالكامل على جهازك؛ لا يُرفع أو يُبثّ في أي مكان.' },
+  },
+  {
+    id: 'photo-booth',
+    en: { name: 'Webcam Photo Booth', description: 'Take photos with your webcam, apply fun filters, mirror the image, and download each shot. The camera only turns on when you start it, and every photo stays on your device — nothing is uploaded.' },
+    ar: { name: 'كشك تصوير الويب كام', description: 'التقط صورًا بكاميرا الويب، وطبّق مرشّحات ممتعة، واعكس الصورة، ونزّل كل لقطة. لا تعمل الكاميرا إلا حين تبدأها، وتبقى كل صورة على جهازك — لا يُرفع أي شيء.' },
+  },
+  {
+    id: 'image-redact',
+    en: { name: 'Image Redactor', description: 'Drop an image and drag boxes over anything sensitive — faces, names, numbers — to pixelate or black it out, then download the redacted picture. The redaction is baked into the pixels and everything runs on your device.' },
+    ar: { name: 'محرّر تمويه الصور', description: 'أفلت صورة واسحب مربّعات فوق أي شيء حسّاس — وجوه، أسماء، أرقام — لتبكسله أو تحجبه، ثم نزّل الصورة المموّهة. يُدمج التمويه في البكسلات وكل شيء يجري على جهازك.' },
+  },
+  {
+    id: 'file-encrypt',
+    en: { name: 'File Encryptor', description: 'Encrypt any file with a password using AES-256-GCM (with a PBKDF2-derived key), then decrypt it later with the same password. The file and password never leave your browser — real, standard cryptography on your device.' },
+    ar: { name: 'مشفّر الملفات', description: 'شفّر أي ملف بكلمة مرور باستخدام AES-256-GCM (بمفتاح مشتقّ عبر PBKDF2)، ثم فُكّ تشفيره لاحقًا بالكلمة نفسها. لا يغادر الملف ولا كلمة المرور متصفحك — تشفير قياسي حقيقي على جهازك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

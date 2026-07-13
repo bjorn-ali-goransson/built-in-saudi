@@ -74,6 +74,10 @@ import { imageToAsciiTool } from './image-to-ascii/meta'
 import { memeGeneratorTool } from './meme-generator/meta'
 import { faviconGeneratorTool } from './favicon-generator/meta'
 import { steganographyTool } from './steganography/meta'
+import { screenRecorderTool } from './screen-recorder/meta'
+import { photoBoothTool } from './photo-booth/meta'
+import { imageRedactTool } from './image-redact/meta'
+import { fileEncryptTool } from './file-encrypt/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -118,6 +122,10 @@ export const tools: Tool[] = [
   memeGeneratorTool,
   faviconGeneratorTool,
   steganographyTool,
+  imageRedactTool,
+  photoBoothTool,
+  screenRecorderTool,
+  fileEncryptTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
