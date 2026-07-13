@@ -53,6 +53,12 @@ const STR = {
 
 const initials = (nm: string) => nm.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '•'
 
+function StreamVideo({ stream, className, muted, mirror }: { stream: MediaStream; className?: string; muted?: boolean; mirror?: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  useEffect(() => { if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
+  return <video ref={ref} autoPlay playsInline muted={muted} className={`${mirror ? '-scale-x-100 ' : ''}${className || ''}`} />
+}
+
 // The host's "Waiting in the lobby" list — a card of guests with a Let-in button.
 function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; live?: boolean }) {
   if (waiting.length === 0) return live ? null : <p className="max-w-[30rem] text-[0.85rem] text-ink-faint">{hint}</p>
@@ -133,8 +139,9 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
   const [editingName, setEditingName] = useState(false)
-  const [showParticipants, setShowParticipants] = useState(true)
+  const [showParticipants, setShowParticipants] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 640 : true))
   const [showChat, setShowChat] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
   const [view, setView] = useState<'board' | 'file'>('board')
@@ -300,8 +307,11 @@ export default function CallsTool() {
   function toggleMic() { const v = !mic; setMic(v); rtc.current?.toggleMic(v) }
   function toggleCam() { const v = !cam; setCam(v); rtc.current?.toggleCam(v) }
   async function toggleScreen() {
-    if (sharing) { rtc.current?.stopScreen(); setSharing(false); if (local) setLocal(local) }
-    else { const st = await rtc.current?.shareScreen(); if (st) { setSharing(true) } }
+    if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null) }
+    else {
+      const st = await rtc.current?.shareScreen()
+      if (st) { setSharing(true); setScreenStream(st); st.getVideoTracks()[0]?.addEventListener('ended', () => { setSharing(false); setScreenStream(null) }) }
+    }
   }
   function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
   function pickFiles(fl: FileList | null) {
@@ -423,6 +433,10 @@ export default function CallsTool() {
 
   const selectedFile = files.find((f) => f.id === selected)
   const participantCount = 1 + inCallPeers.length
+  // Whoever is screen-sharing becomes the main stage for everyone.
+  const presenterPeer = inCallPeers.find(([, i]) => i.sharing)
+  const presenterStream = sharing ? screenStream : (presenterPeer ? peers.get(presenterPeer[0]) : null)
+  const presenting = !!presenterStream
   const graceLeft = graceEndsAt ? Math.max(0, graceEndsAt - Date.now()) : 0
   const graceMMSS = `${Math.floor(graceLeft / 60000)}:${String(Math.floor((graceLeft % 60000) / 1000)).padStart(2, '0')}`
 
@@ -466,10 +480,10 @@ export default function CallsTool() {
       )}
 
       {/* ---- body ---- */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative">
         {/* files list (left) — shown only when the Files panel is toggled open */}
         {showFiles && files.length > 0 && (
-          <aside className="w-48 sm:w-56 shrink-0 border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 flex flex-col gap-0.5" data-testid="call-filelist">
+          <aside className="w-48 sm:w-56 shrink-0 border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 flex flex-col gap-0.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-filelist">
             <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1 py-1">{s.filesTitle} · {files.length}</p>
             {files.map((f) => (
               <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
@@ -483,9 +497,12 @@ export default function CallsTool() {
           </aside>
         )}
 
-        {/* main stage: file preview (behind) + whiteboard (always drawable on top) */}
-        <main className={`flex-1 relative min-w-0 ${view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_88%,black)]' : 'bg-white'}`}>
-          {view === 'file' && selectedFile && (
+        {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
+        <main className={`flex-1 relative min-w-0 ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
+          {presenting && presenterStream && (
+            <StreamVideo stream={presenterStream} muted className="absolute inset-0 w-full h-full object-contain" />
+          )}
+          {!presenting && view === 'file' && selectedFile && (
             <div className="absolute inset-0 grid place-items-center p-4 overflow-auto">
               {selectedFile.mime.startsWith('image/')
                 ? <img src={selectedFile.url} alt={selectedFile.name} className="max-w-full max-h-full object-contain" />
@@ -499,9 +516,9 @@ export default function CallsTool() {
             className="absolute bottom-3 start-3 grid place-items-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-ink-soft shadow-[var(--shadow-sm)] hover:text-[var(--danger)] cursor-pointer"><TrashIcon className="w-4 h-4" /></button>
         </main>
 
-        {/* right dock: participants or chat */}
+        {/* right dock: participants or chat (fullscreen overlay on mobile) */}
         {showParticipants && (
-          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5" data-testid="call-participants-panel">
+          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-participants-panel">
             <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1">{s.participants} · {participantCount}</p>
             {!isGuest && waiting.length > 0 && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
             <div className="grid grid-cols-2 gap-2">
@@ -513,7 +530,7 @@ export default function CallsTool() {
           </aside>
         )}
         {showChat && (
-          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col" data-testid="call-chat-panel">
+          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-chat-panel">
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
               {chat.map((m, i) => (
                 <div key={i} className={m.from === 'me' ? 'text-end' : ''}>
