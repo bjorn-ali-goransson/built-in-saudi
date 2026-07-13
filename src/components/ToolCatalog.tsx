@@ -50,14 +50,19 @@ function CompactToolCard({ tool }: { tool: Tool }) {
       </span>
       <span className="min-w-0 flex-1 flex flex-col gap-[0.1rem] max-[560px]:flex-none max-[560px]:w-full max-[560px]:items-center">
         <span title={l.name} className={`block truncate max-w-full text-[0.9rem] font-medium leading-tight max-[560px]:text-[0.72rem] max-[560px]:text-center max-[560px]:whitespace-normal ${comingSoon ? 'text-ink-faint' : 'text-ink'}`}>{l.name}</span>
-        {/* Truncated on desktop; on hover the row un-truncates and wraps to show
-            the full description (the tile grows within its grid row). */}
-        <span title={l.tagline} className="block truncate group-hover:whitespace-normal group-hover:[overflow:visible] max-w-full text-[0.72rem] leading-tight text-ink-faint max-[560px]:hidden">{l.tagline}</span>
+        {/* One line is reserved (h); the real text is absolutely positioned so
+            that un-truncating on hover overflows downward as an overlay and never
+            shifts the tile or its grid row. */}
+        <span className="relative block h-[0.95rem] text-[0.72rem] leading-[0.95rem] max-[560px]:hidden" aria-hidden="true">
+          <span title={l.tagline} className="absolute inset-x-0 top-0 truncate text-ink-faint group-hover:whitespace-normal group-hover:overflow-visible group-hover:rounded-b-md group-hover:bg-[var(--surface)] group-hover:shadow-[var(--shadow-md)] group-hover:pb-1 group-hover:pe-1">{l.tagline}</span>
+        </span>
       </span>
     </>
   )
 
-  const base = 'group flex items-center gap-[0.6rem] rounded-md p-[0.5rem_0.65rem] no-underline max-[560px]:flex-col max-[560px]:gap-[0.45rem] max-[560px]:p-[0.4rem_0.2rem] max-[560px]:bg-transparent max-[560px]:border-none max-[560px]:shadow-none'
+  // `relative` + hover:z lifts the tile (and its description overlay) above
+  // neighbouring tiles so the expanded text reads cleanly over them.
+  const base = 'group relative hover:z-20 flex items-center gap-[0.6rem] rounded-md p-[0.5rem_0.65rem] no-underline max-[560px]:flex-col max-[560px]:gap-[0.45rem] max-[560px]:p-[0.4rem_0.2rem] max-[560px]:bg-transparent max-[560px]:border-none max-[560px]:shadow-none'
 
   if (comingSoon) {
     return (
