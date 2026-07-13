@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, PenIcon, ScreenShareIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, PhoneIcon, EndCallIcon, UsersIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, PenIcon, ScreenShareIcon, FileIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo } from './rtc'
 
@@ -33,6 +33,7 @@ const STR = {
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Send files', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
+    joined: 'joined', left: 'left', editName: 'Edit your name',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
   ar: {
@@ -45,6 +46,7 @@ const STR = {
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'إرسال ملفات', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
+    joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
 }
@@ -68,16 +70,16 @@ function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting:
   )
 }
 
-// A toolbar icon button with a native tooltip.
+// A borderless toolbar icon button: shaded on hover, extra-shaded when active.
 function IconBtn({ onClick, title, active, danger, children, testid, badge }: { onClick: () => void; title: string; active?: boolean; danger?: boolean; children: ReactNode; testid?: string; badge?: number }) {
   return (
     <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testid}
-      className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border cursor-pointer transition-colors [&_svg]:w-[18px] [&_svg]:h-[18px] ${
-        danger ? 'bg-[var(--danger)] text-white border-[var(--danger)] hover:brightness-110'
-          : active ? 'bg-green-600 text-sand-100 border-green-600'
-            : 'bg-[var(--surface)] text-ink-soft border-[color:var(--line)] hover:border-green-500 hover:text-ink'}`}>
+      className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border-0 cursor-pointer transition-colors [&_svg]:w-[18px] [&_svg]:h-[18px] ${
+        danger ? 'bg-transparent text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_15%,transparent)]'
+          : active ? 'bg-[color-mix(in_srgb,var(--ink)_15%,transparent)] text-ink'
+            : 'bg-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] hover:text-ink'}`}>
       {children}
-      {badge ? <span className="absolute -top-1.5 -end-1.5 min-w-[16px] h-4 px-1 rounded-full bg-gold-500 text-white text-[0.6rem] font-bold grid place-items-center">{badge}</span> : null}
+      {badge ? <span className="absolute -top-1 -end-1 min-w-[15px] h-[15px] px-1 rounded-full bg-gold-500 text-white text-[0.6rem] font-bold grid place-items-center">{badge}</span> : null}
     </button>
   )
 }
@@ -131,11 +133,16 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  const [editingName, setEditingName] = useState(false)
   const [showParticipants, setShowParticipants] = useState(true)
   const [showChat, setShowChat] = useState(false)
+  const [showFiles, setShowFiles] = useState(false)
   const [view, setView] = useState<'board' | 'file'>('board')
   const [files, setFiles] = useState<{ id: string; name: string; url: string; mime: string; from: string }[]>([])
   const [selected, setSelected] = useState<string>('')
+  // Unseen-activity badges (p=participants, c=chat, f=files) — set when a panel is
+  // closed; a toast also fires unless you're actively drawing.
+  const [unseen, setUnseen] = useState({ p: 0, c: 0, f: 0 })
   const [chat, setChat] = useState<ChatItem[]>([])
   const [msg, setMsg] = useState('')
   const [toast, setToast] = useState('')
@@ -147,6 +154,18 @@ export default function CallsTool() {
   const drawing = useRef<{ x: number; y: number } | null>(null)
   const incoming = useRef<Map<string, { name: string; mime: string; parts: ArrayBuffer[] }>>(new Map())
   const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
+  const panelRef = useRef({ p: true, c: false, f: false }) // which panels are open (for notify)
+  const knownInCall = useRef<Set<string>>(new Set()) // ids currently in the call (join/leave detection)
+  panelRef.current = { p: showParticipants, c: showChat, f: showFiles }
+
+  // Fire a toast for new activity when its panel is closed, and mark a badge. The
+  // toast is suppressed while you're actively drawing; the badge persists.
+  function notify(panel: 'p' | 'c' | 'f', message: string) {
+    if (panelRef.current[panel]) return // they're looking at it live
+    setUnseen((u) => ({ ...u, [panel]: u[panel] + 1 }))
+    if (drawing.current === null) { setToast(message); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 3500) }
+  }
+  const toastT = useRef<number | undefined>(undefined)
 
   // Expire peers who go quiet (e.g. closed their tab) so they don't linger in
   // the lobby — the data-channel heartbeat refreshes `seen` every 5s.
@@ -170,7 +189,7 @@ export default function CallsTool() {
   const inCallPeers = [...roster].filter(([, i]) => i.inCall)
 
   function onData(id: string, m: DataMsg) {
-    if (m.t === 'chat') setChat((c) => [...c, { from: id, name: m.name, text: m.text }])
+    if (m.t === 'chat') { setChat((c) => [...c, { from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'wb') { if (m.op === 'clear') clearBoard(false); else if (m.stroke) drawSeg(m.stroke, m.color || '#e11', m.width || 3) }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
@@ -179,6 +198,7 @@ export default function CallsTool() {
       setFiles((fs) => [...fs, { id: m.id, name: f.name, url, mime: f.mime, from: nameOf(id) }])
       setChat((c) => [...c, { from: id, name: nameOf(id), fileName: f.name, url }])
       incoming.current.delete(m.id)
+      notify('f', `${nameOf(id)} · ${f.name}`)
     }
   }
   // most recent file-start id per peer receives the chunks (channels are ordered)
@@ -189,9 +209,16 @@ export default function CallsTool() {
     const r = new CallRoom(code, {
       onLocal: (st) => setLocal(st),
       onPeerStream: (pid, st) => setPeers((p) => new Map(p).set(pid, st)),
-      onLeave: (pid) => { setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }) },
+      onLeave: (pid) => {
+        if (knownInCall.current.has(pid)) { knownInCall.current.delete(pid); notify('p', `${rosterRef.current.get(pid)?.name || '•'} ${s.left}`) }
+        setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m })
+      },
       onData, onFileChunk,
-      onPeerInfo: (id, info) => { seen.current.set(id, Date.now()); setRoster((r2) => new Map(r2).set(id, info)) },
+      onPeerInfo: (id, info) => {
+        seen.current.set(id, Date.now())
+        if (info.inCall && !knownInCall.current.has(id)) { knownInCall.current.add(id); notify('p', `${info.name || '•'} ${s.joined}`) }
+        setRoster((r2) => new Map(r2).set(id, info))
+      },
       onAdmitted: () => setPhase('live'), // rtc enables our media itself
       onMuteNotice: (by, targetId, targetIsMe) => {
         if (targetIsMe) setMic(false)
@@ -237,6 +264,13 @@ export default function CallsTool() {
 
   useEffect(() => () => { rtc.current?.leave() }, [])
 
+  // Returning host (reloaded the ?room link) → re-enter the room immediately.
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (isHostReturn && !autoStarted.current) { autoStarted.current = true; startHost() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function hangup() {
     if (!isGuest) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ } } // host ends → nuke the room
     else rtc.current?.leave()
@@ -279,8 +313,18 @@ export default function CallsTool() {
       setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name, url }])
     }
   }
-  function openFile(id: string) { setSelected(id); setView('file') }
+  function openFile(id: string) { setSelected(id); setView('file'); setShowFiles(true) }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
+  function toggleParticipants() { setShowParticipants((v) => { if (!v) { setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) } return !v }) }
+  function toggleChat() { setShowChat((v) => { if (!v) { setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) } return !v }) }
+  function toggleFiles() { setShowFiles((v) => { if (!v) setUnseen((u) => ({ ...u, f: 0 })); return !v }) }
+  function deleteFile(id: string) {
+    const gone = files.find((f) => f.id === id); if (gone) URL.revokeObjectURL(gone.url)
+    const rest = files.filter((f) => f.id !== id)
+    setFiles(rest)
+    if (rest.length === 0) { setView('board'); setShowFiles(false); setSelected('') } // last file → back to whiteboard
+    else if (selected === id) setSelected(rest[0].id)
+  }
 
   // ---- whiteboard ----
   function wbPt(e: React.PointerEvent) { const r = wbRef.current!.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height } }
@@ -299,7 +343,7 @@ export default function CallsTool() {
     const fit = () => { const c = wbRef.current; if (c && (c.width !== c.clientWidth || c.height !== c.clientHeight)) { c.width = c.clientWidth; c.height = c.clientHeight } }
     const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
     return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
-  }, [phase, view, showParticipants, showChat, files.length])
+  }, [phase, view, showParticipants, showChat, showFiles, files.length])
 
   async function shareInvite(code = room) {
     const url = `${SITE}${localePath(locale, '/apps/calls')}?room=${code}`
@@ -389,11 +433,13 @@ export default function CallsTool() {
       onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pickFiles(e.dataTransfer.files) }}>
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
-        <div className="relative">
-          <input value={name} onChange={(e) => setName(e.target.value)} aria-label={s.yourName} data-testid="call-name"
-            className="h-9 w-[8.5rem] sm:w-40 ps-2.5 pe-8 rounded-md border border-[color:var(--line)] bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none focus:border-green-500" />
-          <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
-            className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink cursor-pointer"><RefreshIcon className="w-4 h-4" /></button>
+        <div className="flex items-center gap-0.5">
+          {editingName
+            ? <input value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
+                className="h-9 w-[8.5rem] sm:w-40 px-2.5 rounded-md border border-green-500 bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none" />
+            : <button type="button" onClick={() => setEditingName(true)} title={s.editName} data-testid="call-name-display"
+                className="h-9 max-w-[9rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink truncate hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start">{name || '—'}</button>}
+          <IconBtn onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} testid="call-shuffle"><RefreshIcon /></IconBtn>
         </div>
         <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><ShareIcon /></IconBtn>
@@ -401,11 +447,12 @@ export default function CallsTool() {
         <div className="flex-1" />
 
         <IconBtn onClick={() => setView('board')} active={view === 'board'} title={s.board} testid="call-board"><PenIcon /></IconBtn>
+        {files.length > 0 && <IconBtn onClick={toggleFiles} active={showFiles} title={s.filesTitle} testid="call-files-btn" badge={unseen.f || undefined}><FileIcon /></IconBtn>}
         <IconBtn onClick={toggleScreen} active={sharing} title={s.screen}><ScreenShareIcon /></IconBtn>
         <IconBtn onClick={() => fileRef.current?.click()} title={s.sendFiles} testid="call-files"><UploadIcon /></IconBtn>
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
-        <IconBtn onClick={() => { setShowParticipants((v) => !v); setShowChat(false) }} active={showParticipants} title={s.participants} testid="call-participants" badge={participantCount}><UsersIcon /></IconBtn>
-        <IconBtn onClick={() => { setShowChat((v) => !v); setShowParticipants(false) }} active={showChat} title={s.chat} badge={chat.length || undefined}><ChatIcon /></IconBtn>
+        <IconBtn onClick={toggleParticipants} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
+        <IconBtn onClick={toggleChat} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
@@ -420,15 +467,18 @@ export default function CallsTool() {
 
       {/* ---- body ---- */}
       <div className="flex-1 flex min-h-0">
-        {/* files list (left) */}
-        {files.length > 0 && (
-          <aside className="w-48 sm:w-56 shrink-0 border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 flex flex-col gap-1" data-testid="call-filelist">
+        {/* files list (left) — shown only when the Files panel is toggled open */}
+        {showFiles && files.length > 0 && (
+          <aside className="w-48 sm:w-56 shrink-0 border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 flex flex-col gap-0.5" data-testid="call-filelist">
             <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1 py-1">{s.filesTitle} · {files.length}</p>
             {files.map((f) => (
-              <button key={f.id} type="button" onClick={() => openFile(f.id)}
-                className={`text-start rounded-md px-2 py-1.5 text-[0.82rem] truncate border cursor-pointer ${selected === f.id && view === 'file' ? 'bg-green-600 text-sand-100 border-green-600' : 'bg-transparent border-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}>
-                {f.name}<span className="block text-[0.68rem] opacity-70 truncate">{f.from}</span>
-              </button>
+              <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
+                <button type="button" onClick={() => openFile(f.id)} className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                  {f.name}<span className="block text-[0.68rem] text-ink-faint truncate">{f.from}</span>
+                </button>
+                <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
+                  className="opacity-0 group-hover:opacity-100 grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
+              </div>
             ))}
           </aside>
         )}

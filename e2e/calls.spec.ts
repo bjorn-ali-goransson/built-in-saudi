@@ -77,7 +77,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pa.getByPlaceholder('Message…').fill('hello-from-alice')
   await pa.getByRole('button', { name: 'Send', exact: true }).click()
   await pb.getByRole('button', { name: 'Chat', exact: true }).click()
-  await expect(pb.getByText('hello-from-alice')).toBeVisible({ timeout: 15_000 })
+  await expect(pb.getByTestId('call-chat-panel').getByText('hello-from-alice')).toBeVisible({ timeout: 15_000 })
 
   await a.close(); await b.close()
 })
