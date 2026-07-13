@@ -20,7 +20,7 @@ export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: bo
 // centred, aspect-preserving board space; width/size are fractions of the board.
 export type WbObj =
   | { id: string; kind: 'stroke'; pts: number[]; color: string; width: number; erase?: boolean }
-  | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number }
+  | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number; rot?: number }
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
