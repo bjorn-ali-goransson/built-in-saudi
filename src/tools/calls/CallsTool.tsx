@@ -590,7 +590,8 @@ export default function CallsTool() {
                 className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><RefreshIcon /></button>
             </div>
           : <button type="button" onClick={() => setEditingName(true)} title={s.editName} data-testid="call-name-display"
-              className="h-9 max-w-[10rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink truncate hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start">{name || '—'}</button>}
+              className="h-9 max-w-[12rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start flex items-center gap-1">
+              <span className="truncate">{name || '—'}</span>{inCallPeers.length > 0 && <span className="text-ink-faint shrink-0">+{inCallPeers.length}</span>}</button>}
         <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><ShareIcon /></IconBtn>
 
         <div className="flex-1" />
@@ -664,15 +665,15 @@ export default function CallsTool() {
           )}
 
           {/* whiteboard tools */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1 max-w-[calc(100%-1rem)] overflow-x-auto" data-testid="wb-tools">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1" data-testid="wb-tools">
             {[0.005, 0.011, 0.022].map((w, i) => (
               <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
                 className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 ${tool === 'pen' && penW === w ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>
-                <span className="rounded-full" style={{ width: `${5 + i * 4}px`, height: `${5 + i * 4}px`, background: penColor }} />
+                <span className="rounded-full border-2 border-[color:var(--ink)]" style={{ width: `${6 + i * 4}px`, height: `${6 + i * 4}px` }} />
               </button>
             ))}
             <span className="w-px h-5 bg-[color:var(--line)] mx-0.5 shrink-0" />
-            <Menu align="start" testid="wb-color" triggerClass="flex items-center gap-1 grid place-items-center h-8 px-1.5 rounded-full border-0 bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] cursor-pointer shrink-0"
+            <Menu align="start" testid="wb-color" triggerClass="flex items-center gap-1 h-8 px-1.5 rounded-full border-0 bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] cursor-pointer shrink-0"
               trigger={<><span className="w-5 h-5 rounded-full border border-[color:var(--line)]" style={{ background: penColor }} /><ChevronDownIcon className="w-3 h-3 text-ink-faint" /></>}>
               <div className="grid grid-cols-5 gap-1">
                 {WB_COLORS.map((col) => (
@@ -696,7 +697,10 @@ export default function CallsTool() {
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}
         {showParticipants && (
           <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-participants-panel">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1">{s.participants} · {participantCount}</p>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.participants} · {participantCount}</p>
+              <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
+            </div>
             {!isGuest && waiting.length > 0 && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
             <div className="grid grid-cols-2 gap-2">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
@@ -708,6 +712,10 @@ export default function CallsTool() {
         )}
         {showChat && (
           <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-chat-panel">
+            <div className="hidden max-[640px]:flex items-center justify-between px-3 py-2 border-b border-[color:var(--line)]">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.chat}</p>
+              <button type="button" onClick={() => setShowChat(false)} aria-label="Close" data-testid="call-chat-close" className="grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
+            </div>
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
               {chat.map((m, i) => (
                 <div key={i} className={m.from === 'me' ? 'text-end' : ''}>
