@@ -146,3 +146,26 @@ These were requested but require infra, so they wait until we stand up the backe
 - **Prayer-time alerts** (#6) and **"alert me N days before" for Islamic dates** (#8):
   background/phone notifications when the site is closed need **Web Push (VAPID)**
   — a small push backend. Local/while-open notifications remain possible client-side.
+
+### Parked from the "build everything else" sweep (Jul 2026)
+During the big client-side tool sweep, these ideas were deliberately **not** built
+because they need a backend, an external API, or a heavy WASM/model payload that
+conflicts with the lean, client-first stance. Revisit when the economics/infra justify:
+- **One-time encrypted secret / note** — needs server storage for the ciphertext
+  (self-destruct link). Backend is ~90% reusable from existing functions; strong
+  privacy flagship candidate when we add storage.
+- **Password breach check (HIB​P k-anonymity)** — client-side is technically possible
+  (only 5 hash chars leave the device) but it calls an **external** service, so it
+  sits outside the "nothing leaves your browser" promise; decide deliberately.
+- **Currency converter** — needs live FX **rates** (external API / cached feed).
+- **HEIC → JPG**, **background remover**, **image upscaler** — need heavy
+  libheif/ML **WASM or models** (multi-MB); revisit if there's real demand.
+- **GIF maker / video→GIF**, **video trim/convert**, **audio convert** — **ffmpeg.wasm**
+  (~25 MB) — big download; park until justified.
+- **SQLite playground** (sql.js), **Mermaid/PlantUML render** — large libs; park.
+- **ZATCA e-invoice** — intentionally paused (see chat): a compliant Phase-2 invoice
+  needs the taxpayer's cryptographic stamp + ZATCA onboarding/reporting, which a
+  public client tool must not do. If revisited, ship only an **honest QR
+  decoder/verifier**, never a "compliant invoice" generator.
+- **P2P collaborative code pad / retro board** — could **reuse the Calls signaling
+  relay** (no new infra), but are substantial builds; queued behind the simple tools.

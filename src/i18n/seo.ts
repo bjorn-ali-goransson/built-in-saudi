@@ -124,6 +124,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مؤقّت بومودورو', description: 'مؤقّت بومودورو خالٍ من التشتيت: اعمل في جلسات مركّزة، وخذ فترات راحة قصيرة وطويلة، ودعه يتنقّل تلقائيًا مع نغمة لطيفة وعدّاد جولات. تُحفظ مدّتك المخصّصة على جهازك. يعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'end-of-service',
+    en: { name: 'End-of-Service Calculator', description: 'Estimate the Saudi end-of-service gratuity (mukāfaʾat nihāyat al-khidma): half a month per year for the first five years and a full month per year thereafter, adjusted for resignation vs contract end. Based on Labour Law Articles 84–85, informational only — not legal advice. Runs in your browser.' },
+    ar: { name: 'حاسبة نهاية الخدمة', description: 'قدّر مكافأة نهاية الخدمة السعودية: نصف شهر عن كل سنة من السنوات الخمس الأولى وشهر كامل عن كل سنة بعدها، مع تعديلها حسب الاستقالة أو انتهاء العقد. مبنيّة على المادتين 84 و85 من نظام العمل، لأغراض إرشادية فقط وليست استشارة قانونية. تعمل في متصفحك.' },
+  },
+  {
+    id: 'zakat-calculator',
+    en: { name: 'Zakat Calculator', description: 'Add up your zakatable assets — cash, gold and silver, trade goods and money owed to you — subtract short-term debts, and see 2.5% due once your net wealth is above the niṣāb and held for a lunar year. A helping estimate, not a fatwa. Runs in your browser.' },
+    ar: { name: 'حاسبة الزكاة', description: 'اجمع أموالك الزكوية — النقد والذهب والفضة وعروض التجارة والديون المرجوّة لك — واطرح الديون قصيرة الأجل، لترى 2.5% الواجبة متى بلغ صافي مالك النصاب وحال عليه الحول. تقدير مُعين وليس فتوى. يعمل في متصفحك.' },
+  },
+  {
+    id: 'age-calculator',
+    en: { name: 'Age Calculator', description: 'Enter a birth date to see the exact age in years, months and days, the totals in months, weeks and days, the weekday you were born on, and a countdown to the next birthday. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة العمر', description: 'أدخل تاريخ الميلاد لترى العمر بدقّة بالسنوات والأشهر والأيام، والمجاميع بالأشهر والأسابيع والأيام، ويوم الأسبوع الذي وُلدت فيه، وعدًّا تنازليًا للميلاد القادم. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'working-days',
+    en: { name: 'Working Days Calculator', description: 'Count the working days between two dates, excluding the weekend — Friday–Saturday for Saudi Arabia or Saturday–Sunday elsewhere — with totals for calendar days and weekend days. Runs entirely in your browser.' },
+    ar: { name: 'حاسبة أيام العمل', description: 'احسب أيام العمل بين تاريخين باستثناء نهاية الأسبوع — الجمعة والسبت للسعودية أو السبت والأحد لغيرها — مع مجاميع للأيام الكلية وأيام العطلة. تعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

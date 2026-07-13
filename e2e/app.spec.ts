@@ -392,6 +392,40 @@ test.describe('tools', () => {
     await expect(page.getByTestId('pom-toggle')).toBeVisible()
   })
 
+  test('end-of-service: 7 years at 10000, contract ended', async ({ page }) => {
+    await page.goto('/en/apps/end-of-service')
+    await page.getByTestId('eos-wage').fill('10000')
+    await page.getByTestId('eos-years').fill('7')
+    await page.getByTestId('eos-months').fill('0')
+    // first 5y: 5*0.5*10000=25000; next 2y: 2*10000=20000; total 45000
+    await expect(page.getByTestId('eos-award')).toHaveText('45,000.00')
+    // resign at 7y → two-thirds → 30000
+    await page.getByTestId('eos-resigned').click()
+    await expect(page.getByTestId('eos-award')).toHaveText('30,000.00')
+  })
+
+  test('zakat: 2.5% above nisab', async ({ page }) => {
+    await page.goto('/en/apps/zakat-calculator')
+    await page.getByTestId('zk-cash').fill('100000')
+    await page.getByTestId('zk-nisab').fill('4000')
+    await expect(page.getByTestId('zk-due')).toHaveText('2,500.00')
+  })
+
+  test('age calculator: computes an age from a birth date', async ({ page }) => {
+    await page.goto('/en/apps/age-calculator')
+    await page.getByTestId('age-input').fill('2000-01-01')
+    await expect(page.getByTestId('age-result')).toContainText('years')
+    await expect(page.getByTestId('age-next')).toBeVisible()
+  })
+
+  test('working days: a Mon–Fri week is 5 working days (Sat–Sun weekend)', async ({ page }) => {
+    await page.goto('/en/apps/working-days')
+    await page.getByTestId('wd-satsun').click()
+    await page.getByTestId('wd-from').fill('2026-07-06') // Monday
+    await page.getByTestId('wd-to').fill('2026-07-10')   // Friday
+    await expect(page.getByTestId('wd-working')).toHaveText('5')
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

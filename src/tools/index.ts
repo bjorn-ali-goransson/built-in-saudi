@@ -56,6 +56,10 @@ import { percentageCalculatorTool } from './percentage-calculator/meta'
 import { splitBillTool } from './split-bill/meta'
 import { aspectRatioTool } from './aspect-ratio/meta'
 import { pomodoroTool } from './pomodoro/meta'
+import { endOfServiceTool } from './end-of-service/meta'
+import { zakatCalculatorTool } from './zakat-calculator/meta'
+import { ageCalculatorTool } from './age-calculator/meta'
+import { workingDaysTool } from './working-days/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -82,6 +86,10 @@ export const tools: Tool[] = [
   splitBillTool,
   aspectRatioTool,
   pomodoroTool,
+  endOfServiceTool,
+  zakatCalculatorTool,
+  ageCalculatorTool,
+  workingDaysTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
