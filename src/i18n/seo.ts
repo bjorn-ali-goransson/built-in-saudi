@@ -169,6 +169,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محلّل وكيل المستخدم', description: 'اقرأ نص وكيل المستخدم لمتصفحك، أو الصق أي نص آخر، لترى المتصفح ومحرّك العرض ونظام التشغيل ونوع الجهاز مفصّلة. يُحلَّل محليًا — لا يُرسل وكيلك إلى أي مكان.' },
   },
   {
+    id: 'readability',
+    en: { name: 'Readability Scorer', description: 'Paste English text to get its Flesch Reading Ease score and Flesch–Kincaid grade level, plus word, sentence and syllable counts and averages, so you can see and simplify how hard your writing is. Runs entirely in your browser.' },
+    ar: { name: 'مقياس المقروئية', description: 'الصق نصًّا إنجليزيًا لتحصل على درجة سهولة القراءة (Flesch) ومستوى الصف الدراسي (Flesch–Kincaid)، مع عدد الكلمات والجُمل والمقاطع ومتوسّطاتها، لترى مدى صعوبة كتابتك وتبسّطها. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'random-picker',
+    en: { name: 'Random Picker Wheel', description: 'Type your options, one per line, and spin a colourful wheel to pick one at random — great for names, prizes, chores or deciding where to eat. Uses cryptographic randomness. Runs entirely in your browser.' },
+    ar: { name: 'عجلة الاختيار العشوائي', description: 'اكتب خياراتك، خيارًا في كل سطر، وأدِر عجلة ملوّنة لاختيار واحد عشوائيًا — مثالية للأسماء أو الجوائز أو المهام أو تقرير مكان الأكل. تستخدم عشوائية تشفيرية. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'dice-roller',
+    en: { name: 'Dice Roller', description: 'Roll any number of dice with any number of sides (d4 to d20 and beyond), see each result and the total, or flip a coin — with fair, unbiased cryptographic randomness. Runs entirely in your browser.' },
+    ar: { name: 'رامي النرد', description: 'ارمِ أي عدد من حبّات النرد بأي عدد أوجه (من d4 إلى d20 وأكثر)، وشاهد كل نتيجة والمجموع، أو اقلب عملة — بعشوائية تشفيرية عادلة غير متحيّزة. تعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'countdown',
+    en: { name: 'Countdown Timer', description: 'Set a target date and time — a deadline, launch, trip or celebration — and watch a live countdown of days, hours, minutes and seconds tick down. Your event is remembered on this device. Runs entirely in your browser.' },
+    ar: { name: 'العدّ التنازلي', description: 'حدّد تاريخًا ووقتًا مستهدفًا — موعدًا نهائيًا أو إطلاقًا أو رحلة أو احتفالًا — وشاهد عدًّا تنازليًا حيًّا بالأيام والساعات والدقائق والثواني. تُحفظ مناسبتك على هذا الجهاز. يعمل بالكامل في متصفحك.' },
+  },
+  {
+    id: 'typing-test',
+    en: { name: 'Typing Speed Test', description: 'Type the shown passage to measure your typing speed in words per minute and your accuracy, with each character highlighted as right or wrong in real time. Runs entirely in your browser.' },
+    ar: { name: 'اختبار سرعة الكتابة', description: 'اكتب المقطع المعروض لقياس سرعة كتابتك بالكلمات في الدقيقة ودقّتك، مع تمييز كل حرف صحيحًا أو خاطئًا لحظيًا. يعمل بالكامل في متصفحك.' },
+  },
+  {
     id: 'book-me',
     en: { name: 'Book Me', description: 'A free, no-sign-up scheduling link — paint your weekly availability, set the meeting length with gaps and buffers, and share one link. People self-book an open slot without the email back-and-forth; you get a push, a Telegram DM and an email when they book.' },
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },

@@ -460,6 +460,41 @@ test.describe('tools', () => {
     await expect(page.getByTestId('ua-os')).toContainText('Windows')
   })
 
+  test('readability: scores a simple sentence', async ({ page }) => {
+    await page.goto('/en/apps/readability')
+    await page.getByTestId('rd-input').fill('The cat sat on the mat. The dog ran fast. We had fun today.')
+    await expect(page.getByTestId('rd-ease')).toBeVisible()
+    await expect(page.getByTestId('rd-grade')).toBeVisible()
+  })
+
+  test('random picker: spins and shows a winner', async ({ page }) => {
+    await page.goto('/en/apps/random-picker')
+    await page.getByTestId('rp-input').fill('Alpha\nBeta\nGamma')
+    await page.getByTestId('rp-spin').click()
+    await expect(page.getByTestId('rp-result')).toHaveText(/Alpha|Beta|Gamma/, { timeout: 6000 })
+  })
+
+  test('dice roller: rolls two d6 into a total', async ({ page }) => {
+    await page.goto('/en/apps/dice-roller')
+    await page.getByTestId('dr-count').fill('2')
+    await page.getByTestId('dr-d6').click()
+    await page.getByTestId('dr-roll').click()
+    await expect(page.getByTestId('dr-total')).toBeVisible()
+  })
+
+  test('countdown: shows a live day count for a future date', async ({ page }) => {
+    await page.goto('/en/apps/countdown')
+    await page.getByTestId('cd-input').fill('2099-01-01T00:00')
+    await expect(page.getByTestId('cd-days')).toBeVisible()
+  })
+
+  test('typing test: renders a passage and input', async ({ page }) => {
+    await page.goto('/en/apps/typing-test')
+    await expect(page.getByTestId('typing-test')).toBeVisible()
+    await expect(page.getByTestId('tt-input')).toBeVisible()
+    await expect(page.getByTestId('tt-wpm')).toBeVisible()
+  })
+
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
     await page.goto('/en/tools/adhkar')
     const kursi = page.getByTestId('dhikr-kursi')

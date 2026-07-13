@@ -751,3 +751,30 @@ export function DeviceIcon({ className }: P) {
     </svg>
   )
 }
+
+export function WheelIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" />
+    </svg>
+  )
+}
+
+export function DiceIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01" />
+    </svg>
+  )
+}
+
+export function KeyboardIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8" />
+    </svg>
+  )
+}

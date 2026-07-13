@@ -65,6 +65,11 @@ import { boxShadowTool } from './box-shadow/meta'
 import { gradientGeneratorTool } from './gradient-generator/meta'
 import { ipSubnetTool } from './ip-subnet/meta'
 import { userAgentTool } from './user-agent/meta'
+import { readabilityTool } from './readability/meta'
+import { randomPickerTool } from './random-picker/meta'
+import { diceRollerTool } from './dice-roller/meta'
+import { countdownTool } from './countdown/meta'
+import { typingTestTool } from './typing-test/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -100,6 +105,11 @@ export const tools: Tool[] = [
   gradientGeneratorTool,
   ipSubnetTool,
   userAgentTool,
+  readabilityTool,
+  randomPickerTool,
+  diceRollerTool,
+  countdownTool,
+  typingTestTool,
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
