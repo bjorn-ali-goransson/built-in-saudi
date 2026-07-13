@@ -1,8 +1,10 @@
-// P2P mesh call engine. Media (cam/mic/screen) and data (whiteboard, chat, files)
-// flow directly between browsers over WebRTC; our only server contact is the
-// signaling relay (offers/answers/ICE) — it never sees call content. STUN is
-// public (address discovery only). No TURN → strict/symmetric NATs won't connect.
-// Signaling relay URL; overridable in tests via window.__CALL_SIGNAL.
+// P2P mesh call engine. Media (cam/mic/screen) AND lobby control (names, knock,
+// admit) flow directly between browsers over WebRTC data channels. Our only
+// server contact is the signaling relay, which shuttles the WebRTC handshake
+// (offer/answer/ICE) — random peer ids and SDP only, never names or content.
+// A data-only connection forms first (no camera/mic); media is added lazily via
+// renegotiation once the host admits a guest, so un-admitted guests never see or
+// send any media, and their names are exchanged peer-to-peer, not via the relay.
 const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGNAL?: string }).__CALL_SIGNAL) || 'https://us-central1-blitz-ksa.cloudfunctions.net/call-signal'
 
 const ICE: RTCIceServer[] = [
@@ -11,13 +13,18 @@ const ICE: RTCIceServer[] = [
 ]
 
 export type PeerState = 'connecting' | 'connected' | 'failed'
-// Data messages (JSON) sent over the channel — the app interprets these.
+export type Role = 'host' | 'guest'
+export interface PeerInfo { name: string; role: Role; inCall: boolean }
+
+// App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
   | { t: 'chat'; name: string; text: string }
   | { t: 'wb'; op: 'stroke' | 'clear'; stroke?: number[]; color?: string; width?: number }
-  | { t: 'name'; name: string }
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
+
+// Control messages (JSON, `c`) — lobby presence + admission, peer-to-peer.
+type Ctrl = { c: 'info'; name: string; role: Role; inCall: boolean } | { c: 'admit' }
 
 export interface CallHandlers {
   onLocal?(stream: MediaStream): void
@@ -26,15 +33,22 @@ export interface CallHandlers {
   onLeave?(id: string): void
   onData?(id: string, msg: DataMsg): void
   onFileChunk?(id: string, chunk: ArrayBuffer): void
-  /** Host only: a guest is knocking at the lobby (waiting to be admitted). */
-  onKnock?(id: string, name: string): void
-  /** Host only: a waiting guest left before being admitted. */
-  onKnockLeave?(id: string): void
-  /** Guest only: the host admitted us — the app should now start the call. */
+  /** A peer told us who they are / their lobby state (over the data channel). */
+  onPeerInfo?(id: string, info: PeerInfo): void
+  /** Guest only: the host admitted us — media is now enabling; switch to the call. */
   onAdmitted?(): void
 }
 
-interface Peer { pc: RTCPeerConnection; dc?: RTCDataChannel; stream?: MediaStream; pending: RTCIceCandidateInit[] }
+interface Peer {
+  pc: RTCPeerConnection
+  dc?: RTCDataChannel
+  stream?: MediaStream
+  pending: RTCIceCandidateInit[]
+  polite: boolean
+  makingOffer: boolean
+  info?: PeerInfo
+  mediaLinked: boolean // our local tracks have been added to this pc
+}
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -44,56 +58,53 @@ export class CallRoom {
   readonly me = rid()
   private h: CallHandlers
   private peers = new Map<string, Peer>()
-  private since = -1 // highest signaling seq seen; -1 so we also get seq 0
-  private active = false // the poll loop is running (lobby and/or call)
-  private inCall = false // media acquired + peer connections allowed
-  private isHost = false
+  private since = -1
+  private active = false
   private name = ''
-  private knockTimer: number | undefined
+  private role: Role = 'guest'
+  private heartbeat: number | undefined
+  inCall = false // we've enabled our own media
   local: MediaStream | null = null
   private camTrack: MediaStreamTrack | null = null
   private screen: MediaStream | null = null
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
-  /** Enter the room's lobby over signaling only — no media, no peer connections.
-   *  Hosts listen for knocks; guests knock and wait to be admitted. */
+  /** Enter the room: start signalling and form data-only connections with anyone
+   *  present. No camera/mic yet. Hosts wait for guests; guests knock over the
+   *  data channel once connected. */
   enterLobby(name: string, asHost: boolean): void {
-    this.name = name; this.isHost = asHost
+    this.name = name; this.role = asHost ? 'host' : 'guest'
     if (!this.active) { this.active = true; this.pollLoop() }
-    if (asHost) {
-      this.send('host-here', 'all', { name })
-    } else {
-      this.knock()
-      // Re-announce periodically so a host who opens later still sees us.
-      this.knockTimer = window.setInterval(() => { if (!this.inCall) this.knock() }, 4000)
-    }
-  }
-  private knock() { this.send('knock', 'all', { name: this.name }) }
-
-  /** Host: let a specific waiting guest in (going live ourselves if needed). */
-  async admit(id: string): Promise<void> {
-    if (!this.inCall) await this.startCall()
-    this.send('admit', id, { name: this.name })
+    this.send('join', 'all')
+    // Heartbeat: re-announce presence over the data channels so peers can expire
+    // anyone who goes quiet (closed tab) instead of leaving them stuck in the lobby.
+    this.heartbeat = window.setInterval(() => this.broadcastInfo(), 5000)
   }
 
-  /** Begin the media call: host on "Start", or guest once admitted. */
-  async startCall(): Promise<void> {
+  /** Turn on our camera/mic and share them with everyone already in the call. */
+  async enableMedia(): Promise<void> {
     if (this.inCall) return
     this.local = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 1280, height: 720 } })
     this.camTrack = this.local.getVideoTracks()[0] || null
     // Privacy-first: join muted with the camera off — the user turns each on.
     this.local.getAudioTracks().forEach((t) => (t.enabled = false))
     this.local.getVideoTracks().forEach((t) => (t.enabled = false))
-    this.h.onLocal?.(this.local)
     this.inCall = true
-    window.clearInterval(this.knockTimer)
-    if (!this.active) { this.active = true; this.pollLoop() }
-    this.send('join', 'all')
+    this.h.onLocal?.(this.local)
+    for (const p of this.peers.values()) this.linkMedia(p)
+    this.broadcastInfo()
   }
 
-  // ---- signaling relay -------------------------------------------------------
-  private async post(action: 'send' | 'poll', extra: Record<string, unknown>): Promise<{ seq?: number; msgs?: { from: string; to: string; type: string; payload: unknown; seq: number }[] }> {
+  /** Host: admit a specific waiting guest — go live ourselves, then tell them. */
+  async admit(id: string): Promise<void> {
+    if (!this.inCall) await this.enableMedia()
+    const p = this.peers.get(id)
+    if (p?.dc?.readyState === 'open') p.dc.send(JSON.stringify({ c: 'admit' } as Ctrl))
+  }
+
+  // ---- signaling relay (handshake + presence trigger only) -------------------
+  private async post(action: 'send' | 'poll', extra: Record<string, unknown>): Promise<{ msgs?: { from: string; type: string; payload: unknown; seq: number }[] }> {
     const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action, ...extra }) })
     return r.ok ? r.json() : {}
   }
@@ -112,29 +123,23 @@ export class CallRoom {
 
   private async onSignal(from: string, type: string, payload: unknown) {
     if (from === this.me) return
-    // ---- lobby (pre-call) signaling ----
-    if (type === 'knock') { if (this.isHost) this.h.onKnock?.(from, ((payload as { name?: string })?.name) || '') ; return }
-    if (type === 'lobby-leave') { this.h.onKnockLeave?.(from); return }
-    if (type === 'admit') { if (!this.inCall) this.h.onAdmitted?.(); return } // guest: host let us in
-    if (type === 'host-here') return // informational
-    // ---- media signaling — only once we've actually joined the call ----
-    if (!this.inCall) return
-    if (type === 'join') { this.send('hello', from); this.maybeOffer(from) }
-    else if (type === 'hello') this.maybeOffer(from)
-    else if (type === 'offer') await this.onOffer(from, payload as RTCSessionDescriptionInit)
-    else if (type === 'answer') { const p = this.peers.get(from); if (p) { await p.pc.setRemoteDescription(payload as RTCSessionDescriptionInit); await this.flush(from) } }
-    else if (type === 'ice') { const c = payload as RTCIceCandidateInit; const p = this.peers.get(from); if (p && p.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c) }
+    if (type === 'join') { this.send('hello', from); this.connect(from) }
+    else if (type === 'hello') this.connect(from)
+    else if (type === 'offer' || type === 'answer') await this.onDesc(from, payload as RTCSessionDescriptionInit, type)
+    else if (type === 'ice') { const c = payload as RTCIceCandidateInit; const p = this.peers.get(from); if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c) }
     else if (type === 'leave') this.drop(from)
   }
-  private async flush(id: string) { const p = this.peers.get(id); if (!p) return; for (const c of p.pending) await p.pc.addIceCandidate(c).catch(() => {}); p.pending = [] }
 
-  // Deterministic initiator: the larger id offers → no glare.
-  private maybeOffer(other: string) { if (!this.peers.has(other) && this.me > other) this.offer(other) }
+  // Form a data-only connection. The larger id creates the channel (initiator).
+  private connect(other: string) { if (!this.peers.has(other)) this.mkPeer(other, this.me > other) }
 
-  private mkPeer(id: string): Peer {
+  private mkPeer(id: string, initiator: boolean): Peer {
     const pc = new RTCPeerConnection({ iceServers: ICE })
-    const peer: Peer = { pc, pending: [] }
-    this.local?.getTracks().forEach((t) => pc.addTrack(t, this.local!))
+    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false }
+    pc.onnegotiationneeded = async () => {
+      try { peer.makingOffer = true; await pc.setLocalDescription(); this.send('offer', id, pc.localDescription) }
+      catch { /* */ } finally { peer.makingOffer = false }
+    }
     pc.onicecandidate = (e) => { if (e.candidate) this.send('ice', id, e.candidate.toJSON()) }
     pc.ontrack = (e) => { peer.stream = e.streams[0]; this.h.onPeerStream?.(id, e.streams[0]) }
     pc.onconnectionstatechange = () => {
@@ -144,40 +149,55 @@ export class CallRoom {
       if (s === 'failed' || s === 'closed') this.drop(id)
     }
     pc.ondatachannel = (e) => this.bindDc(id, peer, e.channel)
+    if (initiator) this.bindDc(id, peer, pc.createDataChannel('bis', { ordered: true }))
     this.peers.set(id, peer)
     this.h.onPeer?.(id, 'connecting')
     return peer
   }
-  private async offer(id: string) {
-    const peer = this.mkPeer(id)
-    this.bindDc(id, peer, peer.pc.createDataChannel('bis', { ordered: true }))
-    const o = await peer.pc.createOffer(); await peer.pc.setLocalDescription(o)
-    this.send('offer', id, o)
+
+  // Perfect negotiation: tolerate simultaneous (re)negotiation from both sides.
+  private async onDesc(id: string, desc: RTCSessionDescriptionInit, kind: 'offer' | 'answer') {
+    const peer = this.peers.get(id) || this.mkPeer(id, false)
+    const pc = peer.pc
+    const collision = kind === 'offer' && (peer.makingOffer || pc.signalingState !== 'stable')
+    if (collision && !peer.polite) return // impolite peer ignores a colliding offer
+    await pc.setRemoteDescription(desc).catch(() => {})
+    await this.flush(id)
+    if (kind === 'offer') { await pc.setLocalDescription(); this.send('answer', id, pc.localDescription) }
   }
-  private async onOffer(id: string, offer: RTCSessionDescriptionInit) {
-    const peer = this.peers.get(id) || this.mkPeer(id)
-    await peer.pc.setRemoteDescription(offer); await this.flush(id)
-    const a = await peer.pc.createAnswer(); await peer.pc.setLocalDescription(a)
-    this.send('answer', id, a)
-  }
-  private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
-    peer.dc = dc; dc.binaryType = 'arraybuffer'
-    dc.onmessage = (e) => {
-      if (typeof e.data === 'string') { try { this.h.onData?.(id, JSON.parse(e.data)) } catch { /* ignore */ } }
-      else this.h.onFileChunk?.(id, e.data as ArrayBuffer)
-    }
+  private async flush(id: string) { const p = this.peers.get(id); if (!p) return; for (const c of p.pending) await p.pc.addIceCandidate(c).catch(() => {}); p.pending = [] }
+
+  // Add our media to a peer once we're BOTH in the call (never before).
+  private linkMedia(peer: Peer) {
+    if (!this.inCall || !this.local || peer.mediaLinked || !peer.info?.inCall) return
+    peer.mediaLinked = true
+    this.local.getTracks().forEach((t) => peer.pc.addTrack(t, this.local!)) // → renegotiation
   }
 
-  // ---- app-facing send -------------------------------------------------------
-  broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open') p.dc.send(s) }
-  /** Send a file to everyone (chunked over each channel). */
+  private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
+    peer.dc = dc; dc.binaryType = 'arraybuffer'
+    dc.onopen = () => this.sendInfo(peer)
+    dc.onmessage = (e) => {
+      if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
+      let m: Record<string, unknown>
+      try { m = JSON.parse(e.data) } catch { return }
+      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
+      else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
+      else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
+    }
+  }
+  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall } as Ctrl)) }
+  private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
+
+  // ---- app-facing send (only to peers actually in the call) ------------------
+  broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
   async sendFile(file: File) {
     const id = rid(), CH = 16 * 1024
     this.broadcast({ t: 'file-start', id, name: file.name, size: file.size, mime: file.type })
     const buf = await file.arrayBuffer()
     for (let o = 0; o < buf.byteLength; o += CH) {
       const slice = buf.slice(o, o + CH)
-      for (const p of this.peers.values()) if (p.dc?.readyState === 'open') { while (p.dc.bufferedAmount > 4 * 1024 * 1024) await sleep(40); p.dc.send(slice) }
+      for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) { while (p.dc.bufferedAmount > 4 * 1024 * 1024) await sleep(40); p.dc.send(slice) }
     }
     this.broadcast({ t: 'file-end', id })
   }
@@ -201,10 +221,9 @@ export class CallRoom {
 
   private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.h.onLeave?.(id) }
   leave() {
-    if (this.inCall) this.send('leave', 'all')
-    else if (this.active && !this.isHost) this.send('lobby-leave', 'all')
+    if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false
-    window.clearInterval(this.knockTimer)
+    window.clearInterval(this.heartbeat)
     this.stopScreen()
     this.peers.forEach((p) => { try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())

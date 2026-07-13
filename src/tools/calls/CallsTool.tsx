@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon } from '../../components/icons'
-import { CallRoom, type DataMsg } from './rtc'
+import { CallRoom, type DataMsg, type PeerInfo } from './rtc'
 
 const SITE = 'https://built-in-saudi.com'
 const NAME_KEY = 'bis-call-name'
@@ -51,23 +51,45 @@ function Video({ stream, muted, mirror, label }: { stream: MediaStream; muted?: 
   )
 }
 
+const initials = (nm: string) => nm.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '•'
+
+// The host's "Waiting in the lobby" list — a card of guests with a Let-in button.
+function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; live?: boolean }) {
+  if (waiting.length === 0) return live ? null : <p className="max-w-[30rem] text-[0.85rem] text-ink-faint">{hint}</p>
+  return (
+    <div className="max-w-[30rem] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-4 flex flex-col gap-2.5" data-testid={live ? 'call-lobby-live' : 'call-lobby'}>
+      <p className="text-[0.82rem] font-semibold text-ink-soft flex items-center justify-between">{title} <span className="font-mono text-ink-faint">{waiting.length}</span></p>
+      {waiting.map(([id, info]) => (
+        <div key={id} className="flex items-center gap-3">
+          <span className="w-8 h-8 rounded-full bg-[color-mix(in_srgb,var(--color-green-400)_22%,transparent)] text-green-700 grid place-items-center text-[0.78rem] font-semibold shrink-0" aria-hidden="true">{initials(info.name)}</span>
+          <span className="flex-1 text-[0.92rem] text-ink truncate">{info.name || '•'}</span>
+          <Button variant="primary" onClick={() => admit(id)} data-testid="call-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0">{admitLabel}</Button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 type ChatItem = { from: string; name: string; text?: string; fileName?: string; url?: string }
 
 export default function CallsTool() {
   const { locale } = useLocale()
   const s = STR[locale]
-  const initialRoom = new URLSearchParams(window.location.search).get('room') || ''
+  // Captured once at mount — we later rewrite the URL to ?room=…, which must not
+  // flip this (it determines host vs guest).
+  const [initialRoom] = useState(() => new URLSearchParams(window.location.search).get('room') || '')
   const [name, setName] = useState(() => { try { return localStorage.getItem(NAME_KEY) || randName(locale === 'ar') } catch { return randName(locale === 'ar') } })
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
   const isGuest = !!initialRoom
-  const [waitingLobby, setWaitingLobby] = useState<Map<string, string>>(new Map())
+  // Everyone we've connected to (data channel), with the name/role/lobby state
+  // they told us peer-to-peer. The host's waiting list is derived from this.
+  const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
 
   const rtc = useRef<CallRoom | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
-  const [names, setNames] = useState<Map<string, string>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
   const [panel, setPanel] = useState<'none' | 'board' | 'chat'>('none')
   const [chat, setChat] = useState<ChatItem[]>([])
@@ -79,12 +101,28 @@ export default function CallsTool() {
   const wbRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef<{ x: number; y: number } | null>(null)
   const incoming = useRef<Map<string, { name: string; mime: string; parts: ArrayBuffer[] }>>(new Map())
+  const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
 
-  const nameOf = useCallback((id: string) => names.get(id) || '•', [names])
+  // Expire peers who go quiet (e.g. closed their tab) so they don't linger in
+  // the lobby — the data-channel heartbeat refreshes `seen` every 5s.
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const cutoff = Date.now() - 15_000
+      setRoster((r) => {
+        let changed = false; const m = new Map(r)
+        for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < cutoff) { m.delete(id); seen.current.delete(id); changed = true }
+        return changed ? m : r
+      })
+    }, 5000)
+    return () => window.clearInterval(iv)
+  }, [])
+
+  const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
+  // The people the host still needs to let in (guests who haven't joined yet).
+  const waiting = [...roster].filter(([, i]) => i.role === 'guest' && !i.inCall)
 
   function onData(id: string, m: DataMsg) {
-    if (m.t === 'name') setNames((n) => new Map(n).set(id, m.name))
-    else if (m.t === 'chat') setChat((c) => [...c, { from: id, name: m.name, text: m.text }])
+    if (m.t === 'chat') setChat((c) => [...c, { from: id, name: m.name, text: m.text }])
     else if (m.t === 'wb') { if (m.op === 'clear') clearBoard(false); else if (m.stroke) drawSeg(m.stroke, m.color || '#e11', m.width || 3) }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
@@ -102,30 +140,30 @@ export default function CallsTool() {
     const r = new CallRoom(code, {
       onLocal: (st) => setLocal(st),
       onPeerStream: (pid, st) => setPeers((p) => new Map(p).set(pid, st)),
-      onPeer: (_pid, state) => { if (state === 'connected') r.broadcast({ t: 'name', name: name || s.you }) },
-      onLeave: (pid) => { setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setNames((n) => { const m = new Map(n); m.delete(pid); return m }) },
+      onLeave: (pid) => { setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }) },
       onData, onFileChunk,
-      onKnock: (id, nm) => setWaitingLobby((w) => new Map(w).set(id, nm || '•')),
-      onKnockLeave: (id) => setWaitingLobby((w) => { const m = new Map(w); m.delete(id); return m }),
-      onAdmitted: () => { rtc.current?.startCall().then(() => setPhase('live')).catch(mediaError) },
+      onPeerInfo: (id, info) => { seen.current.set(id, Date.now()); setRoster((r2) => new Map(r2).set(id, info)) },
+      onAdmitted: () => setPhase('live'), // rtc enables our media itself
     })
     rtc.current = r
     return r
   }
   function mediaError() { setToast('Camera/mic permission needed'); setTimeout(() => setToast(''), 3000) }
+  // Put the room code in the URL so it's shareable and rooms are distinguishable.
+  function reflectRoom(code: string) { history.replaceState(null, '', `${localePath(locale, '/apps/calls')}?room=${code}`) }
 
   // Host: start the call right away (others still need to be let in).
   async function startHost() {
     try { localStorage.setItem(NAME_KEY, name) } catch { /* */ }
     setBusy(true)
-    const code = room || code6(); setRoom(code)
+    const code = room || code6(); setRoom(code); reflectRoom(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
-    try { await r.startCall(); setPhase('live') } catch { mediaError() } finally { setBusy(false) }
+    try { await r.enableMedia(); setPhase('live') } catch { mediaError() } finally { setBusy(false) }
   }
   // Host: create + share the link without joining yet; wait to let people in.
   async function shareHost() {
     try { localStorage.setItem(NAME_KEY, name) } catch { /* */ }
-    const code = room || code6(); setRoom(code)
+    const code = room || code6(); setRoom(code); reflectRoom(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
     setPhase('hosting')
     await shareInvite(code)
@@ -139,13 +177,12 @@ export default function CallsTool() {
   }
   // Host: let a specific waiting guest into the call (going live if needed).
   async function admit(id: string) {
-    setWaitingLobby((w) => { const m = new Map(w); m.delete(id); return m })
     try { await rtc.current?.admit(id); setPhase('live') } catch { mediaError() }
   }
 
   useEffect(() => () => { rtc.current?.leave() }, [])
 
-  function hangup() { rtc.current?.leave(); rtc.current = null; setPhase('lobby'); setPeers(new Map()); setLocal(null); setChat([]); setWaitingLobby(new Map()); history.replaceState(null, '', localePath(locale, '/apps/calls')) }
+  function hangup() { rtc.current?.leave(); rtc.current = null; setPhase('lobby'); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); history.replaceState(null, '', localePath(locale, '/apps/calls')) }
 
   function toggleMic() { const v = !mic; setMic(v); rtc.current?.toggleMic(v) }
   function toggleCam() { const v = !cam; setCam(v); rtc.current?.toggleCam(v) }
@@ -185,7 +222,6 @@ export default function CallsTool() {
   const invite = () => shareInvite()
 
   if (phase !== 'live') {
-    const showIntro = waitingLobby.size === 0 && phase !== 'waiting'
     return (
       <Stack data-testid="calls">
         <div className="max-w-[30rem] rounded-lg border border-green-900/40 bg-green-950 text-sand-100 p-5 sm:p-6 flex flex-col gap-4">
@@ -199,22 +235,7 @@ export default function CallsTool() {
             </>
           ) : (
             <>
-              {showIntro && <p className="text-[0.95rem] leading-relaxed text-sand-100/90">{s.lead}</p>}
-
-              {phase === 'hosting' && (waitingLobby.size > 0 ? (
-                <div className="flex flex-col gap-2">
-                  <p className="text-[0.82rem] font-semibold text-sand-100/80">{s.lobbyList}</p>
-                  <ul className="flex flex-col gap-1.5 m-0 p-0 list-none" data-testid="call-lobby">
-                    {[...waitingLobby].map(([id, nm]) => (
-                      <li key={id} className="flex items-center justify-between gap-2 bg-sand-100/10 rounded-md px-3 py-2">
-                        <span className="text-[0.9rem] text-sand-100 truncate">{nm}</span>
-                        <Button variant="primary" onClick={() => admit(id)} data-testid="call-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0">{s.admit}</Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : <p className="text-[0.85rem] text-sand-100/70">{s.shareHint}</p>)}
-
+              <p className="text-[0.95rem] leading-relaxed text-sand-100/90">{s.lead}</p>
               <label className="flex flex-col gap-1.5">
                 <span className="text-[0.82rem] font-medium text-sand-100/70">{s.yourName}</span>
                 <div className="relative">
@@ -225,7 +246,6 @@ export default function CallsTool() {
                   </button>
                 </div>
               </label>
-
               <div className="flex gap-2">
                 <Button variant="primary" disabled={busy} className="flex-1"
                   onClick={isGuest ? askToJoin : startHost}
@@ -238,11 +258,14 @@ export default function CallsTool() {
                   </Button>
                 )}
               </div>
+              <p className="text-[0.78rem] text-sand-100/70 flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
             </>
           )}
-
-          <p className="text-[0.78rem] text-sand-100/70 flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
         </div>
+
+        {/* The lobby list lives below the whole box (host only). */}
+        {!isGuest && phase === 'hosting' && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} />}
+
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
       </Stack>
     )
@@ -259,17 +282,7 @@ export default function CallsTool() {
       {tiles.length <= 1 && <p className="text-[0.85rem] text-ink-faint text-center">{s.waiting}</p>}
 
       {/* Host: people knocking while the call is live (only the host gets these). */}
-      {waitingLobby.size > 0 && (
-        <div className="border border-[color:color-mix(in_srgb,var(--gold-400)_45%,transparent)] bg-[color-mix(in_srgb,var(--gold-400)_12%,transparent)] rounded-md p-3 flex flex-col gap-2" data-testid="call-lobby-live">
-          <p className="text-[0.82rem] font-semibold text-ink">{s.lobbyList}</p>
-          {[...waitingLobby].map(([id, nm]) => (
-            <div key={id} className="flex items-center justify-between gap-2">
-              <span className="text-[0.9rem] text-ink truncate">{nm}</span>
-              <Button variant="primary" onClick={() => admit(id)} data-testid="call-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0">{s.admit}</Button>
-            </div>
-          ))}
-        </div>
-      )}
+      {!isGuest && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
 
       {/* controls */}
       <div className="flex items-center justify-center gap-2 flex-wrap">

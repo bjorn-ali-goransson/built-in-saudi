@@ -40,8 +40,8 @@ export const staticPageSeo: ToolSeo[] = [
 export const liveToolSeo: ToolSeo[] = [
   {
     id: 'calls',
-    en: { name: 'Private Call', description: 'Start a private, peer-to-peer video call from one shareable invite image (QR + link). Video, screen-share, a shared whiteboard, chat and file-drop go straight between browsers over WebRTC — only the initial handshake touches a tiny relay that never sees your call. Public STUN, no recording, small groups.' },
-    ar: { name: 'مكالمة خاصة', description: 'ابدأ مكالمة فيديو خاصة مباشرة بين الأجهزة من صورة دعوة واحدة (رمز QR + رابط). الفيديو ومشاركة الشاشة والسبورة المشتركة والدردشة وإرسال الملفات تنتقل مباشرة بين المتصفحات عبر WebRTC — فقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك. STUN عام، بلا تسجيل، لمجموعات صغيرة.' },
+    en: { name: 'Call', description: 'Secure peer-to-peer voice/video/teams calling between browsers — no data touches our servers. Share one invite link and let people in from a waiting room; video, screen-share, a shared whiteboard, chat and file-drop all go straight between browsers over WebRTC, with only the initial handshake passing through a tiny relay that never sees your call.' },
+    ar: { name: 'مكالمة', description: 'مكالمات صوت وفيديو وفرق آمنة بين المتصفحات مباشرةً — لا تمر أي بيانات بخوادمنا. شارك رابط دعوة واحدًا واسمح للناس بالدخول من غرفة انتظار؛ الفيديو ومشاركة الشاشة والسبورة والدردشة وإرسال الملفات تنتقل مباشرة عبر WebRTC، وفقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك.' },
   },
   {
     id: 'prompt-analyzer',
