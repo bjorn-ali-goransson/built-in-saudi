@@ -17,31 +17,31 @@ export function ToolCard({ tool }: Props) {
 
   const inner = (
     <>
-      {tool.status !== 'stable' && (
-        <div className="flex items-center justify-end max-[560px]:hidden">
-          <StatusBadge status={tool.status}>
-            {comingSoon ? t.card.comingSoon : t.card.beta}
-          </StatusBadge>
-        </div>
-      )}
-
-      <span
-        className={`relative grid place-items-center w-[46px] h-[46px] rounded-[12px] mt-1 transition-[background,color] duration-200 [&_svg]:size-6 max-[560px]:mx-auto max-[560px]:w-[58px] max-[560px]:h-[58px] max-[560px]:rounded-2xl max-[560px]:bg-green-600 max-[560px]:text-sand-100 max-[560px]:shadow-[var(--shadow-sm)] max-[560px]:[&_svg]:w-7 max-[560px]:[&_svg]:h-7 ${
-          comingSoon
-            ? 'bg-[color-mix(in_srgb,var(--color-ink)_6%,transparent)] text-ink-faint'
-            : 'bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-600 group-hover:bg-green-600 group-hover:text-sand-100 max-[560px]:group-hover:bg-green-600 max-[560px]:group-hover:text-sand-100'
-        }`}
-        aria-hidden="true"
-      >
-        <Icon />
-        {/* Mobile: a brass badge straddling the icon's bottom-right corner
-            (desktop shows the top badge above). Gold reads clearly on green. */}
+      {/* Icon and (desktop) status pill share a row; on mobile the icon centres
+          and the pill is hidden in favour of the corner badge on the icon. */}
+      <div className="flex items-center justify-between gap-2 mt-1 max-[560px]:justify-center">
+        <span
+          className={`relative grid place-items-center w-[46px] h-[46px] rounded-[12px] transition-[background,color] duration-200 [&_svg]:size-6 max-[560px]:mx-auto max-[560px]:w-[58px] max-[560px]:h-[58px] max-[560px]:rounded-2xl max-[560px]:bg-green-600 max-[560px]:text-sand-100 max-[560px]:shadow-[var(--shadow-sm)] max-[560px]:[&_svg]:w-7 max-[560px]:[&_svg]:h-7 ${
+            comingSoon
+              ? 'bg-[color-mix(in_srgb,var(--color-ink)_6%,transparent)] text-ink-faint'
+              : 'bg-[color-mix(in_srgb,var(--green-400)_12%,transparent)] text-green-600 group-hover:bg-green-600 group-hover:text-sand-100 max-[560px]:group-hover:bg-green-600 max-[560px]:group-hover:text-sand-100'
+          }`}
+          aria-hidden="true"
+        >
+          <Icon />
+          {/* Mobile: a brass badge straddling the icon's bottom-right corner. */}
+          {tool.status !== 'stable' && (
+            <span className="hidden max-[560px]:inline-flex items-center justify-center absolute bottom-[3px] right-[3px] translate-x-1/2 translate-y-1/2 font-body text-[0.5rem] font-bold uppercase tracking-[0.03em] leading-none px-1.5 py-1 rounded-full bg-[var(--gold-500)] text-white ring-2 ring-[var(--sand-50)]">
+              {comingSoon ? t.card.comingSoon : t.card.beta}
+            </span>
+          )}
+        </span>
         {tool.status !== 'stable' && (
-          <span className="hidden max-[560px]:inline-flex items-center justify-center absolute bottom-[3px] right-[3px] translate-x-1/2 translate-y-1/2 font-body text-[0.5rem] font-bold uppercase tracking-[0.03em] leading-none px-1.5 py-1 rounded-full bg-[var(--gold-500)] text-white ring-2 ring-[var(--sand-50)]">
-            {comingSoon ? t.card.comingSoon : t.card.beta}
+          <span className="max-[560px]:hidden">
+            <StatusBadge status={tool.status}>{comingSoon ? t.card.comingSoon : t.card.beta}</StatusBadge>
           </span>
         )}
-      </span>
+      </div>
 
       <h3 className={`text-[1.18rem] font-semibold mt-[0.35rem] max-[560px]:font-body max-[560px]:text-[0.72rem] max-[560px]:font-medium max-[560px]:m-0 max-[560px]:leading-[1.2] ${comingSoon ? 'text-ink-faint' : ''}`}>{l.name}</h3>
       <p className="text-[0.92rem] text-ink-soft leading-[1.45] flex-1 max-[560px]:hidden">{l.tagline}</p>
