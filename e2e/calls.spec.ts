@@ -57,7 +57,7 @@ test('share button opens a modal with a QR before joining a call', async ({ brow
 test('the browser Back button leaves an active call and returns to a clean lobby', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
-  await p.goto('/en/apps/calls?room=deadroom') // a stale room somewhere in history
+  await p.goto('/en/apps/calls?code=deadroom') // a stale room somewhere in history
   await p.goto('/en/apps/calls')
   await p.getByTestId('call-name').fill('Host')
   await p.getByTestId('call-start').click()
@@ -66,14 +66,14 @@ test('the browser Back button leaves an active call and returns to a clean lobby
   await expect(p.getByTestId('calls-live')).toHaveCount(0)
   await expect(p.getByTestId('call-start')).toBeVisible()
   await expect(p.getByTestId('call-join')).toHaveCount(0)
-  expect(new URL(p.url()).searchParams.get('room')).toBeNull()
+  expect(new URL(p.url()).searchParams.get('code')).toBeNull()
   await c.close()
 })
 
 test('a stale ?room= guest lobby can escape by starting its own call', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
-  await p.goto('/en/apps/calls?room=deadroom')
+  await p.goto('/en/apps/calls?code=deadroom')
   await p.getByTestId('call-name').fill('Stuck')
   // Guest lobby (no host will answer). The escape switches to host mode.
   await expect(p.getByTestId('call-join')).toBeVisible()
@@ -81,7 +81,7 @@ test('a stale ?room= guest lobby can escape by starting its own call', async ({ 
   await expect(p.getByTestId('call-start')).toBeVisible()
   await p.getByTestId('call-start').click()
   await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  expect(new URL(p.url()).searchParams.get('room')).not.toBe('deadroom')
+  expect(new URL(p.url()).searchParams.get('code')).not.toBe('deadroom')
   await c.close()
 })
 
@@ -94,11 +94,11 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pa.getByTestId('call-name').fill('Alice')
   await pa.getByTestId('call-start').click()
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  const room = new URL(pa.url()).searchParams.get('room') || '' // code is reflected into the URL
+  const room = new URL(pa.url()).searchParams.get('code') || '' // code is reflected into the URL
   expect(room.length).toBeGreaterThan(4)
 
   // B asks to join → lands in the waiting lobby, NOT in the call yet
-  await pb.goto(`/en/apps/calls?room=${room}`)
+  await pb.goto(`/en/apps/calls?code=${room}`)
   await pb.getByTestId('call-name').fill('Bob')
   await pb.getByTestId('call-join').click()
   await expect(pb.getByTestId('call-waiting')).toBeVisible({ timeout: 10_000 })

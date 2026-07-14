@@ -239,7 +239,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   + GIS client ID; no new deps. Covered by `my-data`. (There is also a fully
   client-side **Arabic Verb Conjugator**, `src/tools/arabic-verbs/`, with no backend.)
 - **Calls signaling** (`functions/call.js`): `call-signal` — a metadata-only relay
-  for the P2P **Call** tool (`src/tools/calls/`, id `calls`). It only shuttles the
+  for the P2P **Calls** tool (`src/tools/calls/`, id `calls`, display name "Calls"). It only shuttles the
   WebRTC **handshake** (offer/answer/ICE + join/hello/leave — random peer ids and
   SDP only) in an ephemeral Firestore `callRooms/{code}` doc (2h TTL, polled); it
   **never sees names, audio/video/whiteboard/chat/files** — all of those flow
@@ -256,8 +256,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **lets in** each one (`admit`), which triggers lazy media (`enableMedia` +
   `linkMedia`, added only between in-call peers) on both sides. A 5s presence
   **heartbeat** over the data channel lets peers expire anyone who goes quiet
-  (closed tab) instead of leaving them stuck in the lobby. The room code is written
-  into the URL (`?room=…`) once a call starts.
+  (closed tab) instead of leaving them stuck in the lobby. **URL/history:** the
+  start page is `/apps/calls`; entering a call **pushState**s `/apps/calls/join?code=…`
+  (routed via `apps/:toolId/join`), so the browser **Back** button pops that entry
+  and a `popstate` handler leaves the call back to a clean lobby (never a stale
+  `?code=` guest trap). The invite/share link is the same `/join?code=…`. `code=`
+  is the param (`room=` still read for old links). The invite image (QR + code +
+  PNG-metadata) is `src/tools/calls/invite.ts`.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
   deploys all twenty-eight functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA

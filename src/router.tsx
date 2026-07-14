@@ -28,6 +28,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage />, errorElement: <ErrorPage /> },
       { path: 'apps/:toolId', element: <ToolPage />, errorElement: <ErrorPage /> },
+      // In-call / invite URL for the Calls app: /apps/calls/join?code=… renders the
+      // same tool (it reads the code from the query).
+      { path: 'apps/:toolId/join', element: <ToolPage />, errorElement: <ErrorPage /> },
       { path: 'tools/:toolId', element: <AppsRedirect /> },
       // Public booking page. Shared as built-in-saudi.com/book/<code> — a bare
       // /book/<code> hits Layout with an invalid :lang and redirects to the
