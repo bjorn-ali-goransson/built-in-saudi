@@ -81,3 +81,5 @@ jobs:
           gcloud functions deploy call-signal             "${common[@]}" --entry-point=callSignal
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
+
+          gcloud functions deploy diacritize              "${common[@]}" --entry-point=diacritize

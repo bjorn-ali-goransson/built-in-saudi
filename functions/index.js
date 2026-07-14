@@ -14,6 +14,8 @@ import './shorten.js'
 import './call.js'
 // Prompt Analyzer (analyzePrompt) — one LLM grade per 24h.
 import './prompt.js'
+// Arabic diacritization (diacritize) — one LLM تشكيل per 24h.
+import './diacritize.js'
 
 const { Firestore } = firestore
 const db = new Firestore()

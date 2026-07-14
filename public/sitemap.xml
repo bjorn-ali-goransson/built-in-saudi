@@ -1066,6 +1066,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/line-breaks"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/diacritize</loc>
+    <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/diacritize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/diacritize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/diacritize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/diacritize</loc>
+    <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/diacritize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/diacritize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/diacritize"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/arabic-verbs</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-verbs"/>

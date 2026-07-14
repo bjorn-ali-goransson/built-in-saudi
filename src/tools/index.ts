@@ -93,6 +93,7 @@ import { slugifyTool } from './slugify/meta'
 import { lineBreaksTool } from './line-breaks/meta'
 import { pasteToMarkdownTool } from './paste-to-markdown/meta'
 import { arabicVerbsTool } from './arabic-verbs/meta'
+import { diacritizeTool } from './diacritize/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -176,6 +177,7 @@ export const tools: Tool[] = [
   ibanValidatorTool,
   tafqeetTool,
   arabicVerbsTool,
+  diacritizeTool,
   qiblaTool,
   passwordGeneratorTool,
   uuidGeneratorTool,

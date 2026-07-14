@@ -504,6 +504,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محوّل فواصل الأسطر', description: 'تبديل تلقائي لتباعد الأسطر — المفردة تصبح مزدوجة والمزدوجة مفردة والمختلطة تُوحَّد إلى مزدوجة. صندوق ناتج مع نسخ ومشاركة، داخل متصفحك.' },
   },
   {
+    id: 'diacritize',
+    en: { name: 'Arabic Diacritizer', description: 'Paste Arabic text and AI adds full diacritics (تشكيل) with grammatical case endings, ready to copy. Google sign-in; one run per 24 hours.' },
+    ar: { name: 'مُشكِّل النصوص العربية', description: 'الصق نصًّا عربيًّا فيضيف الذكاء الاصطناعي التشكيل الكامل مع الإعراب، جاهزًا للنسخ. تسجيل دخول Google؛ مرة كل ٢٤ ساعة.' },
+  },
+  {
     id: 'arabic-verbs',
     en: { name: 'Arabic Verb Conjugator', description: 'Enter an Arabic root for the full conjugation — past, present (3 moods), imperative, passive across 13 pronouns, Forms I–X + quadriliteral, derived nouns and emphatics. Weak/irregular roots flagged. All in-browser.' },
     ar: { name: 'مُصرِّف الأفعال العربية', description: 'أدخل جذرًا عربيًّا للتصريف الكامل — الماضي والمضارع (ثلاثة أوجه) والأمر والمجهول عبر ١٣ ضميرًا، الأوزان من فَعَلَ إلى استفعل والرباعي، مع المشتقات والتوكيد. تُنبَّه الجذور المعتلّة والشاذّة. داخل المتصفح.' },

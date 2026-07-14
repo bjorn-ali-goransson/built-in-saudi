@@ -216,8 +216,9 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   new per-user server-side storage, update `my-data` to report + delete it too** (and
   mention it in the Privacy page copy). Today it covers `bookingHosts/{sub}`,
   `bookings` where `hostUid == sub`, `cvUsage/{sub}`, `cvSaved/{sub}` (the opt-in
-  server copy of a CV), `shortLinks` where `owner == sub`, and `promptUsage/{sub}`
-  (Prompt Analyzer rate-limit counters).
+  server copy of a CV), `shortLinks` where `owner == sub`, `promptUsage/{sub}`
+  (Prompt Analyzer rate-limit counters), and `diacritizeUsage/{sub}` (Arabic
+  Diacritizer rate-limit counters).
 - **Link shortener** (`functions/shorten.js`): `shorten` (Google-auth → create a
   6-month short link in Firestore `shortLinks`, keyed by a random code, storing
   `owner`/`url`/`expiresAt`/`hits`), `resolve-link` (public GET `?c=<code>` →
@@ -230,6 +231,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   chart. Rate-limited to **1 analysis / 24h** per user via `promptUsage/{sub}` (a
   `runs` timestamp array; owner email bypasses). Reuses the CV tool's
   `OPENAI_API_KEY` secret + GIS client ID; no new deps. Covered by `my-data`.
+- **Arabic Diacritizer** (`functions/diacritize.js`): `diacritize` — Google-auth →
+  one OpenAI (`gpt-4o`, temp 0) pass that fully vowelises pasted Arabic text
+  (تشكيل + إعراب) and returns it verbatim-plus-harakāt. The client validates the
+  text contains Arabic before sending. Rate-limited to **1 run / 24h** per user via
+  `diacritizeUsage/{sub}` (owner email bypasses). Reuses the `OPENAI_API_KEY` secret
+  + GIS client ID; no new deps. Covered by `my-data`. (There is also a fully
+  client-side **Arabic Verb Conjugator**, `src/tools/arabic-verbs/`, with no backend.)
 - **Calls signaling** (`functions/call.js`): `call-signal` — a metadata-only relay
   for the P2P **Call** tool (`src/tools/calls/`, id `calls`). It only shuttles the
   WebRTC **handshake** (offer/answer/ICE + join/hello/leave — random peer ids and
@@ -251,7 +259,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   (closed tab) instead of leaving them stuck in the lobby. The room code is written
   into the URL (`?room=…`) once a call starts.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all twenty-seven functions on any `functions/**` change, authenticating **keylessly
+  deploys all twenty-eight functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

@@ -109,6 +109,7 @@ export interface MyDataReport {
   savedCv?: boolean
   shortLinks?: number
   promptRuns?: number
+  diacritizeRuns?: number
 }
 
 /** Report (del=false) or delete (del=true) everything stored for this Google user. */

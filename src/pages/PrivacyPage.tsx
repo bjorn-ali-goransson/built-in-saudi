@@ -172,8 +172,8 @@ export function PrivacyPage() {
 /** Sign in with Google to see everything stored for you, and delete it. */
 function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   const t = locale === 'ar'
-    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
-    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
+    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', diac: 'مرات التشكيل', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
+    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', diac: 'Diacritization runs', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
   const [idToken, setIdToken] = useState('')
   const [report, setReport] = useState<MyDataReport | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'deleting' | 'done' | 'error'>('idle')
@@ -199,10 +199,10 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   async function del() {
     if (!idToken) return
     setStatus('deleting')
-    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0, promptRuns: 0 } : r)) } catch { setStatus('error') }
+    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0, promptRuns: 0, diacritizeRuns: 0 } : r)) } catch { setStatus('error') }
   }
 
-  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0 && (report.promptRuns || 0) === 0
+  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0 && (report.promptRuns || 0) === 0 && (report.diacritizeRuns || 0) === 0
 
   return (
     <div className="wrap max-w-[46rem] pb-[clamp(1.5rem,4vw,2.5rem)]">
@@ -223,6 +223,7 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
                 {report.savedCv && <li>{t.savedCv}: <b>✓</b></li>}
                 <li>{t.links}: <b>{report.shortLinks || 0}</b></li>
                 <li>{t.prompt}: <b>{report.promptRuns || 0}</b></li>
+                <li>{t.diac}: <b>{report.diacritizeRuns || 0}</b></li>
               </ul>
               <Button variant="primary" data-testid="mydata-delete" disabled={status === 'deleting'} onClick={del} className="self-start !bg-gold-500 !border-gold-500 hover:!bg-gold-400">
                 {status === 'deleting' ? t.deleting : t.del}

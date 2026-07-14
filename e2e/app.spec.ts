@@ -673,6 +673,15 @@ test.describe('paste to markdown', () => {
   })
 })
 
+test.describe('arabic diacritizer', () => {
+  test('rejects non-Arabic text before hitting the backend', async ({ page }) => {
+    await page.goto('/en/apps/diacritize')
+    await page.getByTestId('dc-input').fill('hello world, no arabic here')
+    await page.getByTestId('dc-run').click()
+    await expect(page.getByTestId('dc-err')).toContainText('Arabic')
+  })
+})
+
 test.describe('arabic verb conjugator', () => {
   test('conjugates a triliteral Form I root', async ({ page }) => {
     await page.goto('/en/apps/arabic-verbs')
