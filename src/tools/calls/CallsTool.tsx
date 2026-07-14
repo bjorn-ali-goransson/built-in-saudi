@@ -34,7 +34,7 @@ const STR = {
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
-    participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Send files', muteMe: 'Mute me', unmuteMe: 'Unmute',
+    participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
@@ -49,7 +49,7 @@ const STR = {
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
-    participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'إرسال ملفات', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
+    participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
@@ -177,6 +177,8 @@ export default function CallsTool() {
   const [showParticipants, setShowParticipants] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 640 : true))
   const [showChat, setShowChat] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0) // enter/leave fire per child; count to know when we've truly left
   const [view, setView] = useState<'board' | 'file'>('board')
   const [files, setFiles] = useState<{ id: string; name: string; url: string; mime: string; from: string }[]>([])
   const [selected, setSelected] = useState<string>('')
@@ -257,6 +259,7 @@ export default function CallsTool() {
       setFiles((fs) => [...fs, { id: m.id, name: f.name, url, mime: f.mime, from: nameOf(id) }])
       setChat((c) => [...c, { from: id, name: nameOf(id), fileName: f.name, url }])
       incoming.current.delete(m.id)
+      openFile(m.id) // a dropped file is selected for everyone
       notify('f', `${nameOf(id)} · ${f.name}`)
     }
   }
@@ -379,12 +382,15 @@ export default function CallsTool() {
   function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
   function pickFiles(fl: FileList | null) {
     if (!fl) return
+    let lastId = ''
     for (const f of fl) {
       rtc.current?.sendFile(f)
       const id = `me-${Date.now()}-${f.name}`, url = URL.createObjectURL(f)
       setFiles((fs) => [...fs, { id, name: f.name, url, mime: f.type, from: s.you }])
       setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name, url }])
+      lastId = id
     }
+    if (lastId) openFile(lastId) // show it to me; peers auto-open it on receipt too
   }
   function openFile(id: string) { setSelected(id); setView('file'); setShowFiles(true) }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
@@ -636,7 +642,20 @@ export default function CallsTool() {
   // transformed ancestor would otherwise become its containing block).
   return createPortal(
     <div className="fixed inset-0 z-[80] flex flex-col bg-[var(--bg)]" data-testid="calls-live"
-      onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pickFiles(e.dataTransfer.files) }}>
+      onDragEnter={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); dragDepth.current++; setDragOver(true) } }}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }}
+      onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragOver(false) }}
+      onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
+      {dragOver && (
+        <div className="absolute inset-0 z-[90] p-4 pointer-events-none" data-testid="call-dropzone">
+          <div className="w-full h-full grid place-items-center rounded-xl border-2 border-dashed border-green-500 bg-[color-mix(in_srgb,var(--green-400)_16%,var(--bg))]">
+            <div className="flex flex-col items-center gap-2 text-green-800">
+              <UploadIcon className="w-9 h-9" />
+              <span className="font-semibold text-[1rem]">{s.dropHere}</span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
         {editingName
@@ -692,6 +711,8 @@ export default function CallsTool() {
                 <button type="button" onClick={() => openFile(f.id)} className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
                   {f.name}<span className="block text-[0.68rem] text-ink-faint truncate">{f.from}</span>
                 </button>
+                <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
+                  className="opacity-0 group-hover:opacity-100 grid place-items-center w-7 h-7 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
                 <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
                   className="opacity-0 group-hover:opacity-100 grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
               </div>
@@ -711,6 +732,8 @@ export default function CallsTool() {
                 : <a href={selectedFile.url} download={selectedFile.name} className="flex flex-col items-center gap-2 text-sand-100/80">
                     <DownloadIcon className="w-8 h-8" /><span className="text-[0.9rem]">{selectedFile.name}</span><span className="text-[0.78rem] opacity-70">{s.noPreview}</span>
                   </a>}
+              <a href={selectedFile.url} download={selectedFile.name} title={s.download} aria-label={s.download} data-testid="call-file-dl-main"
+                className="absolute top-3 end-3 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
           <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-none ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
