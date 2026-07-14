@@ -364,8 +364,10 @@ export default function CallsTool() {
     return () => window.clearInterval(iv)
   }, [graceEndsAt])
 
-  function toggleMic() { const v = !mic; setMic(v); rtc.current?.toggleMic(v) }
-  function toggleCam() { const v = !cam; setCam(v); rtc.current?.toggleCam(v) }
+  // Acquire the device on turn-on and release it on turn-off (so the browser's
+  // in-use indicator clears when muted/off). Revert the button if permission is denied.
+  async function toggleMic() { const v = !mic; setMic(v); const ok = await rtc.current?.toggleMic(v); if (v && ok === false) setMic(false) }
+  async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
   async function toggleScreen() {
     if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null) }
     else {
@@ -640,7 +642,7 @@ export default function CallsTool() {
           <IconBtn onClick={toggleParticipants} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
           <IconBtn onClick={toggleChat} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
           <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
-          <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
+          <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
           <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         </span>

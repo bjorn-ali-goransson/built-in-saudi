@@ -64,7 +64,9 @@ interface Peer {
   polite: boolean
   makingOffer: boolean
   info?: PeerInfo
-  mediaLinked: boolean // our local tracks have been added to this pc
+  mediaLinked: boolean // our media senders have been created on this pc
+  aSender?: RTCRtpSender // persistent audio sender — replaceTrack(null) to release, without renegotiating
+  vSender?: RTCRtpSender // persistent video sender (camera or screen)
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -86,7 +88,11 @@ export class CallRoom {
   private aspect = 1 // our whiteboard canvas w/h — shared so peers can fade the non-common area
   inCall = false // we've enabled our own media
   local: MediaStream | null = null
-  private camTrack: MediaStreamTrack | null = null
+  // Live device tracks — acquired only while on, and stop()ped when the user turns
+  // them off so the browser drops its "camera/mic in use" indicator (a disabled
+  // track keeps the hardware open; only stop() releases it).
+  private audioTrack: MediaStreamTrack | null = null
+  private videoTrack: MediaStreamTrack | null = null
   private screen: MediaStream | null = null
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
@@ -103,14 +109,11 @@ export class CallRoom {
     this.heartbeat = window.setInterval(() => this.broadcastInfo(), 5000)
   }
 
-  /** Turn on our camera/mic and share them with everyone already in the call. */
+  /** Join the call. Privacy-first: we open NO device here — we start muted with the
+   *  camera off, so nothing is acquired until the user actually turns mic/cam on. */
   async enableMedia(): Promise<void> {
     if (this.inCall) return
-    this.local = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 1280, height: 720 } })
-    this.camTrack = this.local.getVideoTracks()[0] || null
-    // Privacy-first: join muted with the camera off — the user turns each on.
-    this.local.getAudioTracks().forEach((t) => (t.enabled = false))
-    this.local.getVideoTracks().forEach((t) => (t.enabled = false))
+    this.local = new MediaStream()
     this.inCall = true
     this.h.onLocal?.(this.local)
     for (const p of this.peers.values()) this.linkMedia(p)
@@ -192,11 +195,27 @@ export class CallRoom {
   }
   private async flush(id: string) { const p = this.peers.get(id); if (!p) return; for (const c of p.pending) await p.pc.addIceCandidate(c).catch(() => {}); p.pending = [] }
 
-  // Add our media to a peer once we're BOTH in the call (never before).
+  // Once we're BOTH in the call, push whatever we're currently sending (if a device
+  // is on). Senders persist so later toggles are replaceTrack, not renegotiation.
   private linkMedia(peer: Peer) {
-    if (!this.inCall || !this.local || peer.mediaLinked || !peer.info?.inCall) return
+    if (!this.inCall || peer.mediaLinked || !peer.info?.inCall) return
     peer.mediaLinked = true
-    this.local.getTracks().forEach((t) => peer.pc.addTrack(t, this.local!)) // → renegotiation
+    if (this.audioTrack) this.addOrReplace(peer, this.audioTrack)
+    const v = this.screenOn ? this.screen?.getVideoTracks()[0] || null : this.videoTrack
+    if (v) this.addOrReplace(peer, v)
+  }
+  // Put a track on a peer's sender of that kind, creating the sender the first time
+  // (that first add renegotiates; every later swap — including →null — does not).
+  private addOrReplace(peer: Peer, track: MediaStreamTrack) {
+    const audio = track.kind === 'audio'
+    const cur = audio ? peer.aSender : peer.vSender
+    if (cur) { cur.replaceTrack(track).catch(() => {}); return }
+    if (!this.local) return
+    const s = peer.pc.addTrack(track, this.local)
+    if (audio) peer.aSender = s; else peer.vSender = s
+  }
+  private releaseKind(kind: 'audio' | 'video') {
+    for (const p of this.peers.values()) { const s = kind === 'audio' ? p.aSender : p.vSender; s?.replaceTrack(null).catch(() => {}) }
   }
 
   private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
@@ -229,26 +248,58 @@ export class CallRoom {
   }
 
   // ---- media controls --------------------------------------------------------
-  toggleMic(on: boolean) { this.muted = !on; this.local?.getAudioTracks().forEach((t) => (t.enabled = on)); this.broadcastInfo() }
-  toggleCam(on: boolean) { this.cam = on; this.local?.getVideoTracks().forEach((t) => (t.enabled = on)); this.broadcastInfo() }
+  /** Unmute → acquire the mic and route it; mute → stop the mic (releases hardware).
+   *  Returns false if the user denied the mic so the UI can revert. */
+  async toggleMic(on: boolean): Promise<boolean> {
+    if (on) {
+      if (!this.audioTrack) {
+        try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); this.audioTrack = s.getAudioTracks()[0] }
+        catch { this.muted = true; this.broadcastInfo(); return false }
+        this.local?.addTrack(this.audioTrack)
+      }
+      this.muted = false
+      for (const p of this.peers.values()) if (p.info?.inCall) this.addOrReplace(p, this.audioTrack)
+    } else {
+      this.muted = true; this.releaseKind('audio')
+      if (this.audioTrack) { this.local?.removeTrack(this.audioTrack); this.audioTrack.stop(); this.audioTrack = null }
+    }
+    this.broadcastInfo(); return true
+  }
+  /** Camera on → acquire and route it; off → stop it (releases the camera). */
+  async toggleCam(on: boolean): Promise<boolean> {
+    if (on) {
+      if (!this.videoTrack) {
+        try { const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }); this.videoTrack = s.getVideoTracks()[0] }
+        catch { this.cam = false; this.broadcastInfo(); return false }
+        this.local?.addTrack(this.videoTrack); this.h.onLocal?.(this.local!)
+      }
+      this.cam = true
+      if (!this.screenOn) for (const p of this.peers.values()) if (p.info?.inCall) this.addOrReplace(p, this.videoTrack)
+    } else {
+      this.cam = false
+      if (!this.screenOn) this.releaseKind('video')
+      if (this.videoTrack) { this.local?.removeTrack(this.videoTrack); this.videoTrack.stop(); this.videoTrack = null }
+    }
+    this.broadcastInfo(); return true
+  }
   /** Ask another participant's client to mute itself; everyone is notified. */
   forceMute(target: string) { const msg = JSON.stringify({ c: 'fmute', target, by: this.name } as Ctrl); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(msg) }
   /** Tell peers our whiteboard's aspect ratio so they can fade what we can't see. */
   setAspect(a: number) { if (a > 0 && Math.abs(a - this.aspect) > 0.01) { this.aspect = a; this.broadcastInfo() } }
-  private replaceVideo(track: MediaStreamTrack | null) {
-    for (const p of this.peers.values()) { const sender = p.pc.getSenders().find((s) => s.track?.kind === 'video'); if (sender) sender.replaceTrack(track).catch(() => {}) }
+  private setVideoWire(track: MediaStreamTrack | null) {
+    for (const p of this.peers.values()) { if (!p.info?.inCall) continue; if (track) this.addOrReplace(p, track); else p.vSender?.replaceTrack(null).catch(() => {}) }
   }
   async shareScreen(): Promise<MediaStream | null> {
     try {
       this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
       const track = this.screen.getVideoTracks()[0]
-      this.replaceVideo(track)
+      this.setVideoWire(track)
       this.screenOn = true; this.broadcastInfo()
       track.onended = () => this.stopScreen()
       return this.screen
     } catch { return null }
   }
-  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; this.replaceVideo(this.camTrack); if (this.screenOn) { this.screenOn = false; this.broadcastInfo() } }
+  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; this.setVideoWire(this.cam ? this.videoTrack : null); if (this.screenOn) { this.screenOn = false; this.broadcastInfo() } }
 
   private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.h.onLeave?.(id) }
   leave() {
@@ -258,5 +309,6 @@ export class CallRoom {
     this.stopScreen()
     this.peers.forEach((p) => { try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())
+    this.audioTrack?.stop(); this.videoTrack?.stop(); this.audioTrack = null; this.videoTrack = null
   }
 }

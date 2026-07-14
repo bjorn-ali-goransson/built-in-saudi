@@ -79,5 +79,15 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pb.getByRole('button', { name: 'Chat', exact: true }).click()
   await expect(pb.getByTestId('call-chat-panel').getByText('hello-from-alice')).toBeVisible({ timeout: 15_000 })
 
+  // No device is opened at join (privacy-first). Alice turns her camera ON — this
+  // must lazily acquire + renegotiate so Bob actually receives her video track.
+  // (The video tiles live in the participants panel, so open it on Bob.)
+  await pa.getByTestId('call-cam').click()
+  await pb.getByTestId('call-participants').click()
+  await expect.poll(async () => pb.evaluate(() => {
+    const vids = [...document.querySelectorAll('[data-testid=calls-live] video')] as HTMLVideoElement[]
+    return vids.some((v) => v.srcObject instanceof MediaStream && v.srcObject.getVideoTracks().length > 0)
+  }), { timeout: 20_000 }).toBe(true)
+
   await a.close(); await b.close()
 })
