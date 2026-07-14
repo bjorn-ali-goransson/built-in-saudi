@@ -153,10 +153,11 @@ export class CallRoom {
         const msgs = d.msgs || []; got = msgs.length
         for (const m of msgs) { await this.onSignal(m.from, m.type, m.payload); if (m.seq > this.since) this.since = m.seq }
       } catch { /* transient */ }
-      // Drain a handshake burst fast; poll briskly while (re)connecting or alone so a
-      // new/rejoining peer is noticed within ~1.2s; back off once everyone's connected.
+      // Drain a handshake burst immediately; poll fast while (re)connecting or waiting
+      // for someone (so knocks/joins land in well under a second); back off once
+      // everyone's connected. The relay only ever carries the handshake.
       const settling = [...this.peers.values()].some((p) => p.pc.connectionState !== 'connected')
-      await sleep(got > 0 ? 200 : settling || this.peers.size === 0 ? 500 : 1200)
+      await sleep(got > 0 ? 120 : settling || this.peers.size === 0 ? 300 : 1200)
     }
   }
 
