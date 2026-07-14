@@ -76,18 +76,14 @@ test('the browser Back button leaves an active call and returns to a clean lobby
   await c.close()
 })
 
-test('a stale ?room= guest lobby can escape by starting its own call', async ({ browser }) => {
+test('a dead ?code= link is verified first and shows "meeting ended" (not the join form)', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
-  await p.goto('/en/apps/calls?code=deadroom')
-  await p.getByTestId('call-name').fill('Stuck')
-  // Guest lobby (no host will answer). The escape switches to host mode.
-  await expect(p.getByTestId('call-join')).toBeVisible()
-  await p.getByTestId('call-start-own').click()
-  await expect(p.getByTestId('call-start')).toBeVisible()
-  await p.getByTestId('call-start').click()
-  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  expect(new URL(p.url()).searchParams.get('code')).not.toBe('deadroom')
+  await p.goto('/en/apps/calls?code=nosuchroom')
+  // Probed as gone → the ended screen, never the "enter name / ask to join" lobby.
+  await expect(p.getByTestId('call-ended')).toBeVisible({ timeout: 10_000 })
+  await expect(p.getByTestId('call-join')).toHaveCount(0)
+  await expect(p.getByTestId('call-name')).toHaveCount(0)
   await c.close()
 })
 

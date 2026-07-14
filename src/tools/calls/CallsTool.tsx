@@ -4,7 +4,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
-import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, roomStatus, type DataMsg, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
@@ -53,7 +53,7 @@ const isDefaultName = (n: string) => KUNYA.some(([en, ar]) => n === `Abu ${en}` 
 const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
-    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', shareInvite: 'Share invite',
+    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
@@ -68,7 +68,7 @@ const STR = {
   },
   ar: {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
-    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
+    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
@@ -196,6 +196,9 @@ export default function CallsTool() {
   const [busy, setBusy] = useState(false)
   const [forceHost, setForceHost] = useState(false) // escape a stale ?room= guest lobby
   const isGuest = !!initialRoom && !isHostReturn && !forceHost
+  // A guest arriving via a link: probe the relay first (spinner) so we don't show
+  // "enter your name / ask to join" for a meeting that's already gone.
+  const [checking, setChecking] = useState(!!initialRoom && !isHostReturn)
   // Everyone we've connected to (data channel), with the name/role/lobby state
   // they told us peer-to-peer. The host's waiting list is derived from this.
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
@@ -405,6 +408,19 @@ export default function CallsTool() {
   const autoStarted = useRef(false)
   useEffect(() => {
     if (isHostReturn && !autoStarted.current) { autoStarted.current = true; startHost() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Verify a guest's link before showing the join controls.
+  useEffect(() => {
+    if (!checking) return
+    let alive = true
+    roomStatus(initialRoom).then((st) => {
+      if (!alive) return
+      if (st === 'open') setChecking(false)
+      else { setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
+    })
+    return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -750,7 +766,12 @@ export default function CallsTool() {
       <div className={greenWrap} data-testid="calls">
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
-          {phase === 'waiting' ? (
+          {checking ? (
+            <div className="flex flex-col items-center gap-3" data-testid="call-checking">
+              <span className="w-7 h-7 rounded-full border-2 border-sand-100/25 border-t-sand-100 animate-spin" />
+              <p className="text-sand-100/80 text-[0.95rem]">{s.checkingMeeting}</p>
+            </div>
+          ) : phase === 'waiting' ? (
             <>
               <p className="text-center text-[1rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}

@@ -7,6 +7,21 @@
 // send any media, and their names are exchanged peer-to-peer, not via the relay.
 const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGNAL?: string }).__CALL_SIGNAL) || 'https://us-central1-blitz-ksa.cloudfunctions.net/call-signal'
 
+// One lightweight probe of the relay before showing a guest the join controls:
+//  open    – the room exists and a host has posted (seq > 0)
+//  closed  – the host ended it
+//  missing – never created / expired (no messages ever)
+// A network error returns 'open' so a hiccup never blocks a real meeting.
+export async function roomStatus(room: string): Promise<'open' | 'closed' | 'missing'> {
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'probe' + Math.random().toString(36).slice(2, 8), action: 'poll', since: -1 }) })
+    if (!r.ok) return 'open'
+    const d = await r.json()
+    if (d.closed) return 'closed'
+    return d.seq && d.seq > 0 ? 'open' : 'missing'
+  } catch { return 'open' }
+}
+
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
