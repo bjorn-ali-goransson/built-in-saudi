@@ -8,6 +8,16 @@ const TRI_FORMS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'X']
 const QUAD_FORMS = ['Q1', 'Q2']
 const onlyArabic = (s: string) => (s.match(/[ء-ي]/g) || []).join('')
 
+// A few interesting examples spanning forms and the Form-I vowel patterns.
+const EXAMPLES: { label: string; root: string; form: string; pastV?: string; presV?: string }[] = [
+  { label: 'كَتَبَ', root: 'كتب', form: 'I', pastV: A, presV: U },
+  { label: 'شَرِبَ', root: 'شرب', form: 'I', pastV: I, presV: A },
+  { label: 'عَلَّمَ', root: 'علم', form: 'II' },
+  { label: 'تَعَاوَنَ', root: 'عون', form: 'VI' },
+  { label: 'اِسْتَخْرَجَ', root: 'خرج', form: 'X' },
+  { label: 'دَحْرَجَ', root: 'دحرج', form: 'Q1' },
+]
+
 const DERIVED_LABEL: Record<string, { ar: string; en: string }> = {
   ismFa3il: { ar: 'اسم الفاعل', en: 'Active participle' },
   ismMaf3ul: { ar: 'اسم المفعول', en: 'Passive participle' },
@@ -19,7 +29,7 @@ const DERIVED_LABEL: Record<string, { ar: string; en: string }> = {
 
 const STR = {
   en: {
-    root: 'Root letters', rootPlaceholder: 'e.g. كتب or دحرج', rootHint: 'Type 3 letters (triliteral) or 4 (quadriliteral). Diacritics are ignored.',
+    root: 'Root letters', rootPlaceholder: 'e.g. كتب or دحرج', rootHint: 'Type 3 letters (triliteral) or 4 (quadriliteral). Diacritics are ignored.', examples: 'Try:',
     form: 'Form (وزن)', pastVowel: 'Past middle vowel', presVowel: 'Present middle vowel',
     voice: 'Voice', active: 'Active', passive: 'Passive',
     past: 'Past — الماضي', present: 'Present — المضارع', imperative: 'Imperative — الأمر',
@@ -31,7 +41,7 @@ const STR = {
     noImperativePassive: 'The imperative and derived nouns are formed from the active voice.',
   },
   ar: {
-    root: 'حروف الجذر', rootPlaceholder: 'مثل: كتب أو دحرج', rootHint: 'اكتب ٣ حروف (ثلاثي) أو ٤ (رباعي). تُتجاهَل الحركات.',
+    root: 'حروف الجذر', rootPlaceholder: 'مثل: كتب أو دحرج', rootHint: 'اكتب ٣ حروف (ثلاثي) أو ٤ (رباعي). تُتجاهَل الحركات.', examples: 'جرّب:',
     form: 'الوزن', pastVowel: 'حركة العين في الماضي', presVowel: 'حركة العين في المضارع',
     voice: 'البناء', active: 'معلوم', passive: 'مجهول',
     past: 'الماضي', present: 'المضارع', imperative: 'الأمر',
@@ -101,6 +111,17 @@ export default function ArabicVerbsTool() {
           />
           <span className="text-[0.8rem] text-ink-faint">{s.rootHint}</span>
         </label>
+
+        <div className="flex flex-wrap items-center gap-1.5" dir="rtl">
+          <span className="text-[0.72rem] text-ink-faint font-ar">{s.examples}</span>
+          {EXAMPLES.map((ex) => (
+            <button key={ex.label} type="button" data-testid={`av-ex-${ex.root}`}
+              onClick={() => { setRaw(ex.root); setForm(ex.form); setPastV(ex.pastV ?? A); setPresV(ex.presV ?? U) }}
+              className="rounded-full border border-[color:var(--line-soft)] bg-[var(--surface)] px-2.5 py-1 font-ar text-[1.05rem] text-ink-soft hover:border-green-500 hover:text-green-800 cursor-pointer transition-colors">
+              {ex.label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-[0.72rem] uppercase tracking-[0.06em] text-ink-faint">{s.form}</span>
