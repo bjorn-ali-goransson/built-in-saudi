@@ -389,13 +389,11 @@ export default function CallsTool() {
 
   function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); knownInCall.current.clear(); objects.current.clear(); myStack.current.clear() }
   function hangup() {
-    const others = inCallPeers.length
     if (!isGuest) {
-      // Host: if nobody else is here, nuke the empty room; otherwise just leave
-      // (the meeting continues; the host can Rejoin from the ended screen).
-      if (others === 0) { rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }; setEnded({ reason: 'ended', count: 0 }) }
-      else { rtc.current?.leave(); setEnded({ reason: 'left', count: others }) }
-      rtc.current = null; resetLive(); setPhase('ended')
+      // Host leaving ends the meeting for everyone (the relay is marked closed, so
+      // every peer's poll returns closed → they're dropped into the ended screen).
+      rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }
+      setEnded({ reason: 'ended', count: 0 }); rtc.current = null; resetLive(); setPhase('ended')
     } else {
       rtc.current?.leave(); rtc.current = null; resetLive(); setPhase('lobby')
       history.replaceState(null, '', lobbyPath())
