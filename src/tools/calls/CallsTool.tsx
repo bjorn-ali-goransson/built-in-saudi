@@ -52,7 +52,7 @@ const STR = {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
     yourName: 'Your name', start: 'Start a call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', joining: 'Connecting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
-    you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', dropFiles: 'Drop files to send, or tap',
+    you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
@@ -67,7 +67,7 @@ const STR = {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
-    you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
+    you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
@@ -922,6 +922,7 @@ export default function CallsTool() {
               <button type="button" onClick={() => setShowChat(false)} aria-label="Close" data-testid="call-chat-close" className="grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
+              {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
               {chat.map((m, i) => (
                 <div key={i} className={m.from === 'me' ? 'text-end' : ''}>
                   <span className="text-[0.72rem] text-ink-faint">{m.name}</span>{' '}
@@ -941,11 +942,19 @@ export default function CallsTool() {
 
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
-        <Menu up testid="call-panels" triggerClass={dropTrigger}
-          trigger={<>{showChat ? <ChatIcon /> : <UsersIcon />}<span>{showChat ? s.chat : s.participants}</span>{(unseen.p + unseen.c) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
-          <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }} active={showParticipants} />
-          <MenuItem icon={<ChatIcon />} label={s.chat} onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }} active={showChat} />
-        </Menu>
+        {showParticipants || showChat ? (
+          // A panel is open → the same spot becomes a Close button (back to the view behind).
+          <button type="button" className={dropTrigger} data-testid="call-panels-close" aria-label={s.close}
+            onClick={() => { setShowParticipants(false); setShowChat(false) }}>
+            {showChat ? <ChatIcon /> : <UsersIcon />}<span>{showChat ? s.chat : s.participants}</span><span className="text-[1.15rem] leading-none ms-0.5">✕</span>
+          </button>
+        ) : (
+          <Menu up testid="call-panels" triggerClass={dropTrigger}
+            trigger={<>{<UsersIcon />}<span>{s.participants}</span>{(unseen.p + unseen.c) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
+            <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }} active={showParticipants} />
+            <MenuItem icon={<ChatIcon />} label={s.chat} onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }} active={showChat} />
+          </Menu>
+        )}
         <div className="flex-1" />
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
