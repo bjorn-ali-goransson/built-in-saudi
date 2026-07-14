@@ -53,7 +53,7 @@ const STR = {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
     yourName: 'Your name', start: 'Start a call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', joining: 'Connecting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
-    you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', dropFiles: 'Drop files to send, or tap',
+    you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
@@ -68,7 +68,7 @@ const STR = {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
-    you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
+    you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
@@ -90,13 +90,13 @@ function StreamVideo({ stream, className, muted, mirror }: { stream: MediaStream
 }
 
 // The host's "Waiting in the lobby" list — a card of guests with a Let-in button.
-function LobbyList({ waiting, admit, hint, title, admitLabel, live }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; live?: boolean }) {
+function LobbyList({ waiting, admit, hint, title, admitLabel, live, staleIds }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; live?: boolean; staleIds?: Set<string> }) {
   if (waiting.length === 0) return live ? null : <p className="max-w-[30rem] text-[0.85rem] text-ink-faint">{hint}</p>
   return (
     <div className="max-w-[30rem] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-4 flex flex-col gap-2.5" data-testid={live ? 'call-lobby-live' : 'call-lobby'}>
       <p className="text-[0.82rem] font-semibold text-ink-soft flex items-center justify-between">{title} <span className="font-mono text-ink-faint">{waiting.length}</span></p>
       {waiting.map(([id, info]) => (
-        <div key={id} className="flex items-center gap-3">
+        <div key={id} className={`flex items-center gap-3 transition-opacity duration-500 ${staleIds?.has(id) ? 'opacity-40' : ''}`}>
           <span className="w-8 h-8 rounded-full bg-[color-mix(in_srgb,var(--color-green-400)_22%,transparent)] text-green-700 grid place-items-center text-[0.78rem] font-semibold shrink-0" aria-hidden="true">{initials(info.name)}</span>
           <span className="flex-1 text-[0.92rem] text-ink truncate">{info.name || '•'}</span>
           <Button variant="primary" onClick={() => admit(id)} data-testid="call-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0">{admitLabel}</Button>
@@ -147,13 +147,14 @@ const dropTrigger = 'flex items-center gap-1.5 h-9 px-2.5 rounded-md border-0 bg
 
 // A participant square. The <video> stays mounted whenever there's a stream (so
 // audio always plays even with the camera off); the avatar just overlays it.
-function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string }) {
+function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
   return (
-    <div className="group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)]">
+    <div className={`group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
       {stream && <video ref={ref} autoPlay playsInline muted={self} className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
+      {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
         {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className="w-3.5 h-3.5 shrink-0" />}
         <span className="truncate flex-1">{name}{self ? ' ·' : ''}</span>
@@ -255,18 +256,25 @@ export default function CallsTool() {
   }
   const toastT = useRef<number | undefined>(undefined)
 
-  // Expire peers who go quiet (e.g. closed their tab) so they don't linger in
-  // the lobby — the data-channel heartbeat refreshes `seen` every 5s.
+  // Liveness (heartbeat refreshes `seen` every 2s over the data channel):
+  //  • quiet > IDLE_MS  → dim the peer (a hiccup, or they're stepping away)
+  //  • quiet > GONE_MS  → drop them (tab closed / really gone)
+  const IDLE_MS = 5000, GONE_MS = 15_000
+  const [staleIds, setStaleIds] = useState<Set<string>>(new Set())
   useEffect(() => {
     const iv = window.setInterval(() => {
-      const cutoff = Date.now() - 15_000
+      const now = Date.now()
       setRoster((r) => {
         let changed = false; const m = new Map(r)
-        for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < cutoff) { m.delete(id); seen.current.delete(id); changed = true }
+        for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < now - GONE_MS) { m.delete(id); seen.current.delete(id); changed = true }
         return changed ? m : r
       })
-    }, 5000)
+      const stale = new Set<string>()
+      for (const [id] of rosterRef.current) if ((seen.current.get(id) || 0) < now - IDLE_MS) stale.add(id)
+      setStaleIds((prev) => (prev.size === stale.size && [...stale].every((id) => prev.has(id)) ? prev : stale))
+    }, 1200)
     return () => window.clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   rosterRef.current = roster
@@ -742,7 +750,7 @@ export default function CallsTool() {
         </div>
 
         {/* The lobby list lives below the whole box (host only). */}
-        {!isGuest && phase === 'hosting' && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} />}
+        {!isGuest && phase === 'hosting' && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} staleIds={staleIds} />}
 
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
@@ -956,11 +964,11 @@ export default function CallsTool() {
               <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.participants} · {participantCount}</p>
               <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
             </div>
-            {!isGuest && waiting.length > 0 && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live />}
+            {!isGuest && waiting.length > 0 && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} live staleIds={staleIds} />}
             <div className="grid grid-cols-2 gap-2">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} />
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
               ))}
             </div>
           </aside>

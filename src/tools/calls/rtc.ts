@@ -111,7 +111,7 @@ export class CallRoom {
     this.send('join', 'all')
     // Heartbeat: re-announce presence over the data channels so peers can expire
     // anyone who goes quiet (closed tab) instead of leaving them stuck in the lobby.
-    this.heartbeat = window.setInterval(() => this.broadcastInfo(), 5000)
+    this.heartbeat = window.setInterval(() => this.broadcastInfo(), 2000)
   }
 
   /** Join the call. Privacy-first: we open NO device here — we start muted with the
