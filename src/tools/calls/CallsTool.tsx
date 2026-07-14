@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -48,14 +48,15 @@ const KUNYA: [string, string][] = [
   ['Rabee', 'ربيع'],
 ]
 const randName = (ar: boolean) => { const b = crypto.getRandomValues(new Uint8Array(1)); const p = KUNYA[b[0] % KUNYA.length]; return ar ? `أبو ${p[1]}` : `Abu ${p[0]}` }
+const isDefaultName = (n: string) => KUNYA.some(([en, ar]) => n === `Abu ${en}` || n === `أبو ${ar}`)
 
 const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
-    yourName: 'Your name', start: 'Start a call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', joining: 'Connecting…', shareInvite: 'Share invite',
+    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', joining: 'Connecting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
-    copied: 'Invite link copied', copy: 'Copy link', shareHint: 'Share the link — people who open it appear here for you to let in.',
+    copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
@@ -70,7 +71,7 @@ const STR = {
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
-    copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
+    copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
@@ -181,7 +182,13 @@ export default function CallsTool() {
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
   const [isHostReturn] = useState(() => { try { return !!initialRoom && localStorage.getItem(HOST_KEY) === initialRoom } catch { return false } })
-  const [name, setName] = useState(() => { try { return localStorage.getItem(NAME_KEY) || randName(locale === 'ar') } catch { return randName(locale === 'ar') } })
+  // Only remember a name the user actually TYPED. A stored value that's just the
+  // random "Abu …" default (saved by the old behaviour) is ignored → fresh suggestion.
+  const storedName = (() => { try { const st = localStorage.getItem(NAME_KEY); return st && !isDefaultName(st) ? st : '' } catch { return '' } })()
+  const [name, setName] = useState(() => storedName || randName(locale === 'ar'))
+  const nameEdited = useRef(!!storedName)
+  const editName = (v: string) => { nameEdited.current = true; setName(v) }
+  function saveName() { try { if (nameEdited.current && name.trim()) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live' | 'ended'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
@@ -356,7 +363,7 @@ export default function CallsTool() {
   }
   function mediaError() { setToast('Camera/mic permission needed'); setTimeout(() => setToast(''), 3000) }
   // Put the room code in the URL so it's shareable and rooms are distinguishable.
-  function rememberHost(code: string) { try { localStorage.setItem(NAME_KEY, name); localStorage.setItem(HOST_KEY, code) } catch { /* */ } }
+  function rememberHost(code: string) { saveName(); try { localStorage.setItem(HOST_KEY, code) } catch { /* */ } }
   // URL for an in-call / invite link vs the bare start page.
   const joinPath = (code: string) => `${localePath(locale, '/apps/calls')}/join?code=${code}`
   const lobbyPath = () => localePath(locale, '/apps/calls')
@@ -372,7 +379,7 @@ export default function CallsTool() {
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
   function askToJoin() {
-    try { localStorage.setItem(NAME_KEY, name) } catch { /* */ }
+    saveName()
     const code = room.trim(); if (!code) return
     const r = ensureRoom(code); r.enterLobby(name || s.you, false)
     setPhase('waiting')
@@ -692,13 +699,12 @@ export default function CallsTool() {
         <div className="w-56 h-56 grid place-items-center rounded-xl bg-white p-2.5 shadow-inner">
           {shareQr ? <img src={shareQr} alt="QR" className="w-full h-full" data-testid="call-share-qr" /> : <span className="text-ink-faint text-[0.85rem]">…</span>}
         </div>
-        <p className="font-mono text-[1.6rem] tracking-[0.22em] text-sand-100">{room}</p>
-        <div className="w-full flex items-center gap-1 rounded-md border border-sand-100/20 bg-black/20 ps-2.5 pe-1 py-1">
-          <span className="flex-1 min-w-0 truncate text-[0.82rem] font-mono text-sand-100/80" dir="ltr">{shareUrl.replace(/^https?:\/\//, '')}</span>
-          <button type="button" onClick={copyShareUrl} title={s.copy} aria-label={s.copy} className="grid place-items-center w-8 h-8 rounded bg-transparent border-0 text-sand-100/70 hover:text-sand-100 cursor-pointer shrink-0">{copiedShare ? <span className="text-green-300 font-bold">✓</span> : <CopyIcon className="w-4 h-4" />}</button>
-        </div>
+        <button type="button" onClick={copyShareUrl} data-testid="call-share-copy"
+          className="w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer [&_svg]:w-4 [&_svg]:h-4">
+          {copiedShare ? <span className="text-green-400 font-bold" aria-hidden="true">✓</span> : <CopyIcon />} {copiedShare ? s.copyDone : s.copy}
+        </button>
         <button type="button" onClick={() => shareInvite()} data-testid="call-share-do"
-          className="w-full h-11 rounded-md bg-sand-100 text-green-700 font-semibold flex items-center justify-center gap-2 hover:bg-white border-0 cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><ShareIcon /> {s.shareInvite}</button>
+          className="w-full h-11 rounded-md bg-sand-100 text-green-700 font-semibold flex items-center justify-center gap-2 hover:bg-white border-0 cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><ShareIcon /> {s.shareQrUrl}</button>
       </div>
     </div>, document.body) : null
 
@@ -749,25 +755,31 @@ export default function CallsTool() {
             <>
               <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
               <div className="w-full flex flex-col gap-3">
-                <div className="relative">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-10 text-center h-12" />
-                  <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
-                    className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
-                    <RefreshIcon className="w-4 h-4" />
-                  </button>
-                </div>
-                <button className={cream} disabled={busy} onClick={isGuest ? askToJoin : startHost} data-testid={isGuest ? 'call-join' : 'call-start'}>
-                  {busy ? s.joining : isGuest ? `${s.askJoin} · ${room}` : s.start}
-                </button>
-                {!isGuest && (
-                  <button className={ghost} onClick={() => openShareModal()} data-testid="call-share"><UserPlusIcon className="w-4 h-4" /> {s.shareInvite}</button>
-                )}
-                {isGuest && (
-                  <button type="button" onClick={startOwnCall} data-testid="call-start-own"
-                    className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
+                  <div className="relative">
+                    <Input value={name} onChange={(e) => editName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-10 h-12" />
+                    <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
+                      className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
+                      <RefreshIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </label>
+                {isGuest ? (
+                  <>
+                    <button className={cream} disabled={busy} onClick={askToJoin} data-testid="call-join">{busy ? s.joining : s.askJoin}</button>
+                    <button type="button" onClick={startOwnCall} data-testid="call-start-own"
+                      className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
+                  </>
+                ) : (
+                  <div className="flex gap-3">
+                    <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
+                    <button type="button" onClick={() => openShareModal()} data-testid="call-share"
+                      className="flex-1 h-12 rounded-md bg-white/10 text-sand-100 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>
+                  </div>
                 )}
               </div>
-              <p className="text-[0.78rem] text-sand-100/70 flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
+              <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>
             </>
           )}
 
@@ -816,7 +828,7 @@ export default function CallsTool() {
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
         {editingName
           ? <div className="relative">
-              <input value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
+              <input value={name} autoFocus onChange={(e) => editName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
                 className="h-9 w-[8.5rem] sm:w-44 ps-2.5 pe-8 rounded-md border border-green-500 bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none" />
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
                 className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><RefreshIcon /></button>
