@@ -19,14 +19,16 @@ export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: bo
 // A whiteboard object (a pen/eraser stroke or a text label). Coords are in the
 // centred, aspect-preserving board space; width/size are fractions of the board.
 export type WbObj =
-  | { id: string; kind: 'stroke'; pts: number[]; color: string; width: number; erase?: boolean }
+  // `width` is the stroke's base; `wds` (optional) is a per-point width (board
+  // fraction) so the brush can taper with pointer speed — slower = thicker.
+  | { id: string; kind: 'stroke'; pts: number[]; color: string; width: number; erase?: boolean; wds?: number[] }
   | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number; rot?: number }
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
   | { t: 'chat'; name: string; text: string }
-  | { t: 'wb'; op: 'start'; id: string; pt: number[]; color: string; width: number; erase: boolean }
-  | { t: 'wb'; op: 'point'; id: string; pt: number[] }
+  | { t: 'wb'; op: 'start'; id: string; pt: number[]; color: string; width: number; erase: boolean; w?: number }
+  | { t: 'wb'; op: 'point'; id: string; pt: number[]; w?: number }
   | { t: 'wb'; op: 'text'; obj: WbObj }
   | { t: 'wb'; op: 'remove'; id: string }
   | { t: 'wb'; op: 'clear' }

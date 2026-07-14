@@ -195,6 +195,7 @@ export default function CallsTool() {
   const objects = useRef<WbObj[]>([]) // all drawable objects, in z-order
   const myStack = useRef<string[]>([]) // ids I added, for per-user undo
   const drawing = useRef<WbObj | null>(null) // stroke currently being drawn
+  const lastPt = useRef<{ x: number; y: number; t: number } | null>(null) // last pointer sample (screen px) for velocity
   const [tool, setTool] = useState<'pen' | 'eraser' | 'text'>('pen')
   const [penColor, setPenColor] = useState(WB_COLORS[0])
   const [penW, setPenW] = useState(0.01) // stroke width as a fraction of the board
@@ -244,8 +245,8 @@ export default function CallsTool() {
     if (m.t === 'chat') { setChat((c) => [...c, { from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'wb') {
       if (m.op === 'clear') { objects.current = []; redraw() }
-      else if (m.op === 'start') { objects.current.push({ id: m.id, kind: 'stroke', pts: [...m.pt], color: m.color, width: m.width, erase: m.erase }) }
-      else if (m.op === 'point') { const o = objects.current.find((x) => x.id === m.id); if (o && o.kind === 'stroke') { o.pts.push(...m.pt); drawLastSeg(o) } }
+      else if (m.op === 'start') { objects.current.push({ id: m.id, kind: 'stroke', pts: [...m.pt], color: m.color, width: m.width, erase: m.erase, wds: [m.w ?? m.width] }) }
+      else if (m.op === 'point') { const o = objects.current.find((x) => x.id === m.id); if (o && o.kind === 'stroke') { o.pts.push(...m.pt); (o.wds ||= []).push(m.w ?? o.width); drawLastSeg(o) } }
       else if (m.op === 'text') { objects.current.push(m.obj); redraw() }
       else if (m.op === 'remove') { objects.current = objects.current.filter((x) => x.id !== m.id); redraw() }
     }
@@ -412,13 +413,27 @@ export default function CallsTool() {
     const [hx, hy] = halfExtents(c.width / c.height); const sc = Math.min(c.width, c.height)
     return { sc, px: (u: number) => (u / (2 * hx) + 0.5) * c.width, py: (v: number) => (v / (2 * hy) + 0.5) * c.height }
   }
+  // Width (board fraction) at point index i, falling back to the constant base.
+  const segW = (o: Extract<WbObj, { kind: 'stroke' }>, i: number) => (o.wds?.[i] ?? o.width)
+  // Draw one smoothed, variable-width segment "around" point index i (quadratic
+  // through the midpoints of (i-1,i-2)…(i-1,i), so speed-tapered widths blend).
+  function strokeSeg(x: CanvasRenderingContext2D, m: ReturnType<typeof mapper>, o: Extract<WbObj, { kind: 'stroke' }>, i: number) {
+    const P = (k: number): [number, number] => [m.px(o.pts[2 * k]), m.py(o.pts[2 * k + 1])]
+    x.beginPath(); x.lineWidth = Math.max(0.75, segW(o, i) * m.sc)
+    if (i >= 2) {
+      const [ax, ay] = P(i - 2), [bx, by] = P(i - 1), [cx, cy] = P(i)
+      x.moveTo((ax + bx) / 2, (ay + by) / 2); x.quadraticCurveTo(bx, by, (bx + cx) / 2, (by + cy) / 2)
+    } else { const [ax, ay] = P(0), [bx, by] = P(1); x.moveTo(ax, ay); x.lineTo(bx, by) }
+    x.stroke()
+  }
   function drawObj(x: CanvasRenderingContext2D, m: ReturnType<typeof mapper>, o: WbObj) {
     if (o.kind === 'stroke') {
       x.save(); if (o.erase) x.globalCompositeOperation = 'destination-out'
-      x.strokeStyle = o.color; x.lineWidth = Math.max(1, o.width * m.sc); x.lineCap = 'round'; x.lineJoin = 'round'
-      x.beginPath(); for (let i = 0; i < o.pts.length; i += 2) { const X = m.px(o.pts[i]), Y = m.py(o.pts[i + 1]); i === 0 ? x.moveTo(X, Y) : x.lineTo(X, Y) }
-      if (o.pts.length === 2) { x.lineTo(m.px(o.pts[0]) + 0.1, m.py(o.pts[1])) } // a dot
-      x.stroke(); x.restore()
+      x.strokeStyle = o.color; x.fillStyle = o.color; x.lineCap = 'round'; x.lineJoin = 'round'
+      const n = o.pts.length / 2
+      if (n <= 1) { const r = Math.max(0.5, (segW(o, 0) * m.sc) / 2); x.beginPath(); x.arc(m.px(o.pts[0]), m.py(o.pts[1]), r, 0, Math.PI * 2); x.fill() } // a dot
+      else for (let i = 1; i < n; i++) strokeSeg(x, m, o, i)
+      x.restore()
     } else {
       x.save(); x.translate(m.px(o.u), m.py(o.v)); x.rotate(((o.rot || 0) * Math.PI) / 180)
       x.fillStyle = o.color; x.font = `600 ${Math.max(10, o.size * m.sc)}px 'Hanken Grotesk', system-ui, sans-serif`; x.textBaseline = 'top'
@@ -427,10 +442,10 @@ export default function CallsTool() {
   }
   function drawLastSeg(o: WbObj) {
     if (o.kind !== 'stroke') return; const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
-    const m = mapper(c); const n = o.pts.length; if (n < 4) return
+    const m = mapper(c); const n = o.pts.length / 2; if (n < 2) return
     x.save(); if (o.erase) x.globalCompositeOperation = 'destination-out'
-    x.strokeStyle = o.color; x.lineWidth = Math.max(1, o.width * m.sc); x.lineCap = 'round'; x.lineJoin = 'round'
-    x.beginPath(); x.moveTo(m.px(o.pts[n - 4]), m.py(o.pts[n - 3])); x.lineTo(m.px(o.pts[n - 2]), m.py(o.pts[n - 1])); x.stroke(); x.restore()
+    x.strokeStyle = o.color; x.lineCap = 'round'; x.lineJoin = 'round'
+    strokeSeg(x, m, o, n - 1); x.restore()
   }
   function redraw() {
     const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
@@ -440,13 +455,24 @@ export default function CallsTool() {
     if (tool === 'text') { const p = wbPt(e); setDraft({ u: p.x, v: p.y, size: textSize, rot: 0 }); setTextVal(''); return }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const p = wbPt(e); const id = oid(); const erase = tool === 'eraser'
-    const o: WbObj = { id, kind: 'stroke', pts: [p.x, p.y], color: erase ? '#000' : penColor, width: penW, erase }
+    const o: Extract<WbObj, { kind: 'stroke' }> = { id, kind: 'stroke', pts: [p.x, p.y], color: erase ? '#000' : penColor, width: penW, erase, wds: [penW] }
     objects.current.push(o); myStack.current.push(id); drawing.current = o
-    rtc.current?.broadcast({ t: 'wb', op: 'start', id, pt: [p.x, p.y], color: o.color, width: penW, erase })
+    lastPt.current = { x: e.clientX, y: e.clientY, t: e.timeStamp }
+    rtc.current?.broadcast({ t: 'wb', op: 'start', id, pt: [p.x, p.y], color: o.color, width: penW, erase, w: penW })
+  }
+  // Taper the brush with pointer speed (px/ms): slow = thick (up to 1.25× base),
+  // fast = thin (down to 0.4× base) — the "living pen" feel from the signature pad.
+  function speedWidth(e: React.PointerEvent, base: number) {
+    const prev = lastPt.current; if (!prev) return base
+    const speed = Math.hypot(e.clientX - prev.x, e.clientY - prev.y) / Math.max(1, e.timeStamp - prev.t)
+    const mul = Math.max(0.4, Math.min(1.25, 1.25 - speed * 0.55))
+    return base * mul
   }
   function wbMove(e: React.PointerEvent) {
     const o = drawing.current; if (!o || o.kind !== 'stroke') return
-    const p = wbPt(e); o.pts.push(p.x, p.y); drawLastSeg(o); rtc.current?.broadcast({ t: 'wb', op: 'point', id: o.id, pt: [p.x, p.y] })
+    const p = wbPt(e); const w = speedWidth(e, o.width)
+    o.pts.push(p.x, p.y); (o.wds ||= []).push(w); lastPt.current = { x: e.clientX, y: e.clientY, t: e.timeStamp }
+    drawLastSeg(o); rtc.current?.broadcast({ t: 'wb', op: 'point', id: o.id, pt: [p.x, p.y], w })
   }
   function wbUp() { drawing.current = null }
   function commitText() {
