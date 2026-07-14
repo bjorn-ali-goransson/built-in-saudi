@@ -53,7 +53,7 @@ const isDefaultName = (n: string) => KUNYA.some(([en, ar]) => n === `Abu ${en}` 
 const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
-    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', joining: 'Connecting…', shareInvite: 'Share invite',
+    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
@@ -68,7 +68,7 @@ const STR = {
   },
   ar: {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
-    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
+    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
@@ -186,9 +186,11 @@ export default function CallsTool() {
   // random "Abu …" default (saved by the old behaviour) is ignored → fresh suggestion.
   const storedName = (() => { try { const st = localStorage.getItem(NAME_KEY); return st && !isDefaultName(st) ? st : '' } catch { return '' } })()
   const [name, setName] = useState(() => storedName || randName(locale === 'ar'))
-  const nameEdited = useRef(!!storedName)
-  const editName = (v: string) => { nameEdited.current = true; setName(v) }
-  function saveName() { try { if (nameEdited.current && name.trim()) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
+  // A typed (non-default) name shows a "remember me" checkbox; only a ticked custom
+  // name is persisted — the random "Abu …" default never sticks.
+  const [remember, setRemember] = useState(!!storedName)
+  const nameCustom = name.trim() !== '' && !isDefaultName(name)
+  function saveName() { try { if (remember && nameCustom) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live' | 'ended'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
@@ -764,11 +766,22 @@ export default function CallsTool() {
                 <label className="flex flex-col gap-1">
                   <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
                   <div className="relative">
-                    <Input value={name} onChange={(e) => editName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-10 h-12" />
-                    <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
-                      className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
-                      <RefreshIcon className="w-4 h-4" />
-                    </button>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-11 h-12" />
+                    {nameCustom ? (
+                      // Typed your own name → offer to remember it (with a nudge bubble).
+                      <>
+                        {!remember && (
+                          <div className="absolute bottom-full end-1 mb-2 z-10 w-max max-w-[13rem] rounded-lg bg-sand-100 text-green-900 text-[0.72rem] font-medium px-2.5 py-1.5 shadow-lg pointer-events-none after:content-[''] after:absolute after:top-full after:end-4 after:border-[6px] after:border-transparent after:border-t-sand-100" data-testid="call-remember-hint">{s.rememberName}</div>
+                        )}
+                        <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} data-testid="call-remember" title={s.rememberName} aria-label={s.rememberName}
+                          className="absolute inset-y-0 end-3 my-auto w-5 h-5 accent-green-600 cursor-pointer" />
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
+                        className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
+                        <RefreshIcon className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </label>
                 {isGuest ? (
@@ -834,7 +847,7 @@ export default function CallsTool() {
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
         {editingName
           ? <div className="relative">
-              <input value={name} autoFocus onChange={(e) => editName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
+              <input value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={() => setEditingName(false)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false) }} aria-label={s.yourName} data-testid="call-name"
                 className="h-9 w-[8.5rem] sm:w-44 ps-2.5 pe-8 rounded-md border border-green-500 bg-[var(--bg)] text-[0.9rem] text-ink focus:outline-none" />
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
                 className="absolute inset-y-0 end-1 my-auto h-7 w-7 grid place-items-center rounded bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><RefreshIcon /></button>
