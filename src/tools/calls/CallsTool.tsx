@@ -439,6 +439,7 @@ export default function CallsTool() {
       // every peer's poll returns closed → they're dropped into the ended screen).
       rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }
       setEnded({ reason: 'ended', count: 0 }); rtc.current = null; resetLive(); setPhase('ended')
+      history.replaceState(null, '', lobbyPath()) // clean URL: a reload (e.g. deploy) lands on the host lobby, not ?code= guest mode
     } else {
       // Guest leaving: show the "you left" screen (with a way back in), not a
       // confusing "ask to join" for the room you just left.
@@ -674,7 +675,6 @@ export default function CallsTool() {
 
   async function shareInvite(code = room) {
     const url = `${SITE}${joinPath(code)}`
-    try { await navigator.clipboard.writeText(url); setToast(s.copied); setTimeout(() => setToast(''), 2500) } catch { /* */ }
     try {
       const { makeInvite } = await import('./invite')
       const blob = await makeInvite(url, code, locale === 'ar')
@@ -700,11 +700,9 @@ export default function CallsTool() {
 
   const shareModal = shareOpen ? createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 max-[520px]:p-0" onClick={() => setShareOpen(false)} data-testid="call-share-modal">
-      <div className="w-full max-w-[23rem] max-[520px]:max-w-none max-[520px]:h-full max-[520px]:rounded-none rounded-2xl bg-green-700 text-sand-100 shadow-[var(--shadow-lg)] p-6 flex flex-col gap-4 items-center max-[520px]:justify-center" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center w-full">
-          <h3 className="flex-1 font-display text-[1.15rem] text-sand-100">{s.shareInvite}</h3>
-          <button type="button" onClick={() => setShareOpen(false)} aria-label={s.leave} data-testid="call-share-close" className="w-8 h-8 -me-1 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/70 hover:text-sand-100 hover:bg-white/10 cursor-pointer text-[1.2rem] leading-none">✕</button>
-        </div>
+      <div className="relative w-full max-w-[23rem] max-[520px]:max-w-none max-[520px]:h-full max-[520px]:rounded-none rounded-2xl bg-green-700 text-sand-100 shadow-[var(--shadow-lg)] p-6 flex flex-col gap-4 items-center max-[520px]:justify-center" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={() => setShareOpen(false)} aria-label={s.leave} data-testid="call-share-close" className="absolute top-3 end-3 w-9 h-9 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/70 hover:text-sand-100 hover:bg-white/10 cursor-pointer text-[1.25rem] leading-none">✕</button>
+        <h3 className="w-full font-display text-[1.15rem] text-sand-100 pe-8">{s.shareInvite}</h3>
         <div className="w-56 h-56 grid place-items-center rounded-xl bg-white p-2.5 shadow-inner">
           {shareQr ? <img src={shareQr} alt="QR" className="w-full h-full" data-testid="call-share-qr" /> : <span className="text-ink-faint text-[0.85rem]">…</span>}
         </div>
