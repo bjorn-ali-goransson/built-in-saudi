@@ -22,7 +22,7 @@ export type WbObj =
   // `width` is the stroke's base; `wds` (optional) is a per-point width (board
   // fraction) so the brush can taper with pointer speed — slower = thicker.
   | { id: string; kind: 'stroke'; pts: number[]; color: string; width: number; erase?: boolean; wds?: number[] }
-  | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number; rot?: number }
+  | { id: string; kind: 'text'; u: number; v: number; text: string; color: string; size: number; rot?: number; w?: number }
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =

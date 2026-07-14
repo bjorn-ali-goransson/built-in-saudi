@@ -8,6 +8,27 @@ import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
 const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
+const TXT_PAD = 5 // px inset of text inside the box (matches the editor's padding+border)
+// Word-wrap `text` to `maxW` px using the ctx's current font. Honours explicit
+// newlines and breaks over-long tokens by character.
+function wrapLines(x: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const out: string[] = []
+  for (const para of text.split('\n')) {
+    if (!isFinite(maxW) || !para) { out.push(para); continue }
+    let cur = ''
+    for (let tok of para.match(/\S+\s*/g) || [para]) {
+      if (x.measureText(cur + tok).width <= maxW) { cur += tok; continue }
+      if (cur) { out.push(cur.replace(/\s+$/, '')); cur = '' }
+      while (x.measureText(tok).width > maxW && tok.length > 1) {
+        let i = 1; while (i < tok.length && x.measureText(tok.slice(0, i + 1)).width <= maxW) i++
+        out.push(tok.slice(0, i)); tok = tok.slice(i)
+      }
+      cur = tok
+    }
+    out.push(cur.replace(/\s+$/, ''))
+  }
+  return out
+}
 
 const SITE = 'https://built-in-saudi.com'
 const NAME_KEY = 'bis-call-name'
@@ -39,7 +60,7 @@ const STR = {
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name',
-    rotate: 'Rotate', moveText: 'Move', smaller: 'Smaller', bigger: 'Bigger',
+    rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
   ar: {
@@ -54,7 +75,7 @@ const STR = {
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
-    rotate: 'تدوير', moveText: 'تحريك', smaller: 'أصغر', bigger: 'أكبر',
+    rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
 }
@@ -206,11 +227,15 @@ export default function CallsTool() {
   const [penColor, setPenColor] = useState(WB_COLORS[0])
   const [penW, setPenW] = useState(0.01) // stroke width as a fraction of the board
   // Text being placed/edited: an object with position, size (board units) and rotation.
-  const [draft, setDraft] = useState<{ u: number; v: number; size: number; rot: number } | null>(null)
-  const [textVal, setTextVal] = useState('')
+  // Text being placed/edited — carries its own text + wrap width so a commit never
+  // races with opening a new box (the "goes blank" bug).
+  type TextDraft = { u: number; v: number; size: number; rot: number; w: number; text: string }
+  const [draft, setDraft] = useState<TextDraft | null>(null)
+  const draftRef = useRef<TextDraft | null>(null) // mirror so we can commit from anywhere
   const [textSize, setTextSize] = useState(0.035) // remembered font size (board units)
-  const textInputRef = useRef<HTMLInputElement>(null)
+  const textInputRef = useRef<HTMLTextAreaElement>(null)
   const textReady = useRef(false)
+  const DEFAULT_TW = 0.4 // default text wrap width (board fraction)
   const incoming = useRef<Map<string, { name: string; mime: string; parts: ArrayBuffer[] }>>(new Map())
   const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
   const panelRef = useRef({ p: true, c: false, f: false }) // which panels are open (for notify)
@@ -439,8 +464,12 @@ export default function CallsTool() {
       x.restore()
     } else {
       x.save(); x.translate(m.px(o.u), m.py(o.v)); x.rotate(((o.rot || 0) * Math.PI) / 180)
-      x.fillStyle = o.color; x.font = `600 ${Math.max(10, o.size * m.sc)}px 'Hanken Grotesk', system-ui, sans-serif`; x.textBaseline = 'top'
-      x.fillText(o.text, 0, 0); x.restore()
+      const fs = Math.max(10, o.size * m.sc)
+      x.fillStyle = o.color; x.font = `600 ${fs}px 'Hanken Grotesk', system-ui, sans-serif`; x.textBaseline = 'top'
+      const maxW = o.w ? o.w * m.sc : Infinity
+      const lines = wrapLines(x, o.text, maxW)
+      lines.forEach((ln, i) => x.fillText(ln, TXT_PAD, TXT_PAD + i * fs * 1.3)) // TXT_PAD matches the editor's inset
+      x.restore()
     }
   }
   function drawLastSeg(o: WbObj) {
@@ -455,7 +484,7 @@ export default function CallsTool() {
     const m = mapper(c); x.clearRect(0, 0, c.width, c.height); for (const o of objects.current) drawObj(x, m, o)
   }
   function wbDown(e: React.PointerEvent) {
-    if (tool === 'text') { const p = wbPt(e); setDraft({ u: p.x, v: p.y, size: textSize, rot: 0 }); setTextVal(''); return }
+    if (tool === 'text') { const p = wbPt(e); finishDraft(); setDraft({ u: p.x, v: p.y, size: textSize, rot: 0, w: DEFAULT_TW, text: '' }); return }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const p = wbPt(e); const id = oid(); const erase = tool === 'eraser'
     const o: Extract<WbObj, { kind: 'stroke' }> = { id, kind: 'stroke', pts: [p.x, p.y], color: erase ? '#000' : penColor, width: penW, erase, wds: [penW] }
@@ -478,33 +507,39 @@ export default function CallsTool() {
     drawLastSeg(o); rtc.current?.broadcast({ t: 'wb', op: 'point', id: o.id, pt: [p.x, p.y], w })
   }
   function wbUp() { drawing.current = null }
-  function commitText() {
-    const t = textVal.trim()
-    if (t && draft) { const o: WbObj = { id: oid(), kind: 'text', u: draft.u, v: draft.v, text: t, color: penColor, size: draft.size, rot: draft.rot }; objects.current.push(o); myStack.current.push(o.id); rtc.current?.broadcast({ t: 'wb', op: 'text', obj: o }); redraw() }
-    setDraft(null); setTextVal('')
+  function commitDraft(d: TextDraft) {
+    const t = d.text.trim(); if (!t) return
+    const o: WbObj = { id: oid(), kind: 'text', u: d.u, v: d.v, text: t, color: penColor, size: d.size, rot: d.rot, w: d.w }
+    objects.current.push(o); myStack.current.push(o.id); rtc.current?.broadcast({ t: 'wb', op: 'text', obj: o }); redraw()
   }
+  // Commit the current draft (if it has text) and close it. Called on blur / new box.
+  function finishDraft() { const d = draftRef.current; draftRef.current = null; if (d) { commitDraft(d); setDraft(null) } }
+  const upd = (patch: Partial<TextDraft>) => setDraft((d) => { if (!d) return d; const n = { ...d, ...patch }; draftRef.current = n; return n })
   // Board→screen (client px, relative to the canvas box) for positioning the text editor.
   function b2s(u: number, v: number) {
     const c = wbRef.current; if (!c) return { x: 0, y: 0, sc: 1 }
     const w = c.clientWidth, h = c.clientHeight; const [hx, hy] = halfExtents(w / h)
     return { x: (u / (2 * hx) + 0.5) * w, y: (v / (2 * hy) + 0.5) * h, sc: Math.min(w, h) }
   }
-  // Drag the text box to move it, or drag the top handle to rotate it around its anchor.
-  function dragText(e: React.PointerEvent, mode: 'move' | 'rotate') {
+  // Drag a text handle: move the anchor, rotate (snapped to 45°), or set the wrap width.
+  function dragText(e: React.PointerEvent, mode: 'move' | 'rotate' | 'width') {
     e.preventDefault(); e.stopPropagation()
-    const c = wbRef.current, d0 = draft; if (!c || !d0) return
+    const c = wbRef.current, d0 = draftRef.current; if (!c || !d0) return
     const sc = Math.min(c.clientWidth, c.clientHeight)
     const sx = e.clientX, sy = e.clientY
     const r = c.getBoundingClientRect(); const a = b2s(d0.u, d0.v); const cx = r.left + a.x, cy = r.top + a.y
+    const rad = (d0.rot * Math.PI) / 180
     const move = (ev: PointerEvent) => {
-      if (mode === 'move') setDraft((d) => d && { ...d, u: d0.u + (ev.clientX - sx) / sc, v: d0.v + (ev.clientY - sy) / sc })
-      else setDraft((d) => d && { ...d, rot: (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI + 90 })
+      if (mode === 'move') upd({ u: d0.u + (ev.clientX - sx) / sc, v: d0.v + (ev.clientY - sy) / sc })
+      else if (mode === 'rotate') { const raw = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI + 90; upd({ rot: Math.round(raw / 45) * 45 }) }
+      else { const localDx = (ev.clientX - sx) * Math.cos(rad) + (ev.clientY - sy) * Math.sin(rad); upd({ w: Math.max(0.08, Math.min(1.6, d0.w + localDx / sc)) }) }
     }
     const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up) }
     document.addEventListener('pointermove', move); document.addEventListener('pointerup', up)
   }
   function bumpTextSize(delta: number) {
-    setDraft((d) => { if (!d) return d; const size = Math.min(0.14, Math.max(0.014, d.size + delta)); setTextSize(size); return { ...d, size } })
+    const d = draftRef.current; if (!d) return
+    const size = Math.min(0.14, Math.max(0.014, d.size + delta)); setTextSize(size); upd({ size })
   }
   function undo() { const id = myStack.current.pop(); if (!id) return; objects.current = objects.current.filter((o) => o.id !== id); redraw(); rtc.current?.broadcast({ t: 'wb', op: 'remove', id }) }
   function clearBoard(broadcast = true) { objects.current = []; myStack.current = []; redraw(); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear' }) }
@@ -517,6 +552,9 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, view, showParticipants, showChat, showFiles, files.length])
 
+  useEffect(() => { draftRef.current = draft }, [draft])
+  // Auto-grow the text box to fit its wrapped content (on text/width/size change).
+  useEffect(() => { const el = textInputRef.current; if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }, [draft?.text, draft?.w, draft?.size])
   // Focus the text box a tick after it opens (autoFocus gets blurred by the click
   // that placed it, since the canvas isn't focusable). Ignore that first blur.
   useEffect(() => {
@@ -768,21 +806,29 @@ export default function CallsTool() {
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
-            const stop = (e: React.SyntheticEvent) => e.preventDefault() // keep the input focused (don't blur→commit)
+            const boxW = draft.w * pos.sc // content width; wrapping matches the canvas render
+            const stop = (e: React.SyntheticEvent) => e.preventDefault() // keep the box focused (don't blur→commit)
             return (
-              // Anchored at the text's top-left so the input glyphs sit exactly where
-              // they'll render on commit. Handles float above; size controls float below.
+              // Anchored at the text's top-left (border-box corner) so the glyphs sit
+              // exactly where they render on commit. The whole rig rotates as one.
               <div className="absolute z-20" style={{ left: pos.x, top: pos.y, transform: `rotate(${draft.rot}deg)`, transformOrigin: 'top left' }}>
-                <div className="absolute -top-9 left-0 flex items-center gap-1">
-                  <button type="button" onPointerDown={(e) => dragText(e, 'rotate')} onMouseDown={stop} title={s.rotate} data-testid="wb-text-rotate"
-                    className="w-7 h-7 grid place-items-center rounded-full bg-green-600 text-white border-0 cursor-grab shadow touch-none [&_svg]:w-3.5 [&_svg]:h-3.5"><RefreshIcon /></button>
-                  <span onPointerDown={(e) => dragText(e, 'move')} onMouseDown={stop} title={s.moveText} data-testid="wb-text-move"
-                    className="w-7 h-7 grid place-items-center rounded-full bg-[var(--surface)] border border-[color:var(--line)] shadow cursor-move touch-none text-ink-soft hover:text-ink [&_svg]:w-3.5 [&_svg]:h-3.5"><GripIcon /></span>
-                </div>
-                <input ref={textInputRef} value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={() => { if (textReady.current) commitText() }} data-testid="wb-textinput"
-                  onKeyDown={(e) => { if (e.key === 'Enter') commitText(); else if (e.key === 'Escape') { setDraft(null); setTextVal('') } }}
-                  style={{ fontSize: fontPx, color: penColor, lineHeight: 1.2 }} className="block bg-[color-mix(in_srgb,var(--surface)_55%,transparent)] rounded-[3px] border-0 outline-none font-semibold min-w-[3rem] p-0 shadow-[0_0_0_2px_#22c55e]" />
-                <div className="absolute top-full mt-2 left-0 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full px-1 py-0.5 shadow-sm" style={{ transform: `rotate(${-draft.rot}deg)`, transformOrigin: 'top left' }} data-testid="wb-text-size">
+                {/* rotate handle: centred above, with a line down to the box */}
+                <div className="absolute left-1/2 -translate-x-1/2 -top-4 w-px h-4 bg-[color-mix(in_srgb,var(--ink)_45%,transparent)]" />
+                <button type="button" onPointerDown={(e) => dragText(e, 'rotate')} onMouseDown={stop} title={s.rotate} data-testid="wb-text-rotate"
+                  className="absolute left-1/2 -translate-x-1/2 -top-[2.6rem] w-7 h-7 grid place-items-center rounded-full bg-green-600 text-white border-0 cursor-grab shadow touch-none [&_svg]:w-3.5 [&_svg]:h-3.5"><RefreshIcon /></button>
+                {/* move handle: left of the box */}
+                <span onPointerDown={(e) => dragText(e, 'move')} onMouseDown={stop} title={s.moveText} data-testid="wb-text-move"
+                  className="absolute top-1/2 -translate-y-1/2 -left-9 w-7 h-7 grid place-items-center rounded-full bg-[var(--surface)] border border-[color:var(--line)] shadow cursor-move touch-none text-ink-soft hover:text-ink [&_svg]:w-3.5 [&_svg]:h-3.5"><GripIcon /></span>
+                {/* width handle: right of the box (sets wrapping) */}
+                <span onPointerDown={(e) => dragText(e, 'width')} onMouseDown={stop} title={s.widthText} data-testid="wb-text-width"
+                  className="absolute top-1/2 -translate-y-1/2 -right-3 w-2.5 h-8 rounded-full bg-green-600 border-2 border-[var(--surface)] shadow cursor-ew-resize touch-none" />
+                <textarea ref={textInputRef} value={draft.text} rows={1}
+                  onChange={(e) => upd({ text: e.target.value })} onBlur={() => { if (textReady.current) finishDraft() }}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { draftRef.current = null; setDraft(null) } }} data-testid="wb-textinput"
+                  style={{ width: boxW + 2 * TXT_PAD, fontSize: fontPx, color: penColor, lineHeight: 1.3 }}
+                  className="block box-border resize-none overflow-hidden bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] rounded-[2px] outline-none font-semibold p-1 border border-dashed border-[color-mix(in_srgb,var(--ink)_45%,transparent)]" />
+                {/* font size, kept upright */}
+                <div className="absolute top-full mt-3 left-0 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full px-1 py-0.5 shadow-sm" style={{ transform: `rotate(${-draft.rot}deg)`, transformOrigin: 'top left' }} data-testid="wb-text-size">
                   <button type="button" onMouseDown={stop} onClick={() => bumpTextSize(-0.008)} title={s.smaller} className="w-6 h-6 grid place-items-center rounded-full bg-transparent border-0 text-ink cursor-pointer text-[1.05rem] leading-none">−</button>
                   <span className="text-[0.7rem] text-ink-faint tabular-nums w-6 text-center">{Math.round(fontPx)}</span>
                   <button type="button" onMouseDown={stop} onClick={() => bumpTextSize(0.008)} title={s.bigger} className="w-6 h-6 grid place-items-center rounded-full bg-transparent border-0 text-ink cursor-pointer text-[1.05rem] leading-none">+</button>
