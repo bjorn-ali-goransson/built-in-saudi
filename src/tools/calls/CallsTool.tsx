@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Stack, Button, Input } from '../../components/ui'
+import { Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
@@ -205,6 +205,7 @@ export default function CallsTool() {
   const [dragOver, setDragOver] = useState(false)
   const dragDepth = useRef(0) // enter/leave fire per child; count to know when we've truly left
   const [shareOpen, setShareOpen] = useState(false)
+  const sharedRef = useRef(false) // has the host opened the share dialog at least once?
   const [shareUrl, setShareUrl] = useState('')
   const [shareQr, setShareQr] = useState('')
   const [copiedShare, setCopiedShare] = useState(false)
@@ -365,7 +366,7 @@ export default function CallsTool() {
     setBusy(true)
     const code = room || code6(); setRoom(code); rememberHost(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
-    try { await r.enableMedia(); setPhase('live') } catch { mediaError() } finally { setBusy(false) }
+    try { await r.enableMedia(); setPhase('live'); if (!sharedRef.current) openShareModal(code) } catch { mediaError() } finally { setBusy(false) }
   }
   // Escape a stale ?room= link: drop the room, become a host, clean the URL.
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
@@ -419,7 +420,7 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); knownInCall.current.clear(); objects.current.clear(); myStack.current.clear() }
+  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); knownInCall.current.clear(); objects.current.clear(); myStack.current.clear() }
   function hangup() {
     if (!isGuest) {
       // Host leaving ends the meeting for everyone (the relay is marked closed, so
@@ -480,6 +481,23 @@ export default function CallsTool() {
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
   function toggleParticipants() { setShowParticipants((v) => { if (!v) { setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) } return !v }) }
   function toggleChat() { setShowChat((v) => { if (!v) { setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) } return !v }) }
+  // Keyboard shortcuts (live only): M mute · W whiteboard · S screen · F file · C chat · P/A participants.
+  const kbd = useRef<{ live: boolean; act: Record<string, () => void> }>({ live: false, act: {} })
+  kbd.current = { live: phase === 'live', act: {
+    M: () => toggleMic(), W: () => { setView('board'); setSelected('') }, S: () => toggleScreen(),
+    F: () => fileRef.current?.click(), C: () => toggleChat(), P: () => toggleParticipants(), A: () => toggleParticipants(),
+  } }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!kbd.current.live || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      const fn = kbd.current.act[e.key.toUpperCase()]
+      if (fn) { e.preventDefault(); fn() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   function deleteFile(id: string) {
     const gone = files.find((f) => f.id === id); if (gone) URL.revokeObjectURL(gone.url)
     objects.current.delete(`f:${id}`); myStack.current.delete(`f:${id}`) // drop its whiteboard
@@ -653,8 +671,9 @@ export default function CallsTool() {
   }
   // Open the share modal (QR + link + native share). Works before a call too: if
   // there's no room yet we quietly become the host (sharing without joining).
-  async function openShareModal() {
-    let code = room
+  async function openShareModal(existing?: string) {
+    sharedRef.current = true
+    let code = existing || room
     if (!code) { code = code6(); setRoom(code); rememberHost(code); ensureRoom(code).enterLobby(name || s.you, true); setPhase('hosting') }
     const url = `${SITE}${joinPath(code)}`
     setShareUrl(url); setShareQr(''); setCopiedShare(false); setShareOpen(true)
@@ -664,101 +683,107 @@ export default function CallsTool() {
   const invite = () => openShareModal()
 
   const shareModal = shareOpen ? createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 max-[520px]:p-0" onClick={() => setShareOpen(false)} data-testid="call-share-modal">
-      <div className="w-full max-w-[23rem] max-[520px]:max-w-none max-[520px]:h-full max-[520px]:rounded-none rounded-lg bg-[var(--surface)] shadow-[var(--shadow-lg)] p-5 flex flex-col gap-4 items-center max-[520px]:justify-center" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 max-[520px]:p-0" onClick={() => setShareOpen(false)} data-testid="call-share-modal">
+      <div className="w-full max-w-[23rem] max-[520px]:max-w-none max-[520px]:h-full max-[520px]:rounded-none rounded-2xl bg-green-700 text-sand-100 shadow-[var(--shadow-lg)] p-6 flex flex-col gap-4 items-center max-[520px]:justify-center" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center w-full">
-          <h3 className="flex-1 font-display text-[1.1rem] text-ink">{s.shareInvite}</h3>
-          <button type="button" onClick={() => setShareOpen(false)} aria-label={s.leave} className="w-8 h-8 -me-1 grid place-items-center rounded-md bg-transparent border-0 text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer text-[1.2rem] leading-none">✕</button>
+          <h3 className="flex-1 font-display text-[1.15rem] text-sand-100">{s.shareInvite}</h3>
+          <button type="button" onClick={() => setShareOpen(false)} aria-label={s.leave} data-testid="call-share-close" className="w-8 h-8 -me-1 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/70 hover:text-sand-100 hover:bg-white/10 cursor-pointer text-[1.2rem] leading-none">✕</button>
         </div>
-        <div className="w-56 h-56 grid place-items-center rounded-md bg-white border border-[color:var(--line-soft)] p-2">
+        <div className="w-56 h-56 grid place-items-center rounded-xl bg-white p-2.5 shadow-inner">
           {shareQr ? <img src={shareQr} alt="QR" className="w-full h-full" data-testid="call-share-qr" /> : <span className="text-ink-faint text-[0.85rem]">…</span>}
         </div>
-        <p className="font-mono text-[1.3rem] tracking-[0.15em] text-green-800">{room}</p>
-        <div className="w-full flex items-center gap-1 rounded-md border border-[color:var(--line-soft)] bg-[var(--bg)] ps-2.5 pe-1 py-1">
-          <span className="flex-1 min-w-0 truncate text-[0.82rem] font-mono text-ink-soft" dir="ltr">{shareUrl.replace(/^https?:\/\//, '')}</span>
-          <button type="button" onClick={copyShareUrl} title={s.copy} aria-label={s.copy} className="grid place-items-center w-8 h-8 rounded bg-transparent border-0 text-ink-faint hover:text-green-700 cursor-pointer shrink-0">{copiedShare ? <span className="text-green-700 font-bold">✓</span> : <CopyIcon className="w-4 h-4" />}</button>
+        <p className="font-mono text-[1.6rem] tracking-[0.22em] text-sand-100">{room}</p>
+        <div className="w-full flex items-center gap-1 rounded-md border border-sand-100/20 bg-black/20 ps-2.5 pe-1 py-1">
+          <span className="flex-1 min-w-0 truncate text-[0.82rem] font-mono text-sand-100/80" dir="ltr">{shareUrl.replace(/^https?:\/\//, '')}</span>
+          <button type="button" onClick={copyShareUrl} title={s.copy} aria-label={s.copy} className="grid place-items-center w-8 h-8 rounded bg-transparent border-0 text-sand-100/70 hover:text-sand-100 cursor-pointer shrink-0">{copiedShare ? <span className="text-green-300 font-bold">✓</span> : <CopyIcon className="w-4 h-4" />}</button>
         </div>
-        <Button variant="primary" className="w-full justify-center" onClick={() => shareInvite()} data-testid="call-share-do"><ShareIcon className="w-4 h-4" /> {s.shareInvite}</Button>
+        <button type="button" onClick={() => shareInvite()} data-testid="call-share-do"
+          className="w-full h-11 rounded-md bg-sand-100 text-green-700 font-semibold flex items-center justify-center gap-2 hover:bg-white border-0 cursor-pointer [&_svg]:w-4 [&_svg]:h-4"><ShareIcon /> {s.shareInvite}</button>
       </div>
     </div>, document.body) : null
 
+  // Full-screen green setup/ended screen (no site chrome) — the app's front door.
+  const greenWrap = 'fixed inset-0 z-[80] overflow-auto bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-10'
+  const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
+  const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
+  const phoneLogo = <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
+
   if (phase === 'ended') {
-    return (
-      <Stack data-testid="calls">
-        <div className="max-w-[30rem] rounded-lg border border-green-900/40 bg-green-950 text-sand-100 p-6 flex flex-col gap-4" data-testid="call-ended">
+    return createPortal(
+      <div className={greenWrap} data-testid="calls">
+        <div className="w-full max-w-[22rem] flex flex-col items-center gap-5 text-center" data-testid="call-ended">
+          {phoneLogo}
           {ended.reason === 'left' ? (
             <>
-              <p className="text-[1.15rem] font-display">{s.youEnded}</p>
+              <p className="text-[1.2rem] font-display">{s.youEnded}</p>
               {ended.count > 0 && <p className="text-[0.9rem] text-sand-100/75">{s.stillThere(ended.count)}</p>}
-              <div className="flex gap-2 flex-wrap">
-                <Button variant="primary" onClick={rejoin} data-testid="call-rejoin">{s.rejoin}</Button>
-                <Button onClick={newCall}>{s.createNew}</Button>
+              <div className="w-full flex flex-col gap-3">
+                <button className={cream} onClick={rejoin} data-testid="call-rejoin">{s.rejoin}</button>
+                <button className={ghost} onClick={newCall}>{s.createNew}</button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-[1.1rem] font-display">{ended.reason === 'ended' ? s.youEndedMeeting : s.ended}</p>
-              <Button variant="primary" onClick={newCall}>{s.createNew}</Button>
+              <p className="text-[1.15rem] font-display leading-relaxed">{ended.reason === 'ended' ? s.youEndedMeeting : s.ended}</p>
+              <button className={cream} onClick={newCall}>{s.createNew}</button>
             </>
           )}
         </div>
-      </Stack>
-    )
+      </div>, document.body)
   }
 
   if (phase !== 'live') {
-    return (
-      <Stack data-testid="calls">
-        <div className="max-w-[30rem] rounded-lg border border-green-900/40 bg-green-950 text-sand-100 p-5 sm:p-6 flex flex-col gap-4">
+    return createPortal(
+      <div className={greenWrap} data-testid="calls">
+        <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
+          {phoneLogo}
           {phase === 'waiting' ? (
             <>
-              <p className="text-[0.95rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
+              <p className="text-center text-[1rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}
               </p>
-              <p className="font-mono text-[0.8rem] text-sand-100/60">{room}</p>
-              <Button onClick={hangup} data-testid="call-cancel">{s.cancel}</Button>
+              <p className="font-mono text-[1.1rem] tracking-[0.15em] text-sand-100/70">{room}</p>
+              <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
           ) : (
             <>
-              <p className="text-[0.95rem] leading-relaxed text-sand-100/90">{s.lead}</p>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[0.82rem] font-medium text-sand-100/70">{s.yourName}</span>
+              <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
+              <div className="w-full flex flex-col gap-3">
                 <div className="relative">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="—" data-testid="call-name" className="pe-10" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-10 text-center h-12" />
                   <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
                     className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
                     <RefreshIcon className="w-4 h-4" />
                   </button>
                 </div>
-              </label>
-              <div className="flex gap-2">
-                <Button variant="primary" disabled={busy} className="flex-1"
-                  onClick={isGuest ? askToJoin : startHost}
-                  data-testid={isGuest ? 'call-join' : 'call-start'}>
+                <button className={cream} disabled={busy} onClick={isGuest ? askToJoin : startHost} data-testid={isGuest ? 'call-join' : 'call-start'}>
                   {busy ? s.joining : isGuest ? `${s.askJoin} · ${room}` : s.start}
-                </Button>
+                </button>
                 {!isGuest && (
-                  <Button onClick={openShareModal} title={s.shareInvite} aria-label={s.shareInvite} className="!px-3" data-testid="call-share">
-                    <UserPlusIcon className="w-4 h-4" />
-                  </Button>
+                  <button className={ghost} onClick={() => openShareModal()} data-testid="call-share"><UserPlusIcon className="w-4 h-4" /> {s.shareInvite}</button>
+                )}
+                {isGuest && (
+                  <button type="button" onClick={startOwnCall} data-testid="call-start-own"
+                    className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
                 )}
               </div>
-              {isGuest && (
-                <button type="button" onClick={startOwnCall} data-testid="call-start-own"
-                  className="self-start text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
-              )}
               <p className="text-[0.78rem] text-sand-100/70 flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
             </>
           )}
-        </div>
 
-        {/* The lobby list lives below the whole box (host only). */}
-        {!isGuest && phase === 'hosting' && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} staleIds={staleIds} />}
+          {/* Host waiting list (people knocking), or a hint while nobody's here yet. */}
+          {!isGuest && phase === 'hosting' && (
+            <div className="w-full">
+              {waiting.length > 0
+                ? <LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} staleIds={staleIds} live />
+                : <p className="text-center text-[0.85rem] text-sand-100/70">{s.shareHint}</p>}
+            </div>
+          )}
+        </div>
 
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
-      </Stack>
-    )
+      </div>, document.body)
   }
 
   const selectedFile = files.find((f) => f.id === selected)

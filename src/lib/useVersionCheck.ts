@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { isInCall } from './inCall'
+import { isInCall, onCallExit } from './inCall'
 
 /**
  * Detect a new deploy and reload so open tabs don't break on stale, hashed
@@ -32,6 +32,7 @@ export function useVersionCheck() {
     const id = window.setInterval(check, 60000)
     const onVisible = () => { if (!document.hidden) check() }
     document.addEventListener('visibilitychange', onVisible)
-    return () => { stopped = true; window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
+    onCallExit(check) // leaving a call (hang-up or Back) → apply a deferred deploy now
+    return () => { stopped = true; window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible); onCallExit(() => {}) }
   }, [])
 }

@@ -36,6 +36,12 @@ test.beforeAll(async () => {
 })
 test.afterAll(() => server?.close())
 
+// A host start now auto-opens the Share modal; close it before driving the call UI.
+async function closeShare(p: import('@playwright/test').Page) {
+  const x = p.getByTestId('call-share-close')
+  if (await x.count()) await x.click()
+}
+
 async function ctx(browser: Browser, signal: string) {
   const c = await browser.newContext({ permissions: ['camera', 'microphone'] })
   await c.addInitScript((url) => { (window as unknown as { __CALL_SIGNAL: string }).__CALL_SIGNAL = url }, signal)
@@ -92,6 +98,7 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
   await p.getByTestId('call-name').fill('Host')
   await p.getByTestId('call-start').click()
   await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
   // Inject a tiny PNG through the hidden file input → opens in the file view.
   await p.evaluate(() => {
     const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
@@ -124,6 +131,7 @@ test('mobile: file bar docks under the toolbar and the view dropdown stays on sc
   await p.getByTestId('call-name').fill('M')
   await p.getByTestId('call-start').click()
   await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
   await p.evaluate(() => {
     const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
     const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
@@ -154,6 +162,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
   const room = new URL(pa.url()).searchParams.get('code') || '' // code is reflected into the URL
   expect(room.length).toBeGreaterThan(4)
+  await closeShare(pa) // the host's auto-opened share dialog
 
   // A scribbles on the whiteboard BEFORE anyone else is admitted.
   const boxA = (await pa.locator('[data-testid=calls-live] canvas').boundingBox())!

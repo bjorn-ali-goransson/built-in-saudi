@@ -198,6 +198,9 @@ export class CallRoom {
     const pc = peer.pc
     const collision = kind === 'offer' && (peer.makingOffer || pc.signalingState !== 'stable')
     if (collision && !peer.polite) return // impolite peer ignores a colliding offer
+    // Polite peer in a glare: roll our own offer back first, then accept theirs
+    // (otherwise the 2nd/3rd peer's media renegotiation can silently stall).
+    if (collision && peer.polite && pc.signalingState === 'have-local-offer') await pc.setLocalDescription({ type: 'rollback' }).catch(() => {})
     await pc.setRemoteDescription(desc).catch(() => {})
     await this.flush(id)
     if (kind === 'offer') { await pc.setLocalDescription(); this.send('answer', id, pc.localDescription) }
