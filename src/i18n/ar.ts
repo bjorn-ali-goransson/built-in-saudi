@@ -28,7 +28,7 @@ export const ar: Dict = {
 
   card: { comingSoon: 'قريباً', beta: 'تجريبي', open: 'افتح' },
 
-  toolPage: { breadcrumb: 'التطبيقات' },
+  toolPage: { breadcrumb: 'التطبيقات', moreTools: 'أدوات مجانية أخرى' },
 
   footer: {
     ethos: 'مجاني ومفتوح. بياناتك لا تغادر جهازك — كل أداة تعمل بالكامل داخل متصفحك.',

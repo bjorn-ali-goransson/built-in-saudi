@@ -4,6 +4,9 @@ import { siteMeta } from '../i18n/seo'
 
 const ORIGIN = 'https://built-in-saudi.com'
 const SUFFIX: Record<Locale, string> = { en: ' — Built in Saudi', ar: ' — بُنِيَ في السعودية' }
+// Pages are served with a trailing slash (directory index); point canonical /
+// hreflang at that form so they don't reference a URL that 301-redirects.
+const slash = (sub: string) => `${sub}/`.replace(/\/+$/, '/')
 
 function setMeta(selector: string, attr: string, value: string) {
   const el = document.querySelector(selector)
@@ -21,8 +24,8 @@ function setHreflangs(subPath: string) {
     link.setAttribute('data-hreflang', '1')
     document.head.appendChild(link)
   }
-  for (const l of LOCALES) add(l, `${ORIGIN}/${l}${subPath}`)
-  add('x-default', `${ORIGIN}/en${subPath}`) // we lean English as the default
+  for (const l of LOCALES) add(l, `${ORIGIN}/${l}${slash(subPath)}`)
+  add('x-default', `${ORIGIN}/en${slash(subPath)}`) // we lean English as the default
 }
 
 /**
@@ -35,7 +38,7 @@ export function useDocumentMeta(locale: Locale, subPath = '', title?: string, de
     const site = siteMeta[locale]
     const fullTitle = title ? `${title}${SUFFIX[locale]}` : site.title
     const desc = description ?? site.description
-    const canonical = `${ORIGIN}/${locale}${subPath}`
+    const canonical = `${ORIGIN}/${locale}${slash(subPath)}`
 
     document.title = fullTitle
     setMeta('meta[name="description"]', 'content', desc)
@@ -44,6 +47,8 @@ export function useDocumentMeta(locale: Locale, subPath = '', title?: string, de
     setMeta('meta[property="og:title"]', 'content', fullTitle)
     setMeta('meta[property="og:description"]', 'content', desc)
     setMeta('meta[property="og:locale"]', 'content', locale === 'ar' ? 'ar_SA' : 'en_US')
+    setMeta('meta[name="twitter:title"]', 'content', fullTitle)
+    setMeta('meta[name="twitter:description"]', 'content', desc)
     setHreflangs(subPath)
   }, [locale, subPath, title, description])
 }

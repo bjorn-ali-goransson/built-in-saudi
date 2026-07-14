@@ -27,7 +27,7 @@ export const en = {
 
   card: { comingSoon: 'Coming soon', beta: 'Beta', open: 'Open' },
 
-  toolPage: { breadcrumb: 'Apps' },
+  toolPage: { breadcrumb: 'Apps', moreTools: 'More free tools' },
 
   footer: {
     ethos:

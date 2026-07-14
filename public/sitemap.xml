@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://built-in-saudi.com/en</loc>
+    <loc>https://built-in-saudi.com/en/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -11,7 +11,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar</loc>
+    <loc>https://built-in-saudi.com/ar/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -20,7 +20,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/link-shortener</loc>
+    <loc>https://built-in-saudi.com/en/apps/link-shortener/</loc>
     <lastmod>2026-07-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -29,7 +29,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/link-shortener"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/link-shortener</loc>
+    <loc>https://built-in-saudi.com/ar/apps/link-shortener/</loc>
     <lastmod>2026-07-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -38,721 +38,721 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/link-shortener"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/calls</loc>
+    <loc>https://built-in-saudi.com/en/apps/calls/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calls"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calls"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/calls</loc>
+    <loc>https://built-in-saudi.com/ar/apps/calls/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calls"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calls"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/screen-recorder</loc>
+    <loc>https://built-in-saudi.com/en/apps/screen-recorder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/screen-recorder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/screen-recorder</loc>
+    <loc>https://built-in-saudi.com/ar/apps/screen-recorder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/screen-recorder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/photo-booth</loc>
+    <loc>https://built-in-saudi.com/en/apps/photo-booth/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/photo-booth"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/photo-booth"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/photo-booth"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/photo-booth</loc>
+    <loc>https://built-in-saudi.com/ar/apps/photo-booth/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/photo-booth"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/photo-booth"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/photo-booth"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/image-redact</loc>
+    <loc>https://built-in-saudi.com/en/apps/image-redact/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-redact"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-redact"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-redact"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/image-redact</loc>
+    <loc>https://built-in-saudi.com/ar/apps/image-redact/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-redact"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-redact"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-redact"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/file-encrypt</loc>
+    <loc>https://built-in-saudi.com/en/apps/file-encrypt/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-encrypt"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/file-encrypt</loc>
+    <loc>https://built-in-saudi.com/ar/apps/file-encrypt/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-encrypt"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-encrypt"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/image-to-ascii</loc>
+    <loc>https://built-in-saudi.com/en/apps/image-to-ascii/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-to-ascii"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-to-ascii"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-to-ascii"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/image-to-ascii</loc>
+    <loc>https://built-in-saudi.com/ar/apps/image-to-ascii/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-to-ascii"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-to-ascii"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-to-ascii"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/meme-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/meme-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/meme-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/meme-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/meme-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/meme-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/meme-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/meme-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/meme-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/meme-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/favicon-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/favicon-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/favicon-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/favicon-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/favicon-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/favicon-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/favicon-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/favicon-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/favicon-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/favicon-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/steganography</loc>
+    <loc>https://built-in-saudi.com/en/apps/steganography/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/steganography"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/steganography"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/steganography"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/steganography</loc>
+    <loc>https://built-in-saudi.com/ar/apps/steganography/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/steganography"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/steganography"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/steganography"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/readme-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/readme-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/readme-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/readme-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/readme-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/readme-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/readme-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/readme-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/readme-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/readme-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/markdown-table</loc>
+    <loc>https://built-in-saudi.com/en/apps/markdown-table/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/markdown-table"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/markdown-table"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/markdown-table"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/markdown-table</loc>
+    <loc>https://built-in-saudi.com/ar/apps/markdown-table/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/markdown-table"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/markdown-table"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/markdown-table"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/fake-data</loc>
+    <loc>https://built-in-saudi.com/en/apps/fake-data/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/fake-data"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/fake-data"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/fake-data"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/fake-data</loc>
+    <loc>https://built-in-saudi.com/ar/apps/fake-data/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/fake-data"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/fake-data"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/fake-data"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/slugify</loc>
+    <loc>https://built-in-saudi.com/en/apps/slugify/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/slugify"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/slugify"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/slugify"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/slugify</loc>
+    <loc>https://built-in-saudi.com/ar/apps/slugify/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/slugify"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/slugify"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/slugify"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/meta-tags</loc>
+    <loc>https://built-in-saudi.com/en/apps/meta-tags/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/meta-tags"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/meta-tags"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/meta-tags"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/meta-tags</loc>
+    <loc>https://built-in-saudi.com/ar/apps/meta-tags/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/meta-tags"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/meta-tags"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/meta-tags"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/robots-txt</loc>
+    <loc>https://built-in-saudi.com/en/apps/robots-txt/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/robots-txt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/robots-txt"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/robots-txt"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/robots-txt</loc>
+    <loc>https://built-in-saudi.com/ar/apps/robots-txt/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/robots-txt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/robots-txt"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/robots-txt"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/gitignore</loc>
+    <loc>https://built-in-saudi.com/en/apps/gitignore/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gitignore"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gitignore"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gitignore"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/gitignore</loc>
+    <loc>https://built-in-saudi.com/ar/apps/gitignore/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gitignore"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gitignore"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gitignore"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/json-to-types</loc>
+    <loc>https://built-in-saudi.com/en/apps/json-to-types/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/json-to-types"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/json-to-types"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/json-to-types"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/json-to-types</loc>
+    <loc>https://built-in-saudi.com/ar/apps/json-to-types/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/json-to-types"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/json-to-types"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/json-to-types"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/writer</loc>
+    <loc>https://built-in-saudi.com/en/apps/writer/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/writer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/writer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/writer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/writer</loc>
+    <loc>https://built-in-saudi.com/ar/apps/writer/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/writer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/writer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/writer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/flashcards</loc>
+    <loc>https://built-in-saudi.com/en/apps/flashcards/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/flashcards"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/flashcards"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/flashcards"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/flashcards</loc>
+    <loc>https://built-in-saudi.com/ar/apps/flashcards/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/flashcards"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/flashcards"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/flashcards"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/kanban</loc>
+    <loc>https://built-in-saudi.com/en/apps/kanban/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/kanban"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/kanban"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/kanban"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/kanban</loc>
+    <loc>https://built-in-saudi.com/ar/apps/kanban/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/kanban"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/kanban"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/kanban"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/tier-list</loc>
+    <loc>https://built-in-saudi.com/en/apps/tier-list/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tier-list"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tier-list"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tier-list"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/tier-list</loc>
+    <loc>https://built-in-saudi.com/ar/apps/tier-list/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tier-list"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tier-list"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tier-list"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/readability</loc>
+    <loc>https://built-in-saudi.com/en/apps/readability/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/readability"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/readability"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/readability"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/readability</loc>
+    <loc>https://built-in-saudi.com/ar/apps/readability/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/readability"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/readability"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/readability"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/random-picker</loc>
+    <loc>https://built-in-saudi.com/en/apps/random-picker/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/random-picker"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/random-picker"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/random-picker"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/random-picker</loc>
+    <loc>https://built-in-saudi.com/ar/apps/random-picker/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/random-picker"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/random-picker"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/random-picker"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/dice-roller</loc>
+    <loc>https://built-in-saudi.com/en/apps/dice-roller/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/dice-roller"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/dice-roller"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/dice-roller"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/dice-roller</loc>
+    <loc>https://built-in-saudi.com/ar/apps/dice-roller/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/dice-roller"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/dice-roller"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/dice-roller"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/countdown</loc>
+    <loc>https://built-in-saudi.com/en/apps/countdown/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/countdown"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/countdown"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/countdown"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/countdown</loc>
+    <loc>https://built-in-saudi.com/ar/apps/countdown/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/countdown"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/countdown"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/countdown"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/typing-test</loc>
+    <loc>https://built-in-saudi.com/en/apps/typing-test/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/typing-test"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/typing-test"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/typing-test"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/typing-test</loc>
+    <loc>https://built-in-saudi.com/ar/apps/typing-test/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/typing-test"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/typing-test"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/typing-test"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/cubic-bezier</loc>
+    <loc>https://built-in-saudi.com/en/apps/cubic-bezier/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cubic-bezier"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/cubic-bezier</loc>
+    <loc>https://built-in-saudi.com/ar/apps/cubic-bezier/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cubic-bezier"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cubic-bezier"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/box-shadow</loc>
+    <loc>https://built-in-saudi.com/en/apps/box-shadow/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/box-shadow"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/box-shadow"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/box-shadow"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/box-shadow</loc>
+    <loc>https://built-in-saudi.com/ar/apps/box-shadow/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/box-shadow"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/box-shadow"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/box-shadow"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/gradient-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/gradient-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gradient-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/gradient-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/gradient-generator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gradient-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gradient-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/ip-subnet</loc>
+    <loc>https://built-in-saudi.com/en/apps/ip-subnet/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ip-subnet"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/ip-subnet</loc>
+    <loc>https://built-in-saudi.com/ar/apps/ip-subnet/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ip-subnet"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ip-subnet"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/user-agent</loc>
+    <loc>https://built-in-saudi.com/en/apps/user-agent/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/user-agent"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/user-agent"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/user-agent"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/user-agent</loc>
+    <loc>https://built-in-saudi.com/ar/apps/user-agent/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/user-agent"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/user-agent"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/user-agent"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/end-of-service</loc>
+    <loc>https://built-in-saudi.com/en/apps/end-of-service/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/end-of-service"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/end-of-service"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/end-of-service"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/end-of-service</loc>
+    <loc>https://built-in-saudi.com/ar/apps/end-of-service/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/end-of-service"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/end-of-service"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/end-of-service"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/zakat-calculator</loc>
+    <loc>https://built-in-saudi.com/en/apps/zakat-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/zakat-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/zakat-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/zakat-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/zakat-calculator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/zakat-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/zakat-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/zakat-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/zakat-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/age-calculator</loc>
+    <loc>https://built-in-saudi.com/en/apps/age-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/age-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/age-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/age-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/age-calculator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/age-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/age-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/age-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/age-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/working-days</loc>
+    <loc>https://built-in-saudi.com/en/apps/working-days/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/working-days"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/working-days"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/working-days"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/working-days</loc>
+    <loc>https://built-in-saudi.com/ar/apps/working-days/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/working-days"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/working-days"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/working-days"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/loan-calculator</loc>
+    <loc>https://built-in-saudi.com/en/apps/loan-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/loan-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/loan-calculator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/loan-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/loan-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/loan-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/percentage-calculator</loc>
+    <loc>https://built-in-saudi.com/en/apps/percentage-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/percentage-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/percentage-calculator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/percentage-calculator/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/percentage-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/percentage-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/split-bill</loc>
+    <loc>https://built-in-saudi.com/en/apps/split-bill/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/split-bill"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/split-bill</loc>
+    <loc>https://built-in-saudi.com/ar/apps/split-bill/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/split-bill"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/aspect-ratio</loc>
+    <loc>https://built-in-saudi.com/en/apps/aspect-ratio/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/aspect-ratio"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/aspect-ratio</loc>
+    <loc>https://built-in-saudi.com/ar/apps/aspect-ratio/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/aspect-ratio"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/aspect-ratio"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pomodoro</loc>
+    <loc>https://built-in-saudi.com/en/apps/pomodoro/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pomodoro</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pomodoro/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/url-encoder</loc>
+    <loc>https://built-in-saudi.com/en/apps/url-encoder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/url-encoder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/url-encoder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/url-encoder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/url-encoder</loc>
+    <loc>https://built-in-saudi.com/ar/apps/url-encoder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/url-encoder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/url-encoder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/url-encoder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/base-converter</loc>
+    <loc>https://built-in-saudi.com/en/apps/base-converter/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/base-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/base-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/base-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/base-converter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/base-converter/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/base-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/base-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/base-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/csv-json</loc>
+    <loc>https://built-in-saudi.com/en/apps/csv-json/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-json"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-json"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-json"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/csv-json</loc>
+    <loc>https://built-in-saudi.com/ar/apps/csv-json/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-json"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-json"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-json"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/list-tools</loc>
+    <loc>https://built-in-saudi.com/en/apps/list-tools/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/list-tools"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/list-tools"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/list-tools"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/list-tools</loc>
+    <loc>https://built-in-saudi.com/ar/apps/list-tools/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/list-tools"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/list-tools"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/list-tools"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/color-contrast</loc>
+    <loc>https://built-in-saudi.com/en/apps/color-contrast/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/color-contrast"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/color-contrast"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/color-contrast"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/color-contrast</loc>
+    <loc>https://built-in-saudi.com/ar/apps/color-contrast/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/color-contrast"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/color-contrast"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/color-contrast"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/regex-tester</loc>
+    <loc>https://built-in-saudi.com/en/apps/regex-tester/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/regex-tester"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/regex-tester"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/regex-tester"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/regex-tester</loc>
+    <loc>https://built-in-saudi.com/ar/apps/regex-tester/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/regex-tester"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/regex-tester"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/regex-tester"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/jwt-decoder</loc>
+    <loc>https://built-in-saudi.com/en/apps/jwt-decoder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/jwt-decoder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/jwt-decoder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/jwt-decoder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/jwt-decoder</loc>
+    <loc>https://built-in-saudi.com/ar/apps/jwt-decoder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/jwt-decoder"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/jwt-decoder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/jwt-decoder"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/cron-explainer</loc>
+    <loc>https://built-in-saudi.com/en/apps/cron-explainer/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cron-explainer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cron-explainer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cron-explainer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/cron-explainer</loc>
+    <loc>https://built-in-saudi.com/ar/apps/cron-explainer/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/cron-explainer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cron-explainer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cron-explainer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/text-diff</loc>
+    <loc>https://built-in-saudi.com/en/apps/text-diff/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/text-diff"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/text-diff"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/text-diff"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/text-diff</loc>
+    <loc>https://built-in-saudi.com/ar/apps/text-diff/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/text-diff"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/text-diff"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/text-diff"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/unix-timestamp</loc>
+    <loc>https://built-in-saudi.com/en/apps/unix-timestamp/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/unix-timestamp"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/unix-timestamp"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/unix-timestamp"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/unix-timestamp</loc>
+    <loc>https://built-in-saudi.com/ar/apps/unix-timestamp/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/unix-timestamp"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/unix-timestamp"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/unix-timestamp"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/prompt-analyzer</loc>
+    <loc>https://built-in-saudi.com/en/apps/prompt-analyzer/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/prompt-analyzer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/prompt-analyzer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prompt-analyzer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/prompt-analyzer</loc>
+    <loc>https://built-in-saudi.com/ar/apps/prompt-analyzer/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/prompt-analyzer"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/prompt-analyzer"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prompt-analyzer"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/qr-code</loc>
+    <loc>https://built-in-saudi.com/en/apps/qr-code/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -761,7 +761,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/qr-code"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/qr-code</loc>
+    <loc>https://built-in-saudi.com/ar/apps/qr-code/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -770,7 +770,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/qr-code"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/prayer-times</loc>
+    <loc>https://built-in-saudi.com/en/apps/prayer-times/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -779,7 +779,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prayer-times"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/prayer-times</loc>
+    <loc>https://built-in-saudi.com/ar/apps/prayer-times/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -788,7 +788,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prayer-times"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/hijri-calendar</loc>
+    <loc>https://built-in-saudi.com/en/apps/hijri-calendar/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -797,7 +797,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hijri-calendar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/hijri-calendar</loc>
+    <loc>https://built-in-saudi.com/ar/apps/hijri-calendar/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -806,7 +806,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hijri-calendar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/password-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/password-generator/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -815,7 +815,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/password-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/password-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/password-generator/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -824,63 +824,63 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/password-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/uuid-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/uuid-generator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/uuid-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/uuid-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/uuid-generator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/uuid-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/text-counter</loc>
+    <loc>https://built-in-saudi.com/en/apps/text-counter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/text-counter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/text-counter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/text-counter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/text-counter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/text-counter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/text-counter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/text-counter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/text-counter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/base64</loc>
+    <loc>https://built-in-saudi.com/en/apps/base64/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/base64"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/base64"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/base64"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/base64</loc>
+    <loc>https://built-in-saudi.com/ar/apps/base64/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/base64"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/base64"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/base64"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/date-diff</loc>
+    <loc>https://built-in-saudi.com/en/apps/date-diff/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/date-diff"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/date-diff"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/date-diff"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/date-diff</loc>
+    <loc>https://built-in-saudi.com/ar/apps/date-diff/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/date-diff"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/date-diff"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/date-diff"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/qibla</loc>
+    <loc>https://built-in-saudi.com/en/apps/qibla/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -889,7 +889,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/qibla"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/qibla</loc>
+    <loc>https://built-in-saudi.com/ar/apps/qibla/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -898,448 +898,448 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/qibla"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/archive-inspector</loc>
+    <loc>https://built-in-saudi.com/en/apps/archive-inspector/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/archive-inspector"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/archive-inspector"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/archive-inspector"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/archive-inspector</loc>
+    <loc>https://built-in-saudi.com/ar/apps/archive-inspector/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/archive-inspector"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/archive-inspector"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/archive-inspector"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/file-metadata</loc>
+    <loc>https://built-in-saudi.com/en/apps/file-metadata/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-metadata"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-metadata"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-metadata"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/file-metadata</loc>
+    <loc>https://built-in-saudi.com/ar/apps/file-metadata/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/file-metadata"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/file-metadata"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/file-metadata"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/detect-language</loc>
+    <loc>https://built-in-saudi.com/en/apps/detect-language/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/detect-language"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/detect-language"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/detect-language"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/detect-language</loc>
+    <loc>https://built-in-saudi.com/ar/apps/detect-language/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/detect-language"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/detect-language"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/detect-language"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/lorem-ipsum</loc>
+    <loc>https://built-in-saudi.com/en/apps/lorem-ipsum/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/lorem-ipsum"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/lorem-ipsum"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/lorem-ipsum"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/lorem-ipsum</loc>
+    <loc>https://built-in-saudi.com/ar/apps/lorem-ipsum/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/lorem-ipsum"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/lorem-ipsum"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/lorem-ipsum"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/islamic-calendar</loc>
+    <loc>https://built-in-saudi.com/en/apps/islamic-calendar/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/islamic-calendar"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/islamic-calendar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/islamic-calendar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/islamic-calendar</loc>
+    <loc>https://built-in-saudi.com/ar/apps/islamic-calendar/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/islamic-calendar"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/islamic-calendar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/islamic-calendar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/istikhara</loc>
+    <loc>https://built-in-saudi.com/en/apps/istikhara/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/istikhara"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/istikhara"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/istikhara"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/istikhara</loc>
+    <loc>https://built-in-saudi.com/ar/apps/istikhara/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/istikhara"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/istikhara"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/istikhara"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/adhkar</loc>
+    <loc>https://built-in-saudi.com/en/apps/adhkar/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/adhkar"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/adhkar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/adhkar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/adhkar</loc>
+    <loc>https://built-in-saudi.com/ar/apps/adhkar/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/adhkar"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/adhkar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/adhkar"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/hisn-al-muslim</loc>
+    <loc>https://built-in-saudi.com/en/apps/hisn-al-muslim/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hisn-al-muslim"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hisn-al-muslim"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hisn-al-muslim"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/hisn-al-muslim</loc>
+    <loc>https://built-in-saudi.com/ar/apps/hisn-al-muslim/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hisn-al-muslim"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hisn-al-muslim"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hisn-al-muslim"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/json-formatter</loc>
+    <loc>https://built-in-saudi.com/en/apps/json-formatter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/json-formatter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/json-formatter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/json-formatter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/json-formatter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/json-formatter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/json-formatter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/json-formatter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/json-formatter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/hash-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/hash-generator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hash-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hash-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hash-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/hash-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/hash-generator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hash-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hash-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hash-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/case-converter</loc>
+    <loc>https://built-in-saudi.com/en/apps/case-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/case-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/case-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/case-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/case-converter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/case-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/case-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/case-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/case-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/line-breaks</loc>
+    <loc>https://built-in-saudi.com/en/apps/line-breaks/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/line-breaks"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/line-breaks"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/line-breaks"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/line-breaks</loc>
+    <loc>https://built-in-saudi.com/ar/apps/line-breaks/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/line-breaks"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/line-breaks"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/line-breaks"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/diacritize</loc>
+    <loc>https://built-in-saudi.com/en/apps/diacritize/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/diacritize"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/diacritize"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/diacritize"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/diacritize</loc>
+    <loc>https://built-in-saudi.com/ar/apps/diacritize/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/diacritize"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/diacritize"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/diacritize"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/arabic-verbs</loc>
+    <loc>https://built-in-saudi.com/en/apps/arabic-verbs/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-verbs"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-verbs"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-verbs"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/arabic-verbs</loc>
+    <loc>https://built-in-saudi.com/ar/apps/arabic-verbs/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-verbs"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-verbs"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-verbs"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/paste-to-markdown</loc>
+    <loc>https://built-in-saudi.com/en/apps/paste-to-markdown/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/paste-to-markdown"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/paste-to-markdown"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/paste-to-markdown"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/paste-to-markdown</loc>
+    <loc>https://built-in-saudi.com/ar/apps/paste-to-markdown/</loc>
     <lastmod>2026-07-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/paste-to-markdown"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/paste-to-markdown"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/paste-to-markdown"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/unit-converter</loc>
+    <loc>https://built-in-saudi.com/en/apps/unit-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/unit-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/unit-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/unit-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/unit-converter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/unit-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/unit-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/unit-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/unit-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/arabic-poetry</loc>
+    <loc>https://built-in-saudi.com/en/apps/arabic-poetry/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-poetry"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-poetry"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-poetry"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/arabic-poetry</loc>
+    <loc>https://built-in-saudi.com/ar/apps/arabic-poetry/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-poetry"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-poetry"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-poetry"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/vat-calculator</loc>
+    <loc>https://built-in-saudi.com/en/apps/vat-calculator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vat-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vat-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vat-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/vat-calculator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/vat-calculator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vat-calculator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vat-calculator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vat-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/iban-validator</loc>
+    <loc>https://built-in-saudi.com/en/apps/iban-validator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/iban-validator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/iban-validator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/iban-validator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/iban-validator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/iban-validator/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/iban-validator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/iban-validator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/iban-validator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/tafqeet</loc>
+    <loc>https://built-in-saudi.com/en/apps/tafqeet/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tafqeet"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tafqeet"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tafqeet"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/tafqeet</loc>
+    <loc>https://built-in-saudi.com/ar/apps/tafqeet/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tafqeet"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tafqeet"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tafqeet"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/image-compressor</loc>
+    <loc>https://built-in-saudi.com/en/apps/image-compressor/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-compressor"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-compressor"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-compressor"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/image-compressor</loc>
+    <loc>https://built-in-saudi.com/ar/apps/image-compressor/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-compressor"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-compressor"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-compressor"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/image-format-converter</loc>
+    <loc>https://built-in-saudi.com/en/apps/image-format-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-format-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-format-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-format-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/image-format-converter</loc>
+    <loc>https://built-in-saudi.com/ar/apps/image-format-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-format-converter"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-format-converter"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-format-converter"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/image-cropper</loc>
+    <loc>https://built-in-saudi.com/en/apps/image-cropper/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-cropper"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-cropper"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-cropper"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/image-cropper</loc>
+    <loc>https://built-in-saudi.com/ar/apps/image-cropper/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-cropper"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-cropper"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-cropper"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/images-to-pdf</loc>
+    <loc>https://built-in-saudi.com/en/apps/images-to-pdf/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/images-to-pdf</loc>
+    <loc>https://built-in-saudi.com/ar/apps/images-to-pdf/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-merge</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-merge/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-merge"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-merge"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-merge"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-merge</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-merge/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-merge"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-merge"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-merge"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-split</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-split/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-split"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-split"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-split"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-split</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-split/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-split"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-split"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-split"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-sign</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-sign/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-sign"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-sign"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-sign"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-sign</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-sign/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-sign"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-sign"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-sign"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-fill</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-fill/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-fill"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-fill"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-fill"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-fill</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-fill/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-fill"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-fill"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-fill"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-edit</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-edit/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-edit"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-edit"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-edit"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-edit</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-edit/</loc>
     <lastmod>2026-07-11</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-edit"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-edit"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-edit"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/pdf-compress</loc>
+    <loc>https://built-in-saudi.com/en/apps/pdf-compress/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-compress"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-compress"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-compress"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/pdf-compress</loc>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-compress/</loc>
     <lastmod>2026-07-12</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-compress"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-compress"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-compress"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/invoice-generator</loc>
+    <loc>https://built-in-saudi.com/en/apps/invoice-generator/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/invoice-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/invoice-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/invoice-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/invoice-generator</loc>
+    <loc>https://built-in-saudi.com/ar/apps/invoice-generator/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/invoice-generator"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/invoice-generator"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/invoice-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/color-tools</loc>
+    <loc>https://built-in-saudi.com/en/apps/color-tools/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/color-tools"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/color-tools"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/color-tools"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/ar/apps/color-tools</loc>
+    <loc>https://built-in-saudi.com/ar/apps/color-tools/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/color-tools"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/color-tools"/>

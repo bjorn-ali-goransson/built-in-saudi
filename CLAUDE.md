@@ -56,7 +56,15 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
 4. **When the tool goes LIVE:** add its `en`/`ar` name + description to
    `src/i18n/seo.ts` so the prerender plugin emits static `/<locale>/apps/<id>/`
    HTML with correct head + content. Add its `/en` + `/ar` URLs to
-   `public/sitemap.xml`.
+   `public/sitemap.xml` — **with a trailing slash** (`…/apps/<id>/`); the pages are
+   served as directory `index.html`, so the no-slash form 301-redirects. Canonical,
+   `og:url`, hreflang and the prerendered cross-links all use the slash form too
+   (see `vite.config.ts` `applyHead`/`slash` + `useDocumentMeta`). **SEO gotcha:**
+   `applyHead` swaps `<head>` tags by regex — the description/og/twitter matchers
+   are whitespace-tolerant (`setContent`) because `index.html` wraps some tags
+   across lines; a naïve single-line regex silently leaves the *default*
+   description on every page. Each tool page's crawlable block also links to all
+   other tools (kills orphan pages) under a "More free tools" H2.
 5. Add a Playwright case to `e2e/app.spec.ts` (drive the `data-testid`s you
    expose). For a **substantial** tool, also work from a spec in
    `docs/tools/<id>.md`; the many small single-purpose utilities are built

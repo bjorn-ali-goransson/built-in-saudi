@@ -17,25 +17,42 @@ const suffix: Record<Loc, string> = { en: ' — Built in Saudi', ar: ' — بُ�
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const escAttr = (s: string) => esc(s).replace(/"/g, '&quot;')
 
+// Trailing slash: pages are served as directory index.html, so GitHub Pages
+// 301-redirects the no-slash form to the slash form. Point every canonical /
+// og:url / hreflang / internal link at the slash form so crawlers land on a 200
+// directly (no redirect hop).
+const slash = (sub: string) => `${sub}/`.replace(/\/+$/, '/')
+
 function hreflangs(sub: string): string {
-  const links = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${ORIGIN}/${l}${sub}" />`)
-  links.push(`<link rel="alternate" hreflang="x-default" href="${ORIGIN}/en${sub}" />`)
+  const links = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${ORIGIN}/${l}${slash(sub)}" />`)
+  links.push(`<link rel="alternate" hreflang="x-default" href="${ORIGIN}/en${slash(sub)}" />`)
   return links.join('')
 }
 
 interface Head { locale: Loc; dir: string; title: string; desc: string; canonical: string; sub: string }
 
+// Replace a meta tag's content regardless of attribute order or line wrapping
+// (index.html wraps some tags across lines, which a single-line regex misses —
+// that silently left every page with the default description).
+function setContent(html: string, matchAttr: string, value: string): string {
+  const re = new RegExp(`(<meta\\s+${matchAttr}\\s+content=")[^"]*(")`, 'i')
+  return re.test(html) ? html.replace(re, `$1${escAttr(value)}$2`) : html
+}
+
 function applyHead(html: string, h: Head): string {
-  return html
+  html = html
     .replace(/<html[^>]*>/, `<html lang="${h.locale}" dir="${h.dir}" translate="no">`)
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(h.title)}</title>`)
-    .replace(/(<meta name="description" content=")[^"]*(")/, `$1${escAttr(h.desc)}$2`)
     .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${h.canonical}$2`)
-    .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${escAttr(h.title)}$2`)
-    .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${escAttr(h.desc)}$2`)
     .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${h.canonical}$2`)
     .replace(/(<meta property="og:locale" content=")[^"]*(")/, `$1${h.locale === 'ar' ? 'ar_SA' : 'en_US'}$2`)
     .replace(/<\/head>/, `${hreflangs(h.sub)}</head>`)
+  html = setContent(html, 'name="description"', h.desc)
+  html = setContent(html, 'property="og:title"', h.title)
+  html = setContent(html, 'property="og:description"', h.desc)
+  html = setContent(html, 'name="twitter:title"', h.title)
+  html = setContent(html, 'name="twitter:description"', h.desc)
+  return html
 }
 
 // Inject crawlable content into #root, but `hidden` so it never paints (avoids a
@@ -50,18 +67,28 @@ function homeContent(locale: Loc): string {
   const items = liveToolSeo
     .map((tool) => {
       const ts = tool[locale]
-      return `<li><a href="/${locale}/apps/${tool.id}">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
+      return `<li><a href="/${locale}/apps/${tool.id}/">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
     })
     .join('')
   // Home is app-list-only (the hero copy was removed); keep a single H1 for SEO.
   return `<main><h1>${esc(t.hero.title1)} ${esc(t.hero.title2)}</h1><ul>${items}</ul></main>`
 }
 
+// A tool page's crawlable block: H1 + description, an H2, and a full cross-link
+// list of the other tools. The cross-links mean no tool page is reachable from
+// the homepage alone (kills the "orphan / 1 internal link" problem) and lifts
+// the on-page word count / internal-link density that thin utility pages lack.
 function toolContent(locale: Loc, tool: ToolSeo): string {
   const t = dicts[locale]
   const ts = tool[locale]
-  return `<main><nav><a href="/${locale}">${esc(t.toolPage.breadcrumb)}</a> / ${esc(ts.name)}</nav>`
-    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p></main>`
+  const more = t.toolPage.moreTools
+  const others = liveToolSeo
+    .filter((x) => x.id !== tool.id)
+    .map((x) => `<li><a href="/${locale}/apps/${x.id}/">${esc(x[locale].name)}</a></li>`)
+    .join('')
+  return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a> / ${esc(ts.name)}</nav>`
+    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p>`
+    + `<h2>${esc(more)}</h2><ul>${others}</ul></main>`
 }
 
 /**
@@ -107,14 +134,14 @@ function prerenderPlugin(): Plugin {
         const dir = dicts[locale].dir
         const site = siteMeta[locale]
 
-        let home = applyHead(shell, { locale, dir, title: site.title, desc: site.description, canonical: `${ORIGIN}/${locale}`, sub: '' })
+        let home = applyHead(shell, { locale, dir, title: site.title, desc: site.description, canonical: `${ORIGIN}/${locale}/`, sub: '' })
         home = injectContent(home, homeContent(locale))
         write(locale, home)
 
         for (const tool of liveToolSeo) {
           const ts = tool[locale]
           const sub = `/apps/${tool.id}`
-          let page = applyHead(shell, { locale, dir, title: `${ts.name}${suffix[locale]}`, desc: ts.description, canonical: `${ORIGIN}/${locale}${sub}`, sub })
+          let page = applyHead(shell, { locale, dir, title: `${ts.name}${suffix[locale]}`, desc: ts.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
           page = injectContent(page, toolContent(locale, tool))
           write(`${locale}${sub}`, page)
         }
@@ -124,14 +151,14 @@ function prerenderPlugin(): Plugin {
         for (const page of staticPageSeo) {
           const ps = page[locale]
           const sub = `/${page.id}`
-          let html = applyHead(shell, { locale, dir, title: `${ps.name}${suffix[locale]}`, desc: ps.description, canonical: `${ORIGIN}/${locale}${sub}`, sub })
+          let html = applyHead(shell, { locale, dir, title: `${ps.name}${suffix[locale]}`, desc: ps.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
           html = injectContent(html, `<main><h1>${esc(ps.name)}</h1><p>${esc(ps.description)}</p></main>`)
           write(`${locale}${sub}`, html)
         }
       }
 
       // Root shell: English-default head + hreflang + language links (it redirects client-side).
-      let root = applyHead(shell, { locale: 'en', dir: 'ltr', title: siteMeta.en.title, desc: siteMeta.en.description, canonical: `${ORIGIN}/en`, sub: '' })
+      let root = applyHead(shell, { locale: 'en', dir: 'ltr', title: siteMeta.en.title, desc: siteMeta.en.description, canonical: `${ORIGIN}/en/`, sub: '' })
       root = injectContent(root, `<main><h1>${esc(siteMeta.en.title)}</h1><p><a href="/en">English</a> · <a href="/ar">العربية</a></p></main>`)
       writeFileSync(join(dist, 'index.html'), root)
 
