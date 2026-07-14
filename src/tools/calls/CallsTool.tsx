@@ -271,6 +271,8 @@ export default function CallsTool() {
   const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
   // The people the host still needs to let in (guests who haven't joined yet).
   const waiting = [...roster].filter(([, i]) => i.role === 'guest' && !i.inCall)
+  // Someone showed up in the waiting list → close the Share invite so the host sees them.
+  useEffect(() => { if (waiting.length > 0) setShareOpen(false) }, [waiting.length])
   // In-call participants (excludes those still knocking in the lobby).
   const inCallPeers = [...roster].filter(([, i]) => i.inCall)
 
