@@ -275,6 +275,18 @@ export default function CallsTool() {
   useEffect(() => { if (waiting.length > 0) setShareOpen(false) }, [waiting.length])
   // In-call participants (excludes those still knocking in the lobby).
   const inCallPeers = [...roster].filter(([, i]) => i.inCall)
+  // When a peer joins the call, the host sends the current whiteboard(s) so they
+  // see scribbles made before they arrived. Everyone else dedupes by id (no-op).
+  const prevInCall = useRef(0)
+  useEffect(() => {
+    const n = inCallPeers.length
+    if (!isGuest && n > prevInCall.current) {
+      const boards = [...objects.current.entries()].filter(([, o]) => o.length) as [string, WbObj[]][]
+      if (boards.length) rtc.current?.broadcast({ t: 'wb-sync', boards })
+    }
+    prevInCall.current = n
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inCallPeers.length, isGuest])
 
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setChat((c) => [...c, { from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
@@ -285,6 +297,10 @@ export default function CallsTool() {
       else if (m.op === 'point') { const o = boardOf(bk).find((x) => x.id === m.id); if (o && o.kind === 'stroke') { o.pts.push(...m.pt); (o.wds ||= []).push(m.w ?? o.width); if (active) drawLastSeg(o) } }
       else if (m.op === 'text') { boardOf(bk).push(m.obj); if (active) redraw() }
       else if (m.op === 'remove') { objects.current.set(bk, boardOf(bk).filter((x) => x.id !== m.id)); if (active) redraw() }
+    }
+    else if (m.t === 'wb-sync') { // a full board snapshot for us (we joined late) — merge by id
+      for (const [k, objs] of m.boards) { const arr = boardOf(k); const have = new Set(arr.map((o) => o.id)); for (const o of objs) if (!have.has(o.id)) arr.push(o) }
+      redraw()
     }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
@@ -775,23 +791,29 @@ export default function CallsTool() {
           <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => { setView('board'); setSelected('') }} active={view === 'board' && !presenting} testid="view-board" />
           <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />
         </Menu>
-        {/* files dropdown: upload + the shared-file list (each file has its own board) */}
-        <Menu testid="call-files" triggerClass={dropTrigger} align="start"
-          trigger={<><FileIcon /><span className="max-[420px]:hidden">{s.filesTitle}{files.length > 0 ? ` · ${files.length}` : ''}</span>{unseen.f > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
-          <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} />
-          {files.length > 0 && <div className="my-1 border-t border-[color:var(--line)]" />}
-          {files.map((f) => (
-            <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
-              <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
-                {f.name}<span className="block text-[0.66rem] text-ink-faint truncate">{f.from}</span>
-              </button>
-              <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
-                className="grid place-items-center w-7 h-7 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
-              <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
-                className="grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
-            </div>
-          ))}
-        </Menu>
+        {/* files dropdown — MOBILE only (desktop has the docked panel below) */}
+        <span className="hidden max-[640px]:contents">
+          <Menu testid="call-files" triggerClass={dropTrigger} align="start"
+            trigger={<><FileIcon /><span className="max-[420px]:hidden">{s.filesTitle}{files.length > 0 ? ` · ${files.length}` : ''}</span>{unseen.f > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
+            <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} />
+            {files.length > 0 && <div className="my-1 border-t border-[color:var(--line)]" />}
+            {files.map((f) => (
+              <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
+                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                  {f.name}<span className="block text-[0.66rem] text-ink-faint truncate">{f.from}</span>
+                </button>
+                <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
+                  className="grid place-items-center w-7 h-7 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
+                <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
+                  className="grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </Menu>
+        </span>
+        {/* upload button — DESKTOP (the mobile dropdown carries its own upload) */}
+        <button type="button" onClick={() => fileRef.current?.click()} title={s.sendFiles} className={`${dropTrigger} max-[640px]:hidden`} data-testid="call-upload">
+          <UploadIcon /><span className="max-[880px]:hidden">{s.sendFiles}</span>
+        </button>
 
         {/* participants / chat / call controls — top on desktop, bottom bar on mobile */}
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5 max-[640px]:hidden" />
@@ -814,6 +836,24 @@ export default function CallsTool() {
 
       {/* ---- body ---- */}
       <div className="flex-1 flex min-h-0 relative">
+        {/* docked file list — DESKTOP only (mobile uses the Files dropdown) */}
+        {files.length > 0 && (
+          <aside className="flex max-[640px]:hidden w-48 sm:w-56 shrink-0 flex-col border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 gap-0.5" data-testid="call-filelist">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1 py-1">{s.filesTitle} · {files.length}</p>
+            {files.map((f) => (
+              <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
+                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                  {f.name}<span className="block text-[0.68rem] text-ink-faint truncate">{f.from}</span>
+                </button>
+                <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
+                  className="opacity-0 group-hover:opacity-100 grid place-items-center w-7 h-7 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
+                <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
+                  className="opacity-0 group-hover:opacity-100 grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </aside>
+        )}
+
         {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
         <main className={`flex-1 relative min-w-0 overflow-hidden ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
           {dragOver && (

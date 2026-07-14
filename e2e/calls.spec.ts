@@ -111,7 +111,7 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
   expect(await ink()).toBeGreaterThan(0) // drew on the file's board
   await p.getByTestId('call-view').click(); await p.getByTestId('view-board').click()
   await expect.poll(ink).toBe(0) // pure whiteboard is a separate, empty board
-  await p.getByTestId('call-files').click(); await p.getByTestId('call-file-open').click()
+  await p.getByTestId('call-filelist').getByTestId('call-file-open').click() // desktop docked panel
   await expect.poll(ink).toBeGreaterThan(0) // back on the file → its drawing persists
   await c.close()
 })
@@ -127,6 +127,10 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
   const room = new URL(pa.url()).searchParams.get('code') || '' // code is reflected into the URL
   expect(room.length).toBeGreaterThan(4)
+
+  // A scribbles on the whiteboard BEFORE anyone else is admitted.
+  const boxA = (await pa.locator('[data-testid=calls-live] canvas').boundingBox())!
+  await pa.mouse.move(boxA.x + 60, boxA.y + 60); await pa.mouse.down(); await pa.mouse.move(boxA.x + 160, boxA.y + 140); await pa.mouse.up()
 
   // B asks to join → lands in the waiting lobby, NOT in the call yet
   await pb.goto(`/en/apps/calls?code=${room}`)
@@ -145,6 +149,14 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   // each sees the other as a participant tile (cameras are off by default)
   await expect(pa.getByTestId('call-participants-panel')).toContainText('Bob', { timeout: 25_000 })
   await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice', { timeout: 25_000 })
+
+  // Whiteboard history: B (admitted above) should have received A's earlier scribble.
+  const inkB = () => pb.evaluate(() => {
+    const cv = document.querySelector('[data-testid=calls-live] canvas') as HTMLCanvasElement
+    const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++; return n
+  })
+  await expect.poll(inkB, { timeout: 10_000 }).toBeGreaterThan(0)
 
   // A opens chat and sends; B receives over the data channel
   await pa.getByRole('button', { name: 'Chat', exact: true }).click()

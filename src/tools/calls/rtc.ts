@@ -33,6 +33,8 @@ export type DataMsg =
   | { t: 'wb'; op: 'text'; obj: WbObj; b?: string }
   | { t: 'wb'; op: 'remove'; id: string; b?: string }
   | { t: 'wb'; op: 'clear'; b?: string }
+  // Full whiteboard snapshot sent to a peer who joined after drawing began.
+  | { t: 'wb-sync'; boards: [string, WbObj[]][] }
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
 
