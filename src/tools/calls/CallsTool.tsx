@@ -121,15 +121,16 @@ function IconBtn({ onClick, title, active, danger, children, testid, badge, big 
 }
 
 // A dropdown: a trigger button + a floating panel that closes on outside click.
-function Menu({ trigger, triggerClass, children, align = 'start', up, testid }: { trigger: ReactNode; triggerClass?: string; children: ReactNode; align?: 'start' | 'end'; up?: boolean; testid?: string }) {
+function Menu({ trigger, triggerClass, children, align = 'start', up, testid, full }: { trigger: ReactNode; triggerClass?: string; children: ReactNode; align?: 'start' | 'end'; up?: boolean; testid?: string; full?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { if (!open) return; const h = (e: Event) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }; document.addEventListener('pointerdown', h); return () => document.removeEventListener('pointerdown', h) }, [open])
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={`relative ${full ? 'w-full' : ''}`}>
       <button type="button" onClick={() => setOpen((v) => !v)} data-testid={testid} className={triggerClass}>{trigger}</button>
       {open && (
-        <div onClick={() => setOpen(false)} className={`absolute z-40 min-w-[11rem] bg-[var(--surface)] border border-[color:var(--line)] rounded-lg shadow-[var(--shadow-md)] p-1 ${up ? 'bottom-full mb-1' : 'top-full mt-1'} ${align === 'end' ? 'end-0' : 'start-0'}`}>{children}</div>
+        // max-w keeps it on-screen; `full` makes it span the trigger width (mobile bars).
+        <div onClick={() => setOpen(false)} className={`absolute z-40 ${full ? 'w-full' : 'min-w-[11rem]'} max-w-[calc(100vw-1rem)] bg-[var(--surface)] border border-[color:var(--line)] rounded-lg shadow-[var(--shadow-md)] p-1 ${up ? 'bottom-full mb-1' : 'top-full mt-1'} ${align === 'end' ? 'end-0' : 'start-0'}`}>{children}</div>
       )}
     </div>
   )
@@ -458,8 +459,8 @@ export default function CallsTool() {
     if (!fl) return
     let lastId = ''
     for (const f of fl) {
-      rtc.current?.sendFile(f)
-      const id = `me-${Date.now()}-${f.name}`, url = URL.createObjectURL(f)
+      const id = oid(), url = URL.createObjectURL(f) // shared id → same board key on every peer
+      rtc.current?.sendFile(f, id)
       setFiles((fs) => [...fs, { id, name: f.name, url, mime: f.type, from: s.you }])
       setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name, url }])
       lastId = id
@@ -791,35 +792,13 @@ export default function CallsTool() {
 
         <div className="flex-1" />
 
-        {/* main-view dropdown (whiteboard / share screen) */}
-        <Menu testid="call-view" triggerClass={dropTrigger}
-          trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
+        {/* main-view dropdown: whiteboard / share screen / drop files (upload lives here) */}
+        <Menu testid="call-view" triggerClass={dropTrigger} align="end"
+          trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden max-w-[9rem] truncate">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60 shrink-0" /></>}>
           <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => { setView('board'); setSelected('') }} active={view === 'board' && !presenting} testid="view-board" />
           <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />
+          <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} testid="call-upload" />
         </Menu>
-        {/* files dropdown — MOBILE only (desktop has the docked panel below) */}
-        <span className="hidden max-[640px]:contents">
-          <Menu testid="call-files" triggerClass={dropTrigger} align="start"
-            trigger={<><FileIcon /><span className="max-[420px]:hidden">{s.filesTitle}{files.length > 0 ? ` · ${files.length}` : ''}</span>{unseen.f > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
-            <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} />
-            {files.length > 0 && <div className="my-1 border-t border-[color:var(--line)]" />}
-            {files.map((f) => (
-              <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
-                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
-                  {f.name}<span className="block text-[0.66rem] text-ink-faint truncate">{f.from}</span>
-                </button>
-                <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
-                  className="grid place-items-center w-7 h-7 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
-                <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
-                  className="grid place-items-center w-7 h-7 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
-              </div>
-            ))}
-          </Menu>
-        </span>
-        {/* upload button — DESKTOP (the mobile dropdown carries its own upload) */}
-        <button type="button" onClick={() => fileRef.current?.click()} title={s.sendFiles} className={`${dropTrigger} max-[640px]:hidden`} data-testid="call-upload">
-          <UploadIcon /><span className="max-[880px]:hidden">{s.sendFiles}</span>
-        </button>
 
         {/* participants / chat / call controls — top on desktop, bottom bar on mobile */}
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5 max-[640px]:hidden" />
@@ -833,6 +812,28 @@ export default function CallsTool() {
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
+
+      {/* MOBILE file picker: a full-width dropdown docked under the toolbar (the
+          desktop equivalent is the docked side panel). */}
+      {files.length > 0 && (
+        <div className="hidden max-[640px]:block border-b border-[color:var(--line)] bg-[var(--surface)] px-2 py-1.5" data-testid="call-filebar">
+          <Menu full testid="call-filebar-menu"
+            triggerClass="flex items-center justify-between gap-1.5 w-full h-9 px-2.5 rounded-md border border-[color:var(--line)] bg-[var(--bg)] text-[0.9rem] text-ink cursor-pointer [&_svg]:w-[18px] [&_svg]:h-[18px]"
+            trigger={<><span className="flex items-center gap-1.5 min-w-0"><FileIcon />{unseen.f > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />}<span className="truncate">{view === 'file' && selectedFile ? selectedFile.name : `${s.filesTitle} · ${files.length}`}</span></span><ChevronDownIcon className="opacity-60 shrink-0" /></>}>
+            {files.map((f) => (
+              <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
+                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-2 text-[0.85rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                  {f.name}<span className="block text-[0.66rem] text-ink-faint truncate">{f.from}</span>
+                </button>
+                <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
+                  className="grid place-items-center w-8 h-8 rounded bg-transparent text-ink-faint hover:text-green-700 cursor-pointer shrink-0"><DownloadIcon className="w-4 h-4" /></a>
+                <button type="button" onClick={() => deleteFile(f.id)} title={s.clear} aria-label={s.clear} data-testid="call-file-del"
+                  className="grid place-items-center w-8 h-8 me-1 rounded bg-transparent border-0 text-ink-faint hover:text-[var(--danger)] cursor-pointer shrink-0"><TrashIcon className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </Menu>
+        </div>
+      )}
 
       {graceEndsAt && (
         <div className="flex items-center justify-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium text-white bg-[var(--danger)] border-b border-black/10" data-testid="call-grace">

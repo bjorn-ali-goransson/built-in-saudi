@@ -116,6 +116,33 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
   await c.close()
 })
 
+test('mobile: file bar docks under the toolbar and the view dropdown stays on screen', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.setViewportSize({ width: 390, height: 800 })
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('M')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await p.evaluate(() => {
+    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
+    const dt = new DataTransfer(); dt.items.add(new File([bytes], 'a-rather-long-file-name-1000240436.jpg', { type: 'image/png' }))
+    const inp = document.querySelector('input[type=file]') as HTMLInputElement
+    inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  // A file bar appears just under the toolbar on mobile.
+  await expect(p.getByTestId('call-filebar')).toBeVisible()
+  // The view dropdown opens within the viewport (no overflow), and upload lives in it.
+  await p.getByTestId('call-view').click()
+  await expect(p.getByTestId('call-upload')).toBeVisible()
+  const panel = p.locator('div.z-40', { has: p.getByTestId('view-board') })
+  const box = (await panel.boundingBox())!
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  await c.close()
+})
+
 test('guest waits in the lobby, host admits, then they connect and chat', async ({ browser }) => {
   const a = await ctx(browser, base), b = await ctx(browser, base)
   const pa = await a.newPage(), pb = await b.newPage()
@@ -174,6 +201,19 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
     const vids = [...document.querySelectorAll('[data-testid=calls-live] video')] as HTMLVideoElement[]
     return vids.some((v) => v.srcObject instanceof MediaStream && v.srcObject.getVideoTracks().length > 0)
   }), { timeout: 20_000 }).toBe(true)
+
+  // A shared FILE carries its own whiteboard that syncs between peers (shared id).
+  await pa.evaluate(() => {
+    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
+    const dt = new DataTransfer(); dt.items.add(new File([bytes], 'shared.png', { type: 'image/png' }))
+    const inp = document.querySelector('input[type=file]') as HTMLInputElement
+    inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await expect(pb.locator('[data-testid=calls-live] main img')).toBeVisible({ timeout: 10_000 }) // B received + auto-opened it
+  const boxA2 = (await pa.locator('[data-testid=calls-live] canvas').boundingBox())!
+  await pa.mouse.move(boxA2.x + 70, boxA2.y + 70); await pa.mouse.down(); await pa.mouse.move(boxA2.x + 170, boxA2.y + 150); await pa.mouse.up()
+  await expect.poll(inkB, { timeout: 10_000 }).toBeGreaterThan(0) // B sees A's drawing on the file's board
 
   await a.close(); await b.close()
 })

@@ -241,8 +241,10 @@ export class CallRoom {
 
   // ---- app-facing send (only to peers actually in the call) ------------------
   broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
-  async sendFile(file: File) {
-    const id = rid(), CH = 16 * 1024
+  // `id` is shared with the sender's local file entry so both sides key that file's
+  // whiteboard by the same board id (`f:<id>`) and its annotations sync.
+  async sendFile(file: File, id: string) {
+    const CH = 16 * 1024
     this.broadcast({ t: 'file-start', id, name: file.name, size: file.size, mime: file.type })
     const buf = await file.arrayBuffer()
     for (let o = 0; o < buf.byteLength; o += CH) {
