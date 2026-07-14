@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { isInCall } from './inCall'
 
 /**
  * Detect a new deploy and reload so open tabs don't break on stale, hashed
@@ -18,6 +19,7 @@ export function useVersionCheck() {
         if (!res.ok) return
         const { build, notes } = await res.json()
         if (!stopped && build && build !== current) {
+          if (isInCall()) return // don't yank someone out of a live call — retry next poll
           try {
             sessionStorage.setItem('bis-reloaded', 'update')
             if (notes) sessionStorage.setItem('bis-update-notes', String(notes))

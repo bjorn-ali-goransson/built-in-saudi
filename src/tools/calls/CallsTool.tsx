@@ -5,6 +5,7 @@ import { Stack, Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, type DataMsg, type PeerInfo, type WbObj } from './rtc'
+import { setInCall } from '../../lib/inCall'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
 const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
@@ -371,6 +372,11 @@ export default function CallsTool() {
   }
 
   useEffect(() => () => { rtc.current?.leave() }, [])
+  // Tell the deploy auto-reload to hold off while we're engaged in a call.
+  useEffect(() => {
+    setInCall(phase === 'hosting' || phase === 'waiting' || phase === 'live')
+    return () => setInCall(false)
+  }, [phase])
 
   // Returning host (reloaded the ?room link) → re-enter the room immediately.
   const autoStarted = useRef(false)
