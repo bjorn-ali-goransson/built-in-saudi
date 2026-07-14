@@ -144,13 +144,17 @@ export class CallRoom {
 
   private async pollLoop() {
     while (this.active) {
+      let got = 0
       try {
         const d = await this.post('poll', { since: this.since })
         if (d.closed) { this.h.onClosed?.(); this.leave(); break }
-        for (const m of d.msgs || []) { await this.onSignal(m.from, m.type, m.payload); if (m.seq > this.since) this.since = m.seq }
+        const msgs = d.msgs || []; got = msgs.length
+        for (const m of msgs) { await this.onSignal(m.from, m.type, m.payload); if (m.seq > this.since) this.since = m.seq }
       } catch { /* transient */ }
+      // Drain a handshake burst fast; poll briskly while (re)connecting or alone so a
+      // new/rejoining peer is noticed within ~1.2s; back off once everyone's connected.
       const settling = [...this.peers.values()].some((p) => p.pc.connectionState !== 'connected')
-      await sleep(settling || this.peers.size === 0 ? 900 : 3500)
+      await sleep(got > 0 ? 200 : settling || this.peers.size === 0 ? 500 : 1200)
     }
   }
 
