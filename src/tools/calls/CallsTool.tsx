@@ -82,6 +82,7 @@ const STR = {
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name',
+    connectFail: 'Couldn’t connect to', waitSlow: 'Still trying to connect — if this hangs, the host may be offline or the network is blocking the call.',
     rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
   },
@@ -97,6 +98,7 @@ const STR = {
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
+    connectFail: 'تعذّر الاتصال بـ', waitSlow: 'ما زلنا نحاول الاتصال — إن طال ذلك، فقد يكون المضيف غير متصل أو الشبكة تمنع المكالمة.',
     rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
   },
@@ -378,6 +380,7 @@ export default function CallsTool() {
   const seen = useRef<Map<string, number>>(new Map()) // id → last heartbeat (ms)
   const panelRef = useRef({ p: true, c: false, f: false }) // which panels are open (for notify)
   const knownInCall = useRef<Set<string>>(new Set()) // ids currently in the call (join/leave detection)
+  const connectedOnce = useRef(false) // have we ever reached a 'connected' peer? (guest stuck-waiting detection)
   panelRef.current = { p: showParticipants, c: showChat, f: false }
 
   // Fire a toast for new activity when its panel is closed, and mark a badge. The
@@ -429,6 +432,16 @@ export default function CallsTool() {
     const onVisible = () => { if (!document.hidden && !done) acquire() }
     document.addEventListener('visibilitychange', onVisible)
     return () => { done = true; document.removeEventListener('visibilitychange', onVisible); lock?.release().catch(() => {}) }
+  }, [phase])
+
+  // If a knocking guest hasn't connected to the host within a few seconds, say so
+  // (instead of an indefinite silent spinner). Cleared once a peer connects.
+  const [waitSlow, setWaitSlow] = useState(false)
+  useEffect(() => {
+    if (phase !== 'waiting') { setWaitSlow(false); return }
+    connectedOnce.current = false
+    const t = window.setTimeout(() => { if (!connectedOnce.current) setWaitSlow(true) }, 12_000)
+    return () => window.clearTimeout(t)
   }, [phase])
 
   // Poll the RTC engine for a diagnostics snapshot while the debug panel is open.
@@ -518,6 +531,14 @@ export default function CallsTool() {
         setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m })
       },
       onData, onFileChunk,
+      onPeer: (id, state) => {
+        if (state === 'connected') connectedOnce.current = true
+        else if (state === 'failed') {
+          // Surface the failure instead of silently dropping the peer.
+          const who = rosterRef.current.get(id)?.name || '•'
+          setToast(`${s.connectFail} ${who}`); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 6000)
+        }
+      },
       onPeerInfo: (id, info) => {
         seen.current.set(id, Date.now())
         if (info.inCall && !knownInCall.current.has(id)) { knownInCall.current.add(id); if (rtc.current?.inCall) notify('p', `${info.name || '•'} ${s.joined}`) }
@@ -949,6 +970,7 @@ export default function CallsTool() {
               <p className="text-center text-[1rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}
               </p>
+              {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
           ) : (
