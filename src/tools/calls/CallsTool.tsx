@@ -4,7 +4,7 @@ import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
-import { CallRoom, roomStatus, type DataMsg, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
@@ -174,14 +174,64 @@ function MenuItem({ icon, label, onClick, active, testid }: { icon?: ReactNode; 
 }
 const dropTrigger = 'flex items-center gap-1.5 h-9 px-2.5 rounded-md border-0 bg-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] hover:text-ink cursor-pointer text-[0.9rem] font-medium [&_svg]:w-[18px] [&_svg]:h-[18px]'
 
-// A participant square. The <video> stays mounted whenever there's a stream (so
-// audio always plays even with the camera off); the avatar just overlays it.
+// Remote audio plays through dedicated, always-mounted <audio> sinks rather than
+// the tile's <video>: a cam-off tile hides its video (`invisible`), and some
+// browsers (iOS Safari especially) won't play audio from a hidden video. The
+// late-arriving audio track can also be autoplay-blocked, so retry play() on the
+// next user gesture. One sink per remote peer stream.
+function PeerAudio({ stream }: { stream: MediaStream }) {
+  const ref = useRef<HTMLAudioElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (el.srcObject !== stream) el.srcObject = stream
+    const play = () => { el.play?.().catch(() => {}) }
+    play()
+    document.addEventListener('pointerdown', play)
+    document.addEventListener('keydown', play)
+    return () => { document.removeEventListener('pointerdown', play); document.removeEventListener('keydown', play) }
+  }, [stream])
+  return <audio ref={ref} autoPlay className="hidden" />
+}
+function AudioSinks({ streams }: { streams: [string, MediaStream][] }) {
+  return <>{streams.map(([id, s]) => <PeerAudio key={id} stream={s} />)}</>
+}
+
+// A live read-out of the call's connection + media state, so a tester can screenshot
+// exactly what's happening (is the mic acquired? is audio being sent/received? did
+// the peer connection actually connect?). Toggled from the participants panel.
+function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic: boolean; cam: boolean }) {
+  const line = 'font-mono text-[0.62rem] leading-[1.35] break-all'
+  return (
+    <div className="rounded-md border border-[color:var(--line)] bg-[color-mix(in_srgb,var(--ink)_4%,var(--surface))] p-2 flex flex-col gap-1" data-testid="call-debug">
+      <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-ink-faint">Diagnostics · UI mic {mic ? 'on' : 'off'} / cam {cam ? 'on' : 'off'}</p>
+      {!diag ? <p className={line}>connecting…</p> : (
+        <>
+          <p className={line}>me {diag.me} · {diag.role} · inCall {String(diag.inCall)} · muted {String(diag.muted)}</p>
+          <p className={line}>myMic [{diag.mic}] · myCam [{diag.cam}]</p>
+          {diag.peers.length === 0 && <p className={line}>no peers connected</p>}
+          {diag.peers.map((p) => (
+            <div key={p.id} className={`${line} border-t border-[color:var(--line-soft)] pt-1`}>
+              <div>▸ {p.name} ({p.id}) theirInCall {String(p.theirInCall)}</div>
+              <div>conn <b>{p.conn}</b> · ice {p.ice} · dc {p.dc}</div>
+              <div>sendMic [{p.sendMic}] · sendCam [{p.sendCam}]</div>
+              <div>recvAudio [{p.recvAudio}] · recvVideo [{p.recvVideo}]</div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
+// A participant square. The <video> stays mounted whenever there's a stream; it's
+// always muted (audio is handled by the AudioSinks above), the avatar overlays it.
 function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
   return (
     <div className={`group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
-      {stream && <video ref={ref} autoPlay playsInline muted={self} className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
+      {stream && <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
       {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
@@ -234,6 +284,11 @@ export default function CallsTool() {
   const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone'; count: number }>({ reason: 'gone', count: 0 })
 
   const rtc = useRef<CallRoom | null>(null)
+  // On-screen diagnostics (connection + media state) for debugging. Toggle from the
+  // participants panel; honours ?debug=1 and remembers the choice.
+  const [debug, setDebug] = useState(() => { try { return new URLSearchParams(window.location.search).has('debug') || localStorage.getItem('bis-calls-debug') === '1' } catch { return false } })
+  const [diag, setDiag] = useState<DiagSnapshot | null>(null)
+  const toggleDebug = () => setDebug((d) => { const n = !d; try { localStorage.setItem('bis-calls-debug', n ? '1' : '0') } catch { /* */ }; return n })
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
@@ -338,6 +393,15 @@ export default function CallsTool() {
     document.addEventListener('visibilitychange', onVisible)
     return () => { done = true; document.removeEventListener('visibilitychange', onVisible); lock?.release().catch(() => {}) }
   }, [phase])
+
+  // Poll the RTC engine for a diagnostics snapshot while the debug panel is open.
+  useEffect(() => {
+    if (!debug || phase !== 'live') { setDiag(null); return }
+    const tick = () => setDiag(rtc.current?.diag() ?? null)
+    tick()
+    const iv = window.setInterval(tick, 1000)
+    return () => window.clearInterval(iv)
+  }, [debug, phase])
 
   rosterRef.current = roster
   const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
@@ -929,6 +993,7 @@ export default function CallsTool() {
       onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragOver(false) }}
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
       {shareModal}
+      <AudioSinks streams={[...peers.entries()]} />
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
         {editingName
@@ -1107,8 +1172,12 @@ export default function CallsTool() {
           <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-participants-panel">
             <div className="flex items-center justify-between px-1">
               <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.participants} · {participantCount}</p>
-              <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={toggleDebug} aria-label="Diagnostics" title="Diagnostics" data-testid="call-debug-toggle" className={`grid place-items-center w-8 h-8 rounded-md bg-transparent border-0 cursor-pointer text-[0.95rem] ${debug ? 'text-green-600' : 'text-ink-faint hover:text-ink-soft'}`}>🐞</button>
+                <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
+              </div>
             </div>
+            {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
             {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
             <div className="grid grid-cols-2 gap-2">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />

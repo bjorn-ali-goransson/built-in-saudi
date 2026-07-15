@@ -30,6 +30,8 @@ const ICE: RTCIceServer[] = [
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
+export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string }
+export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; peers: DiagPeer[] }
 
 // A whiteboard object (a pen/eraser stroke or a text label). Coords are in the
 // centred, aspect-preserving board space; width/size are fractions of the board.
@@ -336,6 +338,22 @@ export class CallRoom {
     } catch { return null }
   }
   stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; this.setVideoWire(this.cam ? this.videoTrack : null); if (this.screenOn) { this.screenOn = false; this.broadcastInfo() } }
+
+  /** A snapshot of live connection + media state, for the on-screen debug panel. */
+  diag(): DiagSnapshot {
+    const t = (tr?: MediaStreamTrack | null) => (tr ? `${tr.readyState}${tr.enabled ? '' : ' off'}${tr.muted ? ' muted' : ''}` : '—')
+    return {
+      me: this.me.slice(0, 5), role: this.role, inCall: this.inCall, muted: this.muted,
+      mic: t(this.audioTrack), cam: t(this.videoTrack),
+      peers: [...this.peers.entries()].map(([id, p]) => ({
+        id: id.slice(0, 5), name: p.info?.name || '?', theirInCall: !!p.info?.inCall,
+        conn: p.pc.connectionState, ice: p.pc.iceConnectionState, dc: p.dc?.readyState || '—',
+        sendMic: t(p.aSender?.track), sendCam: t(p.vSender?.track),
+        recvAudio: (p.stream?.getAudioTracks() || []).map(t).join(',') || '—',
+        recvVideo: (p.stream?.getVideoTracks() || []).map(t).join(',') || '—',
+      })),
+    }
+  }
 
   private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.h.onLeave?.(id) }
   leave() {
