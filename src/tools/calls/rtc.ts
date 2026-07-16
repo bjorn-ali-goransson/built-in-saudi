@@ -116,6 +116,10 @@ export class CallRoom {
   private audioTrack: MediaStreamTrack | null = null
   private videoTrack: MediaStreamTrack | null = null
   private screen: MediaStream | null = null
+  // Preferred input device ids (chosen in the UI). Applied on the next acquire and,
+  // when a device is already live, switched immediately via switchMic/switchCamera.
+  private micId: string | undefined
+  private camId: string | undefined
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
@@ -291,7 +295,7 @@ export class CallRoom {
   async toggleMic(on: boolean): Promise<boolean> {
     if (on) {
       if (!this.audioTrack) {
-        try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); this.audioTrack = s.getAudioTracks()[0] }
+        try { const s = await navigator.mediaDevices.getUserMedia({ audio: this.micId ? { deviceId: { exact: this.micId } } : true }); this.audioTrack = s.getAudioTracks()[0] }
         catch { this.muted = true; this.broadcastInfo(); return false }
         this.local?.addTrack(this.audioTrack)
       }
@@ -307,7 +311,7 @@ export class CallRoom {
   async toggleCam(on: boolean): Promise<boolean> {
     if (on) {
       if (!this.videoTrack) {
-        try { const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }); this.videoTrack = s.getVideoTracks()[0] }
+        try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, width: 1280, height: 720 } }); this.videoTrack = s.getVideoTracks()[0] }
         catch { this.cam = false; this.broadcastInfo(); return false }
         this.local?.addTrack(this.videoTrack); this.h.onLocal?.(this.local!)
       }
@@ -319,6 +323,28 @@ export class CallRoom {
       if (this.videoTrack) { this.local?.removeTrack(this.videoTrack); this.videoTrack.stop(); this.videoTrack = null }
     }
     this.broadcastInfo(); return true
+  }
+  /** Switch the active microphone. Remembered for the next unmute; applied live via
+   *  replaceTrack (no renegotiation) when the mic is currently on. */
+  async switchMic(id: string): Promise<void> {
+    this.micId = id
+    if (this.muted || !this.audioTrack) return
+    let track: MediaStreamTrack
+    try { track = (await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: id } } })).getAudioTracks()[0] } catch { return }
+    this.local?.removeTrack(this.audioTrack); this.audioTrack.stop()
+    this.audioTrack = track; this.local?.addTrack(track)
+    for (const p of this.peers.values()) if (p.info?.inCall) this.addOrReplace(p, track)
+  }
+  /** Switch the active camera. Remembered for next cam-on; applied live otherwise
+   *  (unless a screen share is on, which owns the video wire). */
+  async switchCamera(id: string): Promise<void> {
+    this.camId = id
+    if (!this.cam || !this.videoTrack) return
+    let track: MediaStreamTrack
+    try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, width: 1280, height: 720 } })).getVideoTracks()[0] } catch { return }
+    this.local?.removeTrack(this.videoTrack); this.videoTrack.stop()
+    this.videoTrack = track; this.local?.addTrack(track); this.h.onLocal?.(this.local!)
+    if (!this.screenOn) this.setVideoWire(track)
   }
   /** Ask another participant's client to mute itself; everyone is notified. */
   forceMute(target: string) { const msg = JSON.stringify({ c: 'fmute', target, by: this.name } as Ctrl); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(msg) }

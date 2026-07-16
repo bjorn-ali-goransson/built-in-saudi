@@ -283,6 +283,44 @@ test('a guest stuck in the lobby can still open diagnostics (not just in-call)',
   await a.close(); await b.close()
 })
 
+test('device picker lists camera, microphone and speaker', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  await p.getByTestId('call-devices').click()
+  const menu = p.locator('div.z-40', { hasText: 'Camera' })
+  await expect(menu).toContainText('Camera')
+  await expect(menu).toContainText('Microphone')
+  await expect(menu).toContainText('Speaker')
+  await c.close()
+})
+
+test('mobile: call opens as a whiteboard/dock split with tabs to switch to chat', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.setViewportSize({ width: 390, height: 800 })
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('M')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  // Starts split: the participants dock is open at the bottom with its tab strip.
+  await expect(p.getByTestId('call-participants-panel')).toBeVisible()
+  await expect(p.getByTestId('call-dock-tabs')).toBeVisible()
+  // The dock occupies the bottom of the screen, not the full height (whiteboard above).
+  const dock = (await p.getByTestId('call-participants-panel').boundingBox())!
+  expect(dock.y).toBeGreaterThan(300)
+  // Tapping the Chat tab switches the same dock to chat.
+  await p.getByTestId('call-dock-tab-chat').click()
+  await expect(p.getByTestId('call-chat-panel')).toBeVisible()
+  await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
+  await c.close()
+})
+
 test('a debugging host propagates ?debug=1 into the invite link', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()

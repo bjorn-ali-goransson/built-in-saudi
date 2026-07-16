@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -79,6 +79,7 @@ const STR = {
     lobbyList: 'Waiting in the lobby', admit: 'Let in', leftLobby: 'left', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
     camOn: 'Turn camera on', camOff: 'Turn camera off', mutedBy: 'muted', muteThem: 'Mute for everyone', filesTitle: 'Files', noPreview: 'No preview — download to open', download: 'Download',
+    devices: 'Devices', camera: 'Camera', microphone: 'Microphone', speaker: 'Speaker',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name',
@@ -95,6 +96,7 @@ const STR = {
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', leftLobby: 'غادر', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
     camOn: 'تشغيل الكاميرا', camOff: 'إيقاف الكاميرا', mutedBy: 'كتم', muteThem: 'اكتم للجميع', filesTitle: 'الملفات', noPreview: 'لا معاينة — نزّل للفتح', download: 'تنزيل',
+    devices: 'الأجهزة', camera: 'الكاميرا', microphone: 'الميكروفون', speaker: 'السماعة',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
@@ -182,7 +184,7 @@ const dropTrigger = 'flex items-center gap-1.5 h-9 px-2.5 rounded-md border-0 bg
 // browsers (iOS Safari especially) won't play audio from a hidden video. The
 // late-arriving audio track can also be autoplay-blocked, so retry play() on the
 // next user gesture. One sink per remote peer stream.
-function PeerAudio({ stream }: { stream: MediaStream }) {
+function PeerAudio({ stream, sinkId }: { stream: MediaStream; sinkId?: string }) {
   const ref = useRef<HTMLAudioElement>(null)
   useEffect(() => {
     const el = ref.current
@@ -194,10 +196,32 @@ function PeerAudio({ stream }: { stream: MediaStream }) {
     document.addEventListener('keydown', play)
     return () => { document.removeEventListener('pointerdown', play); document.removeEventListener('keydown', play) }
   }, [stream])
+  // Route playback to the chosen speaker (output device). setSinkId isn't in the
+  // lib DOM types and is unsupported on some browsers, so guard + cast.
+  useEffect(() => {
+    const el = ref.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null
+    if (el && sinkId && el.setSinkId) el.setSinkId(sinkId).catch(() => {})
+  }, [sinkId, stream])
   return <audio ref={ref} autoPlay className="hidden" />
 }
-function AudioSinks({ streams }: { streams: [string, MediaStream][] }) {
-  return <>{streams.map(([id, s]) => <PeerAudio key={id} stream={s} />)}</>
+function AudioSinks({ streams, sinkId }: { streams: [string, MediaStream][]; sinkId?: string }) {
+  return <>{streams.map(([id, s]) => <PeerAudio key={id} stream={s} sinkId={sinkId} />)}</>
+}
+
+// One labelled section of the device picker (Camera / Microphone / Speaker). With
+// no explicit choice yet, the first device is shown as active (the browser default).
+function DeviceGroup({ label, items, value, onPick }: { label: string; items: MediaDeviceInfo[]; value: string; onPick: (id: string) => void }) {
+  return (
+    <div className="py-1 border-t border-[color:var(--line-soft)] first:border-t-0">
+      <p className="px-3 pt-1 pb-0.5 text-[0.66rem] font-semibold uppercase tracking-wide text-ink-faint">{label}</p>
+      {items.length === 0
+        ? <p className="px-3 py-1 text-[0.82rem] text-ink-faint/70">—</p>
+        : items.map((d, i) => (
+          <MenuItem key={d.deviceId || i} label={d.label || `${label} ${i + 1}`}
+            active={value ? value === d.deviceId : i === 0} onClick={() => onPick(d.deviceId)} />
+        ))}
+    </div>
+  )
 }
 
 // Voice-activity detection: true while the stream's audio is above a speaking
@@ -269,7 +293,7 @@ function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, 
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
   return (
-    <div className={`group relative aspect-square rounded-lg overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] border border-[color:var(--line-soft)] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
+    <div className={`group relative aspect-square overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
       {stream && <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
       {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
@@ -331,9 +355,15 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  // Input/output device selection (camera, mic, speaker). Labels only populate once
+  // permission is granted, so we re-enumerate whenever the cam/mic turn on.
+  const [mediaDevices, setMediaDevices] = useState<MediaDeviceInfo[]>([])
+  const [camId, setCamId] = useState(''), [micId, setMicId] = useState(''), [spkId, setSpkId] = useState('')
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
   const [editingName, setEditingName] = useState(false)
-  const [showParticipants, setShowParticipants] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 640 : true))
+  // Open by default on every size: desktop shows the side dock, mobile the bottom
+  // split. (Mobile used to start whiteboard-fullscreen; now it starts split.)
+  const [showParticipants, setShowParticipants] = useState(true)
   const [showChat, setShowChat] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const dragDepth = useRef(0) // enter/leave fire per child; count to know when we've truly left
@@ -455,6 +485,17 @@ export default function CallsTool() {
     const iv = window.setInterval(tick, 1000)
     return () => window.clearInterval(iv)
   }, [debug, phase])
+
+  // Enumerate cam/mic/speaker devices for the picker. Re-runs when cam/mic turn on
+  // (device labels are blank until permission is granted) and on hot-plug.
+  useEffect(() => {
+    const md = navigator.mediaDevices
+    if (!md?.enumerateDevices) return
+    const load = () => md.enumerateDevices().then(setMediaDevices).catch(() => {})
+    load()
+    md.addEventListener?.('devicechange', load)
+    return () => md.removeEventListener?.('devicechange', load)
+  }, [cam, mic])
 
   rosterRef.current = roster
   const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
@@ -1059,6 +1100,30 @@ export default function CallsTool() {
   const graceLeft = graceEndsAt ? Math.max(0, graceEndsAt - Date.now()) : 0
   const graceMMSS = `${Math.floor(graceLeft / 60000)}:${String(Math.floor((graceLeft % 60000) / 1000)).padStart(2, '0')}`
 
+  const cams = mediaDevices.filter((d) => d.kind === 'videoinput')
+  const mics = mediaDevices.filter((d) => d.kind === 'audioinput')
+  const spks = mediaDevices.filter((d) => d.kind === 'audiooutput')
+  // Camera / mic / speaker picker. `up` opens it upward (mobile bottom bar).
+  const deviceMenu = (up?: boolean) => (
+    <Menu testid={up ? 'call-devices-m' : 'call-devices'} align="end" up={up} triggerClass="grid place-items-center h-9 min-w-9 px-2 rounded-md border-0 bg-transparent text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] hover:text-ink cursor-pointer [&_svg]:w-[18px] [&_svg]:h-[18px]" trigger={<CogIcon />}>
+      <div className="min-w-[13rem] max-w-[80vw]">
+        <DeviceGroup label={s.camera} items={cams} value={camId} onPick={(id) => { setCamId(id); rtc.current?.switchCamera(id) }} />
+        <DeviceGroup label={s.microphone} items={mics} value={micId} onPick={(id) => { setMicId(id); rtc.current?.switchMic(id) }} />
+        {spks.length > 0 && <DeviceGroup label={s.speaker} items={spks} value={spkId} onPick={setSpkId} />}
+      </div>
+    </Menu>
+  )
+  // Mobile-only tab strip atop the bottom dock: switch it between the participant
+  // grid and chat (desktop uses the toolbar buttons; the dock is a side panel there).
+  const dockTabs = (
+    <div className="hidden max-[640px]:flex items-stretch border-b border-[color:var(--line)] shrink-0 bg-[var(--surface)]" data-testid="call-dock-tabs">
+      <button type="button" data-testid="call-dock-tab-participants" onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }}
+        className={`flex-1 h-11 grid place-items-center text-[0.85rem] font-medium bg-transparent border-0 border-b-2 cursor-pointer ${showParticipants ? 'text-green-700 border-green-600' : 'text-ink-soft border-transparent'}`}>{s.participants}</button>
+      <button type="button" data-testid="call-dock-tab-chat" onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }}
+        className={`flex-1 h-11 grid place-items-center text-[0.85rem] font-medium bg-transparent border-0 border-b-2 cursor-pointer ${showChat ? 'text-green-700 border-green-600' : 'text-ink-soft border-transparent'}`}>{s.chat}</button>
+    </div>
+  )
+
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
   // transformed ancestor would otherwise become its containing block).
   return createPortal(
@@ -1068,7 +1133,7 @@ export default function CallsTool() {
       onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragOver(false) }}
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
       {shareModal}
-      <AudioSinks streams={[...peers.entries()]} />
+      <AudioSinks streams={[...peers.entries()]} sinkId={spkId} />
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">
         {editingName
@@ -1101,6 +1166,7 @@ export default function CallsTool() {
           <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
+          {deviceMenu()}
           <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
@@ -1135,7 +1201,9 @@ export default function CallsTool() {
       )}
 
       {/* ---- body ---- */}
-      <div className="flex-1 flex min-h-0 relative">
+      {/* Desktop: whiteboard + side dock in a row. Mobile: a vertical split —
+          whiteboard on top, the participants/chat dock docked to the bottom half. */}
+      <div className="flex-1 flex min-h-0 relative max-[640px]:flex-col">
         {/* docked file list — DESKTOP only (mobile uses the Files dropdown) */}
         {files.length > 0 && (
           <aside className="flex max-[640px]:hidden w-48 sm:w-56 shrink-0 flex-col border-e border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2 gap-0.5" data-testid="call-filelist">
@@ -1244,27 +1312,25 @@ export default function CallsTool() {
 
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}
         {showParticipants && (
-          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-participants-panel">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.participants} · {participantCount}</p>
-              <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
-            </div>
-            {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
-            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
-            <div className="grid grid-cols-2 gap-2">
-              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
-              {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
-              ))}
+          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:h-[46%] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-participants-panel">
+            {dockTabs}
+            <div className="flex flex-col gap-2.5 p-2.5">
+              <p className="max-[640px]:hidden text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1">{s.participants} · {participantCount}</p>
+              {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
+              {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
+              {/* Full-bleed video mosaic: no gaps/rounding/border, flush to the panel edges. */}
+              <div className="grid grid-cols-2 gap-0 -mx-2.5 -mb-2.5">
+                <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
+                {inCallPeers.map(([id, info]) => (
+                  <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
+                ))}
+              </div>
             </div>
           </aside>
         )}
         {showChat && (
-          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-chat-panel">
-            <div className="hidden max-[640px]:flex items-center justify-between px-3 py-2 border-b border-[color:var(--line)]">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.chat}</p>
-              <button type="button" onClick={() => setShowChat(false)} aria-label="Close" data-testid="call-chat-close" className="grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
-            </div>
+          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:h-[46%] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-chat-panel">
+            {dockTabs}
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
               {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
               {chat.map((m, i) => (
@@ -1300,6 +1366,7 @@ export default function CallsTool() {
           </Menu>
         )}
         <div className="flex-1" />
+        {deviceMenu(true)}
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
         <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big>{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
