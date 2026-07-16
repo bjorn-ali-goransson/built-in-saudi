@@ -47,6 +47,14 @@ export function useDocumentMeta(locale: Locale, subPath = '', title?: string, de
     setMeta('meta[property="og:title"]', 'content', fullTitle)
     setMeta('meta[property="og:description"]', 'content', desc)
     setMeta('meta[property="og:locale"]', 'content', locale === 'ar' ? 'ar_SA' : 'en_US')
+    // og:locale:alternate reinforces the hreflang signal for the other language
+    let altMeta = document.querySelector('meta[property="og:locale:alternate"]') as HTMLMetaElement | null
+    if (!altMeta) {
+      altMeta = document.createElement('meta')
+      altMeta.setAttribute('property', 'og:locale:alternate')
+      document.head.appendChild(altMeta)
+    }
+    altMeta.setAttribute('content', locale === 'ar' ? 'en_US' : 'ar_SA')
     setMeta('meta[name="twitter:title"]', 'content', fullTitle)
     setMeta('meta[name="twitter:description"]', 'content', desc)
     setHreflangs(subPath)
