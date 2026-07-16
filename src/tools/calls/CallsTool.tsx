@@ -323,11 +323,11 @@ export default function CallsTool() {
   const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone'; count: number }>({ reason: 'gone', count: 0 })
 
   const rtc = useRef<CallRoom | null>(null)
-  // On-screen diagnostics (connection + media state) for debugging. Toggle from the
-  // participants panel; honours ?debug=1 and remembers the choice.
-  const [debug, setDebug] = useState(() => { try { return new URLSearchParams(window.location.search).has('debug') || localStorage.getItem('bis-calls-debug') === '1' } catch { return false } })
+  // On-screen diagnostics (connection + media state) for debugging. Enabled purely
+  // by ?debug=1 in the URL — which the host's invite link carries — so a guest lands
+  // with it on and there's no button to find. Read once at mount.
+  const [debug] = useState(() => { try { return new URLSearchParams(window.location.search).has('debug') } catch { return false } })
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
-  const toggleDebug = () => setDebug((d) => { const n = !d; try { localStorage.setItem('bis-calls-debug', n ? '1' : '0') } catch { /* */ }; return n })
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
@@ -445,8 +445,11 @@ export default function CallsTool() {
   }, [phase])
 
   // Poll the RTC engine for a diagnostics snapshot while the debug panel is open.
+  // Runs in every connected phase (hosting/waiting/live), not just live — a guest
+  // stuck in the lobby (data channel never opens) is exactly when you need it.
   useEffect(() => {
-    if (!debug || phase !== 'live') { setDiag(null); return }
+    const connected = phase === 'live' || phase === 'waiting' || phase === 'hosting'
+    if (!debug || !connected) { setDiag(null); return }
     const tick = () => setDiag(rtc.current?.diag() ?? null)
     tick()
     const iv = window.setInterval(tick, 1000)
@@ -558,8 +561,10 @@ export default function CallsTool() {
   function mediaError() { setToast('Camera/mic permission needed'); setTimeout(() => setToast(''), 3000) }
   // Put the room code in the URL so it's shareable and rooms are distinguishable.
   function rememberHost(code: string) { saveName(); try { localStorage.setItem(HOST_KEY, code) } catch { /* */ } }
-  // URL for an in-call / invite link vs the bare start page.
-  const joinPath = (code: string) => `${localePath(locale, '/apps/calls')}/join?code=${code}`
+  // URL for an in-call / invite link vs the bare start page. When the host is
+  // debugging, carry ?debug=1 into the invite so a (non-technical) guest lands with
+  // diagnostics already on — no need to ask them to tap the bug button.
+  const joinPath = (code: string) => `${localePath(locale, '/apps/calls')}/join?code=${code}${debug ? '&debug=1' : ''}`
   const lobbyPath = () => localePath(locale, '/apps/calls')
 
   // Host: start the call right away (others still need to be let in).
@@ -1020,6 +1025,16 @@ export default function CallsTool() {
           {!isGuest && phase === 'hosting' && waiting.length > 0 && (
             <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} staleIds={staleIds} live /></div>
           )}
+
+          {/* Diagnostics on the connecting/waiting screen too — a guest whose data
+              channel never opens can't reach the in-call panel. No button here: it's
+              driven purely by ?debug=1 in the URL, which the host's invite carries, so
+              a non-technical guest lands with it on and nothing to tap. */}
+          {debug && (phase === 'waiting' || phase === 'hosting') && (
+            <div className="w-full [&_[data-testid=call-debug]]:bg-black/20 [&_[data-testid=call-debug]]:border-sand-100/15 [&_*]:!text-sand-100/85" data-testid="call-debug-wait">
+              <DebugPanel diag={diag} mic={mic} cam={cam} />
+            </div>
+          )}
         </div>
 
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
@@ -1232,10 +1247,7 @@ export default function CallsTool() {
           <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto p-2.5 flex flex-col gap-2.5 max-[640px]:absolute max-[640px]:inset-0 max-[640px]:w-full max-[640px]:z-30" data-testid="call-participants-panel">
             <div className="flex items-center justify-between px-1">
               <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">{s.participants} · {participantCount}</p>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={toggleDebug} aria-label="Diagnostics" title="Diagnostics" data-testid="call-debug-toggle" className={`grid place-items-center w-8 h-8 rounded-md bg-transparent border-0 cursor-pointer text-[0.95rem] ${debug ? 'text-green-600' : 'text-ink-faint hover:text-ink-soft'}`}>🐞</button>
-                <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
-              </div>
+              <button type="button" onClick={() => setShowParticipants(false)} aria-label="Close" data-testid="call-participants-close" className="hidden max-[640px]:grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
             </div>
             {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
             {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}

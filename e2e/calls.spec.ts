@@ -261,3 +261,41 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
 
   await a.close(); await b.close()
 })
+
+test('a guest stuck in the lobby can still open diagnostics (not just in-call)', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  // Bob joins with ?debug=1 and is left WAITING (host never admits). The bug panel
+  // must be reachable from the waiting screen — previously it only existed in-call,
+  // so a guest whose connection stalled had nothing to open.
+  await pb.goto(`/en/apps/calls?code=${room}&debug=1`)
+  await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
+  await expect(pb.getByTestId('call-waiting')).toBeVisible({ timeout: 10_000 })
+  // No button to tap — the panel auto-appears because the URL carries debug=1.
+  await expect(pb.getByTestId('call-debug-wait')).toBeVisible()
+  // The panel is live: it shows our own role and eventually the host as a peer.
+  await expect(pb.getByTestId('call-debug')).toContainText('guest', { timeout: 5_000 })
+  await expect(pb.getByTestId('call-debug')).not.toContainText('no peers connected', { timeout: 15_000 })
+  await a.close(); await b.close()
+})
+
+test('a debugging host propagates ?debug=1 into the invite link', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  // Host is debugging → the shared invite must carry debug=1 so a non-technical
+  // guest lands with diagnostics on, without being asked to tap anything.
+  await p.goto('/en/apps/calls?debug=1')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-share').click()
+  await expect(p.getByTestId('call-share-qr')).toBeVisible({ timeout: 10_000 })
+  // openShareModal pushes the same join URL that feeds the QR / copy / native share.
+  const url = new URL(p.url())
+  expect(url.pathname).toContain('/apps/calls/join')
+  expect(url.searchParams.get('code')).not.toBeNull()
+  expect(url.searchParams.get('debug')).toBe('1')
+  await c.close()
+})
