@@ -1,5 +1,9 @@
 // Client calls to the Book With Me Cloud Functions. Same host as push.ts.
-const FN = 'https://us-central1-blitz-ksa.cloudfunctions.net'
+// `window.__BOOKING_FN` lets e2e point the whole flow at a mock server (see the
+// mock OAuth provider in e2e/book-me.spec.ts); production uses the real host.
+const FN =
+  (typeof window !== 'undefined' && (window as unknown as { __BOOKING_FN?: string }).__BOOKING_FN) ||
+  'https://us-central1-blitz-ksa.cloudfunctions.net'
 
 export interface HostMeta {
   name: string | null

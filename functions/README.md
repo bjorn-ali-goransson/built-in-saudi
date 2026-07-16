@@ -22,7 +22,17 @@ are HMAC-signed with `node:crypto`, the `.ics` is hand-written. See
 - **booking-google-callback** (`bookingGoogleCallback`) — exchanges the code,
   upserts `bookingHosts/{googleSub}` with the refresh token, redirects back to the
   dashboard with an HMAC `#hsid` session. **The deployed name must stay
-  `booking-google-callback` — it's the OAuth redirect URI in `booking.js`.**
+  `booking-google-callback`** — `public/oauth/callback/index.html` forwards to it
+  by that literal URL.
+
+  **The OAuth redirect URI is NOT this function.** It's
+  `https://built-in-saudi.com/oauth/callback/` — a static page in `public/` that
+  just forwards `location.search` here. Google prints the redirect URI's domain on
+  the consent screen until brand verification passes, and verification requires we
+  own that domain; `cloudfunctions.net` is Google's, so it could never verify.
+  Changing `REDIRECT_URI` means updating the Authorized redirect URI in the console
+  to match byte-for-byte (trailing slash included) — a mismatch breaks sign-in with
+  `redirect_uri_mismatch`.
 - **save-schedule** (`saveSchedule`) — `POST { hsid, code, tz, meeting, availability, notify, pushSub? }` → upserts the host (hsid-authenticated).
 - **get-availability** (`getAvailability`) — `POST { code }` → host meta + open slot epochs (drawn availability − bookings − Google free/busy).
 - **book** — `POST { code, startUtc, name, email, note }` → transactional booking (deterministic id `hostUid_startMs` prevents double-booking), creates the Calendar event, fires push + Telegram + Resend email w/ `.ics`.

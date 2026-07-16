@@ -30,10 +30,14 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
 const SESSION_SECRET = process.env.SENDER_SECRET || 'x' // reuse the existing shared secret for HMAC
 
-// This function's own base URL, used as the OAuth redirect target. All gen2
-// functions in this project share the us-central1-<project> host.
-const FN_BASE = 'https://us-central1-blitz-ksa.cloudfunctions.net'
-const REDIRECT_URI = `${FN_BASE}/booking-google-callback`
+// The OAuth redirect target is a static page on OUR domain, which then forwards
+// the code to booking-google-callback. Google prints the redirect URI's domain
+// on the consent screen for un-brand-verified apps, and brand verification
+// requires we own that domain — cloudfunctions.net is Google's, so pointing here
+// is what lets the app name ("Built in Saudi") ever display. Must match the
+// Authorized redirect URI in the console byte-for-byte, trailing slash included
+// (the no-slash form 301s, since Pages serves it as a directory index).
+const REDIRECT_URI = `${SITE}/oauth/callback/`
 
 const OAUTH_SCOPES = [
   'openid',

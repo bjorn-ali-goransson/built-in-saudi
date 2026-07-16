@@ -111,6 +111,7 @@ const STR = {
     copy: 'Copy link',
     copied: 'Copied!',
     previewLink: 'Preview',
+    unverified: 'Google will warn that this app isn’t verified — our review is still in progress. Choose Advanced → Continue to carry on. We only read when you’re busy and add your booked meetings.',
     calWarn: 'Google Calendar isn’t connected, so your existing events won’t block booking times and new bookings won’t be added to your calendar. Reconnect and allow Calendar access.',
     reconnectExpired: 'Your Google connection has expired or was revoked — your booking page won’t work until you reconnect.',
     reconnect: 'Reconnect Calendar',
@@ -191,6 +192,7 @@ const STR = {
     copy: 'نسخ الرابط',
     copied: 'تم النسخ!',
     previewLink: 'معاينة',
+    unverified: 'سيحذّرك جوجل من أن هذا التطبيق لم يُوثَّق بعد — المراجعة ما زالت جارية. اختر «خيارات متقدمة» ثم «متابعة» للمواصلة. نقرأ فقط أوقات انشغالك ونضيف اجتماعاتك المحجوزة.',
     calWarn: 'تقويم Google غير مربوط، لذا لن تحجب مواعيدك الحالية أوقات الحجز ولن تُضاف الحجوزات الجديدة إلى تقويمك. أعد الربط واسمح بالوصول إلى التقويم.',
     reconnectExpired: 'انتهت صلاحية ربط Google أو تم إلغاؤه — لن تعمل صفحة الحجز حتى تعيد الربط.',
     reconnect: 'إعادة ربط التقويم',
@@ -591,6 +593,15 @@ export default function BookWithMeTool() {
           </div>
         </div>
       </div>
+
+      {/* Until Google's brand + scope review clears, the consent screen shows an
+          "unverified app" interstitial. Warn first so it reads as expected, not
+          as something broken. */}
+      {!session && (
+        <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="unverified-warning">
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.unverified}</span>
+        </div>
+      )}
 
       {session && (tokenStatus === 'nocal' || tokenStatus === 'disconnected') && (
         <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="cal-warning">

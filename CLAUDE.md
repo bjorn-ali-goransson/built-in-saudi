@@ -198,7 +198,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   each own their toggles. See [`functions/README.md`](./functions/README.md).
 - **Book Me backend** (`functions/booking.js`, same stack; tool id is now
   **`book-me`**, folder still `src/tools/book-with-me/`): Calendly-style scheduling
-  — `booking-google-start`/`-callback`, `save-schedule`, `get-availability`,
+  — `booking-google-start`/`-callback` (**the OAuth redirect URI is
+  `built-in-saudi.com/oauth/callback/`, a static forwarder in `public/`, NOT the
+  function** — Google prints the redirect URI's domain on the consent screen until
+  brand verification passes, so it must be a domain we own, not
+  `cloudfunctions.net`), `save-schedule`, `get-availability`,
   `book`, `telegram-webhook`, plus **`delete-host`** (deletes the host record +
   all its bookings), **`my-data`** (see the data-deletion note below),
   **`host-status`** (is the stored token still connected + does it have Calendar
@@ -217,7 +221,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   (bot `@BuiltInSaudi_bot`) + Resend email w/ `.ics` — **no emojis, meeting type in
   the subject**. Extra env: `GOOGLE_OAUTH_CLIENT_ID` (var),
   `GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/`TELEGRAM_BOT_TOKEN` (secrets).
-  One-time `setWebhook` after deploy. See [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
+  One-time `setWebhook` after deploy. **E2E** (`e2e/book-me.spec.ts`) stands up a
+  **mock OAuth provider + backend** and points the client at it via two window
+  overrides the app exposes only for this: `window.__BOOKING_FN` (the Cloud
+  Functions host, in `src/lib/bookingApi.ts`) and `window.__BOOKING_CALLBACK_FN`
+  (the forward target in `public/oauth/callback/index.html`). The mock drives the
+  real redirect chain — start → static `/oauth/callback/` page → callback → signed
+  in — so the sign-in flow is covered without hitting Google. See [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
 - **"Delete my data" is one consolidated endpoint** (`my-data` in `functions/booking.js`,
   surfaced on the **Privacy page**): sign in with Google → it reports and deletes
   **everything** stored for that user across the whole site. **Whenever you add any

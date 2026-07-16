@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Signing you in…</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+           font: 400 0.95rem/1.5 system-ui, sans-serif; color: #4a4a44; background: #faf7f2; }
+  </style>
+</head>
+<body>
+  <p>Signing you in…</p>
+  <script>
+    // Google's OAuth redirect lands here rather than straight on the function so
+    // that the redirect URI — and therefore the domain Google prints on the
+    // consent screen — is built-in-saudi.com, a domain we own and have verified
+    // in Search Console. Brand verification requires that; cloudfunctions.net is
+    // Google's domain, so it can never be verified as ours.
+    //
+    // The code is single-use and useless without the client secret, so handing it
+    // through the browser costs nothing: the exchange still happens server-side.
+    //
+    // window.__BOOKING_CALLBACK_FN lets e2e forward to a mock server instead
+    // (set via addInitScript before this runs); production uses the real host.
+    var fn = window.__BOOKING_CALLBACK_FN || 'https://us-central1-blitz-ksa.cloudfunctions.net/booking-google-callback'
+    location.replace(fn + location.search)
+  </script>
+  <noscript>JavaScript is required to finish signing in.</noscript>
+</body>
+</html>
