@@ -135,8 +135,27 @@ function homeContent(locale: Loc): string {
 function toolContent(locale: Loc, tool: ToolSeo): string {
   const t = dicts[locale]
   const ts = tool[locale]
-  return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a> / ${esc(ts.name)}</nav>`
-    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p></main>`
+  const tr = t.toolPage.trust
+
+  let html = `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a> / ${esc(ts.name)}</nav>`
+    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p>`
+
+  if (ts.howItWorks && ts.howItWorks.length > 0) {
+    html += `<h2>${esc(t.toolPage.howItWorks)}</h2><ol>` + ts.howItWorks.map((s) => `<li>${esc(s)}</li>`).join('') + `</ol>`
+  }
+  if (ts.features && ts.features.length > 0) {
+    html += `<h2>${esc(t.toolPage.features)}</h2><ul>` + ts.features.map((s) => `<li>${esc(s)}</li>`).join('') + `</ul>`
+  }
+  if (ts.faq && ts.faq.length > 0) {
+    html += `<h2>${esc(t.toolPage.faq)}</h2>` + ts.faq.map((item) => `<h3>${esc(item.q)}</h3><p>${esc(item.a)}</p>`).join('')
+  }
+
+  html += `<h2>${esc(tr.title)}</h2>`
+    + `<h3>${esc(tr.clientSideTitle)}</h3><p>${esc(tr.clientSideDesc)}</p>`
+    + `<h3>${esc(tr.freeTitle)}</h3><p>${esc(tr.freeDesc)}</p>`
+    + `<h3>${esc(tr.privacyTitle)}</h3><p>${esc(tr.privacyDesc)}</p>`
+
+  return html + `</main>`
 }
 
 /**

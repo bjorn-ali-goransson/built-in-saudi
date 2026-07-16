@@ -27,7 +27,22 @@ export const en = {
 
   card: { comingSoon: 'Coming soon', beta: 'Beta', open: 'Open' },
 
-  toolPage: { breadcrumb: 'Apps', moreTools: 'More free tools' },
+  toolPage: { 
+    breadcrumb: 'Apps', 
+    moreTools: 'More free tools',
+    features: 'Key Features',
+    howItWorks: 'How it works',
+    faq: 'Frequently Asked Questions',
+    trust: {
+      title: 'Free, Private & Secure',
+      clientSideTitle: '100% Client-Side',
+      clientSideDesc: 'Your data never leaves your device. We use browser-native APIs to process everything locally.',
+      freeTitle: 'Free & Unrestricted',
+      freeDesc: 'No paywalls, no limits, and no account required.',
+      privacyTitle: 'Privacy First',
+      privacyDesc: 'No tracking scripts or server uploads. What happens on your device stays on your device.',
+    }
+  },
 
   footer: {
     ethos:

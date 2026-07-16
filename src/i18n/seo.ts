@@ -16,10 +16,16 @@ export const siteMeta: Record<Locale, { title: string; description: string }> = 
   },
 }
 
+export interface ToolContent {
+  features?: string[]
+  howItWorks?: string[]
+  faq?: { q: string; a: string }[]
+}
+
 export interface ToolSeo {
   id: string
-  en: { name: string; description: string }
-  ar: { name: string; description: string }
+  en: { name: string; description: string } & ToolContent
+  ar: { name: string; description: string } & ToolContent
 }
 
 /** Standalone (non-tool) pages that also get prerendered at /<locale>/<id>/. */
@@ -300,8 +306,48 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'cv-generator',
-    en: { name: 'CV Generator', description: 'Upload your CV and get it rewritten into a clean, ATS-ready résumé — signal only, no noise. Photos, colours, GPAs and references stripped; skills and a punchy summary synthesised from your whole history. Export PDF or Word.' },
-    ar: { name: 'منشئ السيرة الذاتية', description: 'ارفع سيرتك واحصل عليها معادةَ الكتابة في قالب نظيف متوافق مع أنظمة التتبّع — إشارة بلا ضجيج. تُزال الصور والألوان والمعدّلات والمراجع؛ وتُستخلص المهارات وملخّص موجز. صدّر PDF أو Word.' },
+    en: { 
+      name: 'CV Generator', 
+      description: 'Upload your CV and get it rewritten into a clean, ATS-ready résumé — signal only, no noise. Photos, colours, GPAs and references stripped; skills and a punchy summary synthesised from your whole history. Export PDF or Word.',
+      features: [
+        'ATS-Optimized Formatting: Converts messy CVs into clean, parsable formats that pass automated screens.',
+        'Noise Reduction: Automatically strips out unnecessary photos, colors, and irrelevant data to focus on what matters.',
+        'Instant Export: Download your new CV as a professional PDF or editable Word document.',
+        '100% Client-Side Processing: Your personal information and work history never leave your device.'
+      ],
+      howItWorks: [
+        'Upload your existing CV or resume file directly in your browser.',
+        'Our local processing engine analyzes and synthesizes your skills and work history.',
+        'Review the newly generated, clean layout.',
+        'Export as PDF or Word document instantly.'
+      ],
+      faq: [
+        { q: 'Is my data stored on your servers?', a: 'No. All processing happens entirely within your web browser. We never see or store your CV data.' },
+        { q: 'What makes this CV ATS-ready?', a: 'Applicant Tracking Systems (ATS) struggle with complex layouts, photos, and colors. Our generator strips these out and uses a standard, single-column text structure that software can parse accurately.' },
+        { q: 'Can I edit the generated CV?', a: 'Yes! You can export it as a Word document (.docx) and make any adjustments you need before saving the final version.' }
+      ]
+    },
+    ar: { 
+      name: 'منشئ السيرة الذاتية', 
+      description: 'ارفع سيرتك واحصل عليها معادةَ الكتابة في قالب نظيف متوافق مع أنظمة التتبّع — إشارة بلا ضجيج. تُزال الصور والألوان والمعدّلات والمراجع؛ وتُستخلص المهارات وملخّص موجز. صدّر PDF أو Word.',
+      features: [
+        'تنسيق متوافق مع أنظمة التتبع: يحول السير الذاتية الفوضوية إلى تنسيقات نظيفة تقرأها الأنظمة الآلية بنجاح.',
+        'تقليل الضوضاء: يزيل تلقائياً الصور والألوان والبيانات غير الضرورية للتركيز على ما يهم.',
+        'تصدير فوري: حمل سيرتك الجديدة كملف PDF احترافي أو مستند Word قابل للتعديل.',
+        'معالجة محلية بالكامل: معلوماتك الشخصية وتاريخك المهني لا تغادر جهازك أبداً.'
+      ],
+      howItWorks: [
+        'ارفع ملف سيرتك الذاتية الحالية مباشرة في متصفحك.',
+        'يقوم محرك المعالجة المحلي لدينا بتحليل واستخلاص مهاراتك وتاريخك المهني.',
+        'راجع التصميم الجديد والنظيف.',
+        'قم بتصديره كملف PDF أو مستند Word فوراً.'
+      ],
+      faq: [
+        { q: 'هل يتم تخزين بياناتي على خوادمكم؟', a: 'لا. كل المعالجة تتم بالكامل داخل متصفح الويب الخاص بك. نحن لا نرى أو نخزن بيانات سيرتك الذاتية أبداً.' },
+        { q: 'ما الذي يجعل هذه السيرة متوافقة مع أنظمة التتبع؟', a: 'أنظمة تتبع المتقدمين (ATS) تواجه صعوبة مع التصاميم المعقدة والصور والألوان. يقوم منشئنا بإزالة هذه العناصر ويستخدم هيكل نصي قياسي بعمود واحد يمكن للبرامج قراءته بدقة.' },
+        { q: 'هل يمكنني تعديل السيرة الذاتية الناتجة؟', a: 'نعم! يمكنك تصديرها كمستند Word (.docx) وإجراء أي تعديلات تحتاجها قبل حفظ النسخة النهائية.' }
+      ]
+    },
   },
   {
     id: 'link-shortener',
