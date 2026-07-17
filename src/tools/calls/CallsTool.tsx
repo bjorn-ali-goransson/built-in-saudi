@@ -1213,6 +1213,7 @@ export default function CallsTool() {
   // Height style for the mobile dock (a CSS var the max-[640px] class consumes; on
   // desktop the class doesn't apply, so the var is harmlessly ignored).
   const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
+  const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
 
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
   // transformed ancestor would otherwise become its containing block).
@@ -1244,7 +1245,9 @@ export default function CallsTool() {
         <Menu testid="call-view" triggerClass={dropTrigger} align="end"
           trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden max-w-[9rem] truncate">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60 shrink-0" /></>}>
           <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => { setView('board'); setSelected('') }} active={view === 'board' && !presenting} testid="view-board" />
-          <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />
+          {/* getDisplayMedia is desktop-only — hide the option where it can't work
+              (mobile browsers, incl. Chrome for Android) rather than offer a dead button. */}
+          {canShareScreen && <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />}
           <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} testid="call-upload" />
         </Menu>
 
