@@ -69,6 +69,23 @@ function chime() {
   } catch { /* audio unavailable */ }
 }
 
+// Ask once (on a user gesture — starting/joining a call) so we can post OS
+// notifications when someone enters while the tab is backgrounded.
+function askNotify() {
+  try { if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {}) } catch { /* */ }
+}
+// System notification for "someone entered" — only when the tab is hidden (a
+// focused tab already gets the chime + in-app toast). Prefer the SW registration
+// (works installed / on more browsers) and fall back to the Notification ctor.
+async function osNotify(title: string, body: string) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return
+    const reg = await navigator.serviceWorker?.ready.catch(() => null)
+    if (reg?.showNotification) await reg.showNotification(title, { body, tag: 'bis-call-enter', icon: '/icon.svg' })
+    else new Notification(title, { body })
+  } catch { /* */ }
+}
+
 const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
@@ -82,7 +99,7 @@ const STR = {
     devices: 'Devices', camera: 'Camera', microphone: 'Microphone', speaker: 'Speaker',
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
-    joined: 'joined', left: 'left', editName: 'Edit your name',
+    joined: 'joined', left: 'left', editName: 'Edit your name', waitingToJoin: 'is waiting to join',
     connectFail: 'Couldn’t connect to', waitSlow: 'Still trying to connect — if this hangs, the host may be offline or the network is blocking the call.',
     rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
@@ -99,7 +116,7 @@ const STR = {
     devices: 'الأجهزة', camera: 'الكاميرا', microphone: 'الميكروفون', speaker: 'السماعة',
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
-    joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك',
+    joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك', waitingToJoin: 'بانتظار الدخول',
     connectFail: 'تعذّر الاتصال بـ', waitSlow: 'ما زلنا نحاول الاتصال — إن طال ذلك، فقد يكون المضيف غير متصل أو الشبكة تمنع المكالمة.',
     rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
@@ -393,6 +410,7 @@ export default function CallsTool() {
   const drawing = useRef<{ board: string; obj: Extract<WbObj, { kind: 'stroke' }> } | null>(null)
   const boardKeyRef = useRef('board') // the active board, set each render from the current view
   const lastPt = useRef<{ x: number; y: number; t: number } | null>(null) // last pointer sample (screen px) for velocity
+  const pointers = useRef<Set<number>>(new Set()) // active touch pointers — 2+ means pinch-zoom, not a stroke
   const [tool, setTool] = useState<'pen' | 'eraser' | 'text'>('pen')
   const [penColor, setPenColor] = useState(WB_COLORS[0])
   const [penW, setPenW] = useState(0.01) // stroke width as a fraction of the board
@@ -498,6 +516,11 @@ export default function CallsTool() {
   }, [cam, mic])
 
   rosterRef.current = roster
+  const phaseRef = useRef(phase); phaseRef.current = phase
+  // "Checking again" spinner: shown once half the current relay-poll delay has
+  // elapsed (only while waiting/hosting — not needed in a live call).
+  const [recheck, setRecheck] = useState(false)
+  const recheckT = useRef<number | undefined>(undefined)
   const nameOf = useCallback((id: string) => roster.get(id)?.name || '•', [roster])
   // The people the host still needs to let in (guests who haven't joined yet).
   const waiting = [...roster].filter(([, i]) => i.role === 'guest' && !i.inCall)
@@ -506,10 +529,11 @@ export default function CallsTool() {
   const knockSeen = useRef<Set<string>>(new Set())
   // A new knocker → close the Share invite, chime, and (host) let it be seen.
   useEffect(() => {
-    let fresh = false
-    for (const [id] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); fresh = true }
-    if (fresh) {
-      setShareOpen(false); if (!isGuest) chime()
+    const freshNames: string[] = []
+    for (const [id, info] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); freshNames.push(info.name || '•') }
+    if (freshNames.length) {
+      setShareOpen(false)
+      if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -585,7 +609,7 @@ export default function CallsTool() {
       },
       onPeerInfo: (id, info) => {
         seen.current.set(id, Date.now())
-        if (info.inCall && !knownInCall.current.has(id)) { knownInCall.current.add(id); if (rtc.current?.inCall) notify('p', `${info.name || '•'} ${s.joined}`) }
+        if (info.inCall && !knownInCall.current.has(id)) { knownInCall.current.add(id); if (rtc.current?.inCall) { notify('p', `${info.name || '•'} ${s.joined}`); osNotify(info.name || '•', s.joined) } }
         setRoster((r2) => new Map(r2).set(id, info))
       },
       onAdmitted: () => setPhase('live'), // rtc enables our media itself
@@ -595,6 +619,14 @@ export default function CallsTool() {
         setToast(`${by} ${s.mutedBy} ${who}`); setTimeout(() => setToast(''), 3500)
       },
       onClosed: () => { rtc.current = null; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
+      onPollCycle: (delayMs) => {
+        // A poll just finished → hide the spinner, then re-show it once half the
+        // wait has passed, so it signals "checking again" only while lobby-waiting.
+        window.clearTimeout(recheckT.current); setRecheck(false)
+        if (delayMs >= 250 && (phaseRef.current === 'waiting' || phaseRef.current === 'hosting')) {
+          recheckT.current = window.setTimeout(() => setRecheck(true), delayMs / 2)
+        }
+      },
     })
     rtc.current = r
     return r
@@ -610,7 +642,7 @@ export default function CallsTool() {
 
   // Host: start the call right away (others still need to be let in).
   async function startHost() {
-    setBusy(true)
+    setBusy(true); askNotify()
     const code = room || code6(); setRoom(code); rememberHost(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
     // Desktop: auto-open the Share dialog on start; mobile goes straight to the call.
@@ -620,7 +652,7 @@ export default function CallsTool() {
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
   function askToJoin() {
-    saveName()
+    saveName(); askNotify()
     const code = room.trim(); if (!code) return
     const r = ensureRoom(code); r.enterLobby(name || s.you, false)
     setPhase('waiting')
@@ -835,7 +867,23 @@ export default function CallsTool() {
   }
   // Drop an editable text box on the board (commit any open one first).
   function placeText(u: number, v: number) { finishDraft(); setTool('text'); setDraft({ u, v, size: textSize, rot: 0, w: DEFAULT_TW, text: '' }) }
+  // A stroke aborted mid-draw (a second finger landed → pinch-zoom): remove the
+  // partial stroke locally + for peers, and release any capture so the browser zooms.
+  function cancelStroke() {
+    for (const pid of pointers.current) { try { wbRef.current?.releasePointerCapture(pid) } catch { /* not captured */ } }
+    const d = drawing.current; if (!d) return
+    const arr = boardOf(d.board); const i = arr.findIndex((o) => o.id === d.obj.id); if (i >= 0) arr.splice(i, 1)
+    const st = stackOf(d.board); const si = st.lastIndexOf(d.obj.id); if (si >= 0) st.splice(si, 1)
+    rtc.current?.broadcast({ t: 'wb', op: 'remove', id: d.obj.id, b: d.board })
+    drawing.current = null; redraw()
+  }
   function wbDown(e: React.PointerEvent) {
+    if (e.pointerType === 'touch') {
+      pointers.current.add(e.pointerId)
+      // Pinch-zoom beats multi-finger drawing: a 2nd finger cancels the stroke and
+      // hands the gesture to the browser (canvas has touch-action: pinch-zoom).
+      if (pointers.current.size > 1) { cancelStroke(); return }
+    }
     if (tool === 'text') { const p = wbPt(e); placeText(p.x, p.y); return }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const board = boardKeyRef.current
@@ -854,12 +902,13 @@ export default function CallsTool() {
     return base * mul
   }
   function wbMove(e: React.PointerEvent) {
+    if (e.pointerType === 'touch' && pointers.current.size > 1) return // pinch in progress
     const d = drawing.current; if (!d) return; const o = d.obj
     const p = wbPt(e); const w = speedWidth(e, o.width)
     o.pts.push(p.x, p.y); (o.wds ||= []).push(w); lastPt.current = { x: e.clientX, y: e.clientY, t: e.timeStamp }
     drawLastSeg(o); rtc.current?.broadcast({ t: 'wb', op: 'point', id: o.id, pt: [p.x, p.y], w, b: d.board })
   }
-  function wbUp() { drawing.current = null }
+  function wbUp(e?: React.PointerEvent) { if (e) pointers.current.delete(e.pointerId); drawing.current = null }
   function commitDraft(d: TextDraft) {
     const t = d.text.trim(); if (!t) return
     const board = boardKeyRef.current
@@ -971,7 +1020,9 @@ export default function CallsTool() {
   // The setup/ended "front door" — a green panel that now lives INSIDE the site
   // chrome (global header + footer via Layout), not a full-screen portal. It fills
   // at least the viewport minus the sticky header (68px desktop / 60px mobile).
-  const greenWrap = 'bg-green-700 text-sand-100 rounded-lg flex flex-col items-center justify-center px-6 py-14 min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
+  // Full-bleed: break out of ToolPage's centred `.wrap` (horizontal) and cancel its
+  // vertical padding, so the green panel reaches every edge between header + footer.
+  const greenWrap = 'bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-14 w-screen mx-[calc(50%-50vw)] my-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
   const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
   const phoneLogo = <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
@@ -1016,6 +1067,8 @@ export default function CallsTool() {
               <p className="text-center text-[1rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}
               </p>
+              {/* Halfway through each poll wait, show we're checking the relay again. */}
+              <span className={`w-5 h-5 rounded-full border-2 border-sand-100/25 border-t-sand-100 transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
               {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
@@ -1246,7 +1299,7 @@ export default function CallsTool() {
                 className="absolute top-3 end-3 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
-          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-none ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} />
+          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
@@ -1315,18 +1368,20 @@ export default function CallsTool() {
         {showParticipants && (
           <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:h-[46%] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-participants-panel">
             {dockTabs}
-            <div className="flex flex-col gap-2.5 p-2.5">
-              <p className="max-[640px]:hidden text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1">{s.participants} · {participantCount}</p>
-              {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
-              {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
-              {/* Full-bleed video mosaic: no gaps/rounding/border, flush to the panel edges. */}
-              <div className="grid grid-cols-2 gap-0 -mx-2.5 -mb-2.5">
-                <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
-                {inCallPeers.map(([id, info]) => (
-                  <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
-                ))}
-              </div>
+            {/* Full-bleed video mosaic, flush to every edge of the panel — including
+                the top (the count/debug/lobby meta sits BELOW the tiles). */}
+            <div className="grid grid-cols-2 gap-0" data-testid="call-tiles">
+              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
+              {inCallPeers.map(([id, info]) => (
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
+              ))}
             </div>
+            {(debug || (!isGuest && (waiting.length > 0 || leftWaiters.length > 0))) && (
+              <div className="flex flex-col gap-2.5 p-2.5">
+                {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
+                {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
+              </div>
+            )}
           </aside>
         )}
         {showChat && (

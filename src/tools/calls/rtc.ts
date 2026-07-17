@@ -76,6 +76,9 @@ export interface CallHandlers {
   onMuteNotice?(by: string, targetId: string, targetIsMe: boolean): void
   /** The meeting was closed (host ended it, or it was nuked after a disconnect). */
   onClosed?(): void
+  /** Fired each poll cycle with the delay (ms) until the next relay poll — the UI
+   *  uses it to show a "checking again" spinner partway through the wait. */
+  onPollCycle?(delayMs: number): void
 }
 
 interface Peer {
@@ -178,7 +181,9 @@ export class CallRoom {
       // for someone (so knocks/joins land in well under a second); back off once
       // everyone's connected. The relay only ever carries the handshake.
       const settling = [...this.peers.values()].some((p) => p.pc.connectionState !== 'connected')
-      await sleep(got > 0 ? 120 : settling || this.peers.size === 0 ? 300 : 1200)
+      const delay = got > 0 ? 120 : settling || this.peers.size === 0 ? 300 : 1200
+      this.h.onPollCycle?.(delay)
+      await sleep(delay)
     }
   }
 
