@@ -146,9 +146,22 @@ export class CallRoom {
     this.local = new MediaStream()
     this.inCall = true
     this.send('join', 'all') // now admitted → invite the other in-call peers to mesh
-    this.h.onLocal?.(this.local)
+    this.emitPreview()
     for (const p of this.peers.values()) this.linkMedia(p)
     this.broadcastInfo()
+  }
+
+  // Hand the UI a FRESH MediaStream of the current local tracks for the self-view.
+  // The new reference forces the <video> to re-attach and re-read the track — a
+  // stopped→restarted camera otherwise keeps the old track's intrinsic size and
+  // renders stretched (a portrait phone showing a landscape-shaped frame). We keep
+  // `this.local` (the senders' stream group) stable so audio/video stay one remote
+  // stream; only the preview reference changes.
+  private emitPreview() {
+    const tracks: MediaStreamTrack[] = []
+    if (this.audioTrack) tracks.push(this.audioTrack)
+    if (this.videoTrack) tracks.push(this.videoTrack)
+    this.h.onLocal?.(new MediaStream(tracks))
   }
 
   /** Host: admit a specific waiting guest — go live ourselves, then tell them. */
@@ -318,14 +331,16 @@ export class CallRoom {
       if (!this.videoTrack) {
         try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, width: 1280, height: 720 } }); this.videoTrack = s.getVideoTracks()[0] }
         catch { this.cam = false; this.broadcastInfo(); return false }
-        this.local?.addTrack(this.videoTrack); this.h.onLocal?.(this.local!)
+        this.local?.addTrack(this.videoTrack)
       }
       this.cam = true
+      this.emitPreview()
       if (!this.screenOn) for (const p of this.peers.values()) if (p.info?.inCall) this.addOrReplace(p, this.videoTrack)
     } else {
       this.cam = false
       if (!this.screenOn) this.releaseKind('video')
       if (this.videoTrack) { this.local?.removeTrack(this.videoTrack); this.videoTrack.stop(); this.videoTrack = null }
+      this.emitPreview()
     }
     this.broadcastInfo(); return true
   }
@@ -348,7 +363,7 @@ export class CallRoom {
     let track: MediaStreamTrack
     try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, width: 1280, height: 720 } })).getVideoTracks()[0] } catch { return }
     this.local?.removeTrack(this.videoTrack); this.videoTrack.stop()
-    this.videoTrack = track; this.local?.addTrack(track); this.h.onLocal?.(this.local!)
+    this.videoTrack = track; this.local?.addTrack(track); this.emitPreview()
     if (!this.screenOn) this.setVideoWire(track)
   }
   /** Ask another participant's client to mute itself; everyone is notified. */
