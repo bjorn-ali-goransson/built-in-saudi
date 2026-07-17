@@ -9,6 +9,7 @@ import { subscribeDevice } from '../../lib/push'
 import {
   loadConfig,
   saveConfig,
+  clearConfig,
   gridToWindows,
   windowsToGrid,
   BOOKING_LINK_BASE,
@@ -530,9 +531,13 @@ export default function BookWithMeTool() {
     window.open(link, '_blank', 'noopener')
     if (session) publish()
   }
-  // Return to the unpublished state on this device.
+  // Sign out on this device: drop the session AND the locally cached schedule, so
+  // the editor resets to a clean slate instead of reloading the previous host's
+  // data. (The published page stays live server-side; sign back in to manage it.)
   function unpublish() {
     localStorage.removeItem(HSID_KEY)
+    clearConfig()
+    setCfg(loadConfig())
     setSession(null)
     setPubMenu(false)
   }
@@ -542,6 +547,8 @@ export default function BookWithMeTool() {
     try {
       await deleteHost(session.hsid)
       localStorage.removeItem(HSID_KEY)
+      clearConfig()
+      setCfg(loadConfig())
       setSession(null)
       setDelOpen(false)
     } catch {

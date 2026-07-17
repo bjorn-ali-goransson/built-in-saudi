@@ -285,6 +285,17 @@ export function saveConfig(cfg: HostConfig): void {
   }
 }
 
+// Wipe the locally cached schedule. Signing out / deleting the page calls this so
+// the editor doesn't reload the previous host's data. Safe because the published
+// page's real config lives server-side (re-fetched via getConfig on next sign-in).
+export function clearConfig(): void {
+  try {
+    localStorage.removeItem(BIS_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 // Path-based booking link on the apex (subdomain deferred — no Cloudflare needed).
 // A bare /book/<code> lets the visitor's own locale kick in via the Layout
 // redirect, so links aren't language-locked.
