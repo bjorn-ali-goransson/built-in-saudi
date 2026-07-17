@@ -968,17 +968,17 @@ export default function CallsTool() {
       </div>
     </div>, document.body) : null
 
-  // Full-screen green setup/ended screen (no site chrome) — the app's front door.
-  const greenWrap = 'fixed inset-0 z-[80] overflow-auto bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-10'
+  // The setup/ended "front door" — a green panel that now lives INSIDE the site
+  // chrome (global header + footer via Layout), not a full-screen portal. It fills
+  // at least the viewport minus the sticky header (68px desktop / 60px mobile).
+  const greenWrap = 'bg-green-700 text-sand-100 rounded-lg flex flex-col items-center justify-center px-6 py-14 min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
   const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
   const phoneLogo = <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
-  const greenNav = <div className="absolute top-0 inset-x-0 px-5 py-3.5 text-[0.82rem] font-medium text-sand-100/55 select-none pointer-events-none">{locale === 'ar' ? 'مكالمات' : 'Calls'} <span className="text-sand-100/35">— Built in Saudi</span></div>
 
   if (phase === 'ended') {
-    return createPortal(
+    return (
       <div className={greenWrap} data-testid="calls">
-        {greenNav}
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5 text-center" data-testid="call-ended">
           {phoneLogo}
           {ended.reason === 'left' ? (
@@ -997,13 +997,13 @@ export default function CallsTool() {
             </>
           )}
         </div>
-      </div>, document.body)
+      </div>
+    )
   }
 
   if (phase !== 'live') {
-    return createPortal(
+    return (
       <div className={greenWrap} data-testid="calls">
-        {greenNav}
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
           {checking ? (
@@ -1080,7 +1080,8 @@ export default function CallsTool() {
 
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
-      </div>, document.body)
+      </div>
+    )
   }
 
   const selectedFile = files.find((f) => f.id === selected)
