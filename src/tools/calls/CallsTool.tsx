@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon, BellIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -69,11 +69,6 @@ function chime() {
   } catch { /* audio unavailable */ }
 }
 
-// Ask once (on a user gesture — starting/joining a call) so we can post OS
-// notifications when someone enters while the tab is backgrounded.
-function askNotify() {
-  try { if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {}) } catch { /* */ }
-}
 // System notification for "someone entered" — only when the tab is hidden (a
 // focused tab already gets the chime + in-app toast). Prefer the SW registration
 // (works installed / on more browsers) and fall back to the Notification ctor.
@@ -100,6 +95,7 @@ const STR = {
     hostGone: 'The host disconnected', endsIn: 'meeting ends in', ended: 'This meeting has ended or can’t be found.', newCall: 'Start a new call',
     youEnded: 'You have left the call', youEndedMeeting: 'You ended the meeting.', stillThere: (n: number) => `${n} ${n === 1 ? 'participant is' : 'participants are'} still there`, rejoin: 'Rejoin', createNew: 'Create a new meeting',
     joined: 'joined', left: 'left', editName: 'Edit your name', waitingToJoin: 'is waiting to join',
+    notifyWhy: 'Get notified when someone joins — even when this tab is in the background.', notifyEnable: 'Enable notifications',
     connectFail: 'Couldn’t connect to', waitSlow: 'Still trying to connect — if this hangs, the host may be offline or the network is blocking the call.',
     rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
@@ -117,6 +113,7 @@ const STR = {
     hostGone: 'انقطع اتصال المضيف', endsIn: 'ينتهي الاجتماع خلال', ended: 'انتهى هذا الاجتماع أو تعذّر العثور عليه.', newCall: 'ابدأ مكالمة جديدة',
     youEnded: 'غادرت المكالمة', youEndedMeeting: 'أنهيت الاجتماع.', stillThere: (n: number) => `لا يزال ${n} من المشاركين هنا`, rejoin: 'أعد الانضمام', createNew: 'أنشئ اجتماعًا جديدًا',
     joined: 'انضمّ', left: 'غادر', editName: 'عدّل اسمك', waitingToJoin: 'بانتظار الدخول',
+    notifyWhy: 'نبّهك عند انضمام أحد — حتى عندما تكون هذه النافذة في الخلفية.', notifyEnable: 'تفعيل الإشعارات',
     connectFail: 'تعذّر الاتصال بـ', waitSlow: 'ما زلنا نحاول الاتصال — إن طال ذلك، فقد يكون المضيف غير متصل أو الشبكة تمنع المكالمة.',
     rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
@@ -384,7 +381,14 @@ export default function CallsTool() {
   const [showChat, setShowChat] = useState(false)
   // Mobile bottom-dock height (px); null = default 46vh. Dragged via the dock header.
   const [dockH, setDockH] = useState<number | null>(null)
-  const dockDrag = useRef<{ bottom: number } | null>(null)
+  const dockDrag = useRef<{ startY: number; startH: number; max: number } | null>(null)
+  // Explain-first notifications: show an in-call banner rationale, and only call the
+  // browser's requestPermission() when the user clicks Enable (never auto-prompt).
+  const [notifyBar, setNotifyBar] = useState(() => {
+    try { return typeof Notification !== 'undefined' && Notification.permission === 'default' && localStorage.getItem('bis-call-notify-off') !== '1' } catch { return false }
+  })
+  function enableNotify() { try { Notification.requestPermission().catch(() => {}) } catch { /* */ } setNotifyBar(false) }
+  function dismissNotify() { setNotifyBar(false); try { localStorage.setItem('bis-call-notify-off', '1') } catch { /* */ } }
   const [dragOver, setDragOver] = useState(false)
   const dragDepth = useRef(0) // enter/leave fire per child; count to know when we've truly left
   const [shareOpen, setShareOpen] = useState(false)
@@ -645,7 +649,7 @@ export default function CallsTool() {
 
   // Host: start the call right away (others still need to be let in).
   async function startHost() {
-    setBusy(true); askNotify()
+    setBusy(true)
     const code = room || code6(); setRoom(code); rememberHost(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
     // Desktop: auto-open the Share dialog on start; mobile goes straight to the call.
@@ -655,7 +659,7 @@ export default function CallsTool() {
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
   function askToJoin() {
-    saveName(); askNotify()
+    saveName()
     const code = room.trim(); if (!code) return
     const r = ensureRoom(code); r.enterLobby(name || s.you, false)
     setPhase('waiting')
@@ -1186,12 +1190,15 @@ export default function CallsTool() {
   function dockDown(e: React.PointerEvent) {
     const aside = (e.currentTarget as HTMLElement).parentElement
     if (!aside) return
-    dockDrag.current = { bottom: aside.getBoundingClientRect().bottom }
+    const r = aside.getBoundingClientRect()
+    // Delta-based: remember where the grab started + the height then, so the dock
+    // resizes by how far you move — no jump from snapping its top to the cursor.
+    dockDrag.current = { startY: e.clientY, startH: r.height, max: r.bottom - 52 }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   function dockMove(e: React.PointerEvent) {
     const d = dockDrag.current; if (!d) return
-    setDockH(Math.max(120, Math.min(d.bottom - 52, d.bottom - e.clientY)))
+    setDockH(Math.max(120, Math.min(d.max, d.startH + (d.startY - e.clientY))))
   }
   function dockUp(e: React.PointerEvent) {
     dockDrag.current = null
@@ -1264,6 +1271,19 @@ export default function CallsTool() {
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
+
+      {/* Explain-first notifications: rationale + Enable (which is the ONLY place we
+          call requestPermission). Edge-docked bar under the toolbar; dismissible. */}
+      {notifyBar && (
+        <div className="flex items-center gap-2.5 flex-wrap px-3 py-2 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,var(--color-green-400)_12%,var(--surface))]" data-testid="call-notify-bar">
+          <BellIcon className="w-4 h-4 text-green-700 shrink-0" />
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[12rem]">{s.notifyWhy}</span>
+          <button type="button" onClick={enableNotify} data-testid="call-notify-enable"
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-green-600 text-sand-100 text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-green-700">{s.notifyEnable}</button>
+          <button type="button" onClick={dismissNotify} aria-label={s.close} data-testid="call-notify-dismiss"
+            className="flex-none grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.05rem] leading-none">✕</button>
+        </div>
+      )}
 
       {/* MOBILE file picker: a full-width dropdown docked under the toolbar (the
           desktop equivalent is the docked side panel). */}

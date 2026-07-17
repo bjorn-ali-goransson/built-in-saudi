@@ -283,6 +283,28 @@ test('a guest stuck in the lobby can still open diagnostics (not just in-call)',
   await a.close(); await b.close()
 })
 
+test('notifications are explain-first: a banner with Enable, dismissible, no auto-prompt', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  // Headless reports Notification.permission as 'denied'; pin it to 'default' so the
+  // rationale banner (which only shows before a decision) renders.
+  await c.addInitScript(() => { try { Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' }) } catch { /* */ } })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  // The rationale banner shows (permission is still 'default') with an Enable button —
+  // we never call requestPermission automatically.
+  const bar = p.getByTestId('call-notify-bar')
+  await expect(bar).toBeVisible()
+  await expect(p.getByTestId('call-notify-enable')).toBeVisible()
+  // Dismissing hides it without asking the browser.
+  await p.getByTestId('call-notify-dismiss').click()
+  await expect(bar).toHaveCount(0)
+  await c.close()
+})
+
 test('device picker lists camera, microphone and speaker', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
