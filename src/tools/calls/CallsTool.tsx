@@ -90,7 +90,7 @@ const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
     yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', shareInvite: 'Share invite',
-    mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
+    mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', screenUnsupported: 'Screen sharing isn’t supported on this device', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', leftLobby: 'left', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
@@ -107,7 +107,7 @@ const STR = {
   ar: {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', shareInvite: 'مشاركة الدعوة',
-    mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
+    mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', screenUnsupported: 'مشاركة الشاشة غير مدعومة على هذا الجهاز', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', leftLobby: 'غادر', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
@@ -382,6 +382,9 @@ export default function CallsTool() {
   // split. (Mobile used to start whiteboard-fullscreen; now it starts split.)
   const [showParticipants, setShowParticipants] = useState(true)
   const [showChat, setShowChat] = useState(false)
+  // Mobile bottom-dock height (px); null = default 46vh. Dragged via the dock header.
+  const [dockH, setDockH] = useState<number | null>(null)
+  const dockDrag = useRef<{ bottom: number } | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const dragDepth = useRef(0) // enter/leave fire per child; count to know when we've truly left
   const [shareOpen, setShareOpen] = useState(false)
@@ -757,11 +760,14 @@ export default function CallsTool() {
   const speaking = useSpeaking(local, mic) // flash the mic icon while the local user talks
   async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
   async function toggleScreen() {
-    if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null) }
-    else {
-      const st = await rtc.current?.shareScreen()
-      if (st) { setSharing(true); setScreenStream(st); st.getVideoTracks()[0]?.addEventListener('ended', () => { setSharing(false); setScreenStream(null) }) }
+    if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null); return }
+    // iOS Safari (and some mobile browsers) don't implement getDisplayMedia at all —
+    // tell the user instead of failing silently.
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
+      setToast(s.screenUnsupported); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000); return
     }
+    const st = await rtc.current?.shareScreen()
+    if (st) { setSharing(true); setScreenStream(st); st.getVideoTracks()[0]?.addEventListener('ended', () => { setSharing(false); setScreenStream(null) }) }
   }
   function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
   function pickFiles(fl: FileList | null) {
@@ -1167,16 +1173,39 @@ export default function CallsTool() {
       </div>
     </Menu>
   )
-  // Mobile-only tab strip atop the bottom dock: switch it between the participant
-  // grid and chat (desktop uses the toolbar buttons; the dock is a side panel there).
-  const dockTabs = (
-    <div className="hidden max-[640px]:flex items-stretch border-b border-[color:var(--line)] shrink-0 bg-[var(--surface)]" data-testid="call-dock-tabs">
-      <button type="button" data-testid="call-dock-tab-participants" onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }}
-        className={`flex-1 h-11 grid place-items-center text-[0.85rem] font-medium bg-transparent border-0 border-b-2 cursor-pointer ${showParticipants ? 'text-green-700 border-green-600' : 'text-ink-soft border-transparent'}`}>{s.participants}</button>
-      <button type="button" data-testid="call-dock-tab-chat" onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }}
-        className={`flex-1 h-11 grid place-items-center text-[0.85rem] font-medium bg-transparent border-0 border-b-2 cursor-pointer ${showChat ? 'text-green-700 border-green-600' : 'text-ink-soft border-transparent'}`}>{s.chat}</button>
+  // Drag the mobile dock header to resize it — up to the toolbar (maximise) or down
+  // to a sliver. The dock's bottom is anchored (above the footer), so height = the
+  // anchored bottom minus the pointer's Y.
+  function dockDown(e: React.PointerEvent) {
+    const aside = (e.currentTarget as HTMLElement).parentElement
+    if (!aside) return
+    dockDrag.current = { bottom: aside.getBoundingClientRect().bottom }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function dockMove(e: React.PointerEvent) {
+    const d = dockDrag.current; if (!d) return
+    setDockH(Math.max(120, Math.min(d.bottom - 52, d.bottom - e.clientY)))
+  }
+  function dockUp(e: React.PointerEvent) {
+    dockDrag.current = null
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* */ }
+  }
+  // Mobile-only dock header: a drag handle to resize + the panel title + an X to
+  // close the dock. Switching participants/chat is the footer dropdown, not tabs.
+  const dockHeader = (title: string) => (
+    <div className="hidden max-[640px]:flex items-center justify-between shrink-0 border-b border-[color:var(--line)] bg-[var(--surface)] ps-3 pe-1.5 h-10 touch-none select-none cursor-row-resize"
+      data-testid="call-dock-header" onPointerDown={dockDown} onPointerMove={dockMove} onPointerUp={dockUp} onPointerCancel={dockUp}>
+      <span className="flex items-center gap-2 text-[0.8rem] font-semibold text-ink-soft">
+        <span className="flex flex-col gap-[3px]" aria-hidden="true"><span className="w-5 h-px bg-ink-faint/50" /><span className="w-5 h-px bg-ink-faint/50" /></span>
+        {title}
+      </span>
+      <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => { setShowParticipants(false); setShowChat(false) }} data-testid="call-dock-close" aria-label={s.close}
+        className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
     </div>
   )
+  // Height style for the mobile dock (a CSS var the max-[640px] class consumes; on
+  // desktop the class doesn't apply, so the var is harmlessly ignored).
+  const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
 
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
   // transformed ancestor would otherwise become its containing block).
@@ -1277,7 +1306,7 @@ export default function CallsTool() {
         )}
 
         {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
-        <main className={`flex-1 relative min-w-0 overflow-hidden ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
+        <main className={`flex-1 relative min-w-0 overflow-hidden max-[640px]:min-h-0 ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
           {dragOver && (
             <div className="absolute inset-0 z-40 p-4 pointer-events-none" data-testid="call-dropzone">
               <div className="w-full h-full grid place-items-center rounded-xl border-2 border-dashed border-green-500 bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)]">
@@ -1366,8 +1395,8 @@ export default function CallsTool() {
 
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}
         {showParticipants && (
-          <aside className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:h-[46%] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-participants-panel">
-            {dockTabs}
+          <aside style={dockStyle} className="w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:[height:var(--dock-h,46vh)] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-participants-panel">
+            {dockHeader(s.participants)}
             {/* Full-bleed video mosaic, flush to every edge of the panel — including
                 the top (the count/debug/lobby meta sits BELOW the tiles). */}
             <div className="grid grid-cols-2 gap-0" data-testid="call-tiles">
@@ -1385,8 +1414,8 @@ export default function CallsTool() {
           </aside>
         )}
         {showChat && (
-          <aside className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:h-[46%] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-chat-panel">
-            {dockTabs}
+          <aside style={dockStyle} className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:[height:var(--dock-h,46vh)] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-chat-panel">
+            {dockHeader(s.chat)}
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
               {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
               {chat.map((m, i) => (
@@ -1408,19 +1437,13 @@ export default function CallsTool() {
 
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
-        {showParticipants || showChat ? (
-          // A panel is open → the same spot becomes a Close button (back to the view behind).
-          <button type="button" className={dropTrigger} data-testid="call-panels-close" aria-label={s.close}
-            onClick={() => { setShowParticipants(false); setShowChat(false) }}>
-            {showChat ? <ChatIcon /> : <UsersIcon />}<span>{showChat ? s.chat : s.participants}</span><span className="text-[1.15rem] leading-none ms-0.5">✕</span>
-          </button>
-        ) : (
-          <Menu up testid="call-panels" triggerClass={dropTrigger}
-            trigger={<>{<UsersIcon />}<span>{s.participants}</span>{(unseen.p + unseen.c) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
-            <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }} active={showParticipants} />
-            <MenuItem icon={<ChatIcon />} label={s.chat} onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }} active={showChat} />
-          </Menu>
-        )}
+        {/* Bottom-left dropdown switches the dock between participants and chat (and
+            re-opens it if it was closed). Closing the dock is the X on its header. */}
+        <Menu up testid="call-panels" triggerClass={dropTrigger}
+          trigger={<>{showChat ? <ChatIcon /> : <UsersIcon />}<span>{showChat ? s.chat : s.participants}</span>{(unseen.p + unseen.c) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}<ChevronDownIcon className="w-3.5 h-3.5 opacity-60" /></>}>
+          <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} testid="call-panel-participants" onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }} active={showParticipants} />
+          <MenuItem icon={<ChatIcon />} label={s.chat} testid="call-panel-chat" onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }} active={showChat} />
+        </Menu>
         <div className="flex-1" />
         {deviceMenu(true)}
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>

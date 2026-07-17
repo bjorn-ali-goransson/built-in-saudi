@@ -299,7 +299,7 @@ test('device picker lists camera, microphone and speaker', async ({ browser }) =
   await c.close()
 })
 
-test('mobile: call opens as a whiteboard/dock split with tabs to switch to chat', async ({ browser }) => {
+test('mobile: dock opens split; bottom-left dropdown switches it, header X closes it', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
   await p.setViewportSize({ width: 390, height: 800 })
@@ -308,15 +308,19 @@ test('mobile: call opens as a whiteboard/dock split with tabs to switch to chat'
   await p.getByTestId('call-start').click()
   await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
   await closeShare(p)
-  // Starts split: the participants dock is open at the bottom with its tab strip.
+  // Starts split: the participants dock is docked to the bottom with a drag header.
   await expect(p.getByTestId('call-participants-panel')).toBeVisible()
-  await expect(p.getByTestId('call-dock-tabs')).toBeVisible()
-  // The dock occupies the bottom of the screen, not the full height (whiteboard above).
+  await expect(p.getByTestId('call-dock-header')).toBeVisible()
   const dock = (await p.getByTestId('call-participants-panel').boundingBox())!
   expect(dock.y).toBeGreaterThan(300)
-  // Tapping the Chat tab switches the same dock to chat.
-  await p.getByTestId('call-dock-tab-chat').click()
+  // The bottom-left dropdown (not tabs) switches the dock to chat.
+  await p.getByTestId('call-panels').click()
+  await p.getByTestId('call-panel-chat').click()
   await expect(p.getByTestId('call-chat-panel')).toBeVisible()
+  await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
+  // The X on the dock header closes the dock (whiteboard goes full-height).
+  await p.getByTestId('call-dock-close').click()
+  await expect(p.getByTestId('call-chat-panel')).toHaveCount(0)
   await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
   await c.close()
 })
