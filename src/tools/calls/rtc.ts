@@ -373,15 +373,15 @@ export class CallRoom {
   private setVideoWire(track: MediaStreamTrack | null) {
     for (const p of this.peers.values()) { if (!p.info?.inCall) continue; if (track) this.addOrReplace(p, track); else p.vSender?.replaceTrack(null).catch(() => {}) }
   }
-  async shareScreen(): Promise<MediaStream | null> {
-    try {
-      this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
-      const track = this.screen.getVideoTracks()[0]
-      this.setVideoWire(track)
-      this.screenOn = true; this.broadcastInfo()
-      track.onended = () => this.stopScreen()
-      return this.screen
-    } catch { return null }
+  // Throws on failure (the caller surfaces the reason) instead of swallowing it —
+  // a silent null made mobile screen-share failures impossible to diagnose.
+  async shareScreen(): Promise<MediaStream> {
+    this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
+    const track = this.screen.getVideoTracks()[0]
+    this.setVideoWire(track)
+    this.screenOn = true; this.broadcastInfo()
+    track.onended = () => this.stopScreen()
+    return this.screen
   }
   stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; this.setVideoWire(this.cam ? this.videoTrack : null); if (this.screenOn) { this.screenOn = false; this.broadcastInfo() } }
 

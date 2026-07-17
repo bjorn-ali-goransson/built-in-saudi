@@ -90,7 +90,7 @@ const STR = {
   en: {
     title: 'Private call', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
     yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', shareInvite: 'Share invite',
-    mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', screenUnsupported: 'Screen sharing isn’t supported on this device', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
+    mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', screenUnsupported: 'Screen sharing isn’t supported on this device', screenFailed: 'Screen share failed', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', leftLobby: 'left', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
@@ -107,7 +107,7 @@ const STR = {
   ar: {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', shareInvite: 'مشاركة الدعوة',
-    mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', screenUnsupported: 'مشاركة الشاشة غير مدعومة على هذا الجهاز', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
+    mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', screenUnsupported: 'مشاركة الشاشة غير مدعومة على هذا الجهاز', screenFailed: 'فشلت مشاركة الشاشة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', leftLobby: 'غادر', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
@@ -759,15 +759,22 @@ export default function CallsTool() {
   async function toggleMic() { const v = !mic; setMic(v); const ok = await rtc.current?.toggleMic(v); if (v && ok === false) setMic(false) }
   const speaking = useSpeaking(local, mic) // flash the mic icon while the local user talks
   async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
+  function screenToast(msg: string) { setToast(msg); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
   async function toggleScreen() {
     if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null); return }
-    // iOS Safari (and some mobile browsers) don't implement getDisplayMedia at all —
-    // tell the user instead of failing silently.
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
-      setToast(s.screenUnsupported); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000); return
+    // iOS Safari doesn't implement getDisplayMedia at all — say so up front.
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) { screenToast(s.screenUnsupported); return }
+    try {
+      const st = await rtc.current!.shareScreen()
+      setSharing(true); setScreenStream(st); st.getVideoTracks()[0]?.addEventListener('ended', () => { setSharing(false); setScreenStream(null) })
+    } catch (e) {
+      const err = e as DOMException
+      // The user dismissing the OS picker is not an error — stay quiet.
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return
+      // Otherwise surface the real reason (e.g. NotReadableError, NotSupportedError)
+      // so mobile failures are diagnosable instead of silent.
+      screenToast(`${s.screenFailed}: ${err?.name || err?.message || 'error'}`)
     }
-    const st = await rtc.current?.shareScreen()
-    if (st) { setSharing(true); setScreenStream(st); st.getVideoTracks()[0]?.addEventListener('ended', () => { setSharing(false); setScreenStream(null) }) }
   }
   function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
   function pickFiles(fl: FileList | null) {
