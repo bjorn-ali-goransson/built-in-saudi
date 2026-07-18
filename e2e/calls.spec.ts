@@ -338,7 +338,7 @@ test('device picker lists camera, microphone and speaker', async ({ browser }) =
   await c.close()
 })
 
-test('mobile: dock opens split; bottom-left dropdown switches it, header X closes it', async ({ browser }) => {
+test('mobile: dock — title dropdown switches panels, header X closes, footer icon reopens', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
   await p.setViewportSize({ width: 390, height: 800 })
@@ -352,15 +352,36 @@ test('mobile: dock opens split; bottom-left dropdown switches it, header X close
   await expect(p.getByTestId('call-dock-header')).toBeVisible()
   const dock = (await p.getByTestId('call-participants-panel').boundingBox())!
   expect(dock.y).toBeGreaterThan(300)
-  // The bottom-left dropdown (not tabs) switches the dock to chat.
-  await p.getByTestId('call-panels').click()
-  await p.getByTestId('call-panel-chat').click()
+  // The dock TITLE dropdown (not the footer) switches the panel to chat.
+  await p.getByTestId('call-dock-title').click()
+  await p.getByTestId('call-dock-pick-c').click()
   await expect(p.getByTestId('call-chat-panel')).toBeVisible()
   await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
-  // The X on the dock header closes the dock (whiteboard goes full-height).
+  // The X on the dock header closes it; the footer dock icon reopens the last panel (chat).
   await p.getByTestId('call-dock-close').click()
   await expect(p.getByTestId('call-chat-panel')).toHaveCount(0)
-  await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
+  await p.getByTestId('call-dock-toggle').click()
+  await expect(p.getByTestId('call-chat-panel')).toBeVisible()
+  await c.close()
+})
+
+test('mobile: reactions open a full-width sheet that stays within the screen', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.setViewportSize({ width: 390, height: 800 })
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('M')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  await p.getByTestId('call-react-open').click()
+  const sheet = p.getByTestId('call-react-sheet')
+  await expect(sheet).toBeVisible()
+  const bar = (await sheet.boundingBox())!
+  expect(bar.x).toBe(0) // full-width, flush to the edges (no bleed)
+  expect(Math.round(bar.width)).toBe(390)
+  await sheet.getByTestId('call-react-sheet-close').click()
+  await expect(sheet).toHaveCount(0)
   await c.close()
 })
 
