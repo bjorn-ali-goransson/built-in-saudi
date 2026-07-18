@@ -1239,8 +1239,9 @@ export default function CallsTool() {
   const presenterPeer = inCallPeers.find(([, i]) => i.sharing)
   const presenterStream = sharing ? screenStream : (presenterPeer ? peers.get(presenterPeer[0]) : null)
   const presenting = !!presenterStream
-  // The active whiteboard follows the stage: a screen-share, a file, or the pure board.
-  boardKeyRef.current = presenting ? 'screen' : view === 'file' && selected ? `f:${selected}` : 'board'
+  const stageFile = view === 'file' && !!selectedFile
+  // The active whiteboard follows the stage: a file (Along with its ID), a screen-share, or the pure board.
+  boardKeyRef.current = stageFile ? `file:${selected}` : presenting ? 'screen' : 'board'
   // Whiteboard: fade the part of our canvas that isn't in everyone's common view.
   const selfHx = 0.5 * Math.max(selfAspect, 1), selfHy = 0.5 * Math.max(1 / selfAspect, 1)
   const asp = [selfAspect, ...inCallPeers.map(([, i]) => i.aspect || 1)]
@@ -1477,10 +1478,10 @@ export default function CallsTool() {
               </div>
             </div>
           )}
-          {presenting && presenterStream && (
+          {presenting && !stageFile && (
             <StreamVideo stream={presenterStream} muted className="absolute inset-0 w-full h-full object-contain" />
           )}
-          {!presenting && view === 'file' && selectedFile && (
+          {stageFile && (
             <div className="absolute inset-0 grid place-items-center p-4 overflow-auto">
               {selectedFile.mime.startsWith('image/')
                 ? <img src={selectedFile.url} alt={selectedFile.name} className="max-w-full max-h-full object-contain" />
@@ -1491,7 +1492,7 @@ export default function CallsTool() {
                 className="absolute top-3 end-3 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
-          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${view === 'file' && !presenting ? 'pointer-events-none opacity-0' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
+          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${stageFile ? 'pointer-events-none opacity-0' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
@@ -1527,7 +1528,7 @@ export default function CallsTool() {
           })()}
 
           {/* whiteboard tools */}
-          {!(view === 'file' && !presenting) && (
+          {!stageFile && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1" data-testid="wb-tools">
             {[0.005, 0.011, 0.022].map((w, i) => (
               <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
