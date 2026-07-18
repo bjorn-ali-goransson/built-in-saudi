@@ -259,6 +259,12 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pa.mouse.move(boxA2.x + 70, boxA2.y + 70); await pa.mouse.down(); await pa.mouse.move(boxA2.x + 170, boxA2.y + 150); await pa.mouse.up()
   await expect.poll(inkB, { timeout: 10_000 }).toBeGreaterThan(0) // B sees A's drawing on the file's board
 
+  // Switching the main stage syncs to everyone: A goes back to the whiteboard via
+  // the view menu, and B follows (the file preview disappears on B too).
+  await pa.getByTestId('call-view').click()
+  await pa.getByTestId('view-board').click()
+  await expect(pb.locator('[data-testid=calls-live] main img')).toHaveCount(0, { timeout: 10_000 })
+
   await a.close(); await b.close()
 })
 

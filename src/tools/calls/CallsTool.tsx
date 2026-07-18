@@ -9,6 +9,8 @@ import { setInCall } from '../../lib/inCall'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
 const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
+// A small, no-library emoji palette for the chat composer.
+const EMOJI = ['😀', '😂', '😊', '😍', '😎', '🤔', '😅', '😢', '😮', '🥳', '😴', '🙈', '👍', '👎', '🙏', '👏', '🙌', '👋', '🤝', '💪', '❤️', '🔥', '💯', '⭐', '🎉', '✅', '❌', '💡', '📎', '📌', '⏰', '🚀', '☕', '👀', '✍️', '🎯']
 const WB_FONT = 'Arial, Helvetica, sans-serif' // safe font shared by the editor + canvas render
 const TXT_PAD = 5 // px inset of text inside the box (matches the editor's padding+border)
 // Word-wrap `text` to `maxW` px using the ctx's current font. Honours explicit
@@ -575,6 +577,7 @@ export default function CallsTool() {
       for (const [k, objs] of m.boards) { const arr = boardOf(k); const have = new Set(arr.map((o) => o.id)); for (const o of objs) if (!have.has(o.id)) arr.push(o) }
       redraw()
     }
+    else if (m.t === 'view') { if (m.file) openFile(m.file); else { setView('board'); setSelected('') } }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
       const f = incoming.current.get(m.id); if (!f) return
@@ -794,6 +797,13 @@ export default function CallsTool() {
     if (lastId) openFile(lastId) // show it to me; peers auto-open it on receipt too
   }
   function openFile(id: string) { setSelected(id); setView('file'); setUnseen((u) => ({ ...u, f: 0 })) }
+  // A user switching the main stage (a file, or '' for the whiteboard) switches it
+  // for everyone — broadcast so peers follow. Remote 'view' messages call the local
+  // setters directly (no rebroadcast).
+  function syncView(file: string) {
+    if (file) openFile(file); else { setView('board'); setSelected('') }
+    rtc.current?.broadcast({ t: 'view', file })
+  }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
   function toggleParticipants() { setShowParticipants((v) => { if (!v) { setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) } return !v }) }
   function toggleChat() { setShowChat((v) => { if (!v) { setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) } return !v }) }
@@ -1251,7 +1261,7 @@ export default function CallsTool() {
         {/* main-view dropdown: whiteboard / share screen / drop files (upload lives here) */}
         <Menu testid="call-view" triggerClass={dropTrigger} align="end"
           trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden max-w-[9rem] truncate">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60 shrink-0" /></>}>
-          <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => { setView('board'); setSelected('') }} active={view === 'board' && !presenting} testid="view-board" />
+          <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => syncView('')} active={view === 'board' && !presenting} testid="view-board" />
           {/* getDisplayMedia is desktop-only — hide the option where it can't work
               (mobile browsers, incl. Chrome for Android) rather than offer a dead button. */}
           {canShareScreen && <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />}
@@ -1294,7 +1304,7 @@ export default function CallsTool() {
             trigger={<><span className="flex items-center gap-1.5 min-w-0"><FileIcon />{unseen.f > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />}<span className="truncate">{view === 'file' && selectedFile ? selectedFile.name : `${s.filesTitle} · ${files.length}`}</span></span><ChevronDownIcon className="opacity-60 shrink-0" /></>}>
             {files.map((f) => (
               <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
-                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-2 text-[0.85rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                <button type="button" onClick={() => syncView(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-2 text-[0.85rem] bg-transparent border-0 cursor-pointer text-ink truncate">
                   {f.name}<span className="block text-[0.66rem] text-ink-faint truncate">{f.from}</span>
                 </button>
                 <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
@@ -1323,7 +1333,7 @@ export default function CallsTool() {
             <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint px-1 py-1">{s.filesTitle} · {files.length}</p>
             {files.map((f) => (
               <div key={f.id} className={`group flex items-center rounded-md ${selected === f.id && view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]' : 'hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]'}`}>
-                <button type="button" onClick={() => openFile(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
+                <button type="button" onClick={() => syncView(f.id)} data-testid="call-file-open" className="flex-1 min-w-0 text-start px-2 py-1.5 text-[0.82rem] bg-transparent border-0 cursor-pointer text-ink truncate">
                   {f.name}<span className="block text-[0.68rem] text-ink-faint truncate">{f.from}</span>
                 </button>
                 <a href={f.url} download={f.name} title={s.download} aria-label={s.download} data-testid="call-file-dl"
@@ -1446,18 +1456,32 @@ export default function CallsTool() {
         {showChat && (
           <aside style={dockStyle} className="w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:[height:var(--dock-h,46vh)] max-[640px]:border-s-0 max-[640px]:border-t" data-testid="call-chat-panel">
             {dockHeader(s.chat)}
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 text-[0.9rem]">
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 text-[0.9rem]">
               {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
-              {chat.map((m, i) => (
-                <div key={i} className={m.from === 'me' ? 'text-end' : ''}>
-                  <span className="text-[0.72rem] text-ink-faint">{m.name}</span>{' '}
-                  {m.url ? <a href={m.url} download={m.fileName} className="text-green-700 underline inline-flex items-center gap-1"><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
-                    : m.fileName ? <span className="text-ink-faint">↑ {m.fileName}</span>
-                      : <span className="text-ink">{m.text}</span>}
-                </div>
-              ))}
+              {chat.map((m, i) => {
+                const mine = m.from === 'me'
+                return (
+                  <div key={i} className={`flex flex-col max-w-[85%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
+                    {!mine && <span className="text-[0.68rem] text-ink-faint px-1.5 pb-0.5">{m.name}</span>}
+                    {/* Speech bubble: tail corner squared toward the sender's side. */}
+                    <div className={`px-3 py-1.5 rounded-2xl leading-snug break-words ${mine ? 'bg-green-600 text-sand-100 rounded-ee-sm' : 'bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink rounded-es-sm'}`}>
+                      {m.url ? <a href={m.url} download={m.fileName} className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
+                        : m.fileName ? <span className="opacity-80 inline-flex items-center gap-1"><UploadIcon className="w-3.5 h-3.5" />{m.fileName}</span>
+                          : m.text}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <div className="flex gap-2 p-2 border-t border-[color:var(--line)]">
+            <div className="flex items-center gap-1.5 p-2 border-t border-[color:var(--line)]">
+              <Menu up align="start" testid="call-emoji" triggerClass="grid place-items-center w-9 h-9 shrink-0 rounded-md bg-transparent border-0 cursor-pointer text-[1.2rem] leading-none hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">😊</span>}>
+                <div className="grid grid-cols-6 gap-0.5 w-[15rem] max-w-[80vw]">
+                  {EMOJI.map((e) => (
+                    <button key={e} type="button" data-testid="call-emoji-pick" onClick={(ev) => { ev.stopPropagation(); setMsg((t) => t + e) }}
+                      className="grid place-items-center w-9 h-9 rounded-md text-[1.25rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
+                  ))}
+                </div>
+              </Menu>
               <Input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} className="flex-1" />
               <Button variant="primary" onClick={sendChat}>{s.send}</Button>
             </div>

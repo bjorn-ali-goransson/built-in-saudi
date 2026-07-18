@@ -54,6 +54,8 @@ export type DataMsg =
   | { t: 'wb-sync'; boards: [string, WbObj[]][] }
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
+  // Switch the shared main stage for everyone: a file id, or '' for the whiteboard.
+  | { t: 'view'; file: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
