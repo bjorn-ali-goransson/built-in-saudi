@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon, BellIcon, GridIcon, ExpandIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
 import type { ReactNode } from 'react'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -383,14 +383,14 @@ export default function CallsTool() {
   const [editingName, setEditingName] = useState(false)
   // Open by default on every size: desktop shows the side dock, mobile the bottom
   // split. (Mobile used to start whiteboard-fullscreen; now it starts split.)
-  const [showParticipants, setShowParticipants] = useState(true)
-  const [showChat, setShowChat] = useState(false)
+  // The dock has three modes now: participants, chat, and reactions (null = closed).
+  const [dockMode, setDockMode] = useState<'p' | 'c' | 'r' | null>('p')
+  const showParticipants = dockMode === 'p', showChat = dockMode === 'c', showReactions = dockMode === 'r'
   // Mobile bottom-dock height (px); null = default 46vh. Dragged via the dock header.
   const [dockH, setDockH] = useState<number | null>(null)
   const dockDrag = useRef<{ startY: number; startH: number; max: number } | null>(null)
   const [maximized, setMaximized] = useState(false) // dock filling the whole mobile view
-  const lastPanel = useRef<'p' | 'c'>('p') // reopen this panel from the footer dock icon
-  const [reactSheet, setReactSheet] = useState(false) // mobile full-width reactions sheet
+  const lastPanel = useRef<'p' | 'c' | 'r'>('p') // reopen this mode from the footer dock icon
   // Explain-first notifications: show an in-call banner rationale, and only call the
   // browser's requestPermission() when the user clicks Enable (never auto-prompt).
   const [notifyBar, setNotifyBar] = useState(() => {
@@ -534,7 +534,7 @@ export default function CallsTool() {
   }, [cam, mic])
 
   rosterRef.current = roster
-  if (showParticipants) lastPanel.current = 'p'; else if (showChat) lastPanel.current = 'c'
+  if (dockMode) lastPanel.current = dockMode
   const phaseRef = useRef(phase); phaseRef.current = phase
   // "Checking again" spinner: shown once half the current relay-poll delay has
   // elapsed (only while waiting/hosting — not needed in a live call).
@@ -836,23 +836,20 @@ export default function CallsTool() {
     rtc.current?.broadcast({ t: 'view', file })
   }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
-  function toggleParticipants() { setShowParticipants((v) => { if (!v) { setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) } return !v }) }
-  function toggleChat() { setShowChat((v) => { if (!v) { setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) } return !v }) }
-  // Mobile footer dock icon: close the dock if open, else reopen the last panel.
+  const seenPanel = (m: 'p' | 'c' | 'r') => { if (m === 'p') setUnseen((u) => ({ ...u, p: 0 })); else if (m === 'c') setUnseen((u) => ({ ...u, c: 0 })) }
+  // Open a dock mode (participants / chat / reactions), or close it if it's already showing.
+  function toggleMode(m: 'p' | 'c' | 'r') { setDockMode((cur) => (cur === m ? null : m)); seenPanel(m) }
+  function pickPanel(m: 'p' | 'c' | 'r') { setDockMode(m); seenPanel(m) }
+  // Footer dock icon: close the dock if open, else reopen the last mode.
   function toggleDock() {
-    if (showParticipants || showChat) { setShowParticipants(false); setShowChat(false); setMaximized(false) }
-    else if (lastPanel.current === 'c') { setShowChat(true); setUnseen((u) => ({ ...u, c: 0 })) }
-    else { setShowParticipants(true); setUnseen((u) => ({ ...u, p: 0 })) }
-  }
-  function pickPanel(which: 'p' | 'c') {
-    if (which === 'c') { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }
-    else { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }
+    if (dockMode) { setDockMode(null); setMaximized(false) }
+    else { setDockMode(lastPanel.current); seenPanel(lastPanel.current) }
   }
   // Keyboard shortcuts (live only): M mute · W whiteboard · S screen · F file · C chat · P/A participants.
   const kbd = useRef<{ live: boolean; act: Record<string, () => void> }>({ live: false, act: {} })
   kbd.current = { live: phase === 'live', act: {
     M: () => toggleMic(), W: () => { setView('board'); setSelected('') }, S: () => toggleScreen(),
-    F: () => fileRef.current?.click(), C: () => toggleChat(), P: () => toggleParticipants(), A: () => toggleParticipants(),
+    F: () => fileRef.current?.click(), C: () => toggleMode('c'), P: () => toggleMode('p'), A: () => toggleMode('p'),
   } }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1021,7 +1018,7 @@ export default function CallsTool() {
     const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
     return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, view, selected, sharing, roster, showParticipants, showChat, files.length])
+  }, [phase, view, selected, sharing, roster, dockMode, files.length])
 
   useEffect(() => { draftRef.current = draft }, [draft])
   // Auto-grow the text box to fit its wrapped content (on text/width/size change).
@@ -1274,9 +1271,10 @@ export default function CallsTool() {
       data-testid="call-dock-header" onPointerDown={dockDown} onPointerMove={dockMove} onPointerUp={dockUp} onPointerCancel={dockUp}>
       <div onPointerDown={stopDrag}>
         <Menu align="start" testid="call-dock-title" triggerClass="flex items-center gap-1 h-8 px-2 rounded-md bg-transparent border-0 cursor-pointer text-[0.82rem] font-semibold text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:w-[16px] [&_svg]:h-[16px]"
-          trigger={<>{showChat ? <ChatIcon /> : <UsersIcon />}<span>{showChat ? s.chat : s.participants}</span><ChevronDownIcon className="opacity-60" /></>}>
+          trigger={<>{showReactions ? <span className="text-[1rem] leading-none">🙂</span> : showChat ? <ChatIcon /> : <UsersIcon />}<span>{showReactions ? s.reactions : showChat ? s.chat : s.participants}</span><ChevronDownIcon className="opacity-60" /></>}>
           <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} testid="call-dock-pick-p" onClick={() => pickPanel('p')} active={showParticipants} />
           <MenuItem icon={<ChatIcon />} label={s.chat} testid="call-dock-pick-c" onClick={() => pickPanel('c')} active={showChat} />
+          <MenuItem icon={<span className="text-[1rem] leading-none">🙂</span>} label={s.reactions} testid="call-dock-pick-r" onClick={() => pickPanel('r')} active={showReactions} />
         </Menu>
       </div>
       {/* Grab handle centred across the whole header (not tucked beside the title). */}
@@ -1284,7 +1282,7 @@ export default function CallsTool() {
       <div className="flex items-center" onPointerDown={stopDrag}>
         <button type="button" onClick={() => setMaximized((m) => !m)} data-testid="call-dock-max" aria-label={maximized ? s.restore : s.maximize} title={maximized ? s.restore : s.maximize}
           className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[16px] [&_svg]:h-[16px]"><ExpandIcon /></button>
-        <button type="button" onClick={() => { setShowParticipants(false); setShowChat(false); setMaximized(false) }} data-testid="call-dock-close" aria-label={s.close}
+        <button type="button" onClick={() => { setDockMode(null); setMaximized(false) }} data-testid="call-dock-close" aria-label={s.close}
           className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
       </div>
     </div>
@@ -1293,18 +1291,18 @@ export default function CallsTool() {
   // desktop the class doesn't apply, so the var is harmlessly ignored).
   const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
   const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
-  // Live-reaction popover: pick an emoji → everyone sees it float up the stage. It
-  // stays open (each pick stopsPropagation) so you can fire several; closes on
-  // click-outside. `up` opens it upward (mobile bottom bar).
-  const reactionMenu = (up?: boolean) => (
-    <Menu up={up} align="start" testid="call-react" triggerClass="grid place-items-center h-9 min-w-9 px-2 rounded-md bg-transparent border-0 cursor-pointer text-[1.2rem] leading-none text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">🙂</span>}>
-      <div className="grid grid-cols-6 gap-0.5 w-[15rem] max-w-[80vw]">
+  // Reactions live INSIDE the dock now (a third mode) rather than a popover/sheet —
+  // this emoji grid is the dock body when `showReactions`. Picking fires a live
+  // reaction for everyone; the dock stays open so you can send several.
+  const reactionGrid = (
+    <div className="flex-1 overflow-y-auto p-3">
+      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(2.6rem,1fr))] gap-1">
         {EMOJI.map((e) => (
-          <button key={e} type="button" data-testid="call-react-pick" onClick={(ev) => { ev.stopPropagation(); sendReaction(e) }}
-            className="grid place-items-center w-9 h-9 rounded-md text-[1.25rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
+          <button key={e} type="button" data-testid="call-react-pick" onClick={() => sendReaction(e)}
+            className="grid place-items-center h-11 rounded-md text-[1.6rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
         ))}
       </div>
-    </Menu>
+    </div>
   )
 
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
@@ -1346,9 +1344,9 @@ export default function CallsTool() {
         {/* participants / chat / call controls — top on desktop, bottom bar on mobile */}
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5 max-[640px]:hidden" />
         <span className="max-[640px]:hidden flex items-center gap-1.5">
-          <IconBtn onClick={toggleParticipants} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
-          <IconBtn onClick={toggleChat} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
-          {reactionMenu()}
+          <IconBtn onClick={() => toggleMode('p')} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
+          <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
+          <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react"><span className="text-[1.15rem] leading-none">🙂</span></IconBtn>
           <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
@@ -1553,9 +1551,10 @@ export default function CallsTool() {
                           : m.fileName ? <span className="opacity-80 inline-flex items-center gap-1"><UploadIcon className="w-3.5 h-3.5" />{m.fileName}</span>
                             : m.text}
                       </div>
-                      {/* React to this message — reveal on hover (desktop), always on touch. */}
+                      {/* React to this message — a "more" affordance (not a default
+                          emoji). Reveal on hover (desktop), always on touch. */}
                       <Menu align={mine ? 'end' : 'start'} testid="call-msg-react"
-                        triggerClass="grid place-items-center w-7 h-7 shrink-0 rounded-full bg-transparent border-0 cursor-pointer text-[0.95rem] leading-none opacity-0 group-hover/msg:opacity-100 max-[640px]:opacity-100 hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">🙂</span>}>
+                        triggerClass="grid place-items-center w-7 h-7 shrink-0 rounded-full bg-transparent border-0 cursor-pointer text-ink-faint hover:text-ink opacity-0 group-hover/msg:opacity-100 max-[640px]:opacity-100 hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:w-4 [&_svg]:h-4" trigger={<MoreVIcon />}>
                         <div className="flex gap-0.5">
                           {QUICK.map((e) => (
                             <button key={e} type="button" data-testid="call-msg-react-pick" onClick={() => reactToMsg(m.id, e)}
@@ -1584,42 +1583,26 @@ export default function CallsTool() {
             </div>
           </aside>
         )}
+        {showReactions && (
+          <aside style={dockStyle} className={`w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-reactions-panel">
+            {dockHeader}
+            {reactionGrid}
+          </aside>
+        )}
       </div>
 
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
         {/* A docking icon toggles the dock (reopening the last panel); the panel
             CHOICE now lives in the dock's own title dropdown. */}
-        <IconBtn onClick={toggleDock} active={showParticipants || showChat} title={s.dock} testid="call-dock-toggle" badge={(unseen.p + unseen.c) || undefined}><GridIcon /></IconBtn>
-        <IconBtn onClick={() => setReactSheet(true)} title={s.reactions} testid="call-react-open"><span className="text-[1.2rem] leading-none">🙂</span></IconBtn>
+        <IconBtn onClick={toggleDock} active={!!dockMode} title={s.dock} testid="call-dock-toggle" badge={(unseen.p + unseen.c) || undefined}><DockIcon /></IconBtn>
+        <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><span className="text-[1.2rem] leading-none">🙂</span></IconBtn>
         <div className="flex-1" />
         {deviceMenu(true)}
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
         <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big>{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
       </footer>
-
-      {/* Mobile reactions: a full-width bottom sheet (the popover bled off-screen).
-          Picking an emoji fires the reaction and keeps the sheet open; close via the
-          X or by tapping the backdrop. */}
-      {reactSheet && (
-        <div className="hidden max-[640px]:block">
-          <div className="fixed inset-0 z-[94]" onClick={() => setReactSheet(false)} />
-          <div className="fixed bottom-0 inset-x-0 z-[95] bg-[var(--surface)] border-t border-[color:var(--line)] rounded-t-xl shadow-[var(--shadow-lg)]" data-testid="call-react-sheet">
-            <div className="flex items-center justify-between px-4 h-11 border-b border-[color:var(--line)]">
-              <span className="text-[0.85rem] font-semibold text-ink-soft">{s.reactions}</span>
-              <button type="button" onClick={() => setReactSheet(false)} aria-label={s.close} data-testid="call-react-sheet-close"
-                className="grid place-items-center w-8 h-8 -me-1 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
-            </div>
-            <div className="grid grid-cols-8 gap-1 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {EMOJI.map((e) => (
-                <button key={e} type="button" data-testid="call-react-pick" onClick={() => sendReaction(e)}
-                  className="grid place-items-center h-10 rounded-md text-[1.5rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {toast && <div className="fixed bottom-16 max-[640px]:bottom-20 left-1/2 -translate-x-1/2 z-[90] bg-green-700 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
     </div>,

@@ -293,6 +293,28 @@ export function GridIcon({ className }: P) {
   )
 }
 
+// Vertical "more" dots (message actions).
+export function MoreVIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      {[6, 12, 18].map((cy) => <circle key={cy} cx="12" cy={cy} r="1.5" fill="currentColor" stroke="none" />)}
+    </svg>
+  )
+}
+
+// Dock toggle (DevTools "dock side" style): a prominent solid panel with an arrow
+// out to a less-prominent dashed panel.
+export function DockIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2.5" y="6" width="8" height="12" rx="1.5" />
+      <rect x="13.5" y="6" width="8" height="12" rx="1.5" strokeDasharray="2.4 2" opacity="0.6" />
+      <path d="M7 12h7.5" />
+      <path d="M12 9l3 3-3 3" />
+    </svg>
+  )
+}
+
 export function ReceiptIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -365,7 +365,7 @@ test('mobile: dock — title dropdown switches panels, header X closes, footer i
   await c.close()
 })
 
-test('mobile: reactions open a full-width sheet that stays within the screen', async ({ browser }) => {
+test('mobile: reactions are a dock mode (full-width, no off-screen popup)', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
   await p.setViewportSize({ width: 390, height: 800 })
@@ -374,14 +374,16 @@ test('mobile: reactions open a full-width sheet that stays within the screen', a
   await p.getByTestId('call-start').click()
   await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
   await closeShare(p)
+  // The footer 🙂 switches the dock into reaction mode (not a bleeding popup).
   await p.getByTestId('call-react-open').click()
-  const sheet = p.getByTestId('call-react-sheet')
-  await expect(sheet).toBeVisible()
-  const bar = (await sheet.boundingBox())!
-  expect(bar.x).toBe(0) // full-width, flush to the edges (no bleed)
-  expect(Math.round(bar.width)).toBe(390)
-  await sheet.getByTestId('call-react-sheet-close').click()
-  await expect(sheet).toHaveCount(0)
+  const panel = p.getByTestId('call-reactions-panel')
+  await expect(panel).toBeVisible()
+  const box = (await panel.boundingBox())!
+  expect(box.x).toBe(0) // full-width, flush to the edges
+  expect(Math.round(box.width)).toBe(390)
+  // Picking an emoji fires a live reaction (a float appears on the stage).
+  await panel.getByTestId('call-react-pick').first().click()
+  await expect(p.getByTestId('call-reactions').locator('span')).toHaveCount(1, { timeout: 5_000 })
   await c.close()
 })
 
