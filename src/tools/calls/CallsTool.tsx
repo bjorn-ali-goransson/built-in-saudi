@@ -1603,12 +1603,12 @@ export default function CallsTool() {
                           <Menu align={mine ? 'end' : 'start'} testid="call-msg-reacts-pill"
                             triggerClass={`inline-flex items-center gap-1 h-6 ps-1 pe-1.5 rounded-full border cursor-pointer ${mineReacted ? 'border-green-500 bg-[color-mix(in_srgb,var(--color-green-400)_16%,transparent)]' : 'border-[color:var(--line)] bg-[var(--surface)] hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}
                             trigger={<span className="inline-flex items-center gap-1" title={breakdown}>
-                              <span className="flex -space-x-1">
-                                {latest3.map(([r]) => (
-                                  <span key={r} className="inline-grid place-items-center min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-[0.72rem] leading-none">{r}</span>
+                              <span className="flex -space-x-2">
+                                {latest3.map(([r], k) => (
+                                  <span key={r} style={{ zIndex: latest3.length - k }} className={`relative inline-grid place-items-center h-[1.3rem] rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-[0.72rem] leading-none overflow-hidden ${isTag(r) ? 'px-1.5 max-w-[3.75rem] whitespace-nowrap' : 'w-[1.3rem]'}`}>{r}</span>
                                 ))}
                               </span>
-                              <span className="text-[0.72rem] font-medium text-ink-soft">{total}</span>
+                              <span className="text-[0.72rem] font-medium text-ink-soft ps-0.5">{total}</span>
                             </span>}>
                             <div className="min-w-[11rem] max-w-[16rem] flex flex-col gap-0.5">
                               {reacts.map(([r, names]) => (
