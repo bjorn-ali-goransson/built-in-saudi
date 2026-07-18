@@ -1462,8 +1462,8 @@ export default function CallsTool() {
           {/* Live reactions drifting up the stage. */}
           <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none" data-testid="call-reactions" aria-hidden="true">
             {floats.map((f) => (
-              <span key={f.id} className="absolute bottom-[12%] -translate-x-1/2 flex flex-col items-center gap-0.5 will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>
-                <span className="px-1.5 py-px rounded-full bg-black/55 text-white text-[0.62rem] font-semibold whitespace-nowrap leading-none">{f.who}</span>
+              <span key={f.id} className="absolute bottom-[12%] -translate-x-1/2 flex flex-col items-center gap-1.5 will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>
+                <span className="text-[0.68rem] font-semibold text-ink-soft whitespace-nowrap leading-none [text-shadow:0_1px_3px_var(--bg)]">{f.who}</span>
                 {isTag(f.emoji)
                   ? <span className="inline-block px-3 py-1 rounded-full bg-green-700 text-sand-100 text-[0.95rem] font-semibold whitespace-nowrap shadow-[var(--shadow-md)]">{f.emoji}</span>
                   : <span className="text-[2.4rem] drop-shadow leading-none">{f.emoji}</span>}
