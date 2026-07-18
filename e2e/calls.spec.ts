@@ -246,10 +246,11 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await pill.click()
   await expect(pa.locator('div.z-40').filter({ hasText: 'lol' })).toContainText('Bob')
 
-  // A sends a LIVE reaction → a floating emoji appears on B's stage.
+  // A sends a LIVE reaction → a floating emoji appears on B's stage, labelled Alice.
   await pa.getByTestId('call-react').first().click()
   await pa.getByTestId('call-react-pick').first().click()
   await expect(pb.getByTestId('call-reactions').locator('> span')).toHaveCount(1, { timeout: 10_000 })
+  await expect(pb.getByTestId('call-reactions')).toContainText('Alice')
 
   // No device is opened at join (privacy-first). Alice turns her camera ON — this
   // must lazily acquire + renegotiate so Bob actually receives her video track.

@@ -418,7 +418,7 @@ export default function CallsTool() {
   const [chat, setChat] = useState<ChatItem[]>([])
   // Live floating reactions drifting up the stage (self + peers). `emoji` is any
   // reaction string — an emoji or a word tag.
-  const [floats, setFloats] = useState<{ id: string; emoji: string; x: number }[]>([])
+  const [floats, setFloats] = useState<{ id: string; emoji: string; who: string; x: number }[]>([])
   // User-defined word tags (persisted), plus the composer for adding one.
   const [customTags, setCustomTags] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(TAGS_KEY) || '[]') } catch { return [] } })
   const [tagDraft, setTagDraft] = useState('')
@@ -432,6 +432,7 @@ export default function CallsTool() {
   const [selfAspect, setSelfAspect] = useState(1) // our whiteboard canvas w/h
   const fileRef = useRef<HTMLInputElement>(null)
   const rosterRef = useRef<Map<string, PeerInfo>>(new Map())
+  const chatRef = useRef<ChatItem[]>([])
 
   // whiteboard (object model synced P2P). Each context — the pure board, each
   // shared file, and a screen-share — has its OWN board, keyed below.
@@ -547,6 +548,7 @@ export default function CallsTool() {
   }, [cam, mic])
 
   rosterRef.current = roster
+  chatRef.current = chat
   if (dockMode) lastPanel.current = dockMode
   const phaseRef = useRef(phase); phaseRef.current = phase
   // "Checking again" spinner: shown once half the current relay-poll delay has
@@ -588,8 +590,15 @@ export default function CallsTool() {
 
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
-    else if (m.t === 'react') addFloat(m.emoji)
-    else if (m.t === 'msg-react') applyMsgReact(m.id, m.emoji, m.name)
+    else if (m.t === 'react') addFloat(m.emoji, m.name)
+    else if (m.t === 'msg-react') {
+      // A remote reaction toggled on a message → notify (like a chat) if chat is closed,
+      // but only when it ADDS (not when they remove their reaction).
+      const cur = chatRef.current.find((c) => c.id === m.id)
+      const wasPresent = !!cur?.reactions?.[m.emoji]?.includes(m.name)
+      applyMsgReact(m.id, m.emoji, m.name)
+      if (!wasPresent) notify('c', `${m.name} · ${m.emoji}`)
+    }
     else if (m.t === 'wb') {
       const bk = m.b || 'board'; const active = bk === boardKeyRef.current
       if (m.op === 'clear') { objects.current.set(bk, []); if (active) redraw() }
@@ -809,13 +818,14 @@ export default function CallsTool() {
     }
   }
   function sendChat() { const t = msg.trim(); if (!t) return; const id = oid(); rtc.current?.broadcast({ t: 'chat', id, name: name || s.you, text: t }); setChat((c) => [...c, { id, from: 'me', name: s.you, text: t }]); setMsg('') }
-  // Live meeting reaction: drift a floating emoji up the stage and tell everyone.
-  function addFloat(emoji: string) {
+  // Live meeting reaction: drift a floating emoji/tag up the stage (with the
+  // reactor's name above it) and tell everyone.
+  function addFloat(emoji: string, who: string) {
     const id = oid(), x = 8 + Math.random() * 84
-    setFloats((f) => [...f, { id, emoji, x }])
+    setFloats((f) => [...f, { id, emoji, who, x }])
     window.setTimeout(() => setFloats((f) => f.filter((it) => it.id !== id)), 2500)
   }
-  function sendReaction(emoji: string) { addFloat(emoji); rtc.current?.broadcast({ t: 'react', emoji }) }
+  function sendReaction(emoji: string) { const who = name || s.you; addFloat(emoji, who); rtc.current?.broadcast({ t: 'react', emoji, name: who }) }
   // Toggle `who`'s reaction on a message (used both locally and for peers).
   function applyMsgReact(id: string, emoji: string, who: string) {
     setChat((c) => c.map((m) => {
@@ -1452,10 +1462,11 @@ export default function CallsTool() {
           {/* Live reactions drifting up the stage. */}
           <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none" data-testid="call-reactions" aria-hidden="true">
             {floats.map((f) => (
-              <span key={f.id} className="absolute bottom-[12%] -translate-x-1/2 will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>
+              <span key={f.id} className="absolute bottom-[12%] -translate-x-1/2 flex flex-col items-center gap-0.5 will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>
+                <span className="px-1.5 py-px rounded-full bg-black/55 text-white text-[0.62rem] font-semibold whitespace-nowrap leading-none">{f.who}</span>
                 {isTag(f.emoji)
                   ? <span className="inline-block px-3 py-1 rounded-full bg-green-700 text-sand-100 text-[0.95rem] font-semibold whitespace-nowrap shadow-[var(--shadow-md)]">{f.emoji}</span>
-                  : <span className="text-[2.4rem] drop-shadow">{f.emoji}</span>}
+                  : <span className="text-[2.4rem] drop-shadow leading-none">{f.emoji}</span>}
               </span>
             ))}
           </div>

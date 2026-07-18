@@ -45,8 +45,8 @@ export type WbObj =
 export type DataMsg =
   | { t: 'chat'; id: string; name: string; text: string }
   // A live floating reaction on the meeting (Zoom/FB-style), and a toggle reaction
-  // pinned to a specific chat message (by its id).
-  | { t: 'react'; emoji: string }
+  // pinned to a specific chat message (by its id). Both carry the reactor's name.
+  | { t: 'react'; emoji: string; name: string }
   | { t: 'msg-react'; id: string; emoji: string; name: string }
   // `b` is the board key (pure whiteboard / a file / a screen-share); absent = 'board'.
   | { t: 'wb'; op: 'start'; id: string; pt: number[]; color: string; width: number; erase: boolean; w?: number; b?: string }
