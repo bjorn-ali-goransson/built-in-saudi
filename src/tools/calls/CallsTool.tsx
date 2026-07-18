@@ -1491,7 +1491,7 @@ export default function CallsTool() {
                 className="absolute top-3 end-3 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
-          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
+          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${view === 'file' && !presenting ? 'pointer-events-none opacity-0' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
@@ -1527,6 +1527,7 @@ export default function CallsTool() {
           })()}
 
           {/* whiteboard tools */}
+          {!(view === 'file' && !presenting) && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1" data-testid="wb-tools">
             {[0.005, 0.011, 0.022].map((w, i) => (
               <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
@@ -1554,6 +1555,7 @@ export default function CallsTool() {
             <button type="button" onClick={() => clearBoard()} title={s.clear} aria-label={s.clear} data-testid="wb-clear"
               className="grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 text-ink-soft hover:text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] [&_svg]:w-[17px] [&_svg]:h-[17px]"><TrashIcon /></button>
           </div>
+          )}
         </main>
 
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}
