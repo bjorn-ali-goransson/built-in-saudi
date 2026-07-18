@@ -9,8 +9,10 @@ import { setInCall } from '../../lib/inCall'
 
 const oid = () => Math.random().toString(36).slice(2, 10)
 const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
-// A small, no-library emoji palette for the chat composer.
-const EMOJI = ['😀', '😂', '😊', '😍', '😎', '🤔', '😅', '😢', '😮', '🥳', '😴', '🙈', '👍', '👎', '🙏', '👏', '🙌', '👋', '🤝', '💪', '❤️', '🔥', '💯', '⭐', '🎉', '✅', '❌', '💡', '📎', '📌', '⏰', '🚀', '☕', '👀', '✍️', '🎯']
+// A small, no-library emoji palette for live reactions + message reactions.
+const EMOJI = ['👍', '❤️', '😂', '🤣', '😮', '😢', '🙏', '🤲', '😀', '😊', '😍', '😎', '🤔', '😅', '🥳', '😴', '🙈', '👎', '👏', '🙌', '👋', '🤝', '💪', '🔥', '💯', '⭐', '🎉', '✅', '❌', '💡', '👀', '🚀', '☕', '🎯']
+// A compact row for reacting to an individual message (the common ones).
+const QUICK = ['👍', '❤️', '😂', '🤣', '😮', '😢', '🙏', '🤲']
 const WB_FONT = 'Arial, Helvetica, sans-serif' // safe font shared by the editor + canvas render
 const TXT_PAD = 5 // px inset of text inside the box (matches the editor's padding+border)
 // Word-wrap `text` to `maxW` px using the ctx's current font. Honours explicit
@@ -327,7 +329,7 @@ function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, 
   )
 }
 
-type ChatItem = { from: string; name: string; text?: string; fileName?: string; url?: string }
+type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
 
 export default function CallsTool() {
   const { locale } = useLocale()
@@ -405,6 +407,8 @@ export default function CallsTool() {
   // closed; a toast also fires unless you're actively drawing.
   const [unseen, setUnseen] = useState({ p: 0, c: 0, f: 0 })
   const [chat, setChat] = useState<ChatItem[]>([])
+  // Live floating reactions drifting up the stage (self + peers).
+  const [floats, setFloats] = useState<{ id: string; emoji: string; x: number }[]>([])
   const [msg, setMsg] = useState('')
   const [toast, setToast] = useState('')
   const [selfAspect, setSelfAspect] = useState(1) // our whiteboard canvas w/h
@@ -564,7 +568,9 @@ export default function CallsTool() {
   }, [inCallPeers.length, isGuest])
 
   function onData(id: string, m: DataMsg) {
-    if (m.t === 'chat') { setChat((c) => [...c, { from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
+    if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
+    else if (m.t === 'react') addFloat(m.emoji)
+    else if (m.t === 'msg-react') applyMsgReact(m.id, m.emoji, m.name)
     else if (m.t === 'wb') {
       const bk = m.b || 'board'; const active = bk === boardKeyRef.current
       if (m.op === 'clear') { objects.current.set(bk, []); if (active) redraw() }
@@ -583,7 +589,7 @@ export default function CallsTool() {
       const f = incoming.current.get(m.id); if (!f) return
       const url = URL.createObjectURL(new Blob(f.parts, { type: f.mime || 'application/octet-stream' }))
       setFiles((fs) => [...fs, { id: m.id, name: f.name, url, mime: f.mime, from: nameOf(id) }])
-      setChat((c) => [...c, { from: id, name: nameOf(id), fileName: f.name, url }])
+      setChat((c) => [...c, { id: m.id, from: id, name: nameOf(id), fileName: f.name, url }])
       incoming.current.delete(m.id)
       openFile(m.id) // a dropped file is selected for everyone
       notify('f', `${nameOf(id)} · ${f.name}`)
@@ -783,7 +789,26 @@ export default function CallsTool() {
       screenToast(`${s.screenFailed}: ${err?.name || err?.message || 'error'}`)
     }
   }
-  function sendChat() { const t = msg.trim(); if (!t) return; rtc.current?.broadcast({ t: 'chat', name: name || s.you, text: t }); setChat((c) => [...c, { from: 'me', name: s.you, text: t }]); setMsg('') }
+  function sendChat() { const t = msg.trim(); if (!t) return; const id = oid(); rtc.current?.broadcast({ t: 'chat', id, name: name || s.you, text: t }); setChat((c) => [...c, { id, from: 'me', name: s.you, text: t }]); setMsg('') }
+  // Live meeting reaction: drift a floating emoji up the stage and tell everyone.
+  function addFloat(emoji: string) {
+    const id = oid(), x = 8 + Math.random() * 84
+    setFloats((f) => [...f, { id, emoji, x }])
+    window.setTimeout(() => setFloats((f) => f.filter((it) => it.id !== id)), 2500)
+  }
+  function sendReaction(emoji: string) { addFloat(emoji); rtc.current?.broadcast({ t: 'react', emoji }) }
+  // Toggle `who`'s reaction on a message (used both locally and for peers).
+  function applyMsgReact(id: string, emoji: string, who: string) {
+    setChat((c) => c.map((m) => {
+      if (m.id !== id) return m
+      const r = { ...(m.reactions || {}) }
+      const list = r[emoji] || []
+      r[emoji] = list.includes(who) ? list.filter((n) => n !== who) : [...list, who]
+      if (r[emoji].length === 0) delete r[emoji]
+      return { ...m, reactions: r }
+    }))
+  }
+  function reactToMsg(id: string, emoji: string) { const who = name || s.you; applyMsgReact(id, emoji, who); rtc.current?.broadcast({ t: 'msg-react', id, emoji, name: who }) }
   function pickFiles(fl: FileList | null) {
     if (!fl) return
     let lastId = ''
@@ -791,7 +816,7 @@ export default function CallsTool() {
       const id = oid(), url = URL.createObjectURL(f) // shared id → same board key on every peer
       rtc.current?.sendFile(f, id)
       setFiles((fs) => [...fs, { id, name: f.name, url, mime: f.type, from: s.you }])
-      setChat((c) => [...c, { from: 'me', name: s.you, fileName: f.name, url }])
+      setChat((c) => [...c, { id, from: 'me', name: s.you, fileName: f.name, url }])
       lastId = id
     }
     if (lastId) openFile(lastId) // show it to me; peers auto-open it on receipt too
@@ -1217,12 +1242,11 @@ export default function CallsTool() {
   // Mobile-only dock header: a drag handle to resize + the panel title + an X to
   // close the dock. Switching participants/chat is the footer dropdown, not tabs.
   const dockHeader = (title: string) => (
-    <div className="hidden max-[640px]:flex items-center justify-between shrink-0 border-b border-[color:var(--line)] bg-[var(--surface)] ps-3 pe-1.5 h-10 touch-none select-none cursor-row-resize"
+    <div className="hidden max-[640px]:flex items-center justify-between shrink-0 relative border-b border-[color:var(--line)] bg-[var(--surface)] ps-3 pe-1.5 h-10 touch-none select-none cursor-row-resize"
       data-testid="call-dock-header" onPointerDown={dockDown} onPointerMove={dockMove} onPointerUp={dockUp} onPointerCancel={dockUp}>
-      <span className="flex items-center gap-2 text-[0.8rem] font-semibold text-ink-soft">
-        <span className="flex flex-col gap-[3px]" aria-hidden="true"><span className="w-5 h-px bg-ink-faint/50" /><span className="w-5 h-px bg-ink-faint/50" /></span>
-        {title}
-      </span>
+      <span className="text-[0.8rem] font-semibold text-ink-soft">{title}</span>
+      {/* Grab handle centred across the whole header (not tucked beside the title). */}
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-[3px]" aria-hidden="true"><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /></span>
       <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => { setShowParticipants(false); setShowChat(false) }} data-testid="call-dock-close" aria-label={s.close}
         className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
     </div>
@@ -1231,6 +1255,19 @@ export default function CallsTool() {
   // desktop the class doesn't apply, so the var is harmlessly ignored).
   const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
   const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
+  // Live-reaction popover: pick an emoji → everyone sees it float up the stage. It
+  // stays open (each pick stopsPropagation) so you can fire several; closes on
+  // click-outside. `up` opens it upward (mobile bottom bar).
+  const reactionMenu = (up?: boolean) => (
+    <Menu up={up} align="start" testid="call-react" triggerClass="grid place-items-center h-9 min-w-9 px-2 rounded-md bg-transparent border-0 cursor-pointer text-[1.2rem] leading-none text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">🙂</span>}>
+      <div className="grid grid-cols-6 gap-0.5 w-[15rem] max-w-[80vw]">
+        {EMOJI.map((e) => (
+          <button key={e} type="button" data-testid="call-react-pick" onClick={(ev) => { ev.stopPropagation(); sendReaction(e) }}
+            className="grid place-items-center w-9 h-9 rounded-md text-[1.25rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
+        ))}
+      </div>
+    </Menu>
+  )
 
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
   // transformed ancestor would otherwise become its containing block).
@@ -1273,6 +1310,7 @@ export default function CallsTool() {
         <span className="max-[640px]:hidden flex items-center gap-1.5">
           <IconBtn onClick={toggleParticipants} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
           <IconBtn onClick={toggleChat} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
+          {reactionMenu()}
           <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
@@ -1347,6 +1385,12 @@ export default function CallsTool() {
 
         {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
         <main className={`flex-1 relative min-w-0 overflow-hidden max-[640px]:min-h-0 ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
+          {/* Live reactions drifting up the stage. */}
+          <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none" data-testid="call-reactions" aria-hidden="true">
+            {floats.map((f) => (
+              <span key={f.id} className="absolute bottom-[12%] text-[2.2rem] drop-shadow will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>{f.emoji}</span>
+            ))}
+          </div>
           {dragOver && (
             <div className="absolute inset-0 z-40 p-4 pointer-events-none" data-testid="call-dropzone">
               <div className="w-full h-full grid place-items-center rounded-xl border-2 border-dashed border-green-500 bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)]">
@@ -1460,28 +1504,43 @@ export default function CallsTool() {
               {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
               {chat.map((m, i) => {
                 const mine = m.from === 'me'
+                const reacts = m.reactions ? Object.entries(m.reactions) : []
                 return (
-                  <div key={i} className={`flex flex-col max-w-[85%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
+                  <div key={i} className={`group/msg flex flex-col max-w-[85%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
                     {!mine && <span className="text-[0.68rem] text-ink-faint px-1.5 pb-0.5">{m.name}</span>}
-                    {/* Speech bubble: tail corner squared toward the sender's side. */}
-                    <div className={`px-3 py-1.5 rounded-2xl leading-snug break-words ${mine ? 'bg-green-600 text-sand-100 rounded-ee-sm' : 'bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink rounded-es-sm'}`}>
-                      {m.url ? <a href={m.url} download={m.fileName} className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
-                        : m.fileName ? <span className="opacity-80 inline-flex items-center gap-1"><UploadIcon className="w-3.5 h-3.5" />{m.fileName}</span>
-                          : m.text}
+                    <div className={`flex items-center gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
+                      {/* Speech bubble: tail corner squared toward the sender's side. */}
+                      <div className={`px-3 py-1.5 rounded-2xl leading-snug break-words ${mine ? 'bg-green-600 text-sand-100 rounded-ee-sm' : 'bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink rounded-es-sm'}`}>
+                        {m.url ? <a href={m.url} download={m.fileName} className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
+                          : m.fileName ? <span className="opacity-80 inline-flex items-center gap-1"><UploadIcon className="w-3.5 h-3.5" />{m.fileName}</span>
+                            : m.text}
+                      </div>
+                      {/* React to this message — reveal on hover (desktop), always on touch. */}
+                      <Menu align={mine ? 'end' : 'start'} testid="call-msg-react"
+                        triggerClass="grid place-items-center w-7 h-7 shrink-0 rounded-full bg-transparent border-0 cursor-pointer text-[0.95rem] leading-none opacity-0 group-hover/msg:opacity-100 max-[640px]:opacity-100 hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">🙂</span>}>
+                        <div className="flex gap-0.5">
+                          {QUICK.map((e) => (
+                            <button key={e} type="button" data-testid="call-msg-react-pick" onClick={() => reactToMsg(m.id, e)}
+                              className="grid place-items-center w-8 h-8 rounded-md text-[1.15rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
+                          ))}
+                        </div>
+                      </Menu>
                     </div>
+                    {reacts.length > 0 && (
+                      <div className={`flex flex-wrap gap-1 mt-0.5 ${mine ? 'justify-end' : ''}`} data-testid="call-msg-reacts">
+                        {reacts.map(([e, names]) => (
+                          <button key={e} type="button" onClick={() => reactToMsg(m.id, e)} title={names.join(', ')}
+                            className={`inline-flex items-center gap-0.5 h-5 px-1.5 rounded-full text-[0.72rem] border cursor-pointer ${names.includes(name || s.you) ? 'bg-[color-mix(in_srgb,var(--color-green-400)_22%,transparent)] border-green-500 text-green-800' : 'bg-[var(--surface)] border-[color:var(--line)] text-ink-soft'}`}>
+                            <span>{e}</span> {names.length}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
-            <div className="flex items-center gap-1.5 p-2 border-t border-[color:var(--line)]">
-              <Menu up align="start" testid="call-emoji" triggerClass="grid place-items-center w-9 h-9 shrink-0 rounded-md bg-transparent border-0 cursor-pointer text-[1.2rem] leading-none hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]" trigger={<span aria-hidden="true">😊</span>}>
-                <div className="grid grid-cols-6 gap-0.5 w-[15rem] max-w-[80vw]">
-                  {EMOJI.map((e) => (
-                    <button key={e} type="button" data-testid="call-emoji-pick" onClick={(ev) => { ev.stopPropagation(); setMsg((t) => t + e) }}
-                      className="grid place-items-center w-9 h-9 rounded-md text-[1.25rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
-                  ))}
-                </div>
-              </Menu>
+            <div className="flex gap-2 p-2 border-t border-[color:var(--line)]">
               <Input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} className="flex-1" />
               <Button variant="primary" onClick={sendChat}>{s.send}</Button>
             </div>
@@ -1498,6 +1557,7 @@ export default function CallsTool() {
           <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} testid="call-panel-participants" onClick={() => { setShowParticipants(true); setShowChat(false); setUnseen((u) => ({ ...u, p: 0 })) }} active={showParticipants} />
           <MenuItem icon={<ChatIcon />} label={s.chat} testid="call-panel-chat" onClick={() => { setShowChat(true); setShowParticipants(false); setUnseen((u) => ({ ...u, c: 0 })) }} active={showChat} />
         </Menu>
+        {reactionMenu(true)}
         <div className="flex-1" />
         {deviceMenu(true)}
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>

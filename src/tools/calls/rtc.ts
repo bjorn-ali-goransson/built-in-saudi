@@ -43,7 +43,11 @@ export type WbObj =
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
-  | { t: 'chat'; name: string; text: string }
+  | { t: 'chat'; id: string; name: string; text: string }
+  // A live floating reaction on the meeting (Zoom/FB-style), and a toggle reaction
+  // pinned to a specific chat message (by its id).
+  | { t: 'react'; emoji: string }
+  | { t: 'msg-react'; id: string; emoji: string; name: string }
   // `b` is the board key (pure whiteboard / a file / a screen-share); absent = 'board'.
   | { t: 'wb'; op: 'start'; id: string; pt: number[]; color: string; width: number; erase: boolean; w?: number; b?: string }
   | { t: 'wb'; op: 'point'; id: string; pt: number[]; w?: number; b?: string }
