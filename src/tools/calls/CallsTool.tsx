@@ -11,8 +11,12 @@ const oid = () => Math.random().toString(36).slice(2, 10)
 const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
 // A small, no-library emoji palette for live reactions + message reactions.
 const EMOJI = ['👍', '❤️', '😂', '🤣', '😮', '😢', '🙏', '🤲', '😀', '😊', '😍', '😎', '🤔', '😅', '🥳', '😴', '🙈', '👎', '👏', '🙌', '👋', '🤝', '💪', '🔥', '💯', '⭐', '🎉', '✅', '❌', '💡', '👀', '🚀', '☕', '🎯']
-// A compact row for reacting to an individual message (the common ones).
-const QUICK = ['👍', '❤️', '😂', '🤣', '😮', '😢', '🙏', '🤲']
+// Word tags (wordmarks) usable as reactions alongside emojis. Custom ones the user
+// adds are appended (persisted). A reaction/float is just a string — emoji OR tag.
+const TAGS_EN = ['ok', 'yes', 'no', 'soon', 'BRB', 'lol', 'bruh', 'why?', 'what?', 'khalas', 'ya3', 'tamm']
+const TAGS_AR = ['هلا', 'السلام عليكم', 'حياك', 'بالجنة', 'تبشر', 'شكرا', 'تم', 'ابشر']
+const TAGS_KEY = 'bis-call-tags'
+const isTag = (r: string) => /[\p{L}\p{N}]/u.test(r) // contains a letter/number → text tag, not an emoji
 const WB_FONT = 'Arial, Helvetica, sans-serif' // safe font shared by the editor + canvas render
 const TXT_PAD = 5 // px inset of text inside the box (matches the editor's padding+border)
 // Word-wrap `text` to `maxW` px using the ctx's current font. Honours explicit
@@ -91,7 +95,7 @@ const STR = {
     yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', screenUnsupported: 'Screen sharing isn’t supported on this device', screenFailed: 'Screen share failed', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
-    maximize: 'Maximise', restore: 'Restore', reactions: 'Reactions', dock: 'Panel',
+    maximize: 'Maximise', restore: 'Restore', reactions: 'Reactions', dock: 'Panel', tags: 'Tags', addTag: 'Add a tag…', whoReacted: 'Reactions',
     copied: 'Invite link copied', copy: 'Copy link', copyDone: 'Copied!', shareQrUrl: 'Share QR + URL', shareHint: 'Share the link — people who open it appear here for you to let in.',
     lobbyList: 'Waiting in the lobby', admit: 'Let in', leftLobby: 'left', waitingHost: 'Waiting for the host to let you in…', cancel: 'Cancel',
     participants: 'Participants', endMeeting: 'End meeting', hangUp: 'Leave', sendFiles: 'Drop files', dropHere: 'Drop files to share with everyone', muteMe: 'Mute me', unmuteMe: 'Unmute',
@@ -110,7 +114,7 @@ const STR = {
     yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', screenUnsupported: 'مشاركة الشاشة غير مدعومة على هذا الجهاز', screenFailed: 'فشلت مشاركة الشاشة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
-    maximize: 'تكبير', restore: 'استعادة', reactions: 'تفاعلات', dock: 'اللوحة',
+    maximize: 'تكبير', restore: 'استعادة', reactions: 'تفاعلات', dock: 'اللوحة', tags: 'كلمات', addTag: 'أضف كلمة…', whoReacted: 'التفاعلات',
     copied: 'تم نسخ رابط الدعوة', copy: 'نسخ الرابط', copyDone: 'تم النسخ!', shareQrUrl: 'مشاركة الرمز والرابط', shareHint: 'شارك الرابط — يظهر من يفتحه هنا لتسمح له بالدخول.',
     lobbyList: 'في غرفة الانتظار', admit: 'اسمح بالدخول', leftLobby: 'غادر', waitingHost: 'بانتظار أن يسمح لك المضيف بالدخول…', cancel: 'إلغاء',
     participants: 'المشاركون', endMeeting: 'إنهاء الاجتماع', hangUp: 'مغادرة', sendFiles: 'أفلت الملفات', dropHere: 'أفلت الملفات لمشاركتها مع الجميع', muteMe: 'اكتم صوتي', unmuteMe: 'ألغِ الكتم',
@@ -412,8 +416,17 @@ export default function CallsTool() {
   // closed; a toast also fires unless you're actively drawing.
   const [unseen, setUnseen] = useState({ p: 0, c: 0, f: 0 })
   const [chat, setChat] = useState<ChatItem[]>([])
-  // Live floating reactions drifting up the stage (self + peers).
+  // Live floating reactions drifting up the stage (self + peers). `emoji` is any
+  // reaction string — an emoji or a word tag.
   const [floats, setFloats] = useState<{ id: string; emoji: string; x: number }[]>([])
+  // User-defined word tags (persisted), plus the composer for adding one.
+  const [customTags, setCustomTags] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(TAGS_KEY) || '[]') } catch { return [] } })
+  const [tagDraft, setTagDraft] = useState('')
+  function addCustomTag() {
+    const t = tagDraft.trim(); if (!t) return
+    setCustomTags((cur) => { if (cur.includes(t) || [...TAGS_EN, ...TAGS_AR].includes(t)) return cur; const next = [...cur, t]; try { localStorage.setItem(TAGS_KEY, JSON.stringify(next)) } catch { /* */ } return next })
+    setTagDraft('')
+  }
   const [msg, setMsg] = useState('')
   const [toast, setToast] = useState('')
   const [selfAspect, setSelfAspect] = useState(1) // our whiteboard canvas w/h
@@ -1291,19 +1304,34 @@ export default function CallsTool() {
   // desktop the class doesn't apply, so the var is harmlessly ignored).
   const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
   const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
-  // Reactions live INSIDE the dock now (a third mode) rather than a popover/sheet —
-  // this emoji grid is the dock body when `showReactions`. Picking fires a live
-  // reaction for everyone; the dock stays open so you can send several.
-  const reactionGrid = (
-    <div className="flex-1 overflow-y-auto p-3">
-      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(2.6rem,1fr))] gap-1">
-        {EMOJI.map((e) => (
-          <button key={e} type="button" data-testid="call-react-pick" onClick={() => sendReaction(e)}
-            className="grid place-items-center h-11 rounded-md text-[1.6rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
-        ))}
+  // Shared reaction picker: emojis + word tags (+ a custom-tag composer). Used as the
+  // dock body when `showReactions` AND inside each message's react menu. Every
+  // control stopsPropagation so, inside a Menu, picking doesn't close it (you can
+  // toggle several); the Menu closes on outside click. A reaction is any string.
+  const reactionPicker = (onPick: (r: string) => void, cls = 'w-[17rem] max-w-[calc(100vw-2rem)]') => {
+    const tagCls = 'h-8 px-2.5 rounded-md text-[0.82rem] font-medium border border-[color:var(--line)] bg-[var(--surface)] text-ink cursor-pointer hover:border-green-500 whitespace-nowrap'
+    return (
+      <div className={cls}>
+        <div className="grid [grid-template-columns:repeat(auto-fill,minmax(2.4rem,1fr))] gap-0.5">
+          {EMOJI.map((e) => (
+            <button key={e} type="button" data-testid="call-react-pick" onClick={(ev) => { ev.stopPropagation(); onPick(e) }}
+              className="grid place-items-center h-10 rounded-md text-[1.5rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
+          ))}
+        </div>
+        <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-ink-faint px-1 pt-2 pb-1 mt-1 border-t border-[color:var(--line-soft)]">{s.tags}</p>
+        <div className="flex flex-wrap gap-1">
+          {[...TAGS_EN, ...TAGS_AR, ...customTags].map((t) => (
+            <button key={t} type="button" data-testid="call-react-tag" onClick={(ev) => { ev.stopPropagation(); onPick(t) }} className={tagCls}>{t}</button>
+          ))}
+        </div>
+        <div className="flex gap-1 mt-1.5">
+          <input value={tagDraft} onClick={(ev) => ev.stopPropagation()} onChange={(e) => setTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); addCustomTag() } }} placeholder={s.addTag} data-testid="call-tag-input"
+            className="flex-1 min-w-0 h-8 px-2 rounded-md border border-[color:var(--line)] bg-[var(--bg)] text-[0.85rem] text-ink focus:outline-none focus:border-green-500" />
+          <button type="button" onClick={(ev) => { ev.stopPropagation(); addCustomTag() }} aria-label={s.addTag} data-testid="call-tag-add" className="grid place-items-center w-8 h-8 shrink-0 rounded-md bg-green-600 text-sand-100 border-0 cursor-pointer text-[1.15rem] leading-none">+</button>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   // Portal to <body> so `fixed inset-0` truly covers the viewport (an animated/
   // transformed ancestor would otherwise become its containing block).
@@ -1424,7 +1452,11 @@ export default function CallsTool() {
           {/* Live reactions drifting up the stage. */}
           <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none" data-testid="call-reactions" aria-hidden="true">
             {floats.map((f) => (
-              <span key={f.id} className="absolute bottom-[12%] text-[2.2rem] drop-shadow will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>{f.emoji}</span>
+              <span key={f.id} className="absolute bottom-[12%] -translate-x-1/2 will-change-transform [animation:reactFloat_2.5s_ease-out_forwards]" style={{ left: `${f.x}%` }}>
+                {isTag(f.emoji)
+                  ? <span className="inline-block px-3 py-1 rounded-full bg-green-700 text-sand-100 text-[0.95rem] font-semibold whitespace-nowrap shadow-[var(--shadow-md)]">{f.emoji}</span>
+                  : <span className="text-[2.4rem] drop-shadow">{f.emoji}</span>}
+              </span>
             ))}
           </div>
           {dragOver && (
@@ -1552,27 +1584,45 @@ export default function CallsTool() {
                             : m.text}
                       </div>
                       {/* React to this message — a "more" affordance (not a default
-                          emoji). Reveal on hover (desktop), always on touch. */}
+                          emoji). Reveal on hover (desktop), always on touch. The menu
+                          holds the full picker (emojis + tags), toggling on each pick. */}
                       <Menu align={mine ? 'end' : 'start'} testid="call-msg-react"
                         triggerClass="grid place-items-center w-7 h-7 shrink-0 rounded-full bg-transparent border-0 cursor-pointer text-ink-faint hover:text-ink opacity-0 group-hover/msg:opacity-100 max-[640px]:opacity-100 hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:w-4 [&_svg]:h-4" trigger={<MoreVIcon />}>
-                        <div className="flex gap-0.5">
-                          {QUICK.map((e) => (
-                            <button key={e} type="button" data-testid="call-msg-react-pick" onClick={() => reactToMsg(m.id, e)}
-                              className="grid place-items-center w-8 h-8 rounded-md text-[1.15rem] leading-none bg-transparent border-0 cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]">{e}</button>
-                          ))}
-                        </div>
+                        {reactionPicker((r) => reactToMsg(m.id, r))}
                       </Menu>
                     </div>
-                    {reacts.length > 0 && (
-                      <div className={`flex flex-wrap gap-1 mt-0.5 ${mine ? 'justify-end' : ''}`} data-testid="call-msg-reacts">
-                        {reacts.map(([e, names]) => (
-                          <button key={e} type="button" onClick={() => reactToMsg(m.id, e)} title={names.join(', ')}
-                            className={`inline-flex items-center gap-0.5 h-5 px-1.5 rounded-full text-[0.72rem] border cursor-pointer ${names.includes(name || s.you) ? 'bg-[color-mix(in_srgb,var(--color-green-400)_22%,transparent)] border-green-500 text-green-800' : 'bg-[var(--surface)] border-[color:var(--line)] text-ink-soft'}`}>
-                            <span>{e}</span> {names.length}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {reacts.length > 0 && (() => {
+                      const latest3 = reacts.slice(-3)
+                      const total = reacts.reduce((n, [, names]) => n + names.length, 0)
+                      const mineReacted = reacts.some(([, names]) => names.includes(name || s.you))
+                      const breakdown = reacts.map(([r, names]) => `${r} · ${names.join(', ')}`).join('\n')
+                      // A single "pill": the 3 latest reactions stacked + the total.
+                      // Hover shows the breakdown; click/tap opens the who-reacted list.
+                      return (
+                        <div className={`mt-0.5 ${mine ? 'self-end' : 'self-start'}`} data-testid="call-msg-reacts">
+                          <Menu align={mine ? 'end' : 'start'} testid="call-msg-reacts-pill"
+                            triggerClass={`inline-flex items-center gap-1 h-6 ps-1 pe-1.5 rounded-full border cursor-pointer ${mineReacted ? 'border-green-500 bg-[color-mix(in_srgb,var(--color-green-400)_16%,transparent)]' : 'border-[color:var(--line)] bg-[var(--surface)] hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]'}`}
+                            trigger={<span className="inline-flex items-center gap-1" title={breakdown}>
+                              <span className="flex -space-x-1">
+                                {latest3.map(([r]) => (
+                                  <span key={r} className="inline-grid place-items-center min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-[var(--surface)] border border-[color:var(--line)] text-[0.72rem] leading-none">{r}</span>
+                                ))}
+                              </span>
+                              <span className="text-[0.72rem] font-medium text-ink-soft">{total}</span>
+                            </span>}>
+                            <div className="min-w-[11rem] max-w-[16rem] flex flex-col gap-0.5">
+                              {reacts.map(([r, names]) => (
+                                <button key={r} type="button" onClick={() => reactToMsg(m.id, r)}
+                                  className={`flex items-start gap-2 px-2 py-1.5 rounded-md text-start hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)] ${names.includes(name || s.you) ? 'bg-[color-mix(in_srgb,var(--color-green-400)_12%,transparent)]' : ''}`}>
+                                  <span className="text-[0.95rem] leading-tight shrink-0">{r}</span>
+                                  <span className="text-[0.78rem] text-ink-soft leading-snug">{names.join(', ')}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </Menu>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}
@@ -1586,7 +1636,7 @@ export default function CallsTool() {
         {showReactions && (
           <aside style={dockStyle} className={`w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-reactions-panel">
             {dockHeader}
-            {reactionGrid}
+            <div className="flex-1 overflow-y-auto p-3">{reactionPicker(sendReaction, 'w-full')}</div>
           </aside>
         )}
       </div>
