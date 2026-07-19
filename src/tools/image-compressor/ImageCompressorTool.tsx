@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Input, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { ImageEncoder } from '../../lib/imageEncoder'
 
 type Fmt = 'image/jpeg' | 'image/webp' | 'image/png'
 
@@ -26,31 +27,34 @@ export default function ImageCompressorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
-  const [src, setSrc] = useState<{ name: string; size: number; bitmap: ImageBitmap } | null>(null)
+  const [src, setSrc] = useState<{ name: string; size: number; width: number } | null>(null)
   const [quality, setQuality] = useState(0.8)
   const [format, setFormat] = useState<Fmt>('image/jpeg')
   const [maxW, setMaxW] = useState('')
   const [busy, setBusy] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
+  const encRef = useRef<ImageEncoder | null>(null)
+
+  useEffect(() => () => encRef.current?.dispose(), [])
 
   async function onFile(f: File | undefined) {
     if (!f || !f.type.startsWith('image/')) return
-    try { const bitmap = await createImageBitmap(f); setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, bitmap }) } catch { /* ignore */ }
+    encRef.current ??= new ImageEncoder()
+    const dim = await encRef.current.load(f)
+    if (dim) setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, width: dim.width })
   }
 
+  // Re-encode in the worker (#154) — big images no longer jank the sliders.
   useEffect(() => {
     if (!src) return
     let cancelled = false
     setBusy(true)
-    const scale = maxW && src.bitmap.width > +maxW ? +maxW / src.bitmap.width : 1
-    const w = Math.round(src.bitmap.width * scale), h = Math.round(src.bitmap.height * scale)
-    const c = document.createElement('canvas'); c.width = w; c.height = h
-    c.getContext('2d')!.drawImage(src.bitmap, 0, 0, w, h)
-    c.toBlob((blob) => {
-      if (cancelled || !blob) { setBusy(false); return }
-      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
+    encRef.current!.encode({ maxWidth: maxW ? +maxW : undefined, format, quality: format === 'image/png' ? undefined : quality }).then((blob) => {
+      if (cancelled) return
       setBusy(false)
-    }, format, format === 'image/png' ? undefined : quality)
+      if (!blob) return
+      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
+    })
     return () => { cancelled = true }
   }, [src, quality, format, maxW])
 
@@ -80,7 +84,7 @@ export default function ImageCompressorTool() {
                 disabled={format === 'image/png'} onChange={(e) => setQuality(+e.target.value)} />
             </Field>
             <Field label={s.maxW}>
-              <Input className="font-mono" type="number" min={1} placeholder={String(src.bitmap.width)} value={maxW} data-testid="imgcomp-maxw" onChange={(e) => setMaxW(e.target.value)} />
+              <Input className="font-mono" type="number" min={1} placeholder={String(src.width)} value={maxW} data-testid="imgcomp-maxw" onChange={(e) => setMaxW(e.target.value)} />
             </Field>
           </div>
 
