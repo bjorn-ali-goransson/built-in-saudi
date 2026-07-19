@@ -295,8 +295,22 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `?code=` guest trap). The invite/share link is the same `/join?code=…`. `code=`
   is the param (`room=` still read for old links). The invite image (QR + code +
   PNG-metadata) is `src/tools/calls/invite.ts`.
+- **"Call me" personal links** (`functions/call.js`, same file as the signaling relay):
+  `call-register`/`call-ring`/`call-delete` + Firestore `callLinks/{code}`
+  (`{subs[], name, createdAt, updatedAt, expiresAt}`, **anonymous** — no login,
+  device-generated code). Sharing `built-in-saudi.com/call/<code>` lets anyone
+  **ring** the host: each call spins up a **fresh** ephemeral room (the code is
+  only the link) and Web Push wakes the host's device(s) to answer. `call-ring`'s
+  notification URL is `…/apps/calls/join?code=<room>&ring=1&host=<code>` — it
+  **carries the host code**, so the incoming-call screen can offer "stop receiving
+  calls" with **no local state**; the tool also keeps a tiny `bis-call-link`
+  localStorage pointer (the code) just so the link is stable/manageable on revisit.
+  6-month-since-last-use TTL (refreshed on register + ring, lazy-deleted on
+  expiry); dead push subs pruned on 404/410. Reuses the VAPID singleton configured
+  in `functions/index.js`. **Not covered by `my-data`** (anonymous links have no
+  Google `sub` to match) — the host deletes them themselves (in-tool or on a call).
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all twenty-eight functions on any `functions/**` change, authenticating **keylessly
+  deploys all thirty-one functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

@@ -79,6 +79,9 @@ jobs:
           gcloud functions deploy delete-link             "${common[@]}" --entry-point=deleteLink
 
           gcloud functions deploy call-signal             "${common[@]}" --entry-point=callSignal
+          gcloud functions deploy call-register           "${common[@]}" --entry-point=callRegister
+          gcloud functions deploy call-ring               "${common[@]}" --entry-point=callRing
+          gcloud functions deploy call-delete             "${common[@]}" --entry-point=callDelete
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
 

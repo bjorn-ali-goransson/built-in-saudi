@@ -5,10 +5,13 @@
 // in Firestore for 2 hours, and are polled. No auth (public by code); no deps.
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
+import webpush from 'web-push' // VAPID is configured once in index.js (shared singleton)
 
 const { Firestore } = firestore
 const db = new Firestore()
 const ROOMS = 'callRooms'
+const LINKS = 'callLinks' // personal "call me" links → push subscriptions
+const MAX_SUBS = 6 // devices per link
 const TTL_MS = 2 * 3600000 // rooms expire after 2 hours
 const MAX_MSGS = 400 // cap the message buffer per room (bounds the doc size)
 const MAX_PAYLOAD = 20000 // per-message payload cap (an SDP is a few KB)
@@ -105,6 +108,126 @@ http('callSignal', async (req, res) => {
       return count
     })
     res.json({ ok: true, seq })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// ---- Personal "call me" links (Web Push ring) ------------------------------
+// A host claims an anonymous, device-generated code and registers this device's
+// push subscription under it. Sharing built-in-saudi.com/call/<code> lets anyone
+// RING the host: each call spins up a FRESH ephemeral room (the personal code is
+// just the link; every call is a new room) and a push notification wakes the
+// host's device(s) to answer. No auth, no identity — the ring notification's URL
+// carries the code so the host can cancel with no local state; `my-data` can't
+// match anonymous links, so the host removes them itself (in-tool or on a call).
+const LINK_TTL_MS = 183 * 24 * 3600000 // ~6 months since last use (register or ring)
+const codeOf = (s) => clean(s, 40).replace(/[^a-zA-Z0-9_-]/g, '')
+
+// POST { code, sub, name? } → add/refresh this device's push subscription under code.
+http('callRegister', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const sub = b.sub
+    const name = clean(b.name, 40)
+    if (!code || !sub || !sub.endpoint) return res.status(400).json({ error: 'code and sub required' })
+    const ref = db.collection(LINKS).doc(code)
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref)
+      const d = snap.exists ? snap.data() : null
+      const now = new Date()
+      // Dedupe by endpoint (a re-register from the same device just refreshes it).
+      const subs = (d && Array.isArray(d.subs) ? d.subs : []).filter((s) => s && s.endpoint !== sub.endpoint)
+      subs.push(sub)
+      tx.set(ref, {
+        subs: subs.slice(-MAX_SUBS),
+        name: name || (d && d.name) || '',
+        createdAt: (d && d.createdAt) || now,
+        updatedAt: now,
+        expiresAt: new Date(now.getTime() + LINK_TTL_MS),
+      })
+    })
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { code, room, caller? } → push every device on the link to answer `room`.
+http('callRing', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const room = codeOf(b.room)
+    const caller = clean(b.caller, 40) || 'Someone'
+    if (!code || !room) return res.status(400).json({ error: 'code and room required' })
+    const ref = db.collection(LINKS).doc(code)
+    const snap = await ref.get()
+    const d = snap.exists ? snap.data() : null
+    // Missing or expired → treat as gone (and lazily clean up an expired doc).
+    if (!d || (d.expiresAt && d.expiresAt.toDate && d.expiresAt.toDate() < new Date())) {
+      if (d) await ref.delete().catch(() => {})
+      return res.status(404).json({ ok: false, error: 'no such link' })
+    }
+    const subs = Array.isArray(d.subs) ? d.subs : []
+    // The click-URL carries the room to answer AND the host code, so the incoming
+    // call screen can offer "stop receiving calls" without any stored state.
+    const payload = JSON.stringify({
+      title: `${caller} is calling`,
+      body: 'Tap to answer',
+      tag: `call-${room}`,
+      url: `${SITE}/apps/calls/join?code=${room}&ring=1&host=${code}`,
+      requireInteraction: true,
+    })
+    const alive = []
+    let delivered = 0
+    for (const s of subs) {
+      try {
+        await webpush.sendNotification(s, payload)
+        alive.push(s); delivered++
+      } catch (e) {
+        // 404/410 = subscription gone → drop it; anything else is transient → keep.
+        if (!(e && (e.statusCode === 404 || e.statusCode === 410))) alive.push(s)
+      }
+    }
+    const now = new Date()
+    await ref.set({ subs: alive, updatedAt: now, expiresAt: new Date(now.getTime() + LINK_TTL_MS) }, { merge: true }).catch(() => {})
+    res.json({ ok: true, delivered })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { code, endpoint? } → remove one device (endpoint) or the whole link.
+http('callDelete', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const endpoint = b.endpoint ? clean(b.endpoint, 600) : ''
+    if (!code) return res.status(400).json({ error: 'code required' })
+    const ref = db.collection(LINKS).doc(code)
+    if (!endpoint) {
+      await ref.delete().catch(() => {})
+      return res.json({ ok: true, deleted: 'all' })
+    }
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref)
+      if (!snap.exists) return
+      const subs = (snap.data().subs || []).filter((s) => s && s.endpoint !== endpoint)
+      if (subs.length === 0) tx.delete(ref)
+      else tx.set(ref, { subs, updatedAt: new Date() }, { merge: true })
+    })
+    res.json({ ok: true, deleted: 'device' })
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) })
   }
