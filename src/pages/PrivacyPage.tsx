@@ -58,6 +58,13 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
+        h: 'Calls and call links',
+        p: [
+          'Calls is peer-to-peer: video, audio, whiteboard, chat and files go straight between browsers — our server only relays the initial connection handshake and never sees any of that content.',
+          'A personal “call me” link is anonymous: we store only your device’s push subscription under a random code (no name required, no account) so people can ring you. It is kept for 6 months after its last use, then deleted; you can remove it anytime from the Calls tool, or when a call comes in. Because it isn’t tied to an account, “Delete my data” below can’t find it — you remove it yourself.',
+        ],
+      },
+      {
         h: 'Email and notifications',
         p: [
           'Booking confirmations are sent by email through Resend (our email provider) and include a calendar invite. Optional booking alerts are sent via Web Push and, if you connect it, Telegram. These carry only the details needed for the notification.',
@@ -127,6 +134,13 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         p: [
           'يحتاج مختصِر الروابط إلى خادم لإعادة توجيه الزوار، لذا يخزّن الروابط التي تنشئها: الرابط الأصلي، والرمز القصير، وعدّاد النقرات، ومعرّف/بريد حساب جوجل كمالك. يُستخدم تسجيل الدخول عبر جوجل فقط للتأكد أنك شخص حقيقي ولربط الروابط بك، ولا يطلب أي صلاحيات تقويم أو Drive أو غيرها.',
           'تُحفظ الروابط القصيرة لمدة ٦ أشهر ثم تنتهي وتُحذف تلقائيًا. ويمكنك حذف أي رابط بنفسك في أي وقت من الأداة، كما يزيل «احذف بياناتي» أدناه كل روابطك.',
+        ],
+      },
+      {
+        h: 'المكالمات وروابط الاتصال',
+        p: [
+          'المكالمات تجري مباشرةً بين الأجهزة: الفيديو والصوت والسبورة والدردشة والملفات تنتقل بين المتصفحات مباشرةً — خادمنا يمرّر فقط مصافحة الاتصال الأولى ولا يرى أيًّا من ذلك المحتوى.',
+          'رابط «اتصل بي» الشخصي مجهول: نخزّن فقط اشتراك الإشعارات لجهازك تحت رمز عشوائي (بدون اسم وبدون حساب) ليتمكن الناس من الاتصال بك. يُحفظ ٦ أشهر من آخر استخدام ثم يُحذف، ويمكنك إزالته في أي وقت من أداة المكالمات أو عند ورود مكالمة. ولأنه غير مرتبط بحساب، لا يستطيع «احذف بياناتي» أدناه العثور عليه — تزيله بنفسك.',
         ],
       },
       {

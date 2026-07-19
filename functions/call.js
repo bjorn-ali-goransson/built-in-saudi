@@ -183,7 +183,7 @@ http('callRing', async (req, res) => {
       title: `${caller} is calling`,
       body: 'Tap to answer',
       tag: `call-${room}`,
-      url: `${SITE}/apps/calls/join?code=${room}&ring=1&host=${code}`,
+      url: `${SITE}/apps/calls/join?code=${room}&ring=1&link=${code}`,
       requireInteraction: true,
     })
     const alive = []

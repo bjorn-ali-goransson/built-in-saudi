@@ -14,6 +14,7 @@ import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
   DeviceGroup, useSpeaking, DebugPanel, ParticipantTile,
 } from './parts'
+import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 
 type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
 
@@ -55,6 +56,12 @@ export default function CallsTool() {
   // by ?debug=1 in the URL — which the host's invite link carries — so a guest lands
   // with it on and there's no button to find. Read once at mount.
   const [debug] = useState(() => { try { return new URLSearchParams(window.location.search).has('debug') } catch { return false } })
+  // Personal "call me" link flow. `autoadmit=1` → the host (the caller, who
+  // initiated) lets whoever answers straight in, no lobby. `ring=1&link=<code>` →
+  // this browser opened from a ring push (the callee answering); `incomingLink`
+  // drives the "stop receiving calls" affordance offered exactly on an incoming call.
+  const [autoAdmit] = useState(() => { try { return new URLSearchParams(window.location.search).has('autoadmit') } catch { return false } })
+  const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
@@ -247,7 +254,9 @@ export default function CallsTool() {
     for (const [id, info] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); freshNames.push(info.name || '•') }
     if (freshNames.length) {
       setShareOpen(false)
-      if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
+      // Call-link host: whoever answers the ring comes straight in (no lobby).
+      if (!isGuest && autoAdmit) { for (const [id] of waiting) admit(id) }
+      else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -842,6 +851,7 @@ export default function CallsTool() {
             </>
           ) : (
             <>
+              {incomingLink && <IncomingCallNote locale={locale} linkCode={incomingLink} />}
               <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
               <div className="w-full flex flex-col gap-3">
                 <label className="flex flex-col gap-1">
@@ -879,6 +889,7 @@ export default function CallsTool() {
                   </div>
                 )}
               </div>
+              {!isGuest && !initialRoom && !incomingLink && <CallLinkPanel locale={locale} name={name} site={SITE} />}
               <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>
             </>
           )}

@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage'
 import { ToolPage } from './pages/ToolPage'
 import { BookingPage } from './pages/BookingPage'
 import { ShortLinkPage } from './pages/ShortLinkPage'
+import { CallLinkPage } from './pages/CallLinkPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -20,6 +21,9 @@ export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   // Short links: built-in-saudi.com/s/<code> → resolve + redirect (no locale, no chrome).
   { path: '/s/:code', element: <ShortLinkPage />, errorElement: <ErrorPage /> },
+  // Personal "call me" link: built-in-saudi.com/call/<code> → ring the owner + join
+  // a fresh room as the caller (no locale, no chrome).
+  { path: '/call/:code', element: <CallLinkPage />, errorElement: <ErrorPage /> },
   {
     // Locale-prefixed section. Layout validates :lang and redirects if invalid.
     path: '/:lang',

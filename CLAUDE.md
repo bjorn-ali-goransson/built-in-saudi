@@ -301,8 +301,8 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   device-generated code). Sharing `built-in-saudi.com/call/<code>` lets anyone
   **ring** the host: each call spins up a **fresh** ephemeral room (the code is
   only the link) and Web Push wakes the host's device(s) to answer. `call-ring`'s
-  notification URL is `…/apps/calls/join?code=<room>&ring=1&host=<code>` — it
-  **carries the host code**, so the incoming-call screen can offer "stop receiving
+  notification URL is `…/apps/calls/join?code=<room>&ring=1&link=<code>` — it
+  **carries the link code**, so the incoming-call screen can offer "stop receiving
   calls" with **no local state**; the tool also keeps a tiny `bis-call-link`
   localStorage pointer (the code) just so the link is stable/manageable on revisit.
   6-month-since-last-use TTL (refreshed on register + ring, lazy-deleted on
