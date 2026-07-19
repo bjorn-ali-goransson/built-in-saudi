@@ -298,17 +298,25 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
 - **"Call me" personal links** (`functions/call.js`, same file as the signaling relay):
   `call-register`/`call-ring`/`call-delete` + Firestore `callLinks/{code}`
   (`{subs[], name, createdAt, updatedAt, expiresAt}`, **anonymous** — no login,
-  device-generated code). Sharing `built-in-saudi.com/call/<code>` lets anyone
-  **ring** the host: each call spins up a **fresh** ephemeral room (the code is
-  only the link) and Web Push wakes the host's device(s) to answer. `call-ring`'s
-  notification URL is `…/apps/calls/join?code=<room>&ring=1&link=<code>` — it
-  **carries the link code**, so the incoming-call screen can offer "stop receiving
-  calls" with **no local state**; the tool also keeps a tiny `bis-call-link`
-  localStorage pointer (the code) just so the link is stable/manageable on revisit.
-  6-month-since-last-use TTL (refreshed on register + ring, lazy-deleted on
-  expiry); dead push subs pruned on 404/410. Reuses the VAPID singleton configured
-  in `functions/index.js`. **Not covered by `my-data`** (anonymous links have no
-  Google `sub` to match) — the host deletes them themselves (in-tool or on a call).
+  device-generated code). The **owner** claims a link on the Calls setup screen
+  (push subscribe + register) and shares `built-in-saudi.com/call/?c=<code>`.
+  **Flow (roles: the owner is the HOST who admits; the visitor WAITS):** the
+  visitor opens the link → a **green start-screen clone** (`src/pages/CallLinkPage.tsx`,
+  random name + shuffle, **no invite/share**) → Call → spins up a **fresh** room,
+  `call-ring`s the owner, and drops the visitor into the Calls tool as a **guest
+  who knocks and waits** (`/apps/calls?code=<room>&knock=1`; the typed name rides in
+  `sessionStorage` `bis-call-guest-name`, never the URL). `call-ring` Web-pushes the
+  owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>`
+  — `host=1` makes the owner **force-host** that room (auto-start), `ring=1&link=<code>`
+  drives the **"stop receiving calls"** affordance (no local state needed). The owner
+  **admits manually** (no auto-admit). The **shared link is `/call/?c=<code>`** (query,
+  not path) so it resolves to the one **prerendered `/call/` page** (`vite.config.ts`)
+  that carries a readable share preview; `/call/<code>` path still works. The tool
+  keeps a tiny `bis-call-link` localStorage pointer (the code) so the owner's link is
+  stable/manageable on revisit. 6-month-since-last-use TTL (refreshed on register +
+  ring, lazy-deleted on expiry); dead push subs pruned on 404/410. Reuses the VAPID
+  singleton in `functions/index.js`. **Not covered by `my-data`** (anonymous links
+  have no Google `sub`) — the owner deletes them (in-tool or on a call).
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
   deploys all thirty-one functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA

@@ -412,43 +412,46 @@ test('a debugging host propagates ?debug=1 into the invite link', async ({ brows
   await c.close()
 })
 
-test('the /call/<code> page rings the owner and drops the caller into a host room', async ({ browser }) => {
+test('the /call page rings the owner and the visitor waits in the lobby (not admitted)', async ({ browser }) => {
   const c = await ctx(browser, base)
   await c.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, base) // mock the call-link backend
   const p = await c.newPage()
   await p.goto('/call/?c=somebodyscode')
+  // Entrance page mirrors the start screen: a random name is prefilled + shuffleable.
+  await expect(p.getByTestId('call-link-shuffle')).toBeVisible()
   await p.getByTestId('call-link-name').fill('Caller')
   await p.getByTestId('call-link-call').click()
-  // Lands in the Calls tool as the host of a FRESH room, with auto-admit flagged.
-  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  const url = new URL(p.url())
-  expect(url.pathname).toContain('/apps/calls/join')
-  expect(url.searchParams.get('autoadmit')).toBe('1')
-  expect((url.searchParams.get('code') || '').length).toBeGreaterThan(4)
+  // The visitor knocks and WAITS — not dropped into the call.
+  await expect(p.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
+  await expect(p.getByTestId('calls-live')).toHaveCount(0)
+  expect((new URL(p.url()).searchParams.get('code') || '').length).toBeGreaterThan(4)
   await c.close()
 })
 
-test('a call-link host (auto-admit) lets a knocking guest straight in — no manual admit', async ({ browser }) => {
+test('a /call visitor waits until the link owner (from the ring) admits them', async ({ browser }) => {
   const a = await ctx(browser, base), b = await ctx(browser, base)
   await a.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, base)
   const pa = await a.newPage(), pb = await b.newPage()
 
-  // A rings via the /call page → lands hosting a fresh room with auto-admit on.
+  // Visitor rings via /call → lands knocking in the lobby (waiting).
   await pa.goto('/call/?c=ownercode')
   await pa.getByTestId('call-link-name').fill('Alice')
   await pa.getByTestId('call-link-call').click()
-  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await expect(pa.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
   const room = new URL(pa.url()).searchParams.get('code') || ''
   expect(room.length).toBeGreaterThan(4)
-  await closeShare(pa)
 
-  // B opens the same room and asks to join — knocks.
-  await pb.goto(`/en/apps/calls?code=${room}`)
-  await pb.getByTestId('call-name').fill('Bob')
-  await pb.getByTestId('call-join').click()
+  // Owner opens the ring URL (?host=1) → hosts the room and sees Alice knocking.
+  await pb.goto(`/en/apps/calls?code=${room}&host=1&ring=1&link=ownercode`, { waitUntil: 'domcontentloaded' })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pb)
+  await expect(pb.getByTestId('call-lobby-live')).toContainText('Alice', { timeout: 20_000 })
+  // Alice is NOT in yet — she waits until the owner lets her in.
+  await expect(pa.getByTestId('calls-live')).toHaveCount(0)
+  await pb.getByTestId('call-admit').click()
 
-  // No admit click on A: B is admitted automatically and connects.
-  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
-  await expect(pa.getByTestId('call-participants-panel')).toContainText('Bob', { timeout: 25_000 })
+  // Now she connects.
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice', { timeout: 25_000 })
   await a.close(); await b.close()
 })

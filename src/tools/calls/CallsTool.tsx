@@ -30,7 +30,12 @@ export default function CallsTool() {
   // Only remember a name the user actually TYPED. A stored value that's just the
   // random "Abu …" default (saved by the old behaviour) is ignored → fresh suggestion.
   const storedName = (() => { try { const st = localStorage.getItem(NAME_KEY); return st && !isDefaultName(st) ? st : '' } catch { return '' } })()
-  const [name, setName] = useState(() => storedName || randName(locale === 'ar'))
+  // A visitor from /call/?c=… carries the name they typed there (via sessionStorage,
+  // not the URL) so they knock without re-entering it.
+  const [name, setName] = useState(() => {
+    try { if (new URLSearchParams(window.location.search).has('knock')) { const n = sessionStorage.getItem('bis-call-guest-name'); if (n) return n } } catch { /* */ }
+    return storedName || randName(locale === 'ar')
+  })
   // A typed (non-default) name shows a "remember me" checkbox; only a ticked custom
   // name is persisted — the random "Abu …" default never sticks.
   const [remember, setRemember] = useState(!!storedName)
@@ -39,11 +44,14 @@ export default function CallsTool() {
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live' | 'ended'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
-  const [forceHost, setForceHost] = useState(false) // escape a stale ?room= guest lobby
+  // ?host=1 (owner answering a ring) forces the host role; also used to escape a
+  // stale ?room= guest lobby (startOwnCall).
+  const [forceHost, setForceHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const isGuest = !!initialRoom && !isHostReturn && !forceHost
   // A guest arriving via a link: probe the relay first (spinner) so we don't show
-  // "enter your name / ask to join" for a meeting that's already gone.
-  const [checking, setChecking] = useState(!!initialRoom && !isHostReturn)
+  // "enter your name / ask to join" for a meeting that's already gone. Skipped for a
+  // /call visitor (knock=1), who knocks into a room its host hasn't joined yet.
+  const [checking, setChecking] = useState(() => { try { const p = new URLSearchParams(window.location.search); return !!initialRoom && !isHostReturn && !p.has('host') && !p.has('knock') } catch { return !!initialRoom && !isHostReturn } })
   // Everyone we've connected to (data channel), with the name/role/lobby state
   // they told us peer-to-peer. The host's waiting list is derived from this.
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
@@ -56,11 +64,13 @@ export default function CallsTool() {
   // by ?debug=1 in the URL — which the host's invite link carries — so a guest lands
   // with it on and there's no button to find. Read once at mount.
   const [debug] = useState(() => { try { return new URLSearchParams(window.location.search).has('debug') } catch { return false } })
-  // Personal "call me" link flow. `autoadmit=1` → the host (the caller, who
-  // initiated) lets whoever answers straight in, no lobby. `ring=1&link=<code>` →
-  // this browser opened from a ring push (the callee answering); `incomingLink`
+  // Personal "call me" link flow. The VISITOR opens /call/?c=… → arrives here with
+  // `knock=1` and auto-knocks into a fresh room, then WAITS in the lobby. The link
+  // OWNER, woken by the ring push, arrives with `host=1&ring=1&link=<code>`: they
+  // host that room and admit the visitor themselves (no auto-admit). `incomingLink`
   // drives the "stop receiving calls" affordance offered exactly on an incoming call.
-  const [autoAdmit] = useState(() => { try { return new URLSearchParams(window.location.search).has('autoadmit') } catch { return false } })
+  const [knockParam] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') } catch { return false } })
+  const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -254,9 +264,7 @@ export default function CallsTool() {
     for (const [id, info] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); freshNames.push(info.name || '•') }
     if (freshNames.length) {
       setShareOpen(false)
-      // Call-link host: whoever answers the ring comes straight in (no lobby).
-      if (!isGuest && autoAdmit) { for (const [id] of waiting) admit(id) }
-      else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
+      if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -351,7 +359,9 @@ export default function CallsTool() {
         const who = targetIsMe ? s.you : (rosterRef.current.get(targetId)?.name || '•')
         setToast(`${by} ${s.mutedBy} ${who}`); setTimeout(() => setToast(''), 3500)
       },
-      onClosed: () => { rtc.current = null; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
+      // The relay closed. If WE already hung up (phase 'ended'), leave that screen
+      // as-is — don't overwrite "you left / you ended" with "meeting can't be found".
+      onClosed: () => { rtc.current = null; if (phaseRef.current === 'ended') return; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
       onPollCycle: (delayMs) => {
         // A poll just finished → hide the spinner, then re-show it once half the
         // wait has passed, so it signals "checking again" only while lobby-waiting.
@@ -402,10 +412,17 @@ export default function CallsTool() {
     return () => setInCall(false)
   }, [phase])
 
-  // Returning host (reloaded the ?room link) → re-enter the room immediately.
+  // Returning host (reloaded the ?room link), or the link owner woken by a ring
+  // (?host=1) → re-enter / host the room immediately.
   const autoStarted = useRef(false)
   useEffect(() => {
-    if (isHostReturn && !autoStarted.current) { autoStarted.current = true; startHost() }
+    if ((isHostReturn || ownerHost) && !autoStarted.current) { autoStarted.current = true; startHost() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // A /call visitor (?knock=1) auto-knocks into the room and waits to be let in.
+  const autoKnocked = useRef(false)
+  useEffect(() => {
+    if (knockParam && !autoKnocked.current) { autoKnocked.current = true; askToJoin() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
