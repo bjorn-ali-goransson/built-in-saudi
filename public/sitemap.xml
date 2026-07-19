@@ -1192,6 +1192,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-compressor"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/remove-background/</loc>
+    <lastmod>2026-07-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/remove-background"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/remove-background"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/remove-background"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/remove-background/</loc>
+    <lastmod>2026-07-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/remove-background"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/remove-background"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/remove-background"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/image-format-converter/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-format-converter"/>

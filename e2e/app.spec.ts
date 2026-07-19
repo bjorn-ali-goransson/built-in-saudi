@@ -293,6 +293,15 @@ test.describe('tools', () => {
     await expect(page.getByTestId('re-output').locator('mark').first()).toHaveText('1')
   })
 
+  test('remove background: loads a dropzone; picking a file reveals the Remove button', async ({ page }) => {
+    await page.goto('/en/apps/remove-background')
+    await expect(page.getByTestId('remove-background')).toBeVisible()
+    await expect(page.getByTestId('rmbg-drop')).toBeVisible()
+    // Selecting an image shows the run button (we don't run the model in CI — heavy).
+    await page.setInputFiles('input[type=file]', { name: 'x.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') })
+    await expect(page.getByTestId('rmbg-run')).toBeVisible()
+  })
+
   test('jwt decoder: decodes header and payload', async ({ page }) => {
     await page.goto('/en/apps/jwt-decoder')
     // {"alg":"HS256","typ":"JWT"}.{"sub":"1234567890","name":"John Doe"}

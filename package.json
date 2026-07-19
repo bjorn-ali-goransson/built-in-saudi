@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "@react-pdf/renderer": "^4.5.1",
     "adhan": "^4.4.4",
     "mammoth": "^1.12.0",

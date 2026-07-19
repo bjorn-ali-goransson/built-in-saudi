@@ -94,6 +94,7 @@ import { lineBreaksTool } from './line-breaks/meta'
 import { pasteToMarkdownTool } from './paste-to-markdown/meta'
 import { arabicVerbsTool } from './arabic-verbs/meta'
 import { diacritizeTool } from './diacritize/meta'
+import { removeBackgroundTool } from './remove-background/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -104,6 +105,7 @@ import { diacritizeTool } from './diacritize/meta'
 export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
+  removeBackgroundTool,
   promptAnalyzerTool,
   regexTesterTool,
   jwtDecoderTool,

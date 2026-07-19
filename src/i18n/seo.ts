@@ -369,6 +369,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'ضاغط الصور', description: 'اضغط الصور وغيّر حجمها داخل متصفحك — الجودة وأقصى عرض، والحجم قبل وبعد ونسبة التوفير. لا تُرفع الصورة أبدًا.' },
   },
   {
+    id: 'remove-background',
+    en: { name: 'Remove Background', description: 'Automatically remove the background from a photo in your browser and download a transparent PNG. The AI model runs on your device — the image is never uploaded.' },
+    ar: { name: 'إزالة الخلفية', description: 'أزل خلفية الصورة تلقائيًا داخل متصفحك ونزّلها بصيغة PNG شفافة. يعمل نموذج الذكاء الاصطناعي على جهازك — لا تُرفع الصورة أبدًا.' },
+  },
+  {
     id: 'qr-code',
     en: {
       name: 'QR Code Generator',
