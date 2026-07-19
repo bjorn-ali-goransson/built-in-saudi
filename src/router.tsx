@@ -21,8 +21,10 @@ export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   // Short links: built-in-saudi.com/s/<code> → resolve + redirect (no locale, no chrome).
   { path: '/s/:code', element: <ShortLinkPage />, errorElement: <ErrorPage /> },
-  // Personal "call me" link: built-in-saudi.com/call/<code> → ring the owner + join
-  // a fresh room as the caller (no locale, no chrome).
+  // Personal "call me" link: built-in-saudi.com/call/?c=<code> (prerendered preview
+  // page) → ring the owner + join a fresh room as the caller (no locale, no chrome).
+  // /call/<code> path kept for older links.
+  { path: '/call', element: <CallLinkPage />, errorElement: <ErrorPage /> },
   { path: '/call/:code', element: <CallLinkPage />, errorElement: <ErrorPage /> },
   {
     // Locale-prefixed section. Layout validates :lang and redirects if invalid.

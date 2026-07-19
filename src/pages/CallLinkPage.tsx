@@ -28,7 +28,10 @@ function pickLocale(): 'en' | 'ar' {
 }
 
 export function CallLinkPage() {
-  const { code } = useParams()
+  // Primary form is /call/?c=<code> (prerendered preview); /call/<code> path still
+  // works for any older links.
+  const { code: pathCode } = useParams()
+  const code = pathCode || (() => { try { return new URLSearchParams(window.location.search).get('c') || '' } catch { return '' } })()
   const navigate = useNavigate()
   const locale = pickLocale()
   const t = T[locale]

@@ -416,7 +416,7 @@ test('the /call/<code> page rings the owner and drops the caller into a host roo
   const c = await ctx(browser, base)
   await c.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, base) // mock the call-link backend
   const p = await c.newPage()
-  await p.goto('/call/somebodyscode')
+  await p.goto('/call/?c=somebodyscode')
   await p.getByTestId('call-link-name').fill('Caller')
   await p.getByTestId('call-link-call').click()
   // Lands in the Calls tool as the host of a FRESH room, with auto-admit flagged.
@@ -434,7 +434,7 @@ test('a call-link host (auto-admit) lets a knocking guest straight in — no man
   const pa = await a.newPage(), pb = await b.newPage()
 
   // A rings via the /call page → lands hosting a fresh room with auto-admit on.
-  await pa.goto('/call/ownercode')
+  await pa.goto('/call/?c=ownercode')
   await pa.getByTestId('call-link-name').fill('Alice')
   await pa.getByTestId('call-link-call').click()
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })

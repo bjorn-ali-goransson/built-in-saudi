@@ -157,6 +157,25 @@ function prerenderPlugin(): Plugin {
         }
       }
 
+      // Personal "call me" links resolve to /call/?c=<code>, so this ONE static page
+      // carries a readable share preview (GitHub Pages can't SSR the per-code path;
+      // the code is client-side only). Generic, non-localized title/description.
+      {
+        const title = 'Call me — Built in Saudi'
+        const desc = 'Tap to call me: a private, browser-to-browser call. No app, no sign-up.'
+        let call = shell
+          .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
+          .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${ORIGIN}/call/$2`)
+          .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${ORIGIN}/call/$2`)
+        call = setContent(call, 'name="description"', desc)
+        call = setContent(call, 'property="og:title"', title)
+        call = setContent(call, 'property="og:description"', desc)
+        call = setContent(call, 'name="twitter:title"', title)
+        call = setContent(call, 'name="twitter:description"', desc)
+        call = injectContent(call, `<main><h1>${esc(title)}</h1><p>${esc(desc)}</p></main>`)
+        write('call', call)
+      }
+
       // Root shell: English-default head + hreflang + language links (it redirects client-side).
       let root = applyHead(shell, { locale: 'en', dir: 'ltr', title: siteMeta.en.title, desc: siteMeta.en.description, canonical: `${ORIGIN}/en/`, sub: '' })
       root = injectContent(root, `<main><h1>${esc(siteMeta.en.title)}</h1><p><a href="/en">English</a> · <a href="/ar">العربية</a></p></main>`)

@@ -40,7 +40,9 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
   if (!pushSupported()) return null
-  const url = code ? `${site}/call/${code}` : ''
+  // /call/?c=<code> (not /call/<code>) so the shared link resolves to the one
+  // prerendered /call/ page that carries a readable link preview.
+  const url = code ? `${site}/call/?c=${code}` : ''
 
   async function claim() {
     setBusy(true); setErr('')
