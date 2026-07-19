@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Stack, Button } from '../../components/ui'
+import { PdfOps } from '../../lib/pdfOps'
 
 interface Item { id: string; file: File; pages: number | null; error?: boolean }
 
@@ -29,22 +30,21 @@ export default function PdfMergeTool() {
   const [items, setItems] = useState<Item[]>([])
   const [busy, setBusy] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
+  const opsRef = useRef<PdfOps | null>(null)
 
+  useEffect(() => () => opsRef.current?.dispose(), [])
+
+  // Page counting + merging run in a worker (#154) — big PDFs never jank the UI.
   async function addFiles(files: FileList | null) {
     if (!files) return
     const pdfs = [...files].filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
     if (!pdfs.length) return
     const fresh: Item[] = pdfs.map((f) => ({ id: `p${uid++}`, file: f, pages: null }))
     setItems((cur) => [...cur, ...fresh]); setOut(null)
-    const { PDFDocument } = await import('pdf-lib')
+    opsRef.current ??= new PdfOps()
     for (const it of fresh) {
-      try {
-        const doc = await PDFDocument.load(await it.file.arrayBuffer())
-        const n = doc.getPageCount()
-        setItems((cur) => cur.map((x) => x.id === it.id ? { ...x, pages: n } : x))
-      } catch {
-        setItems((cur) => cur.map((x) => x.id === it.id ? { ...x, pages: 0, error: true } : x))
-      }
+      const n = await opsRef.current.pageCount(it.file)
+      setItems((cur) => cur.map((x) => x.id === it.id ? (n === null ? { ...x, pages: 0, error: true } : { ...x, pages: n }) : x))
     }
   }
   function move(i: number, d: -1 | 1) {
@@ -59,16 +59,9 @@ export default function PdfMergeTool() {
     if (!items.length || anyLocked) return
     setBusy(true)
     try {
-      const { PDFDocument } = await import('pdf-lib')
-      const merged = await PDFDocument.create()
-      for (const it of items) {
-        const src = await PDFDocument.load(await it.file.arrayBuffer())
-        const pages = await merged.copyPages(src, src.getPageIndices())
-        pages.forEach((p) => merged.addPage(p))
-      }
-      const bytes = await merged.save()
-      const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
-      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
+      opsRef.current ??= new PdfOps()
+      const blob = await opsRef.current.merge(items.map((it) => it.file))
+      if (blob) setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
     } finally { setBusy(false) }
   }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { CopyIcon, UploadIcon } from '../../components/icons'
 import { Button, Textarea, Stack, Seg, SegButton } from '../../components/ui'
+import type { HashRequest, HashResponse } from './hash.worker'
 
 type Algo = 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512'
 const ALGOS: Algo[] = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512']
@@ -25,37 +26,41 @@ const STR = {
   },
 }
 
-const toHex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
-const toB64 = (buf: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buf)))
-
 export default function HashGeneratorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [mode, setMode] = useState<'text' | 'file'>('text')
   const [text, setText] = useState('')
-  const [file, setFile] = useState<{ name: string; buf: ArrayBuffer } | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [algo, setAlgo] = useState<Algo>('SHA-256')
   const [hex, setHex] = useState('')
   const [b64, setB64] = useState('')
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const workerRef = useRef<Worker | null>(null)
+  const reqRef = useRef(0)
+
+  useEffect(() => () => { workerRef.current?.terminate() }, [])
 
   useEffect(() => {
-    let cancelled = false
-    const data: BufferSource | null | undefined = mode === 'file' ? file?.buf : (text ? new TextEncoder().encode(text) : null)
+    const data: File | string | null = mode === 'file' ? file : (text || null)
     if (!data) { setHex(''); setB64(''); return }
+    workerRef.current ??= new Worker(new URL('./hash.worker.ts', import.meta.url), { type: 'module' })
+    const worker = workerRef.current
+    const id = ++reqRef.current
     setBusy(true)
-    crypto.subtle.digest(algo, data).then((d) => {
-      if (cancelled) return
-      setHex(toHex(d)); setB64(toB64(d)); setBusy(false)
-    })
-    return () => { cancelled = true }
+    const onMessage = (e: MessageEvent<HashResponse>) => {
+      if (e.data.id !== reqRef.current) return // stale response — a newer request is in flight
+      setHex(e.data.hex); setB64(e.data.b64); setBusy(false)
+    }
+    worker.addEventListener('message', onMessage)
+    worker.postMessage({ id, algo, data } satisfies HashRequest)
+    return () => worker.removeEventListener('message', onMessage)
   }, [mode, text, file, algo])
 
-  async function onFile(f: File | undefined) {
-    if (!f) return
-    setFile({ name: f.name, buf: await f.arrayBuffer() })
+  function onFile(f: File | undefined) {
+    if (f) setFile(f)
   }
 
   async function copy(value: string, which: string) {
@@ -90,7 +95,7 @@ export default function HashGeneratorTool() {
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon />
           <span>{file ? file.name : s.drop}</span>
-          {file && <small>{s.bytes(file.buf.byteLength)}</small>}
+          {file && <small>{s.bytes(file.size)}</small>}
           <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       )}

@@ -4,6 +4,7 @@ import { UploadIcon, DownloadIcon, InfoIcon, TrashIcon } from '../../components/
 import { Stack, Button, Spinner } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import type { PageContent, EditObject, ImgXf } from './contentStream'
+import type { EditResponse } from './edit.worker'
 
 type TextBox = { id: string; page: number; x: number; y: number; w: number; h: number; text: string; size: number }
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const
@@ -51,6 +52,8 @@ export default function PdfEditTool() {
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
   const lastSize = useRef(14)
   const pageBoxRef = useRef<HTMLDivElement>(null)
+  const workerRef = useRef<Worker | null>(null)
+  const reqRef = useRef(0)
   const [boxH, setBoxH] = useState(0)
   const pageImgRef = useRef<HTMLImageElement>(null)
   const clips = useRef<Map<string, string>>(new Map())
@@ -62,13 +65,42 @@ export default function PdfEditTool() {
     return { nx: (e.clientX - r.left) / r.width, ny: (e.clientY - r.top) / r.height }
   }
 
+  // Content-stream parsing + the final rebuild run in edit.worker.ts (#154).
+  function editWorker(): Worker {
+    workerRef.current ??= new Worker(new URL('./edit.worker.ts', import.meta.url), { type: 'module' })
+    return workerRef.current
+  }
+  function workerCall(req:
+    | { op: 'load'; buf: ArrayBuffer }
+    | { op: 'save'; file: File; pc: PageContent[]; deleted: Set<string>; xf: Map<string, ImgXf>; texts: TextBox[] },
+  ): Promise<EditResponse> {
+    const worker = editWorker()
+    const id = ++reqRef.current
+    return new Promise((resolve) => {
+      const onMessage = (e: MessageEvent<EditResponse>) => {
+        if (e.data.id !== id) return
+        worker.removeEventListener('message', onMessage)
+        resolve(e.data)
+      }
+      worker.addEventListener('message', onMessage)
+      worker.postMessage({ ...req, id })
+    })
+  }
+
+  useEffect(() => () => { workerRef.current?.terminate() }, [])
+
   async function onFile(f: File | null | undefined) {
     if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
     setBusy(true); setErr(''); setOut(null); setDeleted(new Set()); setXf(new Map()); setTexts([]); setSel(null); setPi(0); clips.current = new Map()
     try {
-      const [{ renderPdf }, { loadEditable }] = await Promise.all([import('../../lib/pdfRender'), import('./contentStream')])
-      const [rendered, editable] = await Promise.all([renderPdf(await f.arrayBuffer(), 2, true), loadEditable(await f.arrayBuffer())])
-      setFile(f); setPages(rendered); setPc(editable.pages); covers.current = new Map()
+      const { renderPdf } = await import('../../lib/pdfRender')
+      const [rendered, loaded] = await Promise.all([
+        renderPdf(await f.arrayBuffer(), 2, true),
+        workerCall({ op: 'load', buf: await f.arrayBuffer() }),
+      ])
+      const pcPages = loaded.op === 'load' ? loaded.pages : null
+      if (!pcPages) throw new Error('unreadable')
+      setFile(f); setPages(rendered); setPc(pcPages); covers.current = new Map()
     } catch {
       setErr(s.locked); setFile(null); setPages(null); setPc(null)
     } finally { setBusy(false) }
@@ -281,31 +313,12 @@ export default function PdfEditTool() {
     if (out) { saveBlob(out.url); return } // already built — just download again
     setBusy(true); setErr('')
     try {
-      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
-      const { applyEdits, writePage } = await import('./contentStream')
-      const pdf = await PDFDocument.load(await file.arrayBuffer())
-      for (const page of pc) {
-        const hasEdit = page.objects.some((o) => deleted.has(o.id) || xf.has(o.id))
-        if (hasEdit) writePage(pdf, page.page, applyEdits(page, deleted, xf))
-      }
-      if (texts.some((t) => t.text.trim())) {
-        const font = await pdf.embedFont(StandardFonts.Helvetica)
-        const pgs = pdf.getPages()
-        for (const t of texts) {
-          const page = pgs[t.page]; if (!page || !t.text.trim()) continue
-          const W = page.getWidth(), H = page.getHeight()
-          // eslint-disable-next-line no-control-regex
-          const safe = t.text.replace(/[^\x00-\xFF]/g, '')
-          page.drawText(safe, { x: t.x * W, y: H - t.y * H - t.size, size: t.size, font, color: rgb(0.05, 0.05, 0.05), maxWidth: t.w * W, lineHeight: t.size * 1.2 })
-        }
-      }
-      const bytes = await pdf.save()
-      const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
+      const res = await workerCall({ op: 'save', file, pc, deleted, xf, texts })
+      const blob = res.op === 'save' ? res.blob : null
+      if (!blob) { setErr(s.locked); return }
       const url = URL.createObjectURL(blob)
       setOut((p) => { if (p) URL.revokeObjectURL(p.url); return { url, size: blob.size } })
       saveBlob(url) // download in the same click
-    } catch {
-      setErr(s.locked)
     } finally { setBusy(false) }
   }
 

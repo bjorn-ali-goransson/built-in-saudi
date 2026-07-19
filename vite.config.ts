@@ -172,4 +172,7 @@ export default defineConfig({
   plugins: [tailwindcss(), react(), prerenderPlugin()],
   base: '/',
   build: { target: 'es2020', sourcemap: false },
+  // Tool workers lazy-import pdf-lib inside the worker (code-splitting), which
+  // the default iife worker format can't do.
+  worker: { format: 'es' },
 })

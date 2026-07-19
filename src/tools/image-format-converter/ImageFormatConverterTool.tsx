@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { ImageEncoder } from '../../lib/imageEncoder'
 
 type Fmt = 'image/png' | 'image/jpeg' | 'image/webp'
 
@@ -30,36 +31,36 @@ export default function ImageFormatConverterTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
-  const [src, setSrc] = useState<{ name: string; size: number; type: string; bitmap: ImageBitmap } | null>(null)
+  const [src, setSrc] = useState<{ name: string; size: number; type: string } | null>(null)
   const [target, setTarget] = useState<Fmt>('image/jpeg')
   const [quality, setQuality] = useState(0.92)
   const [bg, setBg] = useState('#ffffff')
   const [busy, setBusy] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
+  const encRef = useRef<ImageEncoder | null>(null)
+
+  useEffect(() => () => encRef.current?.dispose(), [])
 
   async function onFile(f: File | undefined) {
     if (!f || !f.type.startsWith('image/')) return
-    try {
-      const bitmap = await createImageBitmap(f)
-      setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type, bitmap })
-      setTarget(f.type === 'image/jpeg' ? 'image/png' : 'image/jpeg')
-    } catch { /* ignore */ }
+    encRef.current ??= new ImageEncoder()
+    const dim = await encRef.current.load(f)
+    if (!dim) return
+    setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type })
+    setTarget(f.type === 'image/jpeg' ? 'image/png' : 'image/jpeg')
   }
 
+  // Conversion runs in the worker (#154) so full-size re-encodes never jank the UI.
   useEffect(() => {
     if (!src) return
     let cancelled = false
     setBusy(true)
-    const c = document.createElement('canvas')
-    c.width = src.bitmap.width; c.height = src.bitmap.height
-    const ctx = c.getContext('2d')!
-    if (target === 'image/jpeg') { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height) }
-    ctx.drawImage(src.bitmap, 0, 0)
-    c.toBlob((blob) => {
-      if (cancelled || !blob) { setBusy(false); return }
-      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
+    encRef.current!.encode({ format: target, quality: target === 'image/png' ? undefined : quality, bg: target === 'image/jpeg' ? bg : undefined }).then((blob) => {
+      if (cancelled) return
       setBusy(false)
-    }, target, target === 'image/png' ? undefined : quality)
+      if (!blob) return
+      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
+    })
     return () => { cancelled = true }
   }, [src, target, quality, bg])
 

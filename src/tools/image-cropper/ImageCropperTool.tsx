@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { ImageEncoder } from '../../lib/imageEncoder'
 
 type Fmt = 'image/png' | 'image/jpeg' | 'image/webp'
 type Handle = 'nw' | 'ne' | 'sw' | 'se'
@@ -20,7 +21,7 @@ export default function ImageCropperTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
-  const [src, setSrc] = useState<{ name: string; url: string; bitmap: ImageBitmap; dw: number; dh: number; scale: number } | null>(null)
+  const [src, setSrc] = useState<{ name: string; url: string; dw: number; dh: number; scale: number } | null>(null)
   const [rect, setRect] = useState<Rect>({ x: 0, y: 0, w: 0, h: 0 })
   const [ratio, setRatio] = useState<number | null>(null)
   const [format, setFormat] = useState<Fmt>('image/png')
@@ -28,18 +29,21 @@ export default function ImageCropperTool() {
   const [out, setOut] = useState<{ url: string; size: number; w: number; h: number } | null>(null)
   const drag = useRef<{ mode: 'move' | Handle; sx: number; sy: number; start: Rect } | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const encRef = useRef<ImageEncoder | null>(null)
+
+  useEffect(() => () => encRef.current?.dispose(), [])
 
   async function onFile(f: File | undefined) {
     if (!f || !f.type.startsWith('image/')) return
-    try {
-      const bitmap = await createImageBitmap(f)
-      const scale = Math.min(1, MAXW / bitmap.width)
-      const dw = Math.round(bitmap.width * scale), dh = Math.round(bitmap.height * scale)
-      setSrc({ name: f.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(f), bitmap, dw, dh, scale })
-      const w = Math.round(dw * 0.7), h = Math.round(dh * 0.7)
-      setRect({ x: Math.round((dw - w) / 2), y: Math.round((dh - h) / 2), w, h })
-      setRatio(null)
-    } catch { /* ignore */ }
+    encRef.current ??= new ImageEncoder()
+    const dim = await encRef.current.load(f)
+    if (!dim) return
+    const scale = Math.min(1, MAXW / dim.width)
+    const dw = Math.round(dim.width * scale), dh = Math.round(dim.height * scale)
+    setSrc({ name: f.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(f), dw, dh, scale })
+    const w = Math.round(dw * 0.7), h = Math.round(dh * 0.7)
+    setRect({ x: Math.round((dw - w) / 2), y: Math.round((dh - h) / 2), w, h })
+    setRatio(null)
   }
 
   // Apply an aspect ratio to a rect (adjust height from width), clamped to bounds.
@@ -85,17 +89,18 @@ export default function ImageCropperTool() {
   function endDrag() { drag.current = null }
 
   // Render the cropped region at full resolution whenever the rect/format changes.
-  // The cancel guard ensures a late toBlob from a prior state can't overwrite the latest.
+  // The encode runs in a worker (#154) — dragging the crop box used to re-encode a
+  // full-res crop on the main thread on every pointer move. The cancel guard
+  // ensures a late result from a prior state can't overwrite the latest.
   useEffect(() => {
     if (!src || rect.w < 1) return
     let cancelled = false
     const sx = Math.round(rect.x / src.scale), sy = Math.round(rect.y / src.scale)
     const sw = Math.max(1, Math.round(rect.w / src.scale)), sh = Math.max(1, Math.round(rect.h / src.scale))
-    const c = document.createElement('canvas'); c.width = sw; c.height = sh
-    const ctx = c.getContext('2d')!
-    if (format === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, sw, sh) }
-    ctx.drawImage(src.bitmap, sx, sy, sw, sh, 0, 0, sw, sh)
-    c.toBlob((blob) => { if (cancelled || !blob) return; setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size, w: sw, h: sh } }) }, format, format === 'image/png' ? undefined : quality)
+    encRef.current!.encode({ crop: { sx, sy, sw, sh }, format, quality: format === 'image/png' ? undefined : quality, bg: format === 'image/jpeg' ? '#fff' : undefined }).then((blob) => {
+      if (cancelled || !blob) return
+      setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size, w: sw, h: sh } })
+    })
     return () => { cancelled = true }
   }, [rect, format, quality, src])
 
