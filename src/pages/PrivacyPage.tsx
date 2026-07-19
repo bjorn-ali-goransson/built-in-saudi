@@ -186,8 +186,8 @@ export function PrivacyPage() {
 /** Sign in with Google to see everything stored for you, and delete it. */
 function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   const t = locale === 'ar'
-    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', diac: 'مرات التشكيل', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.' }
-    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', diac: 'Diacritization runs', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.' }
+    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', diac: 'مرات التشكيل', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.', localH: 'هذا المتصفح', localP: 'تتذكّر بعض الأدوات اختياراتك في هذا المتصفح فقط (الأسماء، القوائم المحفوظة، التفضيلات) — لا تُرفع إلى أي خادم. امسح كل ذلك من هنا؛ يؤثر على هذا الجهاز فقط ولا يمكن التراجع عنه.', clearLocal: 'امسح بيانات هذا المتصفح', confirmLocal: 'اضغط مرة أخرى للتأكيد', clearedLocal: (n: number) => `تم مسح ${n} عنصرًا من هذا المتصفح.` }
+    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', diac: 'Diacritization runs', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.', localH: 'This browser', localP: 'Some tools remember your choices in this browser only (names, saved lists, preferences) — none of it is uploaded anywhere. Clear all of it here; this affects only this device and can’t be undone.', clearLocal: 'Clear this browser’s data', confirmLocal: 'Click again to confirm', clearedLocal: (n: number) => `Cleared ${n} item${n === 1 ? '' : 's'} from this browser.` }
   const [idToken, setIdToken] = useState('')
   const [report, setReport] = useState<MyDataReport | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'deleting' | 'done' | 'error'>('idle')
@@ -214,6 +214,18 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
     if (!idToken) return
     setStatus('deleting')
     try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0, promptRuns: 0, diacritizeRuns: 0 } : r)) } catch { setStatus('error') }
+  }
+
+  // Local (this-browser-only) data — independent of the server "my data" above. A
+  // two-click confirm since it wipes every tool's remembered choices at once.
+  const [localMsg, setLocalMsg] = useState('')
+  const [confirmLocal, setConfirmLocal] = useState(false)
+  function clearLocal() {
+    if (!confirmLocal) { setConfirmLocal(true); return }
+    let n = 0
+    try { n = localStorage.length; localStorage.clear() } catch { /* */ }
+    try { sessionStorage.clear() } catch { /* */ }
+    setConfirmLocal(false); setLocalMsg(t.clearedLocal(n))
   }
 
   const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0 && (report.promptRuns || 0) === 0 && (report.diacritizeRuns || 0) === 0
@@ -246,6 +258,16 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
           )
         )}
         {status === 'error' && <p className="text-[0.9rem] text-gold-500">{t.err}</p>}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5 mt-4">
+        <h2 className="font-display text-[1.2rem] text-ink">{t.localH}</h2>
+        <p className="text-[0.95rem] text-ink-soft leading-relaxed">{t.localP}</p>
+        {localMsg
+          ? <p className="text-[0.95rem] font-semibold text-green-700" data-testid="local-cleared">{localMsg}</p>
+          : <Button data-testid="clear-local" onClick={clearLocal} className={`self-start ${confirmLocal ? '!bg-gold-500 !border-gold-500 hover:!bg-gold-400 !text-white' : ''}`}>
+              {confirmLocal ? t.confirmLocal : t.clearLocal}
+            </Button>}
       </section>
     </div>
   )

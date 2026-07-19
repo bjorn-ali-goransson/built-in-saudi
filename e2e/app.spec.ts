@@ -737,3 +737,17 @@ test.describe('pdf sign + fill', () => {
     await expect(page.getByTestId('edit-drop')).toBeVisible()
   })
 })
+
+test.describe('privacy', () => {
+  test('clear this browser’s data wipes localStorage (two-click confirm)', async ({ page }) => {
+    await page.goto('/en/privacy')
+    await page.evaluate(() => localStorage.setItem('bis-test-key', 'x'))
+    const btn = page.getByTestId('clear-local')
+    await expect(btn).toBeVisible()
+    await btn.click() // first click → arm confirm
+    await btn.click() // second click → clear
+    await expect(page.getByTestId('local-cleared')).toBeVisible()
+    const left = await page.evaluate(() => localStorage.length)
+    expect(left).toBe(0)
+  })
+})
