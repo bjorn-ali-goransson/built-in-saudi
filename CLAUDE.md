@@ -306,10 +306,12 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `call-ring`s the owner, and drops the visitor into the Calls tool as a **guest
   who knocks and waits** (`/apps/calls?code=<room>&knock=1`; the typed name rides in
   `sessionStorage` `bis-call-guest-name`, never the URL). `call-ring` Web-pushes the
-  owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>`
-  — `host=1` makes the owner **force-host** that room (auto-start), `ring=1&link=<code>`
-  drives the **"stop receiving calls"** affordance (no local state needed). The owner
-  **admits manually** (no auto-admit). The **shared link is `/call/?c=<code>`** (query,
+  owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>`.
+  `host=1`+`ring=1` shows the owner a **phone-style "Someone is calling…" screen**
+  (green, pulsing phone, **Answer**/**Decline**, **no sharing UI**) — it does NOT
+  auto-host; the **Answer** tap hosts the room (that gesture also unlocks the mic)
+  and **auto-admits the caller** who's waiting (`answeredRef` gates it). `link=<code>`
+  drives the **"stop receiving calls"** affordance (no local state needed). The **shared link is `/call/?c=<code>`** (query,
   not path) so it resolves to the one **prerendered `/call/` page** (`vite.config.ts`)
   that carries a readable share preview; `/call/<code>` path still works. The tool
   keeps a tiny `bis-call-link` localStorage pointer (the code) so the owner's link is
