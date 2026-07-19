@@ -16,6 +16,21 @@ if (typeof (Promise as { withResolvers?: unknown }).withResolvers !== 'function'
   }
 }
 
+// pdf.js 6 also does `for await (… of readableStream)`. Async-iteration of
+// ReadableStream is missing on some iOS/older WebViews — the iterator is undefined,
+// which surfaces as "undefined is not a function (near '…n of e…')" and breaks the
+// CV Generator's PDF read. Polyfill it (guarded — a no-op where already supported).
+if (typeof ReadableStream !== 'undefined' && typeof (ReadableStream.prototype as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] !== 'function') {
+  ;(ReadableStream.prototype as unknown as { [Symbol.asyncIterator]: () => AsyncIterableIterator<unknown> })[Symbol.asyncIterator] = function (this: ReadableStream) {
+    const reader = this.getReader()
+    return {
+      next: () => reader.read() as Promise<IteratorResult<unknown>>,
+      return(value?: unknown) { reader.releaseLock(); return Promise.resolve({ done: true, value } as IteratorResult<unknown>) },
+      [Symbol.asyncIterator]() { return this },
+    }
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <RouterProvider router={router} />

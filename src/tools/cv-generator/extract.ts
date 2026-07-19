@@ -13,8 +13,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 export const pdfVersion = pdfjs.version
 export const pdfWorkerUrl = workerUrl
 
+// We always hand pdf.js the whole buffer, so disable its streaming/range paths —
+// they lean on `for await (… of ReadableStream)`, which some iOS/in-app WebViews
+// don't support (it runs inside the worker too, where a page polyfill can't reach).
+const PDF_OPTS = { disableStream: true, disableAutoFetch: true } as const
+
 async function fromPdf(buf: ArrayBuffer): Promise<string> {
-  const doc = await pdfjs.getDocument({ data: buf }).promise
+  const doc = await pdfjs.getDocument({ data: buf, ...PDF_OPTS }).promise
   const pages: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
@@ -42,7 +47,7 @@ async function fromPdf(buf: ArrayBuffer): Promise<string> {
  *  unlike an <iframe> that leans on the browser's native PDF viewer. */
 export async function renderPdfPages(file: File, scale = 1.6): Promise<string[]> {
   if (!(file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf')) return []
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer(), ...PDF_OPTS }).promise
   const out: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
