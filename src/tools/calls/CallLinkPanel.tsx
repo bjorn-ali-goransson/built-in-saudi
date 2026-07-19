@@ -3,7 +3,7 @@
 // to push and registers a code; the link is built-in-saudi.com/call/<code>. See
 // src/lib/callLink.ts + functions/call.js.
 import { useState } from 'react'
-import { PhoneIcon, CopyIcon, TrashIcon } from '../../components/icons'
+import { PhoneIcon, CopyIcon, TrashIcon, ShareIcon } from '../../components/icons'
 import { pushSupported } from '../../lib/push'
 import { claimCallLink, deleteCallLink, getMyCallLink } from '../../lib/callLink'
 
@@ -13,7 +13,7 @@ const T = {
     blurb: 'Share one link and people can call you right here — your device gets a notification to answer, even when this tab is closed.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
-    yourLink: 'Share this to be called:', copy: 'Copy', copied: 'Copied',
+    yourLink: 'Share this to be called:', copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
     remove: 'Remove my link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
   },
@@ -22,7 +22,7 @@ const T = {
     blurb: 'شارك رابطًا واحدًا ليتصل بك الناس هنا مباشرةً — يصل جهازك إشعار للرد، حتى عندما تكون هذه النافذة مغلقة.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
-    yourLink: 'شارك هذا ليتصلوا بك:', copy: 'نسخ', copied: 'تم النسخ',
+    yourLink: 'شارك هذا ليتصلوا بك:', copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
     remove: 'إزالة رابطي', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
   },
@@ -58,6 +58,10 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
   async function copy() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* */ }
   }
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share
+  async function share() {
+    try { await navigator.share({ title: t.shareText, text: t.shareText, url }) } catch { /* cancelled / unsupported */ }
+  }
 
   return (
     <div className={box} data-testid="call-link-panel">
@@ -72,8 +76,14 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
       ) : (
         <>
           <p className="text-[0.78rem] font-medium text-sand-100/80">{t.yourLink}</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 truncate text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5" data-testid="call-link-url">{url}</code>
+          <code className="block w-full truncate text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5" data-testid="call-link-url">{url}</code>
+          <div className="flex gap-2">
+            {canShare && (
+              <button type="button" onClick={share} data-testid="call-link-share"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-md bg-sand-100 text-green-900 text-[0.85rem] font-semibold cursor-pointer hover:bg-white [&_svg]:w-4 [&_svg]:h-4">
+                <ShareIcon /> {t.share}
+              </button>
+            )}
             <button type="button" className={chip} onClick={copy} data-testid="call-link-copy">
               <CopyIcon /> {copied ? t.copied : t.copy}
             </button>
