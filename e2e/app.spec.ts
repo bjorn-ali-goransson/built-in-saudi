@@ -739,9 +739,10 @@ test.describe('pdf sign + fill', () => {
 })
 
 test.describe('privacy', () => {
-  test('clear this browser’s data wipes localStorage (two-click confirm)', async ({ page }) => {
+  test('clear this browser’s data wipes localStorage (two-click confirm), showing the count first', async ({ page }) => {
     await page.goto('/en/privacy')
     await page.evaluate(() => localStorage.setItem('bis-test-key', 'x'))
+    await expect(page.getByTestId('local-count')).toContainText(/\d/) // count shown before deleting
     const btn = page.getByTestId('clear-local')
     await expect(btn).toBeVisible()
     await btn.click() // first click → arm confirm
@@ -749,5 +750,20 @@ test.describe('privacy', () => {
     await expect(page.getByTestId('local-cleared')).toBeVisible()
     const left = await page.evaluate(() => localStorage.length)
     expect(left).toBe(0)
+  })
+
+  test('download my data exports local + session storage as JSON', async ({ page }) => {
+    await page.goto('/en/privacy')
+    await page.evaluate(() => { localStorage.setItem('bis-dl-key', 'hello'); sessionStorage.setItem('bis-sess', 'world') })
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByTestId('download-data').click(),
+    ])
+    const p = await download.path()
+    const { readFileSync } = await import('node:fs')
+    const json = JSON.parse(readFileSync(p!, 'utf8'))
+    expect(json.localStorage['bis-dl-key']).toBe('hello')
+    expect(json.sessionStorage['bis-sess']).toBe('world')
+    expect(typeof json.exportedAt).toBe('string')
   })
 })
