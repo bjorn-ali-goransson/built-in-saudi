@@ -1487,8 +1487,10 @@ export default function CallsTool() {
                 : <a href={selectedFile.url} download={selectedFile.name} className="flex flex-col items-center gap-2 text-sand-100/80">
                     <DownloadIcon className="w-8 h-8" /><span className="text-[0.9rem]">{selectedFile.name}</span><span className="text-[0.78rem] opacity-70">{s.noPreview}</span>
                   </a>}
+              {/* z-30 lifts the download button above the annotation canvas so it's
+                  clickable, while the canvas stays drawable everywhere else. */}
               <a href={selectedFile.url} download={selectedFile.name} title={s.download} aria-label={s.download} data-testid="call-file-dl-main"
-                className="absolute top-3 end-3 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
+                className="absolute top-3 end-3 z-30 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
           <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />

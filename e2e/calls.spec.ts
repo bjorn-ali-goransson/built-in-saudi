@@ -104,6 +104,9 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
     inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }))
   })
   await expect(p.locator('[data-testid=calls-live] main img')).toBeVisible()
+  // The download button must stay clickable — not obscured by the annotation canvas
+  // (a trial click runs actionability checks, incl. "not covered", without clicking).
+  await p.getByTestId('call-file-dl-main').click({ trial: true })
   const ink = () => p.evaluate(() => {
     const cv = document.querySelector('[data-testid=calls-live] canvas') as HTMLCanvasElement
     const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data
