@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { zipStore } from '../../lib/zip'
 import { Button, Field, Input, Stack, Seg, SegButton } from '../../components/ui'
+import { PdfOps } from '../../lib/pdfOps'
 
 const STR = {
   en: {
@@ -43,17 +44,20 @@ export default function PdfSplitTool() {
   const [extractOut, setExtractOut] = useState<{ url: string; size: number; count: number } | null>(null)
   const [pages, setPages] = useState<{ name: string; url: string }[]>([])
   const [zipUrl, setZipUrl] = useState('')
+  const opsRef = useRef<PdfOps | null>(null)
+
+  useEffect(() => () => opsRef.current?.dispose(), [])
 
   function reset() { setExtractOut(null); setPages([]); setZipUrl('') }
 
+  // All pdf-lib work runs in a worker (#154) — splitting a big PDF never janks the UI.
   async function onFile(f: File | undefined) {
     if (!f) return
     setErr(''); reset()
-    try {
-      const { PDFDocument } = await import('pdf-lib')
-      const doc = await PDFDocument.load(await f.arrayBuffer())
-      setSrc({ name: f.name.replace(/\.pdf$/i, ''), file: f, pages: doc.getPageCount() })
-    } catch { setSrc(null); setErr(s.locked) }
+    opsRef.current ??= new PdfOps()
+    const n = await opsRef.current.pageCount(f)
+    if (n === null) { setSrc(null); setErr(s.locked); return }
+    setSrc({ name: f.name.replace(/\.pdf$/i, ''), file: f, pages: n })
   }
 
   async function extract() {
@@ -62,14 +66,8 @@ export default function PdfSplitTool() {
     if (idx === null || idx.length === 0) { setErr(s.rangeBad); return }
     setErr(''); setBusy(true)
     try {
-      const { PDFDocument } = await import('pdf-lib')
-      const doc = await PDFDocument.load(await src.file.arrayBuffer())
-      const out = await PDFDocument.create()
-      const copied = await out.copyPages(doc, idx.map((i) => i - 1))
-      copied.forEach((p) => out.addPage(p))
-      const bytes = await out.save()
-      const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
-      setExtractOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size, count: idx.length } })
+      const blob = await opsRef.current!.extract(src.file, idx.map((i) => i - 1))
+      if (blob) setExtractOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size, count: idx.length } })
     } finally { setBusy(false) }
   }
 
@@ -77,19 +75,15 @@ export default function PdfSplitTool() {
     if (!src) return
     setBusy(true)
     try {
-      const { PDFDocument } = await import('pdf-lib')
-      const doc = await PDFDocument.load(await src.file.arrayBuffer())
+      const bufs = await opsRef.current!.burst(src.file)
+      if (!bufs) return
       const files: { name: string; bytes: Uint8Array }[] = []
       const links: { name: string; url: string }[] = []
-      for (let i = 0; i < src.pages; i++) {
-        const out = await PDFDocument.create()
-        const [p] = await out.copyPages(doc, [i])
-        out.addPage(p)
-        const bytes = await out.save()
+      bufs.forEach((buf, i) => {
         const name = `${src.name}-p${i + 1}.pdf`
-        files.push({ name, bytes })
-        links.push({ name, url: URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' })) })
-      }
+        files.push({ name, bytes: new Uint8Array(buf) })
+        links.push({ name, url: URL.createObjectURL(new Blob([buf], { type: 'application/pdf' })) })
+      })
       pages.forEach((p) => URL.revokeObjectURL(p.url)); if (zipUrl) URL.revokeObjectURL(zipUrl)
       setPages(links)
       setZipUrl(URL.createObjectURL(zipStore(files)))

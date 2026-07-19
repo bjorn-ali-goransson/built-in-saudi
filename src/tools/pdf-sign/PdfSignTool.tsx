@@ -4,6 +4,7 @@ import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Stack, Button, Spinner } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import SignaturePad from './SignaturePad'
+import type { SignRequest, SignResponse } from './sign.worker'
 
 type Sig = { url: string; w: number; h: number }
 type Placement = { id: string; page: number; x: number; y: number; w: number } // x,y,w normalised
@@ -55,6 +56,10 @@ export default function PdfSignTool() {
   const imgRef = useRef<HTMLImageElement>(null)
   const loupeRef = useRef<HTMLCanvasElement>(null)
   const [loupe, setLoupe] = useState<{ x: number; y: number } | null>(null)
+  const workerRef = useRef<Worker | null>(null)
+  const reqRef = useRef(0)
+
+  useEffect(() => () => { workerRef.current?.terminate() }, [])
 
   // Restore a previously drawn signature.
   useEffect(() => {
@@ -191,26 +196,26 @@ export default function PdfSignTool() {
     setLoupe({ x: clientX, y: clientY })
   }
 
-  async function download() {
+  // Stamping runs in a worker (#154) so signing a big PDF never freezes the page.
+  function download() {
     if (!file || !sig || !placements.length) return
     setBusy(true); setErr('')
-    try {
-      const { PDFDocument } = await import('pdf-lib')
-      const pdf = await PDFDocument.load(await file.arrayBuffer())
-      const png = await pdf.embedPng(sig.url)
-      const pgs = pdf.getPages()
-      for (const pl of placements) {
-        const page = pgs[pl.page]; if (!page) continue
-        const W = page.getWidth(), H = page.getHeight()
-        const w = pl.w * W, h = w * (sig.h / sig.w)
-        page.drawImage(png, { x: pl.x * W, y: H - pl.y * H - h, width: w, height: h })
-      }
-      const bytes = await pdf.save()
-      const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
+    workerRef.current ??= new Worker(new URL('./sign.worker.ts', import.meta.url), { type: 'module' })
+    const worker = workerRef.current
+    const id = ++reqRef.current
+    const onMessage = (e: MessageEvent<SignResponse>) => {
+      if (e.data.id !== reqRef.current) return
+      worker.removeEventListener('message', onMessage)
+      setBusy(false)
+      if (!e.data.blob) { setErr(s.locked); return }
+      const blob = e.data.blob
       setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
-    } catch {
-      setErr(s.locked)
-    } finally { setBusy(false) }
+    }
+    worker.addEventListener('message', onMessage)
+    worker.postMessage({
+      id, file, png: sig.url, sigRatio: sig.h / sig.w,
+      placements: placements.map(({ page, x, y, w }) => ({ page, x, y, w })),
+    } satisfies SignRequest)
   }
 
   const pagePlacements = placements.filter((p) => p.page === pi)

@@ -54,6 +54,40 @@ test('zip inspector lists entries via the worker', async ({ page }) => {
   await expect(page.getByTestId('zip-list')).toContainText('a.txt')
 })
 
+async function makePdf(pages: number): Promise<Buffer> {
+  const { PDFDocument } = await import('pdf-lib')
+  const pdf = await PDFDocument.create()
+  for (let i = 0; i < pages; i++) pdf.addPage([200, 200])
+  return Buffer.from(await pdf.save())
+}
+const asPdf = (name: string, buffer: Buffer) => ({ name, mimeType: 'application/pdf', buffer })
+
+test('pdf merge counts pages and merges via the worker', async ({ page }) => {
+  await page.goto('/en/apps/pdf-merge')
+  await page.setInputFiles('input[type=file]', [asPdf('a.pdf', await makePdf(3)), asPdf('b.pdf', await makePdf(2))])
+  await expect(page.getByTestId('pm-total')).toContainText('5')
+  await page.getByTestId('pm-merge').click()
+  await expect(page.getByTestId('pm-download')).toBeVisible()
+})
+
+test('pdf split extracts a range via the worker', async ({ page }) => {
+  await page.goto('/en/apps/pdf-split')
+  await page.setInputFiles('input[type=file]', asPdf('doc.pdf', await makePdf(3)))
+  await expect(page.getByTestId('ps-count')).toContainText('3')
+  await page.getByTestId('ps-range').fill('2-3')
+  await page.getByTestId('ps-extract').click()
+  await expect(page.getByTestId('ps-download')).toContainText('2')
+})
+
+test('pdf split bursts to single pages via the worker', async ({ page }) => {
+  await page.goto('/en/apps/pdf-split')
+  await page.setInputFiles('input[type=file]', asPdf('doc.pdf', await makePdf(3)))
+  await page.getByTestId('ps-mode-burst').click()
+  await page.getByTestId('ps-split').click()
+  await expect(page.getByTestId('ps-zip')).toBeVisible()
+  await expect(page.getByTestId('ps-page-2')).toBeVisible()
+})
+
 test('hash generator hashes a file via the worker', async ({ page }) => {
   await page.goto('/en/apps/hash-generator')
   await page.getByTestId('hash-mode-file').click()
