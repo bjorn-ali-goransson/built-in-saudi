@@ -125,6 +125,20 @@ declares `@layer theme, base, utilities`.
   (`crypto`, `Intl`, Canvas) over libraries.
 - Keep tools **fully client-side** unless the spec explicitly says `queue`.
 - Match surrounding code style; comments explain *why*, not *what*.
+- **Heavy CPU work runs in a Web Worker, not the main thread** (#154). The
+  pattern: a colocated `<tool>/<x>.worker.ts` (or a shared one in `src/lib/` —
+  `imageEncode.worker.ts` for decode/crop/scale/encode of images,
+  `pdfOps.worker.ts` for pdf-lib pageCount/merge/extract/burst) created with
+  `new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' })`,
+  typed request/response messages matched by a request id (stale responses are
+  dropped), `terminate()` on unmount. Pass `File` handles (the read happens in
+  the worker) and use `OffscreenCanvas`/`createImageBitmap` there; transfer big
+  buffers back. `vite.config.ts` sets `worker: { format: 'es' }` — required for
+  workers that lazy-`import()` (e.g. pdf-lib); iife workers can't code-split.
+  *Not* applicable to interactive on-DOM canvases (redact/meme), tiny inputs
+  (ascii's ≤300-char grid, favicon's 8 icons), or GPU-bound `drawImage` work.
+  Functional coverage lives in `e2e/workers.spec.ts` — extend it when you add
+  a worker.
 
 ## Commands
 
