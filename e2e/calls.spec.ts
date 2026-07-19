@@ -441,17 +441,41 @@ test('a /call visitor waits until the link owner (from the ring) admits them', a
   const room = new URL(pa.url()).searchParams.get('code') || ''
   expect(room.length).toBeGreaterThan(4)
 
-  // Owner opens the ring URL (?host=1) → hosts the room and sees Alice knocking.
+  // Owner opens the ring URL (?host=1&ring=1) → a phone-style "someone is calling"
+  // screen with Answer, and NO link-sharing UI.
   await pb.goto(`/en/apps/calls?code=${room}&host=1&ring=1&link=ownercode`, { waitUntil: 'domcontentloaded' })
-  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
-  await closeShare(pb)
-  await expect(pb.getByTestId('call-lobby-live')).toContainText('Alice', { timeout: 20_000 })
-  // Alice is NOT in yet — she waits until the owner lets her in.
+  await expect(pb.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
+  await expect(pb.getByTestId('call-link-panel')).toHaveCount(0)
+  // Alice keeps waiting until the owner answers.
   await expect(pa.getByTestId('calls-live')).toHaveCount(0)
-  await pb.getByTestId('call-admit').click()
+  await pb.getByTestId('call-answer').click()
 
-  // Now she connects.
+  // Answering hosts the room and lets the caller straight in.
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
   await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice', { timeout: 25_000 })
+  await a.close(); await b.close()
+})
+
+test('mobile: a knock shows in the participants dock (above the elastic video grid)', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.setViewportSize({ width: 390, height: 800 })
+
+  // Host starts a normal call on mobile.
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  // A guest knocks.
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Knocker')
+  await pb.getByTestId('call-join').click()
+
+  // The waiting list is visible in the host's participants dock, with a Let-in button.
+  await expect(pa.getByTestId('call-participants-panel').getByTestId('call-lobby-live')).toContainText('Knocker', { timeout: 20_000 })
+  await expect(pa.getByTestId('call-admit')).toBeVisible()
   await a.close(); await b.close()
 })

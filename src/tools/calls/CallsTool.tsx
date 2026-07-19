@@ -72,6 +72,10 @@ export default function CallsTool() {
   const [knockParam] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') } catch { return false } })
   const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
+  // An incoming ring shows a phone-style "someone is calling" screen; hosting waits
+  // for the explicit Answer tap (which is also the gesture that unlocks the mic).
+  const [answered, setAnswered] = useState(false)
+  const answeredRef = useRef(false)
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
@@ -264,7 +268,9 @@ export default function CallsTool() {
     for (const [id, info] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); freshNames.push(info.name || '•') }
     if (freshNames.length) {
       setShareOpen(false)
-      if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
+      // If we answered an incoming ring, the caller who knocks comes straight in.
+      if (!isGuest && answeredRef.current) { for (const [id] of waiting) admit(id) }
+      else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -388,9 +394,15 @@ export default function CallsTool() {
     setBusy(true)
     const code = room || code6(); setRoom(code); rememberHost(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
-    // Desktop: auto-open the Share dialog on start; mobile goes straight to the call.
-    try { await r.enableMedia(); setPhase('live'); if (!sharedRef.current && window.innerWidth > 640) openShareModal(code) } catch { mediaError() } finally { setBusy(false) }
+    // Desktop: auto-open the Share dialog on start — but NOT when answering a ring
+    // (someone is already calling; there's nothing to share). Mobile skips it too.
+    try { await r.enableMedia(); setPhase('live'); if (!sharedRef.current && !incomingLink && window.innerWidth > 640) openShareModal(code) } catch { mediaError() } finally { setBusy(false) }
   }
+  // Answer an incoming ring: host the room (the tap unlocks the mic) and let the
+  // caller in as soon as they knock (answeredRef gates the auto-admit below).
+  function answerCall() { setAnswered(true); answeredRef.current = true; startHost() }
+  // Decline: leave the ring behind and land on a clean start screen.
+  function declineCall() { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
   // Escape a stale ?room= link: drop the room, become a host, clean the URL.
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
@@ -416,7 +428,9 @@ export default function CallsTool() {
   // (?host=1) → re-enter / host the room immediately.
   const autoStarted = useRef(false)
   useEffect(() => {
-    if ((isHostReturn || ownerHost) && !autoStarted.current) { autoStarted.current = true; startHost() }
+    // A host reload re-enters immediately; a fresh ring (ownerHost + incomingLink)
+    // instead shows the ringing screen and waits for Answer.
+    if ((isHostReturn || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; startHost() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // A /call visitor (?knock=1) auto-knocks into the room and waits to be let in.
@@ -819,7 +833,8 @@ export default function CallsTool() {
   const greenWrap = 'bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-14 w-screen mx-[calc(50%-50vw)] my-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
   const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
-  const phoneLogo = <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
+  const ringing = !!incomingLink && !answered
+  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-green-500 shrink-0 ${ringing ? 'animate-pulse' : ''}`} />
 
   if (phase === 'ended') {
     return (
@@ -866,9 +881,19 @@ export default function CallsTool() {
               {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
+          ) : incomingLink && !answered ? (
+            // Incoming ring — a phone-style "someone is calling" screen. No sharing
+            // UI (someone is already calling). Answer hosts + lets the caller in.
+            <>
+              <p className="text-center text-[1.25rem] font-display" data-testid="call-incoming-title">{s.someoneCalling}</p>
+              <div className="w-full flex flex-col gap-3">
+                <button className={cream} onClick={answerCall} data-testid="call-answer"><PhoneIcon /> {s.answer}</button>
+                <button className={ghost} onClick={declineCall} data-testid="call-decline"><EndCallIcon className="w-4 h-4" /> {s.decline}</button>
+              </div>
+              <IncomingCallNote locale={locale} linkCode={incomingLink} />
+            </>
           ) : (
             <>
-              {incomingLink && <IncomingCallNote locale={locale} linkCode={incomingLink} />}
               <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
               <div className="w-full flex flex-col gap-3">
                 <label className="flex flex-col gap-1">
@@ -1270,6 +1295,14 @@ export default function CallsTool() {
         {showParticipants && (
           <aside style={dockStyle} className={`w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-participants-panel">
             {dockHeader}
+            {/* Knocks first — pinned above the video grid so the host never misses
+                someone waiting, even on a short mobile dock where the elastic grid
+                would otherwise push the list out of view. */}
+            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && (
+              <div className="shrink-0 p-2.5 border-b border-[color:var(--line-soft)]">
+                <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />
+              </div>
+            )}
             {/* Full-bleed elastic video grid: tiles fill their cells (no gaps/margins),
                 the layout (cols×rows) adapts to the participant count + maximise. */}
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
@@ -1278,12 +1311,7 @@ export default function CallsTool() {
                 <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} />
               ))}
             </div>
-            {(debug || (!isGuest && (waiting.length > 0 || leftWaiters.length > 0))) && (
-              <div className="flex flex-col gap-2.5 p-2.5 shrink-0">
-                {debug && <DebugPanel diag={diag} mic={mic} cam={cam} />}
-                {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />}
-              </div>
-            )}
+            {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}
           </aside>
         )}
         {showChat && (
