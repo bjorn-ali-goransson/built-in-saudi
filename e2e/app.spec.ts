@@ -767,3 +767,20 @@ test.describe('privacy', () => {
     expect(typeof json.exportedAt).toBe('string')
   })
 })
+
+test.describe('svg-editor', () => {
+  test('loads, previews, and optimises to a smaller size', async ({ page }) => {
+    await page.goto('/en/apps/svg-editor')
+    await expect(page.getByTestId('svg-input')).toBeVisible()
+    await expect(page.getByTestId('svg-preview')).toBeVisible()
+    const bloated = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">   <!-- editor comment -->   <metadata>junk junk junk junk</metadata>   <rect x="1.123456" y="2.987654" width="8.5" height="8.5" fill="#123456"/>   </svg>'
+    await page.getByTestId('svg-input').fill(bloated)
+    const size = await page.getByTestId('svg-size').textContent()
+    const m = (size || '').match(/(\d+)%\)/) // "… (−NN%)"
+    expect(m).not.toBeNull()
+    expect(Number(m![1])).toBeGreaterThan(0)
+    // Toggling optimise off still renders the (raw) preview.
+    await page.getByTestId('svg-optimize').uncheck()
+    await expect(page.getByTestId('svg-preview')).toBeVisible()
+  })
+})

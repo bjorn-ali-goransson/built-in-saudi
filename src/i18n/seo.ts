@@ -284,6 +284,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد جداول Markdown', description: 'الصق بياناتٍ مفصولة بفواصل أو بعلامات جدولة (النسخ المباشر من جدول بيانات يعمل) لتحصل على جدول Markdown مرتّب بنمط GitHub، مع خيار محاذاة الأعمدة. يعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'svg-editor',
+    en: { name: 'SVG Editor', description: 'Paste or drop an SVG, see it render live, and copy or download a cleaned-up version. The built-in optimiser (SVGOMG-style, sane defaults) strips editor cruft — comments, metadata, Inkscape/Illustrator namespaces — collapses whitespace and rounds coordinates so your icons ship lean. Runs entirely in your browser; nothing is uploaded.' },
+    ar: { name: 'محرّر SVG', description: 'الصق أو أفلت ملف SVG، وشاهده يُعرض مباشرةً، وانسخ أو نزّل نسخة منظّفة. يزيل المُحسِّن المدمج (بأسلوب SVGOMG وبإعدادات معقولة) فضلات المحرّرات — التعليقات والبيانات الوصفية ومساحات أسماء Inkscape/Illustrator — ويطوي المسافات ويقرّب الإحداثيات فتخرج أيقوناتك خفيفة. يعمل بالكامل في متصفحك؛ لا يُرفع أي شيء.' },
+  },
+  {
     id: 'fake-data',
     en: { name: 'Fake Data Generator', description: 'Generate realistic-looking sample records — names, emails, phones, cities, companies, dates and IDs — for seeding tests, mockups and demos. Pick the fields and count, then export as JSON or CSV. Runs entirely in your browser.' },
     ar: { name: 'مولّد بيانات وهمية', description: 'ولّد سجلّات عيّنة واقعية المظهر — أسماء وبُرد إلكترونية وهواتف ومدن وشركات وتواريخ ومعرّفات — لتغذية الاختبارات والنماذج والعروض. اختر الحقول والعدد، ثم صدّر JSON أو CSV. يعمل بالكامل في متصفحك.' },

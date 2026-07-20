@@ -88,6 +88,7 @@ import { kanbanTool } from './kanban/meta'
 import { tierListTool } from './tier-list/meta'
 import { readmeGeneratorTool } from './readme-generator/meta'
 import { markdownTableTool } from './markdown-table/meta'
+import { svgEditorTool } from './svg-editor/meta'
 import { fakeDataTool } from './fake-data/meta'
 import { slugifyTool } from './slugify/meta'
 import { lineBreaksTool } from './line-breaks/meta'
@@ -137,6 +138,7 @@ export const tools: Tool[] = [
   jsonToTypesTool,
   readmeGeneratorTool,
   markdownTableTool,
+  svgEditorTool,
   fakeDataTool,
   readabilityTool,
   slugifyTool,
