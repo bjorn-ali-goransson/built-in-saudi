@@ -3,7 +3,7 @@
 // to push and registers a code; the link is built-in-saudi.com/call/<code>. See
 // src/lib/callLink.ts + functions/call.js.
 import { useState } from 'react'
-import { PhoneIcon, CopyIcon, TrashIcon, ShareIcon } from '../../components/icons'
+import { PhoneIcon, CopyIcon, CheckIcon, TrashIcon, ShareIcon } from '../../components/icons'
 import { pushSupported } from '../../lib/push'
 import { claimCallLink, deleteCallLink, getMyCallLink } from '../../lib/callLink'
 import { makeCallLinkImage } from './invite'
@@ -17,6 +17,9 @@ const T = {
     failed: 'Couldn’t set up the link. Try again.',
     copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
     includeName: 'include name in call',
+    codeTip: 'Your private link code — anyone who has it can call you, so share it only with people you trust.',
+    nameTip: 'Your name, shown to whoever opens the link. Untick “include name in call” to leave it out.',
+    expires: '(Expires in 6 months)',
     remove: 'Unpublish link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
   },
@@ -28,6 +31,9 @@ const T = {
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
     copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
     includeName: 'أدرج الاسم في المكالمة',
+    codeTip: 'رمز رابطك الخاص — أي شخص يملكه يستطيع الاتصال بك، فشاركه فقط مع من تثق بهم.',
+    nameTip: 'اسمك، ويظهر لمن يفتح الرابط. أزل تحديد «أدرج الاسم في المكالمة» لإخفائه.',
+    expires: '(تنتهي خلال ٦ أشهر)',
     remove: 'إلغاء نشر الرابط', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
   },
@@ -55,7 +61,6 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   // Display copy: zero-width spaces before "?" and after "&" give clean wrap points.
   // Shown non-selectable so nobody hand-copies the ZWSP-laced text — use Copy.
   const ZWS = String.fromCharCode(0x200b) // zero-width space: an invisible wrap point
-  const shown = url.replace('?', ZWS + '?').replace(/&/g, '&' + ZWS)
 
   async function claim() {
     setBusy(true); setErr('')
@@ -102,8 +107,24 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
         </>
       ) : (
         <>
-          {/* Non-selectable (has invisible wrap points) — Copy gives the clean URL. */}
-          <code className="block w-full select-none [overflow-wrap:anywhere] text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5" data-testid="call-link-url">{shown}</code>
+          {/* URL: non-selectable (invisible wrap points), with the copy icon inset and
+              the code + name values highlighted with an explanatory tooltip. */}
+          <div className="relative">
+            <div className="select-none [overflow-wrap:anywhere] text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5 pe-9" data-testid="call-link-url">
+              <span>{site}/call/{ZWS}?c=</span>
+              <span className="rounded-[3px] px-0.5 bg-[color-mix(in_srgb,var(--gold-500)_38%,transparent)] cursor-help" title={t.codeTip} data-testid="call-link-seg-code">{code}</span>
+              {withName && name && (
+                <>
+                  <span>&{ZWS}n=</span>
+                  <span className="rounded-[3px] px-0.5 bg-[color-mix(in_srgb,var(--gold-500)_38%,transparent)] cursor-help" title={t.nameTip} data-testid="call-link-seg-name">{encodeURIComponent(name)}</span>
+                </>
+              )}
+            </div>
+            <button type="button" onClick={copy} title={copied ? t.copied : t.copy} aria-label={copied ? t.copied : t.copy} data-testid="call-link-copy"
+              className="absolute top-1 end-1 h-7 w-7 grid place-items-center rounded-md bg-white/10 hover:bg-white/20 border border-sand-100/20 text-sand-100 cursor-pointer [&_svg]:w-4 [&_svg]:h-4">
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             {canShare && (
               <button type="button" onClick={share} data-testid="call-link-share"
@@ -111,18 +132,19 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
                 <ShareIcon /> {t.share}
               </button>
             )}
-            <button type="button" className={chip} onClick={copy} data-testid="call-link-copy">
-              <CopyIcon /> {copied ? t.copied : t.copy}
-            </button>
             <label className="flex items-center gap-1.5 text-[0.78rem] text-sand-100/75 cursor-pointer">
               <input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} data-testid="call-link-withname" className="w-4 h-4 accent-green-500 cursor-pointer" />
               {t.includeName}
             </label>
           </div>
-          <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
-            className="self-start inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
-            <TrashIcon /> {busy ? t.removing : t.remove}
-          </button>
+          {/* Unpublish (below), with the expiry note right-aligned. */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
+              className="inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
+              <TrashIcon /> {busy ? t.removing : t.remove}
+            </button>
+            <span className="text-[0.72rem] text-sand-100/55" data-testid="call-link-expiry">{t.expires}</span>
+          </div>
         </>
       )}
     </div>

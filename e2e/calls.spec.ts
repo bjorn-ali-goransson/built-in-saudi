@@ -533,15 +533,23 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   // A link exists → the meeting buttons are hidden; the link panel is the focus.
   await expect(p.getByTestId('call-start')).toHaveCount(0)
   await expect(p.getByTestId('call-share')).toHaveCount(0)
+  // Unpublish sits below with the expiry note.
   await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
+  await expect(p.getByTestId('call-link-expiry')).toContainText('Expires in 6 months')
   // URL is non-selectable (has zero-width wrap points → strip them to inspect).
   const urlText = () => p.getByTestId('call-link-url').evaluate((el) => (el.textContent || '').replace(new RegExp(String.fromCharCode(0x200b), 'g'), ''))
   expect(await urlText()).toContain('/call/?c=testcode9')
   await expect(p.getByTestId('call-link-url')).toHaveCSS('user-select', 'none')
-  // Name is included by default → rides in the URL (&n=); unchecking drops it.
+  // Copy is now an inset icon in the field; the code is a highlighted span w/ tooltip.
+  await expect(p.getByTestId('call-link-copy')).toBeVisible()
+  await expect(p.getByTestId('call-link-seg-code')).toHaveText('testcode9')
+  await expect(p.getByTestId('call-link-seg-code')).toHaveAttribute('title', /.+/)
+  // Name is included by default → its own highlighted span + rides in the URL (&n=).
   await expect(p.getByTestId('call-link-withname')).toBeChecked()
+  await expect(p.getByTestId('call-link-seg-name')).toBeVisible()
   expect(await urlText()).toContain('n=')
   await p.getByTestId('call-link-withname').uncheck()
+  await expect(p.getByTestId('call-link-seg-name')).toHaveCount(0)
   expect(await urlText()).not.toContain('n=')
   await c.close()
 })
