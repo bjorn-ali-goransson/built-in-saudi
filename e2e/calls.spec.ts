@@ -518,8 +518,22 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   await expect(p.getByTestId('call-link-url')).toContainText('/call/?c=testcode9')
   await expect(p.getByTestId('call-start')).toHaveCount(0)
   await expect(p.getByTestId('call-share')).toHaveCount(0)
-  // Name opt-out is present, checked by default.
+  // Copy reflects the "call me link" framing.
+  await expect(p.getByTestId('call-link-panel')).toContainText('You have set up a Call Me link')
+  await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
+  // Name is included by default → rides in the URL (&n=); unchecking drops it.
   await expect(p.getByTestId('call-link-withname')).toBeChecked()
+  await expect(p.getByTestId('call-link-url')).toContainText('n=')
+  await p.getByTestId('call-link-withname').uncheck()
+  await expect(p.getByTestId('call-link-url')).not.toContainText('n=')
+  await c.close()
+})
+
+test('a call link that includes a name greets the caller by it on the join screen', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/call/?c=abc123&n=Ali%20Saud')
+  await expect(p.getByTestId('call-link-heading')).toHaveText('Call Ali Saud')
   await c.close()
 })
 

@@ -44,7 +44,10 @@ export function CallLinkPage() {
   const [name, setName] = useState(() => stored || randName(locale === 'ar'))
   const [calling, setCalling] = useState(false)
   const nameCustom = name.trim() !== '' && !isDefaultName(name)
-  document.title = `${t.title} — Built in Saudi`
+  // The owner may include their name in the link (&n=) so we greet the caller by it.
+  const ownerName = (() => { try { return (new URLSearchParams(window.location.search).get('n') || '').slice(0, 40).trim() } catch { return '' } })()
+  const heading = ownerName ? (locale === 'ar' ? `اتصل بـ ${ownerName}` : `Call ${ownerName}`) : t.title
+  document.title = `${heading} — Built in Saudi`
 
   async function call() {
     if (!code || calling) return
@@ -76,7 +79,7 @@ export function CallLinkPage() {
       <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
         <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
         <div className="flex flex-col gap-2 text-center">
-          <h1 className="font-display text-[1.5rem]">{t.title}</h1>
+          <h1 className="font-display text-[1.5rem]" data-testid="call-link-heading">{heading}</h1>
           <p className="text-[0.92rem] leading-relaxed text-sand-100/85">{t.blurb}</p>
         </div>
         <div className="w-full flex flex-col gap-3">

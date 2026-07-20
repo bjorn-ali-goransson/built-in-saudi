@@ -15,9 +15,9 @@ const T = {
     permNote: 'You’ll be asked to allow notifications — that’s how your device rings when someone calls.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
-    yourLink: 'Share this to be called:', copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
-    includeName: 'Include my name in the shared image',
-    remove: 'Remove my link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
+    yourLink: 'You have set up a Call Me link:', copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
+    includeName: 'Include my name in the call',
+    remove: 'Unpublish link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
   },
   ar: {
@@ -26,9 +26,9 @@ const T = {
     permNote: 'سيُطلب منك السماح بالإشعارات — بها يرنّ جهازك عند اتصال أحد.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
-    yourLink: 'شارك هذا ليتصلوا بك:', copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
-    includeName: 'أدرج اسمي في صورة المشاركة',
-    remove: 'إزالة رابطي', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
+    yourLink: 'لقد أنشأت رابط «اتصل بي»:', copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
+    includeName: 'أدرج اسمي في المكالمة',
+    remove: 'إلغاء نشر الرابط', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
   },
 }
@@ -47,8 +47,11 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   const [withName, setWithName] = useState(true) // include the name in the share image
   if (!pushSupported()) return null
   // /call/?c=<code> (not /call/<code>) so the shared link resolves to the one
-  // prerendered /call/ page that carries a readable link preview.
-  const url = code ? `${site}/call/?c=${code}` : ''
+  // prerendered /call/ page that carries a readable link preview. When the name is
+  // included, it rides in the URL too (&n=) so the caller's join screen greets them
+  // by name — and it goes into the QR image the same way.
+  const base = code ? `${site}/call/?c=${code}` : ''
+  const url = base && withName && name ? `${base}&n=${encodeURIComponent(name)}` : base
 
   async function claim() {
     setBusy(true); setErr('')
