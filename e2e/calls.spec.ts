@@ -509,12 +509,12 @@ test('the random name has a gender toggle (Abu ⇄ Umm)', async ({ browser }) =>
   await c.close()
 })
 
-test('the call-link panel explains it will ask for notification permission', async ({ browser }) => {
+test('the call-link panel offers to get a link, with no permission-note clutter', async ({ browser }) => {
   const c = await browser.newContext()
   const p = await c.newPage()
   await p.goto('/en/apps/calls')
   await expect(p.getByTestId('call-link-get')).toBeVisible()
-  await expect(p.getByTestId('call-link-perm')).toBeVisible()
+  await expect(p.getByTestId('call-link-perm')).toHaveCount(0)
   await c.close()
 })
 
@@ -530,9 +530,11 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   // The "you have set up a Call Me link" heading sits OUTSIDE the panel.
   await expect(p.getByTestId('call-link-set-note')).toHaveText('You have set up a Call Me link:')
   await expect(p.getByTestId('call-link-panel')).not.toContainText('You have set up')
-  // A link exists → the meeting buttons are hidden; the link panel is the focus.
+  // A link exists → the meeting buttons AND the P2P privacy note are hidden; the
+  // link panel is the focus.
   await expect(p.getByTestId('call-start')).toHaveCount(0)
   await expect(p.getByTestId('call-share')).toHaveCount(0)
+  await expect(p.getByTestId('call-privacy')).toHaveCount(0)
   // Unpublish sits below AND outside the box, with the expiry note right-aligned.
   await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
   await expect(p.getByTestId('call-link-expiry')).toContainText('Expires in 6 months')

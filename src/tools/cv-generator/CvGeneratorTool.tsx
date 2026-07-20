@@ -366,6 +366,17 @@ export default function CvGeneratorTool() {
     return () => clearTimeout(t)
   }, [toast])
 
+  // Guard against a silent hang: on some iOS/in-app WebViews pdf.js's getDocument
+  // never settles (worker/stream quirks), leaving the upload spinner stuck forever
+  // with no error. Time it out so it drops into the recoverable browser-fallback
+  // path (which shows diagnostics) instead of freezing. (#182)
+  function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = setTimeout(() => reject(Object.assign(new Error(`timed out after ${ms / 1000}s reading the file`), { name: 'TimeoutError' })), ms)
+      p.then((v) => { clearTimeout(id); resolve(v) }, (e) => { clearTimeout(id); reject(e) })
+    })
+  }
+
   // Technical diagnostics shown under an upload error, so a screenshot is enough
   // to report the real cause (worker blocked, chunk 404, browser, etc.).
   function diag(what: string, f: File, pdfver: string): string {
@@ -396,7 +407,7 @@ export default function CvGeneratorTool() {
     try {
       const ex = await import('./extract')
       pdfver = ex.pdfVersion
-      const t = await ex.extractText(f)
+      const t = await withTimeout(ex.extractText(f), 30000)
       if (!t || t.length < 60) {
         setErr(s.tooShort)
         setBrowserFallback(false)

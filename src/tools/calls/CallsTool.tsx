@@ -973,7 +973,8 @@ export default function CallsTool() {
                   <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
                 </div>
               )}
-              <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>
+              {/* Hidden once a personal call link is published — that panel is the focus. */}
+              {!hasCallLink && <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5" data-testid="call-privacy"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>}
             </>
           )}
 

@@ -12,7 +12,6 @@ const T = {
   en: {
     heading: 'Your personal call link', get: 'Get a link to be called', getting: 'Setting up…',
     blurb: 'Share one link and people can call you right here — your device gets a notification to answer, even when this tab is closed.',
-    permNote: 'You’ll be asked to allow notifications — that’s how your device rings when someone calls.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
     copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
@@ -26,7 +25,6 @@ const T = {
   ar: {
     heading: 'رابط اتصالك الشخصي', get: 'احصل على رابط ليتصلوا بك', getting: 'جارٍ الإعداد…',
     blurb: 'شارك رابطًا واحدًا ليتصل بك الناس هنا مباشرةً — يصل جهازك إشعار للرد، حتى عندما تكون هذه النافذة مغلقة.',
-    permNote: 'سيُطلب منك السماح بالإشعارات — بها يرنّ جهازك عند اتصال أحد.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
     copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
@@ -103,7 +101,6 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
           <button type="button" className={chip} onClick={claim} disabled={busy} data-testid="call-link-get">
             <PhoneIcon /> {busy ? t.getting : t.get}
           </button>
-          <p className="text-[0.72rem] text-sand-100/60" data-testid="call-link-perm">{t.permNote}</p>
           {err && <p className="text-[0.78rem] text-[var(--gold-400)]" data-testid="call-link-err">{err}</p>}
         </>
       ) : (
