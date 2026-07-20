@@ -456,6 +456,24 @@ test('a /call visitor waits until the link owner (from the ring) admits them', a
   await a.close(); await b.close()
 })
 
+test('an incoming-call message navigates an already-open Calls tab to the ring screen', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Owner') // sitting on the setup screen
+  await expect(p.getByTestId('call-answer')).toHaveCount(0)
+  // Simulate the service worker delivering a ring (what happens when someone calls
+  // while this tab is already open).
+  await p.evaluate(() => {
+    const url = location.origin + '/en/apps/calls?code=ringroom&host=1&ring=1&link=mycode'
+    navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'bis-incoming-call', url } }))
+  })
+  // The tab jumps to the phone-style "someone is calling" screen.
+  await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
+  await expect(p.getByTestId('call-incoming-title')).toBeVisible()
+  await c.close()
+})
+
 test('mobile: a knock shows in the participants dock (above the elastic video grid)', async ({ browser }) => {
   const a = await ctx(browser, base), b = await ctx(browser, base)
   const pa = await a.newPage(), pb = await b.newPage()

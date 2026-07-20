@@ -58,10 +58,20 @@ async function touch() {
   } catch (e) { /* ignore */ }
 }
 
-// Prayer-time push notifications
+// Tell open, VISIBLE tabs about a message (used so an already-open Calls page can
+// jump to the "someone is calling" screen without waiting for the notification tap).
+async function messageVisibleClients(msg) {
+  const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  for (const c of all) { if (c.visibilityState === 'visible') { try { c.postMessage(msg) } catch (e) { /* */ } } }
+}
+
+// Push notifications (prayer times, and "call me" rings).
 self.addEventListener('push', (event) => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
+  // A ring carries ?ring=1 in its URL — nudge any visible tab straight to the
+  // incoming-call screen (the notification still shows for backgrounded tabs).
+  const isCall = typeof data.url === 'string' && data.url.indexOf('ring=1') !== -1
   event.waitUntil(Promise.all([
     self.registration.showNotification(data.title || 'Built in Saudi', {
       body: data.body || '',
@@ -72,6 +82,7 @@ self.addEventListener('push', (event) => {
       data: { url: data.url || '/' },
     }),
     touch(),
+    isCall ? messageVisibleClients({ type: 'bis-incoming-call', url: data.url }) : Promise.resolve(),
   ]))
 })
 
@@ -81,7 +92,14 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     touch()
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    for (const c of all) { if (c.url.includes('built-in-saudi') && 'focus' in c) return c.focus() }
+    // Focus an existing same-origin tab AND tell it where to go (so a tab already
+    // open on another screen actually navigates to the tapped notification's URL).
+    for (const c of all) {
+      if (c.url.indexOf(self.location.origin) === 0 && 'focus' in c) {
+        try { c.postMessage({ type: 'bis-incoming-call', url }) } catch (e) { /* */ }
+        return c.focus()
+      }
+    }
     return self.clients.openWindow(url)
   })())
 })

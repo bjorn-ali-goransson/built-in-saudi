@@ -439,6 +439,23 @@ export default function CallsTool() {
     if (knockParam && !autoKnocked.current) { autoKnocked.current = true; askToJoin() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // An incoming ring while this tab is already open: the service worker posts the
+  // ring URL, and we navigate to the "someone is calling" screen (unless we're
+  // already in a call, or already showing the ring).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string } | null
+      if (!d || d.type !== 'bis-incoming-call' || typeof d.url !== 'string') return
+      const p = phaseRef.current
+      if (p === 'live' || p === 'hosting' || p === 'waiting') return // don't interrupt a live call
+      if (incomingLink && !answeredRef.current) return // already on the ring screen
+      try { window.location.assign(d.url) } catch { /* */ }
+    }
+    navigator.serviceWorker.addEventListener('message', onMsg)
+    return () => navigator.serviceWorker.removeEventListener('message', onMsg)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Verify a guest's link before showing the join controls.
   useEffect(() => {
