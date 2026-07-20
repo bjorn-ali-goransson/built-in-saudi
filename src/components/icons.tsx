@@ -145,6 +145,14 @@ export function CopyIcon({ className }: P) {
   )
 }
 
+export function CheckIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
 export function ArrowIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

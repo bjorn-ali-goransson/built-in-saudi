@@ -472,6 +472,25 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await c.close()
 })
 
+test('a saved name shows a checkmark (not shuffle); tapping it clears + randomises', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => { try { localStorage.setItem('bis-call-name', 'Ali Saud') } catch { /* */ } })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('call-name')).toHaveValue('Ali Saud')
+  // Saved name → checkmark, not the shuffle icon.
+  await expect(p.getByTestId('call-name-saved')).toBeVisible()
+  await expect(p.getByTestId('call-shuffle')).toHaveCount(0)
+  // Tapping the checkmark forgets it and drops back to a random name (+ shuffle).
+  await p.getByTestId('call-name-saved').click()
+  await expect(p.getByTestId('call-name')).not.toHaveValue('Ali Saud')
+  await expect(p.getByTestId('call-name-saved')).toHaveCount(0)
+  await expect(p.getByTestId('call-shuffle')).toBeVisible()
+  const stored = await p.evaluate(() => localStorage.getItem('bis-call-name'))
+  expect(stored).toBeNull()
+  await c.close()
+})
+
 test('mobile: a knock shows in the participants dock (above the elastic video grid)', async ({ browser }) => {
   const a = await ctx(browser, base), b = await ctx(browser, base)
   const pa = await a.newPage(), pb = await b.newPage()

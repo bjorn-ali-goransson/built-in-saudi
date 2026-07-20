@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
@@ -40,7 +40,11 @@ export default function CallsTool() {
   // name is persisted — the random "Abu …" default never sticks.
   const [remember, setRemember] = useState(!!storedName)
   const nameCustom = name.trim() !== '' && !isDefaultName(name)
+  // The current name was loaded from this browser's storage (a remembered name).
+  const savedName = !!storedName && name === storedName
   function saveName() { try { if (remember && nameCustom) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
+  // Forget the stored name and drop back to a fresh random suggestion.
+  function clearSavedName() { try { localStorage.removeItem(NAME_KEY) } catch { /* */ } setRemember(false); setName(randName(locale === 'ar')) }
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live' | 'ended'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
@@ -900,7 +904,14 @@ export default function CallsTool() {
                   <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
                   <div className="relative">
                     <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-11 h-12" />
-                    {nameCustom ? (
+                    {savedName ? (
+                      // Name loaded from this browser's storage → a checkmark (not the
+                      // shuffle icon); tap it to forget the saved name + go random.
+                      <button type="button" onClick={clearSavedName} title={s.savedNameHint} aria-label={s.savedNameHint} data-testid="call-name-saved"
+                        className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-green-600 hover:text-green-700 hover:bg-black/5 cursor-pointer">
+                        <CheckIcon className="w-[18px] h-[18px]" />
+                      </button>
+                    ) : nameCustom ? (
                       // Typed your own name → offer to remember it (with a nudge bubble).
                       <>
                         {!remember && (
