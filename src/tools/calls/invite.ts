@@ -33,6 +33,36 @@ export async function makeInvite(url: string, code: string, ar = false): Promise
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
 }
 
+// A shareable image for a personal "call me" link: QR to the /call page, the
+// sharer's name (unless opted out), and the URL as text + PNG metadata — so it
+// reads well when dropped into WhatsApp etc. `name` empty ⇒ a generic "Call me".
+export async function makeCallLinkImage(url: string, name: string, ar = false): Promise<Blob> {
+  const W = 620, H = 720
+  const c = document.createElement('canvas'); c.width = W; c.height = H
+  const x = c.getContext('2d')!
+  x.fillStyle = '#0e5a3f'; x.fillRect(0, 0, W, H)
+  x.textAlign = 'center'
+  x.fillStyle = '#faf7f0'
+  const title = name ? (ar ? `اتصل بـ ${name}` : `Call ${name}`) : (ar ? 'اتصل بي' : 'Call me')
+  x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
+  x.font = '18px system-ui, sans-serif'; x.fillStyle = 'rgba(250,247,240,0.82)'
+  x.fillText(ar ? 'خاص · مباشر بين الأجهزة · دون تطبيق' : 'Private · peer-to-peer · no app', W / 2, 126)
+
+  const qs = 360, qx = (W - qs) / 2, qy = 168
+  const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: '#0e5a3f', light: '#ffffff' } })
+  x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
+  x.drawImage(await loadImg(qr), qx, qy, qs, qs)
+
+  x.font = '17px system-ui, sans-serif'; x.fillStyle = 'rgba(250,247,240,0.82)'
+  x.fillText(ar ? 'امسح الرمز أو افتح:' : 'Scan the code, or open:', W / 2, qy + qs + 70)
+  x.font = '16px ui-monospace, monospace'; x.fillStyle = '#d6a33f'
+  x.fillText(url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 104)
+
+  const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
+  const caption = (name ? (ar ? `اتصل بـ ${name}: ` : `Call ${name}: `) : (ar ? 'اتصل بي: ' : 'Call me: ')) + url
+  return addPngText(await blob.arrayBuffer(), 'Description', caption)
+}
+
 // --- inject a PNG tEXt metadata chunk (before IEND) ---
 function crc32(buf: Uint8Array): number {
   let crc = 0xffffffff

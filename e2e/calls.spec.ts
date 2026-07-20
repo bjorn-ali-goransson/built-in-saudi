@@ -472,6 +472,33 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await c.close()
 })
 
+test('the call-link panel explains it will ask for notification permission', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('call-link-get')).toBeVisible()
+  await expect(p.getByTestId('call-link-perm')).toBeVisible()
+  await c.close()
+})
+
+test('sharing a personal call link hides Start call/Invite and offers a name opt-out', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => {
+    try { localStorage.setItem('bis-call-link', JSON.stringify({ code: 'testcode9', endpoint: 'https://x/y' })) } catch { /* */ }
+    const nav = navigator as unknown as { share?: unknown; canShare?: unknown }
+    nav.share = () => Promise.resolve(); nav.canShare = () => true
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  // A link exists → the meeting buttons are hidden; the link panel is the focus.
+  await expect(p.getByTestId('call-link-url')).toContainText('/call/?c=testcode9')
+  await expect(p.getByTestId('call-start')).toHaveCount(0)
+  await expect(p.getByTestId('call-share')).toHaveCount(0)
+  // Name opt-out is present, checked by default.
+  await expect(p.getByTestId('call-link-withname')).toBeChecked()
+  await c.close()
+})
+
 test('a saved name shows a checkmark (not shuffle); tapping it clears + randomises', async ({ browser }) => {
   const c = await browser.newContext()
   await c.addInitScript(() => { try { localStorage.setItem('bis-call-name', 'Ali Saud') } catch { /* */ } })

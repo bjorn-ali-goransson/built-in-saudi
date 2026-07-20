@@ -15,6 +15,7 @@ import {
   DeviceGroup, useSpeaking, DebugPanel, ParticipantTile,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
+import { getMyCallLink } from '../../lib/callLink'
 
 type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
 
@@ -80,6 +81,8 @@ export default function CallsTool() {
   // for the explicit Answer tap (which is also the gesture that unlocks the mic).
   const [answered, setAnswered] = useState(false)
   const answeredRef = useRef(false)
+  // Whether this browser already has a personal call link (hides Start call/Invite).
+  const [hasCallLink, setHasCallLink] = useState(() => { try { return !!getMyCallLink() } catch { return false } })
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
@@ -934,7 +937,9 @@ export default function CallsTool() {
                     <button type="button" onClick={startOwnCall} data-testid="call-start-own"
                       className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
                   </>
-                ) : (
+                ) : hasCallLink ? null : (
+                  // Hidden once you're sharing a personal call link — that panel below
+                  // is the focus then, not starting/ inviting to a fresh meeting.
                   <div className="flex gap-3">
                     <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
                     <button type="button" onClick={() => openShareModal()} data-testid="call-share"
@@ -942,7 +947,7 @@ export default function CallsTool() {
                   </div>
                 )}
               </div>
-              {!isGuest && !initialRoom && !incomingLink && <CallLinkPanel locale={locale} name={name} site={SITE} />}
+              {!isGuest && !initialRoom && !incomingLink && <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />}
               <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>
             </>
           )}

@@ -6,23 +6,28 @@ import { useState } from 'react'
 import { PhoneIcon, CopyIcon, TrashIcon, ShareIcon } from '../../components/icons'
 import { pushSupported } from '../../lib/push'
 import { claimCallLink, deleteCallLink, getMyCallLink } from '../../lib/callLink'
+import { makeCallLinkImage } from './invite'
 
 const T = {
   en: {
     heading: 'Your personal call link', get: 'Get a link to be called', getting: 'Setting up…',
     blurb: 'Share one link and people can call you right here — your device gets a notification to answer, even when this tab is closed.',
+    permNote: 'You’ll be asked to allow notifications — that’s how your device rings when someone calls.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
     yourLink: 'Share this to be called:', copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
+    includeName: 'Include my name in the shared image',
     remove: 'Remove my link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
   },
   ar: {
     heading: 'رابط اتصالك الشخصي', get: 'احصل على رابط ليتصلوا بك', getting: 'جارٍ الإعداد…',
     blurb: 'شارك رابطًا واحدًا ليتصل بك الناس هنا مباشرةً — يصل جهازك إشعار للرد، حتى عندما تكون هذه النافذة مغلقة.',
+    permNote: 'سيُطلب منك السماح بالإشعارات — بها يرنّ جهازك عند اتصال أحد.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
     yourLink: 'شارك هذا ليتصلوا بك:', copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
+    includeName: 'أدرج اسمي في صورة المشاركة',
     remove: 'إزالة رابطي', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
   },
@@ -33,12 +38,13 @@ const chip = 'inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-m
 
 /** The setup-screen panel: claim / show / remove your personal call link. Hidden
  *  entirely where Web Push can't work (no point offering it). */
-export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; name: string; site: string }) {
+export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'en' | 'ar'; name: string; site: string; onLinkChange?: (has: boolean) => void }) {
   const t = T[locale]
   const [code, setCode] = useState(() => getMyCallLink()?.code || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
+  const [withName, setWithName] = useState(true) // include the name in the share image
   if (!pushSupported()) return null
   // /call/?c=<code> (not /call/<code>) so the shared link resolves to the one
   // prerendered /call/ page that carries a readable link preview.
@@ -49,19 +55,30 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
     const c = await claimCallLink(name || 'Me')
     setBusy(false)
     if (!c) { setErr(typeof Notification !== 'undefined' && Notification.permission === 'denied' ? t.denied : t.failed); return }
-    setCode(c)
+    setCode(c); onLinkChange?.(true)
   }
   async function remove() {
     const mine = getMyCallLink()
     setBusy(true)
     if (mine) await deleteCallLink(mine.code, mine.endpoint)
-    setBusy(false); setCode('')
+    setBusy(false); setCode(''); onLinkChange?.(false)
   }
   async function copy() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* */ }
   }
   const canShare = typeof navigator !== 'undefined' && !!navigator.share
   async function share() {
+    // Share a QR image (+ optional name + the URL) so it embeds nicely in chat
+    // apps; fall back to a plain URL share where files aren't supported.
+    try {
+      const blob = await makeCallLinkImage(url, withName ? name : '', locale === 'ar')
+      const file = new File([blob], 'call-me.png', { type: 'image/png' })
+      const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean }
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: url } as ShareData)
+        return
+      }
+    } catch { /* fall through */ }
     try { await navigator.share({ title: t.shareText, text: t.shareText, url }) } catch { /* cancelled / unsupported */ }
   }
 
@@ -73,6 +90,7 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
           <button type="button" className={chip} onClick={claim} disabled={busy} data-testid="call-link-get">
             <PhoneIcon /> {busy ? t.getting : t.get}
           </button>
+          <p className="text-[0.72rem] text-sand-100/60 flex items-start gap-1.5" data-testid="call-link-perm">🔔 {t.permNote}</p>
           {err && <p className="text-[0.78rem] text-[var(--gold-400)]" data-testid="call-link-err">{err}</p>}
         </>
       ) : (
@@ -90,6 +108,12 @@ export function CallLinkPanel({ locale, name, site }: { locale: 'en' | 'ar'; nam
               <CopyIcon /> {copied ? t.copied : t.copy}
             </button>
           </div>
+          {canShare && (
+            <label className="flex items-center gap-2 text-[0.78rem] text-sand-100/75 cursor-pointer">
+              <input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} data-testid="call-link-withname" className="w-4 h-4 accent-green-500 cursor-pointer" />
+              {t.includeName}
+            </label>
+          )}
           <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
             className="self-start inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
             <TrashIcon /> {busy ? t.removing : t.remove}
