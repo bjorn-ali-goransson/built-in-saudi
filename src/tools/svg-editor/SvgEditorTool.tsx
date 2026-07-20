@@ -1,84 +1,111 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Stack, Textarea, Button, Check } from '../../components/ui'
+import { Button, Check } from '../../components/ui'
 import { CopyIcon, DownloadIcon } from '../../components/icons'
 import { optimizeSvg } from './svgOptimize'
+import { useEditor } from './useEditor'
+import { Canvas } from './Canvas'
+import { Toolbar } from './Toolbar'
+import { Inspector } from './Inspector'
+import { docToSvg } from './model'
+import { parseSvg } from './parse'
 
-const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- a friendly star -->
-  <circle cx="60" cy="60" r="56" fill="#1f7a3f"/>
-  <path fill="#f4efe6" d="M60.0000 28.00000 L69.021 50.117 L92.900 51.888 L74.573 67.283 L80.229 90.612 L60 78.000 L39.771 90.612 L45.427 67.283 L27.100 51.888 L50.979 50.117 Z"/>
+const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180" viewBox="0 0 240 180">
+  <rect x="20" y="20" width="200" height="140" rx="10" fill="#f4efe6" stroke="#0f3d20" stroke-width="3"/>
+  <circle cx="90" cy="80" r="34" fill="#1f7a3f"/>
+  <path d="M150 120 L180 60 L210 120 Z" fill="#c8952a"/>
 </svg>`
 
 const STR = {
   en: {
-    input: 'SVG markup', drop: 'Paste SVG above, or drop an .svg file',
-    preview: 'Preview', optimize: 'Optimise output (SVGOMG-style)', precision: 'Precision',
-    copy: 'Copy', copied: 'Copied!', download: 'Download .svg', clear: 'Clear', sample: 'Load sample',
-    invalid: 'That doesn’t parse as SVG — the output is left as-is.',
-    saved: (b: number, a: number) => `${fmt(b)} → ${fmt(a)}  (−${b > 0 ? Math.max(0, Math.round((1 - a / b) * 100)) : 0}%)`,
-    privacy: 'Runs entirely in your browser — nothing is uploaded.',
+    select: 'Select / move', pan: 'Pan', rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', pen: 'Freehand', text: 'Text',
+    undo: 'Undo', redo: 'Redo', grid: 'Grid', fit: 'Fit', code: 'Code', canvas: 'Canvas',
+    none: 'none', fill: 'Fill', stroke: 'Stroke', width: 'Width', opacity: 'Opacity', textLabel: 'Text', size: 'Size',
+    layers: 'Layers', empty: 'Nothing drawn yet.', up: 'Bring forward', down: 'Send backward', del: 'Delete', nothing: 'Select a shape to edit its style, or pick a tool and draw.',
+    w: 'W', h: 'H', apply: 'Apply code', optimize: 'Optimise export', precision: 'Precision',
+    copy: 'Copy SVG', copied: 'Copied!', download: 'Download', importer: 'Import SVG', clear: 'Clear', sample: 'Sample',
+    privacy: 'Runs entirely in your browser — nothing is uploaded.', saved: (b: number, a: number) => `${fmt(b)} → ${fmt(a)} (−${b > 0 ? Math.max(0, Math.round((1 - a / b) * 100)) : 0}%)`,
   },
   ar: {
-    input: 'كود SVG', drop: 'الصق SVG أعلاه أو أفلت ملف ‎.svg',
-    preview: 'المعاينة', optimize: 'تحسين المخرجات (بأسلوب SVGOMG)', precision: 'الدقة',
-    copy: 'نسخ', copied: 'تم النسخ!', download: 'تنزيل ‎.svg', clear: 'مسح', sample: 'تحميل مثال',
-    invalid: 'لا يمكن تحليله كـ SVG — تُترك المخرجات كما هي.',
-    saved: (b: number, a: number) => `${fmt(b)} ‹ ${fmt(a)}  (−${b > 0 ? Math.max(0, Math.round((1 - a / b) * 100)) : 0}٪)`,
-    privacy: 'يعمل بالكامل في متصفحك — لا يُرفع أي شيء.',
+    select: 'تحديد / تحريك', pan: 'تحريك العرض', rect: 'مستطيل', ellipse: 'شكل بيضوي', line: 'خط', pen: 'رسم حر', text: 'نص',
+    undo: 'تراجع', redo: 'إعادة', grid: 'شبكة', fit: 'ملاءمة', code: 'الكود', canvas: 'اللوحة',
+    none: 'بلا', fill: 'التعبئة', stroke: 'الحد', width: 'العرض', opacity: 'الشفافية', textLabel: 'النص', size: 'الحجم',
+    layers: 'الطبقات', empty: 'لا يوجد رسم بعد.', up: 'إلى الأمام', down: 'إلى الخلف', del: 'حذف', nothing: 'حدّد شكلًا لتعديل نمطه، أو اختر أداة وارسم.',
+    w: 'ع', h: 'ط', apply: 'تطبيق الكود', optimize: 'تحسين التصدير', precision: 'الدقة',
+    copy: 'نسخ SVG', copied: 'تم النسخ!', download: 'تنزيل', importer: 'استيراد SVG', clear: 'مسح', sample: 'مثال',
+    privacy: 'يعمل بالكامل في متصفحك — لا يُرفع أي شيء.', saved: (b: number, a: number) => `${fmt(b)} ‹ ${fmt(a)} (−${b > 0 ? Math.max(0, Math.round((1 - a / b) * 100)) : 0}٪)`,
   },
 }
 
 function fmt(n: number): string { return n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB` }
 
+const initialDoc = (() => { const p = parseSvg(SAMPLE); return { shapes: p.shapes, width: p.width, height: p.height } })()
+
 export default function SvgEditorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
-  const [src, setSrc] = useState(SAMPLE)
+  const ed = useEditor(initialDoc)
+  const [showGrid, setShowGrid] = useState(true)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [codeText, setCodeText] = useState('')
   const [optimize, setOptimize] = useState(true)
   const [decimals, setDecimals] = useState(2)
   const [copied, setCopied] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const result = useMemo(() => optimizeSvg(src, decimals), [src, decimals])
-  const output = optimize && result.ok ? result.svg : src.trim()
-  const previewSrc = `data:image/svg+xml,${encodeURIComponent(output)}`
+  const raw = useMemo(() => docToSvg(ed.doc.shapes, ed.doc.width, ed.doc.height), [ed.doc])
+  const result = useMemo(() => optimizeSvg(raw, decimals), [raw, decimals])
+  const output = optimize && result.ok ? result.svg : raw
 
-  async function copy() {
-    try { await navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* */ }
-  }
+  function openCode() { setCodeText(output); setCodeOpen(true) }
+  function applyCode() { const p = parseSvg(codeText); if (p.ok) { ed.load({ shapes: p.shapes, width: p.width, height: p.height }); setCodeOpen(false) } }
+  function fit() { ed.setView({ x: -8, y: -8, w: ed.doc.width + 16, h: ed.doc.height + 16 }) }
+
+  async function copy() { try { await navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* */ } }
   function download() {
     const blob = new Blob([output], { type: 'image/svg+xml' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'image.svg'; a.click()
+    const a = document.createElement('a'); a.href = url; a.download = 'drawing.svg'; a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   function onFile(f: File | undefined) {
     if (!f) return
-    f.text().then((t) => setSrc(t)).catch(() => { /* */ })
+    f.text().then((txt) => { const p = parseSvg(txt); if (p.ok) ed.load({ shapes: p.shapes, width: p.width, height: p.height }) }).catch(() => { /* */ })
   }
 
   return (
-    <Stack data-testid="svg-editor">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="flex flex-col gap-[0.4rem]">
-          <span className="text-[0.8rem] font-semibold uppercase tracking-wide text-ink-faint">{s.input}</span>
-          <Textarea value={src} onChange={(e) => setSrc(e.target.value)} rows={14} dir="ltr" spellCheck={false}
-            className="font-mono text-[0.8rem]" data-testid="svg-input"
-            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }} />
-          <button type="button" onClick={() => fileRef.current?.click()} className="self-start text-[0.78rem] text-ink-faint hover:text-ink underline underline-offset-2 bg-transparent border-0 cursor-pointer">{s.drop}</button>
-          <input ref={fileRef} type="file" accept=".svg,image/svg+xml" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-        </label>
-
-        <div className="flex flex-col gap-[0.4rem]">
-          <span className="text-[0.8rem] font-semibold uppercase tracking-wide text-ink-faint">{s.preview}</span>
-          <div className="grid place-items-center min-h-[12rem] rounded-md border border-[color:var(--line-soft)] p-3"
-            style={{ backgroundImage: 'conic-gradient(#e6e1d6 25%, #fff 0 50%, #e6e1d6 0 75%, #fff 0)', backgroundSize: '18px 18px' }}>
-            {result.ok || !optimize
-              ? <img src={previewSrc} alt={s.preview} data-testid="svg-preview" className="max-w-full max-h-[46vh] object-contain" />
-              : <p className="text-[0.85rem] text-[var(--danger)] font-medium" data-testid="svg-invalid">{s.invalid}</p>}
-          </div>
+    <div className="flex flex-col gap-3" data-testid="svg-editor">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Toolbar ed={ed} t={s} />
+        <div className="flex items-center gap-2 ms-auto text-[0.8rem]">
+          <label className="flex items-center gap-1.5 text-ink-soft cursor-pointer"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="accent-green-600" data-testid="svg-grid" /> {s.grid}</label>
+          <Button onClick={fit} data-testid="svg-fit">{s.fit}</Button>
+          <Button variant={codeOpen ? 'primary' : undefined} onClick={() => (codeOpen ? setCodeOpen(false) : openCode())} data-testid="svg-code-toggle">{codeOpen ? s.canvas : s.code}</Button>
         </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-[1fr_16rem]">
+        <div className="relative rounded-md border border-[color:var(--line-soft)] overflow-hidden h-[62vh] min-h-[22rem] bg-[#fbfaf6]"
+          onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
+          {codeOpen ? (
+            <div className="absolute inset-0 flex flex-col">
+              <textarea value={codeText} onChange={(e) => setCodeText(e.target.value)} spellCheck={false} dir="ltr" data-testid="svg-code" className="flex-1 w-full resize-none font-mono text-[0.78rem] p-3 bg-paper outline-none" />
+              <div className="p-2 border-t border-[color:var(--line-soft)] bg-paper"><Button variant="primary" onClick={applyCode} data-testid="svg-code-apply">{s.apply}</Button></div>
+            </div>
+          ) : (
+            <Canvas ed={ed} showGrid={showGrid} />
+          )}
+        </div>
+
+        <aside className="min-w-0">
+          <div className="flex items-center gap-2 mb-3 text-[0.8rem]">
+            <span className="text-ink-faint">{s.w}</span>
+            <input type="number" value={ed.doc.width} min={1} onChange={(e) => ed.resize(Math.max(1, Number(e.target.value) || 1), ed.doc.height)} data-testid="svg-width" className="w-16 rounded-md border border-[color:var(--line-soft)] px-2 py-1 bg-paper" />
+            <span className="text-ink-faint">{s.h}</span>
+            <input type="number" value={ed.doc.height} min={1} onChange={(e) => ed.resize(ed.doc.width, Math.max(1, Number(e.target.value) || 1))} data-testid="svg-height" className="w-16 rounded-md border border-[color:var(--line-soft)] px-2 py-1 bg-paper" />
+          </div>
+          <Inspector ed={ed} t={{ none: s.none, fill: s.fill, stroke: s.stroke, width: s.width, opacity: s.opacity, text: s.textLabel, size: s.size, layers: s.layers, empty: s.empty, up: s.up, down: s.down, del: s.del, nothing: s.nothing }} />
+        </aside>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -94,11 +121,13 @@ export default function SvgEditorTool() {
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={copy} data-testid="svg-copy"><CopyIcon /> {copied ? s.copied : s.copy}</Button>
         <Button onClick={download} data-testid="svg-download"><DownloadIcon /> {s.download}</Button>
-        <Button onClick={() => setSrc('')} data-testid="svg-clear">{s.clear}</Button>
-        <Button onClick={() => setSrc(SAMPLE)} data-testid="svg-sample">{s.sample}</Button>
+        <Button onClick={() => fileRef.current?.click()} data-testid="svg-import">{s.importer}</Button>
+        <input ref={fileRef} type="file" accept=".svg,image/svg+xml" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        <Button onClick={() => ed.load({ shapes: [], width: ed.doc.width, height: ed.doc.height })} data-testid="svg-clear">{s.clear}</Button>
+        <Button onClick={() => ed.load(initialDoc)} data-testid="svg-sample">{s.sample}</Button>
       </div>
 
-      <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
-    </Stack>
+      <p className="text-[0.8rem] text-ink-faint">{s.privacy}</p>
+    </div>
   )
 }

@@ -103,7 +103,7 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
           <button type="button" className={chip} onClick={claim} disabled={busy} data-testid="call-link-get">
             <PhoneIcon /> {busy ? t.getting : t.get}
           </button>
-          <p className="text-[0.72rem] text-sand-100/60 flex items-start gap-1.5" data-testid="call-link-perm">🔔 {t.permNote}</p>
+          <p className="text-[0.72rem] text-sand-100/60" data-testid="call-link-perm">{t.permNote}</p>
           {err && <p className="text-[0.78rem] text-[var(--gold-400)]" data-testid="call-link-err">{err}</p>}
         </>
       ) : (

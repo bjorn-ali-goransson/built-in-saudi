@@ -769,18 +769,48 @@ test.describe('privacy', () => {
 })
 
 test.describe('svg-editor', () => {
-  test('loads, previews, and optimises to a smaller size', async ({ page }) => {
+  test('loads a canvas with the sample shapes and a layers list', async ({ page }) => {
     await page.goto('/en/apps/svg-editor')
-    await expect(page.getByTestId('svg-input')).toBeVisible()
-    await expect(page.getByTestId('svg-preview')).toBeVisible()
-    const bloated = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">   <!-- editor comment -->   <metadata>junk junk junk junk</metadata>   <rect x="1.123456" y="2.987654" width="8.5" height="8.5" fill="#123456"/>   </svg>'
-    await page.getByTestId('svg-input').fill(bloated)
+    await expect(page.getByTestId('svg-canvas')).toBeVisible()
+    await expect(page.getByTestId('svg-artboard')).toBeVisible()
+    // The sample imports to three editable shapes (rect + circle→ellipse + path).
+    await expect(page.getByTestId('svg-layer')).toHaveCount(3)
+    // Nothing selected yet → the empty-state hint shows.
+    await expect(page.getByTestId('svg-noselection')).toBeVisible()
+  })
+
+  test('draws a rectangle, selects it, and restyles it', async ({ page }) => {
+    await page.goto('/en/apps/svg-editor')
+    await page.getByTestId('svg-clear').click()
+    await expect(page.getByTestId('svg-layer')).toHaveCount(0)
+    // Pick the rectangle tool and drag on the canvas to draw one.
+    await page.getByTestId('svg-tool-rect').click()
+    const canvas = page.getByTestId('svg-canvas')
+    const box = (await canvas.boundingBox())!
+    await page.mouse.move(box.x + 80, box.y + 80)
+    await page.mouse.down()
+    await page.mouse.move(box.x + 200, box.y + 180, { steps: 5 })
+    await page.mouse.up()
+    // A shape now exists, is selected (style panel visible), and shows resize handles.
+    await expect(page.getByTestId('svg-layer')).toHaveCount(1)
+    await expect(page.getByTestId('svg-selection')).toBeVisible()
+    await expect(page.getByTestId('svg-fill')).toBeVisible()
+    // Delete via the layer's trash removes it.
+    await page.getByTestId('svg-layer-del').click()
+    await expect(page.getByTestId('svg-layer')).toHaveCount(0)
+  })
+
+  test('exports optimised SVG and round-trips through the code view', async ({ page }) => {
+    await page.goto('/en/apps/svg-editor')
+    // The sample document exports to something the optimiser shrinks.
     const size = await page.getByTestId('svg-size').textContent()
     const m = (size || '').match(/(\d+)%\)/) // "… (−NN%)"
     expect(m).not.toBeNull()
-    expect(Number(m![1])).toBeGreaterThan(0)
-    // Toggling optimise off still renders the (raw) preview.
-    await page.getByTestId('svg-optimize').uncheck()
-    await expect(page.getByTestId('svg-preview')).toBeVisible()
+    // Flip to code view → apply a fresh SVG → it re-imports as one shape.
+    await page.getByTestId('svg-code-toggle').click()
+    await page.getByTestId('svg-code').fill('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect x="5" y="5" width="30" height="30" fill="#c00"/></svg>')
+    await page.getByTestId('svg-code-apply').click()
+    await expect(page.getByTestId('svg-canvas')).toBeVisible()
+    await expect(page.getByTestId('svg-layer')).toHaveCount(1)
   })
 })

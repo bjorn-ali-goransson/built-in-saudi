@@ -5,11 +5,11 @@ import { PenIcon } from '../../components/icons'
 export const svgEditorTool: Tool = {
   id: 'svg-editor',
   name: 'SVG Editor',
-  tagline: 'Edit SVG markup and export it optimised.',
+  tagline: 'Draw and edit vector graphics, then export clean SVG.',
   description:
-    'Paste or drop an SVG, see it render live, and copy or download a cleaned-up version. The optimiser (SVGOMG-style, sane defaults) strips editor cruft — comments, metadata, Inkscape/Illustrator namespaces — collapses whitespace and rounds coordinates, so your icons ship lean. Runs entirely in your browser; nothing is uploaded.',
+    'A lightweight vector editor: draw rectangles, ellipses, lines, freehand paths and text on a canvas, then select, move, resize and restyle them — with layers, undo/redo and pan/zoom. Import an existing SVG to keep editing it, flip to the live code view any time, and export an optimised (SVGOMG-style) file that strips editor cruft and rounds coordinates. Runs entirely in your browser; nothing is uploaded.',
   category: 'Developer',
-  keywords: ['svg', 'editor', 'optimize', 'optimise', 'svgo', 'svgomg', 'minify', 'vector', 'icon', 'markup', 'clean', 'سفج', 'تحسين'],
+  keywords: ['svg', 'editor', 'vector', 'draw', 'inkscape', 'illustrator', 'shapes', 'optimize', 'optimise', 'svgo', 'svgomg', 'minify', 'icon', 'markup', 'سفج', 'رسم', 'محرر'],
   status: 'beta',
   Icon: PenIcon,
   component: lazyTool(() => import('./SvgEditorTool')),
