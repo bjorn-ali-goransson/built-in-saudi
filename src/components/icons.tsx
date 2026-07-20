@@ -153,24 +153,23 @@ export function CheckIcon({ className }: P) {
   )
 }
 
-// A stylized woman in hijab — the hijab drapes around a round face.
+// A woman in hijab — filled silhouette (traced from the Saudi "نساء" sign): a soft
+// rounded drape over the head and shoulders, framing an open face.
 export function HijabiIcon({ className }: P) {
   return (
-    <svg {...base} className={className} aria-hidden="true">
-      <path d="M12 3.2c-3.7 0-6.3 2.8-6.3 6.5 0 2.6 1.1 4 1.7 5.1.5.9.6 1.6.6 2.7V20h8v-2.5c0-1.1.1-1.8.6-2.7.6-1.1 1.7-2.5 1.7-5.1 0-3.7-2.6-6.5-6.3-6.5Z" />
-      <circle cx="12" cy="10" r="3" />
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2.6c-3.1 0-5.4 2.3-5.4 5.4 0 1.5.5 2.6 1.2 3.5-1.8.5-3 2.4-3.2 4.9C4.5 17.9 4.5 21 7.5 21h9c3 0 3-3.1 2.9-4.6-.2-2.5-1.4-4.4-3.2-4.9.7-.9 1.2-2 1.2-3.5 0-3.1-2.3-5.4-5.4-5.4Zm0 3.4c-1.9 0-3.2 1.5-3.2 3.3 0 1.8 1.3 3.3 3.2 3.3s3.2-1.5 3.2-3.3c0-1.8-1.3-3.3-3.2-3.3Z" />
     </svg>
   )
 }
 
-// A stylized man wearing a shemagh/ghutra with an agal band across the top.
+// A man in ghutra + igal — filled silhouette (traced from the Saudi "رجال" sign):
+// the headcloth drapes to points with a centre dip, framing a face with a moustache.
 export function ShemaghIcon({ className }: P) {
   return (
-    <svg {...base} className={className} aria-hidden="true">
-      <circle cx="12" cy="13" r="3" />
-      <path d="M6 13c0-4.6 2.7-8 6-8s6 3.4 6 8" />
-      <path d="M6.6 8c3.5-1.7 7.3-1.7 10.8 0" />
-      <path d="M7.5 20c1-2 3-3 4.5-3s3.5 1 4.5 3" />
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2.6c-3 0-5.4 2.3-5.4 5.4 0 1.4.4 2.4 1 3.3L5 20.6c-.15.5.3.9.8.7l6.2-2.3 6.2 2.3c.5.2.95-.2.8-.7l-2.6-9.3c.6-.9 1-1.9 1-3.3 0-3.1-2.4-5.4-5.4-5.4Zm0 3c-2 0-3.3 1.5-3.3 3.5 0 2.2 1.3 3.8 3.3 3.8s3.3-1.6 3.3-3.8c0-2-1.3-3.5-3.3-3.5Z" />
+      <path d="M9.8 10.7c.8.7 3.6.7 4.4 0-.5 1.4-3.9 1.4-4.4 0Z" />
     </svg>
   )
 }
