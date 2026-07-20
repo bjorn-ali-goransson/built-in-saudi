@@ -15,7 +15,7 @@ import {
   DeviceGroup, useSpeaking, DebugPanel, ParticipantTile,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
-import { getMyCallLink } from '../../lib/callLink'
+import { getMyCallLink, ringCallLink } from '../../lib/callLink'
 
 type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
 
@@ -75,6 +75,8 @@ export default function CallsTool() {
   // host that room and admit the visitor themselves (no auto-admit). `incomingLink`
   // drives the "stop receiving calls" affordance offered exactly on an incoming call.
   const [knockParam] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') } catch { return false } })
+  // A /call visitor carries the owner's link code so Rejoin can ring them again.
+  const [ringCode] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-ring-code') || '') : '' } catch { return '' } })
   const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
   // An incoming ring shows a phone-style "someone is calling" screen; hosting waits
@@ -501,7 +503,14 @@ export default function CallsTool() {
       history.replaceState(null, '', lobbyPath())
     }
   }
-  function rejoin() { setEnded({ reason: 'gone', count: 0 }); setPhase('lobby'); if (isGuest) askToJoin(); else startHost() }
+  function rejoin() {
+    setEnded({ reason: 'gone', count: 0 }); setPhase('lobby')
+    if (isGuest) {
+      // Call-link visitor: ring the owner again so a missed call re-notifies them.
+      if (ringCode && room) ringCallLink(ringCode, room, name || 'Someone')
+      askToJoin()
+    } else startHost()
+  }
   const newCall = () => window.location.assign(localePath(locale, '/apps/calls'))
 
   // Host-disconnect grace (guests only): if the host vanishes, count down 2 minutes

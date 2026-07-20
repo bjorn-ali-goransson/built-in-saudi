@@ -54,6 +54,7 @@ export function CallLinkPage() {
     // so it knocks without asking again. The visitor is a GUEST who waits in the
     // lobby; the ring wakes the link owner, who hosts this room and admits them.
     try { sessionStorage.setItem('bis-call-guest-name', name.trim()) } catch { /* */ }
+    try { sessionStorage.setItem('bis-call-ring-code', code) } catch { /* */ } // so Rejoin can re-ring the owner
     await ringCallLink(code, room, name.trim() || 'Someone')
     navigate(`/${locale}/apps/calls?code=${room}&knock=1`)
   }

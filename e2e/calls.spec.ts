@@ -472,6 +472,30 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await c.close()
 })
 
+test('rejoin after a missed call-link call rings the owner again', async ({ browser }) => {
+  const c = await browser.newContext()
+  let rings = 0
+  await c.route('**/call-ring', async (route) => { rings++; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) }) })
+  await c.addInitScript((u) => {
+    const w = window as unknown as { __CALL_FN: string; __CALL_SIGNAL: string }
+    w.__CALL_FN = u; w.__CALL_SIGNAL = u
+  }, base)
+  const p = await c.newPage()
+  await p.goto('/call/?c=ownerX')
+  await p.getByTestId('call-link-name').fill('Caller')
+  await p.getByTestId('call-link-call').click()
+  await expect(p.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
+  expect(rings).toBe(1) // the initial ring from the /call page
+
+  // Cancel → the "you left" screen, then Rejoin.
+  await p.getByTestId('call-cancel').click()
+  await expect(p.getByTestId('call-rejoin')).toBeVisible({ timeout: 10_000 })
+  await p.getByTestId('call-rejoin').click()
+  // Rejoin re-rings the owner so a missed call re-notifies them.
+  await expect.poll(() => rings, { timeout: 10_000 }).toBe(2)
+  await c.close()
+})
+
 test('the call-link panel explains it will ask for notification permission', async ({ browser }) => {
   const c = await browser.newContext()
   const p = await c.newPage()
