@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, ShemaghIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
@@ -45,7 +45,10 @@ export default function CallsTool() {
   const savedName = !!storedName && name === storedName
   function saveName() { try { if (remember && nameCustom) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
   // Forget the stored name and drop back to a fresh random suggestion.
-  function clearSavedName() { try { localStorage.removeItem(NAME_KEY) } catch { /* */ } setRemember(false); setName(randName(locale === 'ar')) }
+  function clearSavedName() { try { localStorage.removeItem(NAME_KEY) } catch { /* */ } setRemember(false); setName(randName(locale === 'ar', gender === 'f')) }
+  // Random-name gender: the inset toggle flips it and re-rolls a matching kunya.
+  const [gender, setGender] = useState<'m' | 'f'>('m')
+  function toggleGender() { const g = gender === 'm' ? 'f' : 'm'; setGender(g); setName(randName(locale === 'ar', g === 'f')) }
   const [phase, setPhase] = useState<'lobby' | 'hosting' | 'waiting' | 'live' | 'ended'>('lobby')
   const [room, setRoom] = useState(initialRoom)
   const [busy, setBusy] = useState(false)
@@ -915,7 +918,7 @@ export default function CallsTool() {
                 <label className="flex flex-col gap-1">
                   <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
                   <div className="relative">
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className="pe-11 h-12" />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className={`${!savedName && !nameCustom ? 'pe-[4.75rem]' : 'pe-11'} h-12`} />
                     {savedName ? (
                       // Name loaded from this browser's storage → a checkmark (not the
                       // shuffle icon); tap it to forget the saved name + go random.
@@ -933,10 +936,17 @@ export default function CallsTool() {
                           className="absolute inset-y-0 end-3 my-auto w-5 h-5 accent-green-600 cursor-pointer" />
                       </>
                     ) : (
-                      <button type="button" onClick={() => setName(randName(locale === 'ar'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
-                        className="absolute inset-y-0 end-1.5 my-auto h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
-                        <RefreshIcon className="w-4 h-4" />
-                      </button>
+                      // Random name → a gender toggle (hijabi ⇄ shemagh) next to shuffle.
+                      <div className="absolute inset-y-0 end-1.5 my-auto h-8 flex items-center gap-1">
+                        <button type="button" onClick={toggleGender} title={gender === 'm' ? s.genderFemale : s.genderMale} aria-label={gender === 'm' ? s.genderFemale : s.genderMale} data-testid="call-gender"
+                          className="h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
+                          {gender === 'm' ? <HijabiIcon className="w-[19px] h-[19px]" /> : <ShemaghIcon className="w-[19px] h-[19px]" />}
+                        </button>
+                        <button type="button" onClick={() => setName(randName(locale === 'ar', gender === 'f'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
+                          className="h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
+                          <RefreshIcon className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </label>

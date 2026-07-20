@@ -153,6 +153,28 @@ export function CheckIcon({ className }: P) {
   )
 }
 
+// A stylized woman in hijab — the hijab drapes around a round face.
+export function HijabiIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 3.2c-3.7 0-6.3 2.8-6.3 6.5 0 2.6 1.1 4 1.7 5.1.5.9.6 1.6.6 2.7V20h8v-2.5c0-1.1.1-1.8.6-2.7.6-1.1 1.7-2.5 1.7-5.1 0-3.7-2.6-6.5-6.3-6.5Z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+// A stylized man wearing a shemagh/ghutra with an agal band across the top.
+export function ShemaghIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="13" r="3" />
+      <path d="M6 13c0-4.6 2.7-8 6-8s6 3.4 6 8" />
+      <path d="M6.6 8c3.5-1.7 7.3-1.7 10.8 0" />
+      <path d="M7.5 20c1-2 3-3 4.5-3s3.5 1 4.5 3" />
+    </svg>
+  )
+}
+
 export function ArrowIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

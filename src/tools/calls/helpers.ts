@@ -48,8 +48,15 @@ const KUNYA: [string, string][] = [
   ['Marwan', 'مروان'], ['Rayan', 'ريان'], ['Anas', 'أنس'], ['Layth', 'ليث'], ['Zaid', 'زيد'],
   ['Rabee', 'ربيع'],
 ]
-export const randName = (ar: boolean) => { const b = crypto.getRandomValues(new Uint8Array(1)); const p = KUNYA[b[0] % KUNYA.length]; return ar ? `أبو ${p[1]}` : `Abu ${p[0]}` }
-export const isDefaultName = (n: string) => KUNYA.some(([en, ar]) => n === `Abu ${en}` || n === `أبو ${ar}`)
+// A kunya, male ("Abu …") by default or female ("Umm …") when `female` is set.
+export const randName = (ar: boolean, female = false) => {
+  const b = crypto.getRandomValues(new Uint8Array(1))
+  const p = KUNYA[b[0] % KUNYA.length]
+  const pre = female ? (ar ? 'أم' : 'Umm') : (ar ? 'أبو' : 'Abu')
+  return `${pre} ${ar ? p[1] : p[0]}`
+}
+export const isDefaultName = (n: string) => KUNYA.some(([en, ar]) =>
+  n === `Abu ${en}` || n === `أبو ${ar}` || n === `Umm ${en}` || n === `أم ${ar}`)
 
 // A short two-note chime (Web Audio — no asset) for when someone knocks to join.
 let _ac: AudioContext | null = null

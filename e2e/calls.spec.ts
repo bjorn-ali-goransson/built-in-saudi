@@ -496,6 +496,19 @@ test('rejoin after a missed call-link call rings the owner again', async ({ brow
   await c.close()
 })
 
+test('the random name has a gender toggle (Abu ⇄ Umm)', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('call-name')).toHaveValue(/^Abu /) // default male kunya
+  await expect(p.getByTestId('call-gender')).toBeVisible()
+  await p.getByTestId('call-gender').click()
+  await expect(p.getByTestId('call-name')).toHaveValue(/^Umm /) // female
+  await p.getByTestId('call-gender').click()
+  await expect(p.getByTestId('call-name')).toHaveValue(/^Abu /) // back to male
+  await c.close()
+})
+
 test('the call-link panel explains it will ask for notification permission', async ({ browser }) => {
   const c = await browser.newContext()
   const p = await c.newPage()
