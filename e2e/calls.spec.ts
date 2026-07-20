@@ -534,6 +534,8 @@ test('a call link that includes a name greets the caller by it on the join scree
   const p = await c.newPage()
   await p.goto('/call/?c=abc123&n=Ali%20Saud')
   await expect(p.getByTestId('call-link-heading')).toHaveText('Call Ali Saud')
+  await expect(p.getByTestId('call-link-blurb')).toContainText('Use this link to call Ali Saud')
+  await expect(p.getByTestId('call-link-blurb')).toContainText('does not pass our servers')
   await c.close()
 })
 

@@ -47,6 +47,11 @@ export function CallLinkPage() {
   // The owner may include their name in the link (&n=) so we greet the caller by it.
   const ownerName = (() => { try { return (new URLSearchParams(window.location.search).get('n') || '').slice(0, 40).trim() } catch { return '' } })()
   const heading = ownerName ? (locale === 'ar' ? `اتصل بـ ${ownerName}` : `Call ${ownerName}`) : t.title
+  const blurb = ownerName
+    ? (locale === 'ar'
+        ? `استخدم هذا الرابط للاتصال بـ ${ownerName}. المكالمة خاصة ومباشرة بين المتصفحين ولا تمر بخوادمنا.`
+        : `Use this link to call ${ownerName}. The call is a private, browser-to-browser call and does not pass our servers.`)
+    : t.blurb
   document.title = `${heading} — Built in Saudi`
 
   async function call() {
@@ -80,7 +85,7 @@ export function CallLinkPage() {
         <EndCallIcon className="w-24 h-24 text-green-500 shrink-0" />
         <div className="flex flex-col gap-2 text-center">
           <h1 className="font-display text-[1.5rem]" data-testid="call-link-heading">{heading}</h1>
-          <p className="text-[0.92rem] leading-relaxed text-sand-100/85">{t.blurb}</p>
+          <p className="text-[0.92rem] leading-relaxed text-sand-100/85" data-testid="call-link-blurb">{blurb}</p>
         </div>
         <div className="w-full flex flex-col gap-3">
           <label className="flex flex-col gap-1">
