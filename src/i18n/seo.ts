@@ -544,6 +544,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محوّل الوحدات', description: 'حوّل الطول والكتلة والحرارة والبيانات والمساحة والحجم والسرعة والزمن — مباشرةً مع تبديل ونسخ. جداول دقيقة والحرارة بمعاملات إزاحة صحيحة.' },
   },
   {
+    id: 'currency-converter',
+    en: { name: 'Currency Converter', description: 'Convert between the Saudi Riyal and world currencies at up-to-date daily reference rates — swap direction in a tap. Rates from a free public feed, cached for offline use; your amounts never leave your browser.' },
+    ar: { name: 'محوّل العملات', description: 'حوّل بين الريال السعودي وعملات العالم بأسعار مرجعية يومية محدّثة — وبدّل الاتجاه بنقرة. أسعار من مصدر عام مجاني تُحفظ للعمل دون اتصال؛ ولا تغادر مبالغك متصفحك.' },
+  },
+  {
     id: 'base64',
     en: { name: 'Base64 Convert', description: 'Encode and decode Base64 text with full UTF-8 support and a URL-safe option — entirely in your browser.' },
     ar: { name: 'ترميز وفكّ Base64', description: 'رمّز وفكّ نصوص Base64 بدعم كامل لـ UTF-8 وخيار آمن للروابط — بالكامل داخل متصفحك.' },

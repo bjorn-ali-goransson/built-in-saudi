@@ -814,3 +814,29 @@ test.describe('svg-editor', () => {
     await expect(page.getByTestId('svg-layer')).toHaveCount(1)
   })
 })
+
+test.describe('currency-converter', () => {
+  // Stub the public rates feed so the test is deterministic + offline.
+  async function stub(page: import('@playwright/test').Page) {
+    await page.route('**/v1/currencies/usd.min.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ date: '2026-07-20', usd: { sar: 3.75, eur: 0.9 } }) }))
+    await page.route('**/v1/currencies/sar.min.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ date: '2026-07-20', sar: { usd: 0.2667 } }) }))
+  }
+
+  test('converts USD→SAR at the fetched daily rate and swaps', async ({ page }) => {
+    await stub(page)
+    await page.goto('/en/apps/currency-converter')
+    // Defaults: 100 USD → SAR at 3.75 → 375.00, with the rate + date shown.
+    await expect(page.getByTestId('cur-rate')).toContainText('1 USD = 3.75 SAR')
+    await expect(page.getByTestId('cur-result')).toContainText('375')
+    await expect(page.getByTestId('cur-date')).toContainText('2026-07-20')
+    // Swap → SAR base is fetched and the direction flips.
+    await page.getByTestId('cur-swap').click()
+    await expect(page.getByTestId('cur-rate')).toContainText('1 SAR = 0.2667 USD')
+  })
+
+  test('shows an error when rates cannot be loaded', async ({ page }) => {
+    await page.route('**/v1/currencies/**', (r) => r.abort())
+    await page.goto('/en/apps/currency-converter')
+    await expect(page.getByTestId('cur-error')).toBeVisible()
+  })
+})

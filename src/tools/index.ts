@@ -96,6 +96,7 @@ import { pasteToMarkdownTool } from './paste-to-markdown/meta'
 import { arabicVerbsTool } from './arabic-verbs/meta'
 import { diacritizeTool } from './diacritize/meta'
 import { removeBackgroundTool } from './remove-background/meta'
+import { currencyConverterTool } from './currency-converter/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -107,6 +108,7 @@ export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
   removeBackgroundTool,
+  currencyConverterTool,
   promptAnalyzerTool,
   regexTesterTool,
   jwtDecoderTool,

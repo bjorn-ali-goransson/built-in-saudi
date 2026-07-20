@@ -761,6 +761,14 @@ export function CoinsIcon({ className }: P) {
   )
 }
 
+export function ExchangeIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 8h13l-3-3M20 16H7l3 3" />
+    </svg>
+  )
+}
+
 export function CakeIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

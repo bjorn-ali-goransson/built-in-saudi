@@ -1136,6 +1136,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/unit-converter"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/currency-converter/</loc>
+    <lastmod>2026-07-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/currency-converter"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/currency-converter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/currency-converter"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/currency-converter/</loc>
+    <lastmod>2026-07-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/currency-converter"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/currency-converter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/currency-converter"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/arabic-poetry/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-poetry"/>
