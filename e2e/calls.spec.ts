@@ -533,9 +533,10 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   // A link exists → the meeting buttons are hidden; the link panel is the focus.
   await expect(p.getByTestId('call-start')).toHaveCount(0)
   await expect(p.getByTestId('call-share')).toHaveCount(0)
-  // Unpublish sits below with the expiry note.
+  // Unpublish sits below AND outside the box, with the expiry note right-aligned.
   await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
   await expect(p.getByTestId('call-link-expiry')).toContainText('Expires in 6 months')
+  await expect(p.getByTestId('call-link-panel')).not.toContainText('Unpublish link')
   // URL is non-selectable (has zero-width wrap points → strip them to inspect).
   const urlText = () => p.getByTestId('call-link-url').evaluate((el) => (el.textContent || '').replace(new RegExp(String.fromCharCode(0x200b), 'g'), ''))
   expect(await urlText()).toContain('/call/?c=testcode9')

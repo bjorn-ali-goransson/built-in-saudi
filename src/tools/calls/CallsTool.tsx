@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, ShemaghIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
 import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
@@ -936,11 +936,12 @@ export default function CallsTool() {
                           className="absolute inset-y-0 end-3 my-auto w-5 h-5 accent-green-600 cursor-pointer" />
                       </>
                     ) : (
-                      // Random name → a gender toggle (hijabi ⇄ shemagh) next to shuffle.
+                      // Random name → a single female-name toggle (hijabi icon, lit when
+                      // on / dimmed when off) next to shuffle. Off = a male name.
                       <div className="absolute inset-y-0 end-1.5 my-auto h-8 flex items-center gap-1">
-                        <button type="button" onClick={toggleGender} title={gender === 'm' ? s.genderFemale : s.genderMale} aria-label={gender === 'm' ? s.genderFemale : s.genderMale} data-testid="call-gender"
-                          className="h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">
-                          {gender === 'm' ? <HijabiIcon className="w-[19px] h-[19px]" /> : <ShemaghIcon className="w-[19px] h-[19px]" />}
+                        <button type="button" onClick={toggleGender} aria-pressed={gender === 'f'} title={gender === 'f' ? s.femaleOn : s.femaleOff} aria-label={gender === 'f' ? s.femaleOn : s.femaleOff} data-testid="call-gender"
+                          className={`h-8 w-8 grid place-items-center rounded-md border-0 cursor-pointer transition-colors ${gender === 'f' ? 'text-green-600 bg-green-600/12' : 'text-ink-faint/40 bg-transparent hover:text-ink-faint hover:bg-black/5'}`}>
+                          <HijabiIcon className="w-[19px] h-[19px]" />
                         </button>
                         <button type="button" onClick={() => setName(randName(locale === 'ar', gender === 'f'))} title={s.shuffle} aria-label={s.shuffle} data-testid="call-shuffle"
                           className="h-8 w-8 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-black/5 cursor-pointer">

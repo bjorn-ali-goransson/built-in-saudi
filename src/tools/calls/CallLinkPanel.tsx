@@ -95,7 +95,8 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   }
 
   return (
-    <div className={box} data-testid="call-link-panel">
+    <>
+      <div className={box} data-testid="call-link-panel">
       {!code ? (
         <>
           <p className="text-[0.82rem] leading-relaxed text-sand-100/80">{t.blurb}</p>
@@ -121,7 +122,7 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
               )}
             </div>
             <button type="button" onClick={copy} title={copied ? t.copied : t.copy} aria-label={copied ? t.copied : t.copy} data-testid="call-link-copy"
-              className="absolute top-1 end-1 h-7 w-7 grid place-items-center rounded-md bg-white/10 hover:bg-white/20 border border-sand-100/20 text-sand-100 cursor-pointer [&_svg]:w-4 [&_svg]:h-4">
+              className="absolute bottom-1 end-1 h-7 w-7 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/70 hover:text-sand-100 cursor-pointer [&_svg]:w-4 [&_svg]:h-4">
               {copied ? <CheckIcon /> : <CopyIcon />}
             </button>
           </div>
@@ -137,17 +138,20 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
               {t.includeName}
             </label>
           </div>
-          {/* Unpublish (below), with the expiry note right-aligned. */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
-              className="inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
-              <TrashIcon /> {busy ? t.removing : t.remove}
-            </button>
-            <span className="text-[0.72rem] text-sand-100/55" data-testid="call-link-expiry">{t.expires}</span>
-          </div>
         </>
       )}
-    </div>
+      </div>
+      {/* Unpublish sits below AND outside the box; expiry note right-aligned. */}
+      {code && (
+        <div className="flex items-center justify-between gap-2 px-1" data-testid="call-link-foot">
+          <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
+            className="inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
+            <TrashIcon /> {busy ? t.removing : t.remove}
+          </button>
+          <span className="text-[0.72rem] text-sand-100/55" data-testid="call-link-expiry">{t.expires}</span>
+        </div>
+      )}
+    </>
   )
 }
 
