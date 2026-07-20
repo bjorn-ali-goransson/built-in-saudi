@@ -527,18 +527,22 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   })
   const p = await c.newPage()
   await p.goto('/en/apps/calls')
+  // The "you have set up a Call Me link" heading sits OUTSIDE the panel.
+  await expect(p.getByTestId('call-link-set-note')).toHaveText('You have set up a Call Me link:')
+  await expect(p.getByTestId('call-link-panel')).not.toContainText('You have set up')
   // A link exists → the meeting buttons are hidden; the link panel is the focus.
-  await expect(p.getByTestId('call-link-url')).toContainText('/call/?c=testcode9')
   await expect(p.getByTestId('call-start')).toHaveCount(0)
   await expect(p.getByTestId('call-share')).toHaveCount(0)
-  // Copy reflects the "call me link" framing.
-  await expect(p.getByTestId('call-link-panel')).toContainText('You have set up a Call Me link')
   await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
+  // URL is non-selectable (has zero-width wrap points → strip them to inspect).
+  const urlText = () => p.getByTestId('call-link-url').evaluate((el) => (el.textContent || '').replace(new RegExp(String.fromCharCode(0x200b), 'g'), ''))
+  expect(await urlText()).toContain('/call/?c=testcode9')
+  await expect(p.getByTestId('call-link-url')).toHaveCSS('user-select', 'none')
   // Name is included by default → rides in the URL (&n=); unchecking drops it.
   await expect(p.getByTestId('call-link-withname')).toBeChecked()
-  await expect(p.getByTestId('call-link-url')).toContainText('n=')
+  expect(await urlText()).toContain('n=')
   await p.getByTestId('call-link-withname').uncheck()
-  await expect(p.getByTestId('call-link-url')).not.toContainText('n=')
+  expect(await urlText()).not.toContain('n=')
   await c.close()
 })
 

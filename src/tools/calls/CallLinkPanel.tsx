@@ -15,8 +15,8 @@ const T = {
     permNote: 'You’ll be asked to allow notifications — that’s how your device rings when someone calls.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
-    yourLink: 'You have set up a Call Me link:', copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
-    includeName: 'Include my name in the call',
+    copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
+    includeName: 'include name in call',
     remove: 'Unpublish link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
   },
@@ -26,8 +26,8 @@ const T = {
     permNote: 'سيُطلب منك السماح بالإشعارات — بها يرنّ جهازك عند اتصال أحد.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
-    yourLink: 'لقد أنشأت رابط «اتصل بي»:', copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
-    includeName: 'أدرج اسمي في المكالمة',
+    copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
+    includeName: 'أدرج الاسم في المكالمة',
     remove: 'إلغاء نشر الرابط', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
   },
@@ -52,6 +52,10 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   // by name — and it goes into the QR image the same way.
   const base = code ? `${site}/call/?c=${code}` : ''
   const url = base && withName && name ? `${base}&n=${encodeURIComponent(name)}` : base
+  // Display copy: zero-width spaces before "?" and after "&" give clean wrap points.
+  // Shown non-selectable so nobody hand-copies the ZWSP-laced text — use Copy.
+  const ZWS = String.fromCharCode(0x200b) // zero-width space: an invisible wrap point
+  const shown = url.replace('?', ZWS + '?').replace(/&/g, '&' + ZWS)
 
   async function claim() {
     setBusy(true); setErr('')
@@ -98,9 +102,9 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
         </>
       ) : (
         <>
-          <p className="text-[0.78rem] font-medium text-sand-100/80">{t.yourLink}</p>
-          <code className="block w-full truncate text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5" data-testid="call-link-url">{url}</code>
-          <div className="flex gap-2">
+          {/* Non-selectable (has invisible wrap points) — Copy gives the clean URL. */}
+          <code className="block w-full select-none [overflow-wrap:anywhere] text-[0.82rem] font-mono text-sand-100 bg-black/20 rounded px-2 py-1.5" data-testid="call-link-url">{shown}</code>
+          <div className="flex items-center gap-2 flex-wrap">
             {canShare && (
               <button type="button" onClick={share} data-testid="call-link-share"
                 className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-md bg-sand-100 text-green-900 text-[0.85rem] font-semibold cursor-pointer hover:bg-white [&_svg]:w-4 [&_svg]:h-4">
@@ -110,13 +114,11 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
             <button type="button" className={chip} onClick={copy} data-testid="call-link-copy">
               <CopyIcon /> {copied ? t.copied : t.copy}
             </button>
-          </div>
-          {canShare && (
-            <label className="flex items-center gap-2 text-[0.78rem] text-sand-100/75 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-[0.78rem] text-sand-100/75 cursor-pointer">
               <input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} data-testid="call-link-withname" className="w-4 h-4 accent-green-500 cursor-pointer" />
               {t.includeName}
             </label>
-          )}
+          </div>
           <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
             className="self-start inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
             <TrashIcon /> {busy ? t.removing : t.remove}

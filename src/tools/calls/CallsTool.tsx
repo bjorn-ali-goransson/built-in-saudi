@@ -966,7 +966,12 @@ export default function CallsTool() {
                   </div>
                 )}
               </div>
-              {!isGuest && !initialRoom && !incomingLink && <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />}
+              {!isGuest && !initialRoom && !incomingLink && (
+                <div className="w-full flex flex-col gap-1.5">
+                  {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
+                  <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
+                </div>
+              )}
               <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>
             </>
           )}
