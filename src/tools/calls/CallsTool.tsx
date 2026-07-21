@@ -8,7 +8,7 @@ import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
-  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify,
+  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, initials,
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
@@ -82,6 +82,8 @@ export default function CallsTool() {
   const [ringCode] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-ring-code') || '') : '' } catch { return '' } })
   const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
+  // Who's ringing (carried in the ring push URL) so the incoming screen can name them.
+  const [incomingName] = useState(() => { try { return new URLSearchParams(window.location.search).get('caller') || '' } catch { return '' } })
   // An incoming ring shows a phone-style "someone is calling" screen; hosting waits
   // for the explicit Answer tap (which is also the gesture that unlocks the mic).
   const [answered, setAnswered] = useState(false)
@@ -901,10 +903,15 @@ export default function CallsTool() {
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
           ) : incomingLink && !answered ? (
-            // Incoming ring — a phone-style "someone is calling" screen. No sharing
-            // UI (someone is already calling). Answer hosts + lets the caller in.
+            // Incoming ring — a prominent, phone-style "someone is calling" screen that
+            // names the caller. No sharing UI (someone is already calling). Answer hosts
+            // + lets the caller in.
             <>
-              <p className="text-center text-[1.25rem] font-display" data-testid="call-incoming-title">{s.someoneCalling}</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-20 h-20 rounded-full grid place-items-center bg-sand-100/15 border border-sand-100/30 text-sand-100 text-[1.6rem] font-display" data-testid="call-incoming-avatar">{initials(incomingName || 'Someone')}</div>
+                <p className="text-[0.72rem] uppercase tracking-[0.22em] text-sand-100/60 mt-1">{s.incomingCall}</p>
+                <p className="text-center text-[1.5rem] font-display leading-tight" data-testid="call-incoming-title">{incomingName ? s.isCalling(incomingName) : s.someoneCalling}</p>
+              </div>
               <div className="w-full flex flex-col gap-3">
                 <button className={cream} onClick={answerCall} data-testid="call-answer"><PhoneIcon /> {s.answer}</button>
                 <button className={ghost} onClick={declineCall} data-testid="call-decline"><EndCallIcon className="w-4 h-4" /> {s.decline}</button>

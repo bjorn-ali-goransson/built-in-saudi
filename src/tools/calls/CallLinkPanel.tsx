@@ -140,7 +140,7 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
       </div>
       {/* Unpublish sits below AND outside the box; expiry note right-aligned. */}
       {code && (
-        <div className="flex items-center justify-between gap-2 px-1" data-testid="call-link-foot">
+        <div className="flex items-center justify-between gap-2" data-testid="call-link-foot">
           <button type="button" onClick={remove} disabled={busy} data-testid="call-link-remove"
             className="inline-flex items-center gap-1.5 text-[0.8rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer [&_svg]:w-3.5 [&_svg]:h-3.5">
             <TrashIcon /> {busy ? t.removing : t.remove}

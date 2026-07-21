@@ -462,13 +462,15 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await p.goto('/en') // NOT on the Calls tool — the home page
   await expect(p.getByTestId('call-answer')).toHaveCount(0)
   // Simulate the service worker delivering a ring (what happens when someone calls).
+  // The ring URL carries the caller's name so the screen can name them.
   await p.evaluate(() => {
-    const url = location.origin + '/en/apps/calls?code=ringroom&host=1&ring=1&link=mycode'
+    const url = location.origin + '/en/apps/calls?code=ringroom&host=1&ring=1&link=mycode&caller=Layla'
     navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'bis-incoming-call', url } }))
   })
-  // We land on the phone-style "someone is calling" screen.
+  // We land on the phone-style incoming screen, which names the caller.
   await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
-  await expect(p.getByTestId('call-incoming-title')).toBeVisible()
+  await expect(p.getByTestId('call-incoming-title')).toContainText('Layla is calling')
+  await expect(p.getByTestId('call-incoming-avatar')).toHaveText('L')
   await c.close()
 })
 

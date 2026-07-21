@@ -306,9 +306,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `call-ring`s the owner, and drops the visitor into the Calls tool as a **guest
   who knocks and waits** (`/apps/calls?code=<room>&knock=1`; the typed name rides in
   `sessionStorage` `bis-call-guest-name`, never the URL). `call-ring` Web-pushes the
-  owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>`.
-  `host=1`+`ring=1` shows the owner a **phone-style "Someone is calling…" screen**
-  (green, pulsing phone, **Answer**/**Decline**, **no sharing UI**) — it does NOT
+  owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>&caller=<name>`.
+  `host=1`+`ring=1` shows the owner a **prominent phone-style incoming screen that
+  names the caller** ("<name> is calling…", avatar initials + "Incoming call" label,
+  green, pulsing phone, **Answer**/**Decline**, **no sharing UI**) — `caller=<name>`
+  carries the caller's name (from `call-ring`) for that screen; it does NOT
   auto-host; the **Answer** tap hosts the room (that gesture also unlocks the mic)
   and **auto-admits the caller** who's waiting (`answeredRef` gates it). `link=<code>`
   drives the **"stop receiving calls"** affordance (no local state needed). The **shared link is `/call/?c=<code>`** (query,
