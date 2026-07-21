@@ -18,7 +18,7 @@ const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180"
 
 const STR = {
   en: {
-    select: 'Select / move', pan: 'Pan', rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', pen: 'Freehand', text: 'Text',
+    select: 'Select / move', node: 'Edit path nodes (drag to move, double-click to add/remove)', pan: 'Pan', rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', pen: 'Freehand', text: 'Text',
     undo: 'Undo', redo: 'Redo', grid: 'Grid', fit: 'Fit', code: 'Code', canvas: 'Canvas',
     none: 'none', fill: 'Fill', stroke: 'Stroke', width: 'Width', opacity: 'Opacity', textLabel: 'Text', size: 'Size',
     layers: 'Layers', empty: 'Nothing drawn yet.', up: 'Bring forward', down: 'Send backward', del: 'Delete', nothing: 'Select a shape to edit its style, or pick a tool and draw.',
@@ -27,7 +27,7 @@ const STR = {
     privacy: 'Runs entirely in your browser — nothing is uploaded.', saved: (b: number, a: number) => `${fmt(b)} → ${fmt(a)} (−${b > 0 ? Math.max(0, Math.round((1 - a / b) * 100)) : 0}%)`,
   },
   ar: {
-    select: 'تحديد / تحريك', pan: 'تحريك العرض', rect: 'مستطيل', ellipse: 'شكل بيضوي', line: 'خط', pen: 'رسم حر', text: 'نص',
+    select: 'تحديد / تحريك', node: 'تحرير عُقد المسار (اسحب للتحريك، نقر مزدوج للإضافة/الحذف)', pan: 'تحريك العرض', rect: 'مستطيل', ellipse: 'شكل بيضوي', line: 'خط', pen: 'رسم حر', text: 'نص',
     undo: 'تراجع', redo: 'إعادة', grid: 'شبكة', fit: 'ملاءمة', code: 'الكود', canvas: 'اللوحة',
     none: 'بلا', fill: 'التعبئة', stroke: 'الحد', width: 'العرض', opacity: 'الشفافية', textLabel: 'النص', size: 'الحجم',
     layers: 'الطبقات', empty: 'لا يوجد رسم بعد.', up: 'إلى الأمام', down: 'إلى الخلف', del: 'حذف', nothing: 'حدّد شكلًا لتعديل نمطه، أو اختر أداة وارسم.',

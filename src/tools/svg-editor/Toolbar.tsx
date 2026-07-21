@@ -2,10 +2,11 @@
 // and the global actions (undo / redo). Icons are inline SVG (no emoji).
 import type { Editor, Tool } from './useEditor'
 
-type Str = { select: string; pan: string; rect: string; ellipse: string; line: string; pen: string; text: string; undo: string; redo: string }
+type Str = { select: string; node: string; pan: string; rect: string; ellipse: string; line: string; pen: string; text: string; undo: string; redo: string }
 
 const I = {
   select: <path d="M5 3l14 7-6 2-2 6z" />,
+  node: <><path d="M5 17c3-8 11-8 14 0" /><rect x="3" y="15" width="4" height="4" rx="0.5" /><rect x="17" y="15" width="4" height="4" rx="0.5" /><rect x="10" y="4" width="4" height="4" rx="0.5" /></>,
   pan: <path d="M9 11V6a1.5 1.5 0 013 0v4m0 0V4.5a1.5 1.5 0 013 0V11m0-1a1.5 1.5 0 013 0v5a5 5 0 01-5 5h-1.6a4 4 0 01-2.9-1.2L6 15.5a1.5 1.5 0 012.2-2L9 14" />,
   rect: <rect x="4" y="6" width="16" height="12" rx="1" />,
   ellipse: <ellipse cx="12" cy="12" rx="8" ry="6" />,
@@ -16,6 +17,7 @@ const I = {
 
 const TOOLS: { tool: Tool; icon: keyof typeof I; key: keyof Str }[] = [
   { tool: 'select', icon: 'select', key: 'select' },
+  { tool: 'node', icon: 'node', key: 'node' },
   { tool: 'pan', icon: 'pan', key: 'pan' },
   { tool: 'rect', icon: 'rect', key: 'rect' },
   { tool: 'ellipse', icon: 'ellipse', key: 'ellipse' },

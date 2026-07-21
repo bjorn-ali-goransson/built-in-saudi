@@ -2,18 +2,39 @@
 // handles all pointer work: drawing new shapes, selecting, moving, resizing via
 // 8 handles, plus pan (pan tool / middle-drag / space-drag) and wheel-zoom.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Editor } from './useEditor'
-import { bbox, translate, scale, pathD, uid, DEFAULT_FILL, type Shape, type Box, type Pt } from './model'
+import type { Editor, Doc } from './useEditor'
+import { bbox, translate, scale, pathD, uid, DEFAULT_FILL, type Shape, type PathShape, type Box, type Pt } from './model'
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
 const CURSOR: Record<Handle, string> = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize' }
 
 type Drag =
-  | { mode: 'move'; start: Pt; before: Shape }
-  | { mode: 'resize'; start: Pt; before: Shape; handle: Handle; box: Box }
+  | { mode: 'move'; start: Pt; before: Shape; beforeDoc: Doc; moved: boolean }
+  | { mode: 'resize'; start: Pt; before: Shape; handle: Handle; box: Box; beforeDoc: Doc; moved: boolean }
+  | { mode: 'node'; start: Pt; before: PathShape; index: number; beforeDoc: Doc; moved: boolean }
   | { mode: 'draw'; start: Pt; id: string }
   | { mode: 'pan'; startClient: Pt; startView: { x: number; y: number } }
+
+/** Distance from p to segment a–b, plus the projection, for node insertion. */
+function segDist(a: Pt, b: Pt, p: Pt): number {
+  const dx = b.x - a.x, dy = b.y - a.y
+  const len2 = dx * dx + dy * dy
+  const t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+}
+
+/** Index of the segment (start point) nearest to p, and its distance. */
+function nearestSeg(s: PathShape, p: Pt): { index: number; dist: number } {
+  let best = { index: -1, dist: Infinity }
+  const n = s.pts.length
+  const last = s.closed ? n : n - 1
+  for (let i = 0; i < last; i++) {
+    const d = segDist(s.pts[i], s.pts[(i + 1) % n], p)
+    if (d < best.dist) best = { index: i, dist: d }
+  }
+  return best
+}
 
 function handlePos(b: Box, h: Handle): Pt {
   const mx = b.x + b.w / 2, my = b.y + b.h / 2
@@ -29,16 +50,24 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
   const [upp, setUpp] = useState(1) // user units per CSS pixel (for constant-size handles)
   const { doc, view, tool, selected, selectedShape } = ed
 
-  // Track the on-screen scale so handles/outlines stay a constant pixel size.
+  // Track the on-screen scale so handles/nodes stay a constant pixel size. With
+  // preserveAspectRatio="meet" the uniform scale is the SMALLER axis ratio, so
+  // derive user-units-per-pixel from that (not width alone) to stay correct when
+  // the canvas is letterboxed.
   useLayoutEffect(() => {
     const el = svgRef.current
     if (!el) return
-    const measure = () => { const r = el.getBoundingClientRect(); if (r.width) setUpp(view.w / r.width) }
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height) return
+      const scale = Math.min(r.width / view.w, r.height / view.h)
+      if (scale > 0) setUpp(1 / scale)
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view.w])
+  }, [view.w, view.h])
 
   // Measure imported `raw` shapes' intrinsic bounds (for their selection box).
   useLayoutEffect(() => {
@@ -110,14 +139,43 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
       ed.add({ id: uid(), ...DEFAULT_FILL, stroke: 'none', strokeWidth: 0, type: 'text', x: p.x, y: p.y, text: 'Text', fontSize: 24 })
       return
     }
+    // Node tool: click just (re)selects a shape; node handles start their own drag.
+    if (tool === 'node') { const hit = hitTest(p); ed.setSelected(hit ? hit.id : null); return }
     if (tool !== 'select') { startDraw(p); return }
     // Select tool: a resize handle was hit? (handled by handle's own onPointerDown)
     const hit = hitTest(p)
     if (hit) {
       ed.setSelected(hit.id)
-      drag.current = { mode: 'move', start: p, before: hit }
+      drag.current = { mode: 'move', start: p, before: hit, beforeDoc: doc, moved: false }
     } else {
       ed.setSelected(null)
+    }
+  }
+
+  function onNodeDown(e: React.PointerEvent, index: number) {
+    e.stopPropagation()
+    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    if (!selectedShape || selectedShape.type !== 'path') return
+    drag.current = { mode: 'node', start: toUser(e), before: selectedShape, index, beforeDoc: doc, moved: false }
+  }
+
+  // Double-click with the node tool: on a node → delete it; on a segment → insert one.
+  function onDoubleClick(e: React.MouseEvent) {
+    if (tool !== 'node' || !selectedShape || selectedShape.type !== 'path') return
+    const s = selectedShape
+    const p = toUser(e)
+    const hitR = 8 * upp
+    const ni = s.pts.findIndex((pt) => Math.hypot(pt.x - p.x, pt.y - p.y) <= hitR)
+    if (ni >= 0) {
+      if (s.pts.length <= 2) return
+      ed.update(s.id, { pts: s.pts.filter((_, i) => i !== ni) } as Partial<Shape>)
+      return
+    }
+    const seg = nearestSeg(s, p)
+    if (seg.index >= 0 && seg.dist <= 12 * upp) {
+      const pts = s.pts.slice()
+      pts.splice(seg.index + 1, 0, { x: p.x, y: p.y })
+      ed.update(s.id, { pts } as Partial<Shape>)
     }
   }
 
@@ -136,7 +194,7 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
     e.stopPropagation()
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
     if (!selectedShape) return
-    drag.current = { mode: 'resize', start: toUser(e), before: selectedShape, handle: h, box: boxOf(selectedShape) }
+    drag.current = { mode: 'resize', start: toUser(e), before: selectedShape, handle: h, box: boxOf(selectedShape), beforeDoc: doc, moved: false }
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -150,11 +208,19 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
     }
     if (d.mode === 'draw') { moveDraw(p, d.id, d.start); return }
     if (d.mode === 'move') {
+      d.moved = true
       const dx = p.x - d.start.x, dy = p.y - d.start.y
       ed.set((doc2) => ({ ...doc2, shapes: doc2.shapes.map((s) => (s.id === d.before.id ? translate(d.before, dx, dy) : s)) }))
       return
     }
+    if (d.mode === 'node') {
+      d.moved = true
+      const pts = d.before.pts.map((pt, i) => (i === d.index ? { x: p.x, y: p.y } : pt))
+      ed.set((doc2) => ({ ...doc2, shapes: doc2.shapes.map((s) => (s.id === d.before.id ? { ...d.before, pts } : s)) }))
+      return
+    }
     if (d.mode === 'resize') {
+      d.moved = true
       const b = d.box, bw = b.w || 1, bh = b.h || 1
       let x1 = b.x, y1 = b.y, x2 = b.x + b.w, y2 = b.y + b.h
       if (d.handle.includes('w')) x1 = p.x
@@ -172,6 +238,9 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
     const d = drag.current
     drag.current = null
     if (!d) return
+    // A completed move/resize/node drag is one undo step (recorded on release so
+    // the whole gesture collapses to a single entry).
+    if ((d.mode === 'move' || d.mode === 'resize' || d.mode === 'node') && d.moved) { ed.record(d.beforeDoc); return }
     // Drop zero-size drawings; they were an accidental click.
     if (d.mode === 'draw') {
       ed.set((doc2) => {
@@ -206,25 +275,36 @@ export function Canvas({ ed, showGrid }: { ed: Editor; showGrid: boolean }) {
     return () => window.removeEventListener('keydown', key)
   }, [selected, ed])
 
+  const nodeEditing = tool === 'node' && selectedShape?.type === 'path'
   const selBox = selectedShape ? boxOf(selectedShape) : null
   const hs = 4 * upp // handle half-size
+  const nr = 5 * upp // node handle radius
 
   return (
     <svg ref={svgRef} data-testid="svg-canvas" viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
       className="w-full h-full touch-none select-none"
-      style={{ cursor: tool === 'pan' ? 'grab' : tool === 'select' ? 'default' : 'crosshair', backgroundImage: 'conic-gradient(#eee9dd 25%, #fbfaf6 0 50%, #eee9dd 0 75%, #fbfaf6 0)', backgroundSize: '20px 20px' }}
-      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp} onWheel={onWheel}>
+      style={{ cursor: tool === 'pan' ? 'grab' : tool === 'select' || tool === 'node' ? 'default' : 'crosshair', backgroundImage: 'conic-gradient(#eee9dd 25%, #fbfaf6 0 50%, #eee9dd 0 75%, #fbfaf6 0)', backgroundSize: '20px 20px' }}
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp} onWheel={onWheel} onDoubleClick={onDoubleClick}>
       {/* the artboard */}
       <rect x={0} y={0} width={doc.width} height={doc.height} fill="#ffffff" stroke="#00000018" strokeWidth={upp} data-testid="svg-artboard" />
       {showGrid && <GridLines w={doc.width} h={doc.height} step={20} upp={upp} />}
       {doc.shapes.map((s) => <ShapeNode key={s.id} s={s} />)}
-      {selBox && (
+      {selBox && !nodeEditing && (
         <g data-testid="svg-selection" pointerEvents="all">
           <rect x={selBox.x} y={selBox.y} width={selBox.w} height={selBox.h} fill="none" stroke="#1f7a3f" strokeWidth={1.5 * upp} strokeDasharray={`${4 * upp} ${3 * upp}`} pointerEvents="none" />
           {HANDLES.map((h) => {
             const pos = handlePos(selBox, h)
             return <rect key={h} data-handle={h} x={pos.x - hs} y={pos.y - hs} width={hs * 2} height={hs * 2} fill="#fff" stroke="#1f7a3f" strokeWidth={1.2 * upp} style={{ cursor: CURSOR[h] }} onPointerDown={(e) => onHandleDown(e, h)} />
           })}
+        </g>
+      )}
+      {nodeEditing && selectedShape.type === 'path' && (
+        <g data-testid="svg-nodes">
+          {/* thin overlay of the path so segments are easy to double-click on */}
+          <path d={pathD(selectedShape)} fill="none" stroke="#1f7a3f" strokeWidth={1 * upp} pointerEvents="none" opacity={0.6} />
+          {selectedShape.pts.map((pt, i) => (
+            <circle key={i} data-node={i} cx={pt.x} cy={pt.y} r={nr} fill="#fff" stroke="#1f7a3f" strokeWidth={1.4 * upp} style={{ cursor: 'move' }} onPointerDown={(e) => onNodeDown(e, i)} />
+          ))}
         </g>
       )}
     </svg>

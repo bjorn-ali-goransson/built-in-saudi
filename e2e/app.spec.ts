@@ -813,6 +813,40 @@ test.describe('svg-editor', () => {
     await expect(page.getByTestId('svg-canvas')).toBeVisible()
     await expect(page.getByTestId('svg-layer')).toHaveCount(1)
   })
+
+  test('edits path nodes — drag, add and remove', async ({ page }) => {
+    await page.goto('/en/apps/svg-editor')
+    // Load a deterministic 3-point open path via the code view.
+    await page.getByTestId('svg-code-toggle').click()
+    await page.getByTestId('svg-code').fill('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><polyline points="40,40 150,40 100,150" fill="none" stroke="#0a0" stroke-width="3"/></svg>')
+    await page.getByTestId('svg-code-apply').click()
+    // Node tool + select the path from the layers list → its 3 nodes appear.
+    await page.getByTestId('svg-tool-node').click()
+    await page.getByTestId('svg-layer').first().click()
+    await expect(page.getByTestId('svg-nodes')).toBeVisible()
+    await expect(page.locator('[data-node]')).toHaveCount(3)
+
+    // Drag the first node — it should move on screen.
+    const n0 = page.locator('[data-node="0"]')
+    const before = (await n0.boundingBox())!
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(before.x + 40, before.y + 30, { steps: 5 })
+    await page.mouse.up()
+    const after = (await n0.boundingBox())!
+    expect(Math.abs(after.x - before.x) + Math.abs(after.y - before.y)).toBeGreaterThan(8)
+
+    // Double-click the midpoint of segment 0–1 → a node is inserted (3 → 4).
+    const b0 = (await page.locator('[data-node="0"]').boundingBox())!
+    const b1 = (await page.locator('[data-node="1"]').boundingBox())!
+    await page.mouse.dblclick((b0.x + b0.width / 2 + b1.x + b1.width / 2) / 2, (b0.y + b0.height / 2 + b1.y + b1.height / 2) / 2)
+    await expect(page.locator('[data-node]')).toHaveCount(4)
+
+    // Double-click an existing node → it is removed (4 → 3).
+    const bn = (await page.locator('[data-node="2"]').boundingBox())!
+    await page.mouse.dblclick(bn.x + bn.width / 2, bn.y + bn.height / 2)
+    await expect(page.locator('[data-node]')).toHaveCount(3)
+  })
 })
 
 test.describe('currency-converter', () => {

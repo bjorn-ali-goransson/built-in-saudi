@@ -4,7 +4,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { Shape, Fill } from './model'
 
-export type Tool = 'select' | 'pan' | 'rect' | 'ellipse' | 'line' | 'path' | 'text'
+export type Tool = 'select' | 'node' | 'pan' | 'rect' | 'ellipse' | 'line' | 'path' | 'text'
 export type Doc = { shapes: Shape[]; width: number; height: number }
 export type View = { x: number; y: number; w: number; h: number }
 
