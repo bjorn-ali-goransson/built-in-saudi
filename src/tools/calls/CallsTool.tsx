@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
-import { CallRoom, roomStatus, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import {
@@ -12,7 +12,7 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile,
+  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { getMyCallLink, ringCallLink } from '../../lib/callLink'
@@ -65,7 +65,12 @@ export default function CallsTool() {
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
   const [graceEndsAt, setGraceEndsAt] = useState<number | null>(null) // host-disconnect deadline
   const hadHost = useRef(false)
-  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone'; count: number }>({ reason: 'gone', count: 0 })
+  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone' | 'declined'; count: number; message?: string }>({ reason: 'gone', count: 0 })
+  // Busy-call handling: a ring that arrives while we're in a call surfaces as a
+  // banner (not a takeover). `declineTarget` opens the "send a note" composer.
+  const [incomingRing, setIncomingRing] = useState<{ room: string; caller: string } | null>(null)
+  const [declineTarget, setDeclineTarget] = useState<{ room: string; mode: 'screen' | 'banner' } | null>(null)
+  const addWindowRef = useRef(0) // admit knockers until this time (owner chose "Add to call")
 
   const rtc = useRef<CallRoom | null>(null)
   // On-screen diagnostics (connection + media state) for debugging. Enabled purely
@@ -282,8 +287,9 @@ export default function CallsTool() {
     for (const [id, info] of waiting) if (!knockSeen.current.has(id)) { knockSeen.current.add(id); freshNames.push(info.name || '•') }
     if (freshNames.length) {
       setShareOpen(false)
-      // If we answered an incoming ring, the caller who knocks comes straight in.
-      if (!isGuest && answeredRef.current) { for (const [id] of waiting) admit(id) }
+      // If we answered an incoming ring — or just chose "Add to call" while busy —
+      // the caller who knocks comes straight in.
+      if (!isGuest && (answeredRef.current || Date.now() < addWindowRef.current)) { for (const [id] of waiting) admit(id) }
       else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
@@ -382,6 +388,11 @@ export default function CallsTool() {
       // The relay closed. If WE already hung up (phase 'ended'), leave that screen
       // as-is — don't overwrite "you left / you ended" with "meeting can't be found".
       onClosed: () => { rtc.current = null; if (phaseRef.current === 'ended') return; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
+      // Waiting caller: the busy owner told us to join their current call instead —
+      // re-knock in that room (our name is already in sessionStorage).
+      onRedirect: (dest) => { try { window.location.assign(`${localePath(locale, '/apps/calls')}?code=${dest}&knock=1`) } catch { /* */ } },
+      // Waiting caller: the owner declined us, optionally with a note to show.
+      onDeclined: (message) => { rtc.current?.close(); rtc.current = null; setEnded({ reason: 'declined', count: 0, message }); setPhase('ended') },
       onPollCycle: (delayMs) => {
         // A poll just finished → hide the spinner, then re-show it once half the
         // wait has passed, so it signals "checking again" only while lobby-waiting.
@@ -415,8 +426,40 @@ export default function CallsTool() {
   // Answer an incoming ring: host the room (the tap unlocks the mic) and let the
   // caller in as soon as they knock (answeredRef gates the auto-admit below).
   function answerCall() { setAnswered(true); answeredRef.current = true; startHost() }
-  // Decline: leave the ring behind and land on a clean start screen.
-  function declineCall() { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
+  // Decline the full incoming ring — open the "send a note" composer first.
+  function declineCall() { setDeclineTarget({ room: initialRoom, mode: 'screen' }) }
+  // Busy: a ring arrived while we're in a call — surfaced as a banner via the
+  // global useIncomingCall hook. Add-to-call redirects the caller into THIS room;
+  // Decline opens the note composer aimed at the caller's room.
+  useEffect(() => {
+    function onRing(e: Event) {
+      if (phaseRef.current !== 'live') return
+      try {
+        const url = (e as CustomEvent<{ url?: string }>).detail?.url || ''
+        const p = new URLSearchParams(url.split('?')[1] || '')
+        const rm = p.get('code') || ''
+        if (rm) setIncomingRing({ room: rm, caller: p.get('caller') || '' })
+      } catch { /* */ }
+    }
+    window.addEventListener('bis-incoming-ring', onRing)
+    return () => window.removeEventListener('bis-incoming-ring', onRing)
+  }, [])
+  function addToCall() {
+    if (!incomingRing || !room) return
+    signalRoom(incomingRing.room, 'redirect', { room })
+    addWindowRef.current = Date.now() + 60_000 // auto-admit their knock for a minute
+    setToast(s.addingToCall); setTimeout(() => setToast(''), 3500)
+    setIncomingRing(null)
+  }
+  // Send the decline note (canned or custom; may be empty) to the caller's room,
+  // then dismiss — leaving a live call intact, or exiting the incoming screen.
+  function sendDecline(msg: string) {
+    const target = declineTarget
+    setDeclineTarget(null)
+    if (!target) return
+    signalRoom(target.room, 'decline', { msg: msg.slice(0, 200) })
+    if (target.mode === 'screen') { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
+  }
   // Escape a stale ?room= link: drop the room, become a host, clean the URL.
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
@@ -856,6 +899,9 @@ export default function CallsTool() {
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
   const ringing = !!incomingLink && !answered
   const phoneLogo = <EndCallIcon className={`w-24 h-24 text-green-500 shrink-0 ${ringing ? 'animate-pulse' : ''}`} />
+  const declineComposerEl = declineTarget ? (
+    <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
+  ) : null
 
   if (phase === 'ended') {
     return (
@@ -870,6 +916,13 @@ export default function CallsTool() {
                 <button className={cream} onClick={rejoin} data-testid="call-rejoin">{s.rejoin}</button>
                 <button className={ghost} onClick={newCall}>{s.createNew}</button>
               </div>
+            </>
+          ) : ended.reason === 'declined' ? (
+            // The link owner declined this caller — show their note as the reason.
+            <>
+              <p className="text-[1.2rem] font-display" data-testid="call-declined">{s.declinedTitle}</p>
+              <p className="text-[0.95rem] text-sand-100/85 leading-relaxed" data-testid="call-declined-msg">{ended.message?.trim() ? `“${ended.message.trim()}”` : s.declinedGeneric}</p>
+              <button className={cream} onClick={newCall}>{s.createNew}</button>
             </>
           ) : (
             <>
@@ -1003,6 +1056,7 @@ export default function CallsTool() {
 
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
+        {declineComposerEl}
       </div>
     )
   }
@@ -1134,6 +1188,20 @@ export default function CallsTool() {
       onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragOver(false) }}
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
       {shareModal}
+      {declineComposerEl}
+      {/* Busy: a personal-link ring arrived while we're in a call — a docked banner
+          (not a takeover). Add pulls them into THIS room; Decline sends a note. */}
+      {incomingRing && (
+        <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-busy-banner">
+          <span className="w-9 h-9 rounded-full grid place-items-center bg-white/15 text-[0.8rem] font-semibold shrink-0">{initials(incomingRing.caller || 'Someone')}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.92rem] font-semibold leading-tight truncate">{s.busyRinging(incomingRing.caller)}</p>
+            <p className="text-[0.75rem] text-sand-100/70">{s.inACall}</p>
+          </div>
+          <button onClick={addToCall} data-testid="call-busy-add" className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white flex items-center gap-1.5 [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.addToCall}</button>
+          <button onClick={() => { setDeclineTarget({ room: incomingRing.room, mode: 'banner' }); setIncomingRing(null) }} data-testid="call-busy-decline" className="h-9 px-3 rounded-md bg-white/10 text-sand-100 text-[0.85rem] font-medium border border-sand-100/25 cursor-pointer hover:bg-white/20">{s.decline}</button>
+        </div>
+      )}
       <AudioSinks streams={[...peers.entries()]} sinkId={spkId} />
       {/* ---- sticky toolbar (replaces the site navbar during a call) ---- */}
       <header className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)] flex-wrap">

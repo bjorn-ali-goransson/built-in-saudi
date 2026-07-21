@@ -53,6 +53,33 @@ export function IconBtn({ onClick, title, active, danger, children, testid, badg
   )
 }
 
+// "Send them a quick note" composer, shown when the link owner declines a caller.
+// Canned choices fill the box; the note (canned or custom, possibly empty) is what
+// the caller sees as the reason. Rendered as an edge-docked bottom sheet.
+export function DeclineComposer({ title, canned, placeholder, sendLabel, justLabel, cancelLabel, onSend, onCancel }: { title: string; canned: string[]; placeholder: string; sendLabel: string; justLabel: string; cancelLabel: string; onSend: (msg: string) => void; onCancel: () => void }) {
+  const [text, setText] = useState('')
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50" onClick={onCancel} data-testid="call-decline-composer">
+      <div className="w-full sm:max-w-[26rem] bg-paper text-ink border-t sm:border border-[color:var(--line-soft)] sm:rounded-lg p-4 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[0.95rem] font-semibold">{title}</p>
+        <div className="flex flex-wrap gap-2">
+          {canned.map((c) => (
+            <button key={c} type="button" onClick={() => setText(c)} data-testid="call-decline-canned"
+              className={`text-[0.8rem] px-2.5 h-8 rounded-md border cursor-pointer transition-colors ${text === c ? 'border-green-600 bg-green-600/10 text-green-800' : 'border-[color:var(--line-soft)] bg-transparent text-ink-soft hover:bg-black/5'}`}>{c}</button>
+          ))}
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 200))} placeholder={placeholder} rows={2} data-testid="call-decline-text"
+          className="w-full resize-none rounded-md border border-[color:var(--line-soft)] bg-paper px-3 py-2 text-[0.9rem] outline-none focus:border-green-600" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="primary" onClick={() => onSend(text.trim())} data-testid="call-decline-send">{sendLabel}</Button>
+          <button type="button" onClick={() => onSend('')} data-testid="call-decline-just" className="text-[0.82rem] text-ink-faint hover:text-ink bg-transparent border-0 cursor-pointer underline underline-offset-2">{justLabel}</button>
+          <button type="button" onClick={onCancel} data-testid="call-decline-cancel" className="ms-auto text-[0.82rem] text-ink-faint hover:text-ink bg-transparent border-0 cursor-pointer">{cancelLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // A dropdown: a trigger button + a floating panel that closes on outside click.
 export function Menu({ trigger, triggerClass, children, align = 'start', up, testid, full }: { trigger: ReactNode; triggerClass?: string; children: ReactNode; align?: 'start' | 'end'; up?: boolean; testid?: string; full?: boolean }) {
   const [open, setOpen] = useState(false)

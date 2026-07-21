@@ -313,7 +313,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   carries the caller's name (from `call-ring`) for that screen; it does NOT
   auto-host; the **Answer** tap hosts the room (that gesture also unlocks the mic)
   and **auto-admits the caller** who's waiting (`answeredRef` gates it). `link=<code>`
-  drives the **"stop receiving calls"** affordance (no local state needed). The **shared link is `/call/?c=<code>`** (query,
+  drives the **"stop receiving calls"** affordance (no local state needed).
+  **Busy handling:** if a ring arrives while the owner is **already in a call**,
+  `useIncomingCall` doesn't yank them out — it dispatches a `bis-incoming-ring`
+  window event and the live CallsTool shows a **docked banner** ("<name> is
+  calling · you're in a call") with **Add to this call** / **Decline**. *Add* posts a
+  `redirect`→(current room) to the caller's room via `signalRoom` (a one-off relay
+  send in `rtc.ts`, no CallRoom needed) and opens a 60s **auto-admit window**
+  (`addWindowRef`) so the caller's knock in the current room comes straight in.
+  *Decline* — on the banner AND the full incoming screen — opens a **"send a note"
+  composer** (`DeclineComposer` in `parts.tsx`; canned + custom, ≤200 chars) that
+  posts a `decline`+msg to the caller's room; the waiting caller's `onDeclined`
+  handler shows an **ended "Call declined"** screen with that note as the reason.
+  These two owner→caller controls (`redirect`/`decline`) are the only relay
+  messages sent cross-room; everything else is per-room handshake. The **shared link is `/call/?c=<code>`** (query,
   not path) so it resolves to the one **prerendered `/call/` page** (`vite.config.ts`)
   that carries a readable share preview; `/call/<code>` path still works. The tool
   keeps a tiny `bis-call-link` localStorage pointer (the code) so the owner's link is

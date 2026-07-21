@@ -456,6 +456,32 @@ test('a /call visitor waits until the link owner (from the ring) admits them', a
   await a.close(); await b.close()
 })
 
+test('the link owner can decline a caller with a note, and the caller sees it', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  await a.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+
+  await pa.goto('/call/?c=ownercode2')
+  await pa.getByTestId('call-link-name').fill('Alice')
+  await pa.getByTestId('call-link-call').click()
+  await expect(pa.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  // Owner opens the named incoming screen and declines with a canned note.
+  await pb.goto(`/en/apps/calls?code=${room}&host=1&ring=1&link=ownercode2&caller=Alice`, { waitUntil: 'domcontentloaded' })
+  await expect(pb.getByTestId('call-incoming-title')).toContainText('Alice is calling')
+  await pb.getByTestId('call-decline').click()
+  await expect(pb.getByTestId('call-decline-composer')).toBeVisible()
+  await pb.getByTestId('call-decline-canned').first().click()
+  await expect(pb.getByTestId('call-decline-text')).not.toHaveValue('')
+  await pb.getByTestId('call-decline-send').click()
+
+  // Alice (still waiting) is shown she was declined, with the note.
+  await expect(pa.getByTestId('call-declined')).toBeVisible({ timeout: 15_000 })
+  await expect(pa.getByTestId('call-declined-msg')).toContainText('talk right now')
+  await a.close(); await b.close()
+})
+
 test('an incoming-call ring pulls you to the call screen from anywhere on the site', async ({ browser }) => {
   const c = await browser.newContext()
   const p = await c.newPage()

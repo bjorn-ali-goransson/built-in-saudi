@@ -22,6 +22,15 @@ export async function roomStatus(room: string): Promise<'open' | 'closed' | 'mis
   } catch { return 'open' }
 }
 
+/** One-off relay message into a room we're not connected to — used by a busy link
+ *  owner to tell a waiting caller (in their own room) to switch rooms or that they
+ *  were declined. Fire-and-forget; the caller's poll loop picks it up. */
+export async function signalRoom(room: string, type: 'redirect' | 'decline', payload: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'own' + Math.random().toString(36).slice(2, 8), to: 'all', action: 'send', type, payload }) })
+  } catch { /* fire-and-forget */ }
+}
+
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
@@ -82,6 +91,11 @@ export interface CallHandlers {
   onMuteNotice?(by: string, targetId: string, targetIsMe: boolean): void
   /** The meeting was closed (host ended it, or it was nuked after a disconnect). */
   onClosed?(): void
+  /** A waiting caller was told (by the link owner, over the relay) to join another
+   *  room instead — the owner is busy and chose to add them to their current call. */
+  onRedirect?(room: string): void
+  /** A waiting caller was declined by the link owner, with a short reason to show. */
+  onDeclined?(message: string): void
   /** Fired each poll cycle with the delay (ms) until the next relay poll — the UI
    *  uses it to show a "checking again" spinner partway through the wait. */
   onPollCycle?(delayMs: number): void
@@ -217,6 +231,9 @@ export class CallRoom {
     else if (type === 'offer' || type === 'answer') await this.onDesc(from, payload as RTCSessionDescriptionInit, type)
     else if (type === 'ice') { const c = payload as RTCIceCandidateInit; const p = this.peers.get(from); if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c) }
     else if (type === 'leave') this.drop(from)
+    // Owner→waiting-caller control (sent from another room via signalRoom).
+    else if (type === 'redirect') { const r = String((payload as { room?: string })?.room || ''); if (r) this.h.onRedirect?.(r) }
+    else if (type === 'decline') this.h.onDeclined?.(String((payload as { msg?: string })?.msg || ''))
   }
 
   // Form a data-only connection. The larger id creates the channel (initiator).

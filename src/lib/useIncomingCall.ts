@@ -11,7 +11,9 @@ export function useIncomingCall() {
     const onMsg = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null
       if (!d || d.type !== 'bis-incoming-call' || typeof d.url !== 'string') return
-      if (isInCall()) return // don't yank someone out of an active call
+      // Already in a call → don't yank them out. Hand the ring to the live Calls UI
+      // (a "someone's calling, you're busy" banner) instead of dropping it silently.
+      if (isInCall()) { try { window.dispatchEvent(new CustomEvent('bis-incoming-ring', { detail: { url: d.url } })) } catch { /* */ } return }
       try { if (new URLSearchParams(window.location.search).has('ring')) return } catch { /* */ }
       try { window.location.assign(d.url) } catch { /* */ }
     }
