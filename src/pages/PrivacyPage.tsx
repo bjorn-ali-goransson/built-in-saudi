@@ -37,6 +37,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         p: [
           'With your explicit consent, Book With Me uses the Google Calendar “events” scope for two purposes only: (1) to read your events so the booking page never offers a slot when you already have something on your calendar, and (2) to create a calendar event when someone books with you (including a Google Meet link if you enabled it). We never modify or delete your existing events, and we store a refresh token only to perform these two actions on your behalf.',
           'Built in Saudi’s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We do not sell this data, do not use it for advertising, and do not share it with third parties except as needed to provide the feature (Google itself).',
+          'All data is transmitted over an encrypted connection (HTTPS/TLS) and stored in Google Cloud (Firestore) with restricted access; the refresh token is held only as a server-side secret and is never exposed to the browser.',
           'You can revoke our access at any time from your Google Account’s security settings (Third-party access), or by contacting us to delete your host record.',
         ],
       },
@@ -114,8 +115,9 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
       {
         h: '«احجز معي» — بيانات تقويم جوجل',
         p: [
-          'بموافقتك الصريحة، تستخدم «احجز معي» صلاحيتَي «الأحداث» و«أوقات الانشغال» في تقويم جوجل لغرضين فقط: (١) قراءة أوقات انشغالك حتى لا تعرض صفحة الحجز وقتًا أنت مشغول فيه، و(٢) إنشاء حدث في التقويم عند الحجز. ونحفظ رمز تحديث للقيام بذلك نيابةً عنك.',
+          'بموافقتك الصريحة، تستخدم «احجز معي» صلاحية «الأحداث» في تقويم جوجل لغرضين فقط: (١) قراءة أحداثك لحساب أوقات انشغالك حتى لا تعرض صفحة الحجز وقتًا أنت مشغول فيه، و(٢) إنشاء حدث في التقويم عند الحجز (مع رابط Google Meet إن فعّلته). لا نعدّل أو نحذف أحداثك القائمة، ونحفظ رمز تحديث فقط للقيام بهذين الإجراءين نيابةً عنك.',
           'يلتزم «بُنِيَ في السعودية» في استخدامه ونقله للمعلومات الواردة من واجهات جوجل بسياسة بيانات مستخدم خدمات واجهات جوجل، بما في ذلك متطلبات الاستخدام المحدود. لا نبيع هذه البيانات، ولا نستخدمها للإعلانات، ولا نشاركها مع أطراف ثالثة إلا بالقدر اللازم لتقديم الميزة (جوجل نفسها).',
+          'تُنقل جميع البيانات عبر اتصال مُعمّى (HTTPS/TLS) وتُخزَّن في Google Cloud (Firestore) بصلاحيات وصول مقيّدة؛ ويُحفظ رمز التحديث كسرٍّ في الخادم فقط ولا يُكشف للمتصفح إطلاقًا.',
           'يمكنك إلغاء وصولنا في أي وقت من إعدادات أمان حساب جوجل (وصول الجهات الخارجية)، أو بمراسلتنا لحذف سجلك.',
         ],
       },
