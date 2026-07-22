@@ -8,7 +8,7 @@ import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
-  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, initials,
+  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify,
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
@@ -65,7 +65,7 @@ export default function CallsTool() {
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
   const [graceEndsAt, setGraceEndsAt] = useState<number | null>(null) // host-disconnect deadline
   const hadHost = useRef(false)
-  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone' | 'declined'; count: number; message?: string }>({ reason: 'gone', count: 0 })
+  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone' | 'declined' | 'notadmitted'; count: number; message?: string }>({ reason: 'gone', count: 0 })
   // Busy-call handling: a ring that arrives while we're in a call surfaces as a
   // banner (not a takeover). `declineTarget` opens the "send a note" composer.
   const [incomingRing, setIncomingRing] = useState<{ room: string; caller: string } | null>(null)
@@ -444,6 +444,14 @@ export default function CallsTool() {
     window.addEventListener('bis-incoming-ring', onRing)
     return () => window.removeEventListener('bis-incoming-ring', onRing)
   }, [])
+  // The busy banner has no live channel to the caller's room, so if the caller
+  // gives up (hangs up / closes the tab) nothing tells us — auto-dismiss it after a
+  // ring's worth of time so it never lingers forever (#190).
+  useEffect(() => {
+    if (!incomingRing) return
+    const t = window.setTimeout(() => setIncomingRing(null), 45_000)
+    return () => window.clearTimeout(t)
+  }, [incomingRing])
   function addToCall() {
     if (!incomingRing || !room) return
     signalRoom(incomingRing.room, 'redirect', { room })
@@ -558,11 +566,13 @@ export default function CallsTool() {
       setEnded({ reason: 'ended', count: 0 }); rtc.current = null; resetLive(); setPhase('ended')
       history.replaceState(null, '', lobbyPath()) // clean URL: a reload (e.g. deploy) lands on the host lobby, not ?code= guest mode
     } else {
-      // Guest leaving: show the "you left" screen (with a way back in), not a
-      // confusing "ask to join" for the room you just left.
+      // Guest leaving. If they were actually in the call, show "you left" (with a way
+      // back in). If they hung up while still WAITING to be admitted (#191), there's
+      // no call to have "left" — offer "Call again" instead of "Rejoin".
+      const wasAdmitted = phaseRef.current === 'live'
       const others = inCallPeers.length
       rtc.current?.leave(); rtc.current = null; resetLive()
-      setEnded({ reason: 'left', count: others }); setPhase('ended')
+      setEnded({ reason: wasAdmitted ? 'left' : 'notadmitted', count: wasAdmitted ? others : 0 }); setPhase('ended')
       history.replaceState(null, '', lobbyPath())
     }
   }
@@ -913,7 +923,10 @@ export default function CallsTool() {
   const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
   const ringing = !!incomingLink && !answered
-  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-green-500 shrink-0 ${ringing ? 'animate-pulse' : ''}`} />
+  // Incoming screen: the phone bounces instead of pulsing (#189). Other green
+  // screens (ended/waiting) keep it still — `ringing` is only true while an
+  // unanswered ring is on screen.
+  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-green-500 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
@@ -939,6 +952,13 @@ export default function CallsTool() {
               <p className="text-[0.95rem] text-sand-100/85 leading-relaxed" data-testid="call-declined-msg">{ended.message?.trim() ? `“${ended.message.trim()}”` : s.declinedGeneric}</p>
               <button className={cream} onClick={newCall}>{s.createNew}</button>
             </>
+          ) : ended.reason === 'notadmitted' ? (
+            // Hung up while still waiting to be admitted (#191): there was no call to
+            // "leave", so offer "Call again" rather than "you left / Rejoin".
+            <>
+              <p className="text-[1.2rem] font-display" data-testid="call-notadmitted">{s.callEnded}</p>
+              <button className={cream} onClick={rejoin} data-testid="call-again">{s.callAgain}</button>
+            </>
           ) : (
             <>
               <p className="text-[1.15rem] font-display leading-relaxed">{ended.reason === 'ended' ? s.youEndedMeeting : s.ended}</p>
@@ -952,7 +972,7 @@ export default function CallsTool() {
 
   if (phase !== 'live') {
     return (
-      <div className={greenWrap} data-testid="calls">
+      <div className={`${greenWrap} ${ringing ? '[animation:bis-call-flash_2.2s_ease-in-out_infinite]' : ''}`} data-testid="calls">
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
           {checking ? (
@@ -976,8 +996,7 @@ export default function CallsTool() {
             // + lets the caller in.
             <>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-20 h-20 rounded-full grid place-items-center bg-sand-100/15 border border-sand-100/30 text-sand-100 text-[1.6rem] font-display" data-testid="call-incoming-avatar">{initials(incomingName || 'Someone')}</div>
-                <p className="text-[0.72rem] uppercase tracking-[0.22em] text-sand-100/60 mt-1">{s.incomingCall}</p>
+                <p className="text-[0.72rem] uppercase tracking-[0.22em] text-sand-100/60">{s.incomingCall}</p>
                 <p className="text-center text-[1.5rem] font-display leading-tight" data-testid="call-incoming-title">{incomingName ? s.isCalling(incomingName) : s.someoneCalling}</p>
               </div>
               <div className="w-full flex flex-col gap-3">
@@ -1207,8 +1226,12 @@ export default function CallsTool() {
       {/* Busy: a personal-link ring arrived while we're in a call — a docked banner
           (not a takeover). Add pulls them into THIS room; Decline sends a note. */}
       {incomingRing && (
-        <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-busy-banner">
-          <span className="w-9 h-9 rounded-full grid place-items-center bg-white/15 text-[0.8rem] font-semibold shrink-0">{initials(incomingRing.caller || 'Someone')}</span>
+        <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0 [animation:bis-call-flash_2.2s_ease-in-out_infinite]" data-testid="call-busy-banner">
+          {/* A phone bouncing horizontally toward a couple of motion arrows (#192). */}
+          <span className="shrink-0 flex items-center gap-0.5 [animation:bis-bounce-x_0.9s_ease-in-out_infinite]" aria-hidden="true" data-testid="call-busy-phone">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M5 6l5 6-5 6M12 6l5 6-5 6" opacity={0.85} /></svg>
+            <PhoneIcon className="w-5 h-5" />
+          </span>
           <div className="min-w-0 flex-1">
             <p className="text-[0.92rem] font-semibold leading-tight truncate">{s.busyRinging(incomingRing.caller)}</p>
             <p className="text-[0.75rem] text-sand-100/70">{s.inACall}</p>

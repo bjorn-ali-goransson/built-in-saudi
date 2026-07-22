@@ -308,16 +308,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `sessionStorage` `bis-call-guest-name`, never the URL). `call-ring` Web-pushes the
   owner; the notification URL is `…/apps/calls/join?code=<room>&host=1&ring=1&link=<code>&caller=<name>`.
   `host=1`+`ring=1` shows the owner a **prominent phone-style incoming screen that
-  names the caller** ("<name> is calling…", avatar initials + "Incoming call" label,
-  green, pulsing phone, **Answer**/**Decline**, **no sharing UI**) — `caller=<name>`
-  carries the caller's name (from `call-ring`) for that screen; it does NOT
-  auto-host; the **Answer** tap hosts the room (that gesture also unlocks the mic)
-  and **auto-admits the caller** who's waiting (`answeredRef` gates it). `link=<code>`
-  drives the **"stop receiving calls"** affordance (no local state needed).
+  names the caller** ("<name> is calling…" + "Incoming call" label, green, a
+  **bouncing phone** over a **gently flashing background** (`bis-bounce-y` /
+  `bis-call-flash` keyframes), **Answer**/**Decline**, **no sharing UI** — no avatar) —
+  `caller=<name>` carries the caller's name (from `call-ring`) for that screen; it
+  does NOT auto-host; the **Answer** tap hosts the room (that gesture also unlocks
+  the mic) and **auto-admits the caller** who's waiting (`answeredRef` gates it).
+  `link=<code>` drives the **"stop receiving calls"** affordance (no local state
+  needed). A caller who **hangs up while still waiting** (never admitted) gets a
+  "Call ended → **Call again**" screen, not "you left / Rejoin".
   **Busy handling:** if a ring arrives while the owner is **already in a call**,
   `useIncomingCall` doesn't yank them out — it dispatches a `bis-incoming-ring`
-  window event and the live CallsTool shows a **docked banner** ("<name> is
-  calling · you're in a call") with **Add to this call** / **Decline**. *Add* posts a
+  window event and the live CallsTool shows a **docked banner** (flashing bg + a
+  horizontally-bouncing phone-with-arrows: "<name> is calling · you're already in
+  this call") with **Add to this call** / **Decline**; it **auto-dismisses after 45s**
+  (no live channel to the caller's room to detect their hang-up). *Add* posts a
   `redirect`→(current room) to the caller's room via `signalRoom` (a one-off relay
   send in `rtc.ts`, no CallRoom needed) and opens a 60s **auto-admit window**
   (`addWindowRef`) so the caller's knock in the current room comes straight in.

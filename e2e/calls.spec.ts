@@ -496,7 +496,8 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   // We land on the phone-style incoming screen, which names the caller.
   await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
   await expect(p.getByTestId('call-incoming-title')).toContainText('Layla is calling')
-  await expect(p.getByTestId('call-incoming-avatar')).toHaveText('L')
+  // The avatar was removed (#189) — the bouncing phone + title carry it now.
+  await expect(p.getByTestId('call-incoming-avatar')).toHaveCount(0)
   await c.close()
 })
 
@@ -537,11 +538,12 @@ test('rejoin after a missed call-link call rings the owner again', async ({ brow
   await expect(p.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
   expect(rings).toBe(1) // the initial ring from the /call page
 
-  // Cancel → the "you left" screen, then Rejoin.
+  // Cancel while still WAITING (never admitted) → "Call again", NOT "you left/Rejoin" (#191).
   await p.getByTestId('call-cancel').click()
-  await expect(p.getByTestId('call-rejoin')).toBeVisible({ timeout: 10_000 })
-  await p.getByTestId('call-rejoin').click()
-  // Rejoin re-rings the owner so a missed call re-notifies them.
+  await expect(p.getByTestId('call-again')).toBeVisible({ timeout: 10_000 })
+  await expect(p.getByTestId('call-rejoin')).toHaveCount(0)
+  await p.getByTestId('call-again').click()
+  // Calling again re-rings the owner so a missed call re-notifies them.
   await expect.poll(() => rings, { timeout: 10_000 }).toBe(2)
   await c.close()
 })
