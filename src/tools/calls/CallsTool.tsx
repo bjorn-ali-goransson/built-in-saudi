@@ -8,7 +8,7 @@ import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
-  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify,
+  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, startRingtone,
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
@@ -96,6 +96,9 @@ export default function CallsTool() {
   // for the explicit Answer tap (which is also the gesture that unlocks the mic).
   const [answered, setAnswered] = useState(false)
   const answeredRef = useRef(false)
+  // True only during the brief auto-admit of an answered/added caller, so the lobby
+  // list doesn't flash on screen before they're let in (#202).
+  const [autoAdmitting, setAutoAdmitting] = useState(false)
   // Whether this browser already has a personal call link (hides Start call/Invite).
   const [hasCallLink, setHasCallLink] = useState(() => { try { return !!getMyCallLink() } catch { return false } })
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
@@ -243,7 +246,7 @@ export default function CallsTool() {
   useEffect(() => {
     if (phase !== 'waiting') { setWaitSlow(false); return }
     connectedOnce.current = false
-    const t = window.setTimeout(() => { if (!connectedOnce.current) setWaitSlow(true) }, 12_000)
+    const t = window.setTimeout(() => { if (!connectedOnce.current) setWaitSlow(true) }, 30_000)
     return () => window.clearTimeout(t)
   }, [phase])
 
@@ -291,9 +294,14 @@ export default function CallsTool() {
     if (freshNames.length) {
       setShareOpen(false)
       // If we answered an incoming ring — or just chose "Add to call" while busy —
-      // the caller who knocks comes straight in.
-      if (!isGuest && (answeredRef.current || Date.now() < addWindowRef.current)) { for (const [id] of waiting) admit(id) }
-      else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
+      // the caller who knocks comes straight in. Hide the lobby flash meanwhile
+      // (#202), and clear the answer flag so a LATER re-call must be admitted by hand
+      // rather than auto-let-in (#199).
+      if (!isGuest && (answeredRef.current || Date.now() < addWindowRef.current)) {
+        answeredRef.current = false
+        setAutoAdmitting(true)
+        Promise.all(waiting.map(([id]) => admit(id))).finally(() => setAutoAdmitting(false))
+      } else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -455,6 +463,14 @@ export default function CallsTool() {
     const t = window.setTimeout(() => setIncomingRing(null), 45_000)
     return () => window.clearTimeout(t)
   }, [incomingRing])
+  // Ring a sound while a call is coming in — the full incoming screen OR the busy
+  // banner — and stop the moment it's answered/dismissed (#197).
+  useEffect(() => {
+    const calling = (!!incomingLink && !answered) || !!incomingRing
+    if (!calling) return
+    const stop = startRingtone()
+    return stop
+  }, [incomingLink, answered, incomingRing])
   function addToCall() {
     if (!incomingRing || !room) return
     signalRoom(incomingRing.room, 'redirect', { room })
@@ -486,11 +502,15 @@ export default function CallsTool() {
   }
 
   useEffect(() => () => { rtc.current?.leave() }, [])
-  // Tell the deploy auto-reload to hold off while we're engaged in a call.
+  // Tell the deploy auto-reload to hold off while we're engaged — including a
+  // call-link caller waiting to be connected (#195). Kept out of the cleanup so a
+  // phase→phase transition never dips to "not in a call" (which would let a deferred
+  // deploy reload mid-connect); only a real unmount clears it.
   useEffect(() => {
-    setInCall(phase === 'hosting' || phase === 'waiting' || phase === 'live')
-    return () => setInCall(false)
-  }, [phase])
+    const engaged = phase === 'hosting' || phase === 'waiting' || phase === 'live' || (knockParam && phase === 'lobby')
+    setInCall(engaged)
+  }, [phase, knockParam])
+  useEffect(() => () => setInCall(false), [])
 
   // Returning host (reloaded the ?room link), or the link owner woken by a ring
   // (?host=1) → re-enter / host the room immediately.
@@ -933,6 +953,9 @@ export default function CallsTool() {
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
+  // A call-link caller retries by CALLING the owner again (named, if known) — a plain
+  // "Rejoin/Call again" for anyone else (#199, #193).
+  const callAgainLabel = ringCode && linkOwnerName ? s.callNameAgain(linkOwnerName) : s.callAgain
 
   if (phase === 'ended') {
     return (
@@ -944,8 +967,8 @@ export default function CallsTool() {
               <p className="text-[1.2rem] font-display">{s.youEnded}</p>
               {ended.count > 0 && <p className="text-[0.9rem] text-sand-100/75">{s.stillThere(ended.count)}</p>}
               <div className="w-full flex flex-col gap-3">
-                <button className={cream} onClick={rejoin} data-testid="call-rejoin">{s.rejoin}</button>
-                <button className={ghost} onClick={newCall}>{s.createNew}</button>
+                <button className={cream} onClick={rejoin} data-testid="call-rejoin">{ringCode ? callAgainLabel : s.rejoin}</button>
+                <button className={ghost} onClick={newCall}>{s.createAnother}</button>
               </div>
             </>
           ) : ended.reason === 'declined' ? (
@@ -962,7 +985,7 @@ export default function CallsTool() {
             // it, naming them if the link carried a name (#193).
             <>
               <p className="text-[1.2rem] font-display" data-testid="call-notadmitted">{ringCode ? s.ghosted(linkOwnerName) : s.callEnded}</p>
-              <button className={cream} onClick={rejoin} data-testid="call-again">{s.callAgain}</button>
+              <button className={cream} onClick={rejoin} data-testid="call-again">{callAgainLabel}</button>
             </>
           ) : (
             <>
@@ -1068,6 +1091,12 @@ export default function CallsTool() {
               </div>
               {!isGuest && !initialRoom && !incomingLink && (
                 <div className="w-full flex flex-col gap-1.5">
+                  {/* "receive calls" separator above the Call Me box (#196). */}
+                  <div className="flex items-center gap-2.5 my-0.5 text-sand-100/45" data-testid="call-receive-sep">
+                    <span className="h-px flex-1 bg-sand-100/20" />
+                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]">{s.receiveCalls}</span>
+                    <span className="h-px flex-1 bg-sand-100/20" />
+                  </div>
                   {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
                   <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
                 </div>
@@ -1078,7 +1107,7 @@ export default function CallsTool() {
           )}
 
           {/* Host waiting list (people knocking). */}
-          {!isGuest && phase === 'hosting' && waiting.length > 0 && (
+          {!isGuest && phase === 'hosting' && waiting.length > 0 && !autoAdmitting && (
             <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} staleIds={staleIds} live /></div>
           )}
 
@@ -1458,7 +1487,7 @@ export default function CallsTool() {
             {/* Knocks first — pinned above the video grid so the host never misses
                 someone waiting, even on a short mobile dock where the elastic grid
                 would otherwise push the list out of view. */}
-            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && (
+            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && !autoAdmitting && (
               <div className="shrink-0 p-2.5 border-b border-[color:var(--line-soft)]">
                 <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />
               </div>

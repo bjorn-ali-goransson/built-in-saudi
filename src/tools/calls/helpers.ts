@@ -77,6 +77,37 @@ export function chime() {
   } catch { /* audio unavailable */ }
 }
 
+// A looping "someone is calling" ringtone (two-tone ring-ring, then a pause, every
+// ~2.6s) built from the same Web Audio context — no asset. Returns a stop() handle.
+// Autoplay rules mean it only sounds once the page has had a user gesture; the busy
+// banner (owner already in a call) always has one, so that case always rings.
+export function startRingtone(): () => void {
+  let stopped = false
+  let timer = 0
+  const burst = () => {
+    if (stopped) return
+    try {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AC) return
+      if (!_ac) _ac = new AC()
+      if (_ac.state === 'suspended') _ac.resume()
+      const ctx = _ac, t0 = ctx.currentTime
+      // Two quick rings (a classic "ring ring"), then silence until the next cycle.
+      for (const start of [0, 0.42]) {
+        const o = ctx.createOscillator(), g = ctx.createGain()
+        o.type = 'sine'; o.frequency.value = 1046; o.connect(g); g.connect(ctx.destination)
+        const t = t0 + start
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.16, t + 0.03)
+        g.gain.setValueAtTime(0.16, t + 0.28); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.34)
+        o.start(t); o.stop(t + 0.36)
+      }
+    } catch { /* audio unavailable */ }
+  }
+  burst()
+  timer = window.setInterval(burst, 2600)
+  return () => { stopped = true; window.clearInterval(timer) }
+}
+
 // System notification for "someone entered" — only when the tab is hidden (a
 // focused tab already gets the chime + in-app toast). Prefer the SW registration
 // (works installed / on more browsers) and fall back to the Notification ctor.

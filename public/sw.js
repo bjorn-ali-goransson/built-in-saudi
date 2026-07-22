@@ -92,13 +92,18 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     touch()
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    // Focus an existing same-origin tab AND tell it where to go (so a tab already
-    // open on another screen actually navigates to the tapped notification's URL).
-    for (const c of all) {
-      if (c.url.indexOf(self.location.origin) === 0 && 'focus' in c) {
-        try { c.postMessage({ type: 'bis-incoming-call', url }) } catch (e) { /* */ }
-        return c.focus()
+    // Focus an existing same-origin tab and take it to the tapped URL. Prefer a hard
+    // client.navigate() over a postMessage — a tab that was backgrounded when the
+    // call came in may have a stale/asleep page whose message handler never runs, so
+    // the incoming call wouldn't show (#198). navigate() is authoritative.
+    const target = all.find((c) => c.url.indexOf(self.location.origin) === 0 && 'focus' in c)
+    if (target) {
+      try { await target.focus() } catch (e) { /* */ }
+      if ('navigate' in target) {
+        try { await target.navigate(url); return } catch (e) { /* cross-origin/edge — fall through */ }
       }
+      try { target.postMessage({ type: 'bis-incoming-call', url }) } catch (e) { /* */ }
+      return
     }
     return self.clients.openWindow(url)
   })())

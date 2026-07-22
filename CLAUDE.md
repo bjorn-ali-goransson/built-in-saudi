@@ -315,8 +315,17 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   does NOT auto-host; the **Answer** tap hosts the room (that gesture also unlocks
   the mic) and **auto-admits the caller** who's waiting (`answeredRef` gates it).
   `link=<code>` drives the **"stop receiving calls"** affordance (no local state
-  needed). A caller who **hangs up while still waiting** (never admitted) gets a
-  "Call ended → **Call again**" screen, not "you left / Rejoin".
+  needed). An **incoming call rings a looping tone** (`startRingtone` in `helpers.ts`;
+  the full screen + the busy banner, stopped on answer/dismiss). Auto-admit is
+  **one-shot** — `answeredRef` is cleared after the answered caller is let in, so a
+  later re-call must be admitted by hand — and an `autoAdmitting` flag hides the
+  lobby list so it doesn't flash before admit. The **notification tap uses
+  `client.navigate()`** (not just postMessage) so a backgrounded tab reliably lands
+  on the incoming screen. A caller who **hangs up while still waiting** (never
+  admitted) gets a "Call ended → **Call again**" screen (for a call-link caller:
+  "**<name> has ghosted you**" + "**Call <name> again**"), not "you left / Rejoin".
+  The setup screen groups the Call Me box under a **"receive calls" separator**, and
+  the deploy auto-reload (`setInCall`) **holds while a caller is waiting to connect**.
   **Busy handling:** if a ring arrives while the owner is **already in a call**,
   `useIncomingCall` doesn't yank them out — it dispatches a `bis-incoming-ring`
   window event and the live CallsTool shows a **docked banner** (flashing bg + a

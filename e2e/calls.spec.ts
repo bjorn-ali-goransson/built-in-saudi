@@ -539,14 +539,26 @@ test('rejoin after a missed call-link call rings the owner again', async ({ brow
   expect(rings).toBe(1) // the initial ring from the /call page
 
   // Cancel while still WAITING (never admitted) → "Call again", NOT "you left/Rejoin" (#191),
-  // and the main text jokingly names who ghosted the call (#193).
+  // and the main text jokingly names who ghosted you (#193/#200), with a "Call Ali
+  // again" button (#199).
   await p.getByTestId('call-cancel').click()
   await expect(p.getByTestId('call-again')).toBeVisible({ timeout: 10_000 })
-  await expect(p.getByTestId('call-notadmitted')).toContainText('Ali has ghosted the call')
+  await expect(p.getByTestId('call-notadmitted')).toContainText('Ali has ghosted you')
+  await expect(p.getByTestId('call-again')).toContainText('Call Ali again')
   await expect(p.getByTestId('call-rejoin')).toHaveCount(0)
   await p.getByTestId('call-again').click()
   // Calling again re-rings the owner so a missed call re-notifies them.
   await expect.poll(() => rings, { timeout: 10_000 }).toBe(2)
+  await c.close()
+})
+
+test('a "receive calls" separator sits above the Call Me box (#196)', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  const sep = p.getByTestId('call-receive-sep')
+  await expect(sep).toBeVisible()
+  await expect(sep).toContainText('receive calls')
   await c.close()
 })
 
