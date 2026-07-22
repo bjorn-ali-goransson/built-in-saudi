@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Stack, Textarea, Button, FieldLabel } from '../../components/ui'
+import { VolumeIcon, MuteIcon } from '../../components/icons'
 
 const STR = {
   en: { input: 'Options (one per line)', spin: 'Spin', spinning: 'Spinning…', winner: 'Winner', need: 'Add at least two options.', privacy: 'Runs in your browser — nothing is uploaded.', sound: 'Sound', soundOn: 'Sound on', soundOff: 'Sound off' },
@@ -45,8 +46,11 @@ export default function RandomPickerTool() {
   const timer = useRef<number | undefined>(undefined)
   const ticks = useRef<number[]>([])
   const audioCtx = useRef<AudioContext | null>(null)
+  // Live mirror of `sound` so ticks scheduled at spin-start honour a mid-spin toggle.
+  const soundRef = useRef(sound)
 
   useEffect(() => {
+    soundRef.current = sound
     try { localStorage.setItem('bis-picker-sound', sound ? 'on' : 'off') } catch { /* ignore */ }
   }, [sound])
 
@@ -70,6 +74,7 @@ export default function RandomPickerTool() {
   }
 
   function tick(freq: number, dur: number, gain: number) {
+    if (!soundRef.current) return // gate at fire-time so a mid-spin mute goes silent
     const ac = ctx()
     if (!ac) return
     const osc = ac.createOscillator()
@@ -85,8 +90,8 @@ export default function RandomPickerTool() {
   }
 
   function scheduleSound(totalDeg: number) {
-    if (!sound) return
-    ctx() // prime/resume within the click gesture
+    // Always schedule; `tick` decides at fire-time whether to sound (honours mid-spin toggle).
+    if (sound) ctx() // prime/resume within the spin click gesture
     ticks.current.forEach((id) => window.clearTimeout(id))
     ticks.current = []
     const seg = 360 / n
@@ -148,10 +153,10 @@ export default function RandomPickerTool() {
             <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} data-testid="rp-input" /></label>
           <div className="flex items-center gap-3">
             <Button variant="primary" onClick={spin} disabled={n < 2 || spinning} data-testid="rp-spin" className="flex-1">{spinning ? s.spinning : s.spin}</Button>
-            <button type="button" onClick={() => setSound((v) => !v)} aria-pressed={sound}
+            <button type="button" onClick={() => { if (!sound) ctx(); setSound((v) => !v) }} aria-pressed={sound}
               aria-label={sound ? s.soundOn : s.soundOff} title={sound ? s.soundOn : s.soundOff} data-testid="rp-sound"
-              className="shrink-0 h-[2.4rem] w-[2.4rem] grid place-items-center rounded-md border border-line bg-paper text-[1.1rem] text-ink hover:bg-[color-mix(in_srgb,var(--color-green-400)_10%,transparent)]">
-              <span aria-hidden="true">{sound ? '🔊' : '🔇'}</span>
+              className="shrink-0 h-[2.4rem] w-[2.4rem] grid place-items-center rounded-md border border-line bg-paper text-ink hover:bg-[color-mix(in_srgb,var(--color-green-400)_10%,transparent)] aria-pressed:text-green-700">
+              {sound ? <VolumeIcon className="w-5 h-5" /> : <MuteIcon className="w-5 h-5" />}
             </button>
           </div>
           {n < 2 && <p className="text-[0.85rem] text-ink-faint">{s.need}</p>}
