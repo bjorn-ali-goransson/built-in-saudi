@@ -5,8 +5,8 @@ export const WB_COLORS = ['#e11', '#151515', '#1f7a3f', '#2563eb', '#f59e0b']
 export const EMOJI = ['👍', '❤️', '😂', '🤣', '😮', '😢', '🙏', '🤲', '😀', '😊', '😍', '😎', '🤔', '😅', '🥳', '😴', '🙈', '👎', '👏', '🙌', '👋', '🤝', '💪', '🔥', '💯', '⭐', '🎉', '✅', '❌', '💡', '👀', '🚀', '☕', '🎯']
 // Word tags (wordmarks) usable as reactions alongside emojis. Custom ones the user
 // adds are appended (persisted). A reaction/float is just a string — emoji OR tag.
-export const TAGS_EN = ['ok', 'yes', 'no', 'soon', 'BRB', 'lol', 'bruh', 'why?', 'what?', 'khalas', 'ya3', 'tamm']
-export const TAGS_AR = ['هلا', 'السلام عليكم', 'حياك', 'بالجنة', 'تبشر', 'شكرا', 'تم', 'ابشر']
+export const TAGS_EN = ['ok', 'yes', 'no', 'soon', 'BRB', 'lol', 'bruh', 'why?', 'what?', 'khalas', 'tamm']
+export const TAGS_AR = ['هلا', 'سلام', 'حياك', 'تبشر بالجنة', 'شكرا', 'تم', 'ابشر']
 export const TAGS_KEY = 'bis-call-tags'
 export const isTag = (r: string) => /[\p{L}\p{N}]/u.test(r) // contains a letter/number → text tag, not an emoji
 export const WB_FONT = 'Arial, Helvetica, sans-serif' // safe font shared by the editor + canvas render

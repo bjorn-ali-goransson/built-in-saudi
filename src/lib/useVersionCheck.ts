@@ -13,13 +13,17 @@ export function useVersionCheck() {
     if (!current) return
 
     let stopped = false
-    const check = async () => {
+    // `force` bypasses the in-call guard. The periodic poll never yanks someone out
+    // of a live call, but returning to the tab after being away (visibility/focus)
+    // does reload even mid-call — if you were away, the call is likely stale and you
+    // should land on the latest version (#206).
+    const check = async (force = false) => {
       try {
         const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
         if (!res.ok) return
         const { build, notes } = await res.json()
         if (!stopped && build && build !== current) {
-          if (isInCall()) return // don't yank someone out of a live call — retry next poll
+          if (!force && isInCall()) return // periodic poll: don't interrupt a live call
           try {
             sessionStorage.setItem('bis-reloaded', 'update')
             if (notes) sessionStorage.setItem('bis-update-notes', String(notes))
@@ -30,9 +34,12 @@ export function useVersionCheck() {
     }
 
     const id = window.setInterval(check, 60000)
-    const onVisible = () => { if (!document.hidden) check() }
-    document.addEventListener('visibilitychange', onVisible)
-    onCallExit(check) // leaving a call (hang-up or Back) → apply a deferred deploy now
-    return () => { stopped = true; window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible); onCallExit(() => {}) }
+    // Returning to the tab (visibility) or re-focusing the window (browser reopened /
+    // alt-tabbed back) forces a check that reloads even mid-call (#206).
+    const onReturn = () => { if (!document.hidden) check(true) }
+    document.addEventListener('visibilitychange', onReturn)
+    window.addEventListener('focus', onReturn)
+    onCallExit(() => check()) // leaving a call (hang-up or Back) → apply a deferred deploy now
+    return () => { stopped = true; window.clearInterval(id); document.removeEventListener('visibilitychange', onReturn); window.removeEventListener('focus', onReturn); onCallExit(() => {}) }
   }, [])
 }

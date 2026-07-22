@@ -324,8 +324,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   on the incoming screen. A caller who **hangs up while still waiting** (never
   admitted) gets a "Call ended → **Call again**" screen (for a call-link caller:
   "**<name> has ghosted you**" + "**Call <name> again**"), not "you left / Rejoin".
-  The setup screen groups the Call Me box under a **"receive calls" separator**, and
-  the deploy auto-reload (`setInCall`) **holds while a caller is waiting to connect**.
+  The setup screen groups the Call Me box under a **"receive calls" separator**. The
+  deploy auto-reload's **periodic poll** holds while in a call / a caller is waiting to
+  connect (`setInCall`), but **returning to the tab** (visibility/focus) forces a
+  reload even mid-call (`useVersionCheck` `check(force)`) — an away user should land on
+  the latest version (#195/#206).
   **Busy handling:** if a ring arrives while the owner is **already in a call**,
   `useIncomingCall` doesn't yank them out — it dispatches a `bis-incoming-ring`
   window event and the live CallsTool shows a **docked banner** (flashing bg + a
