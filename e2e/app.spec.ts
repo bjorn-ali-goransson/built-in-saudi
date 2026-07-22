@@ -486,6 +486,7 @@ test.describe('tools', () => {
   test('random picker: sound toggle persists', async ({ page }) => {
     await page.goto('/en/apps/random-picker')
     const btn = page.getByTestId('rp-sound')
+    // aria-pressed = the toggle's on/off state, not "was clicked": sound defaults to ON
     await expect(btn).toHaveAttribute('aria-pressed', 'true')
     await btn.click()
     await expect(btn).toHaveAttribute('aria-pressed', 'false')
