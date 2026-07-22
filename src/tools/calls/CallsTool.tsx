@@ -490,6 +490,21 @@ export default function CallsTool() {
     if ((isHostReturn || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; startHost() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // Hardening (#188): the /join route only makes sense with a code (or a host/ring/
+  // knock flag). Landing on a bare /apps/calls/join — no query — is meaningless and,
+  // on GitHub Pages, served as the SPA 404 fallback. Clean the URL back to the calls
+  // root so a stray /join lands on the normal start screen, not a dead join page.
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      const hasState = initialRoom || p.has('host') || p.has('ring') || p.has('knock')
+      if (window.location.pathname.replace(/\/$/, '').endsWith('/join') && !hasState) {
+        history.replaceState(null, '', lobbyPath())
+      }
+    } catch { /* */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // A /call visitor (?knock=1) auto-knocks into the room and waits to be let in.
   const autoKnocked = useRef(false)
   useEffect(() => {

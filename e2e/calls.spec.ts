@@ -500,6 +500,16 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await c.close()
 })
 
+test('a bare /join URL (no code) cleans itself to the calls root (#188)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls/join') // no query — meaningless join
+  // URL is rewritten back to the calls root, and the normal start screen shows.
+  await expect(p).toHaveURL(/\/en\/apps\/calls$/, { timeout: 10_000 })
+  await expect(p.getByTestId('call-name')).toBeVisible()
+  await c.close()
+})
+
 test('a locale-less ring URL keeps its query through the locale redirect (the real notification link)', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
