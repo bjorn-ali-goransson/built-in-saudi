@@ -63,6 +63,7 @@ export function CallLinkPage() {
     // lobby; the ring wakes the link owner, who hosts this room and admits them.
     try { sessionStorage.setItem('bis-call-guest-name', name.trim()) } catch { /* */ }
     try { sessionStorage.setItem('bis-call-ring-code', code) } catch { /* */ } // so Rejoin can re-ring the owner
+    try { sessionStorage.setItem('bis-call-owner-name', ownerName) } catch { /* */ } // so an unanswered call can name who ghosted (#193)
     await ringCallLink(code, room, name.trim() || 'Someone')
     navigate(`/${locale}/apps/calls?code=${room}&knock=1`)
   }

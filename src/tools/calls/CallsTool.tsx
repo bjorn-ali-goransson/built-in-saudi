@@ -83,8 +83,11 @@ export default function CallsTool() {
   // host that room and admit the visitor themselves (no auto-admit). `incomingLink`
   // drives the "stop receiving calls" affordance offered exactly on an incoming call.
   const [knockParam] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') } catch { return false } })
-  // A /call visitor carries the owner's link code so Rejoin can ring them again.
+  // A /call visitor carries the owner's link code so Rejoin can ring them again,
+  // plus the owner's name (if the link had it) so an unanswered call can joke about
+  // who ghosted (#193).
   const [ringCode] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-ring-code') || '') : '' } catch { return '' } })
+  const [linkOwnerName] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-owner-name') || '') : '' } catch { return '' } })
   const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
   // Who's ringing (carried in the ring push URL) so the incoming screen can name them.
@@ -954,9 +957,11 @@ export default function CallsTool() {
             </>
           ) : ended.reason === 'notadmitted' ? (
             // Hung up while still waiting to be admitted (#191): there was no call to
-            // "leave", so offer "Call again" rather than "you left / Rejoin".
+            // "leave", so offer "Call again" rather than "you left / Rejoin". For a
+            // call-link call the owner simply didn't pick up → joke that they ghosted
+            // it, naming them if the link carried a name (#193).
             <>
-              <p className="text-[1.2rem] font-display" data-testid="call-notadmitted">{s.callEnded}</p>
+              <p className="text-[1.2rem] font-display" data-testid="call-notadmitted">{ringCode ? s.ghosted(linkOwnerName) : s.callEnded}</p>
               <button className={cream} onClick={rejoin} data-testid="call-again">{s.callAgain}</button>
             </>
           ) : (
@@ -1051,9 +1056,9 @@ export default function CallsTool() {
                     <button type="button" onClick={startOwnCall} data-testid="call-start-own"
                       className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
                   </>
-                ) : hasCallLink ? null : (
-                  // Hidden once you're sharing a personal call link — that panel below
-                  // is the focus then, not starting/ inviting to a fresh meeting.
+                ) : (
+                  // Always available — even with a personal call link published, you can
+                  // still start a fresh meeting and invite people to it (#194).
                   <div className="flex gap-3">
                     <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
                     <button type="button" onClick={() => openShareModal()} data-testid="call-share"

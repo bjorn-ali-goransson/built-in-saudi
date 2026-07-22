@@ -532,15 +532,17 @@ test('rejoin after a missed call-link call rings the owner again', async ({ brow
     w.__CALL_FN = u; w.__CALL_SIGNAL = u
   }, base)
   const p = await c.newPage()
-  await p.goto('/call/?c=ownerX')
+  await p.goto('/call/?c=ownerX&n=Ali') // the link carries the owner's name
   await p.getByTestId('call-link-name').fill('Caller')
   await p.getByTestId('call-link-call').click()
   await expect(p.getByTestId('call-waiting')).toBeVisible({ timeout: 15_000 })
   expect(rings).toBe(1) // the initial ring from the /call page
 
-  // Cancel while still WAITING (never admitted) → "Call again", NOT "you left/Rejoin" (#191).
+  // Cancel while still WAITING (never admitted) → "Call again", NOT "you left/Rejoin" (#191),
+  // and the main text jokingly names who ghosted the call (#193).
   await p.getByTestId('call-cancel').click()
   await expect(p.getByTestId('call-again')).toBeVisible({ timeout: 10_000 })
+  await expect(p.getByTestId('call-notadmitted')).toContainText('Ali has ghosted the call')
   await expect(p.getByTestId('call-rejoin')).toHaveCount(0)
   await p.getByTestId('call-again').click()
   // Calling again re-rings the owner so a missed call re-notifies them.
@@ -570,7 +572,7 @@ test('the call-link panel offers to get a link, with no permission-note clutter'
   await c.close()
 })
 
-test('sharing a personal call link hides Start call/Invite and offers a name opt-out', async ({ browser }) => {
+test('a personal call link keeps Start call/Invite available and offers a name opt-out', async ({ browser }) => {
   const c = await browser.newContext()
   await c.addInitScript(() => {
     try { localStorage.setItem('bis-call-link', JSON.stringify({ code: 'testcode9', endpoint: 'https://x/y' })) } catch { /* */ }
@@ -582,10 +584,10 @@ test('sharing a personal call link hides Start call/Invite and offers a name opt
   // The "you have set up a Call Me link" heading sits OUTSIDE the panel.
   await expect(p.getByTestId('call-link-set-note')).toHaveText('You have set up a Call Me link:')
   await expect(p.getByTestId('call-link-panel')).not.toContainText('You have set up')
-  // A link exists → the meeting buttons AND the P2P privacy note are hidden; the
-  // link panel is the focus.
-  await expect(p.getByTestId('call-start')).toHaveCount(0)
-  await expect(p.getByTestId('call-share')).toHaveCount(0)
+  // A link exists, but you can STILL start a fresh meeting + invite to it (#194);
+  // only the P2P privacy note stays hidden (the link panel is the focus).
+  await expect(p.getByTestId('call-start')).toBeVisible()
+  await expect(p.getByTestId('call-share')).toBeVisible()
   await expect(p.getByTestId('call-privacy')).toHaveCount(0)
   // Unpublish sits below AND outside the box, with the expiry note right-aligned.
   await expect(p.getByTestId('call-link-remove')).toContainText('Unpublish link')
