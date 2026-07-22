@@ -155,7 +155,7 @@ export default function RandomPickerTool() {
             <Button variant="primary" onClick={spin} disabled={n < 2 || spinning} data-testid="rp-spin" className="flex-1">{spinning ? s.spinning : s.spin}</Button>
             <button type="button" onClick={() => { if (!sound) ctx(); setSound((v) => !v) }} aria-pressed={sound}
               aria-label={sound ? s.soundOn : s.soundOff} title={sound ? s.soundOn : s.soundOff} data-testid="rp-sound"
-              className="shrink-0 h-[2.4rem] w-[2.4rem] grid place-items-center rounded-md border border-line bg-paper text-ink hover:bg-[color-mix(in_srgb,var(--color-green-400)_10%,transparent)] aria-pressed:text-green-700">
+              className="shrink-0 self-stretch w-[3rem] grid place-items-center rounded-md border border-line bg-paper text-ink hover:bg-[color-mix(in_srgb,var(--color-green-400)_10%,transparent)] aria-pressed:text-green-700">
               {sound ? <VolumeIcon className="w-5 h-5" /> : <MuteIcon className="w-5 h-5" />}
             </button>
           </div>
