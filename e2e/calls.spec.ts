@@ -500,6 +500,18 @@ test('an incoming-call ring pulls you to the call screen from anywhere on the si
   await c.close()
 })
 
+test('a locale-less ring URL keeps its query through the locale redirect (the real notification link)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  // This is the exact URL the ring push opens — NO locale prefix. It must redirect
+  // to /en/… WITHOUT dropping ?code/&ring/&caller, or the incoming screen never shows.
+  await p.goto('/apps/calls/join?code=ringroom2&host=1&ring=1&link=mycode&caller=Layla', { waitUntil: 'domcontentloaded' })
+  await expect(p).toHaveURL(/\/en\/apps\/calls\/join\?.*ring=1/, { timeout: 15_000 })
+  await expect(p.getByTestId('call-incoming-title')).toContainText('Layla is calling', { timeout: 15_000 })
+  await expect(p.getByTestId('call-answer')).toBeVisible()
+  await c.close()
+})
+
 test('rejoin after a missed call-link call rings the owner again', async ({ browser }) => {
   const c = await browser.newContext()
   let rings = 0

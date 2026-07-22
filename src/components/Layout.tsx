@@ -19,9 +19,12 @@ export function Layout() {
   const location = useLocation()
 
   // Unknown / missing locale → prepend the visitor's locale to the full path.
+  // Keep the query string + hash: locale-less deep links (the "call me" ring
+  // /apps/calls/join?code=…&ring=1, booking links, etc.) carry state there, and
+  // dropping it silently breaks the incoming-call screen.
   if (!isLocale(lang)) {
     const target = getStoredLocale() ?? detectLocale()
-    return <Navigate to={`/${target}${location.pathname}`} replace />
+    return <Navigate to={`/${target}${location.pathname}${location.search}${location.hash}`} replace />
   }
   return <LocalizedLayout locale={lang} />
 }
