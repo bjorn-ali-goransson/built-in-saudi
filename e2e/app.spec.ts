@@ -494,6 +494,26 @@ test.describe('tools', () => {
     await expect(page.getByTestId('rp-sound')).toHaveAttribute('aria-pressed', 'false')
   })
 
+  test('random picker: ticks while spinning; a mid-spin mute silences the rest', async ({ page }) => {
+    // Count oscillator creations — each audible tick makes one (works even on a
+    // suspended AudioContext, so headless runs without audio hardware still count).
+    await page.addInitScript(() => {
+      let count = 0
+      const orig = AudioContext.prototype.createOscillator
+      AudioContext.prototype.createOscillator = function () { count++; return orig.apply(this) }
+      ;(window as unknown as { __oscs: () => number }).__oscs = () => count
+    })
+    const oscs = () => page.evaluate(() => (window as unknown as { __oscs: () => number }).__oscs())
+    await page.goto('/en/apps/random-picker')
+    await page.getByTestId('rp-spin').click()
+    await page.waitForTimeout(900) // mid-spin (the spin runs ~3.5s)
+    expect(await oscs()).toBeGreaterThan(0)
+    await page.getByTestId('rp-sound').click() // mute mid-spin
+    const atMute = await oscs()
+    await expect(page.getByTestId('rp-result')).toBeVisible({ timeout: 6000 })
+    expect(await oscs()).toBe(atMute) // silent after the mute, winner ding included
+  })
+
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
     await page.goto('/en/apps/dice-roller')
     await page.getByTestId('dr-count').fill('2')
