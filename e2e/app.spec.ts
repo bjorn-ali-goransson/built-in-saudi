@@ -483,6 +483,16 @@ test.describe('tools', () => {
     await expect(page.getByTestId('rp-result')).toHaveText(/Alpha|Beta|Gamma/, { timeout: 6000 })
   })
 
+  test('random picker: sound toggle persists', async ({ page }) => {
+    await page.goto('/en/apps/random-picker')
+    const btn = page.getByTestId('rp-sound')
+    await expect(btn).toHaveAttribute('aria-pressed', 'true')
+    await btn.click()
+    await expect(btn).toHaveAttribute('aria-pressed', 'false')
+    await page.reload()
+    await expect(page.getByTestId('rp-sound')).toHaveAttribute('aria-pressed', 'false')
+  })
+
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
     await page.goto('/en/apps/dice-roller')
     await page.getByTestId('dr-count').fill('2')
