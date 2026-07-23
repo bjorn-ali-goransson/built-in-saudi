@@ -46,13 +46,17 @@ export function CallLinkPage() {
   const nameCustom = name.trim() !== '' && !isDefaultName(name)
   // The owner may include their name in the link (&n=) so we greet the caller by it.
   const ownerName = (() => { try { return (new URLSearchParams(window.location.search).get('n') || '').slice(0, 40).trim() } catch { return '' } })()
-  const heading = ownerName ? (locale === 'ar' ? `اتصل بـ ${ownerName}` : `Call ${ownerName}`) : t.title
+  // Isolate the name with <bdi> so an English (LTR) name embedded in the Arabic (RTL)
+  // heading/blurb doesn't scramble the surrounding text's ordering (bidi). <bdi> adds
+  // no text content, so it's transparent to matching/SEO.
+  const nm = <bdi>{ownerName}</bdi>
+  const heading = ownerName ? (locale === 'ar' ? <>اتصل بـ {nm}</> : <>Call {nm}</>) : t.title
   const blurb = ownerName
     ? (locale === 'ar'
-        ? `استخدم هذا الرابط للاتصال بـ ${ownerName}. المكالمة خاصة ومباشرة بين المتصفحين ولا تمر بخوادمنا.`
-        : `Use this link to call ${ownerName}. The call is a private, browser-to-browser call and does not pass our servers.`)
+        ? <>استخدم هذا الرابط للاتصال بـ {nm}. المكالمة خاصة ومباشرة بين المتصفحين ولا تمر بخوادمنا.</>
+        : <>Use this link to call {nm}. The call is a private, browser-to-browser call and does not pass our servers.</>)
     : t.blurb
-  document.title = `${heading} — Built in Saudi`
+  document.title = `${ownerName ? (locale === 'ar' ? `اتصل بـ ${ownerName}` : `Call ${ownerName}`) : t.title} — Built in Saudi`
 
   async function call() {
     if (!code || calling) return

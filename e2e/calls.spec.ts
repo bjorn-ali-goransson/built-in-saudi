@@ -633,6 +633,20 @@ test('a call link that includes a name greets the caller by it on the join scree
   await c.close()
 })
 
+test('an English name in an Arabic call-link heading is bidi-isolated (RTL fix)', async ({ browser }) => {
+  const c = await browser.newContext({ locale: 'ar' })
+  const p = await c.newPage()
+  await p.addInitScript(() => { try { localStorage.setItem('bis-locale', 'ar') } catch { /* */ } })
+  await p.goto('/call/?c=abc123&n=Ali')
+  const h = p.getByTestId('call-link-heading')
+  // The Arabic greeting still contains the English name…
+  await expect(h).toContainText('اتصل بـ')
+  await expect(h).toContainText('Ali')
+  // …but the name is wrapped in a <bdi> so it can't scramble the RTL ordering.
+  await expect(h.locator('bdi')).toHaveText('Ali')
+  await c.close()
+})
+
 test('a saved name shows a checkmark (not shuffle); tapping it clears + randomises', async ({ browser }) => {
   const c = await browser.newContext()
   await c.addInitScript(() => { try { localStorage.setItem('bis-call-name', 'Ali Saud') } catch { /* */ } })
