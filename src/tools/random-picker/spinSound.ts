@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 /**
  * All of the Random Picker's sound: a lazily-created WebAudio beeper plus the
- * rAF loop that ticks whenever the wheel's rendered rotation passes a slice.
+ * requestAnimationFrame loop that ticks whenever the wheel's rendered rotation passes a slice.
  * Every method is safe to call while muted or with audio unavailable.
  */
 export class SpinSound {
