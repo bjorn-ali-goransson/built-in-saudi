@@ -46,33 +46,25 @@ export class SpinSound {
   }
 
   /**
-   * Tick each slice-crossing by following the wheel's actual rendered rotation —
-   * the CSS transition stays the single source of truth, so the sound can't
-   * drift from the visuals. Stops itself once `totalDeg` has been swept.
+   * Tick each time the spinning wheel sweeps past another slice boundary.
+   * Watches the wheel's actual on-screen rotation once per frame, so the sound
+   * always matches what the eye sees. Stops itself after `totalDeg` of travel.
    */
-  followSpin(el: SVGSVGElement | null, sliceDeg: number, totalDeg: number) {
+  followSpin(wheel: SVGSVGElement | null, sliceDeg: number, totalDeg: number) {
     cancelAnimationFrame(this.raf)
-    if (!el) return
-    const angle = () => {
-      const m = /matrix\(([^)]+)\)/.exec(getComputedStyle(el).transform)
-      if (!m) return 0
-      const [a, b] = m[1].split(',').map(Number)
-      return (Math.atan2(b, a) * 180) / Math.PI
-    }
-    let last = angle()
+    if (!wheel) return
+    let previous = rotationOf(wheel)
     let traveled = 0
-    const step = () => {
-      const a = angle()
-      let d = a - last
-      if (d < -180) d += 360 // the computed angle wraps at 360; the wheel only turns forward
-      last = a
-      if (d > 0) {
-        if (Math.floor((traveled + d) / sliceDeg) > Math.floor(traveled / sliceDeg)) this.tick()
-        traveled += d
-      }
-      if (traveled < totalDeg - 0.5) this.raf = requestAnimationFrame(step)
+    const everyFrame = () => {
+      const current = rotationOf(wheel)
+      const moved = degreesMovedForward(previous, current)
+      previous = current
+      const boundariesCrossed = Math.floor((traveled + moved) / sliceDeg) - Math.floor(traveled / sliceDeg)
+      if (boundariesCrossed > 0) this.tick()
+      traveled += moved
+      if (traveled < totalDeg - 0.5) this.raf = requestAnimationFrame(everyFrame)
     }
-    this.raf = requestAnimationFrame(step)
+    this.raf = requestAnimationFrame(everyFrame)
   }
 
   close() {
@@ -80,6 +72,22 @@ export class SpinSound {
     this.ac?.close()
     this.ac = null
   }
+}
+
+/** The element's current on-screen rotation in degrees (0–360), read from its rendered CSS transform. */
+function rotationOf(el: Element): number {
+  const { a, b } = new DOMMatrix(getComputedStyle(el).transform)
+  return (Math.atan2(b, a) * 180) / Math.PI
+}
+
+/**
+ * How far the wheel turned between two angle readings, in degrees.
+ * The reported angle jumps back to 0 after passing 360; since the wheel only
+ * spins forward, a "backwards" reading just means we crossed that seam.
+ */
+function degreesMovedForward(previous: number, current: number): number {
+  const moved = current - previous
+  return moved < -180 ? moved + 360 : Math.max(0, moved)
 }
 
 /** The sound on/off preference (persisted) and the SpinSound lifecycle. */
