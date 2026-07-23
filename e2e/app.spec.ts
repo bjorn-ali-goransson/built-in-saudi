@@ -510,8 +510,9 @@ test.describe('tools', () => {
     const soundsPlayed = () => page.evaluate(() => window.bisTestSoundCount)
     await page.goto('/en/apps/random-picker')
     await page.getByTestId('rp-spin').click()
-    await page.waitForTimeout(900) // mid-spin (the spin runs ~3.5s)
-    expect(await soundsPlayed()).toBeGreaterThan(0)
+    // "mid-spin" = the wheel has audibly ticked but no winner yet — no duration assumed
+    await expect.poll(soundsPlayed).toBeGreaterThan(0)
+    await expect(page.getByTestId('rp-result')).toHaveCount(0)
     await page.getByTestId('rp-sound').click() // mute mid-spin
     const atMute = await soundsPlayed()
     await expect(page.getByTestId('rp-result')).toBeVisible({ timeout: 6000 })
