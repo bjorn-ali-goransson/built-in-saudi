@@ -42,7 +42,7 @@ export default function RandomPickerTool() {
     const turns = 5
     const target = rot + turns * 360 + (360 - ((rot % 360) + idx * seg + seg / 2)) % 360 + 360
     setRot(target)
-    snd.prime() // unlock audio within the click gesture
+    snd.unlock() // unlock audio within the click gesture
     snd.followSpin(wheelRef.current, seg, target - rot)
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => { snd.ding(); setWinner(options[idx]); setSpinning(false) }, 3600)

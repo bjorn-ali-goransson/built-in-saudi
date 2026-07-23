@@ -20,7 +20,7 @@ export class SpinSound {
   }
 
   /** Create/resume the context — must happen inside a user gesture (autoplay policy). */
-  prime() {
+  unlock() {
     if (this.enabled) this.ensureAudio()
   }
 
@@ -98,7 +98,7 @@ export function useSpinSound() {
   function toggle() {
     const next = !sound
     snd.enabled = next // before the effect runs — a mid-spin tick may fire first
-    if (next) snd.prime() // create/resume inside the click gesture
+    if (next) snd.unlock() // create/resume inside the click gesture
     setSound(next)
   }
 
