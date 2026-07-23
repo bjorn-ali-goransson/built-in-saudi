@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 
 declare global {
-  /** Oscillator-creation counter installed by the random-picker sound test. */
-  interface Window { __oscs: number }
+  /** Installed by the random-picker sound test: how many sounds the page has played. */
+  interface Window { __soundsPlayed: number }
 }
 
 test.describe('home', () => {
@@ -500,22 +500,22 @@ test.describe('tools', () => {
   })
 
   test('random picker: ticks while spinning; a mid-spin mute silences the rest', async ({ page }) => {
-    // Count oscillator creations — each audible tick makes one (works even on a
-    // suspended AudioContext, so headless runs without audio hardware still count).
+    // Every sound (tick or ding) creates one WebAudio oscillator, so counting
+    // oscillator creations counts sounds played — even in silent headless runs.
     await page.addInitScript(() => {
-      window.__oscs = 0
+      window.__soundsPlayed = 0
       const orig = AudioContext.prototype.createOscillator
-      AudioContext.prototype.createOscillator = function () { window.__oscs++; return orig.apply(this) }
+      AudioContext.prototype.createOscillator = function () { window.__soundsPlayed++; return orig.apply(this) }
     })
-    const oscs = () => page.evaluate(() => window.__oscs)
+    const soundsPlayed = () => page.evaluate(() => window.__soundsPlayed)
     await page.goto('/en/apps/random-picker')
     await page.getByTestId('rp-spin').click()
     await page.waitForTimeout(900) // mid-spin (the spin runs ~3.5s)
-    expect(await oscs()).toBeGreaterThan(0)
+    expect(await soundsPlayed()).toBeGreaterThan(0)
     await page.getByTestId('rp-sound').click() // mute mid-spin
-    const atMute = await oscs()
+    const atMute = await soundsPlayed()
     await expect(page.getByTestId('rp-result')).toBeVisible({ timeout: 6000 })
-    expect(await oscs()).toBe(atMute) // silent after the mute, winner ding included
+    expect(await soundsPlayed()).toBe(atMute) // silent after the mute, winner ding included
   })
 
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
