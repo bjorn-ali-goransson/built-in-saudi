@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
 
+declare global {
+  /** Oscillator-creation counter installed by the random-picker sound test. */
+  interface Window { __oscs: number }
+}
+
 test.describe('home', () => {
   test('opens to the app grid + search', async ({ page }) => {
     await page.goto('/en')
@@ -498,12 +503,11 @@ test.describe('tools', () => {
     // Count oscillator creations — each audible tick makes one (works even on a
     // suspended AudioContext, so headless runs without audio hardware still count).
     await page.addInitScript(() => {
-      let count = 0
+      window.__oscs = 0
       const orig = AudioContext.prototype.createOscillator
-      AudioContext.prototype.createOscillator = function () { count++; return orig.apply(this) }
-      ;(window as unknown as { __oscs: () => number }).__oscs = () => count
+      AudioContext.prototype.createOscillator = function () { window.__oscs++; return orig.apply(this) }
     })
-    const oscs = () => page.evaluate(() => (window as unknown as { __oscs: () => number }).__oscs())
+    const oscs = () => page.evaluate(() => window.__oscs)
     await page.goto('/en/apps/random-picker')
     await page.getByTestId('rp-spin').click()
     await page.waitForTimeout(900) // mid-spin (the spin runs ~3.5s)
