@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
 
+declare global {
+  /** Installed by the random-picker sound test: how many sounds the page has played. */
+  interface Window { bisTestSoundCount: number }
+}
+
 test.describe('home', () => {
   test('opens to the app grid + search', async ({ page }) => {
     await page.goto('/en')
@@ -481,6 +486,37 @@ test.describe('tools', () => {
     await page.getByTestId('rp-input').fill('Alpha\nBeta\nGamma')
     await page.getByTestId('rp-spin').click()
     await expect(page.getByTestId('rp-result')).toHaveText(/Alpha|Beta|Gamma/, { timeout: 6000 })
+  })
+
+  test('random picker: sound toggle persists', async ({ page }) => {
+    await page.goto('/en/apps/random-picker')
+    const btn = page.getByTestId('rp-sound')
+    // aria-pressed = the toggle's on/off state, not "was clicked": sound defaults to ON
+    await expect(btn).toHaveAttribute('aria-pressed', 'true')
+    await btn.click()
+    await expect(btn).toHaveAttribute('aria-pressed', 'false')
+    await page.reload()
+    await expect(page.getByTestId('rp-sound')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('random picker: ticks while spinning; a mid-spin mute silences the rest', async ({ page }) => {
+    // Every sound (tick or ding) creates one WebAudio oscillator, so counting
+    // oscillator creations counts sounds played — even in silent headless runs.
+    await page.addInitScript(() => {
+      window.bisTestSoundCount = 0
+      const orig = AudioContext.prototype.createOscillator
+      AudioContext.prototype.createOscillator = function () { window.bisTestSoundCount++; return orig.apply(this) }
+    })
+    const soundsPlayed = () => page.evaluate(() => window.bisTestSoundCount)
+    await page.goto('/en/apps/random-picker')
+    await page.getByTestId('rp-spin').click()
+    // "mid-spin" = the wheel has audibly ticked but no winner yet — no duration assumed
+    await expect.poll(soundsPlayed).toBeGreaterThan(0)
+    await expect(page.getByTestId('rp-result')).toHaveCount(0)
+    await page.getByTestId('rp-sound').click() // mute mid-spin
+    const atMute = await soundsPlayed()
+    await expect(page.getByTestId('rp-result')).toBeVisible({ timeout: 6000 })
+    expect(await soundsPlayed()).toBe(atMute) // silent after the mute, winner ding included
   })
 
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
