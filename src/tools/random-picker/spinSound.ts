@@ -10,7 +10,7 @@ export class SpinSound {
   private ac: AudioContext | null = null
   private raf = 0
 
-  private ctx(): AudioContext | null {
+  private ensureAudio(): AudioContext | null {
     if (!this.ac) {
       if (typeof AudioContext === 'undefined') return null
       this.ac = new AudioContext()
@@ -21,12 +21,12 @@ export class SpinSound {
 
   /** Create/resume the context — must happen inside a user gesture (autoplay policy). */
   prime() {
-    if (this.enabled) this.ctx()
+    if (this.enabled) this.ensureAudio()
   }
 
   tick(freq = 760, dur = 0.05, gain = 0.14) {
     if (!this.enabled) return // gate at fire-time so a mid-spin mute goes silent
-    const ac = this.ctx()
+    const ac = this.ensureAudio()
     if (!ac) return
     const osc = ac.createOscillator()
     const g = ac.createGain()
