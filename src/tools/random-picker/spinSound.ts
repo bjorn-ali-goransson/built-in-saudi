@@ -7,10 +7,12 @@ import { rotationOf, degreesMovedForward } from '../../lib/rotation'
  * Every method is safe to call while muted or with audio unavailable.
  */
 export class SpinSound {
+  /** Master on/off switch (the user's mute toggle). While false, every play method is silent. */
   enabled = true
   private ac: AudioContext | null = null
   private raf = 0
 
+  /** Get the audio engine, ready to play: created on first use, un-paused if the browser paused it. */
   private ensureAudio(): AudioContext | null {
     if (!this.ac) {
       if (typeof AudioContext === 'undefined') return null
@@ -20,11 +22,20 @@ export class SpinSound {
     return this.ac
   }
 
-  /** Create/resume the context — must happen inside a user gesture (autoplay policy). */
+  /**
+   * Start the audio engine early so later ticks play instantly. Browsers only
+   * allow audio to start from a user gesture, so call this inside a click handler.
+   */
   unlock() {
     if (this.enabled) this.ensureAudio()
   }
 
+  /**
+   * Play one short beep — the wheel's tick.
+   * @param freq  pitch in Hz (higher = brighter)
+   * @param dur   length in seconds
+   * @param gain  volume, 0–1
+   */
   tick(freq = 760, dur = 0.05, gain = 0.14) {
     if (!this.enabled) return // gate at fire-time so a mid-spin mute goes silent
     const ac = this.ensureAudio()
@@ -41,6 +52,7 @@ export class SpinSound {
     osc.stop(ac.currentTime + dur)
   }
 
+  /** Play the two-note winner chime shown when the wheel settles. */
   ding() {
     this.tick(880, 0.12, 0.16)
     this.tick(1320, 0.18, 0.12)
@@ -68,13 +80,15 @@ export class SpinSound {
     this.raf = requestAnimationFrame(everyFrame)
   }
 
+  /** Release everything: stop the follow loop and shut down the audio engine. Call on unmount. */
   close() {
     cancelAnimationFrame(this.raf)
     this.ac?.close()
     this.ac = null
   }
 }
-/** The sound on/off preference (persisted) and the SpinSound lifecycle. */
+
+/** The sound on/off preference (persisted to localStorage) and the SpinSound lifecycle. */
 export function useSpinSound() {
   const [snd] = useState(() => new SpinSound())
   const [sound, setSound] = useState(() => {
