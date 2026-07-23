@@ -38,18 +38,15 @@ interface WheelProps {
   spinning: boolean
   /** Lets useSpinWheel read the rendered rotation back to time the tick sounds. */
   svgRef: RefObject<SVGSVGElement>
-  /** Called when the spin's transform transition finishes. */
-  onSettled: () => void
 }
 
-export function Wheel({ options, rot, spinning, svgRef, onSettled }: WheelProps) {
+export function Wheel({ options, rot, spinning, svgRef }: WheelProps) {
   const n = options.length
   return (
     <div className="relative shrink-0">
       {/* fixed pointer at 12 o'clock; the wheel turns beneath it */}
       <div className="absolute left-1/2 -translate-x-1/2 -top-1 z-10 text-[1.4rem]" aria-hidden="true">▼</div>
       <svg ref={svgRef} width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="max-w-[320px] w-full h-auto"
-        onTransitionEnd={(e) => { if (e.propertyName === 'transform') onSettled() }}
         style={{ transform: `rotate(${rot}deg)`, transition: spinning ? SPIN_TRANSITION : 'none' }}>
         {options.map((label, i) => {
           const mid = angleAt((i + 0.5) / n) // middle of this option's slice

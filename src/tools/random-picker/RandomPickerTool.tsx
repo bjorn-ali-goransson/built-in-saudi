@@ -21,7 +21,7 @@ export default function RandomPickerTool() {
   })
   const options = useMemo(() => text.split('\n').map((l) => l.trim()).filter(Boolean), [text])
   const n = options.length
-  const { rot, spinning, winner, wheelRef, spin, settle } = useSpinWheel(options, snd)
+  const { rot, spinning, winner, wheelRef, spin } = useSpinWheel(options, snd)
 
   useEffect(() => {
     snd.enabled = sound
@@ -39,7 +39,7 @@ export default function RandomPickerTool() {
   return (
     <Stack data-testid="random-picker">
       <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-        <Wheel options={options} rot={rot} spinning={spinning} svgRef={wheelRef} onSettled={settle} />
+        <Wheel options={options} rot={rot} spinning={spinning} svgRef={wheelRef} />
 
         <div className="flex flex-col gap-3 w-full">
           <label className="flex flex-col gap-[0.4rem]"><FieldLabel>{s.input}</FieldLabel>

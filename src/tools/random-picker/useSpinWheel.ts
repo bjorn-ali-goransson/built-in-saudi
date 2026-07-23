@@ -5,10 +5,7 @@ const SPIN_MS = 3500
 /** The single definition of the spin's motion — the sound follows the rendered rotation, so it needs no copy. */
 export const SPIN_TRANSITION = `transform ${SPIN_MS}ms cubic-bezier(0.2,0.8,0.1,1)`
 
-/**
- * One spin's lifecycle: pick a winner, rotate the wheel to it, follow the *rendered*
- * rotation frame-by-frame (a tick per segment-width swept), resolve on transitionend.
- */
+/** Pick a winner, rotate the wheel to it, and tick each time a slice passes the pointer. */
 export function useSpinWheel(options: string[], sound: SpinSound) {
   const [rot, setRot] = useState(0)
   const [spinning, setSpinning] = useState(false)
@@ -16,8 +13,6 @@ export function useSpinWheel(options: string[], sound: SpinSound) {
   const wheelRef = useRef<SVGSVGElement | null>(null)
   const raf = useRef(0)
   const timer = useRef<number | undefined>(undefined)
-  // The in-flight winner's name; non-null exactly while a spin is unresolved.
-  const pending = useRef<string | null>(null)
 
   useEffect(() => () => {
     cancelAnimationFrame(raf.current)
@@ -34,38 +29,23 @@ export function useSpinWheel(options: string[], sound: SpinSound) {
     return (Math.atan2(b, a) * 180) / Math.PI
   }
 
-  // Follow the wheel's actual rendered rotation and click each time it sweeps another
-  // segment-width — the CSS transition is the single source of truth, so the sound
-  // can't drift from the visuals however the easing or duration are tuned.
-  function followRotation(seg: number) {
+  /** Tick whenever the wheel's rendered rotation sweeps past another slice boundary. */
+  function tickOnSliceCrossings(seg: number, totalDeg: number) {
     cancelAnimationFrame(raf.current)
     let last = wheelAngle()
     let traveled = 0
     const step = () => {
-      if (pending.current === null) return
       const a = wheelAngle()
       let d = a - last
       if (d < -180) d += 360 // the computed angle wraps at 360; the wheel only turns forward
       last = a
       if (d > 0) {
-        const before = Math.floor(traveled / seg)
+        if (Math.floor((traveled + d) / seg) > Math.floor(traveled / seg)) sound.tick()
         traveled += d
-        if (Math.floor(traveled / seg) > before) sound.tick()
       }
-      raf.current = requestAnimationFrame(step)
+      if (traveled < totalDeg - 0.5) raf.current = requestAnimationFrame(step)
     }
     raf.current = requestAnimationFrame(step)
-  }
-
-  /** Resolve the spin (idempotent): ding, reveal the winner, stop following. */
-  function settle() {
-    if (pending.current === null) return
-    cancelAnimationFrame(raf.current)
-    window.clearTimeout(timer.current)
-    sound.ding()
-    setWinner(pending.current)
-    pending.current = null
-    setSpinning(false)
   }
 
   function spin() {
@@ -79,13 +59,15 @@ export function useSpinWheel(options: string[], sound: SpinSound) {
     const turns = 5
     const delta = turns * 360 + (360 - ((rot % 360) + idx * seg + seg / 2)) % 360 + 360
     setRot(rot + delta)
-    pending.current = options[idx]
     sound.prime() // resume/create the AudioContext within the click gesture
-    followRotation(seg)
-    // transitionend resolves the spin; this is a safety net for a missed event
+    tickOnSliceCrossings(seg, delta)
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(settle, SPIN_MS + 250)
+    timer.current = window.setTimeout(() => {
+      sound.ding()
+      setWinner(options[idx])
+      setSpinning(false)
+    }, SPIN_MS + 100)
   }
 
-  return { rot, spinning, winner, wheelRef, spin, settle }
+  return { rot, spinning, winner, wheelRef, spin }
 }
