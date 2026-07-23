@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 declare global {
   /** Installed by the random-picker sound test: how many sounds the page has played. */
-  interface Window { __soundsPlayed: number }
+  interface Window { bisTestSoundCount: number }
 }
 
 test.describe('home', () => {
@@ -503,11 +503,11 @@ test.describe('tools', () => {
     // Every sound (tick or ding) creates one WebAudio oscillator, so counting
     // oscillator creations counts sounds played — even in silent headless runs.
     await page.addInitScript(() => {
-      window.__soundsPlayed = 0
+      window.bisTestSoundCount = 0
       const orig = AudioContext.prototype.createOscillator
-      AudioContext.prototype.createOscillator = function () { window.__soundsPlayed++; return orig.apply(this) }
+      AudioContext.prototype.createOscillator = function () { window.bisTestSoundCount++; return orig.apply(this) }
     })
-    const soundsPlayed = () => page.evaluate(() => window.__soundsPlayed)
+    const soundsPlayed = () => page.evaluate(() => window.bisTestSoundCount)
     await page.goto('/en/apps/random-picker')
     await page.getByTestId('rp-spin').click()
     await page.waitForTimeout(900) // mid-spin (the spin runs ~3.5s)
