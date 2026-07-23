@@ -12,9 +12,8 @@ export class SpinSound {
 
   private ctx(): AudioContext | null {
     if (!this.ac) {
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AC) return null
-      this.ac = new AC()
+      if (typeof AudioContext === 'undefined') return null
+      this.ac = new AudioContext()
     }
     if (this.ac.state === 'suspended') this.ac.resume()
     return this.ac
