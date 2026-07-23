@@ -19,20 +19,6 @@ function slice(i: number, n: number): string {
   return `M ${C} ${C} L ${C + R * Math.cos(a0)} ${C + R * Math.sin(a0)} A ${R} ${R} 0 ${large} 1 ${C + R * Math.cos(a1)} ${C + R * Math.sin(a1)} Z`
 }
 
-// cubic-bezier(0.2,0.8,0.1,1) — matches the CSS transition easing so ticks land on segment crossings.
-function easeProgress(t: number): number {
-  const cx = 0.2, cy = 0.8, dx = 0.1, dy = 1
-  let u = t
-  for (let k = 0; k < 5; k++) {
-    const x = 3 * (1 - u) * (1 - u) * u * cx + 3 * (1 - u) * u * u * dx + u * u * u
-    const dxdu = 3 * (1 - u) * (1 - u) * cx + 6 * (1 - u) * u * (dx - cx) + 3 * u * u * (1 - dx)
-    if (dxdu === 0) break
-    u -= (x - t) / dxdu
-    u = Math.max(0, Math.min(1, u))
-  }
-  return 3 * (1 - u) * (1 - u) * u * cy + 3 * (1 - u) * u * u * dy + u * u * u
-}
-
 export default function RandomPickerTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -44,9 +30,12 @@ export default function RandomPickerTool() {
     try { return localStorage.getItem('bis-picker-sound') !== 'off' } catch { return true }
   })
   const timer = useRef<number | undefined>(undefined)
-  const ticks = useRef<number[]>([])
   const audioCtx = useRef<AudioContext | null>(null)
-  // Live mirror of `sound` so ticks scheduled at spin-start honour a mid-spin toggle.
+  const raf = useRef(0)
+  const wheelRef = useRef<SVGSVGElement | null>(null)
+  // The in-flight winner's name; non-null exactly while a spin is unresolved.
+  const pending = useRef<string | null>(null)
+  // Live mirror of `sound` so ticks fired mid-spin honour a mid-spin toggle.
   const soundRef = useRef(sound)
 
   useEffect(() => {
@@ -56,7 +45,7 @@ export default function RandomPickerTool() {
 
   useEffect(() => () => {
     window.clearTimeout(timer.current)
-    ticks.current.forEach((id) => window.clearTimeout(id))
+    cancelAnimationFrame(raf.current)
     audioCtx.current?.close()
   }, [])
 
@@ -89,26 +78,47 @@ export default function RandomPickerTool() {
     osc.stop(ac.currentTime + dur)
   }
 
-  function scheduleSound(totalDeg: number) {
-    // Always schedule; `tick` decides at fire-time whether to sound (honours mid-spin toggle).
-    if (sound) ctx() // prime/resume within the spin click gesture
-    ticks.current.forEach((id) => window.clearTimeout(id))
-    ticks.current = []
-    const seg = 360 / n
-    const crossings = Math.floor(totalDeg / seg)
-    for (let k = 1; k <= crossings; k++) {
-      const p = (k * seg) / totalDeg // fraction of rotation completed at this crossing
-      // invert eased progress -> time fraction via a coarse search
-      let lo = 0, hi = 1
-      for (let it = 0; it < 20; it++) {
-        const midT = (lo + hi) / 2
-        if (easeProgress(midT) < p) lo = midT; else hi = midT
+  /** The wheel's rendered rotation in degrees, read back from the computed transform. */
+  function wheelAngle(): number {
+    const el = wheelRef.current
+    if (!el) return 0
+    const m = /matrix\(([^)]+)\)/.exec(getComputedStyle(el).transform)
+    if (!m) return 0
+    const [a, b] = m[1].split(',').map(Number)
+    return (Math.atan2(b, a) * 180) / Math.PI
+  }
+
+  // Follow the wheel's actual rendered rotation and click each time it sweeps another
+  // segment-width — the CSS transition is the single source of truth, so the sound
+  // can't drift from the visuals however the easing or duration are tuned.
+  function startTicks(seg: number) {
+    cancelAnimationFrame(raf.current)
+    let last = wheelAngle()
+    let traveled = 0
+    const step = () => {
+      if (pending.current === null) return
+      const a = wheelAngle()
+      let d = a - last
+      if (d < -180) d += 360 // the computed angle wraps at 360; the wheel only turns forward
+      last = a
+      if (d > 0) {
+        const before = Math.floor(traveled / seg)
+        traveled += d
+        if (Math.floor(traveled / seg) > before) tick(760, 0.05, 0.14)
       }
-      const at = ((lo + hi) / 2) * SPIN_MS
-      ticks.current.push(window.setTimeout(() => tick(760, 0.05, 0.14), at))
+      raf.current = requestAnimationFrame(step)
     }
-    // winner ding
-    ticks.current.push(window.setTimeout(() => { tick(880, 0.12, 0.16); tick(1320, 0.18, 0.12) }, SPIN_MS + 40))
+    raf.current = requestAnimationFrame(step)
+  }
+
+  function finish() {
+    if (pending.current === null) return
+    cancelAnimationFrame(raf.current)
+    window.clearTimeout(timer.current)
+    tick(880, 0.12, 0.16); tick(1320, 0.18, 0.12) // winner ding
+    setWinner(pending.current)
+    pending.current = null
+    setSpinning(false)
   }
 
   function spin() {
@@ -120,9 +130,12 @@ export default function RandomPickerTool() {
     const turns = 5
     const delta = turns * 360 + (360 - ((rot % 360) + idx * seg + seg / 2)) % 360 + 360
     setRot(rot + delta)
-    scheduleSound(delta)
+    pending.current = options[idx]
+    if (sound) ctx() // prime/resume within the click gesture
+    startTicks(seg)
+    // the transition's own end event resolves the spin; this is a safety net for a missed event
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => { setWinner(options[idx]); setSpinning(false) }, 3600)
+    timer.current = window.setTimeout(finish, SPIN_MS + 250)
   }
 
   return (
@@ -130,7 +143,8 @@ export default function RandomPickerTool() {
       <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
         <div className="relative shrink-0">
           <div className="absolute left-1/2 -translate-x-1/2 -top-1 z-10 text-[1.4rem]" aria-hidden="true">▼</div>
-          <svg width={C * 2} height={C * 2} viewBox={`0 0 ${C * 2} ${C * 2}`} className="max-w-[320px] w-full h-auto"
+          <svg ref={wheelRef} width={C * 2} height={C * 2} viewBox={`0 0 ${C * 2} ${C * 2}`} className="max-w-[320px] w-full h-auto"
+            onTransitionEnd={(e) => { if (e.propertyName === 'transform') finish() }}
             style={{ transform: `rotate(${rot}deg)`, transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.2,0.8,0.1,1)` : 'none' }}>
             {options.map((opt, i) => {
               const mid = ((i + 0.5) / n) * 2 * Math.PI - Math.PI / 2
