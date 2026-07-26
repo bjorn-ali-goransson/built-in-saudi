@@ -16,6 +16,9 @@ import './call.js'
 import './prompt.js'
 // Arabic diacritization (diacritize) — one LLM تشكيل per 24h.
 import './diacritize.js'
+// To-do lists (todoSync/todoMine/todoShare/todoDelete) — the OPTIONAL cloud half;
+// a list is local-only until the user turns sync on for it.
+import './todo.js'
 
 const { Firestore } = firestore
 const db = new Firestore()

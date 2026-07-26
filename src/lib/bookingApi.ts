@@ -114,6 +114,8 @@ export interface MyDataReport {
   shortLinks?: number
   promptRuns?: number
   diacritizeRuns?: number
+  todoLists?: number
+  todoListsSharedWithMe?: number
 }
 
 /** Report (del=false) or delete (del=true) everything stored for this Google user. */

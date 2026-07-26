@@ -263,8 +263,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `bookings` where `hostUid == sub`, `cvUsage/{sub}`, `cvSaved/{sub}` (a **legacy**
   server copy of a CV — "save for later" was removed in #213, so nothing writes
   this any more; `my-data` keeps purging old copies), `shortLinks` where
-  `owner == sub`, `promptUsage/{sub}` (Prompt Analyzer rate-limit counters), and
-  `diacritizeUsage/{sub}` (Arabic Diacritizer rate-limit counters).
+  `owner == sub`, `promptUsage/{sub}` (Prompt Analyzer rate-limit counters),
+  `diacritizeUsage/{sub}` (Arabic Diacritizer rate-limit counters), and `todoLists`
+  (lists where `owner == sub` are deleted; for a list someone else owns, only our
+  **membership** is removed — never their list).
 - **CV Generator** (`functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
   uploaded CV as strict JSON, 2 per 24h per user) + `cv-refine` (instruction-driven
   tweaks). The model **never asks the user questions** — it returns an `issues`
@@ -274,6 +276,17 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   removed in #213 — `cv-save`/`cv-get`/`cv-delete`/`cv-tailor` are gone from the
   source and the deploy workflow (the old deployments need a one-off
   `gcloud functions delete`). Nothing per-user is stored but `cvUsage` counters.
+- **To-do lists** (`functions/todo.js`, tool `src/tools/todo/`, id `todo`): the tool is
+  **local-first** — lists live in `localStorage` (`bis-todo`) and work with no account
+  at all. Only a list the user switches **sync** on for reaches the backend:
+  `todo-sync` (upsert; whole-list last-write-wins, a stale push can't clobber a newer
+  server copy), `todo-mine` (owned + shared-with-me), `todo-share` (**owner only**,
+  member emails), `todo-delete` (owner deletes for everyone; a member just drops
+  their own access). Firestore `todoLists/{id}` (`{owner, title, items[], members[],
+  updatedAt, expiresAt}`, 1-year TTL since last write). Members can **edit** — that's
+  the point of sharing — but only the owner changes who it's shared with. Same GIS
+  client ID as the CV tool. **Covered by `my-data`** (owned lists deleted; membership
+  of someone else's list is removed, not their list).
 - **Link shortener** (`functions/shorten.js`): `shorten` (Google-auth → create a
   6-month short link in Firestore `shortLinks`, keyed by a random code, storing
   `owner`/`url`/`expiresAt`/`hits`), `resolve-link` (public GET `?c=<code>` →
@@ -398,7 +411,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   (`bis-missed-call` → window event `bis-call-missed`), which drops a pointless
   ringing screen back to the lobby.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all twenty-eight functions on any `functions/**` change, authenticating **keylessly
+  deploys all thirty-two functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

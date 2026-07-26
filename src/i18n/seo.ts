@@ -254,6 +254,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'JSON إلى TypeScript', description: 'الصق كائن أو مصفوفة JSON لتحصل على واجهات TypeScript مستنبطة منها — تصبح الكائنات المتداخلة واجهات خاصة بها، وتُصنَّف المصفوفات، وتصير المفاتيح الغائبة من بعض العناصر اختيارية. تعمل بالكامل في متصفحك.' },
   },
   {
+    id: 'todo',
+    en: { name: 'To-do Lists', description: 'Simple to-do lists that live in your browser: add tasks, tick them off, clear the finished ones. No account needed and nothing is uploaded. Want a list on more than one device, or shared with other people so you can tick things off together? Sign in with Google and switch sync on for just that list — everything else stays local.' },
+    ar: { name: 'قوائم المهام', description: 'قوائم مهام بسيطة تعيش في متصفحك: أضِف المهام وأنجِزها وامسح المنتهي منها. بلا حساب ودون رفع أي شيء. وإن أردت قائمة على أكثر من جهاز أو مشتركة مع آخرين لتنجزوا معًا، سجّل الدخول بحساب جوجل وفعّل المزامنة لتلك القائمة وحدها — وما عداها يبقى محليًا.' },
+  },
+  {
     id: 'flashcards',
     en: { name: 'Flashcards', description: 'Build a deck of flip cards — a prompt on the front, the answer on the back — then study it: flip, go through in order or shuffled. Your deck is saved in this browser, nothing uploaded.' },
     ar: { name: 'البطاقات التعليمية', description: 'ابنِ مجموعة بطاقات قابلة للقلب — سؤال في الوجه وإجابة في الظهر — ثم ذاكِرها: اقلب، وتنقّل بالترتيب أو بالخلط. تُحفظ مجموعتك في هذا المتصفح، دون رفع أي شيء.' },

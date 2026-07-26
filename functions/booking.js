@@ -523,7 +523,8 @@ http('myData', async (req, res) => {
     const { idToken, del } = req.body || {}
     const user = await verifyGoogle(idToken)
     if (!user || !user.sub) return res.status(401).json({ error: 'sign in first' })
-    const [hostDoc, bk, cvDoc, cvSavedDoc, links, promptDoc, diacDoc] = await Promise.all([
+    const lowerEmail = String(user.email || '').toLowerCase()
+    const [hostDoc, bk, cvDoc, cvSavedDoc, links, promptDoc, diacDoc, todos, todoShares] = await Promise.all([
       db.collection(HOSTS).doc(user.sub).get(),
       db.collection(BOOKINGS).where('hostUid', '==', user.sub).get(),
       db.collection('cvUsage').doc(user.sub).get(),
@@ -531,6 +532,10 @@ http('myData', async (req, res) => {
       db.collection('shortLinks').where('owner', '==', user.sub).get(),
       db.collection('promptUsage').doc(user.sub).get(),
       db.collection('diacritizeUsage').doc(user.sub).get(),
+      db.collection('todoLists').where('owner', '==', user.sub).get(),
+      // Lists someone ELSE owns that we've been shared into — deleting must remove
+      // our membership, not their list.
+      lowerEmail ? db.collection('todoLists').where('members', 'array-contains', lowerEmail).get() : Promise.resolve({ docs: [], size: 0 }),
     ])
     const report = {
       email: user.email || null,
@@ -541,6 +546,8 @@ http('myData', async (req, res) => {
       shortLinks: links.size,
       promptRuns: promptDoc.exists ? ((promptDoc.get('runs')) || []).length : 0,
       diacritizeRuns: diacDoc.exists ? ((diacDoc.get('runs')) || []).length : 0,
+      todoLists: todos.size,
+      todoListsSharedWithMe: todoShares.size,
     }
     if (del) {
       const batch = db.batch()
@@ -551,6 +558,13 @@ http('myData', async (req, res) => {
       if (cvSavedDoc.exists) batch.delete(cvSavedDoc.ref)
       if (promptDoc.exists) batch.delete(promptDoc.ref)
       if (diacDoc.exists) batch.delete(diacDoc.ref)
+      todos.docs.forEach((d) => batch.delete(d.ref))
+      // Someone else's list: drop just our membership.
+      todoShares.docs.forEach((d) => {
+        if (d.get('owner') === user.sub) return // already queued above
+        const members = (d.get('members') || []).filter((m) => m !== lowerEmail)
+        batch.update(d.ref, { members })
+      })
       await batch.commit()
     }
     res.json({ ok: true, report, deleted: !!del })

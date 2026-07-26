@@ -84,6 +84,7 @@ import { gitignoreTool } from './gitignore/meta'
 import { jsonToTypesTool } from './json-to-types/meta'
 import { flashcardsTool } from './flashcards/meta'
 import { kanbanTool } from './kanban/meta'
+import { todoTool } from './todo/meta'
 import { tierListTool } from './tier-list/meta'
 import { readmeGeneratorTool } from './readme-generator/meta'
 import { markdownTableTool } from './markdown-table/meta'
@@ -143,6 +144,7 @@ export const tools: Tool[] = [
   fakeDataTool,
   readabilityTool,
   slugifyTool,
+  todoTool,
   flashcardsTool,
   kanbanTool,
   randomPickerTool,

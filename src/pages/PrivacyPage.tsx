@@ -188,8 +188,8 @@ export function PrivacyPage() {
 /** Sign in with Google to see everything stored for you, and delete it. */
 function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   const t = locale === 'ar'
-    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', diac: 'مرات التشكيل', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.', localH: 'هذا المتصفح', localP: 'تتذكّر بعض الأدوات اختياراتك في هذا المتصفح فقط (الأسماء، القوائم المحفوظة، التفضيلات) — لا تُرفع إلى أي خادم. امسح كل ذلك من هنا؛ يؤثر على هذا الجهاز فقط ولا يمكن التراجع عنه.', clearLocal: 'امسح بيانات هذا المتصفح', confirmLocal: 'اضغط مرة أخرى للتأكيد', clearedLocal: (n: number) => `تم مسح ${n} عنصرًا من هذا المتصفح.`, download: 'تنزيل بياناتي', browserItems: (n: number) => `لديك ${n} عنصرًا مخزّنًا في هذا المتصفح.`, serverTotal: (n: number) => `نحتفظ بـ ${n} إدخالًا يخصّك.` }
-    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', diac: 'Diacritization runs', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.', localH: 'This browser', localP: 'Some tools remember your choices in this browser only (names, saved lists, preferences) — none of it is uploaded anywhere. Clear all of it here; this affects only this device and can’t be undone.', clearLocal: 'Clear this browser’s data', confirmLocal: 'Click again to confirm', clearedLocal: (n: number) => `Cleared ${n} item${n === 1 ? '' : 's'} from this browser.`, download: 'Download my data', browserItems: (n: number) => `You have ${n} item${n === 1 ? '' : 's'} stored in this browser.`, serverTotal: (n: number) => `We hold ${n} ${n === 1 ? 'entry' : 'entries'} for you.` }
+    ? { h: 'بياناتي', p: 'سجّل الدخول بحساب Google لترى كل ما نخزّنه عنك وتحذفه بنقرة واحدة.', page: 'صفحة حجز', none: 'لا شيء', bookings: 'حجوزات', cv: 'مرات استخدام مولّد السيرة', savedCv: 'سيرة محفوظة', links: 'روابط مختصرة', prompt: 'مرات تحليل الموجّهات', diac: 'مرات التشكيل', todos: 'قوائم مهام', todosShared: 'قوائم مشتركة معك', yes: 'نعم', del: 'احذف كل بياناتي', deleting: 'جارٍ الحذف…', done: 'حُذفت جميع بياناتك.', err: 'حدث خطأ، حاول مجددًا.', nothing: 'لا نخزّن أي بيانات باسمك.', localH: 'هذا المتصفح', localP: 'تتذكّر بعض الأدوات اختياراتك في هذا المتصفح فقط (الأسماء، القوائم المحفوظة، التفضيلات) — لا تُرفع إلى أي خادم. امسح كل ذلك من هنا؛ يؤثر على هذا الجهاز فقط ولا يمكن التراجع عنه.', clearLocal: 'امسح بيانات هذا المتصفح', confirmLocal: 'اضغط مرة أخرى للتأكيد', clearedLocal: (n: number) => `تم مسح ${n} عنصرًا من هذا المتصفح.`, download: 'تنزيل بياناتي', browserItems: (n: number) => `لديك ${n} عنصرًا مخزّنًا في هذا المتصفح.`, serverTotal: (n: number) => `نحتفظ بـ ${n} إدخالًا يخصّك.` }
+    : { h: 'My data', p: 'Sign in with Google to see everything we store for you and delete it in one click.', page: 'Booking page', none: 'none', bookings: 'Bookings', cv: 'CV generator runs', savedCv: 'Saved CV', links: 'Short links', prompt: 'Prompt analyses', diac: 'Diacritization runs', todos: 'To-do lists', todosShared: 'To-do lists shared with you', yes: 'yes', del: 'Delete all my data', deleting: 'Deleting…', done: 'All your data has been deleted.', err: 'Something went wrong — please try again.', nothing: 'We store nothing under your account.', localH: 'This browser', localP: 'Some tools remember your choices in this browser only (names, saved lists, preferences) — none of it is uploaded anywhere. Clear all of it here; this affects only this device and can’t be undone.', clearLocal: 'Clear this browser’s data', confirmLocal: 'Click again to confirm', clearedLocal: (n: number) => `Cleared ${n} item${n === 1 ? '' : 's'} from this browser.`, download: 'Download my data', browserItems: (n: number) => `You have ${n} item${n === 1 ? '' : 's'} stored in this browser.`, serverTotal: (n: number) => `We hold ${n} ${n === 1 ? 'entry' : 'entries'} for you.` }
   const [idToken, setIdToken] = useState('')
   const [report, setReport] = useState<MyDataReport | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'deleting' | 'done' | 'error'>('idle')
@@ -215,7 +215,7 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
   async function del() {
     if (!idToken) return
     setStatus('deleting')
-    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0, promptRuns: 0, diacritizeRuns: 0 } : r)) } catch { setStatus('error') }
+    try { await myData(idToken, true); setStatus('done'); setReport((r) => (r ? { ...r, bookingPage: null, bookings: 0, cvRuns: 0, savedCv: false, shortLinks: 0, promptRuns: 0, diacritizeRuns: 0, todoLists: 0, todoListsSharedWithMe: 0 } : r)) } catch { setStatus('error') }
   }
 
   // Local (this-browser-only) data — independent of the server "my data" above. A
@@ -240,10 +240,10 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0 && (report.promptRuns || 0) === 0 && (report.diacritizeRuns || 0) === 0
+  const empty = report && !report.bookingPage && report.bookings === 0 && report.cvRuns === 0 && !report.savedCv && (report.shortLinks || 0) === 0 && (report.promptRuns || 0) === 0 && (report.diacritizeRuns || 0) === 0 && (report.todoLists || 0) === 0 && (report.todoListsSharedWithMe || 0) === 0
   // How many rows we hold server-side — shown before the delete so the user knows
   // exactly what they're removing.
-  const serverTotal = report ? (report.bookingPage ? 1 : 0) + report.bookings + report.cvRuns + (report.savedCv ? 1 : 0) + (report.shortLinks || 0) + (report.promptRuns || 0) + (report.diacritizeRuns || 0) : 0
+  const serverTotal = report ? (report.bookingPage ? 1 : 0) + report.bookings + report.cvRuns + (report.savedCv ? 1 : 0) + (report.shortLinks || 0) + (report.promptRuns || 0) + (report.diacritizeRuns || 0) + (report.todoLists || 0) + (report.todoListsSharedWithMe || 0) : 0
 
   return (
     <div className="wrap max-w-[46rem] pb-[clamp(1.5rem,4vw,2.5rem)]">
@@ -265,6 +265,8 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
                 <li>{t.links}: <b>{report.shortLinks || 0}</b></li>
                 <li>{t.prompt}: <b>{report.promptRuns || 0}</b></li>
                 <li>{t.diac}: <b>{report.diacritizeRuns || 0}</b></li>
+                <li>{t.todos}: <b>{report.todoLists || 0}</b></li>
+                {!!report.todoListsSharedWithMe && <li>{t.todosShared}: <b>{report.todoListsSharedWithMe}</b></li>}
               </ul>
               <p className="text-[0.9rem] font-semibold text-ink" data-testid="mydata-total">{t.serverTotal(serverTotal)}</p>
               <Button variant="primary" data-testid="mydata-delete" disabled={status === 'deleting'} onClick={del} className="self-start !bg-gold-500 !border-gold-500 hover:!bg-gold-400">

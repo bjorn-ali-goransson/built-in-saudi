@@ -943,3 +943,48 @@ test.describe('currency-converter', () => {
     await expect(page.getByTestId('cur-error')).toBeVisible()
   })
 })
+
+test.describe('to-do lists', () => {
+  test('add, tick off, clear finished — all local, no sign-in', async ({ page }) => {
+    await page.goto('/en/apps/todo')
+    // Starts with one list rather than an empty screen.
+    await expect(page.getByTestId('todo-title')).toHaveValue('My tasks')
+
+    await page.getByTestId('todo-input').fill('Buy dates')
+    await page.getByTestId('todo-add').click()
+    await page.getByTestId('todo-input').fill('Call the plumber')
+    await page.getByTestId('todo-add').click()
+    await expect(page.getByTestId('todo-item')).toHaveCount(2)
+    await expect(page.getByTestId('todo-left')).toContainText('2 left')
+
+    // Ticking one off leaves it listed but struck through.
+    await page.getByTestId('todo-toggle').first().click()
+    await expect(page.getByTestId('todo-left')).toContainText('1 left')
+    await expect(page.getByTestId('todo-item')).toHaveCount(2)
+
+    // Clearing finished drops only the ticked one.
+    await page.getByTestId('todo-clear-done').click()
+    await expect(page.getByTestId('todo-item')).toHaveCount(1)
+    await expect(page.getByTestId('todo-items')).toContainText('Call the plumber')
+
+    // It survives a reload — the whole point of local-first.
+    await page.reload()
+    await expect(page.getByTestId('todo-items')).toContainText('Call the plumber')
+  })
+
+  test('lists are separate, and sharing is gated behind sync', async ({ page }) => {
+    await page.goto('/en/apps/todo')
+    await page.getByTestId('todo-input').fill('First list task')
+    await page.getByTestId('todo-add').click()
+
+    await page.getByTestId('todo-new-list').click()
+    await expect(page.getByTestId('todo-list-chip')).toHaveCount(2)
+    await expect(page.getByTestId('todo-empty')).toBeVisible() // the new list is its own thing
+
+    // Share only appears once a list is synced; until then it's the sync offer.
+    await expect(page.getByTestId('todo-share')).toHaveCount(0)
+    await expect(page.getByTestId('todo-enable-sync')).toBeVisible()
+    await page.getByTestId('todo-enable-sync').click()
+    await expect(page.getByTestId('todo-sync-sheet')).toContainText('stays on this device only')
+  })
+})

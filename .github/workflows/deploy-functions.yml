@@ -83,3 +83,8 @@ jobs:
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
 
           gcloud functions deploy diacritize              "${common[@]}" --entry-point=diacritize
+
+          gcloud functions deploy todo-sync               "${common[@]}" --entry-point=todoSync
+          gcloud functions deploy todo-mine               "${common[@]}" --entry-point=todoMine
+          gcloud functions deploy todo-share              "${common[@]}" --entry-point=todoShare
+          gcloud functions deploy todo-delete             "${common[@]}" --entry-point=todoDelete
