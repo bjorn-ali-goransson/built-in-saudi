@@ -65,14 +65,51 @@ async function messageVisibleClients(msg) {
   for (const c of all) { if (c.visibilityState === 'visible') { try { c.postMessage(msg) } catch (e) { /* */ } } }
 }
 
-// Push notifications (prayer times, and "call me" rings).
+// A MISSED call ("call me" caller gave up before being answered) is never stored
+// on our server — the push carries the record and this device keeps it. Queue it
+// in IndexedDB so it survives with no tab open; the app drains the queue into
+// localStorage (src/lib/missedCalls.ts). Never rejects — a lost record must not
+// break the notification.
+function queueMissed(entry) {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = () => { if (!settled) { settled = true; resolve() } }
+    try {
+      const open = indexedDB.open('bis-calls', 1)
+      open.onupgradeneeded = () => {
+        const db = open.result
+        if (!db.objectStoreNames.contains('missed')) db.createObjectStore('missed', { keyPath: 'id' })
+      }
+      open.onerror = done
+      open.onsuccess = () => {
+        try {
+          const tx = open.result.transaction('missed', 'readwrite')
+          tx.objectStore('missed').put(entry)
+          tx.oncomplete = done; tx.onerror = done; tx.onabort = done
+        } catch (e) { done() }
+      }
+    } catch (e) { done() }
+  })
+}
+
+// Push notifications (prayer times, and "call me" rings / missed calls).
 self.addEventListener('push', (event) => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
   // A ring carries ?ring=1 in its URL — nudge any visible tab straight to the
   // incoming-call screen (the notification still shows for backgrounded tabs).
   const isCall = typeof data.url === 'string' && data.url.indexOf('ring=1') !== -1
+  const m = data.missed && typeof data.missed === 'object' ? data.missed : null
+  const missed = m ? {
+    id: String(m.id || data.tag || Date.now()),
+    name: String(m.name || ''),
+    at: Number(m.at) || Date.now(),
+    back: m.back ? String(m.back) : '',
+  } : null
   event.waitUntil(Promise.all([
+    missed ? queueMissed(missed) : Promise.resolve(),
+    // A visible tab records it right away (and leaves a now-pointless ringing screen).
+    missed ? messageVisibleClients({ type: 'bis-missed-call' }) : Promise.resolve(),
     self.registration.showNotification(data.title || 'Built in Saudi', {
       body: data.body || '',
       icon: '/icon.svg',

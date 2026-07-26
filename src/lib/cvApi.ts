@@ -50,20 +50,38 @@ export function decodeJwt(token: string): { email?: string; name?: string; pictu
   }
 }
 
+/** A problem the AI found but couldn't fix on its own — surfaced to the user in
+ *  a dialog before the CV is revealed (#213). */
+export interface CvIssue {
+  title: string
+  detail: string
+  severity: 'high' | 'medium' | 'low'
+}
+
 export interface CvResult {
   cv: Cv
-  questions: string[]
+  issues: CvIssue[]
   summary: string
-  answersLeft: number
   polishLeft: number
 }
 
-function parseResult(data: { cv?: Cv; questions?: unknown; summary?: unknown; answersLeft?: unknown; polishLeft?: unknown }): CvResult {
+const SEVERITIES = ['high', 'medium', 'low'] as const
+function parseIssues(raw: unknown): CvIssue[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((i) => {
+      const o = (i || {}) as Partial<CvIssue>
+      const sev = SEVERITIES.find((x) => x === o.severity) || 'medium'
+      return { title: String(o.title || ''), detail: String(o.detail || ''), severity: sev }
+    })
+    .filter((i) => i.title)
+}
+
+function parseResult(data: { cv?: Cv; issues?: unknown; summary?: unknown; polishLeft?: unknown }): CvResult {
   return {
     cv: data.cv as Cv,
-    questions: Array.isArray(data.questions) ? data.questions.map(String) : [],
+    issues: parseIssues(data.issues),
     summary: typeof data.summary === 'string' ? data.summary : '',
-    answersLeft: Number(data.answersLeft ?? 0),
     polishLeft: Number(data.polishLeft ?? 0),
   }
 }
@@ -79,53 +97,9 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
   return parseResult(data)
 }
 
-/** Opt-in: save the CV to the user's account so they can resume on any device. */
-export async function saveCvServer(idToken: string, cv: Cv): Promise<void> {
-  const r = await fetch(`${FN}/cv-save`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, cv }),
-  })
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-}
-
-/** Remove the user's server-saved CV (opt-out). */
-export async function deleteCvServer(idToken: string): Promise<void> {
-  await fetch(`${FN}/cv-delete`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  }).catch(() => { /* ignore */ })
-}
-
-/** Fetch the user's server-saved CV (null if none). */
-export async function getSavedCv(idToken: string): Promise<Cv | null> {
-  const r = await fetch(`${FN}/cv-get`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  })
-  if (!r.ok) return null
-  const data = await r.json().catch(() => ({}))
-  return data && data.cv ? (data.cv as Cv) : null
-}
-
-/** Tailor the generated CV to a specific job description (separate 24h budget). */
-export async function tailorCv(idToken: string, cv: Cv, jobDescription: string): Promise<{ cv: Cv; tailorsLeft: number }> {
-  const r = await fetch(`${FN}/cv-tailor`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, cv, jobDescription }),
-  })
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return { cv: data.cv as Cv, tailorsLeft: Number(data.tailorsLeft ?? 0) }
-}
-
-/** Apply one message — an answer to an AI question ('answer') or a free tweak ('polish').
+/** Apply one instruction to the generated CV.
  *  `context` is the previous change summary so the user can correct it ("no, like this"). */
-export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'answer' | 'polish' | 'elaborate' | 'shorten', context = '', sourceText = ''): Promise<CvResult> {
+export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'polish' | 'elaborate' | 'shorten', context = '', sourceText = ''): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

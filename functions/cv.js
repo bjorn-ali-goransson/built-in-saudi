@@ -1,8 +1,10 @@
 // CV Generator backend — verifies a Google sign-in, rate-limits per user, and
 // asks OpenAI to (re)build the CV as strict JSON following the signal-not-noise
 // guidelines. Two flows: cvGenerate (fresh from an uploaded CV, 2 per 24h) and
-// cvRefine (up to 3 instruction-driven tweaks of the generated CV). Text-in,
-// JSON-out; the browser renders + exports. No new deps. Registered via index.js.
+// cvRefine (instruction-driven tweaks of the generated CV). Text-in, JSON-out;
+// the browser renders + exports. Nothing is stored but the rate-limit counters —
+// the server-saved CV ("save for later") and JD tailoring were removed (#213).
+// No new deps. Registered via index.js.
 
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
@@ -10,8 +12,6 @@ import firestore from '@google-cloud/firestore'
 const { Firestore } = firestore
 const db = new Firestore()
 const USAGE = 'cvUsage'
-const SAVED = 'cvSaved' // opt-in server copy of a user's CV (resume on any device)
-const SAVE_RETENTION_MS = 183 * 24 * 60 * 60 * 1000 // ~6 months
 
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || ''
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
@@ -20,12 +20,10 @@ const SITE = 'https://built-in-saudi.com'
 
 const UPLOAD_LIMIT = 2 // fresh generations per rolling 24h per user
 const OWNER_EMAIL = 'bjorn.a.goransson@gmail.com' // exempt from all rate limits
-const ANSWER_LIMIT = 5 // answers to the AI's own gap questions (quality-critical)
 const POLISH_LIMIT = 1 // user-initiated free-form "tell me what to change" tweaks
 const ELABORATE_LIMIT = 2 // "add more detail" rounds when the CV is under a page
 const SHORTEN_LIMIT = 2 // "make shorter" rounds
-const TAILOR_LIMIT = 1 // job-description tailorings per rolling 24h per user
-const QUESTION_CAP = 5 // most questions the model may surface at once
+const ISSUE_CAP = 5 // most CV problems the model may surface at once
 const WINDOW_MS = 24 * 60 * 60 * 1000
 
 function cors(req, res) {
@@ -73,9 +71,10 @@ FIX SILENTLY (do not ask, just correct):
 - Tone: make it professional, confident and concise. Rewrite anything unprofessional, casual, arrogant or over-the-top (e.g. "rockstar ninja", "single-handedly saved the company") into credible, specific, results-focused language.
 - Clarity: rewrite vague or confusing statements into clear ones where the meaning is reasonably inferable. Strip buzzword filler.
 
-ASK (only for MATERIAL gaps you cannot responsibly fix yourself):
-- Put up to 5 short, specific questions in "questions" when something important is missing or inconsistent and answering it would materially strengthen the CV. Only include a question if it is genuinely necessary for CV quality. Examples: a role/seniority with no supporting evidence (e.g. "Developer, 3 years" but no technologies, projects or achievements listed); conflicting or impossible dates; a large unexplained employment gap; a claimed skill never evidenced.
-- Do NOT ask about trivial things, and never invent facts to fill a gap. Always still produce the best CV you can from what's given — questions are additive, never blocking. If nothing material is missing, return an empty array.
+NEVER ask the candidate anything — you get exactly one pass and there is no back-and-forth. Instead, REPORT what you couldn't fix:
+- Put up to 5 problems in "issues": things that are missing, inconsistent or weak in the source CV and that only the candidate can resolve. Examples: a role/seniority with no supporting evidence (e.g. "Developer, 3 years" but no technologies, projects or achievements listed); conflicting or impossible dates; a large unexplained employment gap; a claimed skill never evidenced; no contact email; achievements with no measurable outcome.
+- Each issue is { "title": a 3–8 word label, "detail": one or two sentences saying what's wrong and what to add, "severity": "high" | "medium" | "low" }. "high" = a recruiter is likely to reject or distrust the CV over it; "medium" = it noticeably weakens the CV; "low" = a nice-to-have polish.
+- Report only what genuinely matters, most severe first, and never invent facts to fill a gap. Always still produce the best CV you can from what's given — issues are informational, never blocking. If nothing material is wrong, return an empty array.
 
 The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty):
 {
@@ -92,20 +91,13 @@ The CV object shape (omit a section with an empty array; omit optional strings b
   "languages": [{ "name": string, "level": string }]
 }
 
-Return ONLY JSON of the form: { "cv": { …the CV object above… }, "questions": [ up to 5 short strings ] }`
+Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [ up to 5 issue objects ] }`
 
 const LENGTH_RULE = `\n\nLENGTH — IMPORTANT: The result must fill close to a FULL A4 page. A one-page CV should carry roughly 300+ words of body content (not counting the name, headline and contact line). If the source material is thin, do NOT return a sparse half-page — instead elaborate PROFESSIONALLY and truthfully: expand each role's responsibilities into specific, credible bullets, draw out scope/scale/tools/impact that is implied by the material, and enrich the summary and skills. NEVER invent employers, job titles, dates, metrics or skills that aren't supported — but a confident, well-filled single page reads far better than a short one, so err toward fuller, richer phrasing grounded in what's there.`
 
 const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}${LENGTH_RULE}`
 
-const TAILOR_SYSTEM = `You are an elite technical résumé editor tailoring a candidate's CV to ONE specific job. You are given the candidate's current CV as JSON and the target JOB DESCRIPTION. Produce a version of the CV optimised for THIS job:
-- Rewrite the "summary" and the "role" headline to target this position, mirroring the job's language and priorities (honestly, never dishonestly).
-- Reorder skills, experience bullets and projects so the items MOST relevant to this job come first; condense or drop clearly irrelevant material.
-- Re-bold keywords so the ones this job cares about stand out, and surface matching technologies/skills the candidate genuinely has.
-- NEVER invent skills, tools, employers, dates or achievements the candidate does not already have. Tailoring means re-emphasising and rephrasing what is TRUE — not fabricating a match. If the candidate lacks something the job wants, simply do not claim it.
-Keep the EXACT same CV shape and obey every rule below.\n\n${RULES}\n\nReturn ONLY JSON of the form { "cv": { …the CV object above… } } — no questions needed.`
-
-const REFINE_SYSTEM = `You are an elite technical résumé editor in a short back-and-forth with the candidate. You are given the current CV as JSON plus their message — which is EITHER an answer to one of your earlier questions OR an instruction to change something. Incorporate it: if it answers a gap, weave the new information in and drop that question; if it's an instruction, apply it. Preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing issues silently, and re-evaluate remaining questions.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Return { "cv": { …the CV object… }, "questions": [ up to 5 strings ], "summary": "…" }.`
+const REFINE_SYSTEM = `You are an elite technical résumé editor. You are given the current CV as JSON plus an instruction from the candidate to change something. Apply it, preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing problems silently, and re-evaluate the reported issues.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Return { "cv": { …the CV object… }, "issues": [ up to 5 issue objects ], "summary": "…" }.`
 
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
@@ -136,6 +128,27 @@ function normalize(cv) {
   }
 }
 
+// Problems the model can't fix on its own, shown to the candidate in a dialog
+// before the CV itself. Most severe first, capped — a wall of nitpicks is noise.
+const SEVERITIES = ['high', 'medium', 'low']
+function normalizeIssues(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((i) => {
+      if (typeof i === 'string') return { title: i.trim().slice(0, 120), detail: '', severity: 'medium' }
+      if (!i || typeof i !== 'object') return null
+      const severity = SEVERITIES.includes(String(i.severity).toLowerCase()) ? String(i.severity).toLowerCase() : 'medium'
+      return {
+        title: String(i.title || '').trim().slice(0, 120),
+        detail: String(i.detail || '').trim().slice(0, 500),
+        severity,
+      }
+    })
+    .filter((i) => i && i.title)
+    .sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))
+    .slice(0, ISSUE_CAP)
+}
+
 async function callOpenAI(system, user) {
   if (!OPENAI_API_KEY) {
     const e = new Error('OPENAI_API_KEY not configured')
@@ -163,13 +176,10 @@ async function callOpenAI(system, user) {
   const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
   try {
     const parsed = JSON.parse(content)
-    // Tolerate the model returning { cv, questions } or just the CV object.
+    // Tolerate the model returning { cv, issues } or just the CV object.
     const cvObj = parsed && parsed.cv && typeof parsed.cv === 'object' ? parsed.cv : parsed
-    const questions = Array.isArray(parsed && parsed.questions)
-      ? parsed.questions.map((q) => String(q).trim()).filter(Boolean).slice(0, QUESTION_CAP)
-      : []
     const summary = typeof (parsed && parsed.summary) === 'string' ? parsed.summary.trim() : ''
-    return { cv: normalize(cvObj), questions, summary }
+    return { cv: normalize(cvObj), issues: normalizeIssues(parsed && parsed.issues), summary }
   } catch {
     const e = new Error('AI returned malformed JSON')
     e.code = 502
@@ -181,7 +191,7 @@ function fail(res, e) {
   res.status(e && e.code ? e.code : 500).json({ error: String((e && e.message) || e) })
 }
 
-// POST { idToken, text } → { ok, cv, questions, answersLeft, polishLeft }. Fresh build; 2 per 24h.
+// POST { idToken, text } → { ok, cv, issues, polishLeft }. Fresh build; 2 per 24h.
 http('cvGenerate', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
@@ -200,17 +210,17 @@ http('cvGenerate', async (req, res) => {
       return res.status(429).json({ error: `Limit reached — you can generate ${UPLOAD_LIMIT} CVs per 24 hours. Try again later.` })
     }
 
-    const { cv, questions } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
-    // Record the successful upload and reset both budgets for this new CV.
-    await ref.set({ uploads: [...recent, now], answerCount: 0, polishCount: 0, elaborateCount: 0, shortenCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, questions, answersLeft: ANSWER_LIMIT, polishLeft: POLISH_LIMIT })
+    const { cv, issues } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
+    // Record the successful upload and reset the tweak budgets for this new CV.
+    await ref.set({ uploads: [...recent, now], polishCount: 0, elaborateCount: 0, shortenCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
+    res.json({ ok: true, cv, issues, polishLeft: POLISH_LIMIT })
   } catch (e) {
     fail(res, e)
   }
 })
 
-// POST { idToken, cv, instruction, kind } → { ok, cv, questions, answersLeft, polishLeft }
-// kind 'answer' (answering the AI's gap questions, up to 5) or 'polish' (free tweak, up to 3).
+// POST { idToken, cv, instruction, kind } → { ok, cv, issues, polishLeft, … }
+// kind 'polish' (free tweak), 'elaborate' (fill out a thin CV) or 'shorten'.
 http('cvRefine', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
@@ -222,32 +232,25 @@ http('cvRefine', async (req, res) => {
     if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
     if (!instruction || String(instruction).trim().length < 2) return res.status(400).json({ error: 'missing instruction' })
 
-    const isAnswer = kind === 'answer'
     const isElaborate = kind === 'elaborate'
     const isShorten = kind === 'shorten'
     const ref = db.collection(USAGE).doc(user.sub)
     const d = (await ref.get()).data() || {}
-    let answerCount = Number(d.answerCount || 0)
     let polishCount = Number(d.polishCount || 0)
     let elaborateCount = Number(d.elaborateCount || 0)
     let shortenCount = Number(d.shortenCount || 0)
     const isOwner = user.email === OWNER_EMAIL
-    if (!isOwner && isAnswer && answerCount >= ANSWER_LIMIT) {
-      return res.status(429).json({ error: `You’ve answered the maximum of ${ANSWER_LIMIT} questions for this CV.` })
-    }
     if (!isOwner && isElaborate && elaborateCount >= ELABORATE_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${ELABORATE_LIMIT} “add more detail” rounds for this CV.` })
     }
     if (!isOwner && isShorten && shortenCount >= SHORTEN_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${SHORTEN_LIMIT} “make shorter” rounds for this CV.` })
     }
-    if (!isOwner && !isAnswer && !isElaborate && !isShorten && polishCount >= POLISH_LIMIT) {
+    if (!isOwner && !isElaborate && !isShorten && polishCount >= POLISH_LIMIT) {
       return res.status(429).json({ error: `You’ve used your ${POLISH_LIMIT === 1 ? 'one change' : `${POLISH_LIMIT} changes`} for this CV. Upload again to start fresh.` })
     }
 
-    const lead = isAnswer
-      ? 'The candidate is ANSWERING one or more of your questions'
-      : isElaborate
+    const lead = isElaborate
         ? 'The CV currently fills LESS THAN ONE PAGE. Expand it to better fill a full page — WITHOUT inventing anything: restore useful detail from the original that the first pass trimmed, add specific, credible detail to experience bullets (responsibilities, scope, tools, measurable impact), enrich the summary, and round out the skills. Every addition must be grounded in the original CV or a reasonable, truthful elaboration of what is already there — never fabricate employers, dates, metrics or skills. Keep it signal-first, not padded with filler'
         : isShorten
           ? 'The candidate wants a SHORTER CV — follow the target in their instruction. Condense: cut the least-important detail, merge or trim the weakest bullets, tighten wording, and drop low-signal items, while KEEPING every strong achievement and all key roles. Do not remove whole positions unless clearly irrelevant, and never invent anything'
@@ -260,112 +263,15 @@ http('cvRefine', async (req, res) => {
     const src = typeof sourceText === 'string' && sourceText.trim()
       ? `\n\nFor reference, the ORIGINAL CV text the candidate uploaded (use it to recover any detail that may have been dropped, but keep obeying every rule):\n${String(sourceText).slice(0, 12000)}`
       : ''
-    const { cv, questions, summary } = await callOpenAI(
+    const { cv, issues, summary } = await callOpenAI(
       REFINE_SYSTEM,
       `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}${prev}${src}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
     )
-    if (isAnswer) answerCount += 1
-    else if (isElaborate) elaborateCount += 1
+    if (isElaborate) elaborateCount += 1
     else if (isShorten) shortenCount += 1
     else polishCount += 1
-    await ref.update({ answerCount, polishCount, elaborateCount, shortenCount, updatedAt: new Date() })
-    res.json({ ok: true, cv, questions, summary, answersLeft: ANSWER_LIMIT - answerCount, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount })
-  } catch (e) {
-    fail(res, e)
-  }
-})
-
-// POST { idToken, cv, jobDescription } → { ok, cv, tailorsLeft }. Tailors the
-// generated CV to a specific job description. TAILOR_LIMIT per rolling 24h.
-http('cvTailor', async (req, res) => {
-  cors(req, res)
-  if (req.method === 'OPTIONS') return res.status(204).send('')
-  if (req.method !== 'POST') return res.status(405).send('POST only')
-  try {
-    const { idToken, cv: current, jobDescription } = req.body || {}
-    const user = await verifyGoogle(idToken)
-    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
-    if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
-    if (!jobDescription || String(jobDescription).trim().length < 40) {
-      return res.status(400).json({ error: 'paste the full job description (a bit longer)' })
-    }
-
-    const ref = db.collection(USAGE).doc(user.sub)
-    const now = Date.now()
-    const d = (await ref.get()).data() || {}
-    const recent = (Array.isArray(d.tailors) ? d.tailors : []).filter((t) => now - Number(t) < WINDOW_MS)
-    if (user.email !== OWNER_EMAIL && recent.length >= TAILOR_LIMIT) {
-      return res.status(429).json({ error: `Limit reached — you can tailor ${TAILOR_LIMIT} CVs per 24 hours. Try again later.` })
-    }
-
-    const { cv } = await callOpenAI(
-      TAILOR_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}\n\nTARGET JOB DESCRIPTION:\n${String(jobDescription).slice(0, 8000)}`,
-    )
-    await ref.set({ tailors: [...recent, now], email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, tailorsLeft: TAILOR_LIMIT - recent.length - 1 })
-  } catch (e) {
-    fail(res, e)
-  }
-})
-
-// POST { idToken, cv } → { ok }. Opt-in: store the CV so the user can resume it
-// on any device. One per user (overwrite). Kept 6 months, then lazily deleted.
-http('cvSave', async (req, res) => {
-  cors(req, res)
-  if (req.method === 'OPTIONS') return res.status(204).send('')
-  if (req.method !== 'POST') return res.status(405).send('POST only')
-  try {
-    const { idToken, cv } = req.body || {}
-    const user = await verifyGoogle(idToken)
-    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
-    if (!cv || typeof cv !== 'object') return res.status(400).json({ error: 'missing CV' })
-    const now = Date.now()
-    await db.collection(SAVED).doc(user.sub).set({
-      cv: normalize(cv), savedAt: new Date(now), expiresAt: new Date(now + SAVE_RETENTION_MS), email: user.email || null,
-    })
-    res.json({ ok: true })
-  } catch (e) {
-    fail(res, e)
-  }
-})
-
-// POST { idToken } → { ok }. Remove the user's server-saved CV (opt-out).
-http('cvDelete', async (req, res) => {
-  cors(req, res)
-  if (req.method === 'OPTIONS') return res.status(204).send('')
-  if (req.method !== 'POST') return res.status(405).send('POST only')
-  try {
-    const user = await verifyGoogle((req.body || {}).idToken)
-    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
-    await db.collection(SAVED).doc(user.sub).delete()
-    res.json({ ok: true })
-  } catch (e) {
-    fail(res, e)
-  }
-})
-
-// POST { idToken } → { ok, cv }. The user's saved CV (null if none / expired).
-http('cvGet', async (req, res) => {
-  cors(req, res)
-  if (req.method === 'OPTIONS') return res.status(204).send('')
-  if (req.method !== 'POST') return res.status(405).send('POST only')
-  try {
-    const user = await verifyGoogle((req.body || {}).idToken)
-    if (!user) return res.status(401).json({ error: 'sign in with Google first' })
-    const ref = db.collection(SAVED).doc(user.sub)
-    const snap = await ref.get()
-    if (!snap.exists) return res.json({ ok: true, cv: null })
-    const d = snap.data()
-    const now = Date.now()
-    if (d.expiresAt && d.expiresAt.toMillis && d.expiresAt.toMillis() < now) {
-      ref.delete().catch(() => {})
-      return res.json({ ok: true, cv: null })
-    }
-    // Sliding window: touch the expiry on every successful resume so a CV that's
-    // actively used doesn't lapse, while abandoned ones still expire.
-    ref.update({ expiresAt: new Date(now + SAVE_RETENTION_MS) }).catch(() => {})
-    res.json({ ok: true, cv: d.cv || null })
+    await ref.update({ polishCount, elaborateCount, shortenCount, updatedAt: new Date() })
+    res.json({ ok: true, cv, issues, summary, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount })
   } catch (e) {
     fail(res, e)
   }

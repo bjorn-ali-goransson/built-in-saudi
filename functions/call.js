@@ -157,6 +157,36 @@ http('callRegister', async (req, res) => {
   }
 })
 
+// Load a live link doc (null if missing/expired — an expired one is swept).
+async function liveLink(ref) {
+  const snap = await ref.get()
+  const d = snap.exists ? snap.data() : null
+  if (!d || (d.expiresAt && d.expiresAt.toDate && d.expiresAt.toDate() < new Date())) {
+    if (d) await ref.delete().catch(() => {})
+    return null
+  }
+  return d
+}
+
+// Push `payload` to every device on the link, pruning dead subscriptions and
+// refreshing the link's TTL. Returns how many were delivered.
+async function pushLink(ref, subs, payload) {
+  const alive = []
+  let delivered = 0
+  for (const s of subs) {
+    try {
+      await webpush.sendNotification(s, payload)
+      alive.push(s); delivered++
+    } catch (e) {
+      // 404/410 = subscription gone → drop it; anything else is transient → keep.
+      if (!(e && (e.statusCode === 404 || e.statusCode === 410))) alive.push(s)
+    }
+  }
+  const now = new Date()
+  await ref.set({ subs: alive, updatedAt: now, expiresAt: new Date(now.getTime() + LINK_TTL_MS) }, { merge: true }).catch(() => {})
+  return delivered
+}
+
 // POST { code, room, caller? } → push every device on the link to answer `room`.
 http('callRing', async (req, res) => {
   cors(req, res)
@@ -169,14 +199,8 @@ http('callRing', async (req, res) => {
     const caller = clean(b.caller, 40) || 'Someone'
     if (!code || !room) return res.status(400).json({ error: 'code and room required' })
     const ref = db.collection(LINKS).doc(code)
-    const snap = await ref.get()
-    const d = snap.exists ? snap.data() : null
-    // Missing or expired → treat as gone (and lazily clean up an expired doc).
-    if (!d || (d.expiresAt && d.expiresAt.toDate && d.expiresAt.toDate() < new Date())) {
-      if (d) await ref.delete().catch(() => {})
-      return res.status(404).json({ ok: false, error: 'no such link' })
-    }
-    const subs = Array.isArray(d.subs) ? d.subs : []
+    const d = await liveLink(ref)
+    if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
     // The click-URL carries the room to answer AND the host code, so the incoming
     // call screen can offer "stop receiving calls" without any stored state.
     const payload = JSON.stringify({
@@ -186,19 +210,43 @@ http('callRing', async (req, res) => {
       url: `${SITE}/apps/calls/join?code=${room}&host=1&ring=1&link=${code}&caller=${encodeURIComponent(caller)}`,
       requireInteraction: true,
     })
-    const alive = []
-    let delivered = 0
-    for (const s of subs) {
-      try {
-        await webpush.sendNotification(s, payload)
-        alive.push(s); delivered++
-      } catch (e) {
-        // 404/410 = subscription gone → drop it; anything else is transient → keep.
-        if (!(e && (e.statusCode === 404 || e.statusCode === 410))) alive.push(s)
-      }
-    }
-    const now = new Date()
-    await ref.set({ subs: alive, updatedAt: now, expiresAt: new Date(now.getTime() + LINK_TTL_MS) }, { merge: true }).catch(() => {})
+    const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
+    res.json({ ok: true, delivered })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
+// POST { code, room, caller?, id?, back? } → tell the link owner they MISSED a
+// call: the caller gave up before being let in (#210), optionally asking to be
+// called back on their own link `back` (#211). Nothing is stored server-side —
+// the push carries the record and the owner's device keeps it (sw.js queues it in
+// IndexedDB; the app drains that into localStorage), so we never hold a call log.
+http('callMissed', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const room = codeOf(b.room)
+    const caller = clean(b.caller, 40) || 'Someone'
+    const id = codeOf(b.id) || `m${Date.now()}`
+    const back = codeOf(b.back) // the caller's OWN link code, so the owner can ring back
+    if (!code || !room) return res.status(400).json({ error: 'code and room required' })
+    const ref = db.collection(LINKS).doc(code)
+    const d = await liveLink(ref)
+    if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
+    // Same tag as the ring, so this REPLACES the "… is calling" notification
+    // rather than stacking a second one on top of it.
+    const payload = JSON.stringify({
+      title: back ? `${caller} asked you to call back` : `Missed call from ${caller}`,
+      body: back ? 'Tap to call them back' : 'They hung up before you answered',
+      tag: `call-${room}`,
+      url: `${SITE}/apps/calls`,
+      missed: { id, name: caller, at: Date.now(), back },
+    })
+    const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
     res.json({ ok: true, delivered })
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) })

@@ -526,7 +526,13 @@ test('a locale-less ring URL keeps its query through the locale redirect (the re
 test('rejoin after a missed call-link call rings the owner again', async ({ browser }) => {
   const c = await browser.newContext()
   let rings = 0
+  const missed: Record<string, unknown>[] = []
   await c.route('**/call-ring', async (route) => { rings++; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) }) })
+  // Giving up on the call must tell the owner they missed it, with our name (#210).
+  await c.route('**/call-missed', async (route) => {
+    missed.push(JSON.parse(route.request().postData() || '{}'))
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) })
+  })
   await c.addInitScript((u) => {
     const w = window as unknown as { __CALL_FN: string; __CALL_SIGNAL: string }
     w.__CALL_FN = u; w.__CALL_SIGNAL = u
@@ -546,9 +552,44 @@ test('rejoin after a missed call-link call rings the owner again', async ({ brow
   await expect(p.getByTestId('call-notadmitted')).toContainText('Ali has ghosted you')
   await expect(p.getByTestId('call-again')).toContainText('Call Ali again')
   await expect(p.getByTestId('call-rejoin')).toHaveCount(0)
+  // …and the owner is pushed a missed call naming who gave up (#210), plus the
+  // ghosted caller is offered a call-back request (#211).
+  await expect.poll(() => missed.length, { timeout: 10_000 }).toBe(1)
+  expect(missed[0]).toMatchObject({ code: 'ownerX', caller: 'Caller' })
+  expect(missed[0].back).toBeFalsy()
+  await expect(p.getByTestId('call-back-ask')).toContainText('Ask Ali to call you back')
+
   await p.getByTestId('call-again').click()
   // Calling again re-rings the owner so a missed call re-notifies them.
   await expect.poll(() => rings, { timeout: 10_000 }).toBe(2)
+  await c.close()
+})
+
+test('missed calls are listed on this device, and a call-back request becomes a Call back button (#210/#211)', async ({ browser }) => {
+  const c = await browser.newContext()
+  // Seed what the missed-call push would have left on this device.
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-missed', JSON.stringify([
+      { id: 'm1', name: 'Layla', at: Date.now() - 120000, back: 'laylacode' },
+      { id: 'm2', name: 'Omar', at: Date.now() - 3600000 },
+    ]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  const list = p.getByTestId('call-missed')
+  await expect(list).toBeVisible()
+  await expect(list).toContainText('Missed calls · 2')
+  await expect(list).toContainText('Layla')
+  await expect(list).toContainText('Omar')
+  // Only the caller who asked to be called back gets the button.
+  await expect(p.getByTestId('call-missed-back')).toHaveCount(1)
+  // Dismissing one drops it from the list (and from storage).
+  await p.getByTestId('call-missed-dismiss').last().click()
+  await expect(list).toContainText('Missed calls · 1')
+  // Calling back opens THEIR personal call link, greeting us with their name.
+  await p.getByTestId('call-missed-back').click()
+  await expect(p).toHaveURL(/\/call\/\?c=laylacode&n=Layla$/, { timeout: 10_000 })
+  await expect(p.getByTestId('call-link-heading')).toContainText('Call Layla')
   await c.close()
 })
 

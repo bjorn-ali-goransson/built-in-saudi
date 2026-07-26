@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
-import { useLocale, localePath } from '../../i18n'
-import { Button, Textarea, Stack, Spinner, Sheet, SheetTitle, SheetActions, Check } from '../../components/ui'
-import { DownloadIcon, BookmarkIcon, CloudIcon } from '../../components/icons'
-import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, tailorCv, saveCvServer, getSavedCv, deleteCvServer } from '../../lib/cvApi'
+import { useLocale } from '../../i18n'
+import { Button, Stack, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
+import { DownloadIcon } from '../../components/icons'
+import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, type CvIssue } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
 import { cvHeaderStore } from '../../lib/cvHeader'
 import { inAppBrowser } from '../../lib/inAppBrowser'
@@ -15,7 +14,7 @@ import { cvFilename, type Cv } from './schema'
 const STR = {
   en: {
     heroTitle: 'Optimize your CV',
-    heroBody: 'This tool rewrites the CV you already have and asks a couple of quick questions to fill any gaps.',
+    heroBody: 'This tool rewrites the CV you already have, and flags anything only you can fix before a recruiter sees it.',
     choose: 'Upload your CV',
     extracting: 'Reading your CV…',
     extracted: (n: number) => `Got it — read ${n.toLocaleString()} characters.`,
@@ -38,48 +37,25 @@ const STR = {
     word: 'Save as Word',
     optimized: 'Optimized',
     original: 'Original',
-    generated: 'Generated',
-    tailored: 'Tailored',
     fullscreen: 'Fullscreen',
     exitFs: 'Exit fullscreen',
     saveOptions: 'Save options',
-    saveForLater: 'Save for later',
-    savedForLater: 'Saved on this device — resume it anytime.',
-    resumeSaved: 'Resume your saved CV',
-    customizeJd: 'Customize for JD',
-    jdTitle: 'Customize for a job',
-    jdBody: 'Paste the full job description and we’ll tailor this CV to it — reordering and re-emphasising what matters for this role. We never add experience you don’t already have.',
-    jdPh: 'Paste the job description here…',
-    jdSubmit: 'Tailor my CV',
-    jdTooShort: 'Please paste the full job description — a line or two isn’t enough to tailor accurately.',
-    jdWorking: 'Tailoring…',
-    jdDone: 'Tailored to the job — use the switch to compare with your generated CV.',
-    serverSaveTitle: 'Save for later',
-    serverSaveBody: 'You’ll be able to open your CV from any device and tailor it to specific job descriptions. It’s kept for 6 months, and you can delete your data anytime on the',
-    privacyWord: 'Privacy page',
-    serverSaveTail: '.',
-    serverSaveBtn: 'Save',
+    issuesTitle: 'Before you look',
+    issuesLead: (n: number) => `We rebuilt your CV, but ${n === 1 ? 'one thing needs' : `${n} things need`} you — we can’t invent facts. Fix these and it will land much harder.`,
+    issuesOk: 'Show my CV',
+    sevHigh: 'Critical',
+    sevMedium: 'Important',
+    sevLow: 'Minor',
     cancel: 'Cancel',
-    serverSaving: 'Saving…',
-    serverSavedMsg: 'Saved to your account — resume it on any device.',
     save: 'Save',
     dlPdf: 'Download PDF',
     dlWord: 'Download Word',
-    customize: 'Customize',
-    targetJd: 'Apply job description',
-    jdSaveNote: 'When you customise, your CV is saved to your account so you can reopen it on any device — kept 6 months, and you can delete it anytime on the',
     shortenTitle: 'Make it shorter',
     shortenLead: 'A tighter CV lands better — recruiters skim in seconds. Condense to:',
     pagesWord: (n: number) => `${n} page${n > 1 ? 's' : ''}`,
     shortenBtn: 'Shorten',
     shortening: 'Shortening…',
     changesTitle: 'Improvements made',
-    qLabel: (i: number, n: number) => `Question ${i} of ${n}`,
-    answerPh: 'Type or speak your answer…',
-    send: 'Send',
-    sending: 'Sending…',
-    skip: 'Skip this',
-    answersLeftL: (n: number) => `${n} left`,
     polishTitle: 'Anything else to adjust?',
     polishPh: 'e.g. Make the summary shorter · Emphasise leadership',
     apply: 'Apply',
@@ -97,7 +73,7 @@ const STR = {
   },
   ar: {
     heroTitle: 'حسّن سيرتك الذاتية',
-    heroBody: 'تعيد هذه الأداة كتابة سيرتك الحالية وتطرح سؤالين سريعين لسدّ أي ثغرات.',
+    heroBody: 'تعيد هذه الأداة كتابة سيرتك الحالية، وتُنبّهك لما لا يمكن إصلاحه إلا منك قبل أن يراها مسؤول التوظيف.',
     choose: 'ارفع سيرتك الذاتية',
     extracting: 'جارٍ قراءة سيرتك…',
     extracted: (n: number) => `تمّ — قُرئ ${n.toLocaleString()} حرفًا.`,
@@ -120,48 +96,25 @@ const STR = {
     word: 'حفظ Word',
     optimized: 'المُحسّنة',
     original: 'الأصلية',
-    generated: 'المُنشأة',
-    tailored: 'المُخصّصة',
     fullscreen: 'ملء الشاشة',
     exitFs: 'إنهاء ملء الشاشة',
     saveOptions: 'خيارات الحفظ',
-    saveForLater: 'احفظ للاحقًا',
-    savedForLater: 'حُفظت على هذا الجهاز — استأنفها متى شئت.',
-    resumeSaved: 'استأنف سيرتك المحفوظة',
-    customizeJd: 'خصّص للوظيفة',
-    jdTitle: 'خصّص لوظيفة',
-    jdBody: 'الصق الوصف الوظيفي كاملًا وسنخصّص هذه السيرة له — بإعادة الترتيب وإبراز ما يهم هذه الوظيفة. لا نضيف أبدًا خبرة لا تملكها.',
-    jdPh: 'الصق الوصف الوظيفي هنا…',
-    jdSubmit: 'خصّص سيرتي',
-    jdTooShort: 'الرجاء لصق الوصف الوظيفي كاملًا — سطر أو سطران لا يكفيان للتخصيص بدقة.',
-    jdWorking: 'جارٍ التخصيص…',
-    jdDone: 'خُصّصت للوظيفة — استخدم المُبدّل للمقارنة بسيرتك المُنشأة.',
-    serverSaveTitle: 'احفظ للاحقًا',
-    serverSaveBody: 'ستتمكن من فتح سيرتك من أي جهاز وتخصيصها لوصف وظيفي محدد. تُحفظ لمدة ٦ أشهر، ويمكنك حذف بياناتك في أي وقت من',
-    privacyWord: 'صفحة الخصوصية',
-    serverSaveTail: '.',
-    serverSaveBtn: 'حفظ',
+    issuesTitle: 'قبل أن تطّلع عليها',
+    issuesLead: (n: number) => `أعدنا بناء سيرتك، لكن ${n === 1 ? 'هناك أمرًا يحتاج إليك' : `هناك ${n} أمور تحتاج إليك`} — لا نختلق الحقائق. عالجها وستكون سيرتك أقوى بكثير.`,
+    issuesOk: 'اعرض سيرتي',
+    sevHigh: 'حرِج',
+    sevMedium: 'مهم',
+    sevLow: 'بسيط',
     cancel: 'إلغاء',
-    serverSaving: 'جارٍ الحفظ…',
-    serverSavedMsg: 'حُفظت في حسابك — استأنفها على أي جهاز.',
     save: 'حفظ',
     dlPdf: 'تنزيل PDF',
     dlWord: 'تنزيل Word',
-    customize: 'تخصيص',
-    targetJd: 'طبّق الوصف الوظيفي',
-    jdSaveNote: 'عند التخصيص، تُحفظ سيرتك في حسابك لتفتحها من أي جهاز — لمدة ٦ أشهر، ويمكنك حذفها في أي وقت من',
     shortenTitle: 'اجعلها أقصر',
     shortenLead: 'السيرة الأقصر أفضل — يمسح المسؤولون بسرعة. اختصر إلى:',
     pagesWord: (n: number) => `${n} صفحة`,
     shortenBtn: 'اختصار',
     shortening: 'جارٍ الاختصار…',
     changesTitle: 'التحسينات المُطبَّقة',
-    qLabel: (i: number, n: number) => `سؤال ${i} من ${n}`,
-    answerPh: 'اكتب أو انطق إجابتك…',
-    send: 'إرسال',
-    sending: 'جارٍ الإرسال…',
-    skip: 'تخطَّ هذا',
-    answersLeftL: (n: number) => `${n} متبقٍّ`,
     polishTitle: 'أي شيء آخر لتعديله؟',
     polishPh: 'مثال: اجعل الملخّص أقصر · أبرِز القيادة',
     apply: 'تطبيق',
@@ -180,6 +133,18 @@ const STR = {
 }
 
 type Status = 'idle' | 'extracting' | 'ready' | 'generating' | 'done'
+
+// Severity colours for the issues dialog: danger → brass → neutral ink.
+const SEV_BAR: Record<CvIssue['severity'], string> = {
+  high: 'border-[color:var(--danger)]',
+  medium: 'border-gold-500',
+  low: 'border-[color:var(--line)]',
+}
+const SEV_PILL: Record<CvIssue['severity'], string> = {
+  high: 'bg-[color-mix(in_srgb,var(--danger)_14%,transparent)] text-[color:var(--danger)]',
+  medium: 'bg-[color-mix(in_srgb,var(--color-gold-500)_18%,transparent)] text-gold-500',
+  low: 'bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)] text-ink-faint',
+}
 
 
 /** The uploaded PDF rendered as page images (reliable everywhere, unlike an
@@ -219,22 +184,16 @@ export default function CvGeneratorTool() {
   const [browserFallback, setBrowserFallback] = useState(false) // show the "open in browser" fallback
   const [toast, setToast] = useState('')
   const [loadingStep, setLoadingStep] = useState(0)
-  // A CV the user saved to this device to finish later.
-  const [saved, setSaved] = useState<Cv | null>(() => {
-    try { const r = localStorage.getItem('bis-cv-saved'); return r ? (JSON.parse(r).cv as Cv) : null } catch { return null }
-  })
   const [saveMenu, setSaveMenu] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
   const [signinFallback, setSigninFallback] = useState(false) // show the Google button when One-Tap can't display
-  const [showAlt, setShowAlt] = useState(false) // preview shows the alternate view (tailored CV, or the uploaded original)
+  const [showAlt, setShowAlt] = useState(false) // preview shows the uploaded original instead
   const [fs, setFs] = useState(false) // preview is in browser fullscreen
   const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
-  const [tailoredCv, setTailoredCv] = useState<Cv | null>(null) // JD-tailored version (ephemeral; not persisted)
-  const [jdOpen, setJdOpen] = useState(false)
-  const [jdText, setJdText] = useState('')
-  const [jdBusy, setJdBusy] = useState(false)
-  const [serverSaving, setServerSaving] = useState(false)
-  const [serverSaved, setServerSaved] = useState(false) // this CV is saved to the account
+  // Problems only the candidate can fix. Shown in a dialog OVER the (blurred)
+  // result, before they read the CV itself (#213).
+  const [issues, setIssues] = useState<CvIssue[]>([])
+  const [issuesOpen, setIssuesOpen] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
@@ -244,7 +203,6 @@ export default function CvGeneratorTool() {
   const autoTried = useRef(false)
   // The previous change summary, sent as context so the user can correct it.
   const lastChangeRef = useRef('')
-  const pendingActionRef = useRef<'' | 'save' | 'tailor'>('') // finish this after a sign-in
 
   // Load + init Google Identity Services once (but don't force sign-in yet).
   useEffect(() => {
@@ -289,30 +247,6 @@ export default function CvGeneratorTool() {
   const logout = useCallback(() => { setIdToken(null); try { gisRef.current?.disableAutoSelect() } catch { /* ignore */ } }, [])
   useEffect(() => { cvHeaderStore.set({ active: true, signedIn: !!idToken, login, logout }) }, [idToken, login, logout])
   useEffect(() => () => cvHeaderStore.set({ active: false, signedIn: false, login: () => {}, logout: () => {} }), [])
-
-  // On sign-in, finish whatever the user was doing (save / customise), or pull
-  // any server-saved CV to enable Resume + auto-resume from the landing.
-  useEffect(() => {
-    if (!idToken) return
-    if (pendingActionRef.current && cv) {
-      const act = pendingActionRef.current
-      pendingActionRef.current = ''
-      if (act === 'save') doServerSave()
-      else if (act === 'tailor') setJdOpen(true)
-      return
-    }
-    let cancelled = false
-    getSavedCv(idToken).then((serverCv) => {
-      if (cancelled || !serverCv) return
-      setSaved(serverCv)
-      if (status === 'idle' && !cv && !text) {
-        setCv(serverCv); setTailoredCv(null); setShowAlt(false); setOrigPages([])
-        setServerSaved(true); setStatus('done')
-      }
-    }).catch(() => {})
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idToken])
 
   // Hide the site footer while the immersive result preview is on screen, and
   // lock document scroll: the done view is a full-screen preview + a fixed bottom
@@ -398,8 +332,8 @@ export default function CvGeneratorTool() {
     setErrDetail('')
     setCv(null)
     setShowAlt(false)
-    setTailoredCv(null)
-    setServerSaved(false)
+    setIssues([])
+    setIssuesOpen(false)
     setSigninFallback(false)
     setOrigPages([])
     setStatus('extracting')
@@ -442,11 +376,13 @@ export default function CvGeneratorTool() {
     try {
       const r = await generateCv(idToken, text)
       setCv(r.cv)
-      setTailoredCv(null)
       setShowAlt(false)
-      setServerSaved(false)
       setToast('')
       lastChangeRef.current = ''
+      // Tell them what's wrong BEFORE they read the CV — the dialog sits over a
+      // blurred preview and must be dismissed.
+      setIssues(r.issues)
+      setIssuesOpen(r.issues.length > 0)
       setStatus('done')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
@@ -454,13 +390,11 @@ export default function CvGeneratorTool() {
     }
   }
 
-  // The CV currently on screen — the tailored version when the user is viewing
-  // it, else the generated one. Downloads and "save" act on what you see.
-  const activeCv = tailoredCv && showAlt ? tailoredCv : cv
-  // What the preview switch compares against the generated CV: the tailored
-  // version once it exists (it wins over the original), else the uploaded
-  // original (only available right after an upload). Null → no switch shown.
-  const altKind: 'tailored' | 'original' | null = tailoredCv ? 'tailored' : origPages.length > 0 ? 'original' : null
+  // The generated CV is what downloads act on (the "Original" flip only shows
+  // the uploaded pages — there's nothing to export from those).
+  const activeCv = cv
+  // The preview switch only exists when there's an uploaded original to flip to.
+  const hasOriginal = origPages.length > 0
 
   async function exportPdf() {
     if (!activeCv || pdfBusy) return
@@ -493,79 +427,6 @@ export default function CvGeneratorTool() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
-  function writeLocal(next: Cv) {
-    try { localStorage.setItem('bis-cv-saved', JSON.stringify({ cv: next, savedAt: Date.now() })) } catch { /* storage full */ }
-    setSaved(next)
-  }
-
-  // "Save for later" checkbox → save to the account (server) so the CV can be
-  // resumed on any device. Checking opens the opt-in dialog; unchecking removes
-  // the saved copy. Also cached in localStorage so the device Resume works.
-  function onSaveForLater(on: boolean) {
-    if (!cv) return
-    setSaveMenu(false)
-    if (on) {
-      if (idToken) doServerSave()
-      else { pendingActionRef.current = 'save'; login() } // sign in, then save
-    } else if (serverSaved) {
-      setServerSaved(false)
-      if (idToken) deleteCvServer(idToken)
-      try { localStorage.removeItem('bis-cv-saved') } catch { /* ignore */ }
-      setSaved(null)
-    }
-  }
-
-  async function doServerSave() {
-    if (!idToken || !cv || serverSaving) return
-    setServerSaving(true)
-    setErr('')
-    try {
-      await saveCvServer(idToken, cv)
-      writeLocal(cv)
-      setServerSaved(true)
-      setToast(s.serverSavedMsg)
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setServerSaving(false)
-    }
-  }
-
-  // Tailor the CV to a pasted job description. Customising also saves the CV to
-  // the account (so it can be reopened), which the JD dialog tells the user.
-  async function tailor() {
-    if (!idToken || !cv || jdBusy) return
-    if (jdText.trim().length < 40) { setErr(s.jdTooShort); return }
-    setJdBusy(true)
-    setErr('')
-    try {
-      // Save the base CV to the account as part of customising.
-      try { await saveCvServer(idToken, cv); writeLocal(cv); setServerSaved(true) } catch { /* non-fatal */ }
-      const r = await tailorCv(idToken, cv, jdText.trim())
-      setTailoredCv(r.cv)
-      setShowAlt(true)
-      setJdOpen(false)
-      setToast(s.jdDone)
-    } catch (e) {
-      setErr((e as Error).message || s.genErr)
-    } finally {
-      setJdBusy(false)
-    }
-  }
-
-  function resumeSaved() {
-    if (!saved) return
-    setCv(saved)
-    // A restored CV has no original upload and no tailored version — the preview
-    // switch stays hidden until the user customises for a job. It came from a
-    // saved copy, so the "Save for later" box shows checked.
-    setTailoredCv(null)
-    setShowAlt(false)
-    setOrigPages([])
-    setServerSaved(true)
-    setStatus('done')
-  }
-
   // Full-bleed green intro, docked flush to the navbar (cancels the page's top padding).
   const hero = (
     <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] mt-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] bg-green-600 text-sand-100">
@@ -580,12 +441,6 @@ export default function CvGeneratorTool() {
                 {s.choose}
               </span>
             </label>
-            {saved && (
-              <button type="button" onClick={resumeSaved} data-testid="cv-resume"
-                className="inline-flex items-center gap-2 bg-transparent border-0 text-sand-100 underline text-[0.9rem] font-semibold cursor-pointer">
-                <BookmarkIcon /> {s.resumeSaved}
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -696,14 +551,14 @@ export default function CvGeneratorTool() {
               leave a huge scrollable gray area. Portaled to <body> so ToolPage's
               transform doesn't make `fixed` resolve against the (tiny) tool box. */}
           {createPortal(
-          <div ref={previewRef} className={`overflow-hidden bg-[#e9ebef] ${fs ? 'fixed inset-0 z-50' : 'fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30'}`}>
+          <div ref={previewRef} className={`overflow-hidden bg-[#e9ebef] ${fs ? 'fixed inset-0 z-50' : 'fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30'} ${issuesOpen ? 'blur-[6px] pointer-events-none' : ''}`}>
             <iframe
               ref={iframeRef}
               title={cvFilename(activeCv || cv)}
               className="block w-full h-full border-0 bg-[#e9ebef]"
-              srcDoc={renderCvHtml(tailoredCv && showAlt ? tailoredCv : cv, { preview: true })}
+              srcDoc={renderCvHtml(cv, { preview: true })}
             />
-            {showAlt && altKind === 'original' && origPages.length > 0 && (
+            {showAlt && hasOriginal && (
               <PdfPages pages={origPages} className="absolute inset-0 h-full" />
             )}
 
@@ -712,16 +567,16 @@ export default function CvGeneratorTool() {
                 not the far screen edges. pointer-events pass through to the iframe. */}
             <div className="absolute inset-0 z-10 pointer-events-none">
               <div className="relative h-full mx-auto max-w-[var(--wrap)] [&>*]:pointer-events-auto">
-            {/* View switch (top-left): generated↔tailored after customising, or
-                optimized↔original for a fresh upload. Hidden with nothing to compare. */}
-            {altKind && (
+            {/* View switch (top-left): optimized↔original for a fresh upload.
+                Hidden when there's no uploaded original to compare against. */}
+            {hasOriginal && (
               <div className="absolute start-3 top-3 z-10 flex items-stretch rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] overflow-hidden text-[0.82rem] font-semibold">
-                <button type="button" data-testid="cv-view-optimized" onClick={() => setShowAlt(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showAlt ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{altKind === 'tailored' ? s.generated : s.optimized}</button>
-                <button type="button" data-testid="cv-view-original" onClick={() => setShowAlt(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showAlt ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{altKind === 'tailored' ? s.tailored : s.original}</button>
+                <button type="button" data-testid="cv-view-optimized" onClick={() => setShowAlt(false)} className={`px-3 py-1.5 border-0 cursor-pointer ${!showAlt ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.optimized}</button>
+                <button type="button" data-testid="cv-view-original" onClick={() => setShowAlt(true)} className={`px-3 py-1.5 border-0 border-s border-[color:var(--line)] cursor-pointer ${showAlt ? 'bg-green-600 text-sand-100' : 'bg-transparent text-ink-soft hover:bg-sand-100'}`}>{s.original}</button>
               </div>
             )}
 
-            {/* Save (bottom-left): a green CTA opening downloads + Save-for-later. */}
+            {/* Save (bottom-left): a green CTA opening the download options. */}
             <div className="absolute start-3 bottom-3 z-10">
               {saveMenu && (
                 <div className="absolute bottom-full start-0 mb-1.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-md shadow-[var(--shadow-md)] overflow-hidden min-w-[13rem]">
@@ -733,11 +588,6 @@ export default function CvGeneratorTool() {
                     className="flex items-center gap-2 w-full text-start px-4 py-2.5 text-[0.88rem] text-ink-soft hover:bg-[color-mix(in_srgb,var(--green-400)_10%,transparent)] border-0 bg-transparent cursor-pointer whitespace-nowrap">
                     <DownloadIcon /> {s.dlWord}
                   </button>
-                  <Check className="w-full px-4 py-2.5 border-t border-[color:var(--line-soft)] whitespace-nowrap">
-                    <input type="checkbox" checked={serverSaved} onChange={(e) => onSaveForLater(e.target.checked)} data-testid="cv-save-later" />
-                    <span>{s.saveForLater}</span>
-                    {serverSaved && <CloudIcon className="w-4 h-4 text-green-600" />}
-                  </Check>
                 </div>
               )}
               <button type="button" onClick={() => setSaveMenu((v) => !v)} aria-expanded={saveMenu} data-testid="cv-save-menu"
@@ -745,14 +595,6 @@ export default function CvGeneratorTool() {
                 <DownloadIcon className="size-4" /> {s.save}
               </button>
             </div>
-
-            {/* Customize (bottom-right): Insert JD / Tell me what to change / Make shorter. */}
-            {/* Target job description (bottom-right): tailor the CV to a JD. Requires
-                the CV to be saved first (so it can be reopened + tailored later). */}
-            <button type="button" data-testid="cv-target-jd" onClick={() => { setSaveMenu(false); setErr(''); if (idToken) setJdOpen(true); else { pendingActionRef.current = 'tailor'; login() } }}
-              className="absolute end-3 bottom-3 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft px-3.5 text-[0.88rem] font-semibold shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
-              {s.targetJd}
-            </button>
 
             <button type="button" onClick={toggleFullscreen} data-testid="cv-fullscreen" aria-label={fs ? s.exitFs : s.fullscreen} title={fs ? s.exitFs : s.fullscreen}
               className="absolute end-3 top-3 z-10 grid place-items-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
@@ -766,21 +608,26 @@ export default function CvGeneratorTool() {
           document.body,
           )}
 
-          {jdOpen && (
-            <Sheet onClose={() => { if (!jdBusy) setJdOpen(false) }}>
-              <SheetTitle>{s.jdTitle}</SheetTitle>
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.jdBody}</p>
-              <Textarea value={jdText} onChange={(e) => { setJdText(e.target.value); if (err) setErr('') }} placeholder={s.jdPh}
-                data-testid="cv-jd-text" className="min-h-[34vh] resize-y" autoFocus />
-              <p className="text-[0.78rem] text-ink-faint leading-relaxed">
-                {s.jdSaveNote}{' '}
-                <Link to={localePath(locale, '/privacy')} className="underline hover:text-green-600">{s.privacyWord}</Link>{s.serverSaveTail}
-              </p>
-              {err && <p className="text-[0.85rem] text-gold-500" data-testid="cv-jd-err">{err}</p>}
+          {/* What the AI couldn't fix, most severe first — read this BEFORE the CV. */}
+          {issuesOpen && issues.length > 0 && (
+            <Sheet onClose={() => setIssuesOpen(false)} data-testid="cv-issues">
+              <SheetTitle>{s.issuesTitle}</SheetTitle>
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.issuesLead(issues.length)}</p>
+              <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+                {issues.map((i, n) => (
+                  <li key={n} className={`flex flex-col gap-1 ps-3 border-s-[3px] ${SEV_BAR[i.severity]}`} data-testid="cv-issue">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-[0.94rem] font-semibold text-ink leading-snug">{i.title}</span>
+                      <span className={`text-[0.66rem] font-bold uppercase tracking-[0.06em] px-1.5 py-0.5 rounded-full ${SEV_PILL[i.severity]}`} data-testid={`cv-issue-${i.severity}`}>
+                        {i.severity === 'high' ? s.sevHigh : i.severity === 'medium' ? s.sevMedium : s.sevLow}
+                      </span>
+                    </div>
+                    {i.detail && <p className="text-[0.86rem] text-ink-soft leading-relaxed m-0">{i.detail}</p>}
+                  </li>
+                ))}
+              </ul>
               <SheetActions>
-                <Button variant="primary" onClick={tailor} disabled={jdBusy || !jdText.trim()} data-testid="cv-jd-submit">
-                  {jdBusy ? s.jdWorking : s.jdSubmit}
-                </Button>
+                <Button variant="primary" onClick={() => setIssuesOpen(false)} data-testid="cv-issues-ok">{s.issuesOk}</Button>
               </SheetActions>
             </Sheet>
           )}

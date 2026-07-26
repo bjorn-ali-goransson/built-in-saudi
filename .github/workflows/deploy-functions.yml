@@ -68,10 +68,6 @@ jobs:
           # CV Generator
           gcloud functions deploy cv-generate             "${common[@]}" --entry-point=cvGenerate
           gcloud functions deploy cv-refine               "${common[@]}" --entry-point=cvRefine
-          gcloud functions deploy cv-tailor               "${common[@]}" --entry-point=cvTailor
-          gcloud functions deploy cv-save                 "${common[@]}" --entry-point=cvSave
-          gcloud functions deploy cv-get                  "${common[@]}" --entry-point=cvGet
-          gcloud functions deploy cv-delete               "${common[@]}" --entry-point=cvDelete
 
           gcloud functions deploy shorten                 "${common[@]}" --entry-point=shorten
           gcloud functions deploy resolve-link            "${common[@]}" --entry-point=resolveLink
@@ -82,6 +78,7 @@ jobs:
           gcloud functions deploy call-register           "${common[@]}" --entry-point=callRegister
           gcloud functions deploy call-ring               "${common[@]}" --entry-point=callRing
           gcloud functions deploy call-delete             "${common[@]}" --entry-point=callDelete
+          gcloud functions deploy call-missed             "${common[@]}" --entry-point=callMissed
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
 

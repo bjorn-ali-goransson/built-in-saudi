@@ -61,6 +61,20 @@ export async function ringCallLink(code: string, room: string, caller: string): 
   } catch { return { ok: false, delivered: 0 } }
 }
 
+/** Tell the owner of `code` they missed this call — the caller hung up before
+ *  being let in (#210). Pass `back` (the caller's OWN link code) to make it a
+ *  "call me back" request the owner can act on (#211). `id` is stable per call,
+ *  so a later call-back request replaces the plain missed-call record. */
+export async function reportMissedCall(code: string, room: string, caller: string, id: string, back?: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${FN}/call-missed`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, room, caller, id, back }),
+    })
+    return res.ok
+  } catch { return false }
+}
+
 /** Remove a device from a link (pass its endpoint) or the whole link (omit it).
  *  Best-effort; clears local state if it was ours. Does NOT touch the shared push
  *  subscription — other features (prayer alerts, Book Me) rely on it. */

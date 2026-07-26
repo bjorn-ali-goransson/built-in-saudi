@@ -15,7 +15,8 @@ import {
   DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
-import { getMyCallLink, ringCallLink } from '../../lib/callLink'
+import { MissedCalls } from './MissedCalls'
+import { claimCallLink, getMyCallLink, reportMissedCall, ringCallLink } from '../../lib/callLink'
 
 type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
 
@@ -101,6 +102,10 @@ export default function CallsTool() {
   const [autoAdmitting, setAutoAdmitting] = useState(false)
   // Whether this browser already has a personal call link (hides Start call/Invite).
   const [hasCallLink, setHasCallLink] = useState(() => { try { return !!getMyCallLink() } catch { return false } })
+  // One stable id per call-link call, shared by the missed-call ping and any
+  // later "call me back" request — so the second replaces the first (#210/#211).
+  const missedIdRef = useRef(code6())
+  const [callBackState, setCallBackState] = useState<'' | 'busy' | 'done' | 'err'>('')
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
@@ -493,6 +498,7 @@ export default function CallsTool() {
   function askToJoin() {
     saveName()
     const code = room.trim(); if (!code) return
+    missedIdRef.current = code6() // each knock is its own (possibly missed) call
     const r = ensureRoom(code); r.enterLobby(name || s.you, false)
     setPhase('waiting')
   }
@@ -595,6 +601,9 @@ export default function CallsTool() {
       const wasAdmitted = phaseRef.current === 'live'
       const others = inCallPeers.length
       rtc.current?.leave(); rtc.current = null; resetLive()
+      // Giving up on a call-link call = a MISSED call for the owner — push it to
+      // them (with our name) so it isn't silent (#210).
+      if (!wasAdmitted && ringCode && room) reportMissedCall(ringCode, room, name || 'Someone', missedIdRef.current)
       setEnded({ reason: wasAdmitted ? 'left' : 'notadmitted', count: wasAdmitted ? others : 0 }); setPhase('ended')
       history.replaceState(null, '', lobbyPath())
     }
@@ -608,6 +617,25 @@ export default function CallsTool() {
     } else startHost()
   }
   const newCall = () => window.location.assign(localePath(locale, '/apps/calls'))
+  // Ghosted by a call link (#211): claim a call link of OUR own, then re-send the
+  // missed call carrying it. The owner's missed-call list turns into a "Call back"
+  // button that simply rings us on our link — the roles swap, no new plumbing.
+  async function askCallBack() {
+    if (!ringCode || !room || callBackState === 'busy') return
+    setCallBackState('busy')
+    const mine = await claimCallLink(name || 'Someone')
+    if (!mine) { setCallBackState('err'); return }
+    const ok = await reportMissedCall(ringCode, room, name || 'Someone', missedIdRef.current, mine)
+    setCallBackState(ok ? 'done' : 'err')
+  }
+  // A caller gave up while we were still being rung: the ringing screen is now
+  // pointless — drop back to the lobby, where the missed call is listed (#210).
+  useEffect(() => {
+    if (!incomingLink || answered) return
+    const onMissed = () => { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
+    window.addEventListener('bis-call-missed', onMissed)
+    return () => window.removeEventListener('bis-call-missed', onMissed)
+  }, [incomingLink, answered, locale])
 
   // Host-disconnect grace (guests only): if the host vanishes, count down 2 minutes
   // — a returning host cancels it; on expiry the meeting is nuked for everyone.
@@ -985,7 +1013,20 @@ export default function CallsTool() {
             // it, naming them if the link carried a name (#193).
             <>
               <p className="text-[1.2rem] font-display" data-testid="call-notadmitted">{ringCode ? s.ghosted(linkOwnerName) : s.callEnded}</p>
-              <button className={cream} onClick={rejoin} data-testid="call-again">{callAgainLabel}</button>
+              <div className="w-full flex flex-col gap-3">
+                <button className={cream} onClick={rejoin} data-testid="call-again">{callAgainLabel}</button>
+                {/* Ghosted → ask to be called back instead of chasing them (#211). */}
+                {ringCode && (callBackState === 'done' ? (
+                  <p className="text-[0.85rem] text-sand-100/80 text-center leading-relaxed" data-testid="call-back-asked">{s.askedCallBack}</p>
+                ) : (
+                  <>
+                    <button className={`${ghost} disabled:opacity-60 [&_svg]:w-4 [&_svg]:h-4`} onClick={askCallBack} disabled={callBackState === 'busy'} data-testid="call-back-ask">
+                      <PhoneIcon /> {callBackState === 'busy' ? s.askingCallBack : s.askCallBack(linkOwnerName)}
+                    </button>
+                    {callBackState === 'err' && <p className="text-[0.8rem] text-[var(--gold-400)] text-center" data-testid="call-back-err">{s.askCallBackErr}</p>}
+                  </>
+                ))}
+              </div>
             </>
           ) : (
             <>
@@ -1097,6 +1138,9 @@ export default function CallsTool() {
                     <span className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]">{s.receiveCalls}</span>
                     <span className="h-px flex-1 bg-sand-100/20" />
                   </div>
+                  {/* Who called while you didn't pick up — plus a Call back button
+                      for anyone who asked to be rung back (#210/#211). */}
+                  <MissedCalls locale={locale} s={s} />
                   {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
                   <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
                 </div>

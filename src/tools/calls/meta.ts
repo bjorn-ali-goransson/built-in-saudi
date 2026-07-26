@@ -11,7 +11,7 @@ export const callsTool: Tool = {
     'Secure peer-to-peer voice/video/teams calling between browsers - no data touches our servers. Share one invite link and let people in from a waiting room; video, screen-share, a shared whiteboard, chat and file-drop all go straight between browsers over WebRTC, with only the initial handshake passing through a tiny relay that never sees your call. Public STUN, no recording, small groups.',
   category: 'Communication',
   keywords: ['call', 'video call', 'meeting', 'p2p', 'peer to peer', 'webrtc', 'whiteboard', 'screen share', 'private', 'مكالمة', 'اجتماع', 'فيديو', 'سبورة', 'مشاركة الشاشة'],
-  status: 'beta',
+  status: 'stable',
   Icon: VideoCallIcon,
   component: lazyTool(() => import('./CallsTool')),
   ar: {

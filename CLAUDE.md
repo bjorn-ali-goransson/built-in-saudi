@@ -247,10 +247,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **everything** stored for that user across the whole site. **Whenever you add any
   new per-user server-side storage, update `my-data` to report + delete it too** (and
   mention it in the Privacy page copy). Today it covers `bookingHosts/{sub}`,
-  `bookings` where `hostUid == sub`, `cvUsage/{sub}`, `cvSaved/{sub}` (the opt-in
-  server copy of a CV), `shortLinks` where `owner == sub`, `promptUsage/{sub}`
-  (Prompt Analyzer rate-limit counters), and `diacritizeUsage/{sub}` (Arabic
-  Diacritizer rate-limit counters).
+  `bookings` where `hostUid == sub`, `cvUsage/{sub}`, `cvSaved/{sub}` (a **legacy**
+  server copy of a CV — "save for later" was removed in #213, so nothing writes
+  this any more; `my-data` keeps purging old copies), `shortLinks` where
+  `owner == sub`, `promptUsage/{sub}` (Prompt Analyzer rate-limit counters), and
+  `diacritizeUsage/{sub}` (Arabic Diacritizer rate-limit counters).
+- **CV Generator** (`functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
+  uploaded CV as strict JSON, 2 per 24h per user) + `cv-refine` (instruction-driven
+  tweaks). The model **never asks the user questions** — it returns an `issues`
+  array (`{title, detail, severity: high|medium|low}`) of what only the candidate
+  can fix, which the tool shows in a **modal over the blurred preview before the CV
+  is revealed** (#213). "Save for later" (server-saved CV) and JD tailoring were
+  removed in #213 — `cv-save`/`cv-get`/`cv-delete`/`cv-tailor` are gone from the
+  source and the deploy workflow (the old deployments need a one-off
+  `gcloud functions delete`). Nothing per-user is stored but `cvUsage` counters.
 - **Link shortener** (`functions/shorten.js`): `shorten` (Google-auth → create a
   6-month short link in Firestore `shortLinks`, keyed by a random code, storing
   `owner`/`url`/`expiresAt`/`hits`), `resolve-link` (public GET `?c=<code>` →
@@ -351,8 +361,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   ring, lazy-deleted on expiry); dead push subs pruned on 404/410. Reuses the VAPID
   singleton in `functions/index.js`. **Not covered by `my-data`** (anonymous links
   have no Google `sub`) — the owner deletes them (in-tool or on a call).
+  **Missed calls + call-back** (`call-missed`, #210/#211): a caller who hangs up
+  while still WAITING pushes the owner a "Missed call from <name>" (same
+  notification `tag` as the ring, so it replaces it). Their ghosted screen also
+  offers **"Ask <name> to call you back"** — that claims a call link of the
+  caller's *own* and re-sends the missed call carrying it as `back`, so the roles
+  simply swap. **Nothing is stored server-side**: the push payload carries
+  `{id, name, at, back}`, `public/sw.js` queues it in **IndexedDB** (`bis-calls` /
+  `missed`) so it survives with no tab open, and `src/lib/missedCalls.ts` drains
+  that into localStorage `bis-call-missed` — the list `MissedCalls.tsx` renders
+  under the "receive calls" separator, with a **Call back** button that just opens
+  `/call/?c=<back>&n=<name>`. A visible tab is also postMessaged
+  (`bis-missed-call` → window event `bis-call-missed`), which drops a pointless
+  ringing screen back to the lobby.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all thirty-one functions on any `functions/**` change, authenticating **keylessly
+  deploys all twenty-eight functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

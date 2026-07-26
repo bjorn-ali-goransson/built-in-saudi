@@ -10,7 +10,12 @@ export function useIncomingCall() {
     if (!('serviceWorker' in navigator)) return
     const onMsg = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null
-      if (!d || d.type !== 'bis-incoming-call' || typeof d.url !== 'string') return
+      if (!d) return
+      // A caller gave up before being answered — the SW has queued the missed
+      // call; let whoever is showing the list (and a now-pointless ringing
+      // screen) react to it.
+      if (d.type === 'bis-missed-call') { try { window.dispatchEvent(new Event('bis-call-missed')) } catch { /* */ } return }
+      if (d.type !== 'bis-incoming-call' || typeof d.url !== 'string') return
       // Already in a call → don't yank them out. Hand the ring to the live Calls UI
       // (a "someone's calling, you're busy" banner) instead of dropping it silently.
       if (isInCall()) { try { window.dispatchEvent(new CustomEvent('bis-incoming-ring', { detail: { url: d.url } })) } catch { /* */ } return }
