@@ -327,9 +327,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   bucketed width (`{c:'want'}`, 160/240/320/480/640/960) over the **data channel**;
   the sender sets `scaleResolutionDownBy` + a matching `maxBitrate` **per peer** in
   `tuneVideo()`. A ~120px dock tile therefore receives **160×90 at 60 kbps**, not a
-  960px frame. Screen-share opts out (`scaleResolutionDownBy: 1`, 1200 kbps, 15fps,
-  `maintain-resolution`) since text must stay legible. Verified end-to-end by reading
-  the real `getParameters()` in `e2e/calls.spec.ts`.
+  960px frame. **Width 0 means "you're not on my screen"** — the sender then
+  `replaceTrack(null)`s that peer's video sender (`applyVideo`/`videoPaused`), so a
+  host who closes the participants dock receives **no video bytes at all** until a
+  tile remounts. A peer can be on screen twice (dock tile + main stage while
+  presenting), so `reportSize()` in `CallsTool` sends the **max** of the two and 0
+  only when both are gone. All video routing goes through `applyVideo()` so
+  cam/screen toggles never resurrect a paused sender. Screen-share opts out of
+  scaling (`scaleResolutionDownBy: 1`, 1200 kbps, 15fps, `maintain-resolution`) since
+  text must stay legible. Verified end-to-end by reading the real `getParameters()`
+  in `e2e/calls.spec.ts` (scale > 1, and the track drops then returns on dock toggle).
   **Waiting room (all P2P):** `rtc.ts` forms a **data-only** connection first (no
   camera/mic), using **perfect negotiation** so media can be added later by
   renegotiation. Lobby control — each peer's `{name, role, inCall}` presence, plus

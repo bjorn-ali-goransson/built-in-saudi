@@ -126,7 +126,8 @@ interface Peer {
   mediaLinked: boolean // our media senders have been created on this pc
   aSender?: RTCRtpSender // persistent audio sender — replaceTrack(null) to release, without renegotiating
   vSender?: RTCRtpSender // persistent video sender (camera or screen)
-  wantW?: number // device px this peer says it renders OUR video at (receiver-driven)
+  wantW?: number // device px this peer says it renders OUR video at (0 = not on screen)
+  videoPaused?: boolean // they told us they aren't rendering us — we send them NO video
   sentWantW?: number // the last width WE asked this peer for (dedupes the control msg)
 }
 
@@ -298,9 +299,29 @@ export class CallRoom {
     if (!this.inCall || peer.mediaLinked || !peer.info?.inCall) return
     peer.mediaLinked = true
     if (this.audioTrack) this.addOrReplace(peer, this.audioTrack)
-    const v = this.screenOn ? this.screen?.getVideoTracks()[0] || null : this.videoTrack
-    if (v) this.addOrReplace(peer, v)
+    this.applyVideo(peer)
   }
+
+  /** The video track we'd be sending right now, if anyone wanted it. */
+  private wantedVideoTrack(): MediaStreamTrack | null {
+    if (this.screenOn) return this.screen?.getVideoTracks()[0] || null
+    return this.cam ? this.videoTrack : null
+  }
+
+  /** Route (or withhold) video for ONE peer. A peer that has told us it isn't
+   *  rendering us gets `null` — replaceTrack(null) stops the bytes entirely, which
+   *  is the whole point: a host who closed the participants dock should not be
+   *  paying to receive video nobody is looking at. Restoring is just another
+   *  replaceTrack, so the sender persists and nothing renegotiates. */
+  private applyVideo(peer: Peer) {
+    if (!peer.info?.inCall) return
+    const track = peer.videoPaused ? null : this.wantedVideoTrack()
+    if (peer.vSender) { peer.vSender.replaceTrack(track).catch(() => {}); if (track) this.tuneVideo(); return }
+    if (!track || !this.local) return
+    peer.vSender = peer.pc.addTrack(track, this.local)
+    this.tuneVideo()
+  }
+  private applyVideoAll() { for (const p of this.peers.values()) this.applyVideo(p) }
   // Put a track on a peer's sender of that kind, creating the sender the first time
   // (that first add renegotiates; every later swap — including →null — does not).
   private addOrReplace(peer: Peer, track: MediaStreamTrack) {
@@ -357,8 +378,9 @@ export class CallRoom {
     if (!peer || peer.dc?.readyState !== 'open') return
     const dpr = typeof devicePixelRatio === 'number' ? Math.min(devicePixelRatio, 2) : 1
     const px = Math.round(cssPx * dpr)
-    // 160 / 240 / 320 / 480 / 640 / 960 — the ladder the sender scales onto.
-    const bucket = px <= 160 ? 160 : px <= 240 ? 240 : px <= 320 ? 320 : px <= 480 ? 480 : px <= 640 ? 640 : 960
+    // 0 means "you're not on my screen at all" — the sender stops sending video
+    // entirely. Otherwise snap onto the ladder the sender scales down to.
+    const bucket = px <= 0 ? 0 : px <= 160 ? 160 : px <= 240 ? 240 : px <= 320 ? 320 : px <= 480 ? 480 : px <= 640 ? 640 : 960
     if (peer.sentWantW === bucket) return
     peer.sentWantW = bucket
     peer.dc.send(JSON.stringify({ c: 'want', w: bucket } as Ctrl))
@@ -376,7 +398,12 @@ export class CallRoom {
       try { m = JSON.parse(e.data) } catch { return }
       if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing, aspect: Number(m.aspect) || 1 }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
       else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
-      else if (m.c === 'want') { peer.wantW = Math.max(0, Number(m.w) || 0); this.tuneVideo() }
+      else if (m.c === 'want') {
+        peer.wantW = Math.max(0, Number(m.w) || 0)
+        const paused = peer.wantW === 0
+        if (paused !== !!peer.videoPaused) { peer.videoPaused = paused; this.applyVideo(peer) }
+        else this.tuneVideo()
+      }
       else if (m.c === 'fmute') { const target = String(m.target || ''); const me = target === this.me; if (me) this.toggleMic(false); this.h.onMuteNotice?.(String(m.by || ''), target, me) }
       else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
     }
@@ -427,7 +454,7 @@ export class CallRoom {
       }
       this.cam = true
       this.emitPreview()
-      if (!this.screenOn) for (const p of this.peers.values()) if (p.info?.inCall) this.addOrReplace(p, this.videoTrack)
+      if (!this.screenOn) this.applyVideoAll()
     } else {
       this.cam = false
       if (!this.screenOn) this.releaseKind('video')
@@ -456,27 +483,25 @@ export class CallRoom {
     try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, ...CAM } })).getVideoTracks()[0] } catch { return }
     this.local?.removeTrack(this.videoTrack); this.videoTrack.stop()
     this.videoTrack = track; this.local?.addTrack(track); this.emitPreview()
-    if (!this.screenOn) this.setVideoWire(track)
+    if (!this.screenOn) this.setVideoWire()
   }
   /** Ask another participant's client to mute itself; everyone is notified. */
   forceMute(target: string) { const msg = JSON.stringify({ c: 'fmute', target, by: this.name } as Ctrl); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(msg) }
   /** Tell peers our whiteboard's aspect ratio so they can fade what we can't see. */
   setAspect(a: number) { if (a > 0 && Math.abs(a - this.aspect) > 0.01) { this.aspect = a; this.broadcastInfo() } }
-  private setVideoWire(track: MediaStreamTrack | null) {
-    for (const p of this.peers.values()) { if (!p.info?.inCall) continue; if (track) this.addOrReplace(p, track); else p.vSender?.replaceTrack(null).catch(() => {}) }
-  }
+  private setVideoWire() { this.applyVideoAll() }
   // Throws on failure (the caller surfaces the reason) instead of swallowing it —
   // a silent null made mobile screen-share failures impossible to diagnose.
   async shareScreen(): Promise<MediaStream> {
     this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
     const track = this.screen.getVideoTracks()[0]
     this.screenOn = true // set BEFORE wiring, so tuneVideo picks the screen ceiling
-    this.setVideoWire(track)
+    this.setVideoWire()
     this.broadcastInfo()
     track.onended = () => this.stopScreen()
     return this.screen
   }
-  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; const was = this.screenOn; this.screenOn = false; this.setVideoWire(this.cam ? this.videoTrack : null); this.tuneVideo(); if (was) this.broadcastInfo() }
+  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; const was = this.screenOn; this.screenOn = false; this.setVideoWire(); this.tuneVideo(); if (was) this.broadcastInfo() }
 
   /** A snapshot of live connection + media state, for the on-screen debug panel. */
   diag(): DiagSnapshot {

@@ -7,9 +7,19 @@ import { UsersIcon, MicIcon, MicOffIcon } from '../../components/icons'
 import type { DiagSnapshot, PeerInfo } from './rtc'
 import { initials } from './helpers'
 
-export function StreamVideo({ stream, className, muted, mirror }: { stream: MediaStream; className?: string; muted?: boolean; mirror?: boolean }) {
+export function StreamVideo({ stream, className, muted, mirror, onSize }: { stream: MediaStream; className?: string; muted?: boolean; mirror?: boolean; onSize?: (cssPx: number) => void }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => { if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
+  // Same receiver-driven sizing as the tiles: tell the sender how big we're showing
+  // them, and 0 on unmount so they stop sending once we're not showing them at all.
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !onSize) return
+    const ro = new ResizeObserver(() => onSize(el.clientWidth))
+    ro.observe(el)
+    onSize(el.clientWidth)
+    return () => { ro.disconnect(); onSize(0) }
+  }, [onSize])
   return <video ref={ref} autoPlay playsInline muted={muted} className={`${mirror ? '-scale-x-100 ' : ''}${className || ''}`} />
 }
 
@@ -227,7 +237,8 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
     const ro = new ResizeObserver(() => onSize(el.clientWidth))
     ro.observe(el)
     onSize(el.clientWidth)
-    return () => ro.disconnect()
+    // 0 on unmount (dock closed, switched to chat) → the sender stops sending.
+    return () => { ro.disconnect(); onSize(0) }
   }, [onSize])
   return (
     <div ref={box} className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>

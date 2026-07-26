@@ -592,7 +592,20 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); knownInCall.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
+  // How wide we're painting each peer, per render site. A peer can appear both as a
+  // dock tile and (when presenting) on the main stage, so the sender is told the
+  // largest of the two — and 0 once they're nowhere on screen, which stops their
+  // video reaching us at all (#214).
+  const sizes = useRef<Map<string, { tile: number; stage: number }>>(new Map())
+  const reportSize = useCallback((id: string, where: 'tile' | 'stage', px: number) => {
+    const cur = sizes.current.get(id) || { tile: 0, stage: 0 }
+    if (cur[where] === px) return
+    cur[where] = px
+    sizes.current.set(id, cur)
+    rtc.current?.requestSize(id, Math.max(cur.tile, cur.stage))
+  }, [])
+
+  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
   function hangup() {
     if (!isGuest) {
       // Host leaving ends the meeting for everyone (the relay is marked closed, so
@@ -1470,7 +1483,8 @@ export default function CallsTool() {
             </div>
           )}
           {presenting && presenterStream && (
-            <StreamVideo stream={presenterStream} muted className="absolute inset-0 w-full h-full object-contain" />
+            <StreamVideo stream={presenterStream} muted className="absolute inset-0 w-full h-full object-contain"
+              onSize={presenterPeer ? (px) => reportSize(presenterPeer[0], 'stage', px) : undefined} />
           )}
           {!presenting && view === 'file' && selectedFile && (
             <div className="absolute inset-0 grid place-items-center p-4 overflow-auto">
@@ -1567,7 +1581,7 @@ export default function CallsTool() {
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => rtc.current?.requestSize(id, px)} />
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} />
               ))}
             </div>
             {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}

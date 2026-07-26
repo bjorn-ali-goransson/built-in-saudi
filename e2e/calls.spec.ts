@@ -794,16 +794,30 @@ test('the sender encodes for the size the receiver actually renders (#214)', asy
   await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
 
   await pa.getByTestId('call-cam').click() // give the host a video sender to inspect
+  // sender.track goes null when video is paused, so identify the video m-line by
+  // its transceiver instead — that survives the pause.
   const enc = async () => pa.evaluate(() => {
     const pcs = (window as never as { __pcs: RTCPeerConnection[] }).__pcs || []
-    const s = pcs.flatMap((pc) => pc.getSenders()).find((x) => x.track && x.track.kind === 'video')
-    if (!s) return null
-    const e = (s.getParameters().encodings || [{}])[0]
-    return { kbps: e.maxBitrate ? e.maxBitrate / 1000 : null, scale: e.scaleResolutionDownBy || 1 }
+    for (const pc of pcs) {
+      for (const t of pc.getTransceivers()) {
+        if (!t.receiver || !t.receiver.track || t.receiver.track.kind !== 'video') continue
+        const e = (t.sender.getParameters().encodings || [{}])[0]
+        return { kbps: e.maxBitrate ? e.maxBitrate / 1000 : null, scale: e.scaleResolutionDownBy || 1, hasTrack: !!t.sender.track }
+      }
+    }
+    return null
   })
   // The guest's dock tile is small, so the host must scale well below capture.
   await expect.poll(async () => (await enc())?.scale ?? 1, { timeout: 20_000 }).toBeGreaterThan(1)
   const got = await enc()
   expect(got!.kbps).toBeLessThanOrEqual(200) // a thumbnail costs a fraction of a full frame
+
+  // Nobody looking → nothing sent. Switching the host to chat unmounts the tiles,
+  // which reports width 0 and makes the guest drop our video track entirely.
+  await pb.getByTestId('call-chat').click()
+  await expect.poll(async () => (await enc())?.hasTrack, { timeout: 20_000 }).toBe(false)
+  // …and going back to participants must bring it straight back.
+  await pb.getByTestId('call-participants').click()
+  await expect.poll(async () => (await enc())?.hasTrack, { timeout: 20_000 }).toBe(true)
   await a.close(); await b.close()
 })
