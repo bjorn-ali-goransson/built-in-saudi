@@ -38,6 +38,10 @@ const CAM: MediaTrackConstraints = {
   width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 },
 }
 
+// Roughly what a given encoded width is worth, in kbps. A 160px thumbnail is ~36x
+// fewer pixels than 960px, so it has no business carrying a 700 kbps stream.
+const bitrateFor = (w: number) => (w <= 160 ? 60 : w <= 240 ? 100 : w <= 320 ? 160 : w <= 480 ? 300 : w <= 640 ? 450 : 700)
+
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
@@ -82,6 +86,9 @@ type Ctrl =
   | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
   | { c: 'admit' }
   | { c: 'fmute'; target: string; by: string }
+  // "I am painting your video into a box this many DEVICE pixels wide." The sender
+  // scales its encoder to match, so a 150px thumbnail never carries a 960px frame.
+  | { c: 'want'; w: number }
 
 export interface CallHandlers {
   onLocal?(stream: MediaStream): void
@@ -119,6 +126,8 @@ interface Peer {
   mediaLinked: boolean // our media senders have been created on this pc
   aSender?: RTCRtpSender // persistent audio sender — replaceTrack(null) to release, without renegotiating
   vSender?: RTCRtpSender // persistent video sender (camera or screen)
+  wantW?: number // device px this peer says it renders OUR video at (receiver-driven)
+  sentWantW?: number // the last width WE asked this peer for (dedupes the control msg)
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -314,20 +323,45 @@ export class CallRoom {
    *  to drop frames rather than resolution. */
   private tuneVideo() {
     const n = [...this.peers.values()].filter((p) => p.info?.inCall).length
-    // Per-peer ceiling: generous 1:1, tighter the more copies we're pushing.
-    const kbps = this.screenOn ? 1200 : n <= 1 ? 700 : n === 2 ? 450 : 300
+    // Width we're actually capturing, so the scale factor is honest even when the
+    // camera ignored our ideal constraint.
+    const capW = this.videoTrack?.getSettings().width || 960
     for (const p of this.peers.values()) {
       const s = p.vSender
       if (!s) continue
+      // Receiver-driven: encode for the box THIS peer is painting us into. A tile in
+      // a 6-way grid can be 150px — sending 960px there is ~40x the pixels it can
+      // show. Falls back to a mesh-size guess until they've told us (or if they're
+      // on an old build that never will).
+      const want = p.wantW && p.wantW > 0 ? p.wantW : n <= 1 ? 640 : n === 2 ? 480 : 320
+      const target = this.screenOn ? capW : Math.min(capW, Math.max(160, want))
+      const kbps = this.screenOn ? 1200 : bitrateFor(target)
       try {
         const params = s.getParameters()
         if (!params.encodings || params.encodings.length === 0) params.encodings = [{}]
         params.encodings[0].maxBitrate = kbps * 1000
         params.encodings[0].maxFramerate = this.screenOn ? 15 : 24
+        // Screen-share must stay sharp (text); a camera tile can shrink to fit.
+        params.encodings[0].scaleResolutionDownBy = this.screenOn ? 1 : Math.min(16, Math.max(1, capW / target))
         params.degradationPreference = this.screenOn ? 'maintain-resolution' : 'balanced'
         s.setParameters(params).catch(() => {})
       } catch { /* older browsers: no encoding params — the capture cap still applies */ }
     }
+  }
+
+  /** Receiver side: tell `id` how wide we're painting their video, so they can stop
+   *  encoding pixels we'll only throw away. Quantised into buckets so a few pixels
+   *  of layout drift doesn't spam the data channel or churn the encoder. */
+  requestSize(id: string, cssPx: number) {
+    const peer = this.peers.get(id)
+    if (!peer || peer.dc?.readyState !== 'open') return
+    const dpr = typeof devicePixelRatio === 'number' ? Math.min(devicePixelRatio, 2) : 1
+    const px = Math.round(cssPx * dpr)
+    // 160 / 240 / 320 / 480 / 640 / 960 — the ladder the sender scales onto.
+    const bucket = px <= 160 ? 160 : px <= 240 ? 240 : px <= 320 ? 320 : px <= 480 ? 480 : px <= 640 ? 640 : 960
+    if (peer.sentWantW === bucket) return
+    peer.sentWantW = bucket
+    peer.dc.send(JSON.stringify({ c: 'want', w: bucket } as Ctrl))
   }
   private releaseKind(kind: 'audio' | 'video') {
     for (const p of this.peers.values()) { const s = kind === 'audio' ? p.aSender : p.vSender; s?.replaceTrack(null).catch(() => {}) }
@@ -342,6 +376,7 @@ export class CallRoom {
       try { m = JSON.parse(e.data) } catch { return }
       if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing, aspect: Number(m.aspect) || 1 }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
       else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
+      else if (m.c === 'want') { peer.wantW = Math.max(0, Number(m.w) || 0); this.tuneVideo() }
       else if (m.c === 'fmute') { const target = String(m.target || ''); const me = target === this.me; if (me) this.toggleMic(false); this.h.onMuteNotice?.(String(m.by || ''), target, me) }
       else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
     }

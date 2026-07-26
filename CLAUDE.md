@@ -322,9 +322,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **Bandwidth (#214):** WebRTC always *encodes* (it never sends raw frames), but the
   encoder was uncapped and this is a **mesh** — every peer uploads its own copy to
   every other peer, so upstream = (peers−1) × bitrate. Capture is capped at 960×540 /
-  24fps (`CAM` in `rtc.ts`) and `tuneVideo()` sets `maxBitrate` per sender, stepping
-  down as the mesh grows (700→450→300 kbps; screen-share keeps 1200 kbps at 15fps
-  with `maintain-resolution`, since text must stay legible).
+  24fps (`CAM` in `rtc.ts`), and encoding is **receiver-driven**: each peer measures
+  its rendered tile (`ParticipantTile` `onSize` → `requestSize()`) and sends a
+  bucketed width (`{c:'want'}`, 160/240/320/480/640/960) over the **data channel**;
+  the sender sets `scaleResolutionDownBy` + a matching `maxBitrate` **per peer** in
+  `tuneVideo()`. A ~120px dock tile therefore receives **160×90 at 60 kbps**, not a
+  960px frame. Screen-share opts out (`scaleResolutionDownBy: 1`, 1200 kbps, 15fps,
+  `maintain-resolution`) since text must stay legible. Verified end-to-end by reading
+  the real `getParameters()` in `e2e/calls.spec.ts`.
   **Waiting room (all P2P):** `rtc.ts` forms a **data-only** connection first (no
   camera/mic), using **perfect negotiation** so media can be added later by
   renegotiation. Lobby control — each peer's `{name, role, inCall}` presence, plus

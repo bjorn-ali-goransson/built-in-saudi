@@ -764,3 +764,46 @@ test('a knock is admittable even when the host is on the chat tab (#217)', async
   await expect(banner).toHaveCount(0)
   await pb.close(); await a.close(); await b.close()
 })
+
+// #214: a tile in the participants dock is ~120px wide, so sending a 960px frame
+// into it wastes ~40x the pixels it can show. The receiver measures its tile and
+// asks the sender over the data channel; the sender scales its encoder to match.
+test('the sender encodes for the size the receiver actually renders (#214)', async ({ browser }) => {
+  // Record every RTCPeerConnection so we can read the real encoder parameters.
+  const CAPTURE = `
+    const orig = window.RTCPeerConnection
+    const all = []; window.__pcs = all
+    window.RTCPeerConnection = function (...a) { const pc = new orig(...a); all.push(pc); return pc }
+    window.RTCPeerConnection.prototype = orig.prototype
+  `
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  await a.addInitScript(CAPTURE)
+  const pa = await a.newPage(), pb = await b.newPage()
+
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Guest')
+  await pb.getByTestId('call-join').click()
+  await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+
+  await pa.getByTestId('call-cam').click() // give the host a video sender to inspect
+  const enc = async () => pa.evaluate(() => {
+    const pcs = (window as never as { __pcs: RTCPeerConnection[] }).__pcs || []
+    const s = pcs.flatMap((pc) => pc.getSenders()).find((x) => x.track && x.track.kind === 'video')
+    if (!s) return null
+    const e = (s.getParameters().encodings || [{}])[0]
+    return { kbps: e.maxBitrate ? e.maxBitrate / 1000 : null, scale: e.scaleResolutionDownBy || 1 }
+  })
+  // The guest's dock tile is small, so the host must scale well below capture.
+  await expect.poll(async () => (await enc())?.scale ?? 1, { timeout: 20_000 }).toBeGreaterThan(1)
+  const got = await enc()
+  expect(got!.kbps).toBeLessThanOrEqual(200) // a thumbnail costs a fraction of a full frame
+  await a.close(); await b.close()
+})

@@ -215,11 +215,22 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
 
 // A participant square. The <video> stays mounted whenever there's a stream; it's
 // always muted (audio is handled by the AudioSinks above), the avatar overlays it.
-export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string }) {
+export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void }) {
   const ref = useRef<HTMLVideoElement>(null)
+  const box = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
+  // Report how wide this tile actually is, so the SENDER can encode for it instead
+  // of pushing a 960px frame into a 150px box (#214).
+  useEffect(() => {
+    const el = box.current
+    if (!el || !onSize) return
+    const ro = new ResizeObserver(() => onSize(el.clientWidth))
+    ro.observe(el)
+    onSize(el.clientWidth)
+    return () => ro.disconnect()
+  }, [onSize])
   return (
-    <div className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
+    <div ref={box} className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
       {stream && <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
       {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
