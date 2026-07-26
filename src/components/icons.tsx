@@ -227,6 +227,24 @@ export function MicIcon({ className }: P) {
   )
 }
 
+export function VolumeIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12" />
+    </svg>
+  )
+}
+
+export function MuteIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16 9.5l6 5M22 9.5l-6 5" />
+    </svg>
+  )
+}
+
 export function CvIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
