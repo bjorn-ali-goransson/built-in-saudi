@@ -11,6 +11,7 @@ const STR = {
 
 const COLORS = ['#1f3d2b', '#2f6b45', '#c8a24b', '#8a6d2b', '#3a7d5d', '#b07a3c', '#4c8a63', '#9a8548']
 const R = 150, C = 160
+const SPIN_MS = 3500 // the wheel's CSS transition; the sound follows the same clock
 
 function slice(i: number, n: number): string {
   const a0 = (i / n) * 2 * Math.PI - Math.PI / 2
@@ -43,9 +44,9 @@ export default function RandomPickerTool() {
     const target = rot + turns * 360 + (360 - ((rot % 360) + idx * seg + seg / 2)) % 360 + 360
     setRot(target)
     snd.unlock() // unlock audio within the click gesture
-    snd.followSpin(wheelRef.current, seg, target - rot)
+    snd.followSpin(wheelRef.current, seg, target - rot, SPIN_MS)
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => { snd.ding(); setWinner(options[idx]); setSpinning(false) }, 3600)
+    timer.current = window.setTimeout(() => { snd.ding(); setWinner(options[idx]); setSpinning(false) }, SPIN_MS + 100)
   }
 
   return (
@@ -54,7 +55,7 @@ export default function RandomPickerTool() {
         <div className="relative shrink-0">
           <div className="absolute left-1/2 -translate-x-1/2 -top-1 z-10 text-[1.4rem]" aria-hidden="true">▼</div>
           <svg ref={wheelRef} width={C * 2} height={C * 2} viewBox={`0 0 ${C * 2} ${C * 2}`} className="max-w-[320px] w-full h-auto"
-            style={{ transform: `rotate(${rot}deg)`, transition: spinning ? 'transform 3.5s cubic-bezier(0.2,0.8,0.1,1)' : 'none' }}>
+            style={{ transform: `rotate(${rot}deg)`, transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.2,0.8,0.1,1)` : 'none' }}>
             {options.map((opt, i) => {
               const mid = ((i + 0.5) / n) * 2 * Math.PI - Math.PI / 2
               return (

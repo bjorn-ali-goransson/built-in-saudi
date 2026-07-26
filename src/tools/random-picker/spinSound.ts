@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react'
 import { rotationOf, degreesMovedForward } from '../../lib/rotation'
 
 /**
+ * Shortest gap between two ticks. The wheel opens fast enough to sweep ~50
+ * slices a second (far more with many options), which reads as a buzz rather
+ * than a clatter — this caps the opening rate. It only bites while the wheel is
+ * quick; once it slows below the cap every crossing ticks again, so the ticks
+ * you hear at the end land exactly on the slices you see.
+ */
+const MIN_TICK_GAP_MS = 80
+
+/**
  * All of the Random Picker's sound: a lazily-created WebAudio beeper plus the
  * requestAnimationFrame loop that ticks whenever the wheel's rendered rotation passes a slice.
  * Every method is safe to call while muted or with audio unavailable.
@@ -59,23 +68,34 @@ export class SpinSound {
   }
 
   /**
-   * Tick each time the spinning wheel sweeps past another slice boundary.
-   * Watches the wheel's actual on-screen rotation once per frame, so the sound
-   * always matches what the eye sees. Stops itself after `totalDeg` of travel.
+   * Tick each time the spinning wheel sweeps past another slice boundary, no
+   * faster than MIN_TICK_GAP_MS apart. Watches the wheel's actual on-screen
+   * rotation once per frame, so the sound always matches what the eye sees.
+   * Stops itself after `totalDeg` of travel, or once `durationMs` has elapsed.
    */
-  followSpin(wheel: SVGSVGElement | null, sliceDeg: number, totalDeg: number) {
+  followSpin(wheel: SVGSVGElement | null, sliceDeg: number, totalDeg: number, durationMs: number) {
     cancelAnimationFrame(this.raf)
     if (!wheel) return
     let previous = rotationOf(wheel)
     let traveled = 0
-    const everyFrame = () => {
+    let startedAt = 0
+    let lastTickAt = -Infinity
+    const everyFrame = (now: number) => {
+      if (!startedAt) startedAt = now
       const current = rotationOf(wheel)
       const moved = degreesMovedForward(previous, current)
       previous = current
       const boundariesCrossed = Math.floor((traveled + moved) / sliceDeg) - Math.floor(traveled / sliceDeg)
-      if (boundariesCrossed > 0) this.tick()
+      if (boundariesCrossed > 0 && now - lastTickAt >= MIN_TICK_GAP_MS) {
+        lastTickAt = now
+        this.tick()
+      }
       traveled += moved
-      if (traveled < totalDeg - 0.5) this.raf = requestAnimationFrame(everyFrame)
+      // Stop on distance OR on time. A dropped frame can under-count `traveled`
+      // (the angle reading wraps at 360, so a >180° jump reads short), which
+      // would otherwise leave this loop running forever against a wheel that has
+      // already stopped moving.
+      if (traveled < totalDeg - 0.5 && now - startedAt < durationMs + 250) this.raf = requestAnimationFrame(everyFrame)
     }
     this.raf = requestAnimationFrame(everyFrame)
   }
