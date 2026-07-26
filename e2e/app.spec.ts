@@ -672,6 +672,45 @@ test.describe('shell', () => {
     await page.goto('/en/tools/prayer-times')
     await expect(page.locator('html')).toHaveAttribute('translate', 'no')
   })
+
+  // A shell served from the service-worker cache carries an OLD <meta name="build">,
+  // so version.json never matches it and the update check used to reload on every
+  // return to the tab, forever. It must reload once, then stand down.
+  test('a stale shell does not put the update check into a reload loop', async ({ page }) => {
+    let loads = 0
+    page.on('load', () => { loads++ })
+    // A build the shell can never become — exactly how a cached shell looks.
+    await page.route('**/version.json*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ build: '9999999999999', notes: 'never arrives' }),
+    }))
+    await page.goto('/en')
+    await expect(page.getByTestId('app-grid').or(page.locator('main'))).toBeVisible()
+    const before = loads
+
+    // Returning to the tab fires visibilitychange AND focus — both must not reload twice.
+    await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')) })
+    await expect.poll(() => loads, { timeout: 10_000 }).toBe(before + 1) // exactly one reload
+
+    // Now the guard should hold: further returns must NOT reload again.
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')) })
+      await page.waitForTimeout(400)
+    }
+    expect(loads).toBe(before + 1)
+  })
+
+  // The toast compared build ids for inequality, so an older cached shell counted as
+  // an "update" and it reappeared with no deploy behind it.
+  test('an older build than the one already seen shows no "Updated" toast', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('bis-last-build', '9999999999999'))
+    await page.goto('/en')
+    await expect(page.locator('main')).toBeVisible()
+    await page.waitForTimeout(800)
+    await expect(page.getByTestId('updated-toast')).toHaveCount(0)
+    // …and the higher build must survive, so it can't ping-pong on the next visit.
+    expect(await page.evaluate(() => localStorage.getItem('bis-last-build'))).toBe('9999999999999')
+  })
 })
 
 test.describe('line break converter', () => {

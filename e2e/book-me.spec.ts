@@ -74,12 +74,14 @@ test.beforeAll(async () => {
 })
 test.afterAll(() => server?.close())
 
-test('unverified-app warning shows before sign-in', async ({ page }) => {
+test('before sign-in: the publish CTA shows, with no unverified-app warning', async ({ page }) => {
   await page.goto('/en/apps/book-me')
-  await expect(page.getByTestId('unverified-warning')).toBeVisible()
   // The sign-in CTA is present; the connected-only "open page" control is not.
   await expect(page.getByTestId('save-schedule')).toBeVisible()
   await expect(page.getByTestId('open-page')).toHaveCount(0)
+  // Google's brand review has passed, so the consent screen no longer shows an
+  // "unverified app" interstitial and the pre-emptive warning is gone for good.
+  await expect(page.getByTestId('unverified-warning')).toHaveCount(0)
 })
 
 test('publish runs the full OAuth round-trip and signs the host in', async ({ page, context }) => {
@@ -93,9 +95,8 @@ test('publish runs the full OAuth round-trip and signs the host in', async ({ pa
   await page.getByTestId('save-schedule').click()
 
   // Lands back on the dashboard, signed in: the connected-only control appears,
-  // the pre-sign-in warning and CTA are gone, and the hash was cleaned up.
+  // the pre-sign-in CTA is gone, and the hash was cleaned up.
   await expect(page.getByTestId('open-page')).toBeVisible()
-  await expect(page.getByTestId('unverified-warning')).toHaveCount(0)
   await expect(page.getByTestId('save-schedule')).toHaveCount(0)
   expect(new URL(page.url()).hash).toBe('')
 

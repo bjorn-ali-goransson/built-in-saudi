@@ -33,11 +33,18 @@ export function UpdatedToast() {
       sessionStorage.removeItem('bis-update-notes')
     } catch { /* ignore */ }
 
-    // (2) Fresh visit onto a newer build than the last one we recorded.
+    // (2) Fresh visit onto a build NEWER than the last one we recorded. Build ids are
+    // Date.now() stamps, so "newer" is a numeric comparison — testing mere inequality
+    // also fired on a DOWNGRADE, i.e. whenever the service worker served an older
+    // cached shell. That's why the toast kept reappearing with no deploy behind it,
+    // and why it read a bare "Updated": the notes it fetched described a different
+    // build. Only ever record the highest build seen, so the two can't ping-pong.
     let lastBuild = ''
     try { lastBuild = localStorage.getItem(LAST_BUILD_KEY) || '' } catch { /* ignore */ }
-    const freshUpdate = !!build && !!lastBuild && lastBuild !== build
-    try { if (build) localStorage.setItem(LAST_BUILD_KEY, build) } catch { /* ignore */ }
+    const seen = Number(lastBuild), now = Number(build)
+    const newer = Number.isFinite(now) && (!Number.isFinite(seen) || now > seen)
+    const freshUpdate = !!build && !!lastBuild && Number.isFinite(seen) && newer
+    try { if (build && newer) localStorage.setItem(LAST_BUILD_KEY, build) } catch { /* ignore */ }
 
     if (reloaded) {
       setNotes(sessionNotes)

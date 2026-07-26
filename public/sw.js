@@ -1,7 +1,12 @@
 // Minimal PWA service worker: enables install + offline shell.
 // Network-first (so fresh chunks always win — no stale-chunk issues); the cache
 // is only a fallback when offline. The version poll (/version.json) is never cached.
-const CACHE = 'bis-shell-v1'
+// Cache name carries the build id — the prerender plugin rewrites the __BIS_BUILD__
+// token at build time (vite.config.ts). A new deploy therefore lands in a NEW cache
+// and `activate` deletes the old one, so a stale shell (with an old
+// <meta name="build">) can never outlive its deploy and re-trigger the update
+// reload. In dev the token stays as-is, which is a perfectly good constant name.
+const CACHE = 'bis-shell-__BIS_BUILD__'
 const SHELL = ['/', '/en', '/ar', '/manifest.webmanifest', '/favicon.svg', '/icon.svg']
 
 self.addEventListener('install', (event) => {

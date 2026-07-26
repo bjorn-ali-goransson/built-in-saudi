@@ -122,6 +122,17 @@ function prerenderPlugin(): Plugin {
       shell = shell.replace('</head>', `<meta name="build" content="${build}" /></head>`)
       writeFileSync(join(dist, 'version.json'), JSON.stringify({ build, notes }))
 
+      // Stamp the same build into the service worker's cache name, so each deploy
+      // gets a fresh cache and `activate` evicts the previous one. Without this the
+      // cache name was constant and a shell cached under an OLD build stamp survived
+      // indefinitely — served whenever a fetch failed (a phone waking before the
+      // network is back), which made useVersionCheck reload on a loop.
+      try {
+        const swPath = join(dist, 'sw.js')
+        const sw = readFileSync(swPath, 'utf8')
+        writeFileSync(swPath, sw.replace(/__BIS_BUILD__/g, build))
+      } catch { /* no sw.js in this build — nothing to stamp */ }
+
       writeFileSync(join(dist, '404.html'), shell) // SPA fallback
 
       const write = (routeDir: string, html: string) => {

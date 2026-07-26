@@ -170,6 +170,18 @@ Cloud DNS**, project **`blitz-ksa`**, zone `built-in-saudi`.
 
 - The build stamps `<meta name="build">` + writes `/version.json`; `useVersionCheck`
   polls it (cache-busted) and reloads open tabs when a new deploy is detected.
+  **Reload-loop guard (#207):** a shell served from the SW cache carries an OLD build
+  stamp, so `version.json` never matches it and every return to the tab reloaded
+  again, forever. The check records the build it's reloading *toward*
+  (`sessionStorage` `bis-reload-target`) and stands down if the reload didn't reach
+  it. `visibilitychange` and `focus` both fire on a mobile return, so `check()` also
+  guards against re-entry. **`UpdatedToast` compares build ids numerically** (they're
+  `Date.now()` stamps) and only records the highest seen — testing mere inequality
+  fired on a *downgrade* to a cached shell, which is why "Updated" reappeared with no
+  deploy behind it. **The SW cache name carries the build** (`bis-shell-<build>`; the
+  prerender plugin rewrites a `__BIS_BUILD__` token in `public/sw.js`), so each deploy
+  gets a fresh cache and `activate` evicts the old one — a stale shell can't outlive
+  its deploy. Covered by `e2e/app.spec.ts` (`shell` describe).
 - **Changelog in the update toast:** the build puts a user-facing note into
   `version.json` `notes` — a `Changelog: …` trailer from the latest commit if
   present, else the commit subject. `UpdatedToast` shows it after the reload. So
@@ -214,9 +226,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **`book-me`**, folder still `src/tools/book-with-me/`): Calendly-style scheduling
   — `booking-google-start`/`-callback` (**the OAuth redirect URI is
   `built-in-saudi.com/oauth/callback/`, a static forwarder in `public/`, NOT the
-  function** — Google prints the redirect URI's domain on the consent screen until
-  brand verification passes, so it must be a domain we own, not
-  `cloudfunctions.net`), `save-schedule`, `get-availability`,
+  function** — Google prints the redirect URI's domain on the consent screen, so it
+  must be a domain we own, not `cloudfunctions.net`. **Google's brand/scope review
+  passed (2026-07-26)**, so the consent screen no longer shows an "unverified app"
+  interstitial and the pre-emptive in-app warning was removed), `save-schedule`, `get-availability`,
   `book`, `telegram-webhook`, plus **`delete-host`** (deletes the host record +
   all its bookings), **`my-data`** (see the data-deletion note below),
   **`host-status`** (is the stored token still connected + does it have Calendar
