@@ -302,6 +302,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `my-data` untouched). STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
+  **Knock visibility (#217):** the ONLY admit control used to live inside the
+  participants dock, so a host on the chat tab (or with the dock closed) got a chime
+  and nothing else. A knock now also badges the dock + toasts (`notify('p', …)`) and
+  raises an edge-docked **knock banner** (`call-knock-banner`) that admits directly.
+  **Bandwidth (#214):** WebRTC always *encodes* (it never sends raw frames), but the
+  encoder was uncapped and this is a **mesh** — every peer uploads its own copy to
+  every other peer, so upstream = (peers−1) × bitrate. Capture is capped at 960×540 /
+  24fps (`CAM` in `rtc.ts`) and `tuneVideo()` sets `maxBitrate` per sender, stepping
+  down as the mesh grows (700→450→300 kbps; screen-share keeps 1200 kbps at 15fps
+  with `maintain-resolution`, since text must stay legible).
   **Waiting room (all P2P):** `rtc.ts` forms a **data-only** connection first (no
   camera/mic), using **perfect negotiation** so media can be added later by
   renegotiation. Lobby control — each peer's `{name, role, inCall}` presence, plus

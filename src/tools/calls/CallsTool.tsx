@@ -306,7 +306,13 @@ export default function CallsTool() {
         answeredRef.current = false
         setAutoAdmitting(true)
         Promise.all(waiting.map(([id]) => admit(id))).finally(() => setAutoAdmitting(false))
-      } else if (!isGuest) { chime(); osNotify(freshNames.join(', '), s.waitingToJoin) }
+      } else if (!isGuest) {
+        // Badge the participants dock + surface the in-app toast as well as the
+        // chime. A knock used to only chime, so a host whose dock was closed (or on
+        // chat) got nothing on screen and no way to let anyone in (#217).
+        chime(); osNotify(freshNames.join(', '), s.waitingToJoin)
+        notify('p', `${freshNames.join(', ')} ${s.waitingToJoin}`)
+      }
       // A returning guest (same name) supersedes their old "left" entry.
       const names = new Set(waiting.map(([, i]) => i.name))
       setLeftWaiters((l) => l.filter((w) => !names.has(w.name)))
@@ -1303,6 +1309,26 @@ export default function CallsTool() {
       {declineComposerEl}
       {/* Busy: a personal-link ring arrived while we're in a call — a docked banner
           (not a takeover). Add pulls them into THIS room; Decline sends a note. */}
+      {/* Someone is knocking and the participants dock isn't showing them — the ONLY
+          admit control used to live inside that dock, so a host on the chat tab (or
+          with the dock closed) could neither see nor let anyone in (#217). This bar
+          docks to the top edge and admits directly, whatever the dock is doing. */}
+      {!isGuest && waiting.length > 0 && !showParticipants && !autoAdmitting && (
+        <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-banner">
+          <span className="shrink-0 [animation:bis-bounce-y_1.2s_ease-in-out_infinite]" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.92rem] font-semibold leading-tight truncate" data-testid="call-knock-who">{waiting.map(([, i]) => i.name || '•').join(', ')}</p>
+            <p className="text-[0.75rem] text-sand-100/70">{s.waitingToJoin}</p>
+          </div>
+          {waiting.length === 1 ? (
+            <button onClick={() => admit(waiting[0][0])} data-testid="call-knock-admit"
+              className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.admit}</button>
+          ) : (
+            <button onClick={() => pickPanel('p')} data-testid="call-knock-open"
+              className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.participants}</button>
+          )}
+        </div>
+      )}
       {incomingRing && (
         <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0 [animation:bis-call-flash_2.2s_ease-in-out_infinite]" data-testid="call-busy-banner">
           {/* A phone bouncing horizontally toward a couple of motion arrows (#192). */}
@@ -1349,7 +1375,7 @@ export default function CallsTool() {
         <span className="w-px h-6 bg-[color:var(--line)] mx-0.5 max-[640px]:hidden" />
         <span className="max-[640px]:hidden flex items-center gap-1.5">
           <IconBtn onClick={() => toggleMode('p')} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
-          <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} badge={unseen.c || undefined}><ChatIcon /></IconBtn>
+          <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} testid="call-chat" badge={unseen.c || undefined}><ChatIcon /></IconBtn>
           <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react"><span className="text-[1.15rem] leading-none">🙂</span></IconBtn>
           <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>

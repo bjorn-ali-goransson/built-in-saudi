@@ -588,12 +588,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('jt-output')).toContainText('string[]')
   })
 
-  test('writer: counts words as you type', async ({ page }) => {
-    await page.goto('/en/apps/writer')
-    await page.getByTestId('wr-input').fill('one two three four')
-    await expect(page.getByTestId('wr-words')).toContainText('4')
-  })
-
   test('flashcards: add a card then study it', async ({ page }) => {
     await page.goto('/en/apps/flashcards')
     await page.getByTestId('fc-front').fill('Capital of KSA')

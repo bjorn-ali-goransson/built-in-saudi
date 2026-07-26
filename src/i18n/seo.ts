@@ -254,11 +254,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'JSON إلى TypeScript', description: 'الصق كائن أو مصفوفة JSON لتحصل على واجهات TypeScript مستنبطة منها — تصبح الكائنات المتداخلة واجهات خاصة بها، وتُصنَّف المصفوفات، وتصير المفاتيح الغائبة من بعض العناصر اختيارية. تعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'writer',
-    en: { name: 'Distraction-Free Writer', description: 'A clean, full-width writing pad with a live word and character count and reading time. Your text autosaves to this browser as you type, and you can download it as .txt or .md any time. Nothing uploaded.' },
-    ar: { name: 'محرّر بلا تشتيت', description: 'لوح كتابة نظيف بعرض كامل مع عدّاد حيّ للكلمات والأحرف وزمن القراءة. يُحفظ نصّك تلقائيًا في هذا المتصفح أثناء الكتابة، ويمكنك تنزيله كـ.txt أو .md في أي وقت. لا يُرفع أي شيء.' },
-  },
-  {
     id: 'flashcards',
     en: { name: 'Flashcards', description: 'Build a deck of flip cards — a prompt on the front, the answer on the back — then study it: flip, go through in order or shuffled. Your deck is saved in this browser, nothing uploaded.' },
     ar: { name: 'البطاقات التعليمية', description: 'ابنِ مجموعة بطاقات قابلة للقلب — سؤال في الوجه وإجابة في الظهر — ثم ذاكِرها: اقلب، وتنقّل بالترتيب أو بالخلط. تُحفظ مجموعتك في هذا المتصفح، دون رفع أي شيء.' },

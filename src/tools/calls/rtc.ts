@@ -31,6 +31,13 @@ export async function signalRoom(room: string, type: 'redirect' | 'decline', pay
   } catch { /* fire-and-forget */ }
 }
 
+// Camera capture ceiling (#214). 720p costs ~4x the pixels of this and the tiles
+// never render anywhere near that big — a 2-column grid tops out around 300px wide.
+// Capturing smaller cuts upstream bytes, encoder CPU and phone battery at once.
+const CAM: MediaTrackConstraints = {
+  width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 },
+}
+
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
@@ -290,10 +297,37 @@ export class CallRoom {
   private addOrReplace(peer: Peer, track: MediaStreamTrack) {
     const audio = track.kind === 'audio'
     const cur = audio ? peer.aSender : peer.vSender
-    if (cur) { cur.replaceTrack(track).catch(() => {}); return }
+    if (cur) { cur.replaceTrack(track).catch(() => {}); if (!audio) this.tuneVideo(); return }
     if (!this.local) return
     const s = peer.pc.addTrack(track, this.local)
-    if (audio) peer.aSender = s; else peer.vSender = s
+    if (audio) peer.aSender = s; else { peer.vSender = s; this.tuneVideo() }
+  }
+
+  /** Cap what the video encoder is allowed to spend (#214).
+   *
+   *  WebRTC never sends raw frames — it always encodes (VP8/H.264) — but with no
+   *  `maxBitrate` the encoder just targets whatever the link allows, ~2 Mbps at
+   *  720p. This is a MESH: every peer uploads its own copy to every other peer, so
+   *  one person's upstream is (peers − 1) × bitrate. That multiplication is the real
+   *  waste, so the cap tightens as the call grows. Screen-share keeps a much higher
+   *  ceiling (text has to stay legible) but a low frame rate, and asks the encoder
+   *  to drop frames rather than resolution. */
+  private tuneVideo() {
+    const n = [...this.peers.values()].filter((p) => p.info?.inCall).length
+    // Per-peer ceiling: generous 1:1, tighter the more copies we're pushing.
+    const kbps = this.screenOn ? 1200 : n <= 1 ? 700 : n === 2 ? 450 : 300
+    for (const p of this.peers.values()) {
+      const s = p.vSender
+      if (!s) continue
+      try {
+        const params = s.getParameters()
+        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}]
+        params.encodings[0].maxBitrate = kbps * 1000
+        params.encodings[0].maxFramerate = this.screenOn ? 15 : 24
+        params.degradationPreference = this.screenOn ? 'maintain-resolution' : 'balanced'
+        s.setParameters(params).catch(() => {})
+      } catch { /* older browsers: no encoding params — the capture cap still applies */ }
+    }
   }
   private releaseKind(kind: 'audio' | 'video') {
     for (const p of this.peers.values()) { const s = kind === 'audio' ? p.aSender : p.vSender; s?.replaceTrack(null).catch(() => {}) }
@@ -352,7 +386,7 @@ export class CallRoom {
   async toggleCam(on: boolean): Promise<boolean> {
     if (on) {
       if (!this.videoTrack) {
-        try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, width: 1280, height: 720 } }); this.videoTrack = s.getVideoTracks()[0] }
+        try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, ...CAM } }); this.videoTrack = s.getVideoTracks()[0] }
         catch { this.cam = false; this.broadcastInfo(); return false }
         this.local?.addTrack(this.videoTrack)
       }
@@ -384,7 +418,7 @@ export class CallRoom {
     this.camId = id
     if (!this.cam || !this.videoTrack) return
     let track: MediaStreamTrack
-    try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, width: 1280, height: 720 } })).getVideoTracks()[0] } catch { return }
+    try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, ...CAM } })).getVideoTracks()[0] } catch { return }
     this.local?.removeTrack(this.videoTrack); this.videoTrack.stop()
     this.videoTrack = track; this.local?.addTrack(track); this.emitPreview()
     if (!this.screenOn) this.setVideoWire(track)
@@ -401,12 +435,13 @@ export class CallRoom {
   async shareScreen(): Promise<MediaStream> {
     this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
     const track = this.screen.getVideoTracks()[0]
+    this.screenOn = true // set BEFORE wiring, so tuneVideo picks the screen ceiling
     this.setVideoWire(track)
-    this.screenOn = true; this.broadcastInfo()
+    this.broadcastInfo()
     track.onended = () => this.stopScreen()
     return this.screen
   }
-  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; this.setVideoWire(this.cam ? this.videoTrack : null); if (this.screenOn) { this.screenOn = false; this.broadcastInfo() } }
+  stopScreen() { this.screen?.getTracks().forEach((t) => t.stop()); this.screen = null; const was = this.screenOn; this.screenOn = false; this.setVideoWire(this.cam ? this.videoTrack : null); this.tuneVideo(); if (was) this.broadcastInfo() }
 
   /** A snapshot of live connection + media state, for the on-screen debug panel. */
   diag(): DiagSnapshot {
@@ -424,7 +459,7 @@ export class CallRoom {
     }
   }
 
-  private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.h.onLeave?.(id) }
+  private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
   leave() {
     if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false

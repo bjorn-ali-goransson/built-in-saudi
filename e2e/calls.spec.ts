@@ -730,3 +730,37 @@ test('mobile: a knock shows in the participants dock (above the elastic video gr
   await expect(pa.getByTestId('call-admit')).toBeVisible()
   await a.close(); await b.close()
 })
+
+// #217: the ONLY admit control lived inside the participants dock, so a host who
+// had switched to chat (or closed the dock) got a chime and nothing else — no way
+// to see or let anyone in. A knock must be reachable whatever the dock is doing.
+test('a knock is admittable even when the host is on the chat tab (#217)', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  // Host switches away from participants — the lobby list is now off screen.
+  await pa.getByTestId('call-chat').click()
+  await expect(pa.getByTestId('call-participants-panel')).toHaveCount(0)
+
+  const pc = await b.newPage()
+  await pc.goto(`/en/apps/calls?code=${room}`)
+  await pc.getByTestId('call-name').fill('Latecomer')
+  await pc.getByTestId('call-join').click()
+
+  // A docked banner names them and admits directly, without hunting for the dock.
+  const banner = pa.getByTestId('call-knock-banner')
+  await expect(banner).toBeVisible({ timeout: 20_000 })
+  await expect(pa.getByTestId('call-knock-who')).toContainText('Latecomer')
+  await pa.getByTestId('call-knock-admit').click()
+  // Admitted → they're in the call, and the banner clears itself.
+  await expect(pc.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await expect(banner).toHaveCount(0)
+  await pb.close(); await a.close(); await b.close()
+})

@@ -82,7 +82,6 @@ import { metaTagsTool } from './meta-tags/meta'
 import { robotsTxtTool } from './robots-txt/meta'
 import { gitignoreTool } from './gitignore/meta'
 import { jsonToTypesTool } from './json-to-types/meta'
-import { writerTool } from './writer/meta'
 import { flashcardsTool } from './flashcards/meta'
 import { kanbanTool } from './kanban/meta'
 import { tierListTool } from './tier-list/meta'
@@ -144,7 +143,6 @@ export const tools: Tool[] = [
   fakeDataTool,
   readabilityTool,
   slugifyTool,
-  writerTool,
   flashcardsTool,
   kanbanTool,
   randomPickerTool,
