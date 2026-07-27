@@ -7,13 +7,26 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4173'
 
 export default defineConfig({
   testDir: './e2e',
+  // Playwright's default 30s per-test budget is too small for the multi-context
+  // WebRTC specs: they stand up two or three browsers, form real peer connections
+  // and wait on a polling relay, and their own declared waits already total more
+  // than 30s. Blowing that budget was showing up as "flakiness" when it was really
+  // the harness cutting a legitimately slow test short. A hung test still fails,
+  // just with an honest budget — this is NOT a retry.
+  timeout: 60_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // No retries, anywhere. A retry turns a flaky test green and lets the flake ship;
+  // the suite gates every deploy, so it has to be trustworthy on the first run. A
+  // failure here is a real defect — in the product or in the test — and gets fixed,
+  // not re-rolled.
+  retries: 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
-    trace: 'on-first-retry',
+    // With no retries there is no "first retry" to trace, so keep the trace of any
+    // failure instead — that's what makes a red CI run diagnosable.
+    trace: 'retain-on-failure',
   },
   webServer: process.env.BASE_URL
     ? undefined
