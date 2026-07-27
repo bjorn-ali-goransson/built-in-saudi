@@ -6,6 +6,7 @@ import { cvHeaderStore } from '../lib/cvHeader'
 import { connectGoogleUrl } from '../lib/bookingApi'
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
+import { CallNavButton } from './CallNavButton'
 import { PalmLogo } from './PalmLogo'
 import { ShareButton } from './ShareButton'
 
@@ -55,6 +56,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2 flex-none">
+          <CallNavButton />
           {onBookMe && !bookSession && (
             <button
               type="button"

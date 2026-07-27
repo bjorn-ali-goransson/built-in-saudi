@@ -49,7 +49,7 @@ const ICE: RTCIceServer[] = [
 
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
-export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
+export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
 export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string }
 export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; peers: DiagPeer[] }
 
@@ -83,7 +83,10 @@ export type DataMsg =
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
-  | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number }
+  // `link` is our own published "call me" code, so people we're actually in a call
+  // with can save us as a contact and ring us later (#221). Only ever set when the
+  // user has published such a link — it's already a link they hand out.
+  | { c: 'info'; name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
   | { c: 'admit' }
   | { c: 'fmute'; target: string; by: string }
   // "I am painting your video into a box this many DEVICE pixels wide." The sender
@@ -148,6 +151,7 @@ export class CallRoom {
   private cam = false
   private screenOn = false
   private aspect = 1 // our whiteboard canvas w/h — shared so peers can fade the non-common area
+  private myLink = '' // our published call-link code, shared with in-call peers (#221)
   inCall = false // we've enabled our own media
   local: MediaStream | null = null
   // Live device tracks — acquired only while on, and stop()ped when the user turns
@@ -396,7 +400,7 @@ export class CallRoom {
       if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
       let m: Record<string, unknown>
       try { m = JSON.parse(e.data) } catch { return }
-      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing, aspect: Number(m.aspect) || 1 }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
+      if (m.c === 'info') { peer.info = { name: String(m.name || ''), role: (m.role as Role) || 'guest', inCall: !!m.inCall, muted: !!m.muted, cam: !!m.cam, sharing: !!m.sharing, aspect: Number(m.aspect) || 1, link: m.link ? String(m.link).slice(0, 40) : undefined }; this.h.onPeerInfo?.(id, peer.info); this.linkMedia(peer) }
       else if (m.c === 'admit') { if (!this.inCall) { this.h.onAdmitted?.(); this.enableMedia() } }
       else if (m.c === 'want') {
         peer.wantW = Math.max(0, Number(m.w) || 0)
@@ -408,7 +412,9 @@ export class CallRoom {
       else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
     }
   }
-  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn, aspect: this.aspect } as Ctrl)) }
+  /** Publish our own call-link code to in-call peers so they can save us (#221). */
+  setMyLink(code: string) { if (code !== this.myLink) { this.myLink = code || ''; this.broadcastInfo() } }
+  private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn, aspect: this.aspect, link: this.myLink || undefined } as Ctrl)) }
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
 
   // ---- app-facing send (only to peers actually in the call) ------------------

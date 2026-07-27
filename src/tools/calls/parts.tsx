@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from '../../components/ui'
-import { UsersIcon, MicIcon, MicOffIcon } from '../../components/icons'
+import { UsersIcon, MicIcon, MicOffIcon, UserPlusIcon, CheckIcon } from '../../components/icons'
 import type { DiagSnapshot, PeerInfo } from './rtc'
 import { initials } from './helpers'
 
@@ -225,7 +225,7 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
 
 // A participant square. The <video> stays mounted whenever there's a stream; it's
 // always muted (audio is handled by the AudioSinks above), the avatar overlays it.
-export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void }) {
+export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
@@ -248,6 +248,14 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
         {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className="w-3.5 h-3.5 shrink-0" />}
         <span className="truncate flex-1">{name}{self ? ' ·' : ''}</span>
+        {/* They publish a call-me link → offer to keep them (#221). Stays visible
+            once saved, so it reads as state rather than a control that vanished. */}
+        {!self && onAdd && (
+          <button type="button" onClick={onAdd} title={added ? addedLabel : addLabel} aria-label={added ? addedLabel : addLabel} data-testid="call-add-contact"
+            className={`grid place-items-center w-5 h-5 rounded border-0 cursor-pointer transition-opacity ${added ? 'bg-green-600 text-white opacity-100' : 'bg-white/15 hover:bg-white/30 text-white opacity-0 group-hover:opacity-100'}`}>
+            {added ? <CheckIcon className="w-3.5 h-3.5" /> : <UserPlusIcon className="w-3.5 h-3.5" />}
+          </button>
+        )}
         {!self && onMute && !muted && (
           <button type="button" onClick={onMute} title={muteLabel} aria-label={muteLabel}
             className="opacity-0 group-hover:opacity-100 grid place-items-center w-5 h-5 rounded bg-white/15 hover:bg-white/30 border-0 cursor-pointer transition-opacity">
@@ -256,5 +264,31 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
         )}
       </div>
     </div>
+  )
+}
+
+/** Desktop-only drag handle for the side dock's width (#218). Sits on the dock's
+ *  inline-start edge; dragging toward the stage widens it. Hidden on mobile, where
+ *  the dock is full-width and resizes vertically instead. */
+export function DockResizer({ width, onWidth, min = 240, max = 720 }: { width: number; onWidth: (w: number) => void; min?: number; max?: number }) {
+  const drag = useRef<{ x: number; w: number; rtl: boolean } | null>(null)
+  return (
+    <div
+      role="separator" aria-orientation="vertical" aria-label="Resize panel" data-testid="call-dock-resize"
+      className="hidden sm:block absolute inset-y-0 start-0 w-1.5 -ms-[3px] z-20 cursor-col-resize touch-none select-none
+                 before:content-[''] before:absolute before:inset-y-0 before:start-[3px] before:w-px before:bg-transparent hover:before:bg-green-500"
+      onPointerDown={(e) => {
+        drag.current = { x: e.clientX, w: width, rtl: document.documentElement.dir === 'rtl' }
+        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current
+        if (!d) return
+        const delta = d.rtl ? e.clientX - d.x : d.x - e.clientX
+        onWidth(Math.max(min, Math.min(max, Math.round(d.w + delta))))
+      }}
+      onPointerUp={(e) => { drag.current = null; try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* */ } }}
+      onPointerCancel={() => { drag.current = null }}
+    />
   )
 }

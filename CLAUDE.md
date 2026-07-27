@@ -337,6 +337,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   scaling (`scaleResolutionDownBy: 1`, 1200 kbps, 15fps, `maintain-resolution`) since
   text must stay legible. Verified end-to-end by reading the real `getParameters()`
   in `e2e/calls.spec.ts` (scale > 1, and the track drops then returns on dock toggle).
+  **Answering a ring (#219):** answering puts you in the room BEFORE the caller's
+  connection is up, which used to look like an empty meeting. `awaitingCaller` holds a
+  "Waiting for <name> to join…" overlay until someone is actually in the call, and
+  `willAutoAdmit()` is read **during render** (not from an effect) so the Let-in
+  button never flashes for a caller who is being auto-admitted.
+  **Dock width (#218):** the side dock was a fixed `w-56/64/72` — a sliver on a large
+  screen. It's now `--dock-w` (default 340px, 420px ≥1600px wide), dragged from its
+  inner edge via `DockResizer` and persisted in `bis-call-dock-w`.
+  **Nav shortcut (#220):** `CallNavButton` puts a phone icon in the header **only** for
+  someone who has published a call-me link, badged with the missed-call count.
+  **Contacts (#221):** an in-call peer's own link code rides in the `{c:'info'}`
+  heartbeat (`PeerInfo.link`, set via `setMyLink()`), so their tile offers "save as a
+  contact"; contacts live in `localStorage` `bis-call-contacts` (`src/lib/contacts.ts`)
+  and list on the start screen with a one-tap Call. **Note:** publishing a link means
+  in-call peers are handed that code automatically.
   **Waiting room (all P2P):** `rtc.ts` forms a **data-only** connection first (no
   camera/mic), using **perfect negotiation** so media can be added later by
   renegotiation. Lobby control — each peer's `{name, role, inCall}` presence, plus

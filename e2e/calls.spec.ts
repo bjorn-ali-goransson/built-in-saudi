@@ -821,3 +821,74 @@ test('the sender encodes for the size the receiver actually renders (#214)', asy
   await expect.poll(async () => (await enc())?.hasTrack, { timeout: 20_000 }).toBe(true)
   await a.close(); await b.close()
 })
+
+test('a personal call link puts a badged phone shortcut in the nav (#220)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-link', JSON.stringify({ code: 'mycode123', endpoint: 'e' }))
+    localStorage.setItem('bis-call-missed', JSON.stringify([
+      { id: 'm1', name: 'Layla', at: Date.now() },
+      { id: 'm2', name: 'Omar', at: Date.now() },
+    ]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/qr-code') // any page with the normal chrome
+  const nav = p.getByTestId('nav-calls')
+  await expect(nav).toBeVisible()
+  await expect(p.getByTestId('nav-calls-badge')).toHaveText('2')
+  await nav.click()
+  await expect(p).toHaveURL(/\/en\/apps\/calls$/)
+  await c.close()
+})
+
+test('with no call link there is no nav shortcut (#220)', async ({ browser }) => {
+  const c = await browser.newContext()
+  const p = await c.newPage()
+  await p.goto('/en/apps/qr-code')
+  await expect(p.getByTestId('nav-calls')).toHaveCount(0)
+  await c.close()
+})
+
+test('saved contacts are listed on the start screen and dial their link (#221)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => localStorage.setItem('bis-call-contacts', JSON.stringify([
+    { code: 'muhammadx', name: 'Muhammad', at: Date.now() },
+  ])))
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('call-contacts')).toContainText('Muhammad')
+  await p.getByTestId('call-contact-call').click()
+  await expect(p).toHaveURL(/\/call\/\?c=muhammadx&n=Muhammad$/, { timeout: 10_000 })
+  await expect(p.getByTestId('call-link-heading')).toContainText('Call Muhammad')
+  await c.close()
+})
+
+test('the side dock can be resized on a large screen (#218)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.setViewportSize({ width: 1600, height: 900 })
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+
+  const dock = p.getByTestId('call-participants-panel')
+  const before = (await dock.boundingBox())!.width
+  expect(before).toBeGreaterThan(300) // no longer a 256px sliver on a wide screen
+
+  // Drag the inner edge toward the stage → wider.
+  const h = p.getByTestId('call-dock-resize')
+  const box = (await h.boundingBox())!
+  await p.mouse.move(box.x + box.width / 2, box.y + 200)
+  await p.mouse.down()
+  await p.mouse.move(box.x - 150, box.y + 200, { steps: 10 })
+  await p.mouse.up()
+  await expect.poll(async () => (await dock.boundingBox())!.width, { timeout: 5000 }).toBeGreaterThan(before + 100)
+
+  // …and the new width is remembered for next time.
+  const after = (await dock.boundingBox())!.width
+  expect(after).toBeGreaterThan(before)
+  expect(await p.evaluate(() => Number(localStorage.getItem('bis-call-dock-w')))).toBeGreaterThan(before + 100)
+  await c.close()
+})

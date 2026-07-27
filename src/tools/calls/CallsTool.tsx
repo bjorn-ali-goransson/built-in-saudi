@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input } from '../../components/ui'
+import { Button, Input, Spinner } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -12,10 +12,12 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer,
+  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
+import { Contacts } from './Contacts'
+import { useContacts } from '../../lib/contacts'
 import { claimCallLink, getMyCallLink, reportMissedCall, ringCallLink } from '../../lib/callLink'
 
 type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
@@ -100,11 +102,18 @@ export default function CallsTool() {
   // True only during the brief auto-admit of an answered/added caller, so the lobby
   // list doesn't flash on screen before they're let in (#202).
   const [autoAdmitting, setAutoAdmitting] = useState(false)
+  // Reading the refs during render closes the one-frame gap before the effect runs:
+  // an answered ring (or an open "add to call" window) means the knocker is coming
+  // straight in, so the Let-in button must never flash up at all (#219).
+  const willAutoAdmit = () => autoAdmitting || answeredRef.current || Date.now() < addWindowRef.current
   // Whether this browser already has a personal call link (hides Start call/Invite).
   const [hasCallLink, setHasCallLink] = useState(() => { try { return !!getMyCallLink() } catch { return false } })
   // One stable id per call-link call, shared by the missed-call ping and any
   // later "call me back" request — so the second replaces the first (#210/#211).
   const missedIdRef = useRef(code6())
+  // Saved contacts (#221): people we've called who publish a call-me link.
+  const { contacts, add: addContact, remove: removeContact } = useContacts()
+  const contactCodes = new Set(contacts.map((c) => c.code))
   const [callBackState, setCallBackState] = useState<'' | 'busy' | 'done' | 'err'>('')
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -123,6 +132,13 @@ export default function CallsTool() {
   const showParticipants = dockMode === 'p', showChat = dockMode === 'c', showReactions = dockMode === 'r'
   // Mobile bottom-dock height (px); null = default 46vh. Dragged via the dock header.
   const [dockH, setDockH] = useState<number | null>(null)
+  // Desktop dock width (px), dragged from its inner edge and remembered. The old
+  // fixed 224–288px looked like a sliver on a large screen and couldn't be changed (#218).
+  const [dockW, setDockW] = useState(() => {
+    try { const v = Number(localStorage.getItem('bis-call-dock-w')); if (v >= 240 && v <= 720) return v } catch { /* */ }
+    return typeof window !== 'undefined' && window.innerWidth >= 1600 ? 420 : 340
+  })
+  useEffect(() => { try { localStorage.setItem('bis-call-dock-w', String(dockW)) } catch { /* */ } }, [dockW])
   const dockDrag = useRef<{ startY: number; startH: number; max: number } | null>(null)
   const [maximized, setMaximized] = useState(false) // dock filling the whole mobile view
   const lastPanel = useRef<'p' | 'c' | 'r'>('p') // reopen this mode from the footer dock icon
@@ -424,6 +440,8 @@ export default function CallsTool() {
         }
       },
     })
+    // So in-call peers can save us as a contact and ring us later (#221).
+    try { const mine = getMyCallLink(); if (mine?.code) r.setMyLink(mine.code) } catch { /* */ }
     rtc.current = r
     return r
   }
@@ -1159,6 +1177,7 @@ export default function CallsTool() {
                   </div>
                   {/* Who called while you didn't pick up — plus a Call back button
                       for anyone who asked to be rung back (#210/#211). */}
+                  <Contacts s={s} contacts={contacts} onRemove={removeContact} />
                   <MissedCalls locale={locale} s={s} />
                   {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
                   <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
@@ -1170,7 +1189,7 @@ export default function CallsTool() {
           )}
 
           {/* Host waiting list (people knocking). */}
-          {!isGuest && phase === 'hosting' && waiting.length > 0 && !autoAdmitting && (
+          {!isGuest && phase === 'hosting' && waiting.length > 0 && !willAutoAdmit() && (
             <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} staleIds={staleIds} live /></div>
           )}
 
@@ -1192,6 +1211,9 @@ export default function CallsTool() {
     )
   }
 
+  // We answered a personal-link ring and nobody has actually arrived yet: the caller
+  // is still handshaking (or knocking, about to be auto-admitted).
+  const awaitingCaller = !!incomingLink && answered && inCallPeers.length === 0
   const selectedFile = files.find((f) => f.id === selected)
   const participantCount = 1 + inCallPeers.length
   // Elastic participant grid (P2P → assume ≤6). 1: full. 2: side-by-side, or stacked
@@ -1279,7 +1301,7 @@ export default function CallsTool() {
   )
   // Height style for the mobile dock (a CSS var the max-[640px] class consumes; on
   // desktop the class doesn't apply, so the var is harmlessly ignored).
-  const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined } as React.CSSProperties
+  const dockStyle = { ['--dock-h' as string]: dockH != null ? `${dockH}px` : undefined, ['--dock-w' as string]: `${dockW}px` } as React.CSSProperties
   const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
   // Shared reaction picker: emojis + word tags (+ a custom-tag composer). Used as the
   // dock body when `showReactions` AND inside each message's react menu. Every
@@ -1326,7 +1348,7 @@ export default function CallsTool() {
           admit control used to live inside that dock, so a host on the chat tab (or
           with the dock closed) could neither see nor let anyone in (#217). This bar
           docks to the top edge and admits directly, whatever the dock is doing. */}
-      {!isGuest && waiting.length > 0 && !showParticipants && !autoAdmitting && (
+      {!isGuest && waiting.length > 0 && !showParticipants && !willAutoAdmit() && (
         <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-banner">
           <span className="shrink-0 [animation:bis-bounce-y_1.2s_ease-in-out_infinite]" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>
           <div className="min-w-0 flex-1">
@@ -1464,6 +1486,20 @@ export default function CallsTool() {
 
         {/* main stage: screen-share or file preview (behind) + whiteboard on top */}
         <main className={`flex-1 relative min-w-0 overflow-hidden max-[640px]:min-h-0 ${maximized ? 'max-[640px]:hidden' : ''} ${presenting || view === 'file' ? 'bg-[color-mix(in_srgb,var(--ink)_90%,black)]' : 'bg-white'}`}>
+          {/* Answering a ring puts you in the room BEFORE the caller's connection is
+              up, so without this you'd stare at an empty meeting. Hold a clear
+              "waiting for them" state until someone is actually in the call. */}
+          {awaitingCaller && (
+            <div className="absolute inset-0 z-40 grid place-items-center p-6 bg-[color-mix(in_srgb,var(--ink)_10%,transparent)]" data-testid="call-awaiting">
+              <div className="flex flex-col items-center gap-3 text-center rounded-lg border border-[color:var(--line)] bg-[var(--surface)] px-6 py-5 shadow-[var(--shadow-md)] max-w-[22rem]">
+                <Spinner className="size-7" />
+                <p className="text-[1rem] font-display text-ink leading-snug" data-testid="call-awaiting-who">
+                  {incomingName ? s.waitingForName(incomingName) : s.waitingForCaller}
+                </p>
+                <p className="text-[0.82rem] text-ink-faint leading-relaxed">{s.waitingForHint}</p>
+              </div>
+            </div>
+          )}
           {/* Live reactions drifting up the stage. */}
           <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none" data-testid="call-reactions" aria-hidden="true">
             {floats.map((f) => (
@@ -1566,12 +1602,13 @@ export default function CallsTool() {
 
         {/* right dock: participants or chat (fullscreen overlay on mobile) */}
         {showParticipants && (
-          <aside style={dockStyle} className={`w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-participants-panel">
+          <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-participants-panel">
+            <DockResizer width={dockW} onWidth={setDockW} />
             {dockHeader}
             {/* Knocks first — pinned above the video grid so the host never misses
                 someone waiting, even on a short mobile dock where the elastic grid
                 would otherwise push the list out of view. */}
-            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && !autoAdmitting && (
+            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && !willAutoAdmit() && (
               <div className="shrink-0 p-2.5 border-b border-[color:var(--line-soft)]">
                 <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />
               </div>
@@ -1581,14 +1618,17 @@ export default function CallsTool() {
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} />
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)}
+                  onAdd={info.link ? () => (contactCodes.has(info.link!) ? removeContact(info.link!) : addContact(info.link!, info.name || '')) : undefined}
+                  added={!!info.link && contactCodes.has(info.link)} addLabel={s.addContact} addedLabel={s.savedContact} />
               ))}
             </div>
             {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}
           </aside>
         )}
         {showChat && (
-          <aside style={dockStyle} className={`w-64 sm:w-72 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-chat-panel">
+          <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-chat-panel">
+            <DockResizer width={dockW} onWidth={setDockW} />
             {dockHeader}
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 text-[0.9rem]">
               {chat.length === 0 && <p className="m-auto text-ink-faint/60 text-[0.85rem]" data-testid="call-chat-empty">{s.noMessages}</p>}
@@ -1656,7 +1696,8 @@ export default function CallsTool() {
           </aside>
         )}
         {showReactions && (
-          <aside style={dockStyle} className={`w-56 sm:w-64 shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-reactions-panel">
+          <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-reactions-panel">
+            <DockResizer width={dockW} onWidth={setDockW} />
             {dockHeader}
             <div className="flex-1 overflow-y-auto p-3">{reactionPicker(sendReaction, 'w-full')}</div>
           </aside>
