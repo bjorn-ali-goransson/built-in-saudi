@@ -1212,7 +1212,7 @@ export default function CallsTool() {
                   </div>
                   {/* Who called while you didn't pick up — plus a Call back button
                       for anyone who asked to be rung back (#210/#211). */}
-                  <Contacts s={s} contacts={contacts} onRemove={removeContact} />
+                  <Contacts s={s} contacts={contacts} onRemove={removeContact} myName={name} />
                   <MissedCalls locale={locale} s={s} />
                   {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
                   <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />

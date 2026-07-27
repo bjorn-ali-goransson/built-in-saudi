@@ -79,6 +79,7 @@ jobs:
           gcloud functions deploy call-ring               "${common[@]}" --entry-point=callRing
           gcloud functions deploy call-delete             "${common[@]}" --entry-point=callDelete
           gcloud functions deploy call-missed             "${common[@]}" --entry-point=callMissed
+          gcloud functions deploy call-dm                 "${common[@]}" --entry-point=callDm
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
 

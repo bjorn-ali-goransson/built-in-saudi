@@ -378,6 +378,18 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `title` tooltip would never show on touch). Entries recorded before `from` existed
   behave the same way. **Note:** publishing a link means in-call peers — and anyone whose
   call you miss — are handed that code automatically.
+  **Direct messages (`call-dm`):** contacts can message each other outside a call.
+  Same stance as the rest of Calls — **the server relays and forgets**: the text
+  rides the Web Push payload, `public/sw.js` queues it in IndexedDB and
+  `src/lib/dms.ts` drains it into `localStorage` `bis-call-dms`. There is no mailbox,
+  no cross-device history, and **nothing for `my-data` to report**. The sender's own
+  link code travels as `from`, which is what makes a reply possible. Trade-off to
+  keep in mind: delivery is only as good as the push, so `sendDm` surfaces
+  `delivered: 0` as "none of their devices could be reached" rather than pretending
+  it arrived. **The IndexedDB contract (name/version/stores) lives in
+  `src/lib/localQueue.ts`** and is shared by the app and the service worker — adding
+  a store means bumping the version in ONE place, or the other side throws
+  `VersionError`.
   **Winning a lost peer back (#222):** if a peer who publishes a call-me link fails to
   connect or drops out, a docked banner offers **Add to this call** (ring their link
   with `join: true`, which makes `call-ring` emit a `join=1` URL so Answer *knocks*

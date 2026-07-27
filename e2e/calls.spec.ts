@@ -1057,3 +1057,59 @@ test('a missed call brings the nav icon back anywhere (#224)', async ({ browser 
   await expect(p.getByTestId('nav-calls-badge')).toHaveText('1')
   await c.close()
 })
+
+// DMs between contacts. Like everything else in Calls the server relays and forgets:
+// the message rides a push payload and lives only on the two devices.
+test('a contact can be messaged, and the thread is kept on this device', async ({ browser }) => {
+  const c = await browser.newContext()
+  let sent: Record<string, unknown> | null = null
+  await c.route('**/call-dm', async (r) => {
+    sent = JSON.parse(r.request().postData() || '{}')
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) })
+  })
+  await c.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, 'http://127.0.0.1:1')
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-link', JSON.stringify({ code: 'minecode', endpoint: 'e' }))
+    localStorage.setItem('bis-call-contacts', JSON.stringify([{ code: 'laylacode', name: 'Layla', at: Date.now() }]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+
+  await p.getByTestId('call-contact-dm').click()
+  await expect(p.getByTestId('dm-thread')).toBeVisible()
+  await expect(p.getByTestId('dm-empty')).toBeVisible()
+
+  await p.getByTestId('dm-input').fill('Assalamu alaykum')
+  await p.getByTestId('dm-send').click()
+
+  // Shown as ours straight away, and posted with our own code so they can reply.
+  await expect(p.getByTestId('dm-mine')).toContainText('Assalamu alaykum')
+  await expect.poll(() => sent, { timeout: 10_000 }).not.toBeNull()
+  expect(sent).toMatchObject({ code: 'laylacode', from: 'minecode', text: 'Assalamu alaykum' })
+
+  // Survives a reload — the thread lives on this device.
+  await p.reload()
+  await p.getByTestId('call-contact-dm').click()
+  await expect(p.getByTestId('dm-mine')).toContainText('Assalamu alaykum')
+  await c.close()
+})
+
+test('an incoming DM badges the contact and shows on their side of the thread', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-contacts', JSON.stringify([{ code: 'laylacode', name: 'Layla', at: Date.now() }]))
+    // What the service worker would have drained in from a push.
+    localStorage.setItem('bis-call-dms', JSON.stringify([
+      { id: 'd1', from: 'laylacode', name: 'Layla', text: 'wa alaykum assalam', at: Date.now(), mine: false },
+    ]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('call-contact-dm-badge')).toHaveText('1')
+  await p.getByTestId('call-contact-dm').click()
+  await expect(p.getByTestId('dm-theirs')).toContainText('wa alaykum assalam')
+  // Clearing the thread drops the badge with no reload.
+  await p.getByTestId('dm-clear').click()
+  await expect(p.getByTestId('call-contact-dm-badge')).toHaveCount(0)
+  await c.close()
+})

@@ -262,6 +262,43 @@ http('callMissed', async (req, res) => {
   }
 })
 
+// POST { code, from, name, text } → deliver a short direct message to the owner of
+// `code`. Like every other message in this file, the server STORES NOTHING: the text
+// rides in the Web Push payload and lives only on the recipient's device (sw.js
+// queues it; src/lib/dms.ts drains it into localStorage). `from` is the sender's own
+// link code, which is what makes a reply possible — without it the message is a
+// dead end.
+http('callDm', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const from = codeOf(b.from)
+    const name = clean(b.name, 40) || 'Someone'
+    const text = clean(b.text, 500).trim()
+    const id = codeOf(b.id) || `d${Date.now()}`
+    if (!code || !text) return res.status(400).json({ error: 'code and text required' })
+    const ref = db.collection(LINKS).doc(code)
+    const d = await liveLink(ref)
+    if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
+    const payload = JSON.stringify({
+      title: name,
+      body: text.slice(0, 120),
+      // Per-sender tag, so several messages from one person collapse into the
+      // latest notification rather than stacking up.
+      tag: `dm-${from || 'anon'}`,
+      url: `${SITE}/apps/calls?dm=${from || ''}`,
+      dm: { id, from, name, text, at: Date.now() },
+    })
+    const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
+    res.json({ ok: true, delivered })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
 // POST { code, endpoint? } → remove one device (endpoint) or the whole link.
 http('callDelete', async (req, res) => {
   cors(req, res)

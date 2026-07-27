@@ -6,13 +6,12 @@
 // sent whenever they publish one) — the first drives a Call-back button, the
 // second lets you save them as a contact.
 import { useCallback, useEffect, useState } from 'react'
+import { drainQueue } from './localQueue'
 
 export interface MissedCall { id: string; name: string; at: number; back?: string; from?: string }
 
 const KEY = 'bis-call-missed'
 const MAX = 20
-const DB = 'bis-calls'
-const STORE = 'missed'
 
 function read(): MissedCall[] {
   try {
@@ -46,31 +45,11 @@ export function addMissed(entries: MissedCall[]): MissedCall[] {
   return write([...by.values()])
 }
 
-/** Take everything the service worker queued and fold it into localStorage. */
+/** Take everything the service worker queued and fold it into localStorage.
+ *  The IndexedDB contract (name/version/stores) lives in localQueue so the app and
+ *  the service worker can't drift apart. */
 export async function drainMissedQueue(): Promise<MissedCall[]> {
-  const queued = await new Promise<MissedCall[]>((resolve) => {
-    let settled = false
-    const done = (v: MissedCall[]) => { if (!settled) { settled = true; resolve(v) } }
-    try {
-      if (typeof indexedDB === 'undefined') return done([])
-      const open = indexedDB.open(DB, 1)
-      open.onupgradeneeded = () => {
-        const db = open.result
-        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' })
-      }
-      open.onerror = () => done([])
-      open.onsuccess = () => {
-        try {
-          const tx = open.result.transaction(STORE, 'readwrite')
-          const store = tx.objectStore(STORE)
-          const all = store.getAll()
-          all.onsuccess = () => { store.clear(); done((all.result || []) as MissedCall[]) }
-          all.onerror = () => done([])
-        } catch { done([]) }
-      }
-    } catch { done([]) }
-  })
-  return addMissed(queued)
+  return addMissed(await drainQueue<MissedCall>('missed'))
 }
 
 /** The device's missed-call list, drained on mount and whenever the service

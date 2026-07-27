@@ -15,6 +15,9 @@ export function useIncomingCall() {
       // call; let whoever is showing the list (and a now-pointless ringing
       // screen) react to it.
       if (d.type === 'bis-missed-call') { try { window.dispatchEvent(new Event('bis-call-missed')) } catch { /* */ } return }
+      // A direct message from a contact arrived — the SW has queued it; let whoever
+      // is showing threads pick it up.
+      if (d.type === 'bis-dm') { try { window.dispatchEvent(new Event('bis-dm')) } catch { /* */ } return }
       if (d.type !== 'bis-incoming-call' || typeof d.url !== 'string') return
       // Already in a call → don't yank them out. Hand the ring to the live Calls UI
       // (a "someone's calling, you're busy" banner) instead of dropping it silently.
