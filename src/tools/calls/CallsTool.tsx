@@ -1546,9 +1546,10 @@ export default function CallsTool() {
               <div className="flex flex-col items-center gap-3 text-center rounded-lg border border-[color:var(--line)] bg-[var(--surface)] px-6 py-5 shadow-[var(--shadow-md)] max-w-[22rem]">
                 <Spinner className="size-7" />
                 <p className="text-[1rem] font-display text-ink leading-snug" data-testid="call-awaiting-who">
-                  {incomingName ? s.waitingForName(incomingName) : s.waitingForCaller}
+                  {/* <bdi> so a Latin name inside the Arabic sentence doesn't scramble it. */}
+                  {incomingName ? <>{s.connectingPre}<bdi>{incomingName}</bdi>{s.connectingPost}</> : s.connectingCaller}
                 </p>
-                <p className="text-[0.82rem] text-ink-faint leading-relaxed">{s.waitingForHint}</p>
+                <p className="text-[0.82rem] text-ink-faint leading-relaxed">{s.connectingHint}</p>
               </div>
             </div>
           )}

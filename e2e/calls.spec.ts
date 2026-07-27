@@ -934,3 +934,33 @@ test('a dropped peer with a call link can be rung back into the call (#222)', as
   await expect(banner).toHaveCount(0)
   await pb.close(); await c.close(); await g.close()
 })
+
+// #219: answering a ring shows a connecting state. The caller already chose to
+// call — the copy must not imply they still have to act, or you'd go and nudge
+// them out of band while their connection is simply still coming up.
+test('answering a ring says the caller is connecting, not that we await them (#219)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls/join?code=ringroom9&host=1&ring=1&link=mylink&caller=Muhammad')
+  await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
+  await p.getByTestId('call-answer').click()
+
+  const who = p.getByTestId('call-awaiting-who')
+  await expect(who).toBeVisible({ timeout: 20_000 })
+  await expect(who).toHaveText('Muhammad is connecting…')
+  await expect(who).not.toContainText(/waiting|join/i)
+  await c.close()
+})
+
+test('the connecting copy bidi-isolates a Latin name in Arabic (#219)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/ar/apps/calls/join?code=ringroom8&host=1&ring=1&link=mylink&caller=Muhammad')
+  await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
+  await p.getByTestId('call-answer').click()
+  const who = p.getByTestId('call-awaiting-who')
+  await expect(who).toBeVisible({ timeout: 20_000 })
+  await expect(who).toContainText('جارٍ اتصال')
+  await expect(who.locator('bdi')).toHaveText('Muhammad') // isolated, so RTL ordering holds
+  await c.close()
+})

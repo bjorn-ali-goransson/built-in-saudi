@@ -23,8 +23,12 @@ export const STR = {
     callEnded: 'Call ended', callAgain: 'Call again',
     ghosted: (n: string) => (n ? `${n} has ghosted you` : 'You’ve been ghosted'),
     missedCalls: 'Missed calls', callBack: 'Call back', dismiss: 'Dismiss',
-    waitingForName: (n: string) => `Waiting for ${n} to join…`, waitingForCaller: 'Waiting for the caller to join…',
-    waitingForHint: 'They’re connecting — this takes a moment. They’ll come straight in.',
+    // They CALLED us — they aren't deciding whether to join, their connection is
+    // just coming up. "Waiting for X to join" would read as though they had to act,
+    // and could send you off to nudge them out of band. Split so the name can be
+    // bidi-isolated in the middle of the sentence.
+    connectingPre: '', connectingPost: ' is connecting…', connectingCaller: 'Connecting…',
+    connectingHint: 'Setting up the direct connection — this takes a moment.',
     contacts: 'Contacts', call: 'Call', remove: 'Remove',
     addContact: 'Save as a contact', savedContact: 'Saved — tap to remove',
     lostPeer: (n: string) => `Lost ${n}`, lostPeerHint: 'They have a call link — you can ring them back in.',
@@ -63,8 +67,8 @@ export const STR = {
     callEnded: 'انتهت المكالمة', callAgain: 'اتصل مجددًا',
     ghosted: (n: string) => (n ? `تجاهلك ${n} بشراسة` : 'تم تجاهل مكالمتك'),
     missedCalls: 'مكالمات فائتة', callBack: 'اتصل به', dismiss: 'إزالة',
-    waitingForName: (n: string) => `بانتظار انضمام ${n}…`, waitingForCaller: 'بانتظار انضمام المتصل…',
-    waitingForHint: 'جارٍ اتصاله — يستغرق هذا لحظة، وسيدخل مباشرةً.',
+    connectingPre: 'جارٍ اتصال ', connectingPost: '…', connectingCaller: 'جارٍ الاتصال…',
+    connectingHint: 'يجري إعداد الاتصال المباشر — لحظات فقط.',
     contacts: 'جهات الاتصال', call: 'اتصال', remove: 'إزالة',
     addContact: 'احفظه كجهة اتصال', savedContact: 'محفوظ — اضغط للإزالة',
     lostPeer: (n: string) => `انقطع ${n}`, lostPeerHint: 'لديه رابط اتصال — يمكنك دعوته للعودة.',

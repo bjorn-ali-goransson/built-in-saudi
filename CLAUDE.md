@@ -339,7 +339,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   in `e2e/calls.spec.ts` (scale > 1, and the track drops then returns on dock toggle).
   **Answering a ring (#219):** answering puts you in the room BEFORE the caller's
   connection is up, which used to look like an empty meeting. `awaitingCaller` holds a
-  "Waiting for <name> to join…" overlay until someone is actually in the call, and
+  **"<name> is connecting…"** overlay until someone is actually in the call. Copy
+  matters here: they already chose to call, so anything like "waiting for them to
+  join" reads as though *they* still have to act and sends you off to nudge them out
+  of band. The name is `<bdi>`-wrapped (`connectingPre`/`connectingPost`) so a Latin
+  name inside the Arabic sentence doesn't scramble it. Also,
   `willAutoAdmit()` is read **during render** (not from an effect) so the Let-in
   button never flashes for a caller who is being auto-admitted.
   **Dock width (#218):** the side dock was a fixed `w-56/64/72` — a sliver on a large
