@@ -32,7 +32,7 @@ export const STR = {
     contacts: 'Contacts', call: 'Call', remove: 'Remove',
     addContact: 'Save as a contact', savedContact: 'Saved — tap to remove',
     // Split so the name can be bidi-isolated mid-sentence.
-    cantSavePre: '', cantSavePost: ' hasn’t set up a Call Me link, so there’s no way to call them back.',
+    cantSavePre: '', cantSavePost: ' hasn’t set up a Call Me link, so there’s no way to save them as a contact.',
     lostPeer: (n: string) => `Lost ${n}`, lostPeerHint: 'They have a call link — you can ring them back in.',
     callThem: 'Call them', invitedBack: (n: string) => `Invited ${n} back — they’ll come straight in.`,
     askCallBack: (n: string) => (n ? `Ask ${n} to call you back` : 'Ask them to call you back'),
@@ -73,7 +73,7 @@ export const STR = {
     connectingHint: 'يجري إعداد الاتصال المباشر — لحظات فقط.',
     contacts: 'جهات الاتصال', call: 'اتصال', remove: 'إزالة',
     addContact: 'احفظه كجهة اتصال', savedContact: 'محفوظ — اضغط للإزالة',
-    cantSavePre: 'لم يُنشئ ', cantSavePost: ' رابط «اتصل بي»، فلا سبيل لمعاودة الاتصال به.',
+    cantSavePre: 'لم يُنشئ ', cantSavePost: ' رابط «اتصل بي»، فلا يمكن حفظه كجهة اتصال.',
     lostPeer: (n: string) => `انقطع ${n}`, lostPeerHint: 'لديه رابط اتصال — يمكنك دعوته للعودة.',
     callThem: 'اتصل به', invitedBack: (n: string) => `تمت دعوة ${n} — سيدخل مباشرةً.`,
     askCallBack: (n: string) => (n ? `اطلب من ${n} معاودة الاتصال` : 'اطلب معاودة الاتصال'),

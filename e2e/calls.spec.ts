@@ -994,6 +994,10 @@ test('a caller with no call-me link still gets a save button, which explains its
   await expect(bubble).toBeVisible()
   await expect(bubble).toContainText('Abu waloo')
   await expect(bubble).toContainText('Call Me link')
+  // It must explain the action that failed — saving a contact — not conflate it
+  // with the separate "call back" feature.
+  await expect(bubble).toContainText('save them as a contact')
+  await expect(bubble).not.toContainText(/call them back/i)
   // Nothing was saved, and tapping again dismisses it.
   expect(await p.evaluate(() => localStorage.getItem('bis-call-contacts'))).toBeNull()
   await save.click()
