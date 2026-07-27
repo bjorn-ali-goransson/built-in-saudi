@@ -2,11 +2,12 @@
 // keeps a call log: the missed-call push carries the record, public/sw.js queues
 // it in IndexedDB (so it survives with no tab open), and this drains that queue
 // into localStorage — the list the Calls setup screen shows. An entry may carry
-// `back`, the caller's own call-link code, which turns into a "call back" button
-// (#211).
+// `back` (they asked to be called back, #211) and `from` (their own link code,
+// sent whenever they publish one) — the first drives a Call-back button, the
+// second lets you save them as a contact.
 import { useCallback, useEffect, useState } from 'react'
 
-export interface MissedCall { id: string; name: string; at: number; back?: string }
+export interface MissedCall { id: string; name: string; at: number; back?: string; from?: string }
 
 const KEY = 'bis-call-missed'
 const MAX = 20
@@ -17,7 +18,7 @@ function read(): MissedCall[] {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '[]')
     if (!Array.isArray(v)) return []
-    return v.filter((m) => m && typeof m.id === 'string').map((m) => ({ id: m.id, name: String(m.name || ''), at: Number(m.at) || 0, back: m.back || undefined }))
+    return v.filter((m) => m && typeof m.id === 'string').map((m) => ({ id: m.id, name: String(m.name || ''), at: Number(m.at) || 0, back: m.back || undefined, from: m.from || undefined }))
   } catch { return [] }
 }
 function write(list: MissedCall[]): MissedCall[] {

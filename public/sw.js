@@ -110,6 +110,7 @@ self.addEventListener('push', (event) => {
     name: String(m.name || ''),
     at: Number(m.at) || Date.now(),
     back: m.back ? String(m.back) : '',
+    from: m.from ? String(m.from) : '',
   } : null
   event.waitUntil(Promise.all([
     missed ? queueMissed(missed) : Promise.resolve(),

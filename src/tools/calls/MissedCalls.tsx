@@ -2,8 +2,9 @@
 // didn't pick up, kept on this device only (see src/lib/missedCalls.ts). An entry
 // whose caller asked to be called back (#211) gets a Call back button — it opens
 // THEIR personal call link, so the roles simply swap.
-import { PhoneIcon, TrashIcon } from '../../components/icons'
+import { PhoneIcon, TrashIcon, UserPlusIcon, CheckIcon } from '../../components/icons'
 import { useMissedCalls, type MissedCall } from '../../lib/missedCalls'
+import { useContacts } from '../../lib/contacts'
 import type { Str } from './strings'
 
 /** "3 min ago" / "yesterday" via Intl — no date library. */
@@ -18,7 +19,12 @@ function ago(at: number, locale: 'en' | 'ar'): string {
 
 export function MissedCalls({ locale, s }: { locale: 'en' | 'ar'; s: Str }) {
   const { missed, dismiss, clear } = useMissedCalls()
+  const { contacts, add, remove } = useContacts()
+  const saved = new Set(contacts.map((c) => c.code))
   if (!missed.length) return null
+  // Their own link code — from an explicit call-back ask, or just because they
+  // publish one. Either way it's enough to keep them.
+  const codeOf = (m: MissedCall) => m.back || m.from || ''
 
   // Their own call link (relative, so it works on any origin), with their name so
   // the call page says who we're ringing. We become the caller who waits; they host.
@@ -49,6 +55,18 @@ export function MissedCalls({ locale, s }: { locale: 'en' | 'ar'; s: Str }) {
               <button type="button" onClick={() => callBack(m)} data-testid="call-missed-back"
                 className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-sand-100 text-green-900 text-[0.78rem] font-semibold border-0 cursor-pointer hover:bg-white [&_svg]:w-3.5 [&_svg]:h-3.5">
                 <PhoneIcon /> {s.callBack}
+              </button>
+            ) : null}
+            {/* Keep them, so the next call is one tap from the start screen. */}
+            {codeOf(m) ? (
+              <button type="button" data-testid="call-missed-save"
+                title={saved.has(codeOf(m)) ? s.savedContact : s.addContact}
+                aria-label={saved.has(codeOf(m)) ? s.savedContact : s.addContact}
+                onClick={() => (saved.has(codeOf(m)) ? remove(codeOf(m)) : add(codeOf(m), m.name || ''))}
+                className={`grid place-items-center h-8 w-8 rounded-md border cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4 ${
+                  saved.has(codeOf(m)) ? 'bg-sand-100 text-green-800 border-sand-100' : 'bg-transparent text-sand-100/70 border-sand-100/25 hover:text-sand-100 hover:bg-white/10'
+                }`}>
+                {saved.has(codeOf(m)) ? <CheckIcon /> : <UserPlusIcon />}
               </button>
             ) : null}
             <button type="button" onClick={() => dismiss(m.id)} title={s.dismiss} aria-label={s.dismiss} data-testid="call-missed-dismiss"

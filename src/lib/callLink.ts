@@ -68,10 +68,14 @@ export async function ringCallLink(code: string, room: string, caller: string, j
  *  "call me back" request the owner can act on (#211). `id` is stable per call,
  *  so a later call-back request replaces the plain missed-call record. */
 export async function reportMissedCall(code: string, room: string, caller: string, id: string, back?: string): Promise<boolean> {
+  // Always include our OWN link code (if we publish one) so they can save us as a
+  // contact from the missed call — `back` stays reserved for an explicit ask.
+  let from = ''
+  try { from = getMyCallLink()?.code || '' } catch { /* */ }
   try {
     const res = await fetch(`${FN}/call-missed`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, room, caller, id, back }),
+      body: JSON.stringify({ code, room, caller, id, back, from }),
     })
     return res.ok
   } catch { return false }

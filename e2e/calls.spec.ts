@@ -571,7 +571,7 @@ test('missed calls are listed on this device, and a call-back request becomes a 
   await c.addInitScript(() => {
     localStorage.setItem('bis-call-missed', JSON.stringify([
       { id: 'm1', name: 'Layla', at: Date.now() - 120000, back: 'laylacode' },
-      { id: 'm2', name: 'Omar', at: Date.now() - 3600000 },
+      { id: 'm2', name: 'Omar', at: Date.now() - 3600000, from: 'omarcode' },
     ]))
   })
   const p = await c.newPage()
@@ -581,8 +581,18 @@ test('missed calls are listed on this device, and a call-back request becomes a 
   await expect(list).toContainText('Missed calls · 2')
   await expect(list).toContainText('Layla')
   await expect(list).toContainText('Omar')
-  // Only the caller who asked to be called back gets the button.
+  // Only the caller who asked to be called back gets the Call-back button…
   await expect(p.getByTestId('call-missed-back')).toHaveCount(1)
+  // …but BOTH can be saved as contacts: one via its call-back code, one via the
+  // caller's own published link.
+  await expect(p.getByTestId('call-missed-save')).toHaveCount(2)
+  await p.getByTestId('call-missed-save').first().click()
+  await expect.poll(() => p.evaluate(() => JSON.parse(localStorage.getItem('bis-call-contacts') || '[]').length), { timeout: 5000 }).toBe(1)
+  // It now shows on the start screen's contacts list, ready to dial.
+  await expect(p.getByTestId('call-contacts')).toContainText('Layla')
+  // Tapping again removes them.
+  await p.getByTestId('call-missed-save').first().click()
+  await expect(p.getByTestId('call-contacts')).toHaveCount(0)
   // Dismissing one drops it from the list (and from storage).
   await p.getByTestId('call-missed-dismiss').last().click()
   await expect(list).toContainText('Missed calls · 1')

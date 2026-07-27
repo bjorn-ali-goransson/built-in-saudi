@@ -238,7 +238,10 @@ http('callMissed', async (req, res) => {
     const room = codeOf(b.room)
     const caller = clean(b.caller, 40) || 'Someone'
     const id = codeOf(b.id) || `m${Date.now()}`
-    const back = codeOf(b.back) // the caller's OWN link code, so the owner can ring back
+    const back = codeOf(b.back) // set only when they ASKED to be called back (#211)
+    // The caller's own link code, sent whenever they have one, so a missed call can
+    // be saved as a contact even when they didn't request anything (#221 follow-on).
+    const from = codeOf(b.from)
     if (!code || !room) return res.status(400).json({ error: 'code and room required' })
     const ref = db.collection(LINKS).doc(code)
     const d = await liveLink(ref)
@@ -250,7 +253,7 @@ http('callMissed', async (req, res) => {
       body: back ? 'Tap to call them back' : 'They hung up before you answered',
       tag: `call-${room}`,
       url: `${SITE}/apps/calls`,
-      missed: { id, name: caller, at: Date.now(), back },
+      missed: { id, name: caller, at: Date.now(), back, from },
     })
     const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
     res.json({ ok: true, delivered })
