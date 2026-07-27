@@ -1,7 +1,7 @@
 // Nav shortcut to Calls, shown only to someone who has published a personal "call
 // me" link — for them Calls is a place they get reached, not just a tool they might
 // open, so it earns a permanent spot (#220). Badged with unseen missed calls.
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useLocale, localePath } from '../i18n'
 import { PhoneIcon } from './icons'
 import { getMyCallLink } from '../lib/callLink'
@@ -9,11 +9,17 @@ import { useMissedCalls } from '../lib/missedCalls'
 
 export function CallNavButton() {
   const { locale } = useLocale()
+  const { pathname } = useLocation()
   // Cheap synchronous read — no link, no button, no cost for everyone else.
   const has = (() => { try { return !!getMyCallLink() } catch { return false } })()
   const { missed } = useMissedCalls()
-  if (!has) return null
   const n = missed.length
+  // Earn its place rather than sitting in the nav everywhere (#224): show it on the
+  // home dashboard, inside the Calls app itself, or anywhere at all when there are
+  // missed calls to surface. On an unrelated tool it is just clutter.
+  const isHome = /^\/(en|ar)\/?$/.test(pathname)
+  const onCalls = /\/apps\/calls(\/|$)/.test(pathname)
+  if (!has || !(isHome || onCalls || n > 0)) return null
   const label = locale === 'ar'
     ? (n ? `المكالمات — ${n} مكالمة فائتة` : 'المكالمات')
     : (n ? `Calls — ${n} missed` : 'Calls')

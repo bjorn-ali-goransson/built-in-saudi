@@ -1004,3 +1004,56 @@ test('a caller with no call-me link still gets a save button, which explains its
   await expect(bubble).toHaveCount(0)
   await c.close()
 })
+
+// #223: the badge and the list are separate components reading the same store, so
+// clearing the list has to notify the badge — it used to go stale until a reload.
+test('clearing missed calls updates the nav badge immediately (#223)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-link', JSON.stringify({ code: 'mycode123', endpoint: 'e' }))
+    localStorage.setItem('bis-call-missed', JSON.stringify([
+      { id: 'm1', name: 'Layla', at: Date.now() },
+      { id: 'm2', name: 'Omar', at: Date.now() },
+    ]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await expect(p.getByTestId('nav-calls-badge')).toHaveText('2')
+
+  // Dismiss one row -> badge drops, with no reload.
+  await p.getByTestId('call-missed-dismiss').first().click()
+  await expect(p.getByTestId('nav-calls-badge')).toHaveText('1')
+
+  // Clear the rest -> badge disappears entirely.
+  await p.getByTestId('call-missed-clear').click()
+  await expect(p.getByTestId('nav-calls-badge')).toHaveCount(0)
+  await c.close()
+})
+
+// #224: the icon should earn its place, not sit in the nav on every unrelated tool.
+test('the nav phone icon only shows where it is useful (#224)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => localStorage.setItem('bis-call-link', JSON.stringify({ code: 'mycode123', endpoint: 'e' })))
+  const p = await c.newPage()
+
+  await p.goto('/en')                    // home dashboard -> shown
+  await expect(p.getByTestId('nav-calls')).toBeVisible()
+  await p.goto('/en/apps/calls')         // the Calls app -> shown
+  await expect(p.getByTestId('nav-calls')).toBeVisible()
+  await p.goto('/en/apps/qr-code')       // unrelated tool, no missed calls -> hidden
+  await expect(p.getByTestId('nav-calls')).toHaveCount(0)
+  await c.close()
+})
+
+test('a missed call brings the nav icon back anywhere (#224)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-link', JSON.stringify({ code: 'mycode123', endpoint: 'e' }))
+    localStorage.setItem('bis-call-missed', JSON.stringify([{ id: 'm1', name: 'Layla', at: Date.now() }]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/qr-code') // unrelated tool, but something needs surfacing
+  await expect(p.getByTestId('nav-calls')).toBeVisible()
+  await expect(p.getByTestId('nav-calls-badge')).toHaveText('1')
+  await c.close()
+})

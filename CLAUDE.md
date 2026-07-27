@@ -357,8 +357,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **Dock width (#218):** the side dock was a fixed `w-56/64/72` — a sliver on a large
   screen. It's now `--dock-w` (default 340px, 420px ≥1600px wide), dragged from its
   inner edge via `DockResizer` and persisted in `bis-call-dock-w`.
-  **Nav shortcut (#220):** `CallNavButton` puts a phone icon in the header **only** for
-  someone who has published a call-me link, badged with the missed-call count.
+  **Nav shortcut (#220/#224):** `CallNavButton` puts a phone icon in the header only
+  for someone who has published a call-me link, **and only where it earns its place**
+  — the home dashboard, the Calls app, or anywhere at all when there are missed calls
+  to surface; on an unrelated tool it's clutter. Badged with the missed-call count.
+  **Store writes must notify (#223):** the badge and the missed-call list are separate
+  components over the same `localStorage`, so `missedCalls.ts` `write()` dispatches
+  `bis-missed-changed` and the hook re-reads on it (a plain read, so it can't loop
+  with `write`). `contacts.ts` does the same with `bis-contacts`. Add a new
+  shared-store writer and it needs the same treatment, or one view goes stale.
   **Contacts (#221):** an in-call peer's own link code rides in the `{c:'info'}`
   heartbeat (`PeerInfo.link`, set via `setMyLink()`), so their tile offers "save as a
   contact"; contacts live in `localStorage` `bis-call-contacts` (`src/lib/contacts.ts`)

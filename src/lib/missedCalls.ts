@@ -21,9 +21,15 @@ function read(): MissedCall[] {
     return v.filter((m) => m && typeof m.id === 'string').map((m) => ({ id: m.id, name: String(m.name || ''), at: Number(m.at) || 0, back: m.back || undefined, from: m.from || undefined }))
   } catch { return [] }
 }
+// Every writer announces itself, so a second component showing the same data (the
+// nav badge alongside the list) updates too. Without this, clearing the list left
+// the badge showing a stale count until a reload (#223).
+const CHANGED = 'bis-missed-changed'
+
 function write(list: MissedCall[]): MissedCall[] {
   const next = [...list].sort((a, b) => b.at - a.at).slice(0, MAX)
   try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* storage full */ }
+  try { window.dispatchEvent(new Event(CHANGED)) } catch { /* */ }
   return next
 }
 
@@ -73,10 +79,21 @@ export function useMissedCalls() {
   const [missed, setMissed] = useState<MissedCall[]>(() => listMissed())
   useEffect(() => {
     let alive = true
-    const refresh = () => { drainMissedQueue().then((l) => { if (alive) setMissed(l) }) }
-    refresh()
-    window.addEventListener('bis-call-missed', refresh)
-    return () => { alive = false; window.removeEventListener('bis-call-missed', refresh) }
+    // A new missed call arrived from the service worker → drain the queue.
+    const drain = () => { drainMissedQueue().then((l) => { if (alive) setMissed(l) }) }
+    // Someone changed the list locally (dismiss/clear, possibly in another
+    // component) → just re-read. A plain read, so this can never loop with write().
+    const reread = () => { if (alive) setMissed(listMissed()) }
+    drain()
+    window.addEventListener('bis-call-missed', drain)
+    window.addEventListener(CHANGED, reread)
+    window.addEventListener('storage', reread) // another tab
+    return () => {
+      alive = false
+      window.removeEventListener('bis-call-missed', drain)
+      window.removeEventListener(CHANGED, reread)
+      window.removeEventListener('storage', reread)
+    }
   }, [])
   const dismiss = useCallback((id: string) => setMissed(removeMissed(id)), [])
   const clear = useCallback(() => setMissed(clearMissed()), [])
