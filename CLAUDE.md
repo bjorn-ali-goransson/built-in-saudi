@@ -357,8 +357,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   and list on the start screen with a one-tap Call. A **missed call** is saveable too:
   `call-missed` carries `from` (the caller's own code, sent whenever they publish one)
   alongside `back` (set *only* on an explicit call-back ask), so the missed list shows
-  a save button for anyone reachable while the Call-back button stays reserved for
-  those who asked. **Note:** publishing a link means in-call peers — and anyone whose
+  a save button on **every** row while the Call-back button stays reserved for those
+  who asked. The save button is deliberately never hidden — for a caller with no link
+  it dims and, on tap, opens a **bubble** explaining they haven't set one up (a
+  `title` tooltip would never show on touch). Entries recorded before `from` existed
+  behave the same way. **Note:** publishing a link means in-call peers — and anyone whose
   call you miss — are handed that code automatically.
   **Winning a lost peer back (#222):** if a peer who publishes a call-me link fails to
   connect or drops out, a docked banner offers **Add to this call** (ring their link

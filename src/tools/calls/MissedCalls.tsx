@@ -2,6 +2,7 @@
 // didn't pick up, kept on this device only (see src/lib/missedCalls.ts). An entry
 // whose caller asked to be called back (#211) gets a Call back button — it opens
 // THEIR personal call link, so the roles simply swap.
+import { useEffect, useState } from 'react'
 import { PhoneIcon, TrashIcon, UserPlusIcon, CheckIcon } from '../../components/icons'
 import { useMissedCalls, type MissedCall } from '../../lib/missedCalls'
 import { useContacts } from '../../lib/contacts'
@@ -21,6 +22,13 @@ export function MissedCalls({ locale, s }: { locale: 'en' | 'ar'; s: Str }) {
   const { missed, dismiss, clear } = useMissedCalls()
   const { contacts, add, remove } = useContacts()
   const saved = new Set(contacts.map((c) => c.code))
+  // Which row is showing the "can't save them" bubble (by missed-call id).
+  const [noLink, setNoLink] = useState('')
+  useEffect(() => {
+    if (!noLink) return
+    const t = window.setTimeout(() => setNoLink(''), 4500)
+    return () => window.clearTimeout(t)
+  }, [noLink])
   if (!missed.length) return null
   // Their own link code — from an explicit call-back ask, or just because they
   // publish one. Either way it's enough to keep them.
@@ -57,18 +65,34 @@ export function MissedCalls({ locale, s }: { locale: 'en' | 'ar'; s: Str }) {
                 <PhoneIcon /> {s.callBack}
               </button>
             ) : null}
-            {/* Keep them, so the next call is one tap from the start screen. */}
-            {codeOf(m) ? (
+            {/* Keep them, so the next call is one tap from the start screen. Always
+                shown — hiding it for someone unreachable just looks like a missing
+                feature. Tapping an unreachable one explains why, in a bubble rather
+                than a `title` (which never appears on touch). */}
+            <span className="relative shrink-0">
               <button type="button" data-testid="call-missed-save"
-                title={saved.has(codeOf(m)) ? s.savedContact : s.addContact}
                 aria-label={saved.has(codeOf(m)) ? s.savedContact : s.addContact}
-                onClick={() => (saved.has(codeOf(m)) ? remove(codeOf(m)) : add(codeOf(m), m.name || ''))}
+                onClick={() => {
+                  const code = codeOf(m)
+                  if (!code) { setNoLink((v) => (v === m.id ? '' : m.id)); return }
+                  setNoLink('')
+                  if (saved.has(code)) remove(code); else add(code, m.name || '')
+                }}
                 className={`grid place-items-center h-8 w-8 rounded-md border cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4 ${
-                  saved.has(codeOf(m)) ? 'bg-sand-100 text-green-800 border-sand-100' : 'bg-transparent text-sand-100/70 border-sand-100/25 hover:text-sand-100 hover:bg-white/10'
+                  saved.has(codeOf(m)) ? 'bg-sand-100 text-green-800 border-sand-100'
+                    : codeOf(m) ? 'bg-transparent text-sand-100/70 border-sand-100/25 hover:text-sand-100 hover:bg-white/10'
+                    : 'bg-transparent text-sand-100/35 border-sand-100/15 hover:text-sand-100/60'
                 }`}>
                 {saved.has(codeOf(m)) ? <CheckIcon /> : <UserPlusIcon />}
               </button>
-            ) : null}
+              {noLink === m.id && (
+                <span role="status" data-testid="call-missed-nolink"
+                  className="absolute bottom-full end-0 mb-2 z-20 w-max max-w-[14rem] rounded-lg bg-sand-100 text-green-900 text-[0.72rem] font-medium leading-snug px-2.5 py-1.5 shadow-lg text-start
+                             after:content-[''] after:absolute after:top-full after:end-3 after:border-[6px] after:border-transparent after:border-t-sand-100">
+                  {s.cantSavePre}<bdi>{m.name || '•'}</bdi>{s.cantSavePost}
+                </span>
+              )}
+            </span>
             <button type="button" onClick={() => dismiss(m.id)} title={s.dismiss} aria-label={s.dismiss} data-testid="call-missed-dismiss"
               className="h-8 w-7 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/50 hover:text-sand-100 cursor-pointer text-[0.95rem] leading-none">✕</button>
           </li>

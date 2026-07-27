@@ -586,6 +586,7 @@ test('missed calls are listed on this device, and a call-back request becomes a 
   // …but BOTH can be saved as contacts: one via its call-back code, one via the
   // caller's own published link.
   await expect(p.getByTestId('call-missed-save')).toHaveCount(2)
+  await expect(p.getByTestId('call-missed-nolink')).toHaveCount(0)
   await p.getByTestId('call-missed-save').first().click()
   await expect.poll(() => p.evaluate(() => JSON.parse(localStorage.getItem('bis-call-contacts') || '[]').length), { timeout: 5000 }).toBe(1)
   // It now shows on the start screen's contacts list, ready to dial.
@@ -972,5 +973,30 @@ test('the connecting copy bidi-isolates a Latin name in Arabic (#219)', async ({
   await expect(who).toBeVisible({ timeout: 20_000 })
   await expect(who).toContainText('جارٍ اتصال')
   await expect(who.locator('bdi')).toHaveText('Muhammad') // isolated, so RTL ordering holds
+  await c.close()
+})
+
+// The save button is shown for EVERY missed call — hiding it for someone who has no
+// call-me link just reads as a missing feature. Tapping it must explain why, in a
+// bubble that works on touch (a `title` tooltip never appears on mobile).
+test('a caller with no call-me link still gets a save button, which explains itself (#221)', async ({ browser }) => {
+  const c = await browser.newContext()
+  await c.addInitScript(() => localStorage.setItem('bis-call-missed', JSON.stringify([
+    { id: 'nolink1', name: 'Abu waloo', at: Date.now() - 3600000 }, // no back, no from
+  ])))
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  const save = p.getByTestId('call-missed-save')
+  await expect(save).toHaveCount(1) // shown, not hidden
+
+  await save.click()
+  const bubble = p.getByTestId('call-missed-nolink')
+  await expect(bubble).toBeVisible()
+  await expect(bubble).toContainText('Abu waloo')
+  await expect(bubble).toContainText('Call Me link')
+  // Nothing was saved, and tapping again dismisses it.
+  expect(await p.evaluate(() => localStorage.getItem('bis-call-contacts'))).toBeNull()
+  await save.click()
+  await expect(bubble).toHaveCount(0)
   await c.close()
 })
