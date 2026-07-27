@@ -48,12 +48,14 @@ export async function claimCallLink(name: string): Promise<string | null> {
   return code
 }
 
-/** Ring the owner of a call link so their device(s) get a push to answer `room`. */
-export async function ringCallLink(code: string, room: string, caller: string): Promise<{ ok: boolean; delivered: number }> {
+/** Ring the owner of a call link so their device(s) get a push to answer `room`.
+ *  `join` flips it from "a fresh call you host" to "come join this existing call"
+ *  — used to pull someone back in after a failed or dropped connection (#222). */
+export async function ringCallLink(code: string, room: string, caller: string, join = false): Promise<{ ok: boolean; delivered: number }> {
   try {
     const res = await fetch(`${FN}/call-ring`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, room, caller }),
+      body: JSON.stringify({ code, room, caller, join }),
     })
     if (!res.ok) return { ok: false, delivered: 0 }
     const d = await res.json().catch(() => ({}))

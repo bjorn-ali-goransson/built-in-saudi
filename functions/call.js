@@ -187,7 +187,10 @@ async function pushLink(ref, subs, payload) {
   return delivered
 }
 
-// POST { code, room, caller? } → push every device on the link to answer `room`.
+// POST { code, room, caller?, join? } → push every device on the link.
+// Default: they HOST `room` (a fresh call to them). With `join: true` they are
+// invited to JOIN an existing call as a guest instead — used to pull someone back
+// in after a failed/dropped connection (#222).
 http('callRing', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
@@ -197,17 +200,20 @@ http('callRing', async (req, res) => {
     const code = codeOf(b.code)
     const room = codeOf(b.room)
     const caller = clean(b.caller, 40) || 'Someone'
+    const join = !!b.join
     if (!code || !room) return res.status(400).json({ error: 'code and room required' })
     const ref = db.collection(LINKS).doc(code)
     const d = await liveLink(ref)
     if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
-    // The click-URL carries the room to answer AND the host code, so the incoming
-    // call screen can offer "stop receiving calls" without any stored state.
+    // The click-URL carries the room AND the host code, so the incoming call screen
+    // can offer "stop receiving calls" without any stored state. `join=1` (instead
+    // of `host=1`) means the room already exists and they knock into it as a guest.
+    const role = join ? 'join=1' : 'host=1'
     const payload = JSON.stringify({
-      title: `${caller} is calling`,
-      body: 'Tap to answer',
+      title: join ? `${caller} is inviting you` : `${caller} is calling`,
+      body: join ? 'Tap to join the call' : 'Tap to answer',
       tag: `call-${room}`,
-      url: `${SITE}/apps/calls/join?code=${room}&host=1&ring=1&link=${code}&caller=${encodeURIComponent(caller)}`,
+      url: `${SITE}/apps/calls/join?code=${room}&${role}&ring=1&link=${code}&caller=${encodeURIComponent(caller)}`,
       requireInteraction: true,
     })
     const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)

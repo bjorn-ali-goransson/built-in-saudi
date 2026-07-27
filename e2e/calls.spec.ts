@@ -892,3 +892,45 @@ test('the side dock can be resized on a large screen (#218)', async ({ browser }
   expect(await p.evaluate(() => Number(localStorage.getItem('bis-call-dock-w')))).toBeGreaterThan(before + 100)
   await c.close()
 })
+
+// #222: losing someone who publishes a call-me link should offer a way back in,
+// not just a "couldn't connect" toast.
+test('a dropped peer with a call link can be rung back into the call (#222)', async ({ browser }) => {
+  const c = await ctx(browser, base), g = await ctx(browser, base)
+  let ring: Record<string, unknown> | null = null
+  await c.route('**/call-ring', async (r) => {
+    ring = JSON.parse(r.request().postData() || '{}')
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) })
+  })
+  await c.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, base)
+  // The guest publishes a call-me link, so their presence carries it to the host.
+  await g.addInitScript(() => localStorage.setItem('bis-call-link', JSON.stringify({ code: 'guestlink1', endpoint: 'e' })))
+
+  const pa = await c.newPage(), pb = await g.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Muhammad')
+  await pb.getByTestId('call-join').click()
+  await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+
+  // They leave the call.
+  await pb.getByTestId('call-hangup').click()
+
+  const banner = pa.getByTestId('call-lost-banner')
+  await expect(banner).toBeVisible({ timeout: 30_000 })
+  await expect(pa.getByTestId('call-lost-who')).toContainText('Muhammad')
+
+  // Ringing them back invites them INTO this room (join), not to host a new one.
+  await pa.getByTestId('call-lost-reinvite').click()
+  await expect.poll(() => ring, { timeout: 10_000 }).not.toBeNull()
+  expect(ring).toMatchObject({ code: 'guestlink1', room, join: true })
+  await expect(banner).toHaveCount(0)
+  await pb.close(); await c.close(); await g.close()
+})

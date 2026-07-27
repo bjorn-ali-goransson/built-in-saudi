@@ -72,6 +72,9 @@ export default function CallsTool() {
   // Busy-call handling: a ring that arrives while we're in a call surfaces as a
   // banner (not a takeover). `declineTarget` opens the "send a note" composer.
   const [incomingRing, setIncomingRing] = useState<{ room: string; caller: string } | null>(null)
+  // Someone we couldn't reach (or who dropped) who publishes a call-me link — we can
+  // ring them back into this call instead of everyone giving up (#222).
+  const [lostPeer, setLostPeer] = useState<{ name: string; link: string } | null>(null)
   const [declineTarget, setDeclineTarget] = useState<{ room: string; mode: 'screen' | 'banner' } | null>(null)
   const addWindowRef = useRef(0) // admit knockers until this time (owner chose "Add to call")
 
@@ -92,6 +95,9 @@ export default function CallsTool() {
   const [ringCode] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-ring-code') || '') : '' } catch { return '' } })
   const [linkOwnerName] = useState(() => { try { return new URLSearchParams(window.location.search).has('knock') ? (sessionStorage.getItem('bis-call-owner-name') || '') : '' } catch { return '' } })
   const [ownerHost] = useState(() => { try { return new URLSearchParams(window.location.search).has('host') } catch { return false } })
+  // Invited into an EXISTING call (#222): Answer knocks as a guest rather than
+  // hosting a room that already has people in it.
+  const [joinParam] = useState(() => { try { return new URLSearchParams(window.location.search).has('join') } catch { return false } })
   const [incomingLink] = useState(() => { try { const p = new URLSearchParams(window.location.search); return p.has('ring') ? (p.get('link') || '') : '' } catch { return '' } })
   // Who's ringing (carried in the ring push URL) so the incoming screen can name them.
   const [incomingName] = useState(() => { try { return new URLSearchParams(window.location.search).get('caller') || '' } catch { return '' } })
@@ -395,7 +401,13 @@ export default function CallsTool() {
       onLeave: (pid) => {
         // Only announce join/leave once WE'RE in the call (a waiting guest shouldn't
         // hear about the meeting's comings and goings).
-        if (knownInCall.current.has(pid)) { knownInCall.current.delete(pid); if (rtc.current?.inCall) notify('p', `${rosterRef.current.get(pid)?.name || '•'} ${s.left}`) }
+        if (knownInCall.current.has(pid)) {
+          knownInCall.current.delete(pid)
+          const info = rosterRef.current.get(pid)
+          if (rtc.current?.inCall) notify('p', `${info?.name || '•'} ${s.left}`)
+          // Dropped, but reachable — offer to pull them back (#222).
+          if (rtc.current?.inCall && info?.link) setLostPeer({ name: info.name || '•', link: info.link })
+        }
         else {
           // A guest who left while still waiting — keep them in the list, marked "left".
           const info = rosterRef.current.get(pid)
@@ -407,9 +419,13 @@ export default function CallsTool() {
       onPeer: (id, state) => {
         if (state === 'connected') connectedOnce.current = true
         else if (state === 'failed') {
-          // Surface the failure instead of silently dropping the peer.
-          const who = rosterRef.current.get(id)?.name || '•'
-          setToast(`${s.connectFail} ${who}`); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 6000)
+          // Surface the failure instead of silently dropping the peer — and if they
+          // publish a call-me link, offer to ring them back in rather than just
+          // reporting the bad news (#222).
+          const info = rosterRef.current.get(id)
+          const who = info?.name || '•'
+          if (info?.link) setLostPeer({ name: who, link: info.link })
+          else { setToast(`${s.connectFail} ${who}`); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 6000) }
         }
       },
       onPeerInfo: (id, info) => {
@@ -465,7 +481,12 @@ export default function CallsTool() {
   }
   // Answer an incoming ring: host the room (the tap unlocks the mic) and let the
   // caller in as soon as they knock (answeredRef gates the auto-admit below).
-  function answerCall() { setAnswered(true); answeredRef.current = true; startHost() }
+  function answerCall() {
+    setAnswered(true); answeredRef.current = true
+    // An invite into a live call: knock, and let its host admit us. A fresh ring:
+    // host the room ourselves (the tap is also what unlocks the mic).
+    if (joinParam) { setForceHost(false); askToJoin() } else startHost()
+  }
   // Decline the full incoming ring — open the "send a note" composer first.
   function declineCall() { setDeclineTarget({ room: initialRoom, mode: 'screen' }) }
   // Busy: a ring arrived while we're in a call — surfaced as a banner via the
@@ -500,6 +521,20 @@ export default function CallsTool() {
     const stop = startRingtone()
     return stop
   }, [incomingLink, answered, incomingRing])
+  /** Ring a lost peer's call-me link and invite them straight back into THIS room,
+   *  holding the door open so their knock doesn't need a manual admit. */
+  function reinvite() {
+    if (!lostPeer || !room) return
+    ringCallLink(lostPeer.link, room, name || 'Someone', true)
+    addWindowRef.current = Date.now() + 120_000
+    setToast(s.invitedBack(lostPeer.name)); setTimeout(() => setToast(''), 4000)
+    setLostPeer(null)
+  }
+  /** Leave and ring them properly instead — for when the meeting is over anyway. */
+  function callLost() {
+    if (!lostPeer) return
+    window.location.assign(`/call/?c=${lostPeer.link}${lostPeer.name ? `&n=${encodeURIComponent(lostPeer.name)}` : ''}`)
+  }
   function addToCall() {
     if (!incomingRing || !room) return
     signalRoom(incomingRing.room, 'redirect', { room })
@@ -1362,6 +1397,23 @@ export default function CallsTool() {
             <button onClick={() => pickPanel('p')} data-testid="call-knock-open"
               className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.participants}</button>
           )}
+        </div>
+      )}
+      {/* We lost someone who publishes a call-me link — ring them back in rather
+          than leaving the call a person short (#222). */}
+      {lostPeer && (
+        <div className="w-full bg-[var(--ink)] text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-lost-banner">
+          <span className="shrink-0" aria-hidden="true"><EndCallIcon className="w-5 h-5 text-[var(--gold-400)]" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.92rem] font-semibold leading-tight truncate" data-testid="call-lost-who">{s.lostPeer(lostPeer.name)}</p>
+            <p className="text-[0.75rem] text-sand-100/70">{s.lostPeerHint}</p>
+          </div>
+          <button onClick={reinvite} data-testid="call-lost-reinvite"
+            className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white flex items-center gap-1.5 [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.addToCall}</button>
+          <button onClick={callLost} data-testid="call-lost-call"
+            className="h-9 px-3 rounded-md bg-white/10 text-sand-100 text-[0.85rem] font-medium border border-sand-100/25 cursor-pointer hover:bg-white/20">{s.callThem}</button>
+          <button onClick={() => setLostPeer(null)} aria-label={s.dismiss} title={s.dismiss} data-testid="call-lost-dismiss"
+            className="h-9 w-8 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/60 hover:text-sand-100 cursor-pointer">✕</button>
         </div>
       )}
       {incomingRing && (

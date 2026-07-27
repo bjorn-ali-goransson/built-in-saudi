@@ -352,6 +352,12 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   contact"; contacts live in `localStorage` `bis-call-contacts` (`src/lib/contacts.ts`)
   and list on the start screen with a one-tap Call. **Note:** publishing a link means
   in-call peers are handed that code automatically.
+  **Winning a lost peer back (#222):** if a peer who publishes a call-me link fails to
+  connect or drops out, a docked banner offers **Add to this call** (ring their link
+  with `join: true`, which makes `call-ring` emit a `join=1` URL so Answer *knocks*
+  into the existing room instead of hosting a new one — plus a 2-minute auto-admit
+  window) or **Call them** (leave and dial their link properly). Detection is instant
+  on a clean leave; an abrupt tab close waits on ICE failure (~30s).
   **Waiting room (all P2P):** `rtc.ts` forms a **data-only** connection first (no
   camera/mic), using **perfect negotiation** so media can be added later by
   renegotiation. Lobby control — each peer's `{name, role, inCall}` presence, plus
