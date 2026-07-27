@@ -1,7 +1,13 @@
 name: Deploy to GitHub Pages
 
+# Runs on every push to main AND on pull requests. The e2e suite gates the deploy:
+# nothing reaches Pages unless typecheck, build and the full Playwright run pass.
+# PRs get the same verification but never publish (see the `if` on `deploy`) — so a
+# PR, including one from a fork, is checked before anyone merges it.
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -11,13 +17,15 @@ permissions:
   pages: write
   id-token: write
 
+# Per-ref, so a PR run never cancels the deploy of main (or another PR).
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -34,12 +42,35 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Only chromium — the suite's single project. --with-deps pulls the system
+      # libraries the browser needs on a bare runner.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config serves the dist we just built via `vite preview`, so this
+      # tests exactly the artifact that is about to be published.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # Keep the report when something fails, so a red deploy is diagnosable without
+      # re-running anything locally.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
       - uses: actions/upload-pages-artifact@v5
+        if: github.event_name == 'push'
         with:
           path: dist
 
   deploy:
     needs: build
+    # Verification runs for pull requests; publishing does not.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

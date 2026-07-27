@@ -156,9 +156,17 @@ npm run test:e2e   # Playwright e2e (serves the build, runs e2e/*.spec.ts)
 Playwright specs live in `e2e/`, driven by the `data-testid`s tools already
 expose. `npm run test:e2e` builds nothing itself — it starts `vite preview` on
 :4173 and tests the current `dist/` (so `npm run build` first, or it serves a
-stale build). CI/container path: `docker compose -f docker-compose.e2e.yml run
---rm e2e` (Playwright's official image, tag must match the `@playwright/test`
+stale build). Container path: `docker compose -f docker-compose.e2e.yml run --rm
+e2e` (Playwright's official image, tag must match the `@playwright/test`
 version). **Keep tests green and add a spec when you add a tool.**
+
+**The suite gates the deploy** (`.github/workflows/deploy.yml`): typecheck →
+build → Playwright, and nothing reaches Pages unless all three pass. The same
+workflow runs on **pull requests** (so a PR, including one from a fork, is
+verified before merge) but the `deploy` job is guarded to `push` on `main`, so a
+PR never publishes. A failed run uploads the Playwright report as an artifact.
+Don't treat a local full-suite run as the gate — CI is the gate; run locally only
+what you're actively working on.
 
 ## Deploy
 
