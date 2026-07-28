@@ -92,11 +92,18 @@ test('publish runs the full OAuth round-trip and signs the host in', async ({ pa
   }, [mock, `${mock}/booking-google-callback`])
 
   await page.goto('/en/apps/book-me')
+  // Signed out: the nav offers Log in.
+  await expect(page.getByTestId('book-login')).toBeVisible()
   await page.getByTestId('save-schedule').click()
 
   // Lands back on the dashboard, signed in: the connected-only control appears,
   // the pre-sign-in CTA is gone, and the hash was cleaned up.
   await expect(page.getByTestId('open-page')).toBeVisible()
+
+  // #233: the nav must swap to Log out straight away. It used to read localStorage
+  // once during render, which isn't reactive, so "Log in" survived until a reload.
+  await expect(page.getByTestId('book-logout')).toBeVisible()
+  await expect(page.getByTestId('book-login')).toHaveCount(0)
   await expect(page.getByTestId('save-schedule')).toHaveCount(0)
   expect(new URL(page.url()).hash).toBe('')
 

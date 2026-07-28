@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useLocale, localePath, swapLocaleInPath, setStoredLocale, localizeTool } from '../i18n'
 import { bookingHeaderStore } from '../lib/bookingHeader'
 import { cvHeaderStore } from '../lib/cvHeader'
+import { bookAuthStore } from '../lib/bookAuth'
 import { connectGoogleUrl } from '../lib/bookingApi'
 import { getTool } from '../tools'
 import { AppLauncher } from './AppLauncher'
@@ -22,8 +23,13 @@ export function Header() {
   const isBooking = /\/book\//.test(location.pathname)
   // Show a Log out on the Book Me editor when the host has a saved session.
   const onBookMe = /\/apps\/book-me(\/|$)/.test(location.pathname)
-  let bookSession = false
-  if (onBookMe) { try { bookSession = !!localStorage.getItem('bis-bookwith-hsid') } catch { /* prerender */ } }
+  // Reactive, not a one-shot localStorage read: the tool pushes its session here so
+  // signing in swaps Log in -> Log out immediately, with no reload (#233).
+  const bookAuth = useSyncExternalStore(bookAuthStore.subscribe, bookAuthStore.get, bookAuthStore.get)
+  // Fall back to the stored session on first paint, before the tool has mounted.
+  let stored = false
+  if (onBookMe) { try { stored = !!localStorage.getItem('bis-bookwith-hsid') } catch { /* prerender */ } }
+  const bookSession = bookAuth.active ? bookAuth.signedIn : stored
   function bookLogout() {
     try { localStorage.removeItem('bis-bookwith-hsid') } catch { /* ignore */ }
     window.location.reload()

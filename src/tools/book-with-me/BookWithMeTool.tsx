@@ -6,6 +6,7 @@ import { Button, Input, Stack, Check, Pill, Sheet, SheetTitle, SheetActions } fr
 import { AvailabilityGrid, type GridHandle } from './AvailabilityGrid'
 import { connectGoogleUrl, saveSchedule, deleteHost, hostStatus, getConfig } from '../../lib/bookingApi'
 import { subscribeDevice } from '../../lib/push'
+import { bookAuthStore } from '../../lib/bookAuth'
 import {
   loadConfig,
   saveConfig,
@@ -272,6 +273,10 @@ export default function BookWithMeTool() {
   const [cfg, setCfg] = useState<HostConfig>(() => loadConfig())
   const [grid, setGrid] = useState<Grid>(() => windowsToGrid(cfg.availability))
   const [session, setSession] = useState<Session | null>(null)
+  // Tell the shared Header whether we're signed in — a plain localStorage read there
+  // isn't reactive, so it kept showing "Log in" after sign-in until a reload (#233).
+  useEffect(() => { bookAuthStore.set({ active: true, signedIn: !!session }) }, [session])
+  useEffect(() => () => bookAuthStore.set({ active: false, signedIn: false }), [])
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [pushDenied, setPushDenied] = useState(false)
