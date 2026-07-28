@@ -1016,8 +1016,11 @@ test.describe('image format converter', () => {
     await expect(page.getByTestId('ifc-error')).toBeVisible({ timeout: 10_000 })
   })
 
-  test('the picker offers HEIC so Android will list it', async ({ page }) => {
+  // An image `accept` makes Chrome on Android open the gallery picker, which only
+  // lists MediaStore-indexed media — files in Downloads aren't offered at all. The
+  // input must stay unrestricted so the full document browser opens.
+  test('the picker is unrestricted, so Android opens the document browser', async ({ page }) => {
     await page.goto('/en/apps/image-format-converter')
-    await expect(page.locator('input[type=file]')).toHaveAttribute('accept', /heic/i)
+    await expect(page.locator('input[type=file]')).not.toHaveAttribute('accept', /.+/)
   })
 })
