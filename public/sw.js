@@ -123,6 +123,8 @@ self.addEventListener('push', (event) => {
     text: String(m2.text || ''),
     at: Number(m2.at) || Date.now(),
     mine: false,
+    // A reaction to an earlier message rather than a message of its own.
+    react: m2.react && m2.react.id ? { id: String(m2.react.id), emoji: String(m2.react.emoji || '') } : null,
   } : null
   event.waitUntil(Promise.all([
     missed ? queueLocal('missed', missed) : Promise.resolve(),

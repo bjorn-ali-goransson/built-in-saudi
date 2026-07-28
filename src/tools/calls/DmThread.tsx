@@ -4,7 +4,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Input, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { TrashIcon } from '../../components/icons'
-import { sendDm, type Dm } from '../../lib/dms'
+import { sendDm, sendDmReaction, type Dm } from '../../lib/dms'
+import { EMOJI } from './helpers'
 import type { Contact } from '../../lib/contacts'
 import type { Str } from './strings'
 
@@ -19,6 +20,7 @@ export function DmThread({ s, contact, messages, myName, onClose, onClear }: {
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [picking, setPicking] = useState('') // message id whose emoji picker is open
   const end = useRef<HTMLDivElement>(null)
 
   // Keep the newest message in view as the thread grows.
@@ -46,10 +48,39 @@ export function DmThread({ s, contact, messages, myName, onClose, onClear }: {
       ) : (
         <ul className="flex flex-col gap-1.5 list-none p-0 m-0 max-h-[45vh] overflow-y-auto" data-testid="dm-list">
           {messages.map((m) => (
-            <li key={m.id} className={`flex ${m.mine ? 'justify-end' : 'justify-start'}`} data-testid={m.mine ? 'dm-mine' : 'dm-theirs'}>
-              <span className={`max-w-[80%] rounded-md px-2.5 py-1.5 text-[0.9rem] leading-snug [overflow-wrap:anywhere] ${
-                m.mine ? 'bg-green-600 text-sand-100' : 'bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] text-ink'
-              }`}>{m.text}</span>
+            <li key={m.id} className={`relative flex flex-col ${m.mine ? 'items-end' : 'items-start'}`} data-testid={m.mine ? 'dm-mine' : 'dm-theirs'}>
+              <button
+                type="button" onClick={() => setPicking((p) => (p === m.id ? '' : m.id))}
+                title={s.dmReact} aria-label={s.dmReact} data-testid="dm-react"
+                className={`max-w-[80%] text-start rounded-md px-2.5 py-1.5 text-[0.9rem] leading-snug [overflow-wrap:anywhere] border-0 cursor-pointer ${
+                  m.mine ? 'bg-green-600 text-sand-100' : 'bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] text-ink'
+                }`}
+              >{m.text}</button>
+
+              {/* Reactions sit under the bubble, same toggle semantics as in-call chat. */}
+              {m.reactions && Object.keys(m.reactions).length > 0 && (
+                <span className="flex gap-1 flex-wrap mt-0.5" data-testid="dm-reactions">
+                  {Object.entries(m.reactions).map(([emoji, who]) => (
+                    <button
+                      key={emoji} type="button" title={who.join(', ')} data-testid="dm-reaction"
+                      onClick={() => sendDmReaction(contact.code, m.id, emoji, myName)}
+                      className="inline-flex items-center gap-0.5 h-6 px-1.5 rounded-full border border-[color:var(--line)] bg-[var(--surface)] text-[0.75rem] cursor-pointer hover:border-green-500"
+                    >{emoji}{who.length > 1 ? <span className="text-ink-faint">{who.length}</span> : null}</button>
+                  ))}
+                </span>
+              )}
+
+              {picking === m.id && (
+                <span className="flex gap-0.5 flex-wrap mt-1 p-1.5 rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[var(--shadow-md)] max-w-full" data-testid="dm-react-picker">
+                  {EMOJI.slice(0, 12).map((e) => (
+                    <button
+                      key={e} type="button" data-testid="dm-react-pick"
+                      onClick={() => { sendDmReaction(contact.code, m.id, e, myName); setPicking('') }}
+                      className="grid place-items-center w-7 h-7 rounded bg-transparent border-0 cursor-pointer text-[1rem] hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]"
+                    >{e}</button>
+                  ))}
+                </span>
+              )}
             </li>
           ))}
           <div ref={end} />

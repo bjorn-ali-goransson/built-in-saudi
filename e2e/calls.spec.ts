@@ -1113,3 +1113,37 @@ test('an incoming DM badges the contact and shows on their side of the thread', 
   await expect(p.getByTestId('call-contact-dm-badge')).toHaveCount(0)
   await c.close()
 })
+
+// #230: DM threads get the same message reactions the in-call chat has.
+test('a DM message can be reacted to, and the reaction is sent and toggles', async ({ browser }) => {
+  const c = await browser.newContext()
+  const posts: Record<string, unknown>[] = []
+  await c.route('**/call-dm', async (r) => {
+    posts.push(JSON.parse(r.request().postData() || '{}'))
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, delivered: 1 }) })
+  })
+  await c.addInitScript((u) => { (window as unknown as { __CALL_FN: string }).__CALL_FN = u }, 'http://127.0.0.1:1')
+  await c.addInitScript(() => {
+    localStorage.setItem('bis-call-link', JSON.stringify({ code: 'minecode', endpoint: 'e' }))
+    localStorage.setItem('bis-call-contacts', JSON.stringify([{ code: 'laylacode', name: 'Layla', at: Date.now() }]))
+    localStorage.setItem('bis-call-dms', JSON.stringify([
+      { id: 'd1', from: 'laylacode', name: 'Layla', text: 'salam', at: Date.now(), mine: false },
+    ]))
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-contact-dm').click()
+
+  // Tapping the bubble opens the picker; choosing an emoji applies and sends it.
+  await p.getByTestId('dm-react').first().click()
+  await expect(p.getByTestId('dm-react-picker')).toBeVisible()
+  await p.getByTestId('dm-react-pick').first().click()
+  await expect(p.getByTestId('dm-reaction')).toHaveCount(1)
+  await expect.poll(() => posts.length, { timeout: 10_000 }).toBeGreaterThan(0)
+  expect(posts[0]).toMatchObject({ code: 'laylacode', react: { id: 'd1' } })
+
+  // Tapping the reaction again removes it — same toggle as the in-call chat.
+  await p.getByTestId('dm-reaction').click()
+  await expect(p.getByTestId('dm-reaction')).toHaveCount(0)
+  await c.close()
+})

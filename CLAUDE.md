@@ -265,6 +265,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   TXT/CNAME verification records for the consoles below.
 - **Analytics:** GA4 — account "Built in Saudi", property `built-in-saudi.com`,
   Measurement ID **`G-BPWYMJ8D8R`** (in `index.html`). Timezone Asia/Riyadh, SAR.
+  **Cookieless, via Consent Mode.** `gtag('consent', 'default', {analytics_storage:
+  'denied', …})` must be emitted **before** `gtag('config', …)` — GA reads consent as
+  it initialises, so setting it after is too late and `_ga` is already written.
+  `client_storage: 'none'` is a *Universal Analytics* parameter: GA4 silently ignores
+  it and sets the cookie anyway (verified — the e2e caught exactly this). Consequence
+  to remember when reading reports: with no client id every visit counts on its own,
+  so "users" inflates and returning-visitor metrics are meaningless; page/event
+  counts and traffic sources are unaffected. There is therefore no cookie banner.
+  `e2e/app.spec.ts` asserts no `_ga*` cookie is ever set.
 - **Search:** Google Search Console (domain property, DNS-verified) and Bing
   Webmaster Tools (DNS-verified); both have the sitemap submitted.
 - **Prayer alert backend** (`functions/`, our first backend): Cloud Functions gen2

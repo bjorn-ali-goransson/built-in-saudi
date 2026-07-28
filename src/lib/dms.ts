@@ -15,6 +15,8 @@ import { getMyCallLink } from './callLink'
 
 export interface Dm {
   id: string
+  /** emoji -> who reacted. Same toggle semantics as the in-call chat. */
+  reactions?: Record<string, string[]>
   /** The OTHER party's call-link code — the thread key, whoever sent it. */
   from: string
   name: string
@@ -22,6 +24,8 @@ export interface Dm {
   at: number
   /** True when we sent it (kept locally; the recipient stores their own copy). */
   mine?: boolean
+  /** Set only on the wire: this push is a reaction to `react.id`, not a message. */
+  react?: { id: string; emoji: string } | null
 }
 
 const KEY = 'bis-call-dms'
@@ -36,7 +40,11 @@ export function listDms(): Dm[] {
     if (!Array.isArray(v)) return []
     return v
       .filter((m) => m && typeof m.id === 'string')
-      .map((m) => ({ id: m.id, from: String(m.from || ''), name: String(m.name || ''), text: String(m.text || ''), at: Number(m.at) || 0, mine: !!m.mine }))
+      .map((m) => ({
+        id: m.id, from: String(m.from || ''), name: String(m.name || ''),
+        text: String(m.text || ''), at: Number(m.at) || 0, mine: !!m.mine,
+        reactions: (m.reactions && typeof m.reactions === 'object') ? m.reactions : undefined,
+      }))
       .sort((a, b) => a.at - b.at)
   } catch { return [] }
 }
@@ -66,7 +74,44 @@ export function countsByContact(): Record<string, number> {
 export function clearThread(code: string): Dm[] { return write(listDms().filter((m) => m.from !== code)) }
 
 export async function drainDmQueue(): Promise<Dm[]> {
-  return addDms(await drainQueue<Dm>('dms'))
+  const queued = await drainQueue<Dm>('dms')
+  // A reaction push carries `react` and is NOT a message — attach it to the message
+  // it refers to, or it would show up as an empty bubble in the thread.
+  const messages = queued.filter((m) => !m.react)
+  const reactions = queued.filter((m) => m.react)
+  let out = addDms(messages)
+  for (const r of reactions) {
+    if (!r.react?.id || !r.react.emoji) continue
+    out = applyDmReaction(r.react.id, r.react.emoji, r.name || 'Someone')
+  }
+  return out
+}
+
+/** Toggle `who`'s reaction on a message, locally. Mirrors the in-call chat: a second
+ *  tap removes it, and an emoji with nobody left disappears. */
+export function applyDmReaction(id: string, emoji: string, who: string): Dm[] {
+  return write(listDms().map((m) => {
+    if (m.id !== id) return m
+    const r = { ...(m.reactions || {}) }
+    const list = r[emoji] || []
+    r[emoji] = list.includes(who) ? list.filter((n) => n !== who) : [...list, who]
+    if (!r[emoji].length) delete r[emoji]
+    return { ...m, reactions: r }
+  }))
+}
+
+/** React to a message and tell the other side. The reaction is tiny, so it rides the
+ *  same push as a message — the audio-sized problems of #232 don't apply here. */
+export async function sendDmReaction(code: string, id: string, emoji: string, myName: string): Promise<void> {
+  applyDmReaction(id, emoji, myName || 'Someone')
+  let from = ''
+  try { from = getMyCallLink()?.code || '' } catch { /* */ }
+  try {
+    await fetch(`${FN}/call-dm`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, from, name: myName || 'Someone', react: { id, emoji }, id: `r${id}${emoji}` }),
+    })
+  } catch { /* best-effort, exactly like a message */ }
 }
 
 export interface SendResult { ok: boolean; delivered: number }

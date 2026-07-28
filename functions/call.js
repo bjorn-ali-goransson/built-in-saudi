@@ -279,18 +279,24 @@ http('callDm', async (req, res) => {
     const name = clean(b.name, 40) || 'Someone'
     const text = clean(b.text, 500).trim()
     const id = codeOf(b.id) || `d${Date.now()}`
-    if (!code || !text) return res.status(400).json({ error: 'code and text required' })
+    // A reaction to an earlier message rather than a new one. Tiny, so it fits the
+    // push payload just like text does.
+    const rawReact = b.react && typeof b.react === 'object' ? b.react : null
+    const react = rawReact ? { id: clean(rawReact.id, 60), emoji: clean(rawReact.emoji, 16) } : null
+    if (!code || (!text && !(react && react.id && react.emoji))) {
+      return res.status(400).json({ error: 'code and text (or react) required' })
+    }
     const ref = db.collection(LINKS).doc(code)
     const d = await liveLink(ref)
     if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
     const payload = JSON.stringify({
       title: name,
-      body: text.slice(0, 120),
+      body: react ? `${react.emoji}` : text.slice(0, 120),
       // Per-sender tag, so several messages from one person collapse into the
       // latest notification rather than stacking up.
       tag: `dm-${from || 'anon'}`,
       url: `${SITE}/apps/calls?dm=${from || ''}`,
-      dm: { id, from, name, text, at: Date.now() },
+      dm: { id, from, name, text, at: Date.now(), react },
     })
     const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
     res.json({ ok: true, delivered })

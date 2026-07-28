@@ -33,7 +33,7 @@ export const STR = {
     addContact: 'Save as a contact', savedContact: 'Saved — tap to remove',
     // Split so the name can be bidi-isolated mid-sentence.
     cantSavePre: '', cantSavePost: ' hasn’t set up a Call Me link, so there’s no way to save them as a contact.',
-    dmOpen: 'Messages', dmSend: 'Send', dmSending: 'Sending…', dmClear: 'Clear this conversation',
+    dmReact: 'React to this message', dmOpen: 'Messages', dmSend: 'Send', dmSending: 'Sending…', dmClear: 'Clear this conversation',
     dmPlaceholder: 'Message…', dmEmpty: 'No messages yet. Anything you send lands as a notification on their device.',
     dmFailed: 'Couldn’t send — check your connection and try again.',
     dmNoDevice: 'Sent, but none of their devices could be reached — they may have turned notifications off.',
@@ -78,7 +78,7 @@ export const STR = {
     contacts: 'جهات الاتصال', call: 'اتصال', remove: 'إزالة',
     addContact: 'احفظه كجهة اتصال', savedContact: 'محفوظ — اضغط للإزالة',
     cantSavePre: 'لم يُنشئ ', cantSavePost: ' رابط «اتصل بي»، فلا يمكن حفظه كجهة اتصال.',
-    dmOpen: 'الرسائل', dmSend: 'إرسال', dmSending: 'جارٍ الإرسال…', dmClear: 'امسح هذه المحادثة',
+    dmReact: 'تفاعل مع هذه الرسالة', dmOpen: 'الرسائل', dmSend: 'إرسال', dmSending: 'جارٍ الإرسال…', dmClear: 'امسح هذه المحادثة',
     dmPlaceholder: 'رسالة…', dmEmpty: 'لا رسائل بعد. ما ترسله يصل كإشعار على جهازه.',
     dmFailed: 'تعذّر الإرسال — تحقّق من اتصالك وحاول مجددًا.',
     dmNoDevice: 'أُرسلت، لكن تعذّر الوصول إلى أي من أجهزته — ربما أوقف الإشعارات.',

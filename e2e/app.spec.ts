@@ -1134,3 +1134,28 @@ test.describe('update gate', () => {
     await expect(page.getByTestId('update-reload-now')).toBeVisible()
   })
 })
+
+// Analytics runs cookieless: no identifier is persisted, so there is nothing to
+// consent to and no cookie banner. Assert the shell actually says so, and that no
+// _ga cookie appears at runtime.
+test.describe('analytics', () => {
+  test('GA is configured cookieless and sets no _ga cookie', async ({ page, context }) => {
+    await page.goto('/en')
+    const html = await page.content()
+    expect(html).toContain("analytics_storage: 'denied'")
+    // The real assertion: GA actually loads here, so if consent were configured
+    // wrongly it WOULD write _ga. (It did, when this used the Universal Analytics
+    // `client_storage` parameter, which GA4 silently ignores.)
+    await page.waitForTimeout(4000)
+    const cookies = await context.cookies()
+    expect(cookies.filter((c) => c.name.startsWith('_ga')), 'no analytics cookies').toEqual([])
+  })
+
+  test('the privacy page states the cookieless position in both locales', async ({ page }) => {
+    await page.goto('/en/privacy')
+    await expect(page.getByText(/cookieless mode/i)).toBeVisible()
+    await expect(page.getByText(/no cookie banner/i)).toBeVisible()
+    await page.goto('/ar/privacy')
+    await expect(page.getByText(/بلا كوكيز/)).toBeVisible()
+  })
+})

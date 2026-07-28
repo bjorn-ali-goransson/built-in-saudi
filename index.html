@@ -55,8 +55,26 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag() { dataLayer.push(arguments); }
+      // Cookieless, via Consent Mode. This MUST come before `config` — GA reads
+      // consent when it initialises, so setting it afterwards is too late and the
+      // cookie is already written. (`client_storage: 'none'` is a Universal
+      // Analytics parameter; GA4 ignores it and sets _ga anyway — verified.)
+      gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      });
       gtag('js', new Date());
-      gtag('config', 'G-BPWYMJ8D8R');
+      // With analytics_storage denied there is no client id, so each visit counts on
+      // its own: "users" inflates and returning-visitor metrics stop being meaningful.
+      // Page/event counts and traffic sources are unaffected.
+      gtag('config', 'G-BPWYMJ8D8R', {
+        anonymize_ip: true,
+        ads_data_redaction: true,
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false,
+      });
     </script>
   </head>
   <body>
