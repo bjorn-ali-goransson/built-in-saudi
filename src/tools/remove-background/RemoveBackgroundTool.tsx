@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { DownloadIcon, ScissorsIcon } from '../../components/icons'
 import { Button, Stack , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 const STR = {
   en: {
@@ -45,7 +46,9 @@ export default function RemoveBackgroundTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setPickErr('')
-    try { (await createImageBitmap(f)).close() } catch { setPickErr(await whyUnreadable(f, locale)); return }
+    const probe = await decodeImage(f)
+    if (!probe) { setPickErr(await whyUnreadable(f, locale)); return }
+    probe.close()
     setErr(false); setPct(0)
     setOutUrl((p) => { if (p) URL.revokeObjectURL(p); return '' })
     srcFile.current = f

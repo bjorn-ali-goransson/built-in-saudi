@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Stack, Seg, SegButton, Textarea, Field , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 import type { StegoRequest, StegoResponse } from './stego.worker'
 
 const STR = {
@@ -65,7 +66,9 @@ export default function SteganographyTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setPickErr('')
-    try { (await createImageBitmap(f)).close() } catch { setPickErr(await whyUnreadable(f, locale)); return }
+    const probe = await decodeImage(f)
+    if (!probe) { setPickErr(await whyUnreadable(f, locale)); return }
+    probe.close()
     setTooBig(false); setRevealed(null); setFile(f)
     if (mode === 'reveal') run({ op: 'reveal', file: f })
   }

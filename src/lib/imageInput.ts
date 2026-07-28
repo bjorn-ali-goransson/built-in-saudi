@@ -25,16 +25,17 @@ export async function isHeic(f: File): Promise<boolean> {
 const MSG = {
   en: {
     cantRead: 'Couldn’t read that file. It may be damaged, or in a format this browser can’t open.',
-    heic: 'This is an iPhone HEIC photo, and this browser can’t open HEIC. Safari on iPhone or Mac can. On Android, set Camera → Photo format to “Most compatible” (JPEG), or share the photo — that usually converts it to JPG first.',
+    heic: 'This HEIC photo couldn’t be read. It may be damaged, or use an encoding we can’t decode — try sharing it from Photos, which usually converts it to JPG.',
   },
   ar: {
     cantRead: 'تعذّرت قراءة الملف. قد يكون تالفًا أو بصيغة لا يفتحها هذا المتصفح.',
-    heic: 'هذه صورة HEIC من آيفون، وهذا المتصفح لا يفتح HEIC. يفتحها Safari على آيفون أو ماك. على أندرويد، اضبط الكاميرا ← صيغة الصورة على «الأكثر توافقًا» (JPEG)، أو شارِك الصورة — فذلك يحوّلها عادةً إلى JPG.',
+    heic: 'تعذّرت قراءة صورة HEIC هذه. قد تكون تالفة أو بترميز لا نستطيع فكّه — جرّب مشاركتها من تطبيق الصور، فذلك يحوّلها عادةً إلى JPG.',
   },
 }
 
-/** Why couldn't we open this file? Names HEIC specifically, since that's the common
- *  case and the advice is actionable; anything else gets the generic reason. */
+/** Why couldn't we open this file? HEIC IS decodable now (#226) — reaching this with
+ *  a HEIC means the file itself is bad, not that the format is unsupported, so the
+ *  message must not blame the browser. */
 export async function whyUnreadable(f: File, locale: 'en' | 'ar'): Promise<string> {
   return (await isHeic(f)) ? MSG[locale].heic : MSG[locale].cantRead
 }

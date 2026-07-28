@@ -17,6 +17,8 @@ export type EncodeResponse =
   | { id: number; op: 'load'; width: number; height: number; error?: boolean }
   | { id: number; op: 'encode'; blob: Blob | null }
 
+import { isHeicBuffer } from './heicDecode'
+
 let bitmap: ImageBitmap | null = null
 
 self.onmessage = async (e: MessageEvent<EncodeRequest>) => {
@@ -24,7 +26,16 @@ self.onmessage = async (e: MessageEvent<EncodeRequest>) => {
   if (req.op === 'load') {
     try {
       bitmap?.close()
-      bitmap = await createImageBitmap(req.file)
+      try {
+        bitmap = await createImageBitmap(req.file)
+      } catch (e) {
+        // Only HEIC gets the multi-megabyte fallback; anything else is genuinely bad.
+        // Already in a worker, so decode here rather than spawning another (#226).
+        const head = new Uint8Array(await req.file.slice(0, 12).arrayBuffer())
+        if (!isHeicBuffer(head)) throw e
+        const { decodeHeic } = await import('./heicDecode')
+        bitmap = await decodeHeic(req.file)
+      }
       postMessage({ id: req.id, op: 'load', width: bitmap.width, height: bitmap.height } satisfies EncodeResponse)
     } catch {
       bitmap = null

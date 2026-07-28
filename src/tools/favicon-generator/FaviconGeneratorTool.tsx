@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
 import { Button, Stack , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 const SIZES = [16, 32, 48, 64, 96, 180, 192, 512]
 
@@ -27,7 +28,9 @@ export default function FaviconGeneratorTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setErr('')
-    try { setBitmap(await createImageBitmap(f)) } catch { setErr(await whyUnreadable(f, locale)) }
+    const bmp = await decodeImage(f)
+    if (!bmp) { setErr(await whyUnreadable(f, locale)); return }
+    setBitmap(bmp)
   }
 
   useEffect(() => {

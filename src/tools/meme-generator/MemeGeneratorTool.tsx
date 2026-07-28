@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Stack, Field, Input , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 const STR = {
   en: { drop: 'Drop an image, or tap to choose', top: 'Top text', bottom: 'Bottom text', size: 'Font size', download: 'Download PNG', change: 'Choose another image', privacy: 'Drawn on your device — the image is never uploaded.' },
@@ -40,7 +41,9 @@ export default function MemeGeneratorTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setErr('')
-    try { const bmp = await createImageBitmap(f); setBitmap(bmp); setSize(Math.round(bmp.width / 10)) } catch { setErr(await whyUnreadable(f, locale)) }
+    const bmp = await decodeImage(f)
+    if (!bmp) { setErr(await whyUnreadable(f, locale)); return }
+    setBitmap(bmp); setSize(Math.round(bmp.width / 10))
   }
 
   useEffect(() => {

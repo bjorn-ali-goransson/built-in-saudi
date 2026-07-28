@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Field, Stack, Seg, SegButton , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 type Size = 'fit' | 'a4' | 'letter'
 interface Item { id: string; file: File; url: string }
@@ -48,11 +49,9 @@ export default function ImagesToPdfTool() {
     const ok: { id: string; file: File; url: string }[] = []
     let bad: File | null = null
     for (const f of picked) {
-      try {
-        const bmp = await createImageBitmap(f)
-        bmp.close()
-        ok.push({ id: `i${uid++}`, file: f, url: URL.createObjectURL(f) })
-      } catch { bad ??= f }
+      const bmp = await decodeImage(f)
+      if (bmp) { bmp.close(); ok.push({ id: `i${uid++}`, file: f, url: URL.createObjectURL(f) }) }
+      else bad ??= f
     }
     if (ok.length) { setItems((cur) => [...cur, ...ok]); setPdf(null) }
     if (bad) setErr(await whyUnreadable(bad, locale))

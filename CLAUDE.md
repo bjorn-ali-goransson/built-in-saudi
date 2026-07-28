@@ -137,6 +137,25 @@ with no MIME) and render `<FileError message={…} />` from `components/ui`. Too
 decode later in a worker (remove-background, steganography) must still verify with
 `createImageBitmap` at **pick time**, or the failure surfaces far from the cause.
 
+## HEIC (#226)
+
+iPhone photos are HEIC and **no browser engine outside Safari decodes them**, so on
+Android every one used to be a dead end. `libheif-js` (wasm) fills the gap:
+
+- **`decodeImage(file)` in `src/lib/decodeImage.ts` is the single entry point** — try
+  `createImageBitmap` first (instant and free for PNG/JPEG/WebP), and only fall back
+  to the wasm decoder when the *bytes* say HEIC. Use it in every tool that takes an
+  image; don't call `createImageBitmap` directly.
+- **Lazy, always.** The bundle is ~1.4MB in its own chunk and is fetched only when a
+  HEIC is actually picked. There's an e2e test asserting it is NOT requested for an
+  ordinary PNG — keep it passing.
+- **Off the main thread** (`heic.worker.ts`): a 12MP photo is an HEVC intra-frame
+  decode and would visibly freeze the page. `imageEncode.worker.ts` is already in a
+  worker so it imports `decodeHeic` directly instead of nesting one.
+- The fixture `e2e/fixtures/sample.heic` is a **real** HEIF still (generated with
+  `pillow-heif`). ffmpeg cannot make one — its mp4 muxer with `-brand heic` writes an
+  HEVC video container that libheif rejects.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.

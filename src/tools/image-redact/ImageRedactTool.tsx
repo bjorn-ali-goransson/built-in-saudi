@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, TrashIcon } from '../../components/icons'
 import { Button, Stack, Seg, SegButton , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 type Rect = { x: number; y: number; w: number; h: number }
 
@@ -25,7 +26,9 @@ export default function ImageRedactTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setErr('')
-    try { setBitmap(await createImageBitmap(f)); setRects([]) } catch { setErr(await whyUnreadable(f, locale)) }
+    const bmp = await decodeImage(f)
+    if (!bmp) { setErr(await whyUnreadable(f, locale)); return }
+    setBitmap(bmp); setRects([])
   }
 
   function applyRect(ctx: CanvasRenderingContext2D, r: Rect) {

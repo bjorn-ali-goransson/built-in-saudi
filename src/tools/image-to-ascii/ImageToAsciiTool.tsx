@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
 import { Button, Stack, Field, Check , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
+import { decodeImage } from '../../lib/decodeImage'
 
 const RAMPS = {
   detailed: '@%#*+=-:. ',
@@ -29,7 +30,9 @@ export default function ImageToAsciiTool() {
   async function onFile(f: File | undefined) {
     if (!f) return
     setErr('')
-    try { setBitmap(await createImageBitmap(f)) } catch { setErr(await whyUnreadable(f, locale)) }
+    const bmp = await decodeImage(f)
+    if (!bmp) { setErr(await whyUnreadable(f, locale)); return }
+    setBitmap(bmp)
   }
 
   const ascii = useMemo(() => {
