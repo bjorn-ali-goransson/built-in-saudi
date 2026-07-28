@@ -13,6 +13,8 @@ const STR = {
     from: 'From', download: 'Download', working: 'Converting…',
     privacy: 'Converted on your device — the image is never uploaded.',
     bgHint: 'JPG has no transparency, so transparent areas are filled with this colour.',
+    cantRead: 'Couldn’t read that file. It may be damaged, or in a format this browser can’t open.',
+    heicUnsupported: 'This is an iPhone HEIC photo, and this browser can’t open HEIC. Safari on iPhone or Mac can. On Android, set Camera → Photo format to “Most compatible” (JPEG), or share the photo — that usually converts it to JPG first.',
   },
   ar: {
     drop: 'أفلت صورة أو اضغط للاختيار', another: 'اختر صورة أخرى',
@@ -20,11 +22,25 @@ const STR = {
     from: 'من', download: 'تنزيل', working: 'جارٍ التحويل…',
     privacy: 'يُحوَّل على جهازك — لا تُرفع الصورة أبدًا.',
     bgHint: 'صيغة JPG لا تدعم الشفافية، لذا تُملأ المناطق الشفافة بهذا اللون.',
+    cantRead: 'تعذّرت قراءة الملف. قد يكون تالفًا أو بصيغة لا يفتحها هذا المتصفح.',
+    heicUnsupported: 'هذه صورة HEIC من آيفون، وهذا المتصفح لا يفتح HEIC. يفتحها Safari على آيفون أو ماك. على أندرويد، اضبط الكاميرا ← صيغة الصورة على «الأكثر توافقًا» (JPEG)، أو شارِك الصورة — فذلك يحوّلها عادةً إلى JPG.',
   },
 }
 
 const LABEL: Record<Fmt, string> = { 'image/png': 'PNG', 'image/jpeg': 'JPG', 'image/webp': 'WebP' }
 const EXT: Record<Fmt, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
+/** Is this a HEIC/HEIF file? Read the ISO-BMFF brand rather than trusting the MIME
+ *  type — Android often hands over HEIC with an empty or non-image/* MIME, which is
+ *  exactly why these files used to vanish silently. */
+async function isHeic(f: File): Promise<boolean> {
+  try {
+    const b = new Uint8Array(await f.slice(0, 12).arrayBuffer())
+    if (String.fromCharCode(...b.slice(4, 8)) !== 'ftyp') return false
+    const brand = String.fromCharCode(...b.slice(8, 12))
+    return ['heic', 'heix', 'hevc', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'].includes(brand)
+  } catch { return false }
+}
+
 const fmtBytes = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`
 
 export default function ImageFormatConverterTool() {
@@ -37,15 +53,24 @@ export default function ImageFormatConverterTool() {
   const [bg, setBg] = useState('#ffffff')
   const [busy, setBusy] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
+  const [err, setErr] = useState('')
   const encRef = useRef<ImageEncoder | null>(null)
 
   useEffect(() => () => encRef.current?.dispose(), [])
 
   async function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
+    if (!f) return
+    setErr('')
+    // Deliberately NOT gated on `f.type.startsWith('image/')`: Android hands over
+    // HEIC (and sometimes other formats) with an empty or non-image MIME, and the
+    // old check dropped those on the floor without a word. Let the decoder decide,
+    // and say so when it can't.
     encRef.current ??= new ImageEncoder()
     const dim = await encRef.current.load(f)
-    if (!dim) return
+    if (!dim) {
+      setErr(await isHeic(f) ? s.heicUnsupported : s.cantRead)
+      return
+    }
     setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type })
     setTarget(f.type === 'image/jpeg' ? 'image/png' : 'image/jpeg')
   }
@@ -66,11 +91,16 @@ export default function ImageFormatConverterTool() {
 
   return (
     <Stack data-testid="image-format-converter">
+      {err && (
+        <div className="flex items-start gap-2 border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="ifc-error">
+          <span className="text-[0.88rem] text-ink leading-snug">{err}</span>
+        </div>
+      )}
       {!src ? (
         <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="ifc-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept="image/*,.heic,.heif,.avif,image/heic,image/heif" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>

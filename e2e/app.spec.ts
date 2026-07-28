@@ -988,3 +988,36 @@ test.describe('to-do lists', () => {
     await expect(page.getByTestId('todo-sync-sheet')).toContainText('stays on this device only')
   })
 })
+
+test.describe('image format converter', () => {
+  // Android hands over iPhone HEIC photos with an empty or non-image MIME, and the
+  // browser can't decode HEIC anyway. Both used to hit a bare `return` — the file
+  // vanished with no message at all, which is what made this look like "I can't
+  // select HEIC" rather than "HEIC isn't supported".
+  test('a HEIC photo explains itself instead of silently doing nothing', async ({ page }) => {
+    await page.goto('/en/apps/image-format-converter')
+    // ISO-BMFF header with the `heic` brand — recognised by content, not by name.
+    const heic = Buffer.concat([
+      Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypheic'),
+      Buffer.from([0, 0, 0, 0]), Buffer.from('mif1heic'),
+    ])
+    await page.locator('input[type=file]').setInputFiles({ name: 'IMG_0042.HEIC', mimeType: '', buffer: heic })
+    const err = page.getByTestId('ifc-error')
+    await expect(err).toBeVisible({ timeout: 10_000 })
+    await expect(err).toContainText('HEIC')
+    // Named the MIME as empty on purpose: the old guard dropped it before decoding.
+  })
+
+  test('an unreadable file says so rather than failing silently', async ({ page }) => {
+    await page.goto('/en/apps/image-format-converter')
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not actually a png'),
+    })
+    await expect(page.getByTestId('ifc-error')).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('the picker offers HEIC so Android will list it', async ({ page }) => {
+    await page.goto('/en/apps/image-format-converter')
+    await expect(page.locator('input[type=file]')).toHaveAttribute('accept', /heic/i)
+  })
+})
