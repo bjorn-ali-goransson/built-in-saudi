@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon, TrashIcon } from '../../components/icons'
 import { Button, Stack, Seg, SegButton , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -22,6 +23,14 @@ export default function ImageRedactTool() {
   const [rects, setRects] = useState<Rect[]>([])
   const [mode, setMode] = useState<'blur' | 'black'>('blur')
   const drawing = useRef<Rect | null>(null)
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('image-redact', !!(bitmap))
+    return () => setWorkInProgress('image-redact', false)
+  }, [bitmap])
 
   async function onFile(f: File | undefined) {
     if (!f) return

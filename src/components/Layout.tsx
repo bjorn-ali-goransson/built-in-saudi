@@ -11,6 +11,7 @@ import { NotificationBell } from './NotificationBell'
 import { Spinner } from './ui'
 import { UpdatedToast } from './UpdatedToast'
 import { useVersionCheck } from '../lib/useVersionCheck'
+import { UpdateGate } from './UpdateGate'
 import { useIncomingCall } from '../lib/useIncomingCall'
 import { clearStaleNotifications } from '../lib/push'
 
@@ -32,7 +33,7 @@ export function Layout() {
 function LocalizedLayout({ locale }: { locale: Locale }) {
   const t = dicts[locale]
   const hideFooter = useSyncExternalStore(hideFooterStore.subscribe, hideFooterStore.get, hideFooterStore.get)
-  useVersionCheck()
+  const updateState = useVersionCheck()
   useIncomingCall() // ring from anywhere on the site → the incoming-call screen
 
   useEffect(() => {
@@ -65,6 +66,7 @@ function LocalizedLayout({ locale }: { locale: Locale }) {
         <NotificationBell />
         <LanguageSuggestion />
         <UpdatedToast />
+        <UpdateGate state={updateState} />
         <ScrollRestoration />
       </div>
     </LocaleProvider>

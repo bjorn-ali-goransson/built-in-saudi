@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Field, Stack, Seg, SegButton , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -42,6 +43,14 @@ export default function ImagesToPdfTool() {
   // Take everything and let the renderer decide: Android reports HEIC with an empty
   // MIME, so filtering on `image/*` here silently discarded real photos (#225).
   // Anything that genuinely can't be decoded is reported rather than dropped.
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('images-to-pdf', !!(items.length > 0))
+    return () => setWorkInProgress('images-to-pdf', false)
+  }, [items])
+
   async function addFiles(files: FileList | null) {
     if (!files) return
     setErr('')

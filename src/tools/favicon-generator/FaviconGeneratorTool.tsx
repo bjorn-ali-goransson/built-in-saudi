@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
 import { Button, Stack , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -24,6 +25,14 @@ export default function FaviconGeneratorTool() {
   const [err, setErr] = useState('')
   const [icons, setIcons] = useState<{ size: number; url: string }[]>([])
   const [copied, setCopied] = useState(false)
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('favicon-generator', !!(bitmap))
+    return () => setWorkInProgress('favicon-generator', false)
+  }, [bitmap])
 
   async function onFile(f: File | undefined) {
     if (!f) return

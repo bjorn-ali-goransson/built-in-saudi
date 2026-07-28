@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { DownloadIcon, ScissorsIcon } from '../../components/icons'
 import { Button, Stack , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -43,6 +44,14 @@ export default function RemoveBackgroundTool() {
 
   // Decoding happens later in the worker, so check the file is readable HERE —
   // otherwise a HEIC is accepted and fails downstream with no useful reason (#225).
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('remove-background', !!(srcUrl))
+    return () => setWorkInProgress('remove-background', false)
+  }, [srcUrl])
+
   async function onFile(f: File | undefined) {
     if (!f) return
     setPickErr('')

@@ -216,6 +216,15 @@ Cloud DNS**, project **`blitz-ksa`**, zone `built-in-saudi`.
 
 - The build stamps `<meta name="build">` + writes `/version.json`; `useVersionCheck`
   polls it (cache-busted) and reloads open tabs when a new deploy is detected.
+  **Never reload over work in progress (#228).** A tool holding an uploaded file or a
+  decoded image calls `setWorkInProgress(key, true)` (`src/lib/workInProgress.ts`);
+  the check then **offers** the update in a docked bar instead of taking it, and
+  applies it automatically once the work clears. File objects can't be serialised, so
+  there is no honest way to restore them after a reload — not reloading is the fix.
+  **`UpdateGate`** renders the states: a *dimmed* blocking overlay while checking
+  (only past 500ms) or reloading — dimmed on purpose, so "the screen went grey" is a
+  reportable diagnostic signal — and the non-blocking offer bar. Measured: the check
+  itself answers in ~330ms; the perceptible delay is the reload, not the fetch.
   **Reload-loop guard (#207):** a shell served from the SW cache carries an OLD build
   stamp, so `version.json` never matches it and every return to the tab reloaded
   again, forever. The check records the build it's reloading *toward*

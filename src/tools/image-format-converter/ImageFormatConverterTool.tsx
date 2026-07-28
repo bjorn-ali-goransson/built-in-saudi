@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Field, Stack, Seg, SegButton, FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -42,6 +43,14 @@ export default function ImageFormatConverterTool() {
   const encRef = useRef<ImageEncoder | null>(null)
 
   useEffect(() => () => encRef.current?.dispose(), [])
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('image-format-converter', !!(src))
+    return () => setWorkInProgress('image-format-converter', false)
+  }, [src])
 
   async function onFile(f: File | undefined) {
     if (!f) return

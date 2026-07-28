@@ -1075,3 +1075,62 @@ test.describe('HEIC decoding', () => {
     expect(fetched, 'the 1.4MB wasm must not load for non-HEIC files').toEqual([])
   })
 })
+
+// #228: the deploy auto-reload must never destroy work, and must be visible when it
+// does act — a dimmed UI is a diagnostic signal a user can report.
+test.describe('update gate', () => {
+  const NEWER = { build: '9999999999999', notes: 'Something changed' }
+
+  test('with no work open, a new build reloads', async ({ page }) => {
+    // The blocking overlay only lives for one frame before the tab goes, so assert
+    // the reload itself rather than racing the paint.
+    let loads = 0
+    page.on('load', () => { loads++ })
+    await page.route('**/version.json*', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
+    await page.goto('/en/apps/qr-code')
+    const before = loads
+    await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
+    await expect.poll(() => loads, { timeout: 15_000 }).toBe(before + 1)
+  })
+
+  // The dimmed state is a DIAGNOSTIC SIGNAL: a user can say "the screen went grey"
+  // and that pinpoints the update path. Assert it on a slow check, where it's stable.
+  test('a slow check dims the UI and says controls are paused', async ({ page }) => {
+    await page.route('**/version.json*', async (r) => {
+      await new Promise((res) => setTimeout(res, 2500)) // slower than the 500ms threshold
+      await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ build: '1', notes: '' }) })
+    })
+    await page.goto('/en/apps/qr-code')
+    await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
+    const gate = page.getByTestId('update-checking')
+    await expect(gate).toBeVisible({ timeout: 10_000 })
+    await expect(gate).toContainText('Checking for updates')
+    await expect(gate).toContainText('paused')
+    // It dims rather than hides: the page underneath is still there to be seen.
+    await expect(page.getByTestId('qr-code')).toBeAttached()
+    // …and it clears itself once the check answers.
+    await expect(gate).toHaveCount(0, { timeout: 15_000 })
+  })
+
+  test('with an image loaded, the update is OFFERED, never taken', async ({ page }) => {
+    await page.goto('/en/apps/image-format-converter')
+    // Load a real image so the tool declares work in progress.
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'x.png', mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'),
+    })
+    await expect(page.getByTestId('ifc-download')).toBeVisible({ timeout: 20_000 })
+
+    await page.route('**/version.json*', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
+    await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
+
+    // Offered, not applied: the work survives and the page did not reload.
+    await expect(page.getByTestId('update-offered')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('update-reloading')).toHaveCount(0)
+    await expect(page.getByTestId('ifc-download')).toBeVisible()
+    // And the user can take it when ready.
+    await expect(page.getByTestId('update-reload-now')).toBeVisible()
+  })
+})

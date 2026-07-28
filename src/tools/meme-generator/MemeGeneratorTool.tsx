@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Stack, Field, Input , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -37,6 +38,14 @@ export default function MemeGeneratorTool() {
   const [top, setTop] = useState('')
   const [bottom, setBottom] = useState('')
   const [size, setSize] = useState(48)
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('meme-generator', !!(bitmap))
+    return () => setWorkInProgress('meme-generator', false)
+  }, [bitmap])
 
   async function onFile(f: File | undefined) {
     if (!f) return

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
 import { Button, Stack, Field, Check , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -26,6 +27,14 @@ export default function ImageToAsciiTool() {
   const [charset, setCharset] = useState<keyof typeof RAMPS>('detailed')
   const [invert, setInvert] = useState(false)
   const [copied, setCopied] = useState(false)
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('image-to-ascii', !!(bitmap))
+    return () => setWorkInProgress('image-to-ascii', false)
+  }, [bitmap])
 
   async function onFile(f: File | undefined) {
     if (!f) return

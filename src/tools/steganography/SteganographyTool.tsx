@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Stack, Seg, SegButton, Textarea, Field , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -41,6 +42,14 @@ export default function SteganographyTool() {
 
   // Pixel loops run in a worker (#154); responses are matched by id so a
   // newly-dropped image cancels whatever the previous one was doing.
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('steganography', !!(file))
+    return () => setWorkInProgress('steganography', false)
+  }, [file])
+
   function run(req: { op: 'embed'; file: File; message: string } | { op: 'reveal'; file: File }) {
     if (!workerRef.current) {
       workerRef.current = new Worker(new URL('./stego.worker.ts', import.meta.url), { type: 'module' })

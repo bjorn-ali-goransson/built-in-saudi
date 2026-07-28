@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Input, Field, Stack, Seg, SegButton , FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -38,6 +39,14 @@ export default function ImageCompressorTool() {
   const encRef = useRef<ImageEncoder | null>(null)
 
   useEffect(() => () => encRef.current?.dispose(), [])
+
+
+  // Hold off the deploy auto-reload while a file is loaded — it can't be restored
+  // afterwards, so the update is offered instead of taken (#228).
+  useEffect(() => {
+    setWorkInProgress('image-compressor', !!(src))
+    return () => setWorkInProgress('image-compressor', false)
+  }, [src])
 
   async function onFile(f: File | undefined) {
     if (!f) return
