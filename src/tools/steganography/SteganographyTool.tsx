@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Button, Stack, Seg, SegButton, Textarea, Field } from '../../components/ui'
+import { Button, Stack, Seg, SegButton, Textarea, Field , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 import type { StegoRequest, StegoResponse } from './stego.worker'
 
 const STR = {
@@ -26,6 +27,7 @@ export default function SteganographyTool() {
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<'hide' | 'reveal'>('hide')
+  const [pickErr, setPickErr] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
   const [revealed, setRevealed] = useState<string | null>(null)
@@ -58,8 +60,12 @@ export default function SteganographyTool() {
     workerRef.current.postMessage({ ...req, id: ++reqRef.current } as StegoRequest)
   }
 
-  function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
+  // Same as remove-background: the worker decodes later, so verify readability now
+  // rather than failing opaquely afterwards (#225).
+  async function onFile(f: File | undefined) {
+    if (!f) return
+    setPickErr('')
+    try { (await createImageBitmap(f)).close() } catch { setPickErr(await whyUnreadable(f, locale)); return }
     setTooBig(false); setRevealed(null); setFile(f)
     if (mode === 'reveal') run({ op: 'reveal', file: f })
   }
@@ -75,11 +81,12 @@ export default function SteganographyTool() {
         <SegButton active={mode === 'reveal'} onClick={() => { setMode('reveal'); reset() }} data-testid="stego-reveal">{s.reveal}</SegButton>
       </Seg>
 
+      <FileError message={pickErr} />
       {!file ? (
         <button className="relative flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)]" data-testid="stego-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{dropLabel}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : mode === 'hide' ? (
         <>

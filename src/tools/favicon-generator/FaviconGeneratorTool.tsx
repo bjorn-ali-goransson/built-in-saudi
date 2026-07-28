@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
-import { Button, Stack } from '../../components/ui'
+import { Button, Stack , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 
 const SIZES = [16, 32, 48, 64, 96, 180, 192, 512]
 
@@ -19,12 +20,14 @@ export default function FaviconGeneratorTool() {
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null)
+  const [err, setErr] = useState('')
   const [icons, setIcons] = useState<{ size: number; url: string }[]>([])
   const [copied, setCopied] = useState(false)
 
   async function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
-    try { setBitmap(await createImageBitmap(f)) } catch { /* */ }
+    if (!f) return
+    setErr('')
+    try { setBitmap(await createImageBitmap(f)) } catch { setErr(await whyUnreadable(f, locale)) }
   }
 
   useEffect(() => {
@@ -54,11 +57,12 @@ export default function FaviconGeneratorTool() {
 
   return (
     <Stack data-testid="favicon-generator">
+      <FileError message={err} />
       {!bitmap ? (
         <button className="relative flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)]" data-testid="favicon-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>

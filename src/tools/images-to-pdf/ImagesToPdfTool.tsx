@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Button, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { Button, Field, Stack, Seg, SegButton , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 
 type Size = 'fit' | 'a4' | 'letter'
 interface Item { id: string; file: File; url: string }
@@ -31,15 +32,30 @@ export default function ImagesToPdfTool() {
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<Item[]>([])
+  const [err, setErr] = useState('')
   const [size, setSize] = useState<Size>('fit')
   const [margin, setMargin] = useState(24)
   const [busy, setBusy] = useState(false)
   const [pdf, setPdf] = useState<{ url: string; size: number } | null>(null)
 
-  function addFiles(files: FileList | null) {
+  // Take everything and let the renderer decide: Android reports HEIC with an empty
+  // MIME, so filtering on `image/*` here silently discarded real photos (#225).
+  // Anything that genuinely can't be decoded is reported rather than dropped.
+  async function addFiles(files: FileList | null) {
     if (!files) return
-    const next = [...files].filter((f) => f.type.startsWith('image/')).map((f) => ({ id: `i${uid++}`, file: f, url: URL.createObjectURL(f) }))
-    if (next.length) { setItems((cur) => [...cur, ...next]); setPdf(null) }
+    setErr('')
+    const picked = [...files]
+    const ok: { id: string; file: File; url: string }[] = []
+    let bad: File | null = null
+    for (const f of picked) {
+      try {
+        const bmp = await createImageBitmap(f)
+        bmp.close()
+        ok.push({ id: `i${uid++}`, file: f, url: URL.createObjectURL(f) })
+      } catch { bad ??= f }
+    }
+    if (ok.length) { setItems((cur) => [...cur, ...ok]); setPdf(null) }
+    if (bad) setErr(await whyUnreadable(bad, locale))
   }
   function move(i: number, d: -1 | 1) {
     setItems((cur) => { const a = [...cur]; const j = i + d; if (j < 0 || j >= a.length) return cur;[a[i], a[j]] = [a[j], a[i]]; return a }); setPdf(null)
@@ -87,10 +103,11 @@ export default function ImagesToPdfTool() {
 
   return (
     <Stack data-testid="images-to-pdf">
+      <FileError message={err} />
       <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="i2p-drop" onClick={() => fileRef.current?.click()}
         onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files) }}>
         <UploadIcon /><span>{items.length ? s.add : s.drop}</span>
-        <input ref={fileRef} type="file" accept="image/*" multiple className="absolute w-px h-px opacity-0" onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+        <input ref={fileRef} type="file" multiple className="absolute w-px h-px opacity-0" onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
       </button>
 
       {items.length > 0 && (

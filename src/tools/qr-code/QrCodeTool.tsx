@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LinkIcon, TextIcon, WifiIcon, MailIcon, PhoneIcon, DownloadIcon, ShareIcon } from '../../components/icons'
 import { useLocale } from '../../i18n'
+import { whyUnreadable } from '../../lib/imageInput'
 import { type QrContentType, type WifiFields, type EmailFields, normalizeUrl, buildWifi, buildEmail, buildPhone } from './build'
 import { renderQR, type DotStyle, type Frame, type BorderStyle, DOT_STYLES } from './qrRender'
-import { Input, Textarea, Select, Field, FieldLabel, Check, Seg, SegButton } from '../../components/ui'
+import { Input, Textarea, Select, Field, FieldLabel, Check, Seg, SegButton , FileError } from '../../components/ui'
 
 const TYPE_DEFS: { id: QrContentType; Icon: typeof LinkIcon }[] = [
   { id: 'link', Icon: LinkIcon }, { id: 'text', Icon: TextIcon }, { id: 'wifi', Icon: WifiIcon },
@@ -87,6 +88,7 @@ export default function QrCodeTool() {
   ]
 
   const [type, setType] = useState<QrContentType>('link')
+  const [logoErr, setLogoErr] = useState('')
   const [link, setLink] = useState('https://built-in-saudi.com')
   const [text, setText] = useState('')
   const [wifi, setWifi] = useState<WifiFields>({ ssid: '', password: '', encryption: 'WPA', hidden: false })
@@ -145,10 +147,15 @@ export default function QrCodeTool() {
   }
 
   function onLogo(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
+    if (!f) return
+    setLogoErr('')
+    // No MIME guard: Android reports HEIC with an empty MIME and this used to drop
+    // it silently (#225). Report a load failure instead.
     const img = new Image()
+    const url = URL.createObjectURL(f)
     img.onload = () => { setLogo(img); setLogoName(f.name) }
-    img.src = URL.createObjectURL(f)
+    img.onerror = () => { URL.revokeObjectURL(url); whyUnreadable(f, locale).then(setLogoErr) }
+    img.src = url
   }
 
   function withBlob(cb: (b: Blob) => void) { canvasRef.current?.toBlob((b) => { if (b) cb(b) }, 'image/png') }
@@ -316,7 +323,8 @@ export default function QrCodeTool() {
             {logo
               ? <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" onClick={() => { setLogo(null); setLogoName('') }}>✕ {L.centerOn} · {logoName.slice(0, 10)}</button>
               : <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" data-testid="qr-add-logo" onClick={() => logoInput.current?.click()}>＋ {L.addCenter}</button>}
-            <input ref={logoInput} type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
+            <input ref={logoInput} type="file" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
+            <FileError message={logoErr} />
           </div>
         </div>
 

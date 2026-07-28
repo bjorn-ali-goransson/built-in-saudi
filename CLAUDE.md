@@ -118,6 +118,25 @@ declares `@layer theme, base, utilities`.
 - Keep the e2e suite green; grep `dist/assets/*.css` to confirm a utility
   generated (the PWA service worker caches CSS, so the live preview lies).
 
+## Image file intake (all image tools)
+
+Android drives two rules here (#225), and both apply to **every** tool that takes an
+image:
+
+- **No `accept` on the file input.** Any image `accept` makes Chrome on Android open
+  the *gallery* picker, which lists only MediaStore-indexed media — a file sitting in
+  Downloads is never offered, whatever the accept string says.
+- **Never gate on `f.type.startsWith('image/')`.** Android hands over HEIC (and
+  sometimes more) with an **empty** MIME, so that guard silently discarded real
+  photos. Let the decoder decide.
+
+Because the picker is unrestricted, a bad pick **must** report why — a bare `return`
+turns "wrong file" into a dead UI. Use `whyUnreadable(file, locale)` from
+`src/lib/imageInput.ts` (which sniffs the ISO-BMFF brand, so HEIC is recognised even
+with no MIME) and render `<FileError message={…} />` from `components/ui`. Tools that
+decode later in a worker (remove-background, steganography) must still verify with
+`createImageBitmap` at **pick time**, or the failure surfaces far from the cause.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.

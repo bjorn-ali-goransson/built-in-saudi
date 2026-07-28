@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { DownloadIcon, ScissorsIcon } from '../../components/icons'
-import { Button, Stack } from '../../components/ui'
+import { Button, Stack , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 
 const STR = {
   en: {
@@ -32,14 +33,19 @@ export default function RemoveBackgroundTool() {
   const fileRef = useRef<HTMLInputElement>(null)
   const srcFile = useRef<File | null>(null)
   const [srcUrl, setSrcUrl] = useState('')
+  const [pickErr, setPickErr] = useState('')
   const [srcName, setSrcName] = useState('')
   const [outUrl, setOutUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [pct, setPct] = useState(0)
   const [err, setErr] = useState(false)
 
-  function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
+  // Decoding happens later in the worker, so check the file is readable HERE —
+  // otherwise a HEIC is accepted and fails downstream with no useful reason (#225).
+  async function onFile(f: File | undefined) {
+    if (!f) return
+    setPickErr('')
+    try { (await createImageBitmap(f)).close() } catch { setPickErr(await whyUnreadable(f, locale)); return }
     setErr(false); setPct(0)
     setOutUrl((p) => { if (p) URL.revokeObjectURL(p); return '' })
     srcFile.current = f
@@ -71,12 +77,13 @@ export default function RemoveBackgroundTool() {
 
   return (
     <Stack data-testid="remove-background">
+      <FileError message={pickErr} />
       {!srcUrl ? (
         <button className="flex flex-col items-center gap-[0.4rem] py-10 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)]"
           data-testid="rmbg-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <ScissorsIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>

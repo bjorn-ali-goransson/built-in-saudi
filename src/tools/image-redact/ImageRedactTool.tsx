@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, TrashIcon } from '../../components/icons'
-import { Button, Stack, Seg, SegButton } from '../../components/ui'
+import { Button, Stack, Seg, SegButton , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 
 type Rect = { x: number; y: number; w: number; h: number }
 
@@ -16,13 +17,15 @@ export default function ImageRedactTool() {
   const fileRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null)
+  const [err, setErr] = useState('')
   const [rects, setRects] = useState<Rect[]>([])
   const [mode, setMode] = useState<'blur' | 'black'>('blur')
   const drawing = useRef<Rect | null>(null)
 
   async function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
-    try { setBitmap(await createImageBitmap(f)); setRects([]) } catch { /* */ }
+    if (!f) return
+    setErr('')
+    try { setBitmap(await createImageBitmap(f)); setRects([]) } catch { setErr(await whyUnreadable(f, locale)) }
   }
 
   function applyRect(ctx: CanvasRenderingContext2D, r: Rect) {
@@ -68,11 +71,12 @@ export default function ImageRedactTool() {
 
   return (
     <Stack data-testid="image-redact">
+      <FileError message={err} />
       {!bitmap ? (
         <button className="relative flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)]" data-testid="redact-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>

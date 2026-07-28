@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Button, Input, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { Button, Input, Field, Stack, Seg, SegButton , FileError } from '../../components/ui'
+import { whyUnreadable } from '../../lib/imageInput'
 import { ImageEncoder } from '../../lib/imageEncoder'
 
 type Fmt = 'image/jpeg' | 'image/webp' | 'image/png'
@@ -28,6 +29,7 @@ export default function ImageCompressorTool() {
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
   const [src, setSrc] = useState<{ name: string; size: number; width: number } | null>(null)
+  const [err, setErr] = useState('')
   const [quality, setQuality] = useState(0.8)
   const [format, setFormat] = useState<Fmt>('image/jpeg')
   const [maxW, setMaxW] = useState('')
@@ -38,10 +40,12 @@ export default function ImageCompressorTool() {
   useEffect(() => () => encRef.current?.dispose(), [])
 
   async function onFile(f: File | undefined) {
-    if (!f || !f.type.startsWith('image/')) return
+    if (!f) return
+    setErr('')
     encRef.current ??= new ImageEncoder()
     const dim = await encRef.current.load(f)
-    if (dim) setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, width: dim.width })
+    if (!dim) { setErr(await whyUnreadable(f, locale)); return }
+    setSrc({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, width: dim.width })
   }
 
   // Re-encode in the worker (#154) — big images no longer jank the sliders.
@@ -63,11 +67,12 @@ export default function ImageCompressorTool() {
 
   return (
     <Stack data-testid="image-compressor">
+      <FileError message={err} />
       {!src ? (
         <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="imgcomp-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="image/*" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>

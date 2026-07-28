@@ -303,7 +303,7 @@ test.describe('tools', () => {
     await expect(page.getByTestId('remove-background')).toBeVisible()
     await expect(page.getByTestId('rmbg-drop')).toBeVisible()
     // Selecting an image shows the run button (we don't run the model in CI — heavy).
-    await page.setInputFiles('input[type=file]', { name: 'x.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') })
+    await page.setInputFiles('input[type=file]', { name: 'x.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64') })
     await expect(page.getByTestId('rmbg-run')).toBeVisible()
   })
 
@@ -1002,7 +1002,7 @@ test.describe('image format converter', () => {
       Buffer.from([0, 0, 0, 0]), Buffer.from('mif1heic'),
     ])
     await page.locator('input[type=file]').setInputFiles({ name: 'IMG_0042.HEIC', mimeType: '', buffer: heic })
-    const err = page.getByTestId('ifc-error')
+    const err = page.getByTestId('file-error')
     await expect(err).toBeVisible({ timeout: 10_000 })
     await expect(err).toContainText('HEIC')
     // Named the MIME as empty on purpose: the old guard dropped it before decoding.
@@ -1013,7 +1013,7 @@ test.describe('image format converter', () => {
     await page.locator('input[type=file]').setInputFiles({
       name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not actually a png'),
     })
-    await expect(page.getByTestId('ifc-error')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 10_000 })
   })
 
   // An image `accept` makes Chrome on Android open the gallery picker, which only
@@ -1024,3 +1024,26 @@ test.describe('image format converter', () => {
     await expect(page.locator('input[type=file]')).not.toHaveAttribute('accept', /.+/)
   })
 })
+
+// #225: the same two defects existed in every image tool. Drive each one's picker
+// with a HEIC and assert it explains itself rather than doing nothing, and that no
+// tool re-introduces an image-only `accept` (which hides Downloads on Android).
+const HEIC = () => Buffer.concat([
+  Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypheic'),
+  Buffer.from([0, 0, 0, 0]), Buffer.from('mif1heic'),
+])
+
+for (const tool of [
+  'favicon-generator', 'image-compressor', 'image-cropper', 'image-format-converter',
+  'image-redact', 'image-to-ascii', 'images-to-pdf', 'meme-generator',
+  'remove-background', 'steganography',
+]) {
+  test(`${tool}: a HEIC explains itself, and the picker isn't image-only`, async ({ page }) => {
+    await page.goto(`/en/apps/${tool}`)
+    const input = page.locator('input[type=file]').first()
+    // An image-only accept makes Android open the gallery, which never lists Downloads.
+    await expect(input).not.toHaveAttribute('accept', /^image\/\*$/)
+    await input.setInputFiles({ name: 'IMG_0042.HEIC', mimeType: '', buffer: HEIC() })
+    await expect(page.getByTestId('file-error')).toContainText('HEIC', { timeout: 15_000 })
+  })
+}
