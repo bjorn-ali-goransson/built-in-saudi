@@ -1387,4 +1387,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/todo"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/todo"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/image-rearrange/</loc>
+    <lastmod>2026-07-28</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-rearrange"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-rearrange"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-rearrange"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/image-rearrange/</loc>
+    <lastmod>2026-07-28</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-rearrange"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-rearrange"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-rearrange"/>
+  </url>
 </urlset>

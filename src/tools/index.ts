@@ -2,6 +2,7 @@ import type { Tool } from './types'
 import { imageCompressorTool } from './image-compressor/meta'
 import { imageFormatConverterTool } from './image-format-converter/meta'
 import { imageCropperTool } from './image-cropper/meta'
+import { imageRearrangeTool } from './image-rearrange/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfSplitTool } from './pdf-split/meta'
@@ -166,6 +167,7 @@ export const tools: Tool[] = [
   imageCompressorTool,
   imageFormatConverterTool,
   imageCropperTool,
+  imageRearrangeTool,
   imagesToPdfTool,
   pdfMergeTool,
   pdfSplitTool,

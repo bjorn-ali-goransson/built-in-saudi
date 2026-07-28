@@ -259,6 +259,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'قوائم المهام', description: 'قوائم مهام بسيطة تعيش في متصفحك: أضِف المهام وأنجِزها وامسح المنتهي منها. بلا حساب ودون رفع أي شيء. وإن أردت قائمة على أكثر من جهاز أو مشتركة مع آخرين لتنجزوا معًا، سجّل الدخول بحساب جوجل وفعّل المزامنة لتلك القائمة وحدها — وما عداها يبقى محليًا.' },
   },
   {
+    id: 'image-rearrange',
+    en: { name: 'Rearrange Image', description: 'Open a screenshot or photo, drag out the parts you want to move, then slide and rotate those pieces anywhere on the image — useful for tidying a screenshot, covering something up, or rearranging a layout before you send it. Runs entirely in your browser: the picture is never uploaded, and you can save the result or share it straight from your device.' },
+    ar: { name: 'إعادة ترتيب الصورة', description: 'افتح لقطة شاشة أو صورة، واسحب لتحديد الأجزاء التي تريد تحريكها، ثم انقلها وأدِرها في أي مكان على الصورة — مفيد لترتيب لقطة شاشة أو تغطية شيء أو إعادة ترتيب تصميم قبل إرساله. يعمل بالكامل في متصفحك: لا تُرفع الصورة أبدًا، ويمكنك حفظ النتيجة أو مشاركتها مباشرة.' },
+  },
+  {
     id: 'flashcards',
     en: { name: 'Flashcards', description: 'Build a deck of flip cards — a prompt on the front, the answer on the back — then study it: flip, go through in order or shuffled. Your deck is saved in this browser, nothing uploaded.' },
     ar: { name: 'البطاقات التعليمية', description: 'ابنِ مجموعة بطاقات قابلة للقلب — سؤال في الوجه وإجابة في الظهر — ثم ذاكِرها: اقلب، وتنقّل بالترتيب أو بالخلط. تُحفظ مجموعتك في هذا المتصفح، دون رفع أي شيء.' },

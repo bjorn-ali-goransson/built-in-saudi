@@ -1159,3 +1159,52 @@ test.describe('analytics', () => {
     await expect(page.getByText(/بلا كوكيز/)).toBeVisible()
   })
 })
+
+// #234: cut pieces out of an image, move and rotate them, export the result.
+test.describe('rearrange image', () => {
+  // A real 40x40 PNG (generated, not hand-written — an invented base64 silently
+  // fails to decode and the tool then shows nothing, which is confusing to debug).
+  const IMG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAIAAAADnC86AAAK+UlEQVR4nA3NkRqFMACA0SiKoiiKoiiKoiiKRtFoFI36fhhFURSNoiiKolEURVHUU9x7XuB4nofvEXiEHpFH7JF4pB6ZR+5ReJQelUft0XgIj9ZDeiiPzkN79B7GY/AYPSaP2cN6LB6rx+axexwezuP0uDxuj8fj9fg8PM/H9wl8Qp/IJ/ZJfFKfzCf3KXxKn8qn9ml8hE/rI32UT+ejfXof4zP4jD6Tz+xjfRaf1Wfz2X0OH+dz+lw+t8/j8/p8/j8O8AOCgDAgCogDkoA0IAvIA4qAMqAKqAOaABHQBsgAFdAF6IA+wAQMAWPAFDAH2IAlYA3YAvaAI8AFnAFXwB3wBLwBX/CPQ/yQICQMiULikCQkDclC8pAipAypQuqQJkSEtCEyRIV0ITqkDzEhQ8gYMoXMITZkCVlDtpA95AhxIWfIFXKHPCFvyBf+4wg/IogII6KIOCKJSCOyiDyiiCgjqog6ookQEW2EjFARXYSO6CNMxBAxRkwRc4SNWCLWiC1ijzgiXMQZcUXcEU/EG/FF/zjGjwliwpgoJo5JYtKYLCaPKWLKmCqmjmliREwbI2NUTBejY/oYEzPEjDFTzBxjY5aYNWaL2WOOGBdzxlwxd8wT88Z88T9O8BOChDAhSogTkoQ0IUvIE4qEMqFKqBOaBJHQJsgEldAl6IQ+wSQMCWPClDAn2IQlYU3YEvaEI8ElnAlXwp3wJLwJX/KPU/yUICVMiVLilCQlTclS8pQipUypUuqUJkWktCkyRaV0KTqlTzEpQ8qYMqXMKTZlSVlTtpQ95UhxKWfKlXKnPClvypf+4ww/I8gIM6KMOCPJSDOyjDyjyCgzqow6o8kQGW2GzFAZXYbO6DNMxpAxZkwZc4bNWDLWjC1jzzgyXMaZcWXcGU/Gm/Fl/zjHzwlywpwoJ85JctKcLCfPKXLKnCqnzmlyRE6bI3NUTpejc/ockzPkjDlTzpxjc5acNWfL2XOOHJdz5lw5d86T8+Z8+T8u8AuCgrAgKogLkoK0ICvIC4qCsqAqqAuaAlHQFsgCVdAV6IK+wBQMBWPBVDAX2IKlYC3YCvaCo8AVnAVXwV3wFLwFX/GPS/ySoCQsiUrikqQkLclK8pKipCypSuqSpkSUtCWyRJV0JbqkLzElQ8lYMpXMJbZkKVlLtpK95ChxJWfJVXKXPCVvyVf+4wq/IqgIK6KKuCKpSCuyiryiqCgrqoq6oqkQFW2FrFAVXYWu6CtMxVAxVkwVc4WtWCrWiq1irzgqXMVZcVXcFU/FW/FV/7jGrwlqwpqoJq5JatKarCavKWrKmqqmrmlqRE1bI2tUTVeja/oaUzPUjDVTzVxja5aatWar2WuOGldz1lw1d81T89Z89T9u8BuChrAhaogbkoa0IWvIG4qGsqFqqBuaBtHQNsgG1dA16Ia+wTQMDWPD1DA32IalYW3YGvaGo8E1nA1Xw93wNLwNX/OPBb4gEISCSBALEkEqyAS5oBCUgkpQCxqBELQCKVCCTqAFvcAIBsEomASzwAoWwSrYBLvgEDjBKbgEt+ARvIJP/OMWvyVoCVuilrglaUlbspa8pWgpW6qWuqVpES1ti2xRLV2LbulbTMvQMrZMLXOLbVla1patZW85WlzL2XK13C1Py9vytf9Y4ksCSSiJJLEkkaSSTJJLCkkpqSS1pJEISSuREiXpJFrSS4xkkIySSTJLrGSRrJJNsksOiZOckktySx7JK/nkP1b4ikARKiJFrEgUqSJT5IpCUSoqRa1oFELRKqRCKTqFVvQKoxgUo2JSzAqrWBSrYlPsikPhFKfiUtyKR/EqPvWPO/yOoCPsiDrijqQj7cg68o6io+yoOuqOpkN0tB2yQ3V0Hbqj7zAdQ8fYMXXMHbZj6Vg7to694+hwHWfH1XF3PB1vx9f9Y42vCTShJtLEmkSTajJNrik0pabS1JpGIzStRmqUptNoTa8xmkEzaibNrLGaRbNqNs2uOTROc2ouza15NK/m0/+4x+8JesKeqCfuSXrSnqwn7yl6yp6qp+5pekRP2yN7VE/Xo3v6HtMz9Iw9U8/cY3uWnrVn69l7jh7Xc/ZcPXfP0/P2fP0/NviGwBAaIkNsSAypITPkhsJQGipDbWgMwtAapEEZOoM29AZjGAyjYTLMBmtYDKthM+yGw+AMp+Ey3IbH8Bo+848H/IFgIByIBuKBZCAdyAbygWKgHKgG6oFmQAy0A3JADXQDeqAfMAPDwDgwDcwDdmAZWAe2gX3gGHAD58A1cA88A+/AN/zjEX8kGAlHopF4JBlJR7KRfKQYKUeqkXqkGREj7YgcUSPdiB7pR8zIMDKOTCPziB1ZRtaRbWQfOUbcyDlyjdwjz8g78o3/eMKfCCbCiWginkgm0olsIp8oJsqJaqKeaCbERDshJ9REN6En+gkzMUyME9PEPGEnlol1YpvYJ44JN3FOXBP3xDPxTnzTP57xZ4KZcCaaiWeSmXQmm8lniplyppqpZ5oZMdPOyBk1083omX7GzAwz48w0M8/YmWVmndlm9pljxs2cM9fMPfPMvDPf/I8tviWwhJbIElsSS2rJLLmlsJSWylJbGouwtBZpUZbOoi29xVgGy2iZLLPFWhbLatksu+WwOMtpuSy35bG8ls/+4wV/IVgIF6KFeCFZSBeyhXyhWCgXqoV6oVkQC+2CXFAL3YJe6BfMwrAwLkwL84JdWBbWhW1hXzgW3MK5cC3cC8/Cu/At/3jFXwlWwpVoJV5JVtKVbCVfKVbKlWqlXmlWxEq7IlfUSreiV/oVszKsjCvTyrxiV5aVdWVb2VeOFbdyrlwr98qz8q586z/e8DeCjXAj2og3ko10I9vIN4qNcqPaqDeaDbHRbsgNtdFt6I1+w2wMG+PGtDFv2I1lY93YNvaNY8NtnBvXxr3xbLwb3/aPd/ydYCfciXbinWQn3cl28p1ip9ypduqdZkfstDtyR+10O3qn3zE7w864M+3MO3Zn2Vl3tp1959hxO+fOtXPvPDvvzrf/4wP/IDgID6KD+CA5SA+yg/ygOCgPqoP6oDkQB+2BPFAH3YE+6A/MwXAwHkwH84E9WA7Wg+1gPzgO3MF5cB3cB8/Be/Ad/9jhOwJH6IgcsSNxpI7MkTsKR+moHLWjcQhH65AO5egc2tE7jGNwjI7JMTusY3Gsjs2xOw6Hc5yOy3E7Hsfr+Nw/PvFPgpPwJDqJT5KT9CQ7yU+Kk/KkOqlPmhNx0p7IE3XSneiT/sScDCfjyXQyn9iT5WQ92U72k+PEnZwn18l98py8J9/5jy/8i+AivIgu4ovkIr3ILvKL4qK8qC7qi+ZCXLQX8kJddBf6or8wF8PFeDFdzBf2YrlYL7aL/eK4cBfnxXVxXzwX78V3/eMb/ya4CW+im/gmuUlvspv8prgpb6qb+qa5ETftjbxRN92NvulvzM1wM95MN/ONvVlu1pvtZr85btzNeXPd3DfPzXvz3f/4wX8IHsKH6CF+SB7Sh+whfygeyofqoX5oHsRD+yAf1EP3oB/6B/MwPIwP08P8YB+Wh/Vhe9gfjgf3cD5cD/fD8/A+fM8/fvFfgpfwJXqJX5KX9CV7yV+Kl/Kleqlfmhfx0r7IF/XSveiX/sW8DC/jy/Qyv9iX5WV92V72l+PFvZwv18v98ry8L9/7jz/8j+Aj/Ig+4o/kI/3IPvKP4qP8qD7qj+ZDfLQf8kN9dB/6o/8wH8PH+DF9zB/2Y/lYP7aP/eP4cB/nx/Vxfzwf78f38QN7Pdb59jEZyQAAAABJRU5ErkJggg==',
+    'base64')
+
+  async function load(page: import('@playwright/test').Page) {
+    await page.goto('/en/apps/image-rearrange')
+    await page.locator('input[type=file]').setInputFiles({ name: 'shot.png', mimeType: 'image/png', buffer: IMG })
+    await expect(page.getByTestId('rearr-canvas')).toBeVisible({ timeout: 15_000 })
+  }
+
+  test('dragging on the image cuts out a piece', async ({ page }) => {
+    await load(page)
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+    const box = (await page.getByTestId('rearr-canvas').boundingBox())!
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.15)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, { steps: 8 })
+    await page.mouse.up()
+    await expect(page.getByTestId('rearr-count')).toContainText('Pieces: 1')
+    // A selected piece can be removed again.
+    await expect(page.getByTestId('rearr-remove')).toBeVisible()
+    await page.getByTestId('rearr-remove').click()
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+  })
+
+  test('a tiny tap does not create a stray piece', async ({ page }) => {
+    await load(page)
+    const box = (await page.getByTestId('rearr-canvas').boundingBox())!
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+  })
+
+  test('the result downloads as a PNG', async ({ page }) => {
+    await load(page)
+    const box = (await page.getByTestId('rearr-canvas').boundingBox())!
+    await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 6 })
+    await page.mouse.up()
+    const dl = page.waitForEvent('download')
+    await page.getByTestId('rearr-save').click()
+    expect((await dl).suggestedFilename()).toBe('rearranged.png')
+  })
+})
