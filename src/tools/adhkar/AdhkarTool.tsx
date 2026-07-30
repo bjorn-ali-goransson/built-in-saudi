@@ -146,9 +146,9 @@ export default function AdhkarTool() {
           const pct = Math.min(100, Math.round((cur / d.count) * 100))
           return (
             <li key={d.id}>
-              {/* The whole card is the counter — tap it to count one. Not-done
-                  carries a prominent 2px border (still to do); once complete it
-                  drops to the plain 1px static border. */}
+              {/* The whole card is the counter — tap it to count one. The border
+                  stays a constant 2px and only its colour changes on completion
+                  (prominent green → soft line) so nothing shifts when it's done. */}
               <div
                 role="button"
                 tabIndex={0}
@@ -156,7 +156,7 @@ export default function AdhkarTool() {
                 aria-label={`${d.translit || d.en} — ${s.progress(cur, d.count)}`}
                 onClick={() => tap(d.id, d.count)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(d.id, d.count) } }}
-                className={`rounded-md bg-[var(--surface)] p-4 flex flex-col gap-3 cursor-pointer select-none transition-[border-color,opacity] duration-150 ${done ? 'border border-[color:var(--line-soft)] opacity-70' : 'border-2 border-green-600'}`}
+                className={`rounded-md bg-[var(--surface)] p-4 flex flex-col gap-3 cursor-pointer select-none border-2 transition-[border-color,opacity] duration-150 ${done ? 'border-[color:var(--line-soft)] opacity-70' : 'border-green-600'}`}
               >
                 <div className="flex items-center justify-end">
                   <span className="text-[0.75rem] font-semibold text-ink-faint tabular-nums">{s.times(d.count)}</span>

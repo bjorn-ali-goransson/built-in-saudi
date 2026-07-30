@@ -200,7 +200,7 @@ function StepCard({ step, done, onToggle, locale, s }: {
       aria-label={step.title[locale]}
       onClick={onToggle}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
-      className={`rounded-md bg-[var(--surface)] p-4 flex flex-col gap-3 cursor-pointer select-none transition-[border-color,opacity] duration-150 ${done ? 'border border-[color:var(--line-soft)] opacity-60' : 'border-2 border-green-600'}`}
+      className={`rounded-md bg-[var(--surface)] p-4 flex flex-col gap-3 cursor-pointer select-none border-2 transition-[border-color,opacity] duration-150 ${done ? 'border-[color:var(--line-soft)] opacity-60' : 'border-green-600'}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
