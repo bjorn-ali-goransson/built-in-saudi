@@ -196,6 +196,50 @@ export function useSpeaking(stream: MediaStream | null, active: boolean): boolea
   return speaking
 }
 
+// Multi-stream voice-activity detection (#239). Returns the set of ids whose audio
+// is currently above the speaking threshold, so the caller can highlight whoever is
+// talking. Keeps one analyser per id and rebuilds only when the set of ids or their
+// audio tracks changes — a roster re-render doesn't tear every AudioContext down.
+// Same tap-only approach as useSpeaking: never connected to output, so no echo.
+export function useSpeakingSet(streams: [string, MediaStream][]): Set<string> {
+  const [speaking, setSpeaking] = useState<Set<string>>(() => new Set())
+  // A cheap signature so the effect only re-runs when a stream/track actually changes.
+  const key = streams.map(([id, st]) => `${id}:${st.getAudioTracks()[0]?.id || ''}`).join('|')
+  useEffect(() => {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AC) return
+    let ctx: AudioContext
+    try { ctx = new AC() } catch { return }
+    ctx.resume?.().catch(() => {}) // may start suspended before a gesture
+    const nodes: { id: string; analyser: AnalyserNode; data: Uint8Array<ArrayBuffer>; lastAbove: number }[] = []
+    for (const [id, st] of streams) {
+      const track = st.getAudioTracks()[0]
+      if (!track) continue
+      try {
+        const analyser = ctx.createAnalyser(); analyser.fftSize = 512
+        ctx.createMediaStreamSource(new MediaStream([track])).connect(analyser)
+        nodes.push({ id, analyser, data: new Uint8Array(analyser.frequencyBinCount), lastAbove: 0 })
+      } catch { /* a stream with no live audio */ }
+    }
+    if (nodes.length === 0) { setSpeaking((prev) => (prev.size ? new Set() : prev)); return () => { ctx.close().catch(() => {}) } }
+    const iv = window.setInterval(() => {
+      const now = ctx.currentTime * 1000
+      const next = new Set<string>()
+      for (const n of nodes) {
+        n.analyser.getByteTimeDomainData(n.data)
+        let sum = 0
+        for (let i = 0; i < n.data.length; i++) { const v = (n.data[i] - 128) / 128; sum += v * v }
+        if (Math.sqrt(sum / n.data.length) > 0.035) n.lastAbove = now
+        if (now - n.lastAbove < 350) next.add(n.id) // short linger so it doesn't strobe
+      }
+      setSpeaking((prev) => (prev.size === next.size && [...next].every((x) => prev.has(x)) ? prev : next))
+    }, 100)
+    return () => { window.clearInterval(iv); ctx.close().catch(() => {}) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return speaking
+}
+
 // A live read-out of the call's connection + media state, so a tester can screenshot
 // exactly what's happening (is the mic acquired? is audio being sent/received? did
 // the peer connection actually connect?). Toggled from the participants panel.
@@ -225,7 +269,7 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
 
 // A participant square. The <video> stays mounted whenever there's a stream; it's
 // always muted (audio is handled by the AudioSinks above), the avatar overlays it.
-export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string }) {
+export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel, speaking }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string; speaking?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
@@ -241,13 +285,13 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
     return () => { ro.disconnect(); onSize(0) }
   }, [onSize])
   return (
-    <div ref={box} className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''}`} title={idle ? idleLabel : undefined}>
+    <div ref={box} data-speaking={speaking ? '1' : undefined} className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''} ${speaking ? 'ring-2 ring-inset ring-green-400' : ''}`} title={idle ? idleLabel : undefined}>
       {stream && <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
       {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
-      <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 bg-black/45 text-white text-[0.72rem]">
-        {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className="w-3.5 h-3.5 shrink-0" />}
-        <span className="truncate flex-1">{name}{self ? ' ·' : ''}</span>
+      <div className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 text-white text-[0.72rem] transition-colors ${speaking ? 'bg-green-700/75' : 'bg-black/45'}`}>
+        {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className={`w-3.5 h-3.5 shrink-0 ${speaking ? 'text-green-100' : ''}`} />}
+        <span className={`truncate flex-1 ${speaking ? 'font-semibold' : ''}`}>{name}{self ? ' ·' : ''}</span>
         {/* They publish a call-me link → offer to keep them (#221). Stays visible
             once saved, so it reads as state rather than a control that vanished. */}
         {!self && onAdd && (

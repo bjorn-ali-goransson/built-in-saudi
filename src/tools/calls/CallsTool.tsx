@@ -12,7 +12,7 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
+  DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
@@ -731,6 +731,11 @@ export default function CallsTool() {
   // in-use indicator clears when muted/off). Revert the button if permission is denied.
   async function toggleMic() { const v = !mic; setMic(v); const ok = await rtc.current?.toggleMic(v); if (v && ok === false) setMic(false) }
   const speaking = useSpeaking(local, mic) // flash the mic icon while the local user talks
+  // Who's currently talking, across all connected peers (#239). Drives the per-tile
+  // highlight and the floating "who's talking" badge on the stage — the latter matters
+  // because the video grid lives in the dock, which may be closed or on the chat tab.
+  const speakingIds = useSpeakingSet([...peers])
+  const speakingNames = inCallPeers.filter(([id]) => speakingIds.has(id)).map(([, i]) => i.name || '•')
   async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
   function screenToast(msg: string) { setToast(msg); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
   async function toggleScreen() {
@@ -1564,6 +1569,16 @@ export default function CallsTool() {
               </span>
             ))}
           </div>
+          {/* Who's talking (#239): a floating badge naming the current speaker(s).
+              The video tiles live in the dock, so this is the only on-stage cue when
+              the dock is closed or showing chat. Self is excluded — you know when
+              you're the one talking; the mic button already pulses. */}
+          {speakingNames.length > 0 && (
+            <div className="absolute bottom-3 start-3 z-30 flex items-center gap-1.5 max-w-[70%] px-2.5 h-8 rounded-md bg-black/60 text-sand-100 text-[0.8rem] pointer-events-none" data-testid="call-speaking">
+              <MicIcon className="w-3.5 h-3.5 text-green-300 shrink-0 [animation:mic-pulse_0.9s_ease-in-out_infinite]" />
+              <span className="truncate font-medium">{speakingNames.join(', ')}</span>
+            </div>
+          )}
           {dragOver && (
             <div className="absolute inset-0 z-40 p-4 pointer-events-none" data-testid="call-dropzone">
               <div className="w-full h-full grid place-items-center rounded-xl border-2 border-dashed border-green-500 bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)]">
@@ -1669,9 +1684,9 @@ export default function CallsTool() {
             {/* Full-bleed elastic video grid: tiles fill their cells (no gaps/margins),
                 the layout (cols×rows) adapts to the participant count + maximise. */}
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
-              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
+              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} speaking={speaking && mic} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)}
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
                   onAdd={info.link ? () => (contactCodes.has(info.link!) ? removeContact(info.link!) : addContact(info.link!, info.name || '')) : undefined}
                   added={!!info.link && contactCodes.has(info.link)} addLabel={s.addContact} addedLabel={s.savedContact} />
               ))}
