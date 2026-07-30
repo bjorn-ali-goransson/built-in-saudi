@@ -283,20 +283,25 @@ http('callDm', async (req, res) => {
     // push payload just like text does.
     const rawReact = b.react && typeof b.react === 'object' ? b.react : null
     const react = rawReact ? { id: clean(rawReact.id, 60), emoji: clean(rawReact.emoji, 16) } : null
-    if (!code || (!text && !(react && react.id && react.emoji))) {
-      return res.status(400).json({ error: 'code and text (or react) required' })
+    // A voice note (#232): ONLY the metadata rides the push — the audio itself is
+    // transferred peer-to-peer and never touches the server, which is what keeps this
+    // under the payload cap and true to "nothing stored".
+    const rawVoice = b.voice && typeof b.voice === 'object' ? b.voice : null
+    const voice = rawVoice ? { dur: Math.max(0, Math.min(3600, Number(rawVoice.dur) || 0)), mime: clean(rawVoice.mime, 40) || 'audio/webm', pending: true } : null
+    if (!code || (!text && !voice && !(react && react.id && react.emoji))) {
+      return res.status(400).json({ error: 'code and text, voice or react required' })
     }
     const ref = db.collection(LINKS).doc(code)
     const d = await liveLink(ref)
     if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
     const payload = JSON.stringify({
       title: name,
-      body: react ? `${react.emoji}` : text.slice(0, 120),
+      body: react ? `${react.emoji}` : voice ? 'Voice note' : text.slice(0, 120),
       // Per-sender tag, so several messages from one person collapse into the
       // latest notification rather than stacking up.
       tag: `dm-${from || 'anon'}`,
       url: `${SITE}/apps/calls?dm=${from || ''}`,
-      dm: { id, from, name, text, at: Date.now(), react },
+      dm: { id, from, name, text, at: Date.now(), react, voice },
     })
     const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
     res.json({ ok: true, delivered })

@@ -80,6 +80,24 @@ export type DataMsg =
   | { t: 'file-end'; id: string }
   // Switch the shared main stage for everyone: a file id, or '' for the whiteboard.
   | { t: 'view'; file: string }
+  // Contact-request handshake (#229): ask a peer with no call-me link to become
+  // saveable. They approve (claim a link + enable push, hand the code back) or
+  // decline. Directed at a single peer via sendTo, not broadcast.
+  | { t: 'contact-req'; name: string }
+  | { t: 'contact-approve'; link: string; name: string }
+  | { t: 'contact-decline'; name: string }
+  // Live location sharing (#235): a peer's current position (broadcast while sharing),
+  // a stop signal, and shared map pins. Coordinates only — P2P, never the server.
+  | { t: 'geo'; lat: number; lng: number; acc?: number }
+  | { t: 'geo-stop' }
+  | { t: 'pin'; id: string; lat: number; lng: number; label?: string }
+  | { t: 'pin-remove'; id: string }
+  // DM voice notes (#232): a chunked audio transfer over a data-only rendezvous
+  // connection (no call). vn-start/vn-end bracket the binary chunks; vn-ack lets the
+  // sender mark it delivered and drop it from its outbox.
+  | { t: 'vn-start'; id: string; mime: string; dur: number; size: number }
+  | { t: 'vn-end'; id: string }
+  | { t: 'vn-ack'; id: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
@@ -419,6 +437,31 @@ export class CallRoom {
 
   // ---- app-facing send (only to peers actually in the call) ------------------
   broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
+  /** Send an app data message to ONE peer — the contact-request handshake (#229). */
+  sendTo(id: string, msg: DataMsg) { const p = this.peers.get(id); if (p?.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(JSON.stringify(msg)) }
+
+  // ---- DM voice-note rendezvous (#232) --------------------------------------
+  // These bypass the in-call gate on purpose: the rendezvous peers connect
+  // data-only and never join a call, so `info.inCall` is always false.
+  /** Any peer we have a live data channel to (regardless of in-call state). */
+  hasOpenData(): boolean { return [...this.peers.values()].some((p) => p.dc?.readyState === 'open') }
+  /** Send a control/app message to every open data channel, ignoring in-call state. */
+  sendData(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open') p.dc.send(s) }
+  /** Chunk a voice-note blob to every open data channel. Returns false if nobody is
+   *  connected yet, so the caller keeps it queued. */
+  async sendVoiceNote(id: string, blob: Blob, mime: string, dur: number): Promise<boolean> {
+    const CH = 16 * 1024
+    const open = () => [...this.peers.values()].filter((p) => p.dc?.readyState === 'open')
+    if (open().length === 0) return false
+    this.sendData({ t: 'vn-start', id, mime, dur, size: blob.size })
+    const buf = await blob.arrayBuffer()
+    for (let o = 0; o < buf.byteLength; o += CH) {
+      const slice = buf.slice(o, o + CH)
+      for (const p of open()) { while (p.dc!.bufferedAmount > 4 * 1024 * 1024) await sleep(40); p.dc!.send(slice) }
+    }
+    this.sendData({ t: 'vn-end', id })
+    return true
+  }
   // `id` is shared with the sender's local file entry so both sides key that file's
   // whiteboard by the same board id (`f:<id>`) and its annotations sync.
   async sendFile(file: File, id: string) {

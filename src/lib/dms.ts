@@ -26,6 +26,11 @@ export interface Dm {
   mine?: boolean
   /** Set only on the wire: this push is a reaction to `react.id`, not a message. */
   react?: { id: string; emoji: string } | null
+  /** A voice note (#232). The audio itself lives in IndexedDB keyed by this message's
+   *  `id` (never in localStorage, never on the server); this only carries the metadata.
+   *  `pending` means the audio hasn't transferred P2P yet — for the sender it's
+   *  awaiting delivery, for the recipient it's awaiting the other side coming online. */
+  voice?: { dur: number; mime: string; pending?: boolean }
 }
 
 const KEY = 'bis-call-dms'
@@ -44,6 +49,7 @@ export function listDms(): Dm[] {
         id: m.id, from: String(m.from || ''), name: String(m.name || ''),
         text: String(m.text || ''), at: Number(m.at) || 0, mine: !!m.mine,
         reactions: (m.reactions && typeof m.reactions === 'object') ? m.reactions : undefined,
+        voice: (m.voice && typeof m.voice === 'object') ? { dur: Number(m.voice.dur) || 0, mime: String(m.voice.mime || 'audio/webm'), pending: !!m.voice.pending } : undefined,
       }))
       .sort((a, b) => a.at - b.at)
   } catch { return [] }
@@ -62,6 +68,27 @@ export function addDms(entries: Dm[]): Dm[] {
   const by = new Map(listDms().map((m) => [m.id, m]))
   for (const e of entries) by.set(e.id, { ...by.get(e.id), ...e })
   return write([...by.values()])
+}
+
+/** Flip a voice note's pending flag once its audio has transferred P2P (#232). */
+export function setVoicePending(id: string, pending: boolean): Dm[] {
+  return write(listDms().map((m) => (m.id === id && m.voice ? { ...m, voice: { ...m.voice, pending } } : m)))
+}
+
+/** Notify a contact that a voice note is waiting — metadata only, the audio goes P2P. */
+export async function sendVoiceNotice(code: string, myName: string, meta: { id: string; dur: number; mime: string }): Promise<SendResult> {
+  if (!code) return { ok: false, delivered: 0 }
+  let from = ''
+  try { from = getMyCallLink()?.code || '' } catch { /* */ }
+  try {
+    const res = await fetch(`${FN}/call-dm`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, from, name: myName || 'Someone', id: meta.id, voice: { dur: meta.dur, mime: meta.mime } }),
+    })
+    if (!res.ok) return { ok: false, delivered: 0 }
+    const d = await res.json().catch(() => ({}))
+    return { ok: true, delivered: Number(d.delivered) || 0 }
+  } catch { return { ok: false, delivered: 0 } }
 }
 
 export const threadWith = (code: string) => listDms().filter((m) => m.from === code)

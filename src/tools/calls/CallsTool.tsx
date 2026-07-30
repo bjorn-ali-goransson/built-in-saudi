@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Spinner } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon } from '../../components/icons'
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
@@ -12,11 +12,14 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
+  DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
 import { Contacts } from './Contacts'
+import { CallHistory } from './CallHistory'
+import { LocationMap, type GeoPin } from './LocationMap'
+import { addCall } from '../../lib/callHistory'
 import { useContacts } from '../../lib/contacts'
 import { claimCallLink, getMyCallLink, reportMissedCall, ringCallLink } from '../../lib/callLink'
 
@@ -120,6 +123,10 @@ export default function CallsTool() {
   // Saved contacts (#221): people we've called who publish a call-me link.
   const { contacts, add: addContact, remove: removeContact } = useContacts()
   const contactCodes = new Set(contacts.map((c) => c.code))
+  // In-call contact requests (#229): peers we've asked to become saveable (they
+  // publish no link yet), and an incoming ask awaiting our explicit approval.
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
+  const [contactReq, setContactReq] = useState<{ id: string; name: string } | null>(null)
   const [callBackState, setCallBackState] = useState<'' | 'busy' | 'done' | 'err'>('')
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -162,7 +169,14 @@ export default function CallsTool() {
   const [shareUrl, setShareUrl] = useState('')
   const [shareQr, setShareQr] = useState('')
   const [copiedShare, setCopiedShare] = useState(false)
-  const [view, setView] = useState<'board' | 'file'>('board')
+  const [view, setView] = useState<'board' | 'file' | 'loc'>('board')
+  // Live location sharing (#235): peers' latest positions, shared pins, and whether
+  // WE are broadcasting our own position. All peer-to-peer, coordinates only.
+  const [geos, setGeos] = useState<Map<string, { lat: number; lng: number; acc?: number }>>(new Map())
+  const [pins, setPins] = useState<GeoPin[]>([])
+  const [myGeo, setMyGeo] = useState<{ lat: number; lng: number; acc?: number } | null>(null)
+  const [sharingLoc, setSharingLoc] = useState(false)
+  const geoWatch = useRef<number | undefined>(undefined)
   const [files, setFiles] = useState<{ id: string; name: string; url: string; mime: string; from: string }[]>([])
   const [selected, setSelected] = useState<string>('')
   // Unseen-activity badges (p=participants, c=chat, f=files) — set when a panel is
@@ -186,6 +200,7 @@ export default function CallsTool() {
   const fileRef = useRef<HTMLInputElement>(null)
   const rosterRef = useRef<Map<string, PeerInfo>>(new Map())
   const chatRef = useRef<ChatItem[]>([])
+  const pinsRef = useRef<GeoPin[]>([])
 
   // whiteboard (object model synced P2P). Each context — the pure board, each
   // shared file, and a screen-share — has its OWN board, keyed below.
@@ -302,6 +317,7 @@ export default function CallsTool() {
 
   rosterRef.current = roster
   chatRef.current = chat
+  pinsRef.current = pins
   if (dockMode) lastPanel.current = dockMode
   const phaseRef = useRef(phase); phaseRef.current = phase
   // "Checking again" spinner: shown once half the current relay-poll delay has
@@ -351,6 +367,10 @@ export default function CallsTool() {
       const boards = [...objects.current.entries()].filter(([, o]) => o.length) as [string, WbObj[]][]
       if (boards.length) rtc.current?.broadcast({ t: 'wb-sync', boards })
     }
+    // Re-share existing pins to a fresh joiner (#235) — positions re-broadcast
+    // continuously on their own, but a pin is one-shot, so a late arrival would miss
+    // it. Everyone resends; receivers dedupe by id. Guarded to growth events only.
+    if (n > prevInCall.current) for (const p of pinsRef.current) rtc.current?.broadcast({ t: 'pin', ...p })
     prevInCall.current = n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inCallPeers.length, isGuest])
@@ -378,7 +398,27 @@ export default function CallsTool() {
       for (const [k, objs] of m.boards) { const arr = boardOf(k); const have = new Set(arr.map((o) => o.id)); for (const o of objs) if (!have.has(o.id)) arr.push(o) }
       redraw()
     }
-    else if (m.t === 'view') { if (m.file) openFile(m.file); else { setView('board'); setSelected('') } }
+    else if (m.t === 'view') { if (m.file === '@loc') setView('loc'); else if (m.file) openFile(m.file); else { setView('board'); setSelected('') } }
+    // Location sharing (#235): track peers' positions and shared pins.
+    else if (m.t === 'geo') setGeos((g) => new Map(g).set(id, { lat: m.lat, lng: m.lng, acc: m.acc }))
+    else if (m.t === 'geo-stop') setGeos((g) => { const n = new Map(g); n.delete(id); return n })
+    else if (m.t === 'pin') setPins((ps) => (ps.some((p) => p.id === m.id) ? ps : [...ps, { id: m.id, lat: m.lat, lng: m.lng, label: m.label }]))
+    else if (m.t === 'pin-remove') setPins((ps) => ps.filter((p) => p.id !== m.id))
+    // Contact-request handshake (#229). If we already publish a link, just hand it
+    // back (no consent needed — it's already public); otherwise ask the user.
+    else if (m.t === 'contact-req') {
+      const mine = getMyCallLink()
+      if (mine?.code) { rtc.current?.sendTo(id, { t: 'contact-approve', link: mine.code, name: name || s.you }); return }
+      setContactReq({ id, name: m.name || nameOf(id) }); notify('p', `${m.name || nameOf(id)} · ${s.askToSave}`)
+    }
+    else if (m.t === 'contact-approve') {
+      setRequestedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+      if (m.link) { addContact(m.link, m.name || nameOf(id)); setToast(s.contactSaved(m.name || nameOf(id))); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000) }
+    }
+    else if (m.t === 'contact-decline') {
+      setRequestedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+      setToast(s.contactDeclined(m.name || nameOf(id))); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000)
+    }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
       const f = incoming.current.get(m.id); if (!f) return
@@ -413,7 +453,7 @@ export default function CallsTool() {
           const info = rosterRef.current.get(pid)
           if (info && info.role === 'guest') setLeftWaiters((l) => l.some((w) => w.id === pid) ? l : [...l, { id: pid, name: info.name }])
         }
-        setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m })
+        setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }); setGeos((g) => { const n = new Map(g); n.delete(pid); return n })
       },
       onData, onFileChunk,
       onPeer: (id, state) => {
@@ -565,8 +605,51 @@ export default function CallsTool() {
   async function admit(id: string) {
     try { await rtc.current?.admit(id); setPhase('live') } catch { mediaError() }
   }
+  // In-call contact controls (#229). Saving a peer who publishes a link is instant;
+  // one who doesn't is asked to approve (which claims a link + push for them).
+  function addOrAskContact(id: string, info: PeerInfo) {
+    if (info.link) { if (contactCodes.has(info.link)) removeContact(info.link); else addContact(info.link, info.name || ''); return }
+    if (requestedIds.has(id)) return
+    rtc.current?.sendTo(id, { t: 'contact-req', name: name || s.you })
+    setRequestedIds((prev) => new Set(prev).add(id))
+  }
+  async function approveContact() {
+    if (!contactReq) return
+    const req = contactReq; setContactReq(null)
+    // Claim a personal link on THIS device (subscribes push + registers) so they can
+    // reach us later, then hand the code back. Denied push → tell them nothing saved.
+    const code = await claimCallLink(name || s.you)
+    if (code) { rtc.current?.setMyLink(code); setHasCallLink(true); rtc.current?.sendTo(req.id, { t: 'contact-approve', link: code, name: name || s.you }) }
+    else { rtc.current?.sendTo(req.id, { t: 'contact-decline', name: name || s.you }); setToast(s.contactNoPush); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
+  }
+  function declineContact() {
+    if (contactReq) rtc.current?.sendTo(contactReq.id, { t: 'contact-decline', name: name || s.you })
+    setContactReq(null)
+  }
 
-  useEffect(() => () => { rtc.current?.leave() }, [])
+  useEffect(() => () => { rtc.current?.leave(); stopLocationWatch() }, [])
+  // Call history (#231): clock a call from when we go live to when we leave/it ends,
+  // remembering everyone who was in it, and save the entry on the way out — including
+  // an unmount mid-call (tab close) or a Back-button pop to the lobby.
+  const callStartRef = useRef(0)
+  const callNamesRef = useRef<Set<string>>(new Set())
+  const callRoleRef = useRef<'host' | 'guest'>('guest')
+  const recordCall = useCallback(() => {
+    const start = callStartRef.current
+    if (!start) return
+    callStartRef.current = 0
+    const end = Date.now()
+    if (end - start < 2000) return // ignore misfires / an instant hang-up
+    addCall({ id: `c${start}`, at: start, end, role: callRoleRef.current, names: [...callNamesRef.current] })
+  }, [])
+  useEffect(() => {
+    if (phase === 'live') {
+      if (!callStartRef.current) { callStartRef.current = Date.now(); callNamesRef.current = new Set(); callRoleRef.current = isGuest ? 'guest' : 'host' }
+    } else recordCall() // any non-live phase (ended, or Back to lobby) closes the entry
+  }, [phase, isGuest, recordCall])
+  // Accumulate participants throughout the call, so someone who left early still counts.
+  useEffect(() => { if (callStartRef.current) for (const [, i] of roster) if (i.inCall && i.name) callNamesRef.current.add(i.name) }, [roster])
+  useEffect(() => () => recordCall(), [recordCall])
   // Tell the deploy auto-reload to hold off while we're engaged — including a
   // call-link caller waiting to be connected (#195). Kept out of the cleanup so a
   // phase→phase transition never dips to "not in a call" (which would let a deferred
@@ -658,7 +741,7 @@ export default function CallsTool() {
     rtc.current?.requestSize(id, Math.max(cur.tile, cur.stage))
   }, [])
 
-  function resetLive() { setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
+  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
   function hangup() {
     if (!isGuest) {
       // Host leaving ends the meeting for everyone (the relay is marked closed, so
@@ -731,6 +814,11 @@ export default function CallsTool() {
   // in-use indicator clears when muted/off). Revert the button if permission is denied.
   async function toggleMic() { const v = !mic; setMic(v); const ok = await rtc.current?.toggleMic(v); if (v && ok === false) setMic(false) }
   const speaking = useSpeaking(local, mic) // flash the mic icon while the local user talks
+  // Who's currently talking, across all connected peers (#239). Drives the per-tile
+  // highlight and the floating "who's talking" badge on the stage — the latter matters
+  // because the video grid lives in the dock, which may be closed or on the chat tab.
+  const speakingIds = useSpeakingSet([...peers])
+  const speakingNames = inCallPeers.filter(([id]) => speakingIds.has(id)).map(([, i]) => i.name || '•')
   async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
   function screenToast(msg: string) { setToast(msg); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
   async function toggleScreen() {
@@ -787,9 +875,31 @@ export default function CallsTool() {
   // for everyone — broadcast so peers follow. Remote 'view' messages call the local
   // setters directly (no rebroadcast).
   function syncView(file: string) {
-    if (file) openFile(file); else { setView('board'); setSelected('') }
+    if (file === '@loc') setView('loc'); else if (file) openFile(file); else { setView('board'); setSelected('') }
     rtc.current?.broadcast({ t: 'view', file })
   }
+  // Live location (#235). Toggle GPS sharing: watchPosition broadcasts our position
+  // to in-call peers (coordinates only, P2P), and opening the map switches the shared
+  // stage there for everyone — like dropping a file does.
+  function stopLocationWatch() {
+    if (geoWatch.current != null) { try { navigator.geolocation.clearWatch(geoWatch.current) } catch { /* */ } geoWatch.current = undefined }
+  }
+  function toggleLocation() {
+    if (sharingLoc) { stopLocationWatch(); setSharingLoc(false); setMyGeo(null); rtc.current?.broadcast({ t: 'geo-stop' }); return }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) { screenToast(s.locUnsupported); return }
+    setSharingLoc(true)
+    geoWatch.current = navigator.geolocation.watchPosition(
+      (pos) => { const g = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }; setMyGeo(g); rtc.current?.broadcast({ t: 'geo', ...g }) },
+      () => { screenToast(s.locDenied); stopLocationWatch(); setSharingLoc(false); setMyGeo(null) },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    )
+  }
+  function openLocation() { syncView('@loc') }
+  function dropPin(lat: number, lng: number) {
+    const pin: GeoPin = { id: `p${Date.now()}${Math.random().toString(36).slice(2, 6)}`, lat, lng, label: name || s.you }
+    setPins((ps) => [...ps, pin]); rtc.current?.broadcast({ t: 'pin', ...pin })
+  }
+  function removePin(id: string) { setPins((ps) => ps.filter((p) => p.id !== id)); rtc.current?.broadcast({ t: 'pin-remove', id }) }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
   const seenPanel = (m: 'p' | 'c' | 'r') => { if (m === 'p') setUnseen((u) => ({ ...u, p: 0 })); else if (m === 'c') setUnseen((u) => ({ ...u, c: 0 })) }
   // Open a dock mode (participants / chat / reactions), or close it if it's already showing.
@@ -1053,6 +1163,20 @@ export default function CallsTool() {
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
+  // A peer asked to be saved as a contact but publishes no link — get explicit
+  // consent before claiming a link + push on their behalf (#229).
+  const contactReqEl = contactReq ? (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50" onClick={declineContact} data-testid="call-contact-req">
+      <div className="w-full sm:max-w-[26rem] bg-paper text-ink border-t sm:border border-[color:var(--line-soft)] sm:rounded-lg p-4 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[0.98rem] font-semibold leading-snug">{s.contactReqTitle(contactReq.name || '•')}</p>
+        <p className="text-[0.85rem] text-ink-soft leading-relaxed">{s.contactReqBody}</p>
+        <div className="flex items-center gap-2">
+          <Button variant="primary" onClick={approveContact} data-testid="call-contact-approve">{s.contactApprove}</Button>
+          <button type="button" onClick={declineContact} data-testid="call-contact-decline" className="ms-auto text-[0.82rem] text-ink-faint hover:text-ink bg-transparent border-0 cursor-pointer">{s.contactDeclineBtn}</button>
+        </div>
+      </div>
+    </div>
+  ) : null
   // A call-link caller retries by CALLING the owner again (named, if known) — a plain
   // "Rejoin/Call again" for anyone else (#199, #193).
   const callAgainLabel = ringCode && linkOwnerName ? s.callNameAgain(linkOwnerName) : s.callAgain
@@ -1202,6 +1326,8 @@ export default function CallsTool() {
                   </div>
                 )}
               </div>
+              {/* Recent calls — a conversation entry per call, alongside DM threads (#231). */}
+              {!initialRoom && !incomingLink && <CallHistory locale={locale} s={s} />}
               {!isGuest && !initialRoom && !incomingLink && (
                 <div className="w-full flex flex-col gap-1.5">
                   {/* "receive calls" separator above the Call Me box (#196). */}
@@ -1242,6 +1368,7 @@ export default function CallsTool() {
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
         {declineComposerEl}
+        {contactReqEl}
       </div>
     )
   }
@@ -1377,6 +1504,7 @@ export default function CallsTool() {
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
       {shareModal}
       {declineComposerEl}
+      {contactReqEl}
       {/* Busy: a personal-link ring arrived while we're in a call — a docked banner
           (not a takeover). Add pulls them into THIS room; Decline sends a note. */}
       {/* Someone is knocking and the participants dock isn't showing them — the ONLY
@@ -1450,12 +1578,13 @@ export default function CallsTool() {
 
         {/* main-view dropdown: whiteboard / share screen / drop files (upload lives here) */}
         <Menu testid="call-view" triggerClass={dropTrigger} align="end"
-          trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden max-w-[9rem] truncate">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60 shrink-0" /></>}>
+          trigger={<>{presenting ? <ScreenShareIcon /> : view === 'file' ? <FileIcon /> : view === 'loc' ? <CompassIcon /> : <WhiteboardIcon />}<span className="max-[420px]:hidden max-w-[9rem] truncate">{presenting ? s.screen : view === 'file' ? (selectedFile?.name || s.filesTitle) : view === 'loc' ? s.location : s.board}</span><ChevronDownIcon className="w-3.5 h-3.5 opacity-60 shrink-0" /></>}>
           <MenuItem icon={<WhiteboardIcon />} label={s.board} onClick={() => syncView('')} active={view === 'board' && !presenting} testid="view-board" />
           {/* getDisplayMedia is desktop-only — hide the option where it can't work
               (mobile browsers, incl. Chrome for Android) rather than offer a dead button. */}
           {canShareScreen && <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />}
           <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} testid="call-upload" />
+          <MenuItem icon={<CompassIcon />} label={s.location} onClick={openLocation} active={view === 'loc'} testid="view-location" />
         </Menu>
 
         {/* participants / chat / call controls — top on desktop, bottom bar on mobile */}
@@ -1564,6 +1693,16 @@ export default function CallsTool() {
               </span>
             ))}
           </div>
+          {/* Who's talking (#239): a floating badge naming the current speaker(s).
+              The video tiles live in the dock, so this is the only on-stage cue when
+              the dock is closed or showing chat. Self is excluded — you know when
+              you're the one talking; the mic button already pulses. */}
+          {speakingNames.length > 0 && (
+            <div className="absolute bottom-3 start-3 z-30 flex items-center gap-1.5 max-w-[70%] px-2.5 h-8 rounded-md bg-black/60 text-sand-100 text-[0.8rem] pointer-events-none" data-testid="call-speaking">
+              <MicIcon className="w-3.5 h-3.5 text-green-300 shrink-0 [animation:mic-pulse_0.9s_ease-in-out_infinite]" />
+              <span className="truncate font-medium">{speakingNames.join(', ')}</span>
+            </div>
+          )}
           {dragOver && (
             <div className="absolute inset-0 z-40 p-4 pointer-events-none" data-testid="call-dropzone">
               <div className="w-full h-full grid place-items-center rounded-xl border-2 border-dashed border-green-500 bg-[color-mix(in_srgb,var(--green-400)_18%,transparent)]">
@@ -1588,7 +1727,18 @@ export default function CallsTool() {
                 className="absolute top-3 end-3 z-30 flex items-center gap-1.5 px-3 h-9 rounded-md bg-black/45 hover:bg-black/60 text-sand-100 text-[0.82rem] no-underline"><DownloadIcon className="w-4 h-4" /> {s.download}</a>
             </div>
           )}
-          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
+          {/* Location share (#235): its own stage overlay; the whiteboard is hidden
+              behind it (kept mounted so its ref survives), so annotation can't fight
+              with tap-to-pin. */}
+          {view === 'loc' && !presenting && (
+            <LocationMap locale={locale} s={s} sharing={sharingLoc} onToggleShare={toggleLocation} onDropPin={dropPin} onRemovePin={removePin}
+              pins={pins}
+              points={[
+                ...(myGeo ? [{ id: 'me', lat: myGeo.lat, lng: myGeo.lng, acc: myGeo.acc, label: name || s.you, self: true }] : []),
+                ...[...geos].map(([id, g]) => ({ id, lat: g.lat, lng: g.lng, acc: g.acc, label: nameOf(id) })),
+              ]} />
+          )}
+          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${view === 'loc' ? 'hidden' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
@@ -1623,8 +1773,8 @@ export default function CallsTool() {
             )
           })()}
 
-          {/* whiteboard tools */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1" data-testid="wb-tools">
+          {/* whiteboard tools (hidden while the location map owns the stage) */}
+          <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 ${view === 'loc' ? 'hidden' : 'flex'} items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1`} data-testid="wb-tools">
             {[0.005, 0.011, 0.022].map((w, i) => (
               <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
                 className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 ${tool === 'pen' && penW === w ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>
@@ -1669,11 +1819,12 @@ export default function CallsTool() {
             {/* Full-bleed elastic video grid: tiles fill their cells (no gaps/margins),
                 the layout (cols×rows) adapts to the participant count + maximise. */}
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
-              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} />
+              <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} speaking={speaking && mic} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)}
-                  onAdd={info.link ? () => (contactCodes.has(info.link!) ? removeContact(info.link!) : addContact(info.link!, info.name || '')) : undefined}
-                  added={!!info.link && contactCodes.has(info.link)} addLabel={s.addContact} addedLabel={s.savedContact} />
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
+                  onAdd={() => addOrAskContact(id, info)} added={!!info.link && contactCodes.has(info.link)}
+                  pending={!info.link && requestedIds.has(id)} pendingLabel={s.contactAsked}
+                  addLabel={info.link ? s.addContact : s.askToSave} addedLabel={s.savedContact} />
               ))}
             </div>
             {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}
