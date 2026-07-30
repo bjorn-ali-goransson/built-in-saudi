@@ -122,6 +122,10 @@ export default function CallsTool() {
   // Saved contacts (#221): people we've called who publish a call-me link.
   const { contacts, add: addContact, remove: removeContact } = useContacts()
   const contactCodes = new Set(contacts.map((c) => c.code))
+  // In-call contact requests (#229): peers we've asked to become saveable (they
+  // publish no link yet), and an incoming ask awaiting our explicit approval.
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
+  const [contactReq, setContactReq] = useState<{ id: string; name: string } | null>(null)
   const [callBackState, setCallBackState] = useState<'' | 'busy' | 'done' | 'err'>('')
   const [diag, setDiag] = useState<DiagSnapshot | null>(null)
   const [local, setLocal] = useState<MediaStream | null>(null)
@@ -381,6 +385,21 @@ export default function CallsTool() {
       redraw()
     }
     else if (m.t === 'view') { if (m.file) openFile(m.file); else { setView('board'); setSelected('') } }
+    // Contact-request handshake (#229). If we already publish a link, just hand it
+    // back (no consent needed — it's already public); otherwise ask the user.
+    else if (m.t === 'contact-req') {
+      const mine = getMyCallLink()
+      if (mine?.code) { rtc.current?.sendTo(id, { t: 'contact-approve', link: mine.code, name: name || s.you }); return }
+      setContactReq({ id, name: m.name || nameOf(id) }); notify('p', `${m.name || nameOf(id)} · ${s.askToSave}`)
+    }
+    else if (m.t === 'contact-approve') {
+      setRequestedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+      if (m.link) { addContact(m.link, m.name || nameOf(id)); setToast(s.contactSaved(m.name || nameOf(id))); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000) }
+    }
+    else if (m.t === 'contact-decline') {
+      setRequestedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+      setToast(s.contactDeclined(m.name || nameOf(id))); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000)
+    }
     else if (m.t === 'file-start') incoming.current.set(m.id, { name: m.name, mime: m.mime, parts: [] })
     else if (m.t === 'file-end') {
       const f = incoming.current.get(m.id); if (!f) return
@@ -566,6 +585,27 @@ export default function CallsTool() {
   // Host: let a specific waiting guest into the call (going live if needed).
   async function admit(id: string) {
     try { await rtc.current?.admit(id); setPhase('live') } catch { mediaError() }
+  }
+  // In-call contact controls (#229). Saving a peer who publishes a link is instant;
+  // one who doesn't is asked to approve (which claims a link + push for them).
+  function addOrAskContact(id: string, info: PeerInfo) {
+    if (info.link) { if (contactCodes.has(info.link)) removeContact(info.link); else addContact(info.link, info.name || ''); return }
+    if (requestedIds.has(id)) return
+    rtc.current?.sendTo(id, { t: 'contact-req', name: name || s.you })
+    setRequestedIds((prev) => new Set(prev).add(id))
+  }
+  async function approveContact() {
+    if (!contactReq) return
+    const req = contactReq; setContactReq(null)
+    // Claim a personal link on THIS device (subscribes push + registers) so they can
+    // reach us later, then hand the code back. Denied push → tell them nothing saved.
+    const code = await claimCallLink(name || s.you)
+    if (code) { rtc.current?.setMyLink(code); setHasCallLink(true); rtc.current?.sendTo(req.id, { t: 'contact-approve', link: code, name: name || s.you }) }
+    else { rtc.current?.sendTo(req.id, { t: 'contact-decline', name: name || s.you }); setToast(s.contactNoPush); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
+  }
+  function declineContact() {
+    if (contactReq) rtc.current?.sendTo(contactReq.id, { t: 'contact-decline', name: name || s.you })
+    setContactReq(null)
   }
 
   useEffect(() => () => { rtc.current?.leave() }, [])
@@ -1082,6 +1122,20 @@ export default function CallsTool() {
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
+  // A peer asked to be saved as a contact but publishes no link — get explicit
+  // consent before claiming a link + push on their behalf (#229).
+  const contactReqEl = contactReq ? (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50" onClick={declineContact} data-testid="call-contact-req">
+      <div className="w-full sm:max-w-[26rem] bg-paper text-ink border-t sm:border border-[color:var(--line-soft)] sm:rounded-lg p-4 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[0.98rem] font-semibold leading-snug">{s.contactReqTitle(contactReq.name || '•')}</p>
+        <p className="text-[0.85rem] text-ink-soft leading-relaxed">{s.contactReqBody}</p>
+        <div className="flex items-center gap-2">
+          <Button variant="primary" onClick={approveContact} data-testid="call-contact-approve">{s.contactApprove}</Button>
+          <button type="button" onClick={declineContact} data-testid="call-contact-decline" className="ms-auto text-[0.82rem] text-ink-faint hover:text-ink bg-transparent border-0 cursor-pointer">{s.contactDeclineBtn}</button>
+        </div>
+      </div>
+    </div>
+  ) : null
   // A call-link caller retries by CALLING the owner again (named, if known) — a plain
   // "Rejoin/Call again" for anyone else (#199, #193).
   const callAgainLabel = ringCode && linkOwnerName ? s.callNameAgain(linkOwnerName) : s.callAgain
@@ -1273,6 +1327,7 @@ export default function CallsTool() {
         {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}
         {shareModal}
         {declineComposerEl}
+        {contactReqEl}
       </div>
     )
   }
@@ -1408,6 +1463,7 @@ export default function CallsTool() {
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
       {shareModal}
       {declineComposerEl}
+      {contactReqEl}
       {/* Busy: a personal-link ring arrived while we're in a call — a docked banner
           (not a takeover). Add pulls them into THIS room; Decline sends a note. */}
       {/* Someone is knocking and the participants dock isn't showing them — the ONLY
@@ -1713,8 +1769,9 @@ export default function CallsTool() {
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} speaking={speaking && mic} />
               {inCallPeers.map(([id, info]) => (
                 <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
-                  onAdd={info.link ? () => (contactCodes.has(info.link!) ? removeContact(info.link!) : addContact(info.link!, info.name || '')) : undefined}
-                  added={!!info.link && contactCodes.has(info.link)} addLabel={s.addContact} addedLabel={s.savedContact} />
+                  onAdd={() => addOrAskContact(id, info)} added={!!info.link && contactCodes.has(info.link)}
+                  pending={!info.link && requestedIds.has(id)} pendingLabel={s.contactAsked}
+                  addLabel={info.link ? s.addContact : s.askToSave} addedLabel={s.savedContact} />
               ))}
             </div>
             {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}

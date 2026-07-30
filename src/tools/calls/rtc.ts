@@ -80,6 +80,12 @@ export type DataMsg =
   | { t: 'file-end'; id: string }
   // Switch the shared main stage for everyone: a file id, or '' for the whiteboard.
   | { t: 'view'; file: string }
+  // Contact-request handshake (#229): ask a peer with no call-me link to become
+  // saveable. They approve (claim a link + enable push, hand the code back) or
+  // decline. Directed at a single peer via sendTo, not broadcast.
+  | { t: 'contact-req'; name: string }
+  | { t: 'contact-approve'; link: string; name: string }
+  | { t: 'contact-decline'; name: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
@@ -419,6 +425,8 @@ export class CallRoom {
 
   // ---- app-facing send (only to peers actually in the call) ------------------
   broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
+  /** Send an app data message to ONE peer — the contact-request handshake (#229). */
+  sendTo(id: string, msg: DataMsg) { const p = this.peers.get(id); if (p?.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(JSON.stringify(msg)) }
   // `id` is shared with the sender's local file entry so both sides key that file's
   // whiteboard by the same board id (`f:<id>`) and its annotations sync.
   async sendFile(file: File, id: string) {

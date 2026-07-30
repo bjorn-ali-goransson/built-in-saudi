@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from '../../components/ui'
-import { UsersIcon, MicIcon, MicOffIcon, UserPlusIcon, CheckIcon } from '../../components/icons'
+import { UsersIcon, MicIcon, MicOffIcon, UserPlusIcon, CheckIcon, ClockIcon } from '../../components/icons'
 import type { DiagSnapshot, PeerInfo } from './rtc'
 import { initials } from './helpers'
 
@@ -269,7 +269,7 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
 
 // A participant square. The <video> stays mounted whenever there's a stream; it's
 // always muted (audio is handled by the AudioSinks above), the avatar overlays it.
-export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel, speaking }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string; speaking?: boolean }) {
+export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel, speaking, pending, pendingLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string; speaking?: boolean; pending?: boolean; pendingLabel?: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
@@ -295,9 +295,9 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
         {/* They publish a call-me link → offer to keep them (#221). Stays visible
             once saved, so it reads as state rather than a control that vanished. */}
         {!self && onAdd && (
-          <button type="button" onClick={onAdd} title={added ? addedLabel : addLabel} aria-label={added ? addedLabel : addLabel} data-testid="call-add-contact"
-            className={`grid place-items-center w-5 h-5 rounded border-0 cursor-pointer transition-opacity ${added ? 'bg-green-600 text-white opacity-100' : 'bg-white/15 hover:bg-white/30 text-white opacity-0 group-hover:opacity-100'}`}>
-            {added ? <CheckIcon className="w-3.5 h-3.5" /> : <UserPlusIcon className="w-3.5 h-3.5" />}
+          <button type="button" onClick={onAdd} disabled={pending} title={pending ? pendingLabel : added ? addedLabel : addLabel} aria-label={pending ? pendingLabel : added ? addedLabel : addLabel} data-testid="call-add-contact" data-pending={pending ? '1' : undefined}
+            className={`grid place-items-center w-5 h-5 rounded border-0 transition-opacity ${added ? 'bg-green-600 text-white opacity-100 cursor-pointer' : pending ? 'bg-white/15 text-white/70 opacity-100 cursor-default' : 'bg-white/15 hover:bg-white/30 text-white opacity-0 group-hover:opacity-100 cursor-pointer'}`}>
+            {added ? <CheckIcon className="w-3.5 h-3.5" /> : pending ? <ClockIcon className="w-3.5 h-3.5" /> : <UserPlusIcon className="w-3.5 h-3.5" />}
           </button>
         )}
         {!self && onMute && !muted && (
