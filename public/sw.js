@@ -125,6 +125,8 @@ self.addEventListener('push', (event) => {
     mine: false,
     // A reaction to an earlier message rather than a message of its own.
     react: m2.react && m2.react.id ? { id: String(m2.react.id), emoji: String(m2.react.emoji || '') } : null,
+    // A voice note (#232): metadata only — the audio arrives peer-to-peer, not here.
+    voice: m2.voice && typeof m2.voice === 'object' ? { dur: Number(m2.voice.dur) || 0, mime: String(m2.voice.mime || 'audio/webm'), pending: true } : null,
   } : null
   event.waitUntil(Promise.all([
     missed ? queueLocal('missed', missed) : Promise.resolve(),

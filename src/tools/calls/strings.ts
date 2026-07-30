@@ -46,6 +46,9 @@ export const STR = {
     dmPlaceholder: 'Message…', dmEmpty: 'No messages yet. Anything you send lands as a notification on their device.',
     dmFailed: 'Couldn’t send — check your connection and try again.',
     dmNoDevice: 'Sent, but none of their devices could be reached — they may have turned notifications off.',
+    // Voice notes (#232).
+    recordVoice: 'Record a voice note', recording: 'Recording…', recError: 'Couldn’t record — allow microphone access and try again.',
+    voiceNote: 'Voice note', voicePending: 'Will send when you’re both online', voiceQueued: 'Voice note queued — it sends when you’re both online.',
     lostPeer: (n: string) => `Lost ${n}`, lostPeerHint: 'They have a call link — you can ring them back in.',
     callThem: 'Call them', invitedBack: (n: string) => `Invited ${n} back — they’ll come straight in.`,
     askCallBack: (n: string) => (n ? `Ask ${n} to call you back` : 'Ask them to call you back'),
@@ -104,6 +107,8 @@ export const STR = {
     dmPlaceholder: 'رسالة…', dmEmpty: 'لا رسائل بعد. ما ترسله يصل كإشعار على جهازه.',
     dmFailed: 'تعذّر الإرسال — تحقّق من اتصالك وحاول مجددًا.',
     dmNoDevice: 'أُرسلت، لكن تعذّر الوصول إلى أي من أجهزته — ربما أوقف الإشعارات.',
+    recordVoice: 'سجّل ملاحظة صوتية', recording: 'جارٍ التسجيل…', recError: 'تعذّر التسجيل — اسمح بالوصول إلى الميكروفون وحاول مجددًا.',
+    voiceNote: 'ملاحظة صوتية', voicePending: 'ستُرسل عندما تكونان متصلين معًا', voiceQueued: 'أُدرجت الملاحظة الصوتية — ستُرسل عندما تكونان متصلين معًا.',
     lostPeer: (n: string) => `انقطع ${n}`, lostPeerHint: 'لديه رابط اتصال — يمكنك دعوته للعودة.',
     callThem: 'اتصل به', invitedBack: (n: string) => `تمت دعوة ${n} — سيدخل مباشرةً.`,
     askCallBack: (n: string) => (n ? `اطلب من ${n} معاودة الاتصال` : 'اطلب معاودة الاتصال'),

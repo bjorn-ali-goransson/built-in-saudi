@@ -446,6 +446,19 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `src/lib/localQueue.ts`** and is shared by the app and the service worker — adding
   a store means bumping the version in ONE place, or the other side throws
   `VersionError`.
+  **Voice notes in DMs (#232):** recorded with `MediaRecorder` (Opus) and kept in the
+  sender's LOCAL outbox — a **separate** IndexedDB db `bis-voicenotes` (NOT the
+  sw-shared `bis-calls`, so `localQueue.ts` is untouched) plus a `bis-vn-outbox`
+  pointer in `localStorage`. The `call-dm` push carries **metadata only** (`voice:
+  {dur,mime}`, body "Voice note") — the audio never rides the push. The audio
+  transfers **peer-to-peer**: while both parties have the DM thread open,
+  `useVoiceDrop` (`src/lib/voiceNotes.ts`) meets them in a **data-only rendezvous
+  `CallRoom`** keyed `vn_<sorted link codes>` (smaller code hosts) and streams it over
+  the data channel via `CallRoom.sendVoiceNote` (a non-in-call send path added
+  alongside `sendData`/`hasOpenData`); the receiver stores it, acks (`vn-ack`), and
+  the sender drops it from the outbox. Honest caveat, surfaced in the UI: "both online
+  at once" is a narrow window, so a note shows **pending** until it actually
+  transfers. Still **nothing for `my-data`** (all device-local + P2P).
   **Winning a lost peer back (#222):** if a peer who publishes a call-me link fails to
   connect or drops out, a docked banner offers **Add to this call** (ring their link
   with `join: true`, which makes `call-ring` emit a `join=1` URL so Answer *knocks*
