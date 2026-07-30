@@ -23,6 +23,7 @@ export const STR = {
     callEnded: 'Call ended', callAgain: 'Call again',
     ghosted: (n: string) => (n ? `${n} has ghosted you` : 'You’ve been ghosted'),
     missedCalls: 'Missed calls', callBack: 'Call back', dismiss: 'Dismiss',
+    recentCalls: 'Recent calls', soloCall: 'Just you',
     // They CALLED us — they aren't deciding whether to join, their connection is
     // just coming up. "Waiting for X to join" would read as though they had to act,
     // and could send you off to nudge them out of band. Split so the name can be
@@ -73,6 +74,7 @@ export const STR = {
     callEnded: 'انتهت المكالمة', callAgain: 'اتصل مجددًا',
     ghosted: (n: string) => (n ? `تجاهلك ${n} بشراسة` : 'تم تجاهل مكالمتك'),
     missedCalls: 'مكالمات فائتة', callBack: 'اتصل به', dismiss: 'إزالة',
+    recentCalls: 'مكالمات حديثة', soloCall: 'أنت فقط',
     connectingPre: 'جارٍ اتصال ', connectingPost: '…', connectingCaller: 'جارٍ الاتصال…',
     connectingHint: 'يجري إعداد الاتصال المباشر — لحظات فقط.',
     contacts: 'جهات الاتصال', call: 'اتصال', remove: 'إزالة',

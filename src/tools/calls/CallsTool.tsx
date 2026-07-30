@@ -17,6 +17,8 @@ import {
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
 import { Contacts } from './Contacts'
+import { CallHistory } from './CallHistory'
+import { addCall } from '../../lib/callHistory'
 import { useContacts } from '../../lib/contacts'
 import { claimCallLink, getMyCallLink, reportMissedCall, ringCallLink } from '../../lib/callLink'
 
@@ -567,6 +569,28 @@ export default function CallsTool() {
   }
 
   useEffect(() => () => { rtc.current?.leave() }, [])
+  // Call history (#231): clock a call from when we go live to when we leave/it ends,
+  // remembering everyone who was in it, and save the entry on the way out — including
+  // an unmount mid-call (tab close) or a Back-button pop to the lobby.
+  const callStartRef = useRef(0)
+  const callNamesRef = useRef<Set<string>>(new Set())
+  const callRoleRef = useRef<'host' | 'guest'>('guest')
+  const recordCall = useCallback(() => {
+    const start = callStartRef.current
+    if (!start) return
+    callStartRef.current = 0
+    const end = Date.now()
+    if (end - start < 2000) return // ignore misfires / an instant hang-up
+    addCall({ id: `c${start}`, at: start, end, role: callRoleRef.current, names: [...callNamesRef.current] })
+  }, [])
+  useEffect(() => {
+    if (phase === 'live') {
+      if (!callStartRef.current) { callStartRef.current = Date.now(); callNamesRef.current = new Set(); callRoleRef.current = isGuest ? 'guest' : 'host' }
+    } else recordCall() // any non-live phase (ended, or Back to lobby) closes the entry
+  }, [phase, isGuest, recordCall])
+  // Accumulate participants throughout the call, so someone who left early still counts.
+  useEffect(() => { if (callStartRef.current) for (const [, i] of roster) if (i.inCall && i.name) callNamesRef.current.add(i.name) }, [roster])
+  useEffect(() => () => recordCall(), [recordCall])
   // Tell the deploy auto-reload to hold off while we're engaged — including a
   // call-link caller waiting to be connected (#195). Kept out of the cleanup so a
   // phase→phase transition never dips to "not in a call" (which would let a deferred
@@ -1207,6 +1231,8 @@ export default function CallsTool() {
                   </div>
                 )}
               </div>
+              {/* Recent calls — a conversation entry per call, alongside DM threads (#231). */}
+              {!initialRoom && !incomingLink && <CallHistory locale={locale} s={s} />}
               {!isGuest && !initialRoom && !incomingLink && (
                 <div className="w-full flex flex-col gap-1.5">
                   {/* "receive calls" separator above the Call Me box (#196). */}
