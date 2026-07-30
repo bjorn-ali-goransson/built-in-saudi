@@ -58,6 +58,11 @@ export const STR = {
     connectFail: 'Couldn’t connect to', waitSlow: 'Still trying to connect — if this hangs, the host may be offline or the network is blocking the call.',
     rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
+    // Live location sharing (#235).
+    location: 'Location', locShare: 'Share my location', locStop: 'Stop sharing location',
+    locPinHint: 'Tap the map to drop a pin', locOpenMaps: 'Open in maps',
+    locNobody: 'No one is sharing a location yet. Tap “Share my location” — or drop a pin anywhere on the map.',
+    locUnsupported: 'Location isn’t available on this device', locDenied: 'Location permission was denied',
   },
   ar: {
     title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
@@ -111,6 +116,10 @@ export const STR = {
     connectFail: 'تعذّر الاتصال بـ', waitSlow: 'ما زلنا نحاول الاتصال — إن طال ذلك، فقد يكون المضيف غير متصل أو الشبكة تمنع المكالمة.',
     rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
+    location: 'الموقع', locShare: 'شارك موقعي', locStop: 'إيقاف مشاركة الموقع',
+    locPinHint: 'اضغط على الخريطة لإضافة دبوس', locOpenMaps: 'افتح في الخرائط',
+    locNobody: 'لا أحد يشارك موقعه بعد. اضغط «شارك موقعي» — أو أضِف دبوسًا في أي مكان على الخريطة.',
+    locUnsupported: 'الموقع غير متاح على هذا الجهاز', locDenied: 'تم رفض إذن الموقع',
   },
 }
 export type Str = typeof STR['en']

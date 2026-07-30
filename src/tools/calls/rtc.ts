@@ -86,6 +86,12 @@ export type DataMsg =
   | { t: 'contact-req'; name: string }
   | { t: 'contact-approve'; link: string; name: string }
   | { t: 'contact-decline'; name: string }
+  // Live location sharing (#235): a peer's current position (broadcast while sharing),
+  // a stop signal, and shared map pins. Coordinates only — P2P, never the server.
+  | { t: 'geo'; lat: number; lng: number; acc?: number }
+  | { t: 'geo-stop' }
+  | { t: 'pin'; id: string; lat: number; lng: number; label?: string }
+  | { t: 'pin-remove'; id: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
