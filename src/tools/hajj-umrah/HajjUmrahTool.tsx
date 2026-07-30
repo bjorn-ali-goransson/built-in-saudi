@@ -15,7 +15,8 @@ const STR = {
     },
     dua: 'Supplication', copy: 'Copy', copied: 'Copied',
     reset: 'Reset', progress: 'Progress', count: (d: number, t: number) => `${d} / ${t}`,
-    note: 'A study aid, not a fatwā: the Arabic is the Qur’ān/Sunnah text, while the transliteration, meanings and summaries were written for this app. Follow a trustworthy scholar or guide for your Ḥajj.',
+    note: 'A study aid, not a fatwā. The rulings (rukn / wājib / sunnah) follow the manāsik of Shaykh Ibn Bāz and the fatwās of the Permanent Committee; the procedure follows the Saudi Ministry of Ḥajj & ʿUmrah. The Arabic supplications are the Qur’ān/Sunnah text; the transliteration and meanings were written for this app. Follow a trustworthy scholar or an official guide for your Ḥajj.',
+    sources: 'Sources',
   },
   ar: {
     umrah: 'العمرة', hajj: 'الحج',
@@ -26,9 +27,20 @@ const STR = {
     },
     dua: 'الدعاء', copy: 'نسخ', copied: 'تم النسخ',
     reset: 'تصفير', progress: 'التقدّم', count: (d: number, t: number) => `${d} / ${t}`,
-    note: 'هذا دليل للتعلّم لا فتوى: النص العربي من القرآن والسنة، وكُتبت الترجمة والنطق والملخّصات لهذا التطبيق. اتّبع في حجّك عالِمًا موثوقًا أو مرشدًا.',
+    note: 'هذا دليل للتعلّم لا فتوى. الأحكام (ركن / واجب / سنة) على منسك الشيخ ابن باز وفتاوى اللجنة الدائمة، والصفة العملية على دليل وزارة الحج والعمرة. والنص العربي للأدعية من القرآن والسنة، وكُتبت الترجمة والنطق لهذا التطبيق. اتّبع في حجّك عالِمًا موثوقًا أو مرشدًا رسميًّا.',
+    sources: 'المصادر',
   },
 }
+
+// KSA-aligned references: the fiqh classifications follow the manāsik of the
+// late Grand Mufti Shaykh Ibn Bāz (the rulings the Saudi religious establishment
+// distributes); the procedure follows the Ministry of Ḥajj & ʿUmrah.
+const SOURCES: { href: string; en: string; ar: string }[] = [
+  { href: 'https://binbaz.org.sa/fatwas/14833/', en: 'Ibn Bāz — Pillars & obligations of Ḥajj', ar: 'ابن باز — أركان الحج وواجباته' },
+  { href: 'https://binbaz.org.sa/fatwas/11982/', en: 'Ibn Bāz — The description of ʿUmrah', ar: 'ابن باز — صفة العمرة' },
+  { href: 'https://binbaz.org.sa/fatwas/15743/', en: 'Ibn Bāz — Saʿy is a pillar of Ḥajj & ʿUmrah', ar: 'ابن باز — السعي ركن من أركان الحج والعمرة' },
+  { href: 'https://haj.gov.sa/en/Guides', en: 'Ministry of Ḥajj & ʿUmrah — official pilgrim guides', ar: 'وزارة الحج والعمرة — أدلة المناسك الرسمية' },
+]
 
 const storeKey = (rite: Rite) => `bis-hajj-${rite}`
 function loadDone(rite: Rite): Record<string, boolean> {
@@ -125,6 +137,20 @@ export default function HajjUmrahTool() {
       </ol>
 
       <p className="text-[0.78rem] text-ink-faint">{s.note}</p>
+
+      <div className="flex flex-col gap-1.5">
+        <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-ink-faint rtl:tracking-normal m-0">{s.sources}</h2>
+        <ul className="list-none ps-0 m-0 flex flex-col gap-1">
+          {SOURCES.map((src) => (
+            <li key={src.href}>
+              <a href={src.href} target="_blank" rel="noopener noreferrer"
+                className="text-[0.8rem] text-green-600 underline decoration-[color:var(--line)] underline-offset-2 hover:decoration-current">
+                {src[locale]}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {/* Persistent, edge-docked completion bar — how many steps you've marked
           done in the current view. Portaled to <body> so it stays viewport-fixed
