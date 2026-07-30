@@ -653,6 +653,25 @@ test.describe('tools', () => {
     await page.getByTestId('adhkar-evening').click()
     await expect(page.getByTestId('dhikr-amsayna-evening')).toBeVisible()
   })
+
+  test('hajj-umrah: rite + level switch, tap to mark a step done', async ({ page }) => {
+    await page.goto('/en/tools/hajj-umrah')
+    // Defaults to ʿUmrah, full guide (recommended visible).
+    const tawaf = page.getByTestId('step-u-tawaf')
+    await expect(tawaf).toBeVisible()
+    await expect(page.getByTestId('step-u-ghusl')).toBeVisible() // a recommended step
+    // Tap to complete — the card dims.
+    await tawaf.click()
+    await expect(tawaf).toHaveClass(/opacity-60/)
+    // Obligatory filter hides the sunnah steps.
+    await page.getByTestId('level-obligatory').click()
+    await expect(page.getByTestId('step-u-ghusl')).toHaveCount(0)
+    await expect(page.getByTestId('step-u-tawaf')).toBeVisible()
+    // Switching to Ḥajj shows its rites.
+    await page.getByTestId('rite-hajj').click()
+    await expect(page.getByTestId('step-h-arafah')).toBeVisible()
+    await expect(page.getByTestId('step-u-tawaf')).toHaveCount(0)
+  })
 })
 
 test.describe('shell', () => {

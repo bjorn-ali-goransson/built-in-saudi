@@ -996,6 +996,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/adhkar"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/hajj-umrah/</loc>
+    <lastmod>2026-07-30</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hajj-umrah"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hajj-umrah"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hajj-umrah"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/hajj-umrah/</loc>
+    <lastmod>2026-07-30</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hajj-umrah"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hajj-umrah"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hajj-umrah"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/hisn-al-muslim/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hisn-al-muslim"/>
