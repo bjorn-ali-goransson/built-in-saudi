@@ -18,6 +18,7 @@ import { hijriCalendarTool } from './hijri-calendar/meta'
 import { islamicCalendarTool } from './islamic-calendar/meta'
 import { istikharaTool } from './istikhara/meta'
 import { adhkarTool } from './adhkar/meta'
+import { hajjUmrahTool } from './hajj-umrah/meta'
 import { hisnAlMuslimTool } from './hisn-al-muslim/meta'
 import { ibanValidatorTool } from './iban-validator/meta'
 import { tafqeetTool } from './tafqeet/meta'
@@ -179,6 +180,7 @@ export const tools: Tool[] = [
   prayerTimesTool,
   islamicCalendarTool,
   adhkarTool,
+  hajjUmrahTool,
   hisnAlMuslimTool,
   istikharaTool,
   hijriCalendarTool,

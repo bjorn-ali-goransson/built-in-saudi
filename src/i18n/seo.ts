@@ -461,6 +461,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'أذكار الصباح والمساء', description: 'أذكار الصباح والمساء الأساسية من القرآن والسنة الصحيحة — بالعربية مع النطق والمعنى بالإنجليزية وعدد التكرار والمصدر وعدّاد باللمس.' },
   },
   {
+    id: 'hajj-umrah',
+    en: { name: 'Hajj & Umrah Guide', description: 'A step-by-step guide to ʿUmrah and Ḥajj — every act with its supplication and its fiqh ruling. Switch between ʿUmrah (default) and Ḥajj, show just the pillars and duties or the full guide with the sunan, and track your progress. Fully offline.' },
+    ar: { name: 'دليل الحج والعمرة', description: 'دليل خطوةً بخطوة لأداء العمرة والحج — كل عمل مع دعائه وحكمه الفقهي. بدّل بين العمرة (الافتراضية) والحج، واعرض الأركان والواجبات فقط أو الدليل كاملًا مع السنن، وتتبّع تقدّمك. يعمل دون اتصال.' },
+  },
+  {
     id: 'istikhara',
     en: { name: 'Istikhara Du‘a', description: 'The du‘a of Ṣalāt al-Istikhāra (the prayer for guidance) — the prophetic Arabic with transliteration, an English meaning, how to pray the two rakʿahs, and the source (Jābir ibn ʿAbdillāh · Ṣaḥīḥ al-Bukhārī).' },
     ar: { name: 'دعاء الاستخارة', description: 'دعاء صلاة الاستخارة — النص النبوي بالعربية مع النطق والمعنى بالإنجليزية، وكيفية أداء الركعتين، والمصدر (جابر بن عبد الله · صحيح البخاري).' },

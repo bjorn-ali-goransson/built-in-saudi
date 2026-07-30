@@ -531,6 +531,15 @@ export function MosqueIcon({ className }: P) {
   )
 }
 
+export function KaabaIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 8h12v12H6z" /><path d="M6 11h12" />
+      <path d="M13.5 20v-4h2v4" /><path d="M4 20h16" />
+    </svg>
+  )
+}
+
 export function FeatherIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
