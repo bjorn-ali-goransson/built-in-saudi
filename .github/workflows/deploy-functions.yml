@@ -82,6 +82,7 @@ jobs:
           gcloud functions deploy call-dm                 "${common[@]}" --entry-point=callDm
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
+          gcloud functions deploy improve-prompt          "${common[@]}" --entry-point=improvePrompt
 
           gcloud functions deploy diacritize              "${common[@]}" --entry-point=diacritize
 

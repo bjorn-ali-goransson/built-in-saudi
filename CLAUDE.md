@@ -357,12 +357,18 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   target URL; expired ⇒ 404 + lazy delete), `my-links`, `delete-link`. The public
   redirect is a **top-level `/s/:code` route** (`ShortLinkPage`, no locale/chrome)
   that resolves + `location.replace`. Same GIS client ID as the CV tool.
-- **Prompt Analyzer** (`functions/prompt.js`): `analyzePrompt` — Google-auth →
-  one OpenAI (`gpt-4o`, JSON mode) pass grading a pasted LLM prompt 1–5 across
-  eight dimensions; returns `{scores, issues, summary}` for the client's spider
-  chart. Rate-limited to **1 analysis / 24h** per user via `promptUsage/{sub}` (a
-  `runs` timestamp array; owner email bypasses). Reuses the CV tool's
-  `OPENAI_API_KEY` secret + GIS client ID; no new deps. Covered by `my-data`.
+- **Prompt Analyzer** (`functions/prompt.js`): two endpoints, so a full usage is
+  **two OpenAI passes**. `analyzePrompt` — Google-auth → one OpenAI (`gpt-4o`, JSON
+  mode) pass grading a pasted LLM prompt 1–5 across eight dimensions; returns
+  `{scores, issues, gaps, summary}`. `gaps` is 2–5 clarifying questions only the
+  author can answer (vague purpose, missing context, …), which the client shows as a
+  **form**; `improvePrompt` then takes those answers + the original and returns a
+  **rewritten, stronger prompt** `{improved, notes}`. The client renders the scores
+  as a **heatmap spider chart** (each sector coloured red→amber→green by its score,
+  #242). Rate-limited to **3 analyses + 3 rewrites / 24h** per user via
+  `promptUsage/{sub}` (separate `runs` / `improveRuns` timestamp arrays; owner email
+  bypasses). Reuses the CV tool's `OPENAI_API_KEY` secret + GIS client ID; no new
+  deps. Covered by `my-data`.
 - **Arabic Diacritizer** (`functions/diacritize.js`): `diacritize` — Google-auth →
   one OpenAI (`gpt-4o`, temp 0) pass that fully vowelises pasted Arabic text
   (تشكيل + إعراب) and returns it verbatim-plus-harakāt. The client validates the
@@ -551,7 +557,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   (`bis-missed-call` → window event `bis-call-missed`), which drops a pointless
   ringing screen back to the lobby.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all thirty-two functions on any `functions/**` change, authenticating **keylessly
+  deploys all thirty-four functions on any `functions/**` change, authenticating **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

@@ -45,8 +45,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'prompt-analyzer',
-    en: { name: 'Prompt Analyzer', description: 'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, framing, an escape hatch and downstream stakes — as a spider chart, with concrete issues listed. One analysis per 24 hours.' },
-    ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي مع سرد المشكلات. تحليل واحد كل ٢٤ ساعة.' },
+    en: { name: 'Prompt Analyzer', description: 'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, framing, an escape hatch and downstream stakes — as a heatmap spider chart, with concrete issues listed. Then answer the gaps and get a rewritten, stronger prompt. Three analyses per 24 hours.' },
+    ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي بألوان حرارية مع سرد المشكلات. ثم أجب عن الثغرات لتحصل على موجّه مُعاد صياغته أقوى. ثلاثة تحاليل كل ٢٤ ساعة.' },
   },
   {
     id: 'regex-tester',
