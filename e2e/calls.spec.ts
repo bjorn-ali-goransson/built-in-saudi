@@ -976,6 +976,24 @@ test('the connecting copy bidi-isolates a Latin name in Arabic (#219)', async ({
   await c.close()
 })
 
+// #244: if the answered caller never connects, don't spin forever — escalate from
+// "connecting" to "may have hung up" and finally "couldn't connect, try again".
+test('a caller who never connects escalates to hung-up then failed (#244)', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls/join?code=ringroom7&host=1&ring=1&link=mylink&caller=Muhammad')
+  await expect(p.getByTestId('call-answer')).toBeVisible({ timeout: 15_000 })
+  await p.getByTestId('call-answer').click()
+
+  const who = p.getByTestId('call-awaiting-who')
+  await expect(who).toHaveText('Muhammad is connecting…')
+  // After a few seconds: they may have hung up.
+  await expect(who).toContainText('connected yet', { timeout: 15_000 })
+  // After a few more: the call couldn't connect.
+  await expect(who).toContainText(/Couldn.t connect/, { timeout: 20_000 })
+  await c.close()
+})
+
 // The save button is shown for EVERY missed call — hiding it for someone who has no
 // call-me link just reads as a missing feature. Tapping it must explain why, in a
 // bubble that works on touch (a `title` tooltip never appears on mobile).

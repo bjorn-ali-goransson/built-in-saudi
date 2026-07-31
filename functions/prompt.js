@@ -1,9 +1,11 @@
 // Prompt Analyzer. One LLM call grades a system prompt on eight dimensions
-// (1–5), lists concrete issues, and names the gaps only the author can fill; a
-// second, optional LLM call takes the author's answers to those gaps and
-// rewrites the prompt into a stronger version — so a full usage is two prompts.
-// Google sign-in required; three analyses (and three rewrites) per rolling 24h
-// per user. Same OpenAI + Firestore usage pattern as the CV tool.
+// (1–5), lists concrete issues, and names the gaps only the author can fill; an
+// optional rewrite takes the author's answers to those gaps and rewrites the
+// prompt into a stronger version. The rewrite is a two-pass job — a draft, then
+// a review-and-refine pass that catches a draft that came out weaker than the
+// original before it's returned (#245). Google sign-in required; three analyses
+// (and three rewrites) per rolling 24h per user. Same OpenAI + Firestore usage
+// pattern as the CV tool.
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
 
@@ -43,6 +45,10 @@ Return ONLY JSON: {"scores": {<each dimension>: integer 1-5}, "issues": [{"headl
 const IMPROVE_SYSTEM = `You are an expert LLM prompt engineer. You are given an author's original system prompt and their answers to clarifying questions about its gaps. Rewrite the prompt into a stronger version that keeps the author's intent but applies the principles of a healthy prompt: one coherent explanation of the scenario and its purpose; instructions reconciled with that context rather than bolted on; even, calm signal (no shouting, no ALL CAPS, no piles of "NEVER"); affirmative framing with reasons; a graceful escape hatch for tricky cases; and clear downstream stakes. Fold the author's answers into the prose naturally — do not append them as a Q&A list. Do not invent facts the author did not give; if an answer was left blank, leave that aspect as the original had it rather than guessing. Keep it as concise as the material allows.
 
 Return ONLY JSON: {"improved": string, "notes": string}. "improved" is the full rewritten prompt, ready to paste. "notes" is one sentence naming the biggest change you made.`
+
+const REFINE_SYSTEM = `You are an expert LLM prompt engineer doing a second-pass review. You are given the author's ORIGINAL system prompt and a CANDIDATE rewrite of it. Review the candidate hard against the principles of a healthy prompt: one coherent explanation of the scenario and its purpose; instructions reconciled with that context rather than bolted on; even, calm signal (no shouting, no ALL CAPS, no piles of "NEVER"); affirmative framing with reasons; a graceful escape hatch; and clear downstream stakes. A rewrite has FAILED if it is weaker than the original on any of these, drops information the original carried, invents facts the author never gave, or drifts from the author's intent. Produce a FINAL version that is at least as strong as the original on every dimension and stronger overall — repair any regression in the candidate, restoring from the original where the candidate lost something; if the candidate is already solid, refine it only lightly. Never return something worse than the original.
+
+Return ONLY JSON: {"improved": string, "notes": string}. "improved" is the full final prompt, ready to paste. "notes" is one sentence naming the biggest improvement over the original.`
 
 function cors(req, res) {
   const origin = (req.headers && req.headers.origin) || ''
@@ -86,7 +92,9 @@ async function meter(user, field, limit) {
   return { ref, recent, now }
 }
 
-async function callOpenAI(system, user, res) {
+// `soft`: when true, a failure returns null WITHOUT writing an error to res, so
+// the caller can fall back (used by the optional refine pass).
+async function callOpenAI(system, user, res, soft) {
   const ai = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
@@ -95,9 +103,9 @@ async function callOpenAI(system, user, res) {
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     }),
   })
-  if (!ai.ok) { const b = await ai.text(); console.error('openai', ai.status, b.slice(0, 300)); res.status(502).json({ error: `AI service error (${ai.status})` }); return null }
+  if (!ai.ok) { const b = await ai.text(); console.error('openai', ai.status, b.slice(0, 300)); if (!soft) res.status(502).json({ error: `AI service error (${ai.status})` }); return null }
   const data = await ai.json()
-  try { return JSON.parse(data.choices[0].message.content) } catch { res.status(502).json({ error: 'AI returned malformed JSON' }); return null }
+  try { return JSON.parse(data.choices[0].message.content) } catch { if (!soft) res.status(502).json({ error: 'AI returned malformed JSON' }); return null }
 }
 
 // POST { idToken, prompt } → { ok, scores, issues, gaps, summary }
@@ -110,7 +118,9 @@ http('analyzePrompt', async (req, res) => {
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     const text = String(prompt || '').trim()
-    if (text.length < 20) return res.status(400).json({ error: 'Paste a longer prompt to analyse.' })
+    // A longer prompt is recommended (the client says so), but not required — a
+    // short prompt is scored for what it is (#246). Only truly empty is rejected.
+    if (!text) return res.status(400).json({ error: 'Paste a prompt to analyse.' })
     if (!OPENAI_API_KEY) return res.status(500).json({ error: 'analysis not configured' })
 
     const m = await meter(user, 'runs', ANALYZE_LIMIT)
@@ -145,7 +155,7 @@ http('improvePrompt', async (req, res) => {
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     const text = String(prompt || '').trim()
-    if (text.length < 20) return res.status(400).json({ error: 'Paste a longer prompt first.' })
+    if (!text) return res.status(400).json({ error: 'Paste a prompt first.' })
     if (!OPENAI_API_KEY) return res.status(500).json({ error: 'rewrite not configured' })
 
     const m = await meter(user, 'improveRuns', IMPROVE_LIMIT)
@@ -159,12 +169,19 @@ http('improvePrompt', async (req, res) => {
       : '(The author did not answer any of the clarifying questions.)'
     const userMsg = `ORIGINAL PROMPT:\n${text.slice(0, 20000)}\n\nAUTHOR'S ANSWERS TO THE GAPS:\n${clarifications.slice(0, 6000)}`
 
+    // Pass 1: rewrite the prompt from the answers.
     const parsed = await callOpenAI(IMPROVE_SYSTEM, userMsg, res)
     if (!parsed) return
+    const draft = String(parsed.improved || '').slice(0, 24000)
+    if (!draft) return res.status(502).json({ error: 'AI returned an empty rewrite' })
 
-    const improved = String(parsed.improved || '').slice(0, 24000)
-    const notes = String(parsed.notes || '').slice(0, 300)
-    if (!improved) return res.status(502).json({ error: 'AI returned an empty rewrite' })
+    // Pass 2: review the draft against the original and refine it. A single rewrite
+    // sometimes scores worse than the original; this catches and repairs that
+    // before returning (#245). If the review pass fails, fall back to the draft.
+    const refineMsg = `ORIGINAL PROMPT:\n${text.slice(0, 20000)}\n\nCANDIDATE REWRITE:\n${draft.slice(0, 20000)}\n\nAUTHOR'S ANSWERS TO THE GAPS:\n${clarifications.slice(0, 6000)}`
+    const refined = await callOpenAI(REFINE_SYSTEM, refineMsg, res, draft)
+    const improved = String((refined && refined.improved) || draft).slice(0, 24000)
+    const notes = String((refined && refined.notes) || parsed.notes || '').slice(0, 300)
 
     if (m.ref) await m.ref.set({ improveRuns: [...m.recent, m.now], email: user.email, updatedAt: new Date() }, { merge: true })
     res.json({ ok: true, improved, notes })

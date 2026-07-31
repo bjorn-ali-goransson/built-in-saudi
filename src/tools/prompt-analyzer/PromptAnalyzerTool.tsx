@@ -32,6 +32,7 @@ const STR = {
     signinNote: 'Free — signing in just keeps the AI budget fair (three runs per 24h).', overall: 'Overall', issues: 'Issues', again: 'Analyse another',
     scale: '1 = poor · 5 = healthy', privacy: 'Your prompt is sent to the AI for this analysis and not stored.',
     heatLow: 'weak', heatHigh: 'strong',
+    empty: 'Paste a prompt to analyse.', recommend: 'A longer prompt gives a more useful analysis — you can still run it as-is.',
     improveTitle: 'Get an improved prompt', improveLead: 'Fill in what only you can answer — leave any blank — and the AI rewrites your prompt to close the gaps. This is the second pass.',
     suggest: 'Suggest a better prompt', generate: 'Rewrite my prompt', generating: 'Rewriting…', optional: 'optional',
     improvedTitle: 'Improved prompt', copy: 'Copy', copied: 'Copied', useIt: 'Use as new input',
@@ -42,6 +43,7 @@ const STR = {
     signinNote: 'مجاني — تسجيل الدخول فقط لضبط ميزانية الذكاء الاصطناعي (ثلاث مرات كل ٢٤ ساعة).', overall: 'الإجمالي', issues: 'المشكلات', again: 'حلّل آخر',
     scale: '١ = ضعيف · ٥ = سليم', privacy: 'يُرسل موجّهك للذكاء الاصطناعي لهذا التحليل ولا يُخزَّن.',
     heatLow: 'ضعيف', heatHigh: 'قوي',
+    empty: 'الصق موجّهًا للتحليل.', recommend: 'الموجّه الأطول يعطي تحليلًا أفيد — ويمكنك تحليله كما هو.',
     improveTitle: 'احصل على موجّه أفضل', improveLead: 'أجب عمّا لا يعرفه سواك — واترك ما شئت فارغًا — فيعيد الذكاء الاصطناعي صياغة موجّهك ليسدّ الثغرات. هذا هو المرور الثاني.',
     suggest: 'اقترح موجّهًا أفضل', generate: 'أعد صياغة موجّهي', generating: 'جارٍ إعادة الصياغة…', optional: 'اختياري',
     improvedTitle: 'الموجّه المحسّن', copy: 'نسخ', copied: 'تم النسخ', useIt: 'استخدمه كمدخل جديد',
@@ -117,7 +119,10 @@ export default function PromptAnalyzerTool() {
     finally { setBusy(false) }
   }
   function analyse() {
-    if (text.trim().length < 20) { setErr(locale === 'ar' ? 'الصق موجّهًا أطول.' : 'Paste a longer prompt.'); return }
+    // A longer prompt is only *recommended*, not required (#246): don't block on
+    // length — the note below stays up and Analyse still runs. Only empty stops us.
+    if (!text.trim()) { setErr(s.empty); return }
+    setErr('')
     if (idToken) run(idToken)
     else { pending.current = true; loadGis().then((gis) => gis.prompt()).catch(() => { /* use the button */ }) }
   }
@@ -155,6 +160,7 @@ export default function PromptAnalyzerTool() {
         <>
           <p className="text-[0.95rem] text-ink-soft leading-relaxed">{s.lead}</p>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={s.placeholder} className="min-h-[38vh] resize-y font-mono text-[0.88rem]" data-testid="pa-input" />
+          {text.trim().length > 0 && text.trim().length < 120 && <p className="text-[0.85rem] text-ink-faint" data-testid="pa-hint">{s.recommend}</p>}
           {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="pa-err">{err}</p>}
           <div className="flex items-center gap-3 flex-wrap">
             <Button variant="primary" disabled={busy} onClick={analyse} data-testid="pa-run">{busy ? s.working : (idToken ? s.analyse : s.signin)}</Button>

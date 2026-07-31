@@ -30,6 +30,10 @@ export const STR = {
     // bidi-isolated in the middle of the sentence.
     connectingPre: '', connectingPost: ' is connecting…', connectingCaller: 'Connecting…',
     connectingHint: 'Setting up the direct connection — this takes a moment.',
+    // Escalation while the answered caller still hasn't connected (#244).
+    hungUpPre: '', hungUpPost: ' hasn’t connected yet', hungUpCaller: 'Still not connected',
+    hungUpHint: 'They may have hung up — hold on a little longer.',
+    connectingFailed: 'Couldn’t connect', connectingFailedHint: 'They should try calling again.',
     contacts: 'Contacts', call: 'Call', remove: 'Remove',
     addContact: 'Save as a contact', savedContact: 'Saved — tap to remove',
     // In-call contact requests (#229) — for a peer who publishes no call-me link.
@@ -93,6 +97,10 @@ export const STR = {
     recentCalls: 'مكالمات حديثة', soloCall: 'أنت فقط',
     connectingPre: 'جارٍ اتصال ', connectingPost: '…', connectingCaller: 'جارٍ الاتصال…',
     connectingHint: 'يجري إعداد الاتصال المباشر — لحظات فقط.',
+    // Escalation while the answered caller still hasn't connected (#244).
+    hungUpPre: '', hungUpPost: ' لم يتّصل بعد', hungUpCaller: 'لا يزال غير متصل',
+    hungUpHint: 'ربما أنهى المكالمة — انتظر قليلاً بعد.',
+    connectingFailed: 'تعذّر الاتصال', connectingFailedHint: 'عليه المحاولة مرة أخرى.',
     contacts: 'جهات الاتصال', call: 'اتصال', remove: 'إزالة',
     addContact: 'احفظه كجهة اتصال', savedContact: 'محفوظ — اضغط للإزالة',
     askToSave: 'اطلب حفظه كجهة اتصال', contactAsked: 'بانتظار موافقته…',

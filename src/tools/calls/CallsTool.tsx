@@ -375,6 +375,19 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inCallPeers.length, isGuest])
 
+  // We answered a personal-link ring but the caller's connection hasn't come up
+  // yet. Rather than spin forever, escalate the message: after a few seconds hint
+  // they may have hung up, and after a few more say the call couldn't connect and
+  // they should try again. `awaitStage` 0 = connecting, 1 = maybe hung up, 2 = gave up.
+  const awaiting = !!incomingLink && answered && inCallPeers.length === 0
+  const [awaitStage, setAwaitStage] = useState(0)
+  useEffect(() => {
+    if (!awaiting) { setAwaitStage(0); return }
+    const t1 = window.setTimeout(() => setAwaitStage(1), 8_000)
+    const t2 = window.setTimeout(() => setAwaitStage(2), 20_000)
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2) }
+  }, [awaiting])
+
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'react') addFloat(m.emoji, m.name)
@@ -1375,7 +1388,7 @@ export default function CallsTool() {
 
   // We answered a personal-link ring and nobody has actually arrived yet: the caller
   // is still handshaking (or knocking, about to be auto-admitted).
-  const awaitingCaller = !!incomingLink && answered && inCallPeers.length === 0
+  const awaitingCaller = awaiting
   const selectedFile = files.find((f) => f.id === selected)
   const participantCount = 1 + inCallPeers.length
   // Elastic participant grid (P2P → assume ≤6). 1: full. 2: side-by-side, or stacked
@@ -1673,12 +1686,16 @@ export default function CallsTool() {
           {awaitingCaller && (
             <div className="absolute inset-0 z-40 grid place-items-center p-6 bg-[color-mix(in_srgb,var(--ink)_10%,transparent)]" data-testid="call-awaiting">
               <div className="flex flex-col items-center gap-3 text-center rounded-lg border border-[color:var(--line)] bg-[var(--surface)] px-6 py-5 shadow-[var(--shadow-md)] max-w-[22rem]">
-                <Spinner className="size-7" />
+                {awaitStage < 2 && <Spinner className="size-7" />}
                 <p className="text-[1rem] font-display text-ink leading-snug" data-testid="call-awaiting-who">
                   {/* <bdi> so a Latin name inside the Arabic sentence doesn't scramble it. */}
-                  {incomingName ? <>{s.connectingPre}<bdi>{incomingName}</bdi>{s.connectingPost}</> : s.connectingCaller}
+                  {awaitStage === 2
+                    ? s.connectingFailed
+                    : awaitStage === 1
+                      ? (incomingName ? <>{s.hungUpPre}<bdi>{incomingName}</bdi>{s.hungUpPost}</> : s.hungUpCaller)
+                      : (incomingName ? <>{s.connectingPre}<bdi>{incomingName}</bdi>{s.connectingPost}</> : s.connectingCaller)}
                 </p>
-                <p className="text-[0.82rem] text-ink-faint leading-relaxed">{s.connectingHint}</p>
+                <p className="text-[0.82rem] text-ink-faint leading-relaxed">{awaitStage === 2 ? s.connectingFailedHint : awaitStage === 1 ? s.hungUpHint : s.connectingHint}</p>
               </div>
             </div>
           )}
