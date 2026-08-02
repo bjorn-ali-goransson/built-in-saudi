@@ -197,7 +197,14 @@ test.describe('tools', () => {
     await expect(page.getByTestId('qr-canvas')).toBeVisible()
     await expect(page.getByTestId('qr-share')).toBeVisible()
     await expect(page.getByTestId('qr-preset-0')).toBeVisible()
+    // Content type is auto-detected from what's typed: digits → Phone, "@" → Email.
+    await page.getByTestId('qr-url').fill('0512345678')
+    await expect(page.getByTestId('qr-code')).toContainText('Phone')
+    await page.getByTestId('qr-url').fill('name@example.com')
+    await expect(page.getByTestId('qr-code')).toContainText('Email')
     await page.getByTestId('qr-dot-liquid').click()
+    // The frame's text label only appears once a frame ("template") is chosen.
+    await expect(page.getByTestId('qr-label')).toHaveCount(0)
     await page.getByTestId('qr-frame-circle').click()
     await expect(page.getByTestId('qr-label')).toBeVisible()
   })
