@@ -7,7 +7,7 @@ const CV = {
   contact: { location: 'Riyadh, Saudi Arabia', phone: '', email: 'sara@example.com', links: [] },
   summary: 'Backend engineer with **8 years** building services.',
   skills: [{ id: 'skill-lang', category: 'Languages', items: 'Java, SQL' }],
-  experience: [{ id: 'exp-acme', role: 'Engineer', company: 'Acme', location: '', startYear: '2019', endYear: 'Present', bullets: ['Cut infra costs'] }],
+  experience: [{ id: 'exp-acme', role: 'Engineer', company: 'Acme', location: '', startDate: 'Jan 2019', endDate: 'Present', bullets: ['Cut infra costs'] }],
   projects: [], talks: [], certifications: [], publications: [],
   education: [{ id: 'edu-ksu', degree: 'BSc CS', institution: 'KSU', year: '2016' }], languages: [],
 }

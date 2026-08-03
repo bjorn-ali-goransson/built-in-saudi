@@ -164,7 +164,7 @@ function buildBody(cv: Cv): string {
   if (cv.experience.length) {
     P.push(heading('Experience'))
     for (const j of cv.experience) {
-      const jd = dates(j.startYear, j.endYear)
+      const jd = dates(j.startDate, j.endDate)
       P.push(para(
         run(j.role, { b: true, color: INK, sz: 21 })
         + run(', ' + j.company, { color: ACCENT, sz: 21 })

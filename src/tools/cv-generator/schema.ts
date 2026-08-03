@@ -29,8 +29,8 @@ export interface CvExperience {
   role: string
   company: string
   location?: string // omitted when same as the header location
-  startYear?: string // year only
-  endYear?: string // year only, or "Present"
+  startDate?: string // month + year, e.g. "Mar 2023" (ATS-friendly)
+  endDate?: string // month + year, or "Present"
   bullets: string[] // each may contain **bold**
 }
 

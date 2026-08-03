@@ -226,7 +226,7 @@ export function CvDocument({ cv }: { cv: Cv }) {
                       ...(j.location ? [{ t: ` (${j.location})`, s: s.jLoc }] : []),
                     ]} />
                   </Text>
-                  <Text style={s.jobDates}>{datesLabel(j.startYear, j.endYear)}</Text>
+                  <Text style={s.jobDates}>{datesLabel(j.startDate, j.endDate)}</Text>
                 </View>
                 <View>
                   {(j.bullets || []).map((b, bi) => (

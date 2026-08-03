@@ -109,7 +109,7 @@ function body(cv: Cv): string {
     .map((j) => `<article class="job"><div class="job-head"><p class="job-meta">`
       + `<span class="role">${esc(j.role)}</span>, <span class="co">${esc(j.company)}</span>`
       + (j.location ? ` <span class="loc">(${esc(j.location)})</span>` : '')
-      + `</p><span class="job-dates">${dates(j.startYear, j.endYear)}</span></div>`
+      + `</p><span class="job-dates">${dates(j.startDate, j.endDate)}</span></div>`
       + `<ul>${(j.bullets || []).map((b) => `<li>${rich(b)}</li>`).join('')}</ul></article>`)
     .join('')
 

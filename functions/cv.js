@@ -62,7 +62,7 @@ const RULES = `The purpose of a CV is NOT to get the job — it is to get the IN
 Rules (apply strictly):
 - Write the SUMMARY and SKILLS from the WHOLE document, not just any existing summary/skills section. The summary is 2–3 sentences, punchy, and MUST mention total years of experience.
 - In "summary" and in experience/project text, wrap the most important keywords in **double asterisks** so they render bold. Bold sparingly — only genuine signal (technologies, scale, notable employers, impact).
-- Dates: YEAR ONLY, never months. Ongoing roles use "Present" as endYear.
+- Dates (experience): use MONTH and YEAR, e.g. "Mar 2023" — ATS parse tenure and gaps from month-level dates, and year-only reads as gap-hiding. Never a day. Use a 3-letter month. Ongoing roles use "Present" as endDate. If the source truly gives only a year for a role, keep that year alone rather than inventing a month. (Education stays YEAR ONLY.)
 - Location: country and maybe city only — never a street address. If every role shares the same location, put it once in contact.location and OMIT it from each experience item.
 - Links: a short label ("GitHub", "LinkedIn", "Portfolio") with its URL — never the raw URL as the label.
 - Phone/email: raw values, no "Phone:" / "Email:" labels.
@@ -89,7 +89,7 @@ The CV object shape (omit a section with an empty array; omit optional strings b
   "contact": { "location": string, "phone": string, "email": string, "links": [{ "label": string, "url": string }] },
   "summary": string,
   "skills": [{ "id": string, "category": string, "items": string }],
-  "experience": [{ "id": string, "role": string, "company": string, "location": string, "startYear": string, "endYear": string, "bullets": [string] }],
+  "experience": [{ "id": string, "role": string, "company": string, "location": string, "startDate": string, "endDate": string, "bullets": [string] }],
   "projects": [{ "id": string, "name": string, "description": string }],
   "talks": [{ "id": string, "title": string, "detail": string, "year": string }],
   "certifications": [{ "id": string, "title": string, "detail": string, "year": string }],
@@ -137,7 +137,7 @@ function normalize(cv) {
     skills: arr(cv.skills).map((g, i) => ({ id: idOf(g, 'skill', i), category: str(g.category), items: str(g.items) })).filter((g) => g.category && g.items),
     experience: arr(cv.experience).map((j, i) => ({
       id: idOf(j, 'exp', i), role: str(j.role), company: str(j.company), location: str(j.location),
-      startYear: str(j.startYear), endYear: str(j.endYear), bullets: arr(j.bullets).map(str).filter(Boolean),
+      startDate: str(j.startDate), endDate: str(j.endDate), bullets: arr(j.bullets).map(str).filter(Boolean),
     })).filter((j) => j.role || j.company),
     projects: arr(cv.projects).map((p, i) => ({ id: idOf(p, 'proj', i), name: str(p.name), description: str(p.description) })).filter((p) => p.name),
     talks: dated(cv.talks, 'talk'),
