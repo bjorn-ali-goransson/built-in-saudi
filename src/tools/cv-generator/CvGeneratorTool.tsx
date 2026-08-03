@@ -355,6 +355,7 @@ export default function CvGeneratorTool() {
   const [reportBusy, setReportBusy] = useState(false)
   const [reportErr, setReportErr] = useState('')
   const questionsRef = useRef<HTMLDivElement>(null)
+  const reviewRef = useRef<HTMLDivElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
@@ -447,6 +448,34 @@ export default function CvGeneratorTool() {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [reviewOpen])
+
+  // Size the review overlay to the VISUAL viewport so the mobile keyboard doesn't
+  // hide the questions form / footer. A `fixed inset-0` box keeps the layout-
+  // viewport height when the keyboard opens, so its scroll region + footer end up
+  // behind the keyboard and answering the next question means closing it first.
+  // Tracking window.visualViewport shrinks the overlay to the space above the
+  // keyboard, so the panel scrolls normally and the focused field stays in view.
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!reviewOpen || !vv) return
+    const apply = () => {
+      const el = reviewRef.current
+      if (!el) return
+      el.style.height = `${vv.height}px`
+      // Only override transform when the viewport is actually offset (keyboard has
+      // scrolled the page) — otherwise leave it so the entrance animation runs.
+      el.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''
+    }
+    apply()
+    vv.addEventListener('resize', apply)
+    vv.addEventListener('scroll', apply)
+    return () => {
+      vv.removeEventListener('resize', apply)
+      vv.removeEventListener('scroll', apply)
+      const el = reviewRef.current
+      if (el) { el.style.height = ''; el.style.transform = '' }
+    }
   }, [reviewOpen])
   function toggleFullscreen() {
     const el = previewRef.current
@@ -864,7 +893,7 @@ export default function CvGeneratorTool() {
               questions in the right panel (#248). Portaled so ToolPage's
               transform can't clip the fixed layer. */}
           {reviewOpen && cv && createPortal(
-            <div className="fixed inset-0 z-[80] flex flex-col bg-[var(--surface)] animate-[fadeUp_0.2s_ease_both]" role="dialog" aria-modal="true" data-testid="cv-review">
+            <div ref={reviewRef} className="fixed inset-x-0 top-0 h-[100dvh] z-[80] flex flex-col bg-[var(--surface)] animate-[fadeUp_0.2s_ease_both] origin-top" role="dialog" aria-modal="true" data-testid="cv-review">
               <div className="flex-none flex items-center justify-between gap-3 ps-4 pe-2 py-2.5 border-b border-[color:var(--line-soft)]">
                 <h3 className="font-display rtl:font-ar text-[1.15rem] font-semibold text-ink truncate">{s.atsTitle}</h3>
                 <button type="button" aria-label={s.showCv} data-testid="cv-review-close" onClick={() => setReviewOpen(false)}
