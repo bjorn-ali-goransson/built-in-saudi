@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Stack, Spinner } from '../../components/ui'
+import { Button, Stack, Spinner, Seg, SegButton } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, improveCv, type CvIssue, type CvGap, type CvAts } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
@@ -75,6 +75,9 @@ const STR = {
     atsLead: 'How your rebuilt CV scores for the ATS (Applicant Tracking System) and a recruiter’s 10-second scan.',
     ats: 'ATS',
     overall: 'Overall',
+    before: 'Before',
+    after: 'After',
+    improvedBy: (d: string) => `improved by ${d}`,
     scale: '1 = weak · 5 = strong',
     heatLow: 'weak',
     heatHigh: 'strong',
@@ -157,6 +160,9 @@ const STR = {
     atsLead: 'كيف تُقيَّم سيرتك المُعاد بناؤها في أنظمة تتبّع المتقدّمين (ATS) وفي مسح مسؤول التوظيف خلال ١٠ ثوانٍ.',
     ats: 'ATS',
     overall: 'الإجمالي',
+    before: 'قبل',
+    after: 'بعد',
+    improvedBy: (d: string) => `تحسّن بمقدار ${d}`,
     scale: '١ = ضعيف · ٥ = قوي',
     heatLow: 'ضعيف',
     heatHigh: 'قوي',
@@ -200,7 +206,7 @@ function heat(v: number, sat = 68, light = 45): string {
 
 // A heatmap radar of the six ATS scores. Each sector is coloured by the mean of
 // its two adjacent scores, so weak areas glow red at a glance.
-function AtsRadar({ scores, ar }: { scores: CvAts; ar: boolean }) {
+function AtsRadar({ scores, ar, before }: { scores: CvAts; ar: boolean; before?: CvAts | null }) {
   const N = ATS_DIMS.length, cx = 200, cy = 200, R = 130
   const ang = (i: number) => ((-90 + (i * 360) / N) * Math.PI) / 180
   const pt = (i: number, r: number): [number, number] => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))]
@@ -208,6 +214,8 @@ function AtsRadar({ scores, ar }: { scores: CvAts; ar: boolean }) {
   const val = (i: number) => scores[ATS_DIMS[i].key] || 0
   const vpt = (i: number) => pt(i, (R * val(i)) / 5)
   const poly = ATS_DIMS.map((_, i) => vpt(i).join(',')).join(' ')
+  // The "before" shape (original CV), drawn as a faint dashed outline underneath.
+  const bpoly = before ? ATS_DIMS.map((_, i) => pt(i, (R * (before[ATS_DIMS[i].key] || 0)) / 5).join(',')).join(' ') : ''
   return (
     <svg viewBox="0 0 400 400" className="w-full max-w-[360px] mx-auto" role="img" aria-label="ATS scores" data-testid="cv-ats-radar">
       {[1, 2, 3, 4, 5].map((v) => <polygon key={v} points={ring(v)} fill="none" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" strokeWidth={1} />)}
@@ -217,7 +225,8 @@ function AtsRadar({ scores, ar }: { scores: CvAts; ar: boolean }) {
         const [x1, y1] = vpt(i), [x2, y2] = vpt(j)
         return <polygon key={`s${i}`} points={`${cx},${cy} ${x1},${y1} ${x2},${y2}`} fill={heat((val(i) + val(j)) / 2)} fillOpacity={0.5} stroke="none" />
       })}
-      <polygon points={poly} fill="none" stroke="color-mix(in srgb, var(--ink) 45%, transparent)" strokeWidth={1.5} strokeLinejoin="round" />
+      {bpoly && <polygon points={bpoly} fill="none" stroke="color-mix(in srgb, var(--ink) 34%, transparent)" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" data-testid="cv-ats-radar-before" />}
+      <polygon points={poly} fill="none" stroke="color-mix(in srgb, var(--ink) 55%, transparent)" strokeWidth={2} strokeLinejoin="round" />
       {ATS_DIMS.map((d, i) => { const [x, y] = vpt(i); return <circle key={d.key} cx={x} cy={y} r={3.5} fill={heat(val(i), 70, 38)} stroke="var(--paper)" strokeWidth={1} /> })}
       {ATS_DIMS.map((d, i) => { const [x, y] = pt(i, R + 24); return <text key={d.key} x={x} y={y} fontSize={12} fontWeight={600} textAnchor="middle" dominantBaseline="middle" fill="var(--ink-soft)">{ar ? d.ar : d.en}</text> })}
     </svg>
@@ -334,6 +343,8 @@ export default function CvGeneratorTool() {
   // pass): the review sheet shows the heatmap radar, the issues, and the gaps as
   // an answerable form that a second AI pass folds in to raise the score.
   const [ats, setAts] = useState<CvAts>({})
+  const [atsBefore, setAtsBefore] = useState<CvAts | null>(null) // the original CV's score, for before/after
+  const [reviewSide, setReviewSide] = useState<'before' | 'after'>('after') // which CV the left column previews
   const [gaps, setGaps] = useState<CvGap[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [improving, setImproving] = useState(false)
@@ -504,6 +515,7 @@ export default function CvGeneratorTool() {
     setIssues([])
     setReviewOpen(false)
     setGaps([]); setAnswers({}); setChangeNote(''); setImproveErr('')
+    setAtsBefore(null); setReviewSide('after')
     setSigninFallback(false)
     setOrigPages([])
     setStatus('extracting')
@@ -553,6 +565,8 @@ export default function CvGeneratorTool() {
       // read the CV — the review sheet sits over a blurred preview (#213, #248).
       setIssues(r.issues)
       setAts(r.ats)
+      setAtsBefore(r.atsBefore)
+      setReviewSide('after')
       setGaps(r.gaps)
       setAnswers({})
       setChangeNote('')
@@ -590,7 +604,10 @@ export default function CvGeneratorTool() {
     }
   }
 
-  const overall = Math.round((ATS_DIMS.reduce((a, d) => a + (ats[d.key] || 0), 0) / ATS_DIMS.length) * 10) / 10
+  const mean = (a: CvAts) => Math.round((ATS_DIMS.reduce((s, d) => s + (a[d.key] || 0), 0) / ATS_DIMS.length) * 10) / 10
+  const overall = mean(ats)
+  const overallBefore = atsBefore ? mean(atsBefore) : null
+  const delta = overallBefore != null ? Math.round((overall - overallBefore) * 10) / 10 : 0
 
   // Solution-oriented issues: jump from an issue to the questions form and focus
   // the first answer box, so "fix this" has somewhere to go.
@@ -825,6 +842,7 @@ export default function CvGeneratorTool() {
             {/* ATS score badge (bottom-centre): reopens the review with the radar + questions. */}
             <button type="button" onClick={() => setReviewOpen(true)} data-testid="cv-ats-badge"
               className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-3 text-[0.85rem] font-semibold shadow-[var(--shadow-md)] cursor-pointer hover:border-green-500">
+              {overallBefore != null && <><span className="text-ink-faint">{overallBefore}</span><span className="text-ink-faint font-normal">→</span></>}
               <span style={{ color: heat(overall, 70, 38) }}>{overall}</span>
               <span className="text-ink-faint font-normal">/ 5 · {s.ats}</span>
             </button>
@@ -854,9 +872,24 @@ export default function CvGeneratorTool() {
               </div>
 
               <div className="flex-1 min-h-0 flex">
-                {/* Left column: the CV preview (desktop only). */}
-                <div className="hidden md:block flex-1 min-w-0 bg-[#e9ebef] border-e border-[color:var(--line-soft)]">
-                  <iframe title={cvFilename(cv)} className="block w-full h-full border-0 bg-[#e9ebef]" srcDoc={renderCvHtml(cv, { preview: true })} />
+                {/* Left column: the CV preview (desktop only). When there's an
+                    original upload to compare, a Before/After switch flips the
+                    preview between the uploaded CV and the optimized one. */}
+                <div className="hidden md:flex flex-col flex-1 min-w-0 bg-[#e9ebef] border-e border-[color:var(--line-soft)]">
+                  {atsBefore && hasOriginal && (
+                    <div className="flex-none flex items-center justify-center gap-0 p-2 bg-[var(--surface)] border-b border-[color:var(--line-soft)]">
+                      <Seg role="group">
+                        <SegButton active={reviewSide === 'before'} onClick={() => setReviewSide('before')}>{s.before}</SegButton>
+                        <SegButton active={reviewSide === 'after'} onClick={() => setReviewSide('after')}>{s.after}</SegButton>
+                      </Seg>
+                    </div>
+                  )}
+                  <div className="relative flex-1 min-h-0">
+                    <iframe title={cvFilename(cv)} className="block w-full h-full border-0 bg-[#e9ebef]" srcDoc={renderCvHtml(cv, { preview: true })} />
+                    {reviewSide === 'before' && hasOriginal && (
+                      <PdfPages pages={origPages} className="absolute inset-0 h-full" />
+                    )}
+                  </div>
                 </div>
 
                 {/* Right column: the ATS panel (the only column on mobile). */}
@@ -869,19 +902,40 @@ export default function CvGeneratorTool() {
                     )}
 
                     <div className="flex flex-col items-center gap-2">
-                      <AtsRadar scores={ats} ar={ar} />
-                      <div className="flex items-center justify-center gap-2 text-[0.72rem] text-ink-faint">
-                        <span>{s.heatLow}</span>
-                        <span className="h-2.5 w-24 rounded-[2px]" style={{ background: `linear-gradient(to right, ${heat(1)}, ${heat(3)}, ${heat(5)})` }} aria-hidden="true" />
-                        <span>{s.heatHigh}</span>
+                      <AtsRadar scores={ats} ar={ar} before={atsBefore} />
+                      <div className="flex items-center justify-center gap-3 text-[0.72rem] text-ink-faint flex-wrap">
+                        {atsBefore && (
+                          <span className="inline-flex items-center gap-1"><span className="w-4 border-t border-dashed border-[color:var(--ink-soft)]" aria-hidden="true" /> {s.before}</span>
+                        )}
+                        {atsBefore && (
+                          <span className="inline-flex items-center gap-1"><span className="w-4 border-t-2 border-[color:var(--ink-soft)]" aria-hidden="true" /> {s.after}</span>
+                        )}
+                        <span className="inline-flex items-center gap-1">{s.heatLow}
+                          <span className="h-2.5 w-20 rounded-[2px]" style={{ background: `linear-gradient(to right, ${heat(1)}, ${heat(3)}, ${heat(5)})` }} aria-hidden="true" />
+                          {s.heatHigh}</span>
                       </div>
                     </div>
 
+                    {/* Split before → after overall (the proof it improved). */}
                     <div className="flex items-center gap-3">
-                      <span className="text-[2.4rem] font-display font-bold leading-none" data-testid="cv-ats-overall" style={{ color: heat(overall, 70, 38) }}>{overall}</span>
+                      {overallBefore != null && (
+                        <>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[1.5rem] font-display font-bold leading-none text-ink-faint" data-testid="cv-ats-before">{overallBefore}</span>
+                            <span className="text-[0.66rem] uppercase tracking-[0.08em] text-ink-faint">{s.before}</span>
+                          </div>
+                          <span className="text-ink-faint text-[1.3rem]" aria-hidden="true">→</span>
+                        </>
+                      )}
+                      <div className="flex flex-col items-center">
+                        <span className="text-[2.4rem] font-display font-bold leading-none" data-testid="cv-ats-overall" style={{ color: heat(overall, 70, 38) }}>{overall}</span>
+                        <span className="text-[0.66rem] uppercase tracking-[0.08em] text-ink-faint">{overallBefore != null ? s.after : s.overall}</span>
+                      </div>
                       <div className="flex flex-col">
-                        <span className="text-ink-faint text-[0.9rem]">/ 5 · {s.overall}</span>
-                        <span className="text-[0.72rem] text-ink-faint">{s.scale}</span>
+                        <span className="text-ink-faint text-[0.9rem]">/ 5</span>
+                        {delta > 0
+                          ? <span className="text-[0.8rem] font-semibold text-green-700" data-testid="cv-ats-delta">▲ +{delta}</span>
+                          : <span className="text-[0.72rem] text-ink-faint">{s.scale}</span>}
                       </div>
                     </div>
                     <ul className="flex flex-col gap-1 list-none p-0 m-0">

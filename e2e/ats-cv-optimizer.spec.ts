@@ -15,6 +15,7 @@ const GEN = {
   ok: true, cv: CV,
   issues: [{ title: 'Unexplained employment gap', detail: 'A gap in 2025 with no detail.', severity: 'high' }],
   ats: { keywords: 2, impact: 2, clarity: 4, format: 4, completeness: 3, conciseness: 3 },
+  atsBefore: { keywords: 1, impact: 1, clarity: 3, format: 2, completeness: 2, conciseness: 2 },
   gaps: [
     { id: 'costs', question: 'By what % did you cut costs?', why: 'adds impact', expects: 'percent', targets: ['exp-acme'] },
     { id: 'stack', question: 'What is your core stack?', why: 'adds keywords', expects: 'text', targets: ['skills'] },
@@ -53,6 +54,10 @@ test('ats review: score, percent stepper, issue CTA and the improve pass (mocked
   await expect(review).toBeVisible()
   await expect(page.getByTestId('cv-ats-radar')).toBeVisible()
   await expect(page.getByTestId('cv-ats-overall')).toHaveText('3') // (2+2+4+4+3+3)/6
+  // Before → after: the original scored lower and the delta is shown.
+  await expect(page.getByTestId('cv-ats-before')).toHaveText('1.8') // (1+1+3+2+2+2)/6
+  await expect(page.getByTestId('cv-ats-delta')).toContainText('1.2')
+  await expect(page.getByTestId('cv-ats-radar-before')).toBeAttached()
 
   // An issue links to the questions via a CTA.
   await expect(page.getByTestId('cv-issue-fix').first()).toBeVisible()

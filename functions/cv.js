@@ -112,7 +112,9 @@ Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [
 
 const LENGTH_RULE = `\n\nLENGTH — IMPORTANT: The result must fill close to a FULL A4 page. A one-page CV should carry roughly 300+ words of body content (not counting the name, headline and contact line). If the source material is thin, do NOT return a sparse half-page — instead elaborate PROFESSIONALLY and truthfully: expand each role's responsibilities into specific, credible bullets, draw out scope/scale/tools/impact that is implied by the material, and enrich the summary and skills. NEVER invent employers, job titles, dates, metrics or skills that aren't supported — but a confident, well-filled single page reads far better than a short one, so err toward fuller, richer phrasing grounded in what's there.`
 
-const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}${LENGTH_RULE}`
+const BEFORE_RULE = `\n\nBEFORE / AFTER — in ADDITION to "ats" (the scores for the CV you produce), also return "atsBefore": the same six 1-5 scores for the ORIGINAL uploaded CV **as-is**, before any of your edits, so the candidate can see how much you improved it. Score the original honestly on its own terms — a raw, unformatted, or thin upload typically scores lower on format, keywords, impact and conciseness — and your rebuild should genuinely RAISE the scores (never return an "ats" lower than "atsBefore" on any dimension; if you can't beat the original on a dimension, improve the CV until you can).`
+
+const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}${LENGTH_RULE}${BEFORE_RULE}`
 
 const REFINE_SYSTEM = `You are an elite technical résumé editor. You are given the current CV as JSON plus an instruction from the candidate to change something. Apply it, preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing problems silently, and re-evaluate the reported issues.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Re-score the "ats" object and refresh "gaps" to reflect the updated CV. Return { "cv": { …the CV object… }, "issues": [ up to 5 issue objects ], "ats": { …six 1-5 scores… }, "gaps": [ up to 5 question objects ], "summary": "…" }.`
 
@@ -242,6 +244,8 @@ async function callOpenAI(system, user, { patch = false } = {}) {
     const base = {
       issues: normalizeIssues(parsed && parsed.issues),
       ats: clampAts(parsed && parsed.ats),
+      // The original CV's score (generate only) — null when the model didn't send it.
+      atsBefore: parsed && parsed.atsBefore && typeof parsed.atsBefore === 'object' ? clampAts(parsed.atsBefore) : null,
       gaps: normalizeGaps(parsed && parsed.gaps),
       summary,
     }
@@ -278,10 +282,10 @@ http('cvGenerate', async (req, res) => {
       return res.status(429).json({ error: `Limit reached — you can generate ${UPLOAD_LIMIT} CVs per 24 hours. Try again later.` })
     }
 
-    const { cv, issues, ats, gaps } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
+    const { cv, issues, ats, gaps, atsBefore } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
     // Record the successful upload and reset the tweak budgets for this new CV.
     await ref.set({ uploads: [...recent, now], polishCount: 0, elaborateCount: 0, shortenCount: 0, improveCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, issues, ats, gaps, polishLeft: POLISH_LIMIT, improveLeft: IMPROVE_LIMIT })
+    res.json({ ok: true, cv, issues, ats, gaps, atsBefore, polishLeft: POLISH_LIMIT, improveLeft: IMPROVE_LIMIT })
   } catch (e) {
     fail(res, e)
   }

@@ -339,7 +339,12 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `keywords, impact, clarity, format, completeness, conciseness`, kept in sync with
   `ATS_DIMS` in the tool) and **`gaps`** (2–5 follow-up questions only the candidate
   can answer; the gap prompt tells the model to ASK for a missing number/percentage
-  rather than ever inventing one). The tool shows these in a **full-screen review
+  rather than ever inventing one). Generate also returns **`atsBefore`** — the same
+  six scores for the ORIGINAL uploaded CV as-is — so the review shows a **before →
+  after** comparison (the radar overlays the original as a dashed outline, a split
+  overall pill shows the delta, and a Before/After toggle flips the desktop CV
+  preview between the upload and the optimized version; `atsBefore` is set once at
+  generate and kept across improves). The tool shows these in a **full-screen review
   before the CV is revealed** (#213, #248) — the CV itself in a **left column on
   desktop**, the score panel on the right: a **heatmap spider chart** of the ATS
   scores (same idea as the Prompt Analyzer's radar), the `issues`

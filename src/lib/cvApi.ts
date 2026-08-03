@@ -80,6 +80,7 @@ export interface CvResult {
   cv: Cv
   issues: CvIssue[]
   ats: CvAts
+  atsBefore: CvAts | null // the original CV's score (generate only), for before/after
   gaps: CvGap[]
   summary: string
   polishLeft: number
@@ -118,11 +119,12 @@ function parseGaps(raw: unknown): CvGap[] {
     .filter((g) => g.question)
 }
 
-function parseResult(data: { cv?: Cv; issues?: unknown; ats?: unknown; gaps?: unknown; summary?: unknown; polishLeft?: unknown; improveLeft?: unknown }): CvResult {
+function parseResult(data: { cv?: Cv; issues?: unknown; ats?: unknown; atsBefore?: unknown; gaps?: unknown; summary?: unknown; polishLeft?: unknown; improveLeft?: unknown }): CvResult {
   return {
     cv: data.cv as Cv,
     issues: parseIssues(data.issues),
     ats: parseAts(data.ats),
+    atsBefore: data.atsBefore && typeof data.atsBefore === 'object' ? parseAts(data.atsBefore) : null,
     gaps: parseGaps(data.gaps),
     summary: typeof data.summary === 'string' ? data.summary : '',
     polishLeft: Number(data.polishLeft ?? 0),
