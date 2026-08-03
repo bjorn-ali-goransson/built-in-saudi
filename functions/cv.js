@@ -83,19 +83,19 @@ NEVER ask the candidate anything — you get exactly one pass and there is no ba
 - Each issue is { "title": a 3–8 word label, "detail": one or two sentences saying what's wrong and what to add, "severity": "high" | "medium" | "low" }. "high" = a recruiter is likely to reject or distrust the CV over it; "medium" = it noticeably weakens the CV; "low" = a nice-to-have polish.
 - Report only what genuinely matters, most severe first, and never invent facts to fill a gap. Always still produce the best CV you can from what's given — issues are informational, never blocking. If nothing material is wrong, return an empty array.
 
-The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty):
+The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty). EVERY list item has a short, stable "id" slug (e.g. "exp-morgan-stanley", "skill-cloud") — invent one per item; if an item already carries an id (you were given the current CV), REUSE it unchanged:
 {
   "name": string, "role": string, "available": string,
   "contact": { "location": string, "phone": string, "email": string, "links": [{ "label": string, "url": string }] },
   "summary": string,
-  "skills": [{ "category": string, "items": string }],
-  "experience": [{ "role": string, "company": string, "location": string, "startYear": string, "endYear": string, "bullets": [string] }],
-  "projects": [{ "name": string, "description": string }],
-  "talks": [{ "title": string, "detail": string, "year": string }],
-  "certifications": [{ "title": string, "detail": string, "year": string }],
-  "publications": [{ "title": string, "detail": string, "year": string }],
-  "education": [{ "degree": string, "institution": string, "year": string }],
-  "languages": [{ "name": string, "level": string }]
+  "skills": [{ "id": string, "category": string, "items": string }],
+  "experience": [{ "id": string, "role": string, "company": string, "location": string, "startYear": string, "endYear": string, "bullets": [string] }],
+  "projects": [{ "id": string, "name": string, "description": string }],
+  "talks": [{ "id": string, "title": string, "detail": string, "year": string }],
+  "certifications": [{ "id": string, "title": string, "detail": string, "year": string }],
+  "publications": [{ "id": string, "title": string, "detail": string, "year": string }],
+  "education": [{ "id": string, "degree": string, "institution": string, "year": string }],
+  "languages": [{ "id": string, "name": string, "level": string }]
 }
 
 ATS SCORE — also grade the CV YOU PRODUCE on how it will fare in an Applicant Tracking System and a recruiter's 10-second scan. Score each dimension an INTEGER 1 (poor) to 5 (excellent); higher is ALWAYS better. Score honestly the CV as it stands after your edits — if the source is thin, some scores will be low, and that is exactly what the questions below are for.
@@ -106,9 +106,9 @@ ATS SCORE — also grade the CV YOU PRODUCE on how it will fare in an Applicant 
 - completeness: the essentials are present — contact email, a strong summary, dated roles, education, skills.
 - conciseness: signal-dense and the right length — a strong, well-filled SINGLE PAGE is the target. Never pad with filler, but never cut real signal (skills, keywords, quantified impact) just to be shorter — that would hurt keywords/completeness. Trim only genuine noise.
 
-QUESTIONS (gaps) — name what only the CANDIDATE can supply that would most RAISE those scores: e.g. missing metrics for an achievement, the target job title/industry to tune keywords toward, a claimed skill with no evidence, missing contact details, an unexplained gap. Ask each as a direct question they can answer in a sentence or two. Whenever an achievement is unquantified, ASK FOR THE NUMBER and show the shape of the answer in the question — a percentage, count, time saved, money or scale (e.g. "By roughly what percentage did you cut infrastructure costs? — e.g. ~15%"). Never put an invented figure on the CV yourself; only the candidate's real answer (folded in on the next pass) may add a number. For each gap set "expects" to "percent" when the ideal answer is a single percentage (a cost cut, a growth or improvement figure), otherwise "text". Give 2 to 5 questions, ordered by how much they'd help; skip anything already well answered. (These overlap with "issues" but are phrased as answerable questions for a follow-up pass.)
+QUESTIONS (gaps) — name what only the CANDIDATE can supply that would most RAISE those scores: e.g. missing metrics for an achievement, the target job title/industry to tune keywords toward, a claimed skill with no evidence, missing contact details, an unexplained gap. Ask each as a direct question they can answer in a sentence or two. Whenever an achievement is unquantified, ASK FOR THE NUMBER and show the shape of the answer in the question — a percentage, count, time saved, money or scale (e.g. "By roughly what percentage did you cut infrastructure costs? — e.g. ~15%"). Never put an invented figure on the CV yourself; only the candidate's real answer (folded in on the next pass) may add a number. For each gap set "expects" to "percent" when the ideal answer is a single percentage (a cost cut, a growth or improvement figure), otherwise "text". Also set "targets" to the parts of the CV the answer would change: a list of the item "id"s it touches (e.g. ["exp-morgan-stanley"]) and/or the scalar section keys "summary"/"skills". This lets a later pass rewrite only those parts. Give 2 to 5 questions, ordered by how much they'd help; skip anything already well answered. (These overlap with "issues" but are phrased as answerable questions for a follow-up pass.)
 
-Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [ up to 5 issue objects ], "ats": { "keywords": 1-5, "impact": 1-5, "clarity": 1-5, "format": 1-5, "completeness": 1-5, "conciseness": 1-5 }, "gaps": [ up to 5 { "id": short slug, "question": the direct question to the candidate, "why": <= 12 words on what answering it improves, "expects": "percent" or "text" } ] }`
+Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [ up to 5 issue objects ], "ats": { "keywords": 1-5, "impact": 1-5, "clarity": 1-5, "format": 1-5, "completeness": 1-5, "conciseness": 1-5 }, "gaps": [ up to 5 { "id": short slug, "question": the direct question to the candidate, "why": <= 12 words on what answering it improves, "expects": "percent" or "text", "targets": [ item ids and/or "summary"/"skills" ] } ] }`
 
 const LENGTH_RULE = `\n\nLENGTH — IMPORTANT: The result must fill close to a FULL A4 page. A one-page CV should carry roughly 300+ words of body content (not counting the name, headline and contact line). If the source material is thin, do NOT return a sparse half-page — instead elaborate PROFESSIONALLY and truthfully: expand each role's responsibilities into specific, credible bullets, draw out scope/scale/tools/impact that is implied by the material, and enrich the summary and skills. NEVER invent employers, job titles, dates, metrics or skills that aren't supported — but a confident, well-filled single page reads far better than a short one, so err toward fuller, richer phrasing grounded in what's there.`
 
@@ -119,7 +119,10 @@ const REFINE_SYSTEM = `You are an elite technical résumé editor. You are given
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
   const str = (x) => (typeof x === 'string' ? x : '')
-  const dated = (items) => arr(items).map((t) => ({ title: str(t.title), detail: str(t.detail), year: str(t.year) })).filter((t) => t.title)
+  // Preserve the model's item id (so a targeted improve can patch by it),
+  // falling back to a stable per-section slug when it's missing.
+  const idOf = (t, prefix, i) => str(t && t.id).trim().slice(0, 40) || `${prefix}-${i + 1}`
+  const dated = (items, prefix) => arr(items).map((t, i) => ({ id: idOf(t, prefix, i), title: str(t.title), detail: str(t.detail), year: str(t.year) })).filter((t) => t.title)
   return {
     name: str(cv.name),
     role: str(cv.role),
@@ -131,18 +134,33 @@ function normalize(cv) {
       links: arr(cv.contact && cv.contact.links).map((l) => ({ label: str(l.label), url: str(l.url) })).filter((l) => l.label && l.url),
     },
     summary: str(cv.summary),
-    skills: arr(cv.skills).map((g) => ({ category: str(g.category), items: str(g.items) })).filter((g) => g.category && g.items),
-    experience: arr(cv.experience).map((j) => ({
-      role: str(j.role), company: str(j.company), location: str(j.location),
+    skills: arr(cv.skills).map((g, i) => ({ id: idOf(g, 'skill', i), category: str(g.category), items: str(g.items) })).filter((g) => g.category && g.items),
+    experience: arr(cv.experience).map((j, i) => ({
+      id: idOf(j, 'exp', i), role: str(j.role), company: str(j.company), location: str(j.location),
       startYear: str(j.startYear), endYear: str(j.endYear), bullets: arr(j.bullets).map(str).filter(Boolean),
     })).filter((j) => j.role || j.company),
-    projects: arr(cv.projects).map((p) => ({ name: str(p.name), description: str(p.description) })).filter((p) => p.name),
-    talks: dated(cv.talks),
-    certifications: dated(cv.certifications),
-    publications: dated(cv.publications),
-    education: arr(cv.education).map((e) => ({ degree: str(e.degree), institution: str(e.institution), year: str(e.year) })).filter((e) => e.degree),
-    languages: arr(cv.languages).map((l) => ({ name: str(l.name), level: str(l.level) })).filter((l) => l.name),
+    projects: arr(cv.projects).map((p, i) => ({ id: idOf(p, 'proj', i), name: str(p.name), description: str(p.description) })).filter((p) => p.name),
+    talks: dated(cv.talks, 'talk'),
+    certifications: dated(cv.certifications, 'cert'),
+    publications: dated(cv.publications, 'pub'),
+    education: arr(cv.education).map((e, i) => ({ id: idOf(e, 'edu', i), degree: str(e.degree), institution: str(e.institution), year: str(e.year) })).filter((e) => e.degree),
+    languages: arr(cv.languages).map((l, i) => ({ id: idOf(l, 'lang', i), name: str(l.name), level: str(l.level) })).filter((l) => l.name),
   }
+}
+
+// A section-level PATCH from a targeted improve: normalize ONLY the keys present
+// (each present array/scalar is a complete replacement of that section), so
+// unchanged sections the model didn't re-emit are left untouched on merge.
+const SECTION_KEYS = ['name', 'role', 'available', 'contact', 'summary', 'skills', 'experience', 'projects', 'talks', 'certifications', 'publications', 'education', 'languages']
+function normalizePatch(raw) {
+  if (!raw || typeof raw !== 'object') return {}
+  const present = {}
+  for (const k of SECTION_KEYS) if (k in raw) present[k] = raw[k]
+  // Reuse the full normalizer, then keep only the sections that were present.
+  const full = normalize(present)
+  const out = {}
+  for (const k of Object.keys(present)) out[k] = full[k]
+  return out
 }
 
 // Problems the model can't fix on its own, shown to the candidate in a dialog
@@ -185,12 +203,13 @@ function normalizeGaps(raw) {
       question: String((g && g.question) || '').trim().slice(0, 200),
       why: String((g && g.why) || '').trim().slice(0, 120),
       expects: String((g && g.expects) || '').toLowerCase() === 'percent' ? 'percent' : 'text',
+      targets: (Array.isArray(g && g.targets) ? g.targets : []).map((t) => String(t || '').trim().slice(0, 40)).filter(Boolean).slice(0, 12),
     }))
     .filter((g) => g.question)
     .slice(0, GAP_CAP)
 }
 
-async function callOpenAI(system, user) {
+async function callOpenAI(system, user, { patch = false } = {}) {
   if (!OPENAI_API_KEY) {
     const e = new Error('OPENAI_API_KEY not configured')
     e.code = 500
@@ -220,13 +239,15 @@ async function callOpenAI(system, user) {
     // Tolerate the model returning { cv, issues } or just the CV object.
     const cvObj = parsed && parsed.cv && typeof parsed.cv === 'object' ? parsed.cv : parsed
     const summary = typeof (parsed && parsed.summary) === 'string' ? parsed.summary.trim() : ''
-    return {
-      cv: normalize(cvObj),
+    const base = {
       issues: normalizeIssues(parsed && parsed.issues),
       ats: clampAts(parsed && parsed.ats),
       gaps: normalizeGaps(parsed && parsed.gaps),
       summary,
     }
+    // Improve returns only the changed sections (a patch merged client-side);
+    // every other pass returns the whole CV.
+    return patch ? { patch: normalizePatch(cvObj), ...base } : { cv: normalize(cvObj), ...base }
   } catch {
     const e = new Error('AI returned malformed JSON')
     e.code = 502
@@ -330,18 +351,21 @@ http('cvRefine', async (req, res) => {
       ? `\n\nFor reference, the ORIGINAL CV text the candidate uploaded (use it to recover any detail that may have been dropped, but keep obeying every rule):\n${String(sourceText).slice(0, 12000)}`
       : ''
     const task = isImprove
-      ? `${lead}.\n\nThe candidate's answers to your follow-up questions:\n${filledAnswers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n').slice(0, 6000)}`
+      ? `${lead}.\n\nThe candidate's answers to your follow-up questions:\n${filledAnswers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n').slice(0, 6000)}\n\nRETURN ONLY CHANGED SECTIONS (this OVERRIDES the return shape above): under "cv" include ONLY the sections your edits actually change — for any array section you touch include the COMPLETE section (every item, ids preserved); include "summary" only if you rewrote it; OMIT every section you leave unchanged (the client keeps those, which saves tokens). Still return "ats", "gaps" and "summary".`
       : `${lead}:\n${String(instruction).slice(0, 1000)}`
-    const { cv, issues, ats, gaps, summary } = await callOpenAI(
+    const { cv, patch, issues, ats, gaps, summary } = await callOpenAI(
       REFINE_SYSTEM,
       `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}${prev}${src}\n\n${task}`,
+      { patch: isImprove },
     )
     if (isImprove) improveCount += 1
     else if (isElaborate) elaborateCount += 1
     else if (isShorten) shortenCount += 1
     else polishCount += 1
     await ref.update({ polishCount, elaborateCount, shortenCount, improveCount, updatedAt: new Date() })
-    res.json({ ok: true, cv, issues, ats, gaps, summary, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount, improveLeft: IMPROVE_LIMIT - improveCount })
+    // Improve returns a section-level `patch`; the other kinds return the whole `cv`.
+    const shaped = isImprove ? { patch } : { cv }
+    res.json({ ok: true, ...shaped, issues, ats, gaps, summary, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount, improveLeft: IMPROVE_LIMIT - improveCount })
   } catch (e) {
     fail(res, e)
   }

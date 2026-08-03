@@ -20,8 +20,11 @@ const GEN = {
   ],
   polishLeft: 1, improveLeft: 2,
 }
+// Improve returns only the CHANGED sections as a patch (merged client-side).
 const IMPROVED = {
-  ok: true, cv: CV, issues: [],
+  ok: true,
+  patch: { summary: 'Backend engineer with **8 years** who cut infra costs **15%**.' },
+  issues: [],
   ats: { keywords: 4, impact: 4, clarity: 4, format: 4, completeness: 4, conciseness: 4 },
   gaps: [], summary: 'Folded in your 15% cost cut and core stack.', polishLeft: 1, improveLeft: 1,
 }

@@ -15,12 +15,17 @@ export interface CvContact {
   links: CvLink[]
 }
 
+// Every list item carries a short, stable `id` (authored by the model, preserved
+// across passes) so a targeted improve can patch just the sections that change —
+// see functions/cv.js. Scalar sections are addressed by their key ("summary").
 export interface CvSkillGroup {
+  id?: string
   category: string // "Languages & Core"
   items: string // "Java, SQL, REST"
 }
 
 export interface CvExperience {
+  id?: string
   role: string
   company: string
   location?: string // omitted when same as the header location
@@ -30,23 +35,27 @@ export interface CvExperience {
 }
 
 export interface CvProject {
+  id?: string
   name: string
   description: string // may contain **bold**
 }
 
 export interface CvDated {
+  id?: string
   title: string
   detail?: string // venue / issuer
   year?: string
 }
 
 export interface CvEducation {
+  id?: string
   degree: string
   institution?: string
   year?: string // year only; no GPA, no coursework
 }
 
 export interface CvLanguage {
+  id?: string
   name: string
   level?: string // e.g. "Native", "Fluent", "B2"
 }

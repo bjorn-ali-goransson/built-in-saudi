@@ -347,7 +347,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   that jumps to the questions, and the gaps as an **answerable form**. Answering and
   hitting *Improve* runs `cv-refine` with **`kind: 'improve'`** (`answers[]` instead
   of an instruction, `improveCount` budget of 2/CV) — a second pass that folds the
-  answers in, **re-scores the ATS radar** and refreshes the questions. A score badge
+  answers in, **re-scores the ATS radar** and refreshes the questions. **Every CV
+  list item carries a model-authored stable `id`** (preserved across passes;
+  `normalize` backfills `<section>-<n>`); gaps carry **`targets`** (the ids /
+  `summary`/`skills` keys an answer would change), and the improve pass returns
+  **only the changed sections as a `patch`** (server `normalizePatch`) that the
+  client merges section-level onto the current CV — so unchanged sections aren't
+  re-emitted, saving output tokens. A score badge
   in the preview reopens the review, which also **exports a PDF report**
   (`AtsReport.tsx`, react-pdf) with the score, issues, and the questions printed as
   fill-in gaps. The owner email (`OWNER_EMAIL`) is exempt from every CV rate limit.

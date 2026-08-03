@@ -68,6 +68,8 @@ export interface CvGap {
   // 'percent' → the answer is a single percentage (rendered as a stepper);
   // 'text' → free text. Defaults to 'text'.
   expects: 'percent' | 'text'
+  // The CV item ids / section keys ("summary","skills") this answer would change.
+  targets: string[]
 }
 
 /** ATS score per dimension, each an integer 1–5. Keys match ATS_DIMENSIONS in
@@ -111,7 +113,7 @@ function parseGaps(raw: unknown): CvGap[] {
   return raw
     .map((g, n) => {
       const o = (g || {}) as Partial<CvGap>
-      return { id: String(o.id || `gap${n}`), question: String(o.question || ''), why: String(o.why || ''), expects: o.expects === 'percent' ? 'percent' as const : 'text' as const }
+      return { id: String(o.id || `gap${n}`), question: String(o.question || ''), why: String(o.why || ''), expects: o.expects === 'percent' ? 'percent' as const : 'text' as const, targets: Array.isArray(o.targets) ? o.targets.map((t) => String(t)) : [] }
     })
     .filter((g) => g.question)
 }
@@ -153,8 +155,10 @@ export async function refineCv(idToken: string, cv: Cv, instruction: string, kin
 }
 
 /** Second pass: fold the candidate's answers to the follow-up questions into the
- *  CV to raise its ATS score, then re-score. `sourceText` lets the model pull
- *  back any original detail a blank answer would otherwise leave missing. */
+ *  CV to raise its ATS score, then re-score. To save output tokens the server
+ *  returns only the CHANGED sections as a `patch`; we merge it (section-level,
+ *  by key) onto the current CV. `sourceText` lets the model pull back any
+ *  original detail a blank answer would otherwise leave missing. */
 export async function improveCv(idToken: string, cv: Cv, answers: { question: string; answer: string }[], sourceText = ''): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',
@@ -163,5 +167,6 @@ export async function improveCv(idToken: string, cv: Cv, answers: { question: st
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return parseResult(data)
+  const patch = data.patch && typeof data.patch === 'object' ? (data.patch as Partial<Cv>) : {}
+  return { ...parseResult(data), cv: { ...cv, ...patch } }
 }
