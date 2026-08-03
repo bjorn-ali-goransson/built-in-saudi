@@ -28,7 +28,7 @@ const STR = {
     readyTitle: 'Your CV is ready to optimize',
     readyBody: 'We’ll rewrite it clean and ATS-ready, score it for the 10-second recruiter scan, and flag what only you can fix.',
     readyNote: 'Free — signing in just keeps bots out.',
-    build: 'Optimize my CV',
+    build: 'Sign in and optimize your CV for ATS',
     building: 'Optimizing your CV…',
     steps: ['Reading your CV…', 'Highlighting your impact…', 'Trimming the noise…', 'Tuning it for the 10-second scan…', 'Formatting your new CV…'],
     genErr: 'Something went wrong. Please try again.',
@@ -110,7 +110,7 @@ const STR = {
     readyTitle: 'سيرتك جاهزة للتحسين',
     readyBody: 'سنعيد كتابتها نظيفة ومتوافقة مع أنظمة التتبّع، ونقيّمها لمسح المجنِّد في ١٠ ثوانٍ، ونُبرز ما لا يمكن إصلاحه إلا منك.',
     readyNote: 'مجاني — تسجيل الدخول فقط لمنع الروبوتات.',
-    build: 'حسّن سيرتي',
+    build: 'سجّل الدخول وحسّن سيرتك لأنظمة ATS',
     building: 'جارٍ تحسين سيرتك…',
     steps: ['نقرأ سيرتك…', 'نُبرز إنجازاتك…', 'نحذف الحشو…', 'نضبطها لمسحٍ في ١٠ ثوانٍ…', 'ننسّق سيرتك الجديدة…'],
     genErr: 'حدث خطأ ما. حاول مرة أخرى.',
@@ -255,6 +255,27 @@ function PdfPages({ pages, className = '', cover = false }: { pages: string[]; c
           <img key={i} src={src} alt="" className="w-full max-w-[210mm] bg-white shadow-[var(--shadow-sm)]" />
         ))}
       </div>
+    </div>
+  )
+}
+
+// A blurred teaser of the ATS panel shown behind the sign-in / scanning states —
+// a real-looking spider chart (placeholder scores) plus skeleton feedback rows,
+// so users see what they're about to get. Purely decorative; never interactive.
+const TEASER_SCORES: CvAts = { keywords: 3, impact: 2, clarity: 4, format: 4, completeness: 3, conciseness: 4 }
+function AtsTeaser({ ar, lead }: { ar: boolean; lead: string }) {
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-4 blur-[5px] opacity-90 pointer-events-none select-none">
+      <p className="text-[0.9rem] text-ink-soft leading-relaxed">{lead}</p>
+      <AtsRadar scores={TEASER_SCORES} ar={ar} />
+      <div className="h-3.5 w-32 rounded bg-[color-mix(in_srgb,var(--ink)_14%,transparent)]" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex flex-col gap-1.5 ps-3 border-s-[3px] border-[color:var(--line)]">
+          <div className="h-3 w-2/3 rounded bg-[color-mix(in_srgb,var(--ink)_13%,transparent)]" />
+          <div className="h-2.5 w-full rounded bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]" />
+          <div className="h-2.5 w-4/5 rounded bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]" />
+        </div>
+      ))}
     </div>
   )
 }
@@ -682,50 +703,42 @@ export default function CvGeneratorTool() {
             <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>
           )}
 
-          {/* Blurred PDF backdrop — while generating (scan beam), or during the
-              brief signed-in "ready" moment before auto-generate kicks in.
-              FIXED + portaled to <body> so it fills the screen and flows straight
-              into the done preview (also fixed), with no in-flow 100dvh element
-              leaving a scrollable gap. (The mobile zoom-out root cause was a
-              separate GIS off-screen element — see overflow-x: clip in theme.css.) */}
-          {origPages.length > 0 && (status === 'generating' || (status === 'ready' && !!idToken)) && createPortal(
-            <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden" data-testid="cv-loading">
-              <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : ''}`} />
-              {status === 'generating' && (
-                <>
-                  <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_35%,transparent)]" />
-                  <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
-                  <div className="absolute inset-x-0 bottom-6 flex justify-center px-4 pointer-events-none">
-                    <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
-                      <Spinner className="size-[1.1rem]" label={s.building} />
-                      <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>,
-            document.body,
-          )}
-          {(status === 'generating' || (status === 'ready' && !!idToken)) && origPages.length === 0 && (
-            <div className="py-24 flex flex-col items-center gap-4" data-testid="cv-loading">
-              <Spinner className="size-9" label={s.building} />
-              <span key={loadingStep} className="text-[0.95rem] font-medium text-ink-soft animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
-            </div>
-          )}
+          {/* The "ready / scanning" teaser: a two-column takeover (desktop) that
+              previews the result — the uploaded CV on the left, a BLURRED ATS
+              panel (spider chart + skeleton feedback) on the right — so users see
+              what they're about to get. The sign-in card overlays ONLY when not
+              already signed in; once signed in it flows straight into the scan.
+              FIXED + portaled to <body> (fills the screen, flows into the done
+              preview); one stable container so the card never remounts when the
+              PDF pages finish loading (was causing a flash). */}
+          {(status === 'generating' || status === 'ready') && createPortal(
+            <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden bg-[#e9ebef] flex" data-testid="cv-loading">
+              {/* Left: the uploaded CV (blurred), or a neutral panel for text uploads. */}
+              <div className="relative flex-1 min-w-0 overflow-hidden bg-[#e9ebef]">
+                {origPages.length > 0 && (
+                  <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : 'blur-[3px] scale-[1.01]'}`} />
+                )}
+                <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
+                {status === 'generating' && (
+                  <>
+                    <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
+                    <div className="absolute inset-x-0 bottom-6 flex justify-center px-4 pointer-events-none">
+                      <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
+                        <Spinner className="size-[1.1rem]" label={s.building} />
+                        <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
 
-          {/* Ready + not signed in: the sign-in card, over the softly blurred PDF
-              once it's ready. FIXED + portaled (same overflow reason as above).
-              One stable container so the card never remounts when the PDF pages
-              finish loading (was causing a flash). */}
-          {status === 'ready' && !idToken && createPortal(
-            <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden bg-[#e9ebef]" data-testid="cv-loading">
-              {origPages.length > 0 && (
-                <>
-                  <PdfPages pages={origPages} cover className="absolute inset-0 blur-[3px] scale-[1.01]" />
-                  <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
-                </>
-              )}
-              {readyCard}
+              {/* Right: a blurred teaser of the ATS panel (desktop only). */}
+              <div className="hidden md:block md:w-[25rem] lg:w-[29rem] shrink-0 overflow-hidden border-s border-[color:var(--line-soft)] bg-[var(--surface)] px-4 py-4">
+                <AtsTeaser ar={ar} lead={s.atsLead} />
+              </div>
+
+              {/* Sign-in card — only when not already signed in. */}
+              {!idToken && readyCard}
             </div>,
             document.body,
           )}
