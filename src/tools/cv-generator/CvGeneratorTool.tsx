@@ -5,6 +5,7 @@ import { Button, Stack, Spinner } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, improveCv, type CvIssue, type CvGap, type CvAts } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
+import { setWorkInProgress } from '../../lib/workInProgress'
 import { cvHeaderStore } from '../../lib/cvHeader'
 import { inAppBrowser } from '../../lib/inAppBrowser'
 import { renderCvHtml } from './template'
@@ -397,6 +398,15 @@ export default function CvGeneratorTool() {
   useEffect(() => { cvHeaderStore.set({ active: true, signedIn: !!idToken, login, logout }) }, [idToken, login, logout])
   useEffect(() => () => cvHeaderStore.set({ active: false, signedIn: false, login: () => {}, logout: () => {} }), [])
 
+  // Hold off the deploy auto-reload once a CV is in play (uploaded, generating,
+  // or generated) — reloading would destroy the uploaded file / the result, which
+  // can't be restored. The version check then OFFERS the update in a docked bar
+  // and applies it once the work clears (#228).
+  useEffect(() => {
+    setWorkInProgress('ats-cv-optimizer', status !== 'idle')
+    return () => setWorkInProgress('ats-cv-optimizer', false)
+  }, [status])
+
   // Hide the site footer while the immersive result preview is on screen, and
   // lock document scroll: the done view is a full-screen preview + a fixed bottom
   // bar, so the page must not scroll (stray padding / dvh quirks below the
@@ -719,16 +729,9 @@ export default function CvGeneratorTool() {
                   <PdfPages pages={origPages} cover className={`absolute inset-0 transition-[filter,transform] duration-500 ${status === 'generating' ? 'blur-[7px] scale-[1.03]' : 'blur-[3px] scale-[1.01]'}`} />
                 )}
                 <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[color-mix(in_srgb,var(--sand-50)_30%,transparent)]" />
+                {/* The scan beam sweeps the CV itself (left column). */}
                 {status === 'generating' && (
-                  <>
-                    <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
-                    <div className="absolute inset-x-0 bottom-6 flex justify-center px-4 pointer-events-none">
-                      <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
-                        <Spinner className="size-[1.1rem]" label={s.building} />
-                        <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
-                      </span>
-                    </div>
-                  </>
+                  <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 pointer-events-none blur-[2px] bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--green-500)_45%,transparent),color-mix(in_srgb,var(--green-300)_60%,transparent),color-mix(in_srgb,var(--green-500)_45%,transparent),transparent)] animate-[cvscan_2.4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
                 )}
               </div>
 
@@ -736,6 +739,16 @@ export default function CvGeneratorTool() {
               <div className="hidden md:block md:w-[25rem] lg:w-[29rem] shrink-0 overflow-hidden border-s border-[color:var(--line-soft)] bg-[var(--surface)] px-4 py-4">
                 <AtsTeaser ar={ar} lead={s.atsLead} />
               </div>
+
+              {/* Status pill — centred on the SCREEN (over both columns), not the CV. */}
+              {status === 'generating' && (
+                <div className="absolute inset-0 grid place-items-center px-4 pointer-events-none">
+                  <span className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] text-sand-100 px-4 py-2 text-[0.92rem] font-semibold shadow-[var(--shadow-md)]">
+                    <Spinner className="size-[1.1rem]" label={s.building} />
+                    <span key={loadingStep} className="animate-[fadeUp_0.4s_ease]">{s.steps[loadingStep]}</span>
+                  </span>
+                </div>
+              )}
 
               {/* Sign-in card — only when not already signed in. */}
               {!idToken && readyCard}

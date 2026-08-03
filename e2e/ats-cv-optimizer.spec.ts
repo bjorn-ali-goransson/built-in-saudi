@@ -96,6 +96,29 @@ test('ats optimizer: a backend error does not crash or retry-storm', async ({ pa
   api.expectCalled('**/cv-generate', 1)
 })
 
+test('a new deploy is offered (not forced) while a CV is uploaded', async ({ page }) => {
+  let build = '1' // matches nothing newer → no update on load
+  let loads = 0
+  page.on('load', () => loads++)
+  await page.route('**/version.json*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ build, notes: 'fresh' }) }))
+  await page.goto('/en/apps/ats-cv-optimizer')
+
+  // Upload a CV → the tool holds work (setWorkInProgress).
+  await page.getByTestId('cv-file').setInputFiles({
+    name: 'cv.txt', mimeType: 'text/plain',
+    buffer: Buffer.from('Sara Ahmed — Backend Engineer with eight years at Acme building Java services and cutting costs.'),
+  })
+  await expect(page.getByTestId('cv-generate-cta')).toBeVisible() // reached the "ready" state
+
+  const before = loads
+  build = '99999999999999' // a newer deploy appears; returning to the tab checks
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+
+  // It OFFERS the update in the docked bar and does NOT reload over the CV.
+  await expect(page.getByTestId('update-offered')).toBeVisible()
+  expect(loads).toBe(before)
+})
+
 // Smoke test: the tool renders its upload hero client-side.
 test('ats cv optimizer renders the upload hero', async ({ page }) => {
   await page.goto('/en/apps/ats-cv-optimizer')
