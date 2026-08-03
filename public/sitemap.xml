@@ -752,6 +752,34 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prompt-analyzer"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/ats-cv-optimizer/</loc>
+    <lastmod>2026-08-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ats-cv-optimizer"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ats-cv-optimizer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ats-cv-optimizer"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/ats-cv-optimizer/</loc>
+    <lastmod>2026-08-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ats-cv-optimizer"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ats-cv-optimizer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ats-cv-optimizer"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/book-me/</loc>
+    <lastmod>2026-08-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/book-me"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/book-me"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/book-me"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/book-me/</loc>
+    <lastmod>2026-08-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/book-me"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/book-me"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/book-me"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/qr-code/</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
