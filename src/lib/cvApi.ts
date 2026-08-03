@@ -58,11 +58,27 @@ export interface CvIssue {
   severity: 'high' | 'medium' | 'low'
 }
 
+/** A follow-up question only the candidate can answer — asked after a pass to
+ *  close the gaps that hold the ATS score back. Same shape as the Prompt
+ *  Analyzer's gaps. */
+export interface CvGap {
+  id: string
+  question: string
+  why: string
+}
+
+/** ATS score per dimension, each an integer 1–5. Keys match ATS_DIMENSIONS in
+ *  functions/cv.js and ATS_DIMS in the tool. */
+export type CvAts = Record<string, number>
+
 export interface CvResult {
   cv: Cv
   issues: CvIssue[]
+  ats: CvAts
+  gaps: CvGap[]
   summary: string
   polishLeft: number
+  improveLeft: number
 }
 
 const SEVERITIES = ['high', 'medium', 'low'] as const
@@ -77,12 +93,35 @@ function parseIssues(raw: unknown): CvIssue[] {
     .filter((i) => i.title)
 }
 
-function parseResult(data: { cv?: Cv; issues?: unknown; summary?: unknown; polishLeft?: unknown }): CvResult {
+const ATS_KEYS = ['keywords', 'impact', 'clarity', 'format', 'completeness', 'conciseness'] as const
+function parseAts(raw: unknown): CvAts {
+  const src = (raw || {}) as Record<string, unknown>
+  const out: CvAts = {}
+  for (const k of ATS_KEYS) {
+    const n = Math.round(Number(src[k]))
+    out[k] = Number.isFinite(n) ? Math.max(1, Math.min(5, n)) : 3
+  }
+  return out
+}
+function parseGaps(raw: unknown): CvGap[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((g, n) => {
+      const o = (g || {}) as Partial<CvGap>
+      return { id: String(o.id || `gap${n}`), question: String(o.question || ''), why: String(o.why || '') }
+    })
+    .filter((g) => g.question)
+}
+
+function parseResult(data: { cv?: Cv; issues?: unknown; ats?: unknown; gaps?: unknown; summary?: unknown; polishLeft?: unknown; improveLeft?: unknown }): CvResult {
   return {
     cv: data.cv as Cv,
     issues: parseIssues(data.issues),
+    ats: parseAts(data.ats),
+    gaps: parseGaps(data.gaps),
     summary: typeof data.summary === 'string' ? data.summary : '',
     polishLeft: Number(data.polishLeft ?? 0),
+    improveLeft: Number(data.improveLeft ?? 0),
   }
 }
 
@@ -104,6 +143,20 @@ export async function refineCv(idToken: string, cv: Cv, instruction: string, kin
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken, cv, instruction, kind, context, sourceText }),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+  return parseResult(data)
+}
+
+/** Second pass: fold the candidate's answers to the follow-up questions into the
+ *  CV to raise its ATS score, then re-score. `sourceText` lets the model pull
+ *  back any original detail a blank answer would otherwise leave missing. */
+export async function improveCv(idToken: string, cv: Cv, answers: { question: string; answer: string }[], sourceText = ''): Promise<CvResult> {
+  const r = await fetch(`${FN}/cv-refine`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, cv, kind: 'improve', answers, sourceText }),
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)

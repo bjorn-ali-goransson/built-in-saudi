@@ -333,13 +333,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   **membership** is removed — never their list).
 - **CV Generator** (`functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
   uploaded CV as strict JSON, 2 per 24h per user) + `cv-refine` (instruction-driven
-  tweaks). The model **never asks the user questions** — it returns an `issues`
-  array (`{title, detail, severity: high|medium|low}`) of what only the candidate
-  can fix, which the tool shows in a **modal over the blurred preview before the CV
-  is revealed** (#213). "Save for later" (server-saved CV) and JD tailoring were
-  removed in #213 — `cv-save`/`cv-get`/`cv-delete`/`cv-tailor` are gone from the
-  source and the deploy workflow (the old deployments need a one-off
-  `gcloud functions delete`). Nothing per-user is stored but `cvUsage` counters.
+  tweaks). Each pass also returns an **`ats`** score (six 1–5 dimensions —
+  `keywords, impact, clarity, format, completeness, conciseness`, kept in sync with
+  `ATS_DIMS` in the tool) and **`gaps`** (2–5 follow-up questions only the candidate
+  can answer). The tool shows these in a **review sheet over the blurred preview
+  before the CV is revealed** (#213, #248): a **heatmap spider chart** of the ATS
+  scores (same idea as the Prompt Analyzer's radar), the `issues`
+  (`{title, detail, severity: high|medium|low}`), and the gaps as an **answerable
+  form**. Answering and hitting *Improve* runs `cv-refine` with **`kind: 'improve'`**
+  (`answers[]` instead of an instruction, `improveCount` budget of 2/CV) — a second
+  pass that folds the answers in, **re-scores the ATS radar** and refreshes the
+  questions. A score badge in the preview reopens the review. "Save for later"
+  (server-saved CV) and JD tailoring were removed in #213 —
+  `cv-save`/`cv-get`/`cv-delete`/`cv-tailor` are gone from the source and the deploy
+  workflow (the old deployments need a one-off `gcloud functions delete`). Nothing
+  per-user is stored but `cvUsage` counters.
 - **To-do lists** (`functions/todo.js`, tool `src/tools/todo/`, id `todo`): the tool is
   **local-first** — lists live in `localStorage` (`bis-todo`) and work with no account
   at all. Only a list the user switches **sync** on for reaches the backend:

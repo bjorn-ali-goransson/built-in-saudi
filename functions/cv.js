@@ -23,8 +23,15 @@ const OWNER_EMAIL = 'bjorn.a.goransson@gmail.com' // exempt from all rate limits
 const POLISH_LIMIT = 1 // user-initiated free-form "tell me what to change" tweaks
 const ELABORATE_LIMIT = 2 // "add more detail" rounds when the CV is under a page
 const SHORTEN_LIMIT = 2 // "make shorter" rounds
+const IMPROVE_LIMIT = 2 // "answer the questions, then raise the ATS score" rounds
 const ISSUE_CAP = 5 // most CV problems the model may surface at once
+const GAP_CAP = 5 // most follow-up questions the model may ask at once
 const WINDOW_MS = 24 * 60 * 60 * 1000
+
+// ATS scoring — the CV is graded 1 (poor) to 5 (excellent) on each of these, and
+// the scores render as a heatmap spider chart. Higher is always better. Keep in
+// sync with ATS_DIMS in the client (src/tools/cv-generator/CvGeneratorTool.tsx).
+const ATS_DIMENSIONS = ['keywords', 'impact', 'clarity', 'format', 'completeness', 'conciseness']
 
 function cors(req, res) {
   const origin = (req.headers && req.headers.origin) || ''
@@ -91,13 +98,23 @@ The CV object shape (omit a section with an empty array; omit optional strings b
   "languages": [{ "name": string, "level": string }]
 }
 
-Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [ up to 5 issue objects ] }`
+ATS SCORE — also grade the CV YOU PRODUCE on how it will fare in an Applicant Tracking System and a recruiter's 10-second scan. Score each dimension an INTEGER 1 (poor) to 5 (excellent); higher is ALWAYS better. Score honestly the CV as it stands after your edits — if the source is thin, some scores will be low, and that is exactly what the questions below are for.
+- keywords: relevant role/industry keywords, skills and technologies are present and easy for a parser to find.
+- impact: achievements are concrete and quantified (numbers, scale, outcomes) rather than vague duties.
+- clarity: phrasing is clear, professional and free of filler; easy to read.
+- format: clean, standard, single-column structure an ATS can parse (clear sections, standard headings, dates).
+- completeness: the essentials are present — contact email, a strong summary, dated roles, education, skills.
+- conciseness: signal-dense and the right length — no padding, no walls of text.
+
+QUESTIONS (gaps) — name what only the CANDIDATE can supply that would most RAISE those scores: e.g. missing metrics for an achievement, the target job title/industry to tune keywords toward, a claimed skill with no evidence, missing contact details, an unexplained gap. Ask each as a direct question they can answer in a sentence or two. Give 2 to 5, ordered by how much they'd help; skip anything already well answered. (These overlap with "issues" but are phrased as answerable questions for a follow-up pass.)
+
+Return ONLY JSON of the form: { "cv": { …the CV object above… }, "issues": [ up to 5 issue objects ], "ats": { "keywords": 1-5, "impact": 1-5, "clarity": 1-5, "format": 1-5, "completeness": 1-5, "conciseness": 1-5 }, "gaps": [ up to 5 { "id": short slug, "question": the direct question to the candidate, "why": <= 12 words on what answering it improves } ] }`
 
 const LENGTH_RULE = `\n\nLENGTH — IMPORTANT: The result must fill close to a FULL A4 page. A one-page CV should carry roughly 300+ words of body content (not counting the name, headline and contact line). If the source material is thin, do NOT return a sparse half-page — instead elaborate PROFESSIONALLY and truthfully: expand each role's responsibilities into specific, credible bullets, draw out scope/scale/tools/impact that is implied by the material, and enrich the summary and skills. NEVER invent employers, job titles, dates, metrics or skills that aren't supported — but a confident, well-filled single page reads far better than a short one, so err toward fuller, richer phrasing grounded in what's there.`
 
 const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV and you REBUILD it from scratch as JSON. Regenerate everything — do not copy verbatim; tighten, sharpen, and fix issues silently.\n\n${RULES}${LENGTH_RULE}`
 
-const REFINE_SYSTEM = `You are an elite technical résumé editor. You are given the current CV as JSON plus an instruction from the candidate to change something. Apply it, preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing problems silently, and re-evaluate the reported issues.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Return { "cv": { …the CV object… }, "issues": [ up to 5 issue objects ], "summary": "…" }.`
+const REFINE_SYSTEM = `You are an elite technical résumé editor. You are given the current CV as JSON plus an instruction from the candidate to change something. Apply it, preserve everything untouched, keep the EXACT same CV shape, keep obeying every rule, keep fixing problems silently, and re-evaluate the reported issues.\n\n${RULES}\n\nADDITIONALLY, include a "summary": ONE short past-tense sentence stating the concrete change you made to the CV (e.g. "Added your core stack — Java, Spring Boot, Kafka — to Skills and the Morgan Stanley role."). Re-score the "ats" object and refresh "gaps" to reflect the updated CV. Return { "cv": { …the CV object… }, "issues": [ up to 5 issue objects ], "ats": { …six 1-5 scores… }, "gaps": [ up to 5 question objects ], "summary": "…" }.`
 
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
@@ -149,6 +166,29 @@ function normalizeIssues(raw) {
     .slice(0, ISSUE_CAP)
 }
 
+// ATS scores → a clean { dim: 1-5 } map, defaulting a missing/garbled value to 3.
+function clampAts(raw) {
+  const out = {}
+  for (const k of ATS_DIMENSIONS) {
+    const n = Math.round(Number(raw && raw[k]))
+    out[k] = Number.isFinite(n) ? Math.max(1, Math.min(5, n)) : 3
+  }
+  return out
+}
+
+// Follow-up questions only the candidate can answer, most helpful first.
+function normalizeGaps(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((g, n) => ({
+      id: String((g && g.id) || `gap${n}`).trim().slice(0, 40) || `gap${n}`,
+      question: String((g && g.question) || '').trim().slice(0, 200),
+      why: String((g && g.why) || '').trim().slice(0, 120),
+    }))
+    .filter((g) => g.question)
+    .slice(0, GAP_CAP)
+}
+
 async function callOpenAI(system, user) {
   if (!OPENAI_API_KEY) {
     const e = new Error('OPENAI_API_KEY not configured')
@@ -179,7 +219,13 @@ async function callOpenAI(system, user) {
     // Tolerate the model returning { cv, issues } or just the CV object.
     const cvObj = parsed && parsed.cv && typeof parsed.cv === 'object' ? parsed.cv : parsed
     const summary = typeof (parsed && parsed.summary) === 'string' ? parsed.summary.trim() : ''
-    return { cv: normalize(cvObj), issues: normalizeIssues(parsed && parsed.issues), summary }
+    return {
+      cv: normalize(cvObj),
+      issues: normalizeIssues(parsed && parsed.issues),
+      ats: clampAts(parsed && parsed.ats),
+      gaps: normalizeGaps(parsed && parsed.gaps),
+      summary,
+    }
   } catch {
     const e = new Error('AI returned malformed JSON')
     e.code = 502
@@ -210,47 +256,66 @@ http('cvGenerate', async (req, res) => {
       return res.status(429).json({ error: `Limit reached — you can generate ${UPLOAD_LIMIT} CVs per 24 hours. Try again later.` })
     }
 
-    const { cv, issues } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
+    const { cv, issues, ats, gaps } = await callOpenAI(GENERATE_SYSTEM, `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`)
     // Record the successful upload and reset the tweak budgets for this new CV.
-    await ref.set({ uploads: [...recent, now], polishCount: 0, elaborateCount: 0, shortenCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
-    res.json({ ok: true, cv, issues, polishLeft: POLISH_LIMIT })
+    await ref.set({ uploads: [...recent, now], polishCount: 0, elaborateCount: 0, shortenCount: 0, improveCount: 0, email: user.email, updatedAt: new Date() }, { merge: true })
+    res.json({ ok: true, cv, issues, ats, gaps, polishLeft: POLISH_LIMIT, improveLeft: IMPROVE_LIMIT })
   } catch (e) {
     fail(res, e)
   }
 })
 
-// POST { idToken, cv, instruction, kind } → { ok, cv, issues, polishLeft, … }
-// kind 'polish' (free tweak), 'elaborate' (fill out a thin CV) or 'shorten'.
+// POST { idToken, cv, instruction|answers, kind } → { ok, cv, issues, ats, gaps, … }
+// kind 'polish' (free tweak), 'elaborate' (fill out a thin CV), 'shorten', or
+// 'improve' (fold the candidate's answers to the follow-up questions in to raise
+// the ATS score). Every kind re-scores ats + refreshes gaps.
 http('cvRefine', async (req, res) => {
   cors(req, res)
   if (req.method === 'OPTIONS') return res.status(204).send('')
   if (req.method !== 'POST') return res.status(405).send('POST only')
   try {
-    const { idToken, cv: current, instruction, kind, context, sourceText } = req.body || {}
+    const { idToken, cv: current, instruction, kind, context, sourceText, answers } = req.body || {}
     const user = await verifyGoogle(idToken)
     if (!user) return res.status(401).json({ error: 'sign in with Google first' })
     if (!current || typeof current !== 'object') return res.status(400).json({ error: 'missing CV' })
-    if (!instruction || String(instruction).trim().length < 2) return res.status(400).json({ error: 'missing instruction' })
 
     const isElaborate = kind === 'elaborate'
     const isShorten = kind === 'shorten'
+    const isImprove = kind === 'improve'
+    // Improve is driven by the candidate's answers to the follow-up questions,
+    // not a free-text instruction.
+    const filledAnswers = (Array.isArray(answers) ? answers : [])
+      .map((a) => ({ question: String((a && a.question) || '').trim().slice(0, 200), answer: String((a && a.answer) || '').trim().slice(0, 800) }))
+      .filter((a) => a.question && a.answer)
+    if (isImprove) {
+      if (!filledAnswers.length) return res.status(400).json({ error: 'answer at least one question first' })
+    } else if (!instruction || String(instruction).trim().length < 2) {
+      return res.status(400).json({ error: 'missing instruction' })
+    }
+
     const ref = db.collection(USAGE).doc(user.sub)
     const d = (await ref.get()).data() || {}
     let polishCount = Number(d.polishCount || 0)
     let elaborateCount = Number(d.elaborateCount || 0)
     let shortenCount = Number(d.shortenCount || 0)
+    let improveCount = Number(d.improveCount || 0)
     const isOwner = user.email === OWNER_EMAIL
+    if (!isOwner && isImprove && improveCount >= IMPROVE_LIMIT) {
+      return res.status(429).json({ error: `You’ve used all ${IMPROVE_LIMIT} improve rounds for this CV.` })
+    }
     if (!isOwner && isElaborate && elaborateCount >= ELABORATE_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${ELABORATE_LIMIT} “add more detail” rounds for this CV.` })
     }
     if (!isOwner && isShorten && shortenCount >= SHORTEN_LIMIT) {
       return res.status(429).json({ error: `You’ve used all ${SHORTEN_LIMIT} “make shorter” rounds for this CV.` })
     }
-    if (!isOwner && !isElaborate && !isShorten && polishCount >= POLISH_LIMIT) {
+    if (!isOwner && !isElaborate && !isShorten && !isImprove && polishCount >= POLISH_LIMIT) {
       return res.status(429).json({ error: `You’ve used your ${POLISH_LIMIT === 1 ? 'one change' : `${POLISH_LIMIT} changes`} for this CV. Upload again to start fresh.` })
     }
 
-    const lead = isElaborate
+    const lead = isImprove
+        ? 'The candidate has ANSWERED your follow-up questions (below). Fold their answers into the CV to close the gaps and RAISE the ATS score — add the metrics, keywords, skills, target-role tuning or missing details they supplied, in the right places. Use ONLY what their answers and the existing CV support; never invent facts they did not give, and if an answer is blank leave that aspect as it was. Keep every rule'
+        : isElaborate
         ? 'The CV currently fills LESS THAN ONE PAGE. Expand it to better fill a full page — WITHOUT inventing anything: restore useful detail from the original that the first pass trimmed, add specific, credible detail to experience bullets (responsibilities, scope, tools, measurable impact), enrich the summary, and round out the skills. Every addition must be grounded in the original CV or a reasonable, truthful elaboration of what is already there — never fabricate employers, dates, metrics or skills. Keep it signal-first, not padded with filler'
         : isShorten
           ? 'The candidate wants a SHORTER CV — follow the target in their instruction. Condense: cut the least-important detail, merge or trim the weakest bullets, tighten wording, and drop low-signal items, while KEEPING every strong achievement and all key roles. Do not remove whole positions unless clearly irrelevant, and never invent anything'
@@ -263,15 +328,19 @@ http('cvRefine', async (req, res) => {
     const src = typeof sourceText === 'string' && sourceText.trim()
       ? `\n\nFor reference, the ORIGINAL CV text the candidate uploaded (use it to recover any detail that may have been dropped, but keep obeying every rule):\n${String(sourceText).slice(0, 12000)}`
       : ''
-    const { cv, issues, summary } = await callOpenAI(
+    const task = isImprove
+      ? `${lead}.\n\nThe candidate's answers to your follow-up questions:\n${filledAnswers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n').slice(0, 6000)}`
+      : `${lead}:\n${String(instruction).slice(0, 1000)}`
+    const { cv, issues, ats, gaps, summary } = await callOpenAI(
       REFINE_SYSTEM,
-      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}${prev}${src}\n\n${lead}:\n${String(instruction).slice(0, 1000)}`,
+      `Current CV JSON:\n${JSON.stringify(normalize(current)).slice(0, 24000)}${prev}${src}\n\n${task}`,
     )
-    if (isElaborate) elaborateCount += 1
+    if (isImprove) improveCount += 1
+    else if (isElaborate) elaborateCount += 1
     else if (isShorten) shortenCount += 1
     else polishCount += 1
-    await ref.update({ polishCount, elaborateCount, shortenCount, updatedAt: new Date() })
-    res.json({ ok: true, cv, issues, summary, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount })
+    await ref.update({ polishCount, elaborateCount, shortenCount, improveCount, updatedAt: new Date() })
+    res.json({ ok: true, cv, issues, ats, gaps, summary, polishLeft: POLISH_LIMIT - polishCount, elaborateLeft: ELABORATE_LIMIT - elaborateCount, shortenLeft: SHORTEN_LIMIT - shortenCount, improveLeft: IMPROVE_LIMIT - improveCount })
   } catch (e) {
     fail(res, e)
   }

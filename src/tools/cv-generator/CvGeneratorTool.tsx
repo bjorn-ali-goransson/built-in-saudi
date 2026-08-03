@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Stack, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
-import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, type CvIssue } from '../../lib/cvApi'
+import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, improveCv, type CvIssue, type CvGap, type CvAts } from '../../lib/cvApi'
 import { hideFooterStore } from '../../lib/hideFooter'
 import { cvHeaderStore } from '../../lib/cvHeader'
 import { inAppBrowser } from '../../lib/inAppBrowser'
@@ -70,6 +70,25 @@ const STR = {
     startOver: 'Start over',
     signinErr: 'Google sign-in couldn’t load. Disable blockers and retry.',
     voice: 'Voice input',
+    atsTitle: 'Your CV score',
+    atsLead: 'How your rebuilt CV scores for an Applicant Tracking System and a recruiter’s 10-second scan.',
+    ats: 'ATS',
+    overall: 'Overall',
+    scale: '1 = weak · 5 = strong',
+    heatLow: 'weak',
+    heatHigh: 'strong',
+    issuesHead: 'What needs you',
+    questionsHead: 'Answer to score higher',
+    questionsLead: 'Only you can fill these in — answer what you can and the AI folds them in and re-scores. Leave any blank.',
+    optional: 'optional',
+    improveBtn: 'Improve my CV',
+    improving: 'Improving…',
+    improveLeftL: (n: number) => `${n} improve round${n === 1 ? '' : 's'} left`,
+    noImprove: 'No improve rounds left for this CV — upload again to start fresh.',
+    showCv: 'Show my CV',
+    improveErr: 'Couldn’t improve the CV. Please try again.',
+    answerOne: 'Answer at least one question first.',
+    changed: 'CV improved',
   },
   ar: {
     heroTitle: 'حسّن سيرتك الذاتية',
@@ -129,10 +148,72 @@ const STR = {
     startOver: 'ابدأ من جديد',
     signinErr: 'تعذّر تحميل تسجيل دخول جوجل. عطّل المانعات وأعد المحاولة.',
     voice: 'إدخال صوتي',
+    atsTitle: 'تقييم سيرتك',
+    atsLead: 'كيف تُقيَّم سيرتك المُعاد بناؤها في أنظمة تتبّع المتقدّمين (ATS) وفي مسح مسؤول التوظيف خلال ١٠ ثوانٍ.',
+    ats: 'ATS',
+    overall: 'الإجمالي',
+    scale: '١ = ضعيف · ٥ = قوي',
+    heatLow: 'ضعيف',
+    heatHigh: 'قوي',
+    issuesHead: 'ما يحتاج إليك',
+    questionsHead: 'أجب لترفع تقييمك',
+    questionsLead: 'هذه أمور لا يعرفها سواك — أجب عمّا تستطيع فيدمجها الذكاء الاصطناعي ويعيد التقييم. اترك ما شئت فارغًا.',
+    optional: 'اختياري',
+    improveBtn: 'حسّن سيرتي',
+    improving: 'جارٍ التحسين…',
+    improveLeftL: (n: number) => `${n === 1 ? 'جولة تحسين واحدة متبقّية' : `${n} جولات تحسين متبقّية`}`,
+    noImprove: 'لا جولات تحسين متبقّية لهذه السيرة — ارفع من جديد للبدء من الصفر.',
+    showCv: 'اعرض سيرتي',
+    improveErr: 'تعذّر تحسين السيرة. حاول مرة أخرى.',
+    answerOne: 'أجب عن سؤال واحد على الأقل أولًا.',
+    changed: 'تم تحسين السيرة',
   },
 }
 
 type Status = 'idle' | 'extracting' | 'ready' | 'generating' | 'done'
+
+// ATS scoring dimensions — must match ATS_DIMENSIONS in functions/cv.js. Rendered
+// as a heatmap spider chart (same idea as the Prompt Analyzer's radar).
+const ATS_DIMS = [
+  { key: 'keywords', en: 'Keywords', ar: 'الكلمات' },
+  { key: 'impact', en: 'Impact', ar: 'الأثر' },
+  { key: 'clarity', en: 'Clarity', ar: 'الوضوح' },
+  { key: 'format', en: 'Format', ar: 'التنسيق' },
+  { key: 'completeness', en: 'Complete', ar: 'الاكتمال' },
+  { key: 'conciseness', en: 'Concise', ar: 'الإيجاز' },
+] as const
+
+// Score → heatmap colour: 1 = red, 3 = amber, 5 = green (hue 0°→120°).
+function heat(v: number, sat = 68, light = 45): string {
+  const hue = ((Math.max(1, Math.min(5, v || 1)) - 1) / 4) * 120
+  return `hsl(${hue} ${sat}% ${light}%)`
+}
+
+// A heatmap radar of the six ATS scores. Each sector is coloured by the mean of
+// its two adjacent scores, so weak areas glow red at a glance.
+function AtsRadar({ scores, ar }: { scores: CvAts; ar: boolean }) {
+  const N = ATS_DIMS.length, cx = 200, cy = 200, R = 130
+  const ang = (i: number) => ((-90 + (i * 360) / N) * Math.PI) / 180
+  const pt = (i: number, r: number): [number, number] => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))]
+  const ring = (v: number) => ATS_DIMS.map((_, i) => pt(i, (R * v) / 5).join(',')).join(' ')
+  const val = (i: number) => scores[ATS_DIMS[i].key] || 0
+  const vpt = (i: number) => pt(i, (R * val(i)) / 5)
+  const poly = ATS_DIMS.map((_, i) => vpt(i).join(',')).join(' ')
+  return (
+    <svg viewBox="0 0 400 400" className="w-full max-w-[360px] mx-auto" role="img" aria-label="ATS scores" data-testid="cv-ats-radar">
+      {[1, 2, 3, 4, 5].map((v) => <polygon key={v} points={ring(v)} fill="none" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" strokeWidth={1} />)}
+      {ATS_DIMS.map((_, i) => { const [x, y] = pt(i, R); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="color-mix(in srgb, var(--ink) 8%, transparent)" /> })}
+      {ATS_DIMS.map((_, i) => {
+        const j = (i + 1) % N
+        const [x1, y1] = vpt(i), [x2, y2] = vpt(j)
+        return <polygon key={`s${i}`} points={`${cx},${cy} ${x1},${y1} ${x2},${y2}`} fill={heat((val(i) + val(j)) / 2)} fillOpacity={0.5} stroke="none" />
+      })}
+      <polygon points={poly} fill="none" stroke="color-mix(in srgb, var(--ink) 45%, transparent)" strokeWidth={1.5} strokeLinejoin="round" />
+      {ATS_DIMS.map((d, i) => { const [x, y] = vpt(i); return <circle key={d.key} cx={x} cy={y} r={3.5} fill={heat(val(i), 70, 38)} stroke="var(--paper)" strokeWidth={1} /> })}
+      {ATS_DIMS.map((d, i) => { const [x, y] = pt(i, R + 24); return <text key={d.key} x={x} y={y} fontSize={12} fontWeight={600} textAnchor="middle" dominantBaseline="middle" fill="var(--ink-soft)">{ar ? d.ar : d.en}</text> })}
+    </svg>
+  )
+}
 
 // Severity colours for the issues dialog: danger → brass → neutral ink.
 const SEV_BAR: Record<CvIssue['severity'], string> = {
@@ -173,6 +254,7 @@ function PdfPages({ pages, className = '', cover = false }: { pages: string[]; c
 export default function CvGeneratorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
+  const ar = locale === 'ar'
   const inApp = inAppBrowser() // e.g. "LinkedIn" if in an in-app WebView
   const [idToken, setIdToken] = useState<string | null>(null)
   const [gisReady, setGisReady] = useState(false)
@@ -190,10 +272,20 @@ export default function CvGeneratorTool() {
   const [showAlt, setShowAlt] = useState(false) // preview shows the uploaded original instead
   const [fs, setFs] = useState(false) // preview is in browser fullscreen
   const [origPages, setOrigPages] = useState<string[]>([]) // uploaded PDF rendered to page images (for loading + the "Original" flip)
-  // Problems only the candidate can fix. Shown in a dialog OVER the (blurred)
-  // result, before they read the CV itself (#213).
+  // Problems only the candidate can fix. Shown in the review dialog OVER the
+  // (blurred) result, before they read the CV itself (#213).
   const [issues, setIssues] = useState<CvIssue[]>([])
-  const [issuesOpen, setIssuesOpen] = useState(false)
+  // ATS score + follow-up questions + iteration (the "similar to Prompt Analyzer"
+  // pass): the review sheet shows the heatmap radar, the issues, and the gaps as
+  // an answerable form that a second AI pass folds in to raise the score.
+  const [ats, setAts] = useState<CvAts>({})
+  const [gaps, setGaps] = useState<CvGap[]>([])
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [improving, setImproving] = useState(false)
+  const [improveErr, setImproveErr] = useState('')
+  const [improveLeft, setImproveLeft] = useState(0)
+  const [changeNote, setChangeNote] = useState('')
+  const [reviewOpen, setReviewOpen] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
   const gisRef = useRef<Awaited<ReturnType<typeof loadGis>> | null>(null)
@@ -333,7 +425,8 @@ export default function CvGeneratorTool() {
     setCv(null)
     setShowAlt(false)
     setIssues([])
-    setIssuesOpen(false)
+    setReviewOpen(false)
+    setGaps([]); setAnswers({}); setChangeNote(''); setImproveErr('')
     setSigninFallback(false)
     setOrigPages([])
     setStatus('extracting')
@@ -379,16 +472,48 @@ export default function CvGeneratorTool() {
       setShowAlt(false)
       setToast('')
       lastChangeRef.current = ''
-      // Tell them what's wrong BEFORE they read the CV — the dialog sits over a
-      // blurred preview and must be dismissed.
+      // Show the ATS score, the issues and the follow-up questions BEFORE they
+      // read the CV — the review sheet sits over a blurred preview (#213, #248).
       setIssues(r.issues)
-      setIssuesOpen(r.issues.length > 0)
+      setAts(r.ats)
+      setGaps(r.gaps)
+      setAnswers({})
+      setChangeNote('')
+      setImproveErr('')
+      setImproveLeft(r.improveLeft)
+      setReviewOpen(true)
       setStatus('done')
     } catch (e) {
       setErr((e as Error).message || s.genErr)
       setStatus('ready')
     }
   }
+
+  // Second pass: fold the candidate's answers to the follow-up questions into the
+  // CV to raise its ATS score, then re-score. Stays in the review sheet so the
+  // radar visibly moves.
+  async function improveNow() {
+    if (!idToken || !cv || improving) return
+    const payload = gaps.map((g) => ({ question: g.question, answer: (answers[g.id] || '').trim() })).filter((a) => a.answer)
+    if (!payload.length) { setImproveErr(s.answerOne); return }
+    setImproving(true); setImproveErr('')
+    try {
+      const r = await improveCv(idToken, cv, payload, text)
+      setCv(r.cv)
+      setIssues(r.issues)
+      setAts(r.ats)
+      setGaps(r.gaps)
+      setAnswers({})
+      setImproveLeft(r.improveLeft)
+      setChangeNote(r.summary || s.changed)
+    } catch (e) {
+      setImproveErr((e as Error).message || s.improveErr)
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  const overall = Math.round((ATS_DIMS.reduce((a, d) => a + (ats[d.key] || 0), 0) / ATS_DIMS.length) * 10) / 10
 
   // The generated CV is what downloads act on (the "Original" flip only shows
   // the uploaded pages — there's nothing to export from those).
@@ -551,7 +676,7 @@ export default function CvGeneratorTool() {
               leave a huge scrollable gray area. Portaled to <body> so ToolPage's
               transform doesn't make `fixed` resolve against the (tiny) tool box. */}
           {createPortal(
-          <div ref={previewRef} className={`overflow-hidden bg-[#e9ebef] ${fs ? 'fixed inset-0 z-50' : 'fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30'} ${issuesOpen ? 'blur-[6px] pointer-events-none' : ''}`}>
+          <div ref={previewRef} className={`overflow-hidden bg-[#e9ebef] ${fs ? 'fixed inset-0 z-50' : 'fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30'} ${reviewOpen ? 'blur-[6px] pointer-events-none' : ''}`}>
             <iframe
               ref={iframeRef}
               title={cvFilename(activeCv || cv)}
@@ -596,6 +721,13 @@ export default function CvGeneratorTool() {
               </button>
             </div>
 
+            {/* ATS score badge (bottom-centre): reopens the review with the radar + questions. */}
+            <button type="button" onClick={() => setReviewOpen(true)} data-testid="cv-ats-badge"
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1.5 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-3 text-[0.85rem] font-semibold shadow-[var(--shadow-md)] cursor-pointer hover:border-green-500">
+              <span style={{ color: heat(overall, 70, 38) }}>{overall}</span>
+              <span className="text-ink-faint font-normal">/ 5 · {s.ats}</span>
+            </button>
+
             <button type="button" onClick={toggleFullscreen} data-testid="cv-fullscreen" aria-label={fs ? s.exitFs : s.fullscreen} title={fs ? s.exitFs : s.fullscreen}
               className="absolute end-3 top-3 z-10 grid place-items-center size-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-md)] hover:text-green-700 cursor-pointer">
               {fs
@@ -608,26 +740,91 @@ export default function CvGeneratorTool() {
           document.body,
           )}
 
-          {/* What the AI couldn't fix, most severe first — read this BEFORE the CV. */}
-          {issuesOpen && issues.length > 0 && (
-            <Sheet onClose={() => setIssuesOpen(false)} data-testid="cv-issues">
-              <SheetTitle>{s.issuesTitle}</SheetTitle>
-              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.issuesLead(issues.length)}</p>
-              <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
-                {issues.map((i, n) => (
-                  <li key={n} className={`flex flex-col gap-1 ps-3 border-s-[3px] ${SEV_BAR[i.severity]}`} data-testid="cv-issue">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-[0.94rem] font-semibold text-ink leading-snug">{i.title}</span>
-                      <span className={`text-[0.66rem] font-bold uppercase tracking-[0.06em] px-1.5 py-0.5 rounded-full ${SEV_PILL[i.severity]}`} data-testid={`cv-issue-${i.severity}`}>
-                        {i.severity === 'high' ? s.sevHigh : i.severity === 'medium' ? s.sevMedium : s.sevLow}
-                      </span>
-                    </div>
-                    {i.detail && <p className="text-[0.86rem] text-ink-soft leading-relaxed m-0">{i.detail}</p>}
-                  </li>
-                ))}
-              </ul>
+          {/* The review — read BEFORE the CV: the ATS score as a heatmap radar,
+              what still needs the candidate, and the questions a second pass
+              folds in to raise the score (#248). */}
+          {reviewOpen && cv && (
+            <Sheet onClose={() => setReviewOpen(false)} data-testid="cv-review">
+              <SheetTitle>{s.atsTitle}</SheetTitle>
+              <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.atsLead}</p>
+
+              {changeNote && (
+                <p className="text-[0.88rem] text-ink leading-relaxed border-s-[3px] border-green-500 ps-3" data-testid="cv-change-note">{changeNote}</p>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex-1 min-w-0 w-full">
+                  <AtsRadar scores={ats} ar={ar} />
+                  <div className="flex items-center justify-center gap-2 text-[0.72rem] text-ink-faint mt-1">
+                    <span>{s.heatLow}</span>
+                    <span className="h-2.5 w-24 rounded-[2px]" style={{ background: `linear-gradient(to right, ${heat(1)}, ${heat(3)}, ${heat(5)})` }} aria-hidden="true" />
+                    <span>{s.heatHigh}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 w-full sm:w-[13rem]">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[2.4rem] font-display font-bold leading-none" data-testid="cv-ats-overall" style={{ color: heat(overall, 70, 38) }}>{overall}</span>
+                    <span className="text-ink-faint text-[0.9rem]">/ 5 · {s.overall}</span>
+                  </div>
+                  <p className="text-[0.72rem] text-ink-faint">{s.scale}</p>
+                  <ul className="flex flex-col gap-1 mt-1 list-none p-0 m-0">
+                    {ATS_DIMS.map((d) => { const v = ats[d.key] || 0; return (
+                      <li key={d.key} className="flex items-center gap-2 text-[0.82rem]">
+                        <span className="flex-1 text-ink-soft truncate">{ar ? d.ar : d.en}</span>
+                        <span className="flex gap-0.5">{[1, 2, 3, 4, 5].map((n) => <span key={n} className="w-1.5 h-3.5 rounded-[1px]" style={{ background: n <= v ? heat(v) : 'color-mix(in srgb, var(--ink) 10%, transparent)' }} />)}</span>
+                      </li>) })}
+                  </ul>
+                </div>
+              </div>
+
+              {issues.length > 0 && (
+                <div className="flex flex-col gap-2.5">
+                  <h4 className="text-[0.95rem] font-semibold text-ink m-0">{s.issuesHead}</h4>
+                  <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+                    {issues.map((i, n) => (
+                      <li key={n} className={`flex flex-col gap-1 ps-3 border-s-[3px] ${SEV_BAR[i.severity]}`} data-testid="cv-issue">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-[0.94rem] font-semibold text-ink leading-snug">{i.title}</span>
+                          <span className={`text-[0.66rem] font-bold uppercase tracking-[0.06em] px-1.5 py-0.5 rounded-full ${SEV_PILL[i.severity]}`} data-testid={`cv-issue-${i.severity}`}>
+                            {i.severity === 'high' ? s.sevHigh : i.severity === 'medium' ? s.sevMedium : s.sevLow}
+                          </span>
+                        </div>
+                        {i.detail && <p className="text-[0.86rem] text-ink-soft leading-relaxed m-0">{i.detail}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {gaps.length > 0 && (
+                <div className="flex flex-col gap-2.5 border-t border-[color:var(--line-soft)] pt-3" data-testid="cv-questions">
+                  <div>
+                    <h4 className="text-[0.95rem] font-semibold text-ink m-0">{s.questionsHead}</h4>
+                    <p className="text-[0.86rem] text-ink-soft leading-relaxed mt-0.5">{s.questionsLead}</p>
+                  </div>
+                  {improveLeft > 0 ? (
+                    <>
+                      {gaps.map((g) => (
+                        <label key={g.id} className="flex flex-col gap-1">
+                          <span className="text-[0.86rem] font-medium text-ink leading-snug">{g.question} {g.why && <span className="text-ink-faint font-normal">· {g.why}</span>} <span className="text-ink-faint font-normal">({s.optional})</span></span>
+                          <textarea value={answers[g.id] || ''} onChange={(e) => setAnswers((a) => ({ ...a, [g.id]: e.target.value }))} rows={2} data-testid={`cv-gap-${g.id}`}
+                            className="w-full px-[0.7rem] py-[0.5rem] [font:inherit] text-[0.9rem] text-ink bg-[var(--surface)] border border-[color:var(--line)] rounded-sm resize-y focus:outline-none focus:border-green-500" />
+                        </label>
+                      ))}
+                      {improveErr && <p className="text-[color:var(--danger)] text-[0.88rem]" data-testid="cv-improve-err">{improveErr}</p>}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Button variant="primary" className="!h-9" disabled={improving} onClick={improveNow} data-testid="cv-improve">{improving ? s.improving : s.improveBtn}</Button>
+                        <span className="text-[0.78rem] text-ink-faint">{s.improveLeftL(improveLeft)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-[0.86rem] text-ink-faint" data-testid="cv-no-improve">{s.noImprove}</p>
+                  )}
+                </div>
+              )}
+
               <SheetActions>
-                <Button variant="primary" onClick={() => setIssuesOpen(false)} data-testid="cv-issues-ok">{s.issuesOk}</Button>
+                <Button variant="primary" onClick={() => setReviewOpen(false)} data-testid="cv-review-ok">{s.showCv}</Button>
               </SheetActions>
             </Sheet>
           )}
