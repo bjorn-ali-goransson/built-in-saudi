@@ -338,14 +338,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   tweaks). Each pass also returns an **`ats`** score (six 1–5 dimensions —
   `keywords, impact, clarity, format, completeness, conciseness`, kept in sync with
   `ATS_DIMS` in the tool) and **`gaps`** (2–5 follow-up questions only the candidate
-  can answer). The tool shows these in a **review sheet over the blurred preview
-  before the CV is revealed** (#213, #248): a **heatmap spider chart** of the ATS
+  can answer; the gap prompt tells the model to ASK for a missing number/percentage
+  rather than ever inventing one). The tool shows these in a **full-screen review
+  before the CV is revealed** (#213, #248) — the CV itself in a **left column on
+  desktop**, the score panel on the right: a **heatmap spider chart** of the ATS
   scores (same idea as the Prompt Analyzer's radar), the `issues`
-  (`{title, detail, severity: high|medium|low}`), and the gaps as an **answerable
-  form**. Answering and hitting *Improve* runs `cv-refine` with **`kind: 'improve'`**
-  (`answers[]` instead of an instruction, `improveCount` budget of 2/CV) — a second
-  pass that folds the answers in, **re-scores the ATS radar** and refreshes the
-  questions. A score badge in the preview reopens the review. "Save for later"
+  (`{title, detail, severity: high|medium|low}`) each with an **"answer this" CTA**
+  that jumps to the questions, and the gaps as an **answerable form**. Answering and
+  hitting *Improve* runs `cv-refine` with **`kind: 'improve'`** (`answers[]` instead
+  of an instruction, `improveCount` budget of 2/CV) — a second pass that folds the
+  answers in, **re-scores the ATS radar** and refreshes the questions. A score badge
+  in the preview reopens the review, which also **exports a PDF report**
+  (`AtsReport.tsx`, react-pdf) with the score, issues, and the questions printed as
+  fill-in gaps. The owner email (`OWNER_EMAIL`) is exempt from every CV rate limit.
+  "Save for later"
   (server-saved CV) and JD tailoring were removed in #213 —
   `cv-save`/`cv-get`/`cv-delete`/`cv-tailor` are gone from the source and the deploy
   workflow (the old deployments need a one-off `gcloud functions delete`). Nothing
