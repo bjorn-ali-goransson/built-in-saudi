@@ -64,8 +64,9 @@ Rules (apply strictly):
 - In "summary" and in experience/project text, wrap the most important keywords in **double asterisks** so they render bold. Bold sparingly — only genuine signal (technologies, scale, notable employers, impact).
 - Dates (experience): use MONTH and YEAR, e.g. "Mar 2023" — ATS parse tenure and gaps from month-level dates, and year-only reads as gap-hiding. Never a day. Use a 3-letter month. Ongoing roles use "Present" as endDate. If the source truly gives only a year for a role, keep that year alone rather than inventing a month. (Education stays YEAR ONLY.)
 - Location: country and maybe city only — never a street address. If every role shares the same location, put it once in contact.location and OMIT it from each experience item.
-- Links: a short label ("GitHub", "LinkedIn", "Portfolio") with its URL — never the raw URL as the label.
-- Phone/email: raw values, no "Phone:" / "Email:" labels.
+- Links: KEEP EVERY profile/credential link the source provides (GitHub, LinkedIn, Portfolio, Credly, StackOverflow, personal site, etc.) in contact.links — never drop one. Each is a short label ("GitHub", "Credly") with its URL — never the raw URL as the label.
+- Phone/email: raw values, no "Phone:" / "Email:" labels. Keep the candidate's contact email; if the source lists more than one, keep the primary professional one.
+- CONTACT INFO IS SIGNAL — preserve it. NEVER remove a piece of contact information (an email, phone or link) and then raise an "issue" or "gap"/question asking the candidate to add it back. Only ask about contact details that are genuinely ABSENT from the source.
 - REMOVE entirely: photos, references, GPA, university coursework/curriculum, exact addresses, objective-statement fluff, and any irrelevant experience (e.g. unrelated retail/food jobs for an IT professional).
 - Prefer strong action-verb bullets with measurable impact. Summarise anything verbose.
 - Order experience and education MOST RECENT FIRST (reverse chronological). If you add a role, insert it at the correct chronological position — a newer role goes at the top.

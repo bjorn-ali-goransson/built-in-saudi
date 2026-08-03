@@ -97,6 +97,11 @@ test('ats optimizer: a backend error does not crash or retry-storm', async ({ pa
   await expect.poll(() => api.calls('**/cv-generate')).toBe(1)
   await expect(page.getByTestId('ats-cv-optimizer')).toBeAttached()
   await expect(page.getByTestId('cv-review')).toHaveCount(0)
+  // The error is SHOWN (not hidden behind the blurred loading overlay) with a way
+  // out — the screen isn't locked.
+  await expect(page.getByTestId('cv-error')).toBeVisible()
+  await expect(page.getByTestId('cv-loading')).toHaveCount(0)
+  await expect(page.getByTestId('cv-start-over')).toBeVisible()
   // The autoTried guard means the failed attempt never re-fires.
   api.expectCalled('**/cv-generate', 1)
 })

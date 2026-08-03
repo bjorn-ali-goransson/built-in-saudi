@@ -609,6 +609,15 @@ export default function CvGeneratorTool() {
     }
   }
 
+  // Reset to the upload screen — used to recover from a generation error (a
+  // rate-limit or a transient failure) instead of leaving a covered/blurred screen.
+  function startOver() {
+    autoTried.current = false
+    setStatus('idle'); setErr(''); setErrDetail(''); setBrowserFallback(false)
+    setText(''); setCv(null); setIssues([]); setGaps([]); setAtsBefore(null)
+    setReviewOpen(false); setOrigPages([]); setShowAlt(false)
+  }
+
   // Second pass: fold the candidate's answers to the follow-up questions into the
   // CV to raise its ATS score, then re-score. Stays in the review sheet so the
   // radar visibly moves.
@@ -655,11 +664,7 @@ export default function CvGeneratorTool() {
     try {
       const { atsReportToPdfBlob } = await import('./AtsReport')
       const blob = await atsReportToPdfBlob(cv, ats, issues, gaps)
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `${cvFilename(cv)} — ATS report.pdf`
-      document.body.appendChild(a); a.click(); a.remove()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      await saveFile(blob, `${cvFilename(cv)} — ATS report.pdf`, 'application/pdf')
     } catch (e) {
       setReportErr((e as Error).message || 'PDF export failed')
     } finally {
@@ -673,19 +678,33 @@ export default function CvGeneratorTool() {
   // The preview switch only exists when there's an uploaded original to flip to.
   const hasOriginal = origPages.length > 0
 
+  // Save a generated file. On mobile the `download` attribute is unreliable (iOS
+  // Safari ignores it for blob: URLs — the file just opens or nothing happens),
+  // so prefer the native share sheet ("Save to Files") when the platform can
+  // share files; fall back to a download link on desktop.
+  async function saveFile(blob: Blob, filename: string, mime: string) {
+    const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean }
+    const file = new File([blob], filename, { type: mime })
+    if (nav.canShare && nav.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return }
+      catch (e) { if ((e as Error)?.name === 'AbortError') return } // cancelled → don't also download
+    }
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  }
+
   async function exportPdf() {
     if (!activeCv || pdfBusy) return
     setPdfBusy(true)
     try {
       const { cvToPdfBlob } = await import('./CvPdf')
       const blob = await cvToPdfBlob(activeCv)
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `${cvFilename(activeCv)}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      await saveFile(blob, `${cvFilename(activeCv)}.pdf`, 'application/pdf')
     } catch (e) {
       setErr((e as Error).message || 'PDF export failed')
     } finally {
@@ -693,15 +712,9 @@ export default function CvGeneratorTool() {
     }
   }
 
-  function exportWord() {
+  async function exportWord() {
     if (!activeCv) return
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(cvToDocxBlob(activeCv))
-    a.download = `${cvFilename(activeCv)}.docx`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    await saveFile(cvToDocxBlob(activeCv), `${cvFilename(activeCv)}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
   }
 
   // Full-bleed green intro, docked flush to the navbar (cancels the page's top padding).
@@ -767,7 +780,7 @@ export default function CvGeneratorTool() {
               FIXED + portaled to <body> (fills the screen, flows into the done
               preview); one stable container so the card never remounts when the
               PDF pages finish loading (was causing a flash). */}
-          {(status === 'generating' || status === 'ready') && createPortal(
+          {(status === 'generating' || status === 'ready') && !err && createPortal(
             <div className="fixed inset-x-0 bottom-0 top-[68px] max-[560px]:top-[60px] z-30 overflow-hidden bg-[#e9ebef] flex" data-testid="cv-loading">
               {/* Left: the uploaded CV (blurred), or a neutral panel for text uploads. */}
               <div className="relative flex-1 min-w-0 overflow-hidden bg-[#e9ebef]">
@@ -807,6 +820,9 @@ export default function CvGeneratorTool() {
               <p className="text-[0.9rem] text-ink leading-snug">{err}</p>
               {browserFallback && (
                 <Button variant="primary" data-testid="open-in-browser" onClick={openInBrowser} className="self-start !h-9">{s.openInBrowser}</Button>
+              )}
+              {status !== 'idle' && (
+                <Button data-testid="cv-start-over" onClick={startOver} className="self-start !h-9">{s.startOver}</Button>
               )}
               {errDetail && (
                 <pre data-testid="cv-error-diag" className="whitespace-pre-wrap break-words select-all font-mono text-[0.68rem] leading-snug text-ink-faint bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] border border-[color:var(--line-soft)] rounded-md p-2.5 max-w-full">{errDetail}</pre>
