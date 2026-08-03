@@ -1171,8 +1171,10 @@ test.describe('analytics', () => {
     expect(html).toContain("analytics_storage: 'denied'")
     // The real assertion: GA actually loads here, so if consent were configured
     // wrongly it WOULD write _ga. (It did, when this used the Universal Analytics
-    // `client_storage` parameter, which GA4 silently ignores.)
-    await page.waitForTimeout(4000)
+    // `client_storage` parameter, which GA4 silently ignores.) Wait for GA to
+    // actually fire — that's when the cookie WOULD be written — instead of a blind
+    // timer; if GA is blocked (e.g. offline sandbox), fall back.
+    await page.waitForRequest((req) => /google-analytics\.com|googletagmanager\.com\/gtag\/js/.test(req.url()), { timeout: 8000 }).catch(() => {})
     const cookies = await context.cookies()
     expect(cookies.filter((c) => c.name.startsWith('_ga')), 'no analytics cookies').toEqual([])
   })
