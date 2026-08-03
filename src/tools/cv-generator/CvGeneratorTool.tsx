@@ -82,6 +82,7 @@ const STR = {
     questionsHead: 'Answer to raise your ATS score',
     questionsLead: 'Only you can fill these in — add a number where you can (e.g. “cut costs ~15%”). The AI folds your answers in and re-scores. Leave any blank.',
     gapPlaceholder: 'Add a number where you can — e.g. reduced costs ~15%',
+    pctPlaceholder: 'e.g. 15',
     exportReport: 'Export report (PDF)',
     optional: 'optional',
     improveBtn: 'Improve my CV',
@@ -163,6 +164,7 @@ const STR = {
     questionsHead: 'أجب لترفع تقييم ATS',
     questionsLead: 'هذه أمور لا يعرفها سواك — أضف رقمًا حيثما أمكن (مثل «خفّضت التكاليف ~١٥٪»). يدمج الذكاء الاصطناعي إجاباتك ويعيد التقييم. اترك ما شئت فارغًا.',
     gapPlaceholder: 'أضف رقمًا حيثما أمكن — مثل «خفّضت التكاليف ~١٥٪»',
+    pctPlaceholder: 'مثال ١٥',
     exportReport: 'تصدير التقرير (PDF)',
     optional: 'اختياري',
     improveBtn: 'حسّن سيرتي',
@@ -253,6 +255,31 @@ function PdfPages({ pages, className = '', cover = false }: { pages: string[]; c
           <img key={i} src={src} alt="" className="w-full max-w-[210mm] bg-white shadow-[var(--shadow-sm)]" />
         ))}
       </div>
+    </div>
+  )
+}
+
+// A small percentage stepper for gaps whose answer is a single figure. Empty by
+// default (a helpful placeholder, not a pre-filled answer); the first "+" starts
+// at 5% and it steps by 5. Stores the value as e.g. "15%".
+function PercentInput({ value, onChange, placeholder, testId }: { value: string; onChange: (v: string) => void; placeholder: string; testId: string }) {
+  const digits = value.replace(/[^\d]/g, '')
+  const set = (raw: string) => { const d = raw.replace(/[^\d]/g, '').slice(0, 4); onChange(d ? `${d}%` : '') }
+  const bump = (dir: number) => {
+    const cur = parseInt(digits || '0', 10) || 0
+    const next = digits === '' && dir > 0 ? 5 : Math.max(0, cur + dir * 5)
+    onChange(`${next}%`)
+  }
+  const btn = 'grid place-items-center w-9 self-stretch text-ink-soft hover:bg-sand-100 border-0 bg-transparent cursor-pointer text-[1.15rem] leading-none disabled:opacity-40 disabled:cursor-default'
+  return (
+    <div className="inline-flex items-stretch h-9 rounded-sm border border-[color:var(--line)] overflow-hidden bg-[var(--surface)] focus-within:border-green-500 self-start">
+      <button type="button" aria-label="decrease" className={`${btn} border-e border-[color:var(--line)]`} onClick={() => bump(-1)} disabled={!digits || digits === '0'}>−</button>
+      <div className="flex items-center px-1">
+        <input inputMode="numeric" value={digits} placeholder={placeholder} onChange={(e) => set(e.target.value)} data-testid={testId}
+          className="w-14 text-center [font:inherit] text-[0.9rem] text-ink bg-transparent border-0 outline-none placeholder:text-ink-faint" />
+        <span className="text-ink-faint pe-1.5">%</span>
+      </div>
+      <button type="button" aria-label="increase" className={`${btn} border-s border-[color:var(--line)]`} onClick={() => bump(1)}>+</button>
     </div>
   )
 }
@@ -540,7 +567,7 @@ export default function CvGeneratorTool() {
     const el = questionsRef.current
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    const ta = el.querySelector('textarea') as HTMLTextAreaElement | null
+    const ta = el.querySelector('textarea, input') as HTMLElement | null
     setTimeout(() => ta?.focus(), 320)
   }
 
@@ -873,8 +900,10 @@ export default function CvGeneratorTool() {
                             {gaps.map((g) => (
                               <label key={g.id} className="flex flex-col gap-1">
                                 <span className="text-[0.86rem] font-medium text-ink leading-snug">{g.question} {g.why && <span className="text-ink-faint font-normal">· {g.why}</span>} <span className="text-ink-faint font-normal">({s.optional})</span></span>
-                                <textarea value={answers[g.id] || ''} onChange={(e) => setAnswers((a) => ({ ...a, [g.id]: e.target.value }))} rows={2} placeholder={s.gapPlaceholder} data-testid={`cv-gap-${g.id}`}
-                                  className="w-full px-[0.7rem] py-[0.5rem] [font:inherit] text-[0.9rem] text-ink bg-[var(--surface)] border border-[color:var(--line)] rounded-sm resize-y focus:outline-none focus:border-green-500 placeholder:text-ink-faint" />
+                                {g.expects === 'percent'
+                                  ? <PercentInput value={answers[g.id] || ''} onChange={(v) => setAnswers((a) => ({ ...a, [g.id]: v }))} placeholder={s.pctPlaceholder} testId={`cv-gap-${g.id}`} />
+                                  : <textarea value={answers[g.id] || ''} onChange={(e) => setAnswers((a) => ({ ...a, [g.id]: e.target.value }))} rows={2} placeholder={s.gapPlaceholder} data-testid={`cv-gap-${g.id}`}
+                                      className="w-full px-[0.7rem] py-[0.5rem] [font:inherit] text-[0.9rem] text-ink bg-[var(--surface)] border border-[color:var(--line)] rounded-sm resize-y focus:outline-none focus:border-green-500 placeholder:text-ink-faint" />}
                               </label>
                             ))}
                             {improveErr && <p className="text-[color:var(--danger)] text-[0.88rem]" data-testid="cv-improve-err">{improveErr}</p>}

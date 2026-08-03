@@ -65,6 +65,9 @@ export interface CvGap {
   id: string
   question: string
   why: string
+  // 'percent' → the answer is a single percentage (rendered as a stepper);
+  // 'text' → free text. Defaults to 'text'.
+  expects: 'percent' | 'text'
 }
 
 /** ATS score per dimension, each an integer 1–5. Keys match ATS_DIMENSIONS in
@@ -108,7 +111,7 @@ function parseGaps(raw: unknown): CvGap[] {
   return raw
     .map((g, n) => {
       const o = (g || {}) as Partial<CvGap>
-      return { id: String(o.id || `gap${n}`), question: String(o.question || ''), why: String(o.why || '') }
+      return { id: String(o.id || `gap${n}`), question: String(o.question || ''), why: String(o.why || ''), expects: o.expects === 'percent' ? 'percent' as const : 'text' as const }
     })
     .filter((g) => g.question)
 }
