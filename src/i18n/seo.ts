@@ -309,9 +309,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'احجز معي', description: 'رابط جدولة مجاني بلا تسجيل — ارسم أوقات فراغك الأسبوعية، وحدِّد مدة الاجتماع بفواصل ومهل، وشارك رابطًا واحدًا. يحجز الناس وقتًا متاحًا دون تبادل رسائل، وتصلك إشعارات ورسالة تيليجرام وبريد عند الحجز.' },
   },
   {
-    id: 'cv-generator',
-    en: { name: 'CV Generator', description: 'Upload your CV and get it rewritten into a clean, ATS-ready résumé — signal only, no noise. Photos, colours, GPAs and references stripped; skills and a punchy summary synthesised from your whole history. Export PDF or Word.' },
-    ar: { name: 'منشئ السيرة الذاتية', description: 'ارفع سيرتك واحصل عليها معادةَ الكتابة في قالب نظيف متوافق مع أنظمة التتبّع — إشارة بلا ضجيج. تُزال الصور والألوان والمعدّلات والمراجع؛ وتُستخلص المهارات وملخّص موجز. صدّر PDF أو Word.' },
+    id: 'ats-cv-optimizer',
+    en: { name: 'ATS CV Optimizer', description: 'Upload your CV, get it rewritten into a clean, ATS-ready résumé, and see it scored across six ATS dimensions on a spider chart. Answer a few questions only you can and the tool folds them in to raise the score. Export PDF or Word.' },
+    ar: { name: 'محسِّن السيرة الذاتية (ATS)', description: 'ارفع سيرتك، واحصل عليها معادةَ الكتابة في قالب نظيف متوافق مع أنظمة التتبّع، وشاهد تقييمها عبر ست ركائز في مخطط عنكبوتي. أجب عمّا لا يعرفه سواك فتدمجه الأداة لرفع التقييم. صدّر PDF أو Word.' },
   },
   {
     id: 'link-shortener',

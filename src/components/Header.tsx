@@ -39,8 +39,8 @@ export function Header() {
     try { code = (JSON.parse(localStorage.getItem('bis-bookwith') || '{}').code) || '' } catch { /* ignore */ }
     window.location.href = connectGoogleUrl(code, locale)
   }
-  // The CV Generator drives its own Log in / Log out control in the navbar.
-  const onCv = /\/apps\/cv-generator(\/|$)/.test(location.pathname)
+  // The ATS CV Optimizer drives its own Log in / Log out control in the navbar.
+  const onCv = /\/apps\/ats-cv-optimizer(\/|$)/.test(location.pathname)
   const cvAuth = useSyncExternalStore(cvHeaderStore.subscribe, cvHeaderStore.get, cvHeaderStore.get)
   const bookingTitle = useSyncExternalStore(bookingHeaderStore.subscribe, bookingHeaderStore.get, bookingHeaderStore.get)
   const match = location.pathname.match(/\/apps\/([^/]+)/)

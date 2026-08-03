@@ -592,7 +592,7 @@ export default function CvGeneratorTool() {
 
 
   return (
-    <Stack data-testid="cv-generator">
+    <Stack data-testid="ats-cv-optimizer">
       {status !== 'done' && (
         <>
           {(status === 'idle' || (status === 'extracting' && origPages.length === 0)) && hero}

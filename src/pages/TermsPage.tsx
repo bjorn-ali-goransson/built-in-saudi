@@ -28,9 +28,9 @@ const STR = {
         ],
       },
       {
-        h: 'CV Generator',
+        h: 'ATS CV Optimizer',
         p: [
-          'The CV Generator rewrites the CV you provide using AI. The result is generated automatically and given as-is — you are responsible for reviewing it for accuracy before you use or send it, and for the truthfulness of the information you submit.',
+          'The ATS CV Optimizer rewrites and scores the CV you provide using AI. The result is generated automatically and given as-is — you are responsible for reviewing it for accuracy before you use or send it, and for the truthfulness of the information you submit.',
           'Only upload a CV you have the right to use. Free usage is subject to fair limits (a small number of generations and edits per day) which may change.',
         ],
       },
@@ -75,9 +75,9 @@ const STR = {
         ],
       },
       {
-        h: 'منشئ السيرة الذاتية',
+        h: 'محسِّن السيرة الذاتية (ATS)',
         p: [
-          'يعيد منشئ السيرة كتابة السيرة التي تقدّمها باستخدام الذكاء الاصطناعي. النتيجة تُولَّد تلقائيًا وتُقدَّم كما هي — وأنت مسؤول عن مراجعتها للتأكد من دقتها قبل استخدامها أو إرسالها، وعن صحة المعلومات التي تقدّمها.',
+          'يعيد محسِّن السيرة كتابة السيرة التي تقدّمها ويقيّمها باستخدام الذكاء الاصطناعي. النتيجة تُولَّد تلقائيًا وتُقدَّم كما هي — وأنت مسؤول عن مراجعتها للتأكد من دقتها قبل استخدامها أو إرسالها، وعن صحة المعلومات التي تقدّمها.',
           'ارفع فقط سيرةً يحقّ لك استخدامها. يخضع الاستخدام المجاني لحدود عادلة (عدد محدود من عمليات الإنشاء والتعديل يوميًا) قد تتغيّر.',
         ],
       },

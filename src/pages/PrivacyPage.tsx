@@ -15,7 +15,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
     title: 'Privacy Policy',
     updated: 'Last updated: 6 July 2026',
     intro:
-      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — the Book With Me scheduling tool and the CV Generator — with a dedicated section for each, and exactly what we do with it.',
+      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — the Book With Me scheduling tool and the ATS CV Optimizer — with a dedicated section for each, and exactly what we do with it.',
     sections: [
       {
         h: 'Tools that run in your browser',
@@ -42,7 +42,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
-        h: 'CV Generator',
+        h: 'ATS CV Optimizer',
         p: [
           'Your CV file is read inside your browser — the file itself is never uploaded to us. Only the extracted plain text is sent to our server, which passes it to OpenAI to rewrite it into the structured result and to apply any answers or edits you make.',
           'We do not store the content of your CV on our servers — unless you tick “Save for later”. By default we keep only a small per-user counter (tied to your Google account) to enforce the free limits and prevent abuse — such as how many CVs you generated today and how many edits you have made.',
@@ -83,7 +83,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'Retention and deletion',
         p: [
           'Client-side tool data lives only in your browser until you clear it. For Book With Me, your host record and bookings are kept while your scheduling link is active. To delete your data, revoke Google access and email us and we will remove your host record and bookings.',
-          'The CV Generator stores no CV content — only short-lived usage counters that reset over time, so there is nothing of yours to delete there.',
+          'The ATS CV Optimizer stores no CV content — only short-lived usage counters that reset over time, so there is nothing of yours to delete there.',
           'Short links you create are kept for 6 months, then expire and are deleted automatically; you can also delete them yourself at any time.',
         ],
       },
@@ -97,7 +97,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
     title: 'سياسة الخصوصية',
     updated: 'آخر تحديث: ٦ يوليو ٢٠٢٦',
     intro:
-      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — أداة «احجز معي» ومنشئ السيرة الذاتية، ولكلٍّ قسم مستقل — وما نفعله بها بالضبط.',
+      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — أداة «احجز معي» ومحسِّن السيرة الذاتية (ATS)، ولكلٍّ قسم مستقل — وما نفعله بها بالضبط.',
     sections: [
       {
         h: 'أدوات تعمل داخل متصفحك',
@@ -124,7 +124,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
-        h: 'منشئ السيرة الذاتية',
+        h: 'محسِّن السيرة الذاتية (ATS)',
         p: [
           'يُقرأ ملف سيرتك داخل متصفحك — ولا يُرفع الملف نفسه إلينا أبدًا. يُرسَل النص المستخرج فقط إلى خادمنا، الذي يمرّره إلى OpenAI لإعادة كتابته في النتيجة المنظّمة ولتطبيق أي إجابات أو تعديلات تجريها.',
           'لا نخزّن محتوى سيرتك على خوادمنا — إلا إذا فعّلت «احفظ للاحقًا». افتراضيًا نحتفظ فقط بعدّاد صغير لكل مستخدم (مرتبط بحساب جوجل) لفرض الحدود المجانية ومنع الإساءة — مثل عدد السير التي أنشأتها اليوم وعدد التعديلات.',
@@ -165,7 +165,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         h: 'الاحتفاظ والحذف',
         p: [
           'تبقى بيانات الأدوات في متصفحك حتى تمسحها. أما «احجز معي» فيُحفظ سجلك وحجوزاتك ما دام رابط الحجز نشطًا. لحذف بياناتك، ألغِ وصول جوجل وراسلنا وسنحذف سجلك وحجوزاتك.',
-          'لا يخزّن منشئ السيرة الذاتية أي محتوى — بل عدّادات استخدام قصيرة العمر تتجدد مع الوقت، فلا يوجد ما يُحذف هناك.',
+          'لا يخزّن محسِّن السيرة الذاتية أي محتوى — بل عدّادات استخدام قصيرة العمر تتجدد مع الوقت، فلا يوجد ما يُحذف هناك.',
           'تُحفظ الروابط القصيرة التي تنشئها لمدة ٦ أشهر ثم تنتهي وتُحذف تلقائيًا، ويمكنك أيضًا حذفها بنفسك في أي وقت.',
         ],
       },

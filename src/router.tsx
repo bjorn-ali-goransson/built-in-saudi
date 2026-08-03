@@ -17,6 +17,13 @@ function AppsRedirect() {
   return <Navigate to={`/${lang}/apps/${toolId}`} replace />
 }
 
+/** Renamed tools keep their old /apps/<old-id> URL working with a redirect to
+ *  the new id (cv-generator → ats-cv-optimizer). */
+function RenamedToolRedirect({ to }: { to: string }) {
+  const { lang } = useParams()
+  return <Navigate to={`/${lang}/apps/${to}`} replace />
+}
+
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   // Short links: built-in-saudi.com/s/<code> → resolve + redirect (no locale, no chrome).
@@ -33,6 +40,9 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { index: true, element: <HomePage />, errorElement: <ErrorPage /> },
+      // Renamed tool: /apps/cv-generator → /apps/ats-cv-optimizer (static, so it
+      // outranks the :toolId route below).
+      { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
       { path: 'apps/:toolId', element: <ToolPage />, errorElement: <ErrorPage /> },
       // In-call / invite URL for the Calls app: /apps/calls/join?code=… renders the
       // same tool (it reads the code from the query).

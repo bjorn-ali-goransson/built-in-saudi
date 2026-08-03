@@ -331,7 +331,9 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `diacritizeUsage/{sub}` (Arabic Diacritizer rate-limit counters), and `todoLists`
   (lists where `owner == sub` are deleted; for a list someone else owns, only our
   **membership** is removed — never their list).
-- **CV Generator** (`functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
+- **ATS CV Optimizer** (tool id **`ats-cv-optimizer`**, renamed from `cv-generator`
+  which now 301-redirects via `router.tsx`; folder still `src/tools/cv-generator/`;
+  backend `functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
   uploaded CV as strict JSON, 2 per 24h per user) + `cv-refine` (instruction-driven
   tweaks). Each pass also returns an **`ats`** score (six 1–5 dimensions —
   `keywords, impact, clarity, format, completeness, conciseness`, kept in sync with
