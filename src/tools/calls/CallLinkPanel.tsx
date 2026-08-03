@@ -2,11 +2,22 @@
 // the incoming-call remove affordance. Anonymous: claiming subscribes this device
 // to push and registers a code; the link is built-in-saudi.com/call/<code>. See
 // src/lib/callLink.ts + functions/call.js.
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { PhoneIcon, CopyIcon, CheckIcon, TrashIcon, ShareIcon } from '../../components/icons'
 import { pushSupported } from '../../lib/push'
 import { claimCallLink, deleteCallLink, getMyCallLink } from '../../lib/callLink'
 import { makeCallLinkImage } from './invite'
+import { renderQR } from '../qr-code/qrRender'
+
+// A QR of the "add this device" URL — scanning it on a second device links that
+// device to the same call link (shared push), so either can pick up.
+function LinkDeviceQR({ url }: { url: string }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    if (ref.current) renderQR(ref.current, { value: url, size: 360, margin: 1, fg: '#12211b', bg: '#ffffff', dot: 'square', ecLevel: 'M', frame: 'none' })
+  }, [url])
+  return <canvas ref={ref} className="w-40 h-40" data-testid="call-link-qr" aria-hidden="true" />
+}
 
 const T = {
   en: {
@@ -21,6 +32,8 @@ const T = {
     expires: '(Expires in 6 months)',
     remove: 'Unpublish link', removing: 'Removing…', removed: 'Removed — people can no longer call you on this link.',
     incoming: 'Incoming call', notYou: 'Not you? Stop receiving calls on this link',
+    linkDevice: 'Link another device', hideDevice: 'Hide',
+    linkDeviceHint: 'Scan on your other phone or laptop — it’ll ring there too, so you can pick up from either device.',
   },
   ar: {
     heading: 'رابط اتصالك الشخصي', get: 'احصل على رابط ليتصلوا بك', getting: 'جارٍ الإعداد…',
@@ -34,6 +47,8 @@ const T = {
     expires: '(تنتهي خلال ٦ أشهر)',
     remove: 'إلغاء نشر الرابط', removing: 'جارٍ الإزالة…', removed: 'تمت الإزالة — لم يعد بإمكان أحد الاتصال بك عبر هذا الرابط.',
     incoming: 'مكالمة واردة', notYou: 'لست أنت؟ أوقف تلقّي المكالمات على هذا الرابط',
+    linkDevice: 'اربط جهازًا آخر', hideDevice: 'إخفاء',
+    linkDeviceHint: 'امسح الرمز على هاتفك أو حاسوبك الآخر — سيرنّ هناك أيضًا لتردّ من أيّ جهاز.',
   },
 }
 
@@ -49,6 +64,7 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
   const [withName, setWithName] = useState(true) // include the name in the share image
+  const [linkDevice, setLinkDevice] = useState(false) // show the "link another device" QR
   if (!pushSupported()) return null
   // /call/?c=<code> (not /call/<code>) so the shared link resolves to the one
   // prerendered /call/ page that carries a readable link preview. When the name is
@@ -56,6 +72,9 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
   // by name — and it goes into the QR image the same way.
   const base = code ? `${site}/call/?c=${code}` : ''
   const url = base && withName && name ? `${base}&n=${encodeURIComponent(name)}` : base
+  // "Add this device" URL — opening it on a second device links it to this same
+  // call link (shared push), so either device can pick up.
+  const addUrl = base ? `${base}&add=1${name ? `&n=${encodeURIComponent(name)}` : ''}` : ''
   // Display copy: zero-width spaces before "?" and after "&" give clean wrap points.
   // Shown non-selectable so nobody hand-copies the ZWSP-laced text — use Copy.
   const ZWS = String.fromCharCode(0x200b) // zero-width space: an invisible wrap point
@@ -134,6 +153,18 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
               <input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} data-testid="call-link-withname" className="w-4 h-4 accent-green-500 cursor-pointer" />
               {t.includeName}
             </label>
+          </div>
+          {/* Link a second device so both ring on an incoming call. */}
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={() => setLinkDevice((v) => !v)} className={`${chip} self-start`} aria-expanded={linkDevice} data-testid="call-link-device-toggle">
+              <PhoneIcon /> {linkDevice ? t.hideDevice : t.linkDevice}
+            </button>
+            {linkDevice && (
+              <div className="flex items-center gap-3 rounded-md bg-white p-3" data-testid="call-link-device">
+                <LinkDeviceQR url={addUrl} />
+                <p className="text-[0.8rem] leading-relaxed text-green-900 flex-1">{t.linkDeviceHint}</p>
+              </div>
+            )}
           </div>
         </>
       )}

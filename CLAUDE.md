@@ -565,6 +565,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   ring, lazy-deleted on expiry); dead push subs pruned on 404/410. Reuses the VAPID
   singleton in `functions/index.js`. **Not covered by `my-data`** (anonymous links
   have no Google `sub`) — the owner deletes them (in-tool or on a call).
+  **Multi-device (link a second device):** `callLinks/{code}.subs[]` already holds
+  many push subscriptions and `pushLink` fans out to all of them, so a link can ring
+  several devices. The setup panel (`CallLinkPanel`) offers **"Link another device"** —
+  a QR of `…/call/?c=<code>&add=1&n=<name>`; opening it on a second device renders the
+  **add-device screen** (`AddDeviceScreen` in `CallLinkPage`) whose button calls
+  **`linkThisDevice(code, name)`** (`callLink.ts`): push-subscribe + `call-register`
+  under the SAME code + adopt it locally (`bis-call-link`). No backend change — the
+  existing multi-sub register/push does the work. Covered by `e2e/call-link.spec.ts`.
   **Missed calls + call-back** (`call-missed`, #210/#211): a caller who hangs up
   while still WAITING pushes the owner a "Missed call from <name>" (same
   notification `tag` as the ring, so it replaces it). Their ghosted screen also

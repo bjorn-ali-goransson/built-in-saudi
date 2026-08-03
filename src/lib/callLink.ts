@@ -48,6 +48,26 @@ export async function claimCallLink(name: string): Promise<string | null> {
   return code
 }
 
+/** Link THIS device to an EXISTING call link (from another device's QR): subscribe
+ *  push and register this device's subscription under the given code, so both
+ *  devices ring on an incoming call (the backend pushes to every device on the
+ *  link). Adopts the code locally so this device can also manage/share it.
+ *  Returns the code, or null if push is unavailable / denied / the server rejected it. */
+export async function linkThisDevice(code: string, name: string): Promise<string | null> {
+  if (!code) return null
+  const sub = await subscribeDevice()
+  if (!sub) return null
+  try {
+    const res = await fetch(`${FN}/call-register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, sub, name }),
+    })
+    if (!res.ok) return null
+  } catch { return null }
+  saveMyCallLink({ code, endpoint: sub.endpoint })
+  return code
+}
+
 /** Ring the owner of a call link so their device(s) get a push to answer `room`.
  *  `join` flips it from "a fresh call you host" to "come join this existing call"
  *  — used to pull someone back in after a failed or dropped connection (#222). */

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Spinner } from '../components/ui'
 import { EndCallIcon, PhoneIcon, RefreshIcon, LockIcon } from '../components/icons'
-import { ringCallLink } from '../lib/callLink'
+import { ringCallLink, linkThisDevice } from '../lib/callLink'
 import { code6, NAME_KEY, randName, isDefaultName } from '../tools/calls/helpers'
 
 // built-in-saudi.com/call/<code> — the public page a caller opens to ring the
@@ -16,12 +16,18 @@ const T = {
     yourName: 'Your name', call: 'Call', calling: 'Calling…', shuffle: 'Random name',
     privacy: 'Private and peer-to-peer — only the connection handshake uses our server.',
     noCode: 'This call link is invalid.', home: 'Go to Built in Saudi',
+    addTitle: 'Link this device', addBlurb: 'This device will ring for the same calls, so you can pick up from either one.',
+    addBtn: 'Link this device', adding: 'Linking…', addDone: 'Done — this device will now ring for these calls.',
+    addFail: 'Couldn’t link this device. Allow notifications, then try again.', openCalls: 'Open Calls',
   },
   ar: {
     title: 'ابدأ مكالمة', blurb: 'اتصل بمن شارك هذا الرابط. سيصله إشعار للرد — تبقى المكالمة خاصة ومباشرة بين المتصفحين.',
     yourName: 'اسمك', call: 'اتصال', calling: 'جارٍ الاتصال…', shuffle: 'اسم عشوائي',
     privacy: 'خاصة ومباشرة بين الأجهزة — فقط مصافحة الاتصال تستخدم خادمنا.',
     noCode: 'رابط المكالمة غير صالح.', home: 'اذهب إلى Built in Saudi',
+    addTitle: 'اربط هذا الجهاز', addBlurb: 'سيرنّ هذا الجهاز للمكالمات نفسها، لتردّ من أيّ جهاز.',
+    addBtn: 'اربط هذا الجهاز', adding: 'جارٍ الربط…', addDone: 'تم — سيرنّ هذا الجهاز لهذه المكالمات الآن.',
+    addFail: 'تعذّر ربط هذا الجهاز. اسمح بالإشعارات ثم حاول مجددًا.', openCalls: 'افتح المكالمات',
   },
 }
 
@@ -31,6 +37,46 @@ function pickLocale(): 'en' | 'ar' {
 }
 
 const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors [&_svg]:w-5 [&_svg]:h-5'
+
+// Opened from another device's "link another device" QR (…/call/?c=<code>&add=1):
+// registers THIS device's push under the same code so both ring on a call.
+function AddDeviceScreen({ code, ownerName, locale }: { code: string; ownerName: string; locale: 'en' | 'ar' }) {
+  const t = T[locale]
+  const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'err'>('idle')
+  const nm = <bdi>{ownerName}</bdi>
+  const heading = ownerName ? (locale === 'ar' ? <>اربط هذا الجهاز بمكالمات {nm}</> : <>Link this device to {nm}’s calls</>) : t.addTitle
+  document.title = `${t.addTitle} — Built in Saudi`
+  async function link() {
+    setStatus('busy')
+    const c = await linkThisDevice(code, ownerName || 'Me')
+    setStatus(c ? 'done' : 'err')
+  }
+  return (
+    <div className="min-h-[100dvh] bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-14" dir={locale === 'ar' ? 'rtl' : 'ltr'} data-testid="call-add-device">
+      <div className="w-full max-w-[22rem] flex flex-col items-center gap-5 text-center">
+        <PhoneIcon className="w-20 h-20 text-green-500 shrink-0" />
+        <div className="flex flex-col gap-2">
+          <h1 className="font-display text-[1.5rem]" data-testid="call-add-heading">{heading}</h1>
+          <p className="text-[0.92rem] leading-relaxed text-sand-100/85">{t.addBlurb}</p>
+        </div>
+        {status === 'done' ? (
+          <div className="w-full flex flex-col gap-3">
+            <p className="text-[0.95rem] font-semibold text-sand-100" data-testid="call-add-done">{t.addDone}</p>
+            <a href={`/${locale}/apps/calls`} className={cream}>{t.openCalls}</a>
+          </div>
+        ) : (
+          <div className="w-full flex flex-col gap-2">
+            <button type="button" className={cream} onClick={link} disabled={status === 'busy'} data-testid="call-add-btn">
+              {status === 'busy' ? <><Spinner className="size-5" /> {t.adding}</> : <><PhoneIcon /> {t.addBtn}</>}
+            </button>
+            {status === 'err' && <p className="text-[0.82rem] text-[var(--gold-400)]" data-testid="call-add-err">{t.addFail}</p>}
+          </div>
+        )}
+        <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{t.privacy}</span></p>
+      </div>
+    </div>
+  )
+}
 
 export function CallLinkPage() {
   // Primary form is /call/?c=<code> (prerendered preview); /call/<code> path still
@@ -44,6 +90,8 @@ export function CallLinkPage() {
   const [name, setName] = useState(() => stored || randName(locale === 'ar'))
   const [calling, setCalling] = useState(false)
   const nameCustom = name.trim() !== '' && !isDefaultName(name)
+  // Opened from another device's "link another device" QR → the add-device flow.
+  const isAdd = (() => { try { return new URLSearchParams(window.location.search).get('add') === '1' } catch { return false } })()
   // The owner may include their name in the link (&n=) so we greet the caller by it.
   const ownerName = (() => { try { return (new URLSearchParams(window.location.search).get('n') || '').slice(0, 40).trim() } catch { return '' } })()
   // Isolate the name with <bdi> so an English (LTR) name embedded in the Arabic (RTL)
@@ -71,6 +119,8 @@ export function CallLinkPage() {
     await ringCallLink(code, room, name.trim() || 'Someone')
     navigate(`/${locale}/apps/calls?code=${room}&knock=1`)
   }
+
+  if (isAdd && code) return <AddDeviceScreen code={code} ownerName={ownerName} locale={locale} />
 
   if (!code) {
     return (
