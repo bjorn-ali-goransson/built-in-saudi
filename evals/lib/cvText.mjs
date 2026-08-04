@@ -47,7 +47,9 @@ export function cvToText(cv) {
   section('Certifications', dated(cv.certifications))
   section('Publications', dated(cv.publications))
 
-  section('Education', (cv.education || []).map((e) => `${strip(e.degree)}${e.institution ? ` · ${strip(e.institution)}` : ''}${e.year ? `   ${e.year}` : ''}`))
+  // An entry may carry only an institution (see normalize) — join on " · " only
+  // when both halves exist, or the line opens with a stray separator.
+  section('Education', (cv.education || []).map((e) => `${[strip(e.degree), strip(e.institution)].filter(Boolean).join(' · ')}${e.year ? `   ${e.year}` : ''}`))
 
   const langs = (cv.languages || []).map((l) => `${strip(l.name)}${l.level ? ` (${l.level})` : ''}`)
   if (langs.length) section('Languages', [langs.join('  ·  ')])

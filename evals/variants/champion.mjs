@@ -4,6 +4,10 @@
 // win here is a win in production and nothing else.
 import { GENERATE_SYSTEM, SCORE_SYSTEM, ATS_DIMENSIONS } from '../../functions/cvPrompts.js'
 import { cvToText } from '../../functions/cvText.js'
+// The same shaping the server applies. Without it the eval scored raw model
+// output and missed real defects — e.g. an education entry carrying only an
+// institution, which production silently dropped.
+import { normalize, normalizeIssues, normalizeGaps } from '../../functions/cvShape.js'
 import { chatJSON, pool } from '../lib/openai.mjs'
 import { MODEL } from '../lib/env.mjs'
 
@@ -26,8 +30,8 @@ export default {
       `Here is the raw CV text. Rebuild it as JSON per the rules:\n\n${String(text).slice(0, 30000)}`,
       { model, temperature: 0.3 },
     )
-    const cv = r && r.cv && typeof r.cv === 'object' ? r.cv : r
+    const cv = normalize(r && r.cv && typeof r.cv === 'object' ? r.cv : r)
     const [atsBefore, ats] = await pool([text, cvToText(cv)], 2, (t) => scoreDocument(t, { model }))
-    return { cv, ats, atsBefore, issues: r?.issues || [], gaps: r?.gaps || [] }
+    return { cv, ats, atsBefore, issues: normalizeIssues(r?.issues), gaps: normalizeGaps(r?.gaps) }
   },
 }

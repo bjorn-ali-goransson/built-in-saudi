@@ -122,7 +122,7 @@ function body(cv: Cv): string {
     .join('')
 
   const education = (cv.education || [])
-    .map((e) => `<div class="row"><span class="deg">${esc(e.degree)}${e.institution ? ` <span class="inst">· ${esc(e.institution)}</span>` : ''}</span><span class="year">${esc(e.year)}</span></div>`)
+    .map((e) => `<div class="row"><span class="deg">${esc(e.degree)}${e.institution ? ` <span class="inst">${e.degree ? '· ' : ''}${esc(e.institution)}</span>` : ''}</span><span class="year">${esc(e.year)}</span></div>`)
     .join('')
 
   const languages = (cv.languages || []).length

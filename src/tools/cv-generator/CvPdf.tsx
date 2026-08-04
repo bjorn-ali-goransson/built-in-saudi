@@ -280,7 +280,7 @@ export function CvDocument({ cv }: { cv: Cv }) {
               <View key={i} style={s.row} wrap={false}>
                 <Text style={s.rowLeft}>
                   <Text style={s.deg}>{e.degree}</Text>
-                  {e.institution ? <Text style={s.inst}>{` · ${e.institution}`}</Text> : null}
+                  {e.institution ? <Text style={s.inst}>{e.degree ? ` · ${e.institution}` : e.institution}</Text> : null}
                 </Text>
                 {e.year ? <Text style={s.year}>{e.year}</Text> : null}
               </View>

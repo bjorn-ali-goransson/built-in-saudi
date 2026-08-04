@@ -206,7 +206,7 @@ function buildBody(cv: Cv): string {
     for (const e of cv.education) {
       P.push(para(
         run(e.degree, { b: true, color: INK, sz: 21 })
-        + (e.institution ? run(' · ' + e.institution, { color: MUTED, sz: 21 }) : '')
+        + (e.institution ? run((e.degree ? ' · ' : '') + e.institution, { color: MUTED, sz: 21 }) : '')
         + (e.year ? tab() + run(e.year, { color: MUTED, sz: 18 }) : ''),
         { after: 20, tabRight: !!e.year },
       ))
