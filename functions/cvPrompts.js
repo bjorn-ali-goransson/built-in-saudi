@@ -26,7 +26,7 @@
 // sync with ATS_DIMS in the client (src/tools/cv-generator/CvGeneratorTool.tsx).
 export const ATS_DIMENSIONS = ['keywords', 'impact', 'clarity', 'format', 'completeness', 'conciseness']
 
-const PRESERVE = `PRESERVATION CONTRACT — this outranks every other instruction below, including length.
+export const PRESERVE = `PRESERVATION CONTRACT — this outranks every other instruction below, including length.
 
 An ATS matches literal strings. Every technology, tool, certification or employer you drop is a search the candidate silently stops appearing in. So:
 
@@ -52,7 +52,7 @@ Nationality and current location MAY be kept — they are relevant to Gulf hirin
 
 If you find yourself cutting to save space, stop: length is not a reason to break this contract.`
 
-const CRAFT = `WHAT A STRONG CV LOOKS LIKE — apply all of this on top of the preservation contract:
+export const CRAFT = `WHAT A STRONG CV LOOKS LIKE — apply all of this on top of the preservation contract:
 - The purpose of a CV is to win the INTERVIEW, and a recruiter scans for about 10 seconds. Front-load signal.
 - Write the SUMMARY and SKILLS from the WHOLE document, not just from any existing summary/skills section. The summary is 2–3 sentences, concrete, and MUST state total years of experience.
 - In "summary" and in experience/project text, wrap genuinely important keywords in **double asterisks** so they render bold. Bold sparingly — technologies, scale, notable employers, measurable impact.
@@ -72,11 +72,11 @@ FIX SILENTLY (do not ask, just correct):
 
 TRUTHFULNESS — never invent an employer, title, date, metric, certification or skill the source does not support. Sharpening how a fact is phrased is your job; adding facts is not.`
 
-const LENGTH = `LENGTH — fit the person, not a page count. Roughly: up to ~8 years of experience should land on ONE well-filled page; a longer or denser career may run to TWO pages, and that is perfectly acceptable — recruiters expect it from senior candidates. Two rules only:
+export const LENGTH = `LENGTH — fit the person, not a page count. Roughly: up to ~8 years of experience should land on ONE well-filled page; a longer or denser career may run to TWO pages, and that is perfectly acceptable — recruiters expect it from senior candidates. Two rules only:
 - Never pad. If the source is thin, do not invent filler to fill a page; write it tight and let it be short, and raise the thinness in "issues" instead.
 - Never cut real signal to hit a page. If the choice is a second page or dropping technologies, certifications or achievements, take the second page — the preservation contract wins.`
 
-const SHAPE = `The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty). EVERY list item has a short, stable "id" slug (e.g. "exp-morgan-stanley", "skill-cloud") — invent one per item; if an item already carries an id (you were given the current CV), REUSE it unchanged:
+export const SHAPE = `The CV object shape (omit a section with an empty array; omit optional strings by leaving them empty). EVERY list item has a short, stable "id" slug (e.g. "exp-morgan-stanley", "skill-cloud") — invent one per item; if an item already carries an id (you were given the current CV), REUSE it unchanged:
 {
   "name": string, "role": string, "available": string,
   "contact": { "location": string, "phone": string, "email": string, "links": [{ "label": string, "url": string }] },
@@ -91,11 +91,17 @@ const SHAPE = `The CV object shape (omit a section with an empty array; omit opt
   "languages": [{ "id": string, "name": string, "level": string }]
 }`
 
-const REPORT = `NEVER ask the candidate anything inside the CV — you get one pass. Report what you could not fix instead:
+export const REPORT = `NEVER ask the candidate anything inside the CV — you get one pass. Report what you could not fix instead:
 
 - "issues": up to 5 problems that only the candidate can resolve — a seniority claim with no supporting evidence, conflicting or impossible dates, a large unexplained employment gap, a claimed skill never evidenced, a missing contact route, achievements with no measurable outcome. Each is { "title": a 3–8 word label, "detail": one or two sentences on what is wrong and what to add, "severity": "high" | "medium" | "low" }. "high" = a recruiter is likely to reject or distrust the CV over it. Most severe first. Never raise an issue about something you removed yourself, and never ask for contact details the source actually provided. If nothing material is wrong, return an empty array.
 
-- "gaps": 2 to 5 direct questions whose answers would most strengthen the CV, ordered by how much they would help. Whenever an achievement is unquantified, ASK FOR THE NUMBER and show the shape of the answer (e.g. "By roughly what percentage did you cut infrastructure costs? — e.g. ~15%"). Also worth asking: the target job title/industry to tune keywords toward, evidence for a claimed skill, the reason for a gap. Each is { "id": short slug, "question": the question, "why": <= 12 words on what answering it improves, "expects": "percent" when the ideal answer is a single percentage else "text", "targets": [ the item "id"s the answer would change, and/or "summary" / "skills" ] }. Skip anything already well answered.`
+- "gaps": the questions whose answers would most strengthen the CV. THE SINGLE BIGGEST WEAKNESS OF ALMOST EVERY CV IS UNQUANTIFIED ACHIEVEMENTS, and a recruiter judges that across the WHOLE document — one number in one bullet changes nothing. So:
+  · Walk the experience section role by role. For EVERY role whose bullets carry no concrete figure, ask that role its own question for the headline number, naming the role in the question so the candidate knows which one you mean (e.g. "At Morgan Stanley, how large was the platform you supported — users, transactions per day, or team size?").
+  · Prefer the number a recruiter would care about: scale (users, transactions, size of system or team), improvement (a percentage), money, or time saved.
+  · Show the shape of the answer with an example every time — "e.g. ~15%", "e.g. 40,000 users".
+  · Only then spend remaining questions on other things: the target job title to tune keywords toward, a claimed skill with no evidence, an unexplained gap, a missing contact route.
+  · Ask up to 5 questions, ordered by how much they would help, and skip anything already well quantified. If the CV has more unquantified roles than you have questions, cover the most recent and most senior ones first — they are what a recruiter reads.
+  Each is { "id": short slug, "question": the question, "why": <= 12 words on what answering it improves, "expects": "percent" when the ideal answer is a single percentage else "text", "targets": [ the item "id"s the answer would change, and/or "summary" / "skills" ] }. "targets" MUST name the experience item the question is about, so the follow-up pass can rewrite exactly that role.`
 
 export const GENERATE_SYSTEM = `You are an elite technical résumé editor. You receive the raw text of a person's existing CV — often messily extracted from a PDF — and you rebuild it as JSON: same facts, far better presented.
 

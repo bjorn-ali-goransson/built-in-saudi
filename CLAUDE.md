@@ -191,9 +191,24 @@ run output are gitignored** (`evals/cvs/`, `evals/out/`) — never commit them.
 ```bash
 node evals/run.mjs --roundtrip                    # full corpus, production prompts
 node evals/run.mjs --variants champion,legacy     # A/B against the pre-2026-08 prompt
+node evals/improve.mjs                            # does answering the gaps raise the score?
 node evals/atscheck.mjs <tag>                     # headings + glued keywords in the real PDF
 node evals/dump.mjs <tag> <cv>                    # what an ATS extracts from one export
 ```
+
+**Where the score actually comes from (measured, and it shapes the product):**
+after the rewrite, `keywords` (4.6) and `completeness` (4.65) are near the top,
+`format`/`clarity`/`conciseness` sit at ~3.9–4.0, and **`impact` (3.65) is the
+single blocker on 9 of 10 CVs** — it grades how MANY bullets carry a concrete
+number, and the rewriter is rightly forbidden from inventing one. So the ceiling
+on a fresh upload is roughly 4.2: the remaining points are the candidate's facts,
+not our wording, and the **gaps → improve loop is the only honest way up**. That
+loop used to be dead (it moved `impact` by 0.00 even when the candidate supplied
+real figures) because it asked 2.6 questions against a CV with ~20 unquantified
+bullets. It now asks for a headline number **per role** (4.1 questions), which
+moves `impact` **+0.38** and interview likelihood **+6.3pp**. When tuning, treat
+"how many numbers do we get out of the candidate" as the lever — not the wording
+of the rewrite.
 
 It extracts text exactly as the browser does (`evals/lib/extract.mjs` mirrors
 `extract.ts`), runs each **variant** (`evals/variants/*.mjs` — `champion` is
