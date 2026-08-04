@@ -196,6 +196,33 @@ node evals/atscheck.mjs <tag>                     # headings + glued keywords in
 node evals/dump.mjs <tag> <cv>                    # what an ATS extracts from one export
 ```
 
+**The 1–5 scale must stay usable at both ends.** Two failure modes, both found by
+probing rather than by reading the prompt, both easy to reintroduce:
+- **An unreachable 5.** The original anchors described 5 as a superlative
+  ("exceptionally sharp", "every line is signal"), so the model reserved it for a
+  document it could always imagine improving: `clarity` never scored 5 on ANY
+  input, and a deliberately ideal CV plateaued at 4.67 through seven rounds of
+  targeted rewriting. Every anchor now states a **checkable** condition for 5,
+  plus an explicit line that the top of the scale is attainable. A fictional
+  benchmark then scores a clean **5.00** (`node evals/perfect.mjs`, specimen in
+  `evals/out/perfect-cv.txt`) while real uploads still spread 3.3–4.5, so the
+  range opened without inflating. Keep `evals/perfect.mjs` passing: if it stops
+  reaching 5.0, the scale has silently compressed again.
+- **A gameable 5.** `impact` rewarded *having* a number rather than a credible
+  one — bolting invented percentages onto an otherwise unchanged CV, adding no
+  substance whatsoever, moved it 4.50 → 5.00. That matters more than the score:
+  the improve loop actively pushes candidates toward supplying figures, so a soft
+  rubric teaches the tool to manufacture confident nonsense. The `impact` anchor
+  now requires a figure to name what was measured, be attributable to that person
+  in that role, and vary in unit across the CV, and caps the dimension at 3 when
+  most bullets are padded. `node evals/gameable.mjs` is the regression test.
+
+**Known limit, honestly:** a 5.0 on this rubric is not yet the same as a strong CV
+to a human. The benchmark that scores 5.0 still opens with a boilerplate summary
+("Accomplished Software Engineer… proven track record…") and contains at least one
+unattributable metric. Summary quality and metric attribution are the next things
+worth policing.
+
 **Where the score actually comes from (measured, and it shapes the product):**
 after the rewrite, `keywords` (4.6) and `completeness` (4.65) are near the top,
 `format`/`clarity`/`conciseness` sit at ~3.9–4.0, and **`impact` (3.65) is the

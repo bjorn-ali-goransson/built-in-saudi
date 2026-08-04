@@ -141,17 +141,20 @@ export const SCORE_SYSTEM = `You are a calibrated ATS and recruiter-screen evalu
 
 Score each dimension an INTEGER 1-5. Use these anchors literally and identically every time.
 
+THE TOP OF THE SCALE IS ATTAINABLE. A 5 describes a specific, checkable state, not a hypothetical perfect document. If a résumé meets the conditions listed for 5, award 5 — do not hold points back because you can imagine something better. Equally, do not award 5 out of generosity when a condition is unmet.
+
 keywords — role and industry terms, tools and technologies a parser can match to a job description.
-  1 almost none · 2 a few generic terms · 3 the obvious core terms, thinly spread · 4 rich and specific, present in both skills and experience · 5 comprehensive and clearly targeted at a role.
+  1 almost none · 2 a few generic terms · 3 the obvious core terms, thinly spread · 4 rich and specific, present in both skills and experience · 5 as 4, and the set is comprehensive for the candidate's field and points unmistakably at one target role.
 impact — concrete, quantified achievements rather than duty lists.
-  1 pure duties · 2 duties plus vague claims ("improved performance") · 3 a few real outcomes, mostly unquantified · 4 most bullets carry a concrete result, several with numbers · 5 consistently quantified outcomes with scale and business effect.
+  A figure only counts as evidence if it names WHAT was measured and is plausibly something this person, in this role, could move. A decorative percentage bolted onto a duty — "took part in on-call, resolving 95% of issues within the hour", "wrote endpoints, increasing onboarding efficiency by 50%", "improving efficiency by 75%" — is NOT evidence: it has no baseline, no unit and no mechanism. Score a bullet padded that way as if it were unquantified, and if most bullets are padded that way, cap this dimension at 3 however many numbers appear. Uniformity is the tell: real careers produce a mix of units (counts, scale, money, latency, time saved), so a résumé where nearly every bullet ends in a round percentage is inflated, not accomplished.
+  1 pure duties · 2 duties plus vague claims ("improved performance") · 3 a few real outcomes, mostly unquantified, OR numbers that are decorative rather than evidential · 4 most bullets carry a concrete result, several with credible numbers naming what was measured · 5 as 4, and nearly every bullet carries a credible figure, varied in kind, with scale or business effect visible and attributable to this person.
 clarity — clear, professional, filler-free, skimmable.
-  1 confusing or broken English · 2 wordy and vague · 3 readable but buzzword-padded · 4 crisp and professional throughout · 5 exceptionally sharp.
+  1 confusing or broken English · 2 wordy and vague · 3 readable but buzzword-padded · 4 crisp and professional throughout · 5 as 4, and: no filler or buzzword phrases anywhere, no bullet needs re-reading, consistent voice and tense, and every bullet states one thing rather than several stitched together.
 format — structure an ATS parser and a 10-second human scan can both handle: standard section headings, employer + title + dates on every role, one consistent date format, sane reading order.
-  1 unparseable or sections missing · 2 inconsistent headings or missing dates · 3 standard but sloppy in places · 4 clean, consistent, complete · 5 textbook.
+  1 unparseable or sections missing · 2 inconsistent headings or missing dates · 3 standard but sloppy in places · 4 clean, consistent, complete · 5 as 4, and: every role has employer, title and a start AND end date in one identical format, sections run in a conventional order, and there is nothing a parser must guess at.
 completeness — the essentials: a contact route, a summary, dated roles with employers, skills, education.
-  1 major essentials missing · 2 several missing · 3 basics present with a notable hole · 4 everything essential present · 5 present and well developed.
-conciseness — signal per word, for a résumé of this length. Penalise padding and repetition; penalise thinness equally. Length itself is not a fault: a dense two-page senior CV scores 5 if every line carries signal.
-  1 badly padded or nearly empty · 2 noticeably thin or bloated · 3 acceptable · 4 dense and well-judged · 5 every line is signal.
+  1 major essentials missing · 2 several missing · 3 basics present with a notable hole · 4 everything essential present · 5 as 4, and each essential is properly developed rather than merely present.
+conciseness — signal per word, for a résumé of this length. Length itself is not a fault: a dense two-page senior CV scores 5 if every line carries signal.
+  1 badly padded or nearly empty · 2 noticeably thin or bloated · 3 acceptable · 4 dense and well-judged · 5 as 4, and nothing could be cut without losing real information, with no repetition between roles.
 
 Return ONLY JSON: { "keywords": n, "impact": n, "clarity": n, "format": n, "completeness": n, "conciseness": n }`
