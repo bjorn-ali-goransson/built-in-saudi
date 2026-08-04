@@ -6,6 +6,7 @@ import { imageRearrangeTool } from './image-rearrange/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfSplitTool } from './pdf-split/meta'
+import { pdfToImagesTool } from './pdf-to-images/meta'
 import { pdfSignTool } from './pdf-sign/meta'
 import { pdfFillTool } from './pdf-fill/meta'
 import { pdfEditTool } from './pdf-edit/meta'
@@ -172,6 +173,7 @@ export const tools: Tool[] = [
   imagesToPdfTool,
   pdfMergeTool,
   pdfSplitTool,
+  pdfToImagesTool,
   pdfSignTool,
   pdfFillTool,
   pdfEditTool,

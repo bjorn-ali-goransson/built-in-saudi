@@ -169,6 +169,65 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
+  test('pdf to images: renders every page and offers each / ZIP', async ({ page }) => {
+    // A real 2-page PDF, built here rather than committed as a fixture — the
+    // point of the test is that pdf.js actually rasterises pages, so a
+    // hand-rolled byte blob that pdf.js merely tolerates would prove nothing.
+    const { PDFDocument } = await import('pdf-lib')
+    const doc = await PDFDocument.create()
+    for (const label of ['Page one', 'Page two']) {
+      doc.addPage([200, 280]).drawText(label, { x: 20, y: 140, size: 18 })
+    }
+    const pdf = Buffer.from(await doc.save())
+
+    await page.goto('/en/apps/pdf-to-images')
+    await expect(page.getByTestId('pdf-to-images')).toBeVisible()
+    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
+
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'sample.pdf', mimeType: 'application/pdf', buffer: pdf })
+    await expect(page.getByTestId('p2i-count')).toContainText('2 pages')
+
+    await page.getByTestId('p2i-convert').click()
+    const tiles = page.getByTestId('p2i-results').locator('a')
+    await expect(tiles).toHaveCount(2, { timeout: 30_000 })
+    // Both download routes the user asked for, plus the per-page one on each tile.
+    await expect(page.getByTestId('p2i-zip')).toBeVisible()
+    await expect(page.getByTestId('p2i-each')).toBeVisible()
+    await expect(page.getByTestId('p2i-page-1')).toHaveAttribute('download', /sample-p1\.png$/)
+
+    // The thumbnail must be a genuinely decoded raster, not a broken image.
+    const w = await page.getByTestId('p2i-page-1').locator('img').evaluate((el) => (el as HTMLImageElement).naturalWidth)
+    expect(w).toBeGreaterThan(50)
+
+    // Switching format re-labels the download and clears the stale results.
+    await page.getByTestId('p2i-format-jpeg').click()
+    await expect(page.getByTestId('p2i-results')).toHaveCount(0)
+    await page.getByTestId('p2i-convert').click()
+    await expect(page.getByTestId('p2i-page-2')).toHaveAttribute('download', /sample-p2\.jpg$/, { timeout: 30_000 })
+  })
+
+  test('pdf to images: a page range limits what is produced', async ({ page }) => {
+    const { PDFDocument } = await import('pdf-lib')
+    const doc = await PDFDocument.create()
+    for (let i = 0; i < 5; i++) doc.addPage([120, 160]).drawText(`p${i + 1}`, { x: 10, y: 80, size: 14 })
+    const pdf = Buffer.from(await doc.save())
+
+    await page.goto('/en/apps/pdf-to-images')
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'five.pdf', mimeType: 'application/pdf', buffer: pdf })
+    await expect(page.getByTestId('p2i-count')).toContainText('5 pages')
+
+    await page.getByTestId('p2i-range').fill('2-3, 5')
+    await page.getByTestId('p2i-convert').click()
+    await expect(page.getByTestId('p2i-results').locator('a')).toHaveCount(3, { timeout: 30_000 })
+    await expect(page.getByTestId('p2i-page-2')).toBeVisible()
+    await expect(page.getByTestId('p2i-page-5')).toBeVisible()
+    await expect(page.getByTestId('p2i-page-1')).toHaveCount(0)
+
+    await page.getByTestId('p2i-range').fill('nonsense')
+    await page.getByTestId('p2i-convert').click()
+    await expect(page.getByTestId('p2i-error')).toBeVisible()
+  })
+
   test('invoice generator: computes VAT and total from line items', async ({ page }) => {
     await page.goto('/en/tools/invoice-generator')
     await expect(page.getByTestId('invoice-generator')).toBeVisible()

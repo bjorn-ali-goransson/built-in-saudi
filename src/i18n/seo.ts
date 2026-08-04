@@ -359,6 +359,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'ضغط PDF', description: 'صغّر حجم ملف PDF داخل متصفحك: اختر مستوى الضغط فيُعيد رسم كل صفحة كصورة JPEG محسّنة ويعيد بناء الملف — مثالي للملفات الممسوحة أو المليئة بالصور، مع إظهار حجم التوفير قبل التنزيل. يعمل عبر pdf.js و pdf-lib؛ دون رفعه. يصبح النص جزءًا من الصورة.' },
   },
   {
+    id: 'pdf-to-images',
+    en: { name: 'PDF to Images', description: 'Convert a PDF to images — one PNG, JPG or WebP per page, at screen, print or high-DPI resolution. Pick pages, save each or all as a ZIP. Never uploaded.' },
+    ar: { name: 'PDF إلى صور', description: 'حوّل PDF إلى صور — ملف PNG أو JPG أو WebP لكل صفحة، بدقة الشاشة أو الطباعة أو عالية. اختر الصفحات واحفظها منفردة أو في ZIP. لا تُرفع أبدًا.' },
+  },
+  {
     id: 'images-to-pdf',
     en: { name: 'Images to PDF', description: 'Combine JPG/PNG images into a single PDF, one per page — reorder, fit-to-image or A4/Letter with a margin. Built in your browser; never uploaded.' },
     ar: { name: 'الصور إلى PDF', description: 'ادمج صور JPG/PNG في PDF واحد، صورة لكل صفحة — إعادة ترتيب، وملاءمة الصورة أو A4/Letter بهامش. داخل متصفحك؛ لا تُرفع أبدًا.' },

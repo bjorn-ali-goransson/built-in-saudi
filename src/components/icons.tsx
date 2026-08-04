@@ -564,6 +564,17 @@ export function CropIcon({ className }: P) {
   )
 }
 
+/** A page fanning out into pictures — the inverse of PhotoDocIcon. */
+export function DocPhotoIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3" />
+      <rect x="12" y="9" width="9" height="8" rx="1.5" />
+      <circle cx="14.8" cy="12" r="1" /><path d="M12 15.5l2.5-2 2 1.6 2-1.8 2.5 2.2" />
+    </svg>
+  )
+}
+
 export function PhotoDocIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
