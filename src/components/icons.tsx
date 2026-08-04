@@ -564,6 +564,28 @@ export function CropIcon({ className }: P) {
   )
 }
 
+/** A photo with its data tag being wiped away. */
+export function EraseIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7" />
+      <circle cx="9" cy="9.5" r="1.3" /><path d="M4 16l4-3 3 2.2" />
+      <path d="M15.5 21.5l6-6M15.5 15.5l6 6" />
+    </svg>
+  )
+}
+
+/** Scanner brackets around a QR module — reading a code, not making one. */
+export function ScanQrIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+      <rect x="8" y="8" width="3.5" height="3.5" /><rect x="12.5" y="12.5" width="3.5" height="3.5" />
+      <path d="M15 8h1M8 15v1" />
+    </svg>
+  )
+}
+
 /** Scanner brackets around lines of text — OCR. */
 export function ScanTextIcon({ className }: P) {
   return (

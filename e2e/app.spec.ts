@@ -169,6 +169,97 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
+  test('qr reader: decodes a real code and flags a deceptive link', async ({ page }) => {
+    // Generate genuine QR PNGs with the same library the generator tool uses,
+    // so this exercises real decoding rather than a hand-made pattern.
+    const QRCode = await import('qrcode')
+    const png = async (text: string) => Buffer.from((await QRCode.toDataURL(text, { width: 420, margin: 2 })).split(',')[1], 'base64')
+
+    await page.goto('/en/apps/qr-reader')
+    await expect(page.getByTestId('qr-reader')).toBeVisible()
+    await expect(page.getByText(/never uploaded|never leave/i)).toBeVisible()
+
+    // A Wi-Fi payload should be broken into readable fields, not just dumped.
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'wifi.png', mimeType: 'image/png', buffer: await png('WIFI:S:Majlis Guest;T:WPA;P:hunter2;;') })
+    await expect(page.getByTestId('qr-result')).toContainText('Wi-Fi network')
+    await expect(page.getByTestId('qr-result')).toContainText('Majlis Guest')
+    await expect(page.getByTestId('qr-result')).toContainText('hunter2')
+    await expect(page.getByTestId('qr-warn')).toHaveCount(0)
+
+    // The reason to read a code first: this one reads as "apple.com" but isn't.
+    await page.getByTestId('qr-again').click()
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'evil.png', mimeType: 'image/png', buffer: await png('http://apple.com@192.168.4.9:8080/verify') })
+    await expect(page.getByTestId('qr-raw')).toContainText('apple.com@192.168.4.9')
+    const warn = page.getByTestId('qr-warn')
+    await expect(warn).toContainText(/user@/i)      // the host is not what it looks like
+    await expect(warn).toContainText(/IP address/i)
+    await expect(warn).toContainText(/unusual port/i)
+    await expect(warn).toContainText(/not encrypted/i)
+
+    // And a picture with no code in it says so rather than failing silently.
+    await page.getByTestId('qr-again').click()
+    const blank = await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 200; c.height = 200
+      const x = c.getContext('2d')!; x.fillStyle = '#ddd'; x.fillRect(0, 0, 200, 200)
+      const b: Blob = await new Promise((r) => c.toBlob((v) => r(v!), 'image/png'))
+      return Array.from(new Uint8Array(await b.arrayBuffer()))
+    })
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'blank.png', mimeType: 'image/png', buffer: Buffer.from(blank) })
+    await expect(page.getByTestId('qr-none')).toBeVisible()
+  })
+
+  test('metadata remover: drops EXIF losslessly and keeps the pixels', async ({ page }) => {
+    // A real JPEG with a real APP1/EXIF segment spliced in, so the tool has
+    // something genuine to strip.
+    const jpeg = await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 120; c.height = 90
+      const x = c.getContext('2d')!
+      x.fillStyle = '#2f5482'; x.fillRect(0, 0, 120, 90)
+      x.fillStyle = '#fff'; x.fillRect(20, 20, 40, 30)
+      const b: Blob = await new Promise((r) => c.toBlob((v) => r(v!), 'image/jpeg', 0.9))
+      return Array.from(new Uint8Array(await b.arrayBuffer()))
+    })
+    const src = Buffer.from(jpeg)
+    // Build an APP1 "Exif\0\0" segment and insert it right after SOI.
+    const payload = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), Buffer.alloc(200, 0x41)])
+    const app1 = Buffer.concat([Buffer.from([0xff, 0xe1, ((payload.length + 2) >> 8) & 0xff, (payload.length + 2) & 0xff]), payload])
+    const withExif = Buffer.concat([src.subarray(0, 2), app1, src.subarray(2)])
+
+    await page.goto('/en/apps/metadata-remove')
+    await expect(page.getByTestId('metadata-remove')).toBeVisible()
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'holiday.jpg', mimeType: 'image/jpeg', buffer: withExif })
+
+    await expect(page.getByTestId('mr-removed')).toContainText(/EXIF/i)
+    // Structural strip, not a re-encode — that is the whole point.
+    await expect(page.getByTestId('mr-mode')).toContainText(/not re-compressed/i)
+    await expect(page.getByTestId('mr-download')).toHaveAttribute('download', 'holiday.jpg')
+    // The cleaned file must be smaller than the one carrying the segment, and
+    // still decode to the same dimensions.
+    const { w, h } = await page.getByTestId('mr-preview').evaluate((el) => ({ w: (el as HTMLImageElement).naturalWidth, h: (el as HTMLImageElement).naturalHeight }))
+    expect(w).toBe(120)
+    expect(h).toBe(90)
+    await expect(page.getByTestId('mr-size')).toContainText(/saved/i)
+  })
+
+  test('hash generator: verifies a pasted checksum and picks the algorithm from it', async ({ page }) => {
+    await page.goto('/en/apps/hash-generator')
+    await page.getByTestId('hash-text').fill('built in saudi')
+    await expect(page.getByTestId('hash-hex')).not.toBeEmpty()
+    const sha256 = await page.getByTestId('hash-hex').innerText()
+
+    // Switch away, then paste a SHA-256 — the length alone should switch it back.
+    await page.getByTestId('hash-algo-SHA-1').click()
+    await page.getByTestId('hash-expected').fill(sha256)
+    await expect(page.getByTestId('hash-verdict-match')).toBeVisible()
+
+    // sha256sum output is usually pasted as "<hash>  <filename>".
+    await page.getByTestId('hash-expected').fill(`${sha256}  built-in-saudi.txt`)
+    await expect(page.getByTestId('hash-verdict-match')).toBeVisible()
+
+    await page.getByTestId('hash-expected').fill(sha256.replace(/.$/, (c) => (c === 'a' ? 'b' : 'a')))
+    await expect(page.getByTestId('hash-verdict-no')).toBeVisible()
+  })
+
   test('image to text: actually reads words out of a picture, from our own origin', async ({ page }) => {
     // Render crisp black text on white in the page itself, then hand the PNG to
     // the tool. A fixture image would test the same thing, but this keeps the

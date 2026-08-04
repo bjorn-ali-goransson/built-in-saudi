@@ -359,6 +359,16 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'ضغط PDF', description: 'صغّر حجم ملف PDF داخل متصفحك: اختر مستوى الضغط فيُعيد رسم كل صفحة كصورة JPEG محسّنة ويعيد بناء الملف — مثالي للملفات الممسوحة أو المليئة بالصور، مع إظهار حجم التوفير قبل التنزيل. يعمل عبر pdf.js و pdf-lib؛ دون رفعه. يصبح النص جزءًا من الصورة.' },
   },
   {
+    id: 'qr-reader',
+    en: { name: 'QR Code Reader', description: 'Read a QR code from a picture or your camera and see what it really says before you open it — with warnings for look-alike and shortened links. Nothing is uploaded.' },
+    ar: { name: 'قارئ الباركود', description: 'اقرأ الباركود من صورة أو من الكاميرا وشاهد محتواه الحقيقي قبل فتحه — مع تنبيهات للروابط المضللة والمختصرة. لا يُرفع شيء.' },
+  },
+  {
+    id: 'metadata-remove',
+    en: { name: 'Remove Image Metadata', description: 'Strip EXIF, GPS, XMP and IPTC data from a photo before you share it — without re-compressing the image, so quality is untouched. Never uploaded.' },
+    ar: { name: 'إزالة بيانات الصورة', description: 'احذف بيانات EXIF وGPS وXMP وIPTC من الصورة قبل مشاركتها — دون إعادة ضغطها، فتبقى الجودة كما هي. لا تُرفع أبدًا.' },
+  },
+  {
     id: 'image-to-text',
     en: { name: 'Image to Text (OCR)', description: 'Extract text from a photo, screenshot or scan — English, Arabic or both — then copy it or save as .txt. The OCR engine runs in your browser; nothing is uploaded.' },
     ar: { name: 'استخراج النص من صورة', description: 'استخرج النص من صورة أو لقطة شاشة أو مستند ممسوح — بالإنجليزية أو العربية أو كليهما — ثم انسخه أو احفظه كملف .txt. يعمل داخل متصفحك ولا يُرفع شيء.' },
