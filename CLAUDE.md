@@ -156,6 +156,55 @@ Android every one used to be a dead end. `libheif-js` (wasm) fills the gap:
   `pillow-heif`). ffmpeg cannot make one — its mp4 muxer with `-brand heic` writes an
   HEVC video container that libheif rejects.
 
+## The exported CV PDF must survive machine reading (#249)
+
+The CV the candidate sends employers is the **PDF** (`src/tools/cv-generator/CvPdf.tsx`),
+and an ATS re-extracts text from it. Two template properties silently destroyed
+that, on every CV the tool had ever produced — both invisible on screen, both now
+regression-checked by `node evals/atscheck.mjs <run-tag>`:
+
+- **`letterSpacing` on any machine-read text must stay ≤0.10em.** Above that,
+  PDF text extractors read the glyph gaps as spaces, so `EXPERIENCE` comes back as
+  `E X P E R I E N C E`. Section detection is the first thing a résumé parser does,
+  and **168/175 headings across 32/32 CVs** were unreadable at the old 0.15em.
+  Measured break point is 0.12em at heading size (`evals/trackprobe.mjs`); section
+  heads now use 0.08em.
+- **Every bundled font file needs a UNIQUE internal PostScript name.**
+  `public/fonts/ibm-plex-sans-{400,500,600,700}.ttf` are genuinely different
+  weights (correct `usWeightClass`) but were all subset from the Regular source and
+  kept its name table, so all four reported `IBMPlexSans-Regular`. react-pdf embeds
+  by that internal name, so it collapsed them into ONE face: **every exported CV
+  rendered entirely in Regular** — no bold keywords, no semibold headings — and with
+  a single font in play the PDF text runs merge, eating the space at a bold
+  boundary (`using **Python**` → `usingPython`, which costs the keyword in every
+  ATS; 25 across 14/32 CVs). `scripts/fix-font-names.mjs` rewrites the name strings
+  in place (equal byte length, so no table offsets move). **Re-run it if these
+  subsets are ever regenerated.**
+
+## Evals (`evals/`)
+
+Offline harness for the CV optimizer — the only honest way to answer "did this
+prompt change actually help?", since the tool's own score cannot be used as its
+own evidence. Needs `OPENAI_KEY` in the gitignored root `.env`. **Real CVs and all
+run output are gitignored** (`evals/cvs/`, `evals/out/`) — never commit them.
+
+```bash
+node evals/run.mjs --roundtrip                    # full corpus, production prompts
+node evals/run.mjs --variants champion,legacy     # A/B against the pre-2026-08 prompt
+node evals/atscheck.mjs <tag>                     # headings + glued keywords in the real PDF
+node evals/dump.mjs <tag> <cv>                    # what an ATS extracts from one export
+```
+
+It extracts text exactly as the browser does (`evals/lib/extract.mjs` mirrors
+`extract.ts`), runs each **variant** (`evals/variants/*.mjs` — `champion` is
+production, `legacy` is the frozen old prompt), then blind-scores the original and
+each result with an **independent judge** (`evals/lib/judge.mjs`: one document at a
+time, fixed anchored rubric, no before/after framing, N samples averaged). It also
+measures deterministic keyword/metric retention, LLM-judged dropped and invented
+facts, and `--roundtrip` — re-uploading our own output, the case users report as
+"it lowered my score". Add a variant rather than editing `champion` in place, and
+keep `legacy` untouched so there is always a fixed baseline.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.
@@ -335,13 +384,32 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   which now 301-redirects via `router.tsx`; folder still `src/tools/cv-generator/`;
   backend `functions/cv.js`): `cv-generate` (one OpenAI pass rebuilding an
   uploaded CV as strict JSON, 2 per 24h per user) + `cv-refine` (instruction-driven
-  tweaks). Each pass also returns an **`ats`** score (six 1–5 dimensions —
-  `keywords, impact, clarity, format, completeness, conciseness`, kept in sync with
-  `ATS_DIMS` in the tool) and **`gaps`** (2–5 follow-up questions only the candidate
-  can answer; the gap prompt tells the model to ASK for a missing number/percentage
-  rather than ever inventing one). Generate also returns **`atsBefore`** — the same
-  six scores for the ORIGINAL uploaded CV as-is — so the review shows a **before →
-  after** comparison (the radar overlays the original as a dashed outline, a split
+  tweaks). **All prompt text lives in `functions/cvPrompts.js`** (cv.js keeps
+  transport, auth and rate limiting) so `evals/` can exercise the exact production
+  prompts — importing cv.js would register the handlers and open Firestore.
+  **THE REWRITER DOES NOT SCORE ITSELF.** Until 2026-08 one call rebuilt the CV,
+  graded the original, graded its own output and was told *never to score itself
+  below the original* — so the number could not report a regression and was not a
+  function of the document. Measured on 32 real CVs: it claimed **+1.27** where a
+  blind judge measured **+0.09**, and re-uploading our own output scored it **1.02
+  lower** (4.65 → 3.63) on **32/32** CVs — which is exactly the "it lowered my
+  score" complaint. Scoring is now its own blind call (`SCORE_SYSTEM`, temp 0, one
+  document, no before/after framing) run over the upload AND over
+  `cvToText(cv)` — `functions/cvText.js`, the plain text an ATS recovers from the
+  exported PDF, mirrored by `evals/lib/cvText.mjs`. Same text in, same score out,
+  so the round trip is stable by construction (measured 0.00) and the claimed
+  delta matches the measured one. `scoreDocument` returns `null` on failure rather
+  than costing the candidate their CV (the client degrades to a neutral 3). The
+  rebuild prompt is **preserve-first**: a PRESERVATION CONTRACT that outranks
+  length and names exactly what may be removed, because the old "keep only SIGNAL,
+  remove all NOISE" + full-single-page framing dropped a quarter of technical
+  keywords and a sixth of quantified metrics (retention 76% → 90%). Each pass
+  returns **`ats`** (six 1–5 dimensions — `keywords, impact, clarity, format,
+  completeness, conciseness`, kept in sync with `ATS_DIMS` in the tool) and
+  **`gaps`** (2–5 follow-up questions only the candidate can answer; the gap prompt
+  tells the model to ASK for a missing number/percentage rather than ever inventing
+  one). Generate also returns **`atsBefore`** — the same six scores for the
+  ORIGINAL uploaded CV as-is — so the review shows a **before → after** comparison (the radar overlays the original as a dashed outline, a split
   overall pill shows the delta, and a Before/After toggle flips the desktop CV
   preview between the upload and the optimized version; `atsBefore` is set once at
   generate and kept across improves). The tool shows these in a **full-screen review

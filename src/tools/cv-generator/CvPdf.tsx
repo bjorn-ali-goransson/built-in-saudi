@@ -21,6 +21,15 @@ const C = {
 // IBM Plex Sans, subset to Latin, bundled in public/fonts (react-pdf's fontkit
 // needs static TTF — the Google/IBM packages now ship only woff2). Registered
 // once, lazily, so importing this module doesn't fetch fonts until an export.
+//
+// Each of these four files MUST carry a unique internal PostScript name.
+// react-pdf embeds fonts by that name, so when all four reported
+// "IBMPlexSans-Regular" (they were subset from the Regular source and kept its
+// name table) it collapsed them into ONE face: every exported CV rendered
+// entirely in Regular, and with a single font in play the PDF text runs merged
+// and ate the space at each bold boundary — "using **Python**" reached the ATS
+// as "usingPython", costing the candidate the keyword. See
+// scripts/fix-font-names.mjs, and re-run it if these subsets are regenerated.
 let fontsReady = false
 export function registerCvFonts(base = `${import.meta.env.BASE_URL}fonts/`) {
   if (fontsReady) return
@@ -54,7 +63,13 @@ const s = StyleSheet.create({
   // Sections
   section: { marginTop: pt(16) },
   secHeadRow: { flexDirection: 'row', alignItems: 'center', marginBottom: pt(6) },
-  secHead: { fontSize: pt(10.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: pt(10.5) * 0.15, color: C.accent },
+  // Tracking must stay ≤0.10em on anything an ATS reads: above that, PDF text
+  // extractors read the glyph gaps as spaces and "EXPERIENCE" comes back as
+  // "E X P E R I E N C E", so section detection — the first thing a résumé
+  // parser does — fails. Measured break point is 0.12em at this size
+  // (evals/trackprobe.mjs); at the old 0.15em, 168 of 175 headings across 32
+  // real CVs were unreadable.
+  secHead: { fontSize: pt(10.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: pt(10.5) * 0.08, color: C.accent },
   secRule: { flex: 1, height: 1, backgroundColor: C.line, marginLeft: pt(12) },
   // Summary
   summary: { fontSize: pt(12.25), lineHeight: 1.4, color: C.inkSoft },
