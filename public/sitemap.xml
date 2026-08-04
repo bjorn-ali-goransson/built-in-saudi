@@ -1290,6 +1290,13 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-cropper"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/image-to-text/</loc>
+    <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-to-text"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/pdf-to-images/</loc>
     <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-to-images"/>
@@ -1302,6 +1309,13 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/images-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/images-to-pdf"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/image-to-text/</loc>
+    <lastmod>2026-07-03</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-to-text"/>
   </url>
   <url>
     <loc>https://built-in-saudi.com/ar/apps/pdf-to-images/</loc>

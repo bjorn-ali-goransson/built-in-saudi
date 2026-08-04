@@ -564,6 +564,16 @@ export function CropIcon({ className }: P) {
   )
 }
 
+/** Scanner brackets around lines of text — OCR. */
+export function ScanTextIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+      <path d="M8 10h8M8 13.5h8M8 17h4" />
+    </svg>
+  )
+}
+
 /** A page fanning out into pictures — the inverse of PhotoDocIcon. */
 export function DocPhotoIcon({ className }: P) {
   return (

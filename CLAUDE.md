@@ -247,6 +247,32 @@ facts, and `--roundtrip` — re-uploading our own output, the case users report 
 "it lowered my score". Add a variant rather than editing `champion` in place, and
 keep `legacy` untouched so there is always a fixed baseline.
 
+## OCR (`image-to-text`)
+
+The one tool with a genuinely heavy dependency — `tesseract.js`, because there is
+no platform OCR API worth using. Everything about it is arranged so the privacy
+claim stays literally true:
+
+- **All assets are served from our own origin**, never a CDN. Left at its
+  defaults tesseract.js fetches `worker.min.js` from jsdelivr and the language
+  models from GitHub, which would put third-party requests in the middle of a
+  tool whose whole promise is that your passport scan never leaves the page. So
+  `corePath`/`langPath`/`workerPath` all point at `/ocr`. **An e2e test fails the
+  build if any tesseract asset is requested off-origin** — keep it that way.
+- **The wasm core and worker are copied from `node_modules` at build time**
+  (`scripts/copy-ocr-core.mjs`, wired to `predev`/`prebuild`) and gitignored;
+  `tesseract.js-core` ships ~44MB of variants and we serve two. The
+  **`.traineddata` models ARE committed** (5.3MB, `eng` + `ara` from
+  `tessdata_fast`) because npm has no reliable source for them.
+- **The tool picks the core build itself** rather than passing a directory. Given
+  a directory tesseract.js probes for relaxed-SIMD too and asks for a third
+  variant — and a missing file here does **not** 404: the SPA fallback answers
+  **200 with index.html**, so `importScripts` dies on HTML with a misleading
+  `NetworkError`. That trap applies to anything fetched from `public/`.
+- Models are cached by tesseract.js in IndexedDB after first use. The service
+  worker deliberately does not cache `/ocr` (it only caches navigations and
+  `/assets/`), so 19MB never lands in the shell cache.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.

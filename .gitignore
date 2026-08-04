@@ -11,3 +11,9 @@ Thumbs.db
 # Playwright
 playwright-report/
 test-results/
+
+# The Tesseract engine (wasm core + worker) is copied from node_modules at build
+# time by scripts/copy-ocr-core.mjs, so it stays out of git. The .traineddata
+# language models next to it ARE committed — npm has no reliable source for them.
+public/ocr/tesseract-core-*
+public/ocr/worker.min.js

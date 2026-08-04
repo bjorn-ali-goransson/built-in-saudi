@@ -169,6 +169,59 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
+  test('image to text: actually reads words out of a picture, from our own origin', async ({ page }) => {
+    // Render crisp black text on white in the page itself, then hand the PNG to
+    // the tool. A fixture image would test the same thing, but this keeps the
+    // expected string and the pixels in one place.
+    const png = await page.evaluate(async () => {
+      const c = document.createElement('canvas')
+      c.width = 900; c.height = 260
+      const x = c.getContext('2d')!
+      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height)
+      x.fillStyle = '#000'; x.font = 'bold 84px Georgia, "Times New Roman", serif'
+      x.fillText('Built in Saudi', 40, 110)
+      x.fillText('Invoice 2026', 40, 220)
+      const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), 'image/png'))
+      return Array.from(new Uint8Array(await blob.arrayBuffer()))
+    })
+
+    // The engine and the language model must come from us, never a CDN — that is
+    // the whole privacy claim. Fail loudly if anything reaches off-origin.
+    const offOrigin: string[] = []
+    await page.route('**/*', (route) => {
+      const u = route.request().url()
+      if (/tesseract|traineddata|\.wasm(\.js)?$/i.test(u) && !u.startsWith('http://localhost:4173')) offOrigin.push(u)
+      return route.continue()
+    })
+
+    await page.goto('/en/apps/image-to-text')
+    await expect(page.getByTestId('image-to-text')).toBeVisible()
+    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
+
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'invoice.png', mimeType: 'image/png', buffer: Buffer.from(png) })
+    await expect(page.getByTestId('ocr-preview')).toBeVisible()
+
+    await page.getByTestId('ocr-run').click()
+    // Loading the wasm core plus a 4MB model is slow the first time.
+    await expect(page.getByTestId('ocr-text')).toBeVisible({ timeout: 120_000 })
+    const text = await page.getByTestId('ocr-text').inputValue()
+    expect(text.toLowerCase()).toContain('built in saudi')
+    expect(text).toContain('2026')
+
+    await expect(page.getByTestId('ocr-download')).toHaveAttribute('download', 'invoice.txt')
+    expect(offOrigin, `OCR assets must be served from our origin: ${offOrigin.join(', ')}`).toEqual([])
+  })
+
+  test('image to text: the picker is not image-only and a bad file explains itself', async ({ page }) => {
+    await page.goto('/en/apps/image-to-text')
+    const input = page.locator('input[type=file]').first()
+    // #225: an image-only accept hides Downloads in Android's gallery picker.
+    await expect(input).not.toHaveAttribute('accept', /image/)
+    await input.setInputFiles({ name: 'notes.txt', mimeType: '', buffer: Buffer.from('this is not an image') })
+    await expect(page.getByTestId('file-error')).toBeVisible()
+    await expect(page.getByTestId('ocr-run')).toHaveCount(0)
+  })
+
   test('pdf to images: renders every page and offers each / ZIP', async ({ page }) => {
     // A real 2-page PDF, built here rather than committed as a fixture — the
     // point of the test is that pdf.js actually rasterises pages, so a

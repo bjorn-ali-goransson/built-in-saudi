@@ -359,6 +359,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'ضغط PDF', description: 'صغّر حجم ملف PDF داخل متصفحك: اختر مستوى الضغط فيُعيد رسم كل صفحة كصورة JPEG محسّنة ويعيد بناء الملف — مثالي للملفات الممسوحة أو المليئة بالصور، مع إظهار حجم التوفير قبل التنزيل. يعمل عبر pdf.js و pdf-lib؛ دون رفعه. يصبح النص جزءًا من الصورة.' },
   },
   {
+    id: 'image-to-text',
+    en: { name: 'Image to Text (OCR)', description: 'Extract text from a photo, screenshot or scan — English, Arabic or both — then copy it or save as .txt. The OCR engine runs in your browser; nothing is uploaded.' },
+    ar: { name: 'استخراج النص من صورة', description: 'استخرج النص من صورة أو لقطة شاشة أو مستند ممسوح — بالإنجليزية أو العربية أو كليهما — ثم انسخه أو احفظه كملف .txt. يعمل داخل متصفحك ولا يُرفع شيء.' },
+  },
+  {
     id: 'pdf-to-images',
     en: { name: 'PDF to Images', description: 'Convert a PDF to images — one PNG, JPG or WebP per page, at screen, print or high-DPI resolution. Pick pages, save each or all as a ZIP. Never uploaded.' },
     ar: { name: 'PDF إلى صور', description: 'حوّل PDF إلى صور — ملف PNG أو JPG أو WebP لكل صفحة، بدقة الشاشة أو الطباعة أو عالية. اختر الصفحات واحفظها منفردة أو في ZIP. لا تُرفع أبدًا.' },
