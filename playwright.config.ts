@@ -21,6 +21,16 @@ export default defineConfig({
   // failure here is a real defect — in the product or in the test — and gets fixed,
   // not re-rolled.
   retries: 0,
+  // Cap CI concurrency. Twice now a green-locally suite has failed on the runner
+  // with "Target page, context or browser has been closed" (and once with an
+  // element that never appeared) in DIFFERENT specs — the signature of the
+  // browser being killed under memory pressure, not of a defect in the test.
+  // The calls specs each stand up two or three browser contexts with live peer
+  // connections, so peak memory is far above the average test's. Fewer workers
+  // trades a couple of minutes of CI time for a suite that means what it says —
+  // which matters more here than elsewhere, because retries:0 is deliberate and
+  // this suite gates every deploy.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
