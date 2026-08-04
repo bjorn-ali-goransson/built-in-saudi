@@ -56,6 +56,35 @@ async function verifyGoogle(idToken) {
 }
 
 
+// Experience dates, coerced to ONE shape. The prompt asks for "Mar 2023", but a
+// model that writes "July 2025" or "07/2025" for a single role leaves the CV
+// with mixed date formats, which readers and parsers both read as sloppiness —
+// and it is the one thing dragging `format` down that costs nothing to fix
+// deterministically. A bare year is left alone (the prompt keeps it when the
+// source gives no month) and anything unrecognised passes through untouched.
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+function normalizeDate(raw) {
+  const d = String(raw || '').trim()
+  if (!d) return ''
+  if (/^(present|current|now|ongoing|to date)$/i.test(d)) return 'Present'
+  const mon = (i, year) => `${MONTHS[i][0].toUpperCase()}${MONTHS[i].slice(1)} ${year}`
+  // "March 2023", "Mar 2023", "Mar. 2023", "Sept 2023"
+  let m = d.match(/^([A-Za-z]{3,9})\.?\s+(\d{4})$/)
+  if (m) {
+    const w = m[1].toLowerCase()
+    let i = MONTH_NAMES.indexOf(w)
+    if (i < 0) i = MONTHS.indexOf(w.slice(0, 3))
+    if (i >= 0) return mon(i, m[2])
+  }
+  // "03/2023", "03-2023", "2023-03", "2023/03"
+  let num = 0, year = ''
+  if ((m = d.match(/^(\d{1,2})[/-](\d{4})$/))) { num = Number(m[1]); year = m[2] }
+  else if ((m = d.match(/^(\d{4})[/-](\d{1,2})$/))) { num = Number(m[2]); year = m[1] }
+  if (num >= 1 && num <= 12 && year) return mon(num - 1, year)
+  return d
+}
+
 function normalize(cv) {
   const arr = (x) => (Array.isArray(x) ? x : [])
   const str = (x) => (typeof x === 'string' ? x : '')
@@ -77,7 +106,7 @@ function normalize(cv) {
     skills: arr(cv.skills).map((g, i) => ({ id: idOf(g, 'skill', i), category: str(g.category), items: str(g.items) })).filter((g) => g.category && g.items),
     experience: arr(cv.experience).map((j, i) => ({
       id: idOf(j, 'exp', i), role: str(j.role), company: str(j.company), location: str(j.location),
-      startDate: str(j.startDate), endDate: str(j.endDate), bullets: arr(j.bullets).map(str).filter(Boolean),
+      startDate: normalizeDate(j.startDate), endDate: normalizeDate(j.endDate), bullets: arr(j.bullets).map(str).filter(Boolean),
     })).filter((j) => j.role || j.company),
     projects: arr(cv.projects).map((p, i) => ({ id: idOf(p, 'proj', i), name: str(p.name), description: str(p.description) })).filter((p) => p.name),
     talks: dated(cv.talks, 'talk'),

@@ -84,7 +84,17 @@ export default function LinkShortenerTool() {
           setIdToken(r.credential)
           setShowLogin(false)
           setLoadingLinks(true)
-          myLinks(r.credential).then((l) => setLinks(l)).catch(() => {}).finally(() => setLoadingLinks(false))
+          // Signing in with a pending URL runs this fetch and the shorten
+          // concurrently, so MERGE rather than replace — assigning the server
+          // list wholesale raced the new link and deleted it from view whenever
+          // my-links happened to answer second.
+          myLinks(r.credential)
+            .then((l) => setLinks((prev) => {
+              const seen = new Set(prev.map((x) => x.code))
+              return [...prev, ...l.filter((x) => !seen.has(x.code))]
+            }))
+            .catch(() => {})
+            .finally(() => setLoadingLinks(false))
           const p = pendingRef.current
           pendingRef.current = ''
           if (p) doShortenRef.current(r.credential, p)
@@ -163,7 +173,9 @@ export default function LinkShortenerTool() {
       </div>
       {err && <p className="text-[0.85rem] text-gold-500">{err}</p>}
 
-      {loadingLinks ? (
+      {/* Only spin when there is genuinely nothing to show — a link created
+          during sign-in must stay visible while the history loads behind it. */}
+      {loadingLinks && links.length === 0 ? (
         <div className="py-8 flex justify-center"><Spinner className="size-7" /></div>
       ) : links.length === 0 ? (
         <p className="text-[0.9rem] text-ink-faint py-4">{s.empty}</p>
