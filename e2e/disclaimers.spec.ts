@@ -12,7 +12,6 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'medicine-schedule', kind: 'medical' },
   { id: 'end-of-service', kind: 'legal' },
   { id: 'zakat-calculator', kind: 'religious' },
-  { id: 'loan-calculator', kind: 'financial' },
   { id: 'id-expiry', kind: 'official' },
   { id: 'passport-photo', kind: 'official' },
   { id: 'quotation', kind: 'legal' },

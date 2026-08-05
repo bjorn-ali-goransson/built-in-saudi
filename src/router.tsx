@@ -24,6 +24,13 @@ function RenamedToolRedirect({ to }: { to: string }) {
   return <Navigate to={`/${lang}/apps/${to}`} replace />
 }
 
+/** A tool we removed on purpose. Old links and search results will point at it
+ *  for a long time, so send them to the catalogue rather than a dead end. */
+function RetiredToolRedirect() {
+  const { lang } = useParams()
+  return <Navigate to={`/${lang}`} replace />
+}
+
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   // Short links: built-in-saudi.com/s/<code> → resolve + redirect (no locale, no chrome).
@@ -43,6 +50,8 @@ export const router = createBrowserRouter([
       // Renamed tool: /apps/cv-generator → /apps/ats-cv-optimizer (static, so it
       // outranks the :toolId route below).
       { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
+      // Retired: an interest-based calculator does not belong in this catalogue.
+      { path: 'apps/loan-calculator', element: <RetiredToolRedirect /> },
       { path: 'apps/:toolId', element: <ToolPage />, errorElement: <ErrorPage /> },
       // In-call / invite URL for the Calls app: /apps/calls/join?code=… renders the
       // same tool (it reads the code from the query).

@@ -1,155 +1,107 @@
-# Built in Saudi — Tool Roadmap
+# Built in Saudi — Roadmap
 
-The master backlog. Each tool has a spec in [`docs/tools/`](./tools/) so we can
-chip them off one by one. Prioritisation weighs **demand**, **privacy wedge**
-(competitors upload your files — we don't), **frontend feasibility**, and
-**effort**.
+The backlog, and an honest account of what exists. **149 tools are live.** This
+file was badly stale before August 2026 — it listed shipped tools as unbuilt
+ideas — so it is now organised around what is *true* rather than what was once
+planned.
 
-**Runs** column: `client` = 100% in-browser (our default); `queue` = needs the
+Prioritisation weighs **demand**, the **privacy wedge** (competitors upload your
+files; we don't), **frontend feasibility**, and **effort**.
+
+**Runs**: `client` = 100% in-browser (our default); `queue` = would need the
 optional [backend worker](./BACKEND.md).
 
+---
+
+## What is live (August 2026)
+
+| Category | Count | Shape of it |
+|---|---|---|
+| Developer | 30 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge |
+| Saudi / Local | 21 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather |
+| Text | 20 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder |
+| Images | 18 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing |
+| Calculators | 16 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
+| Generators | 10 | QR, barcode, passwords, 2FA, printable paper, wheels and draws |
+| PDF | 10 | merge/split/compress/sign/fill/edit, →images, →text, **true redaction** |
+| Design | 8 | colour, contrast, gradients, bezier, palette-from-image |
+| Files | 7 | archives, metadata, hex, encryption, audio trim/extract, video→GIF |
+| Business | 4 | invoice, quotation/receipt, CV optimizer, Book Me |
+| Converters, Communication | 4 | units, base64, timestamps, Calls |
+
+Everything is client-side except the documented server-backed tools (Book Me,
+Calls signalling, CV optimizer, link shortener, prompt analyzer, Arabic
+diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the Privacy page.
+
+---
+
 ## Out of scope (deliberately excluded)
-- **Interest / riba-based tools** — no loan/EMI/interest calculators or anything
-  built around interest. Excluded for Islamic (Shariah) reasons.
+
+- **Interest / riba-based tools.** No loan, EMI or interest calculators.
+  Excluded for Islamic (Shariah) reasons. *A `loan-calculator` was built during
+  the July 2026 sweep in contradiction of this rule and was removed in August
+  2026; `/apps/loan-calculator` redirects to the catalogue.* If instalment
+  finance is ever wanted here it should be modelled as Murabaha or Ijara, not as
+  interest.
 - **Irrelevant noise** — construction-cost estimators, CGPA, arcade games, and
-  similar filler seen on competitor "all-in-one" sites.
-- Tools that require scraping or an API key we don't want to run (keyword
-  research, AI blog/social generators) unless offered as external showcases.
+  the filler seen on competitor "all-in-one" sites.
+- **Anything needing a scraped source or an API key we don't want to run**
+  (keyword research, AI blog/social generators) unless offered as an external
+  showcase.
+- **A "file shredder".** It is a lie in a browser and we will not ship one.
+- **Speed tests.** Bandwidth is the product, and it costs us per visitor.
+- **YouTube thumbnail downloader** — off-brand, no privacy wedge, thin value.
 
-## Status legend
-✅ live · 📝 spec ready · 🧭 idea (spec TBD)
+---
 
-## Curation notes (Claude)
+## Parked, with the reason
 
-**✅ Spec pipeline complete (14/14).** Every tool that had a `docs/tools/<id>.md`
-spec is now live: json/css/xml formatter, hash generator, case converter, unit
-converter, VAT calculator, IBAN validator, tafqeet, image compressor / format
-converter / cropper, images→PDF, PDF merge, PDF split, invoice generator — plus
-the off-spec **Arabic poetry meters** tool and the mobile-overflow + header/
-launcher UX fixes. 17 tools live overall; e2e suite at 30 specs, all green. The
-image/PDF/invoice tools are 100% client-side (the "never uploaded" wedge), and
-pdf-lib is the only runtime dep, lazy-loaded per PDF tool.
+Wanted, but blocked on something real. Do not build these casually.
 
-**Strongest next bets (ranked):**
-1. **EXIF / metadata stripper** (T1) — the natural actionable counterpart to the
-   metadata viewer; strong privacy wedge, pairs with the now-complete image suite.
-2. **QR / barcode reader** (T2) — camera + image scan (BarcodeDetector, jsQR
-   fallback); closes the loop with the QR generator. High search intent.
-3. **Iqama / ID / Istiqdam expiry countdown** (T3) — paste a Hijri/Gregorian
-   expiry → days left; genuinely Saudi-local, high intent, tiny to build.
-4. **Arabic ↔ Western numeral converter** (٠١٢٣ ↔ 0123) (T3) — trivial, on-brand,
-   good SEO for a common Saudi need.
-5. **PDF compress / PDF→images / PDF rotate** — round out the PDF suite now that
-   the plumbing (pdf-lib + dropzone + zip helper) exists; each is a short lap.
+| Idea | Blocked on |
+|---|---|
+| **Video trim / convert** | Needs a real MP4 demuxer + muxer (`mp4box.js`, or WebCodecs plumbing). The dependency-free alternative — MediaRecorder realtime capture — is *worse than nothing*: a 10-minute clip takes 10 minutes and silently becomes WebM. Video→GIF shipped because a GIF is short by nature. |
+| **On-device AI** (Chrome's built-in Gemini Nano: Summarizer, Translator, Proofreader, Prompt) | The most interesting item left — it would let us ship AI tools with **no backend and no privacy asterisk**. Chrome-only progressive enhancement; needs a session with a real browser to verify the API surface rather than code written blind. |
+| **JSON ↔ YAML ↔ TOML** | Needs real parsers. Hand-rolling YAML is how you ship silently-wrong output. |
+| **GOSI contributions** | Rates changed with the 2024 pension law and differ by nationality and hire date. Needs an authoritative current source, not memory. |
+| **Mirath / inheritance (فرائض)** | The highest-demand Saudi wedge left, and the one most in need of scholarly sourcing and review. Same bar as `zakat` and `end-of-service`. |
+| **PDF ↔ Word/Excel, ML upscaling, heavy ffmpeg** | Compute we would have to host — see [`BACKEND.md`](./BACKEND.md). |
+| **ZATCA / Fatoora e-invoicing** | Needs a backend and a crypto stamp. We may decode a QR; we must never call anything "a compliant invoice". |
+| **HIBP breach check** | Needs an API we would have to proxy, which puts a hash of your password through our server. |
 
-**Pushback (still recommend cutting):** YouTube thumbnail downloader (off-brand,
-no privacy wedge), typing speed tester (filler), TTS (Web Speech Arabic quality
-is unreliable). ZATCA/Fatoora e-invoicing is high-value but needs a backend +
-crypto stamp — park in BACKEND.md, don't attempt client-side.
+---
 
-**Older idea list (kept for reference):**
-- **EXIF / metadata stripper** — remove GPS + camera metadata from photos before
-  sharing. Strong privacy wedge; we already have a metadata *viewer*, this is the
-  actionable counterpart. `client`, T1.
-- **QR / barcode reader** — scan via camera or an uploaded image (BarcodeDetector
-  API + jsQR fallback). Natural pair to the QR generator. `client`, T2.
-- **Arabic ↔ Western numeral converter** (٠١٢٣ ↔ 0123) + digit-aware text. Tiny,
-  Saudi-local. `client`, T3.
-- **Iqama / ID expiry countdown** — paste an expiry (Hijri or Gregorian), get the
-  days remaining + a reminder. Saudi-local, high intent. `client`, T3.
-- **Color contrast / palette checker** — WCAG contrast + shades. Design, T2.
+## Next, ranked
 
-**Pushback (reconsider / likely cut):**
-- **YouTube thumbnail downloader** — off-brand (depends on YouTube's CDN, no real
-  privacy wedge, thin value). Recommend dropping or making it an external showcase.
-- **Typing speed tester** — filler; weak fit with the "sharp everyday utilities"
-  brand. Low priority at best.
-- **Text to speech** — the Web Speech API is inconsistent across
-  browsers/languages (esp. Arabic); ship only if quality is acceptable, else skip.
+Dep-free and correctness-safe, so they can be built to the same bar as the rest:
 
-## Generators
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| Barcode / QR generator (باركود) | `/tools/qr-code` | client | — | ✅ live |
-| [Password generator](./tools/password-generator.md) | `/tools/password-generator` | client | T1 | 📝 |
-| [UUID generator](./tools/uuid-generator.md) | `/tools/uuid-generator` | client | T1 | 📝 |
-| [Hash generator](./tools/hash-generator.md) | `/tools/hash-generator` | client | T2 | ✅ live |
-| Lorem Ipsum generator | `/tools/lorem-ipsum` | client | T3 | 🧭 |
+1. **Print & paper goods** — booklet imposition (n-up), PDF page numbering and
+   watermarking, Avery-style label sheets, certificates. `pdf-lib` is already a
+   dependency and `paper-generator` proved the pattern.
+2. **Passphrase generator** (diceware, with an Arabic wordlist) — distinct from
+   the character-based password generator, and better advice.
+3. **Image finishing** — batch watermark, collage, polaroid frame, device
+   mockup, SVG optimiser, colour-blindness simulator.
+4. **Saudi remainder** — vehicle plate Arabic↔Latin, national short-address
+   format validator.
+5. **Sound** — metronome, tuner, BPM tap, sound meter. Web Audio, no deps.
+6. **Classroom** — printable worksheets, bingo cards, quiz maker.
 
-## Converters & encoders
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Base64 encoder/decoder](./tools/base64.md) | `/tools/base64` | client | T1 | 📝 |
-| [Unit converter](./tools/unit-converter.md) | `/tools/unit-converter` | client | T2 | ✅ live |
-| [Case converter](./tools/case-converter.md) | `/tools/case-converter` | client | T2 | ✅ live |
-| Timestamp ↔ date | `/tools/timestamp` | client | T2 | 🧭 |
-| Number base converter | `/tools/number-base` | client | T3 | 🧭 |
+---
 
-## Images (client-side)
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Image compressor & resizer](./tools/image-compressor.md) | `/tools/image-compressor` | client | T1 | ✅ live |
-| [Image format converter](./tools/image-format-converter.md) | `/tools/image-format-converter` | client | T1 | ✅ live |
-| [Image cropper](./tools/image-cropper.md) | `/tools/image-cropper` | client | T2 | ✅ live |
-| Background remover | `/tools/background-remover` | queue/wasm | T4 | 🧭 |
-| Image upscaler | `/tools/image-upscaler` | queue/wasm | T4 | 🧭 |
+## Conventions when adding a tool
 
-## PDF (client-side)
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Images → PDF](./tools/images-to-pdf.md) | `/tools/images-to-pdf` | client | T1 | ✅ live |
-| [Merge PDF](./tools/pdf-merge.md) | `/tools/pdf-merge` | client | T1 | ✅ live |
-| [Split PDF](./tools/pdf-split.md) | `/tools/pdf-split` | client | T1 | ✅ live |
-| PDF → images | `/tools/pdf-to-images` | client | T2 | 🧭 |
-| PDF → text (extract) | `/tools/pdf-to-text` | client | T2 | 🧭 |
-| Rotate / reorder / delete / page numbers | `/tools/pdf-organize` | client | T2 | 🧭 |
-| PDF ↔ Word/Excel | `/tools/pdf-office` | queue | T4 | 🧭 |
+See [`CLAUDE.md`](../CLAUDE.md) for the full checklist. The three easiest to
+forget:
 
-## Text & developer
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Word & character counter](./tools/word-counter.md) | `/tools/word-counter` | client | T2 | 📝 |
-| [JSON formatter](./tools/json-formatter.md) | `/tools/json-formatter` | client | T1 | ✅ live |
-| Regex tester | `/tools/regex-tester` | client | T2 | 🧭 |
-| JWT decoder | `/tools/jwt-decoder` | client | T2 | 🧭 |
-| Diff checker | `/tools/diff-checker` | client | T3 | 🧭 |
-| Color picker & palettes | `/tools/color-tools` | client | T2 | 🧭 |
-| Password strength checker | `/tools/password-strength` | client | T2 | 🧭 |
-| Text to speech | `/tools/text-to-speech` | client | T3 | 🧭 |
-| Typing speed tester | `/tools/typing-speed` | client | T3 | 🧭 |
-| Number → words | `/tools/number-to-words` | client | T3 | 🧭 |
-| Notepad (local, autosaved) | `/tools/notepad` | client | T3 | 🧭 |
-| YouTube thumbnail downloader | `/tools/youtube-thumbnail` | client | T3 | 🧭 |
+- **Add its EN/AR entry to `src/i18n/seo.ts` and both locale URLs to
+  `public/sitemap.xml`**, or the page is never prerendered or indexed.
+- **Anything estimating money, health, an entitlement or an official deadline
+  renders `<Disclaimer kind={…}>`** — `e2e/disclaimers.spec.ts` fails the build
+  otherwise.
+- **A tool holding an uploaded file calls `setWorkInProgress`**, or a deploy can
+  reload over the user's work.
 
-## Calculators
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Saudi VAT calculator (15%)](./tools/vat-calculator.md) | `/tools/vat-calculator` | client | T2 | ✅ live |
-| Zakat calculator | `/tools/zakat-calculator` | client | T2 | 🧭 |
-| BMI / Age / Percentage | `/tools/calculators` | client | T3 | 🧭 |
-
-_(No loan/EMI/interest calculators — see Out of scope.)_
-
-## Business & invoicing
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| [Invoice generator (SAR, VAT, bilingual)](./tools/invoice-generator.md) | `/tools/invoice-generator` | client | T2 | ✅ live |
-| Payment receipt generator | `/tools/receipt-generator` | client | T3 | 🧭 |
-
-## 🇸🇦 Saudi / local (brand wedge, low competition)
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| **Prayer Times & Hijri Calendar** (Umm al-Qura; incl. Hijri converter + Ramadan/Eid) | `/tools/prayer-times` | client | — | ✅ live |
-| Hijri ↔ Gregorian converter | `/tools/hijri-converter` | client | T2 | ↳ folded into Prayer Times |
-| [Saudi IBAN validator](./tools/iban-validator.md) | `/tools/iban-validator` | client | T2 | ✅ live |
-| [Tafqeet — amount to Arabic words (تفقيط)](./tools/tafqeet.md) | `/tools/tafqeet` | client | T2 | ✅ live |
-| Arabic text tools (tashkeel, numerals) | `/tools/arabic-text` | client | T3 | 🧭 |
-| Saudi phone number formatter | `/tools/saudi-phone` | client | T3 | 🧭 |
-
-## Services (needs backend)
-| Tool | Slug | Runs | Priority | Status |
-|------|------|------|----------|--------|
-| Book a meeting (calendar) | `/book` | backend | T3 | 🧭 |
-
-See [`BACKEND.md`](./BACKEND.md) for the queue-worker economics and confidence
-scores on the `queue`/`backend` items.
+Per-tool specs live in [`docs/tools/`](./tools/). The many small single-purpose
+utilities are built straight from the checklist; write a spec when the tool is
+substantial.

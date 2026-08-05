@@ -99,11 +99,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'فاحص التباين', description: 'اختر لون النص والخلفية لترى نسبة التباين وفق WCAG 2.1، مع شارات نجاح/رسوب لمستويي AA وAAA لأحجام النص العادية والكبيرة، ومعاينة حيّة. يعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'loan-calculator',
-    en: { name: 'Loan Calculator', description: 'Work out the monthly payment on a loan or mortgage from the amount, annual interest rate and term, with total interest, total repaid and a year-by-year amortization breakdown. A neutral maths tool, not financial advice. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة القروض', description: 'احسب القسط الشهري لقرض أو تمويل عقاري من المبلغ ونسبة الفائدة السنوية والمدة، مع إجمالي الفائدة والمبلغ المسدَّد وجدول إطفاء سنوي. أداة حسابية محايدة وليست نصيحة مالية. تعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'percentage-calculator',
     en: { name: 'Percentage Calculator', description: 'Answer the common percentage questions instantly: what is X% of Y, X is what percent of Y, and the percentage increase or decrease from one number to another. Runs entirely in your browser.' },
     ar: { name: 'حاسبة النسبة المئوية', description: 'أجب فورًا عن أسئلة النسب الشائعة: كم يساوي X% من Y، وX يمثّل أي نسبة من Y، ونسبة الزيادة أو النقص من رقم إلى آخر. تعمل بالكامل في متصفحك.' },

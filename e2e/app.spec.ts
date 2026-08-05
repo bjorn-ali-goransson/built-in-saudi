@@ -581,14 +581,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cc-ratio')).toHaveText('21.00')
   })
 
-  test('loan calculator: zero-interest monthly is amount/months', async ({ page }) => {
-    await page.goto('/en/apps/loan-calculator')
-    await page.getByTestId('loan-amount').fill('12000')
-    await page.getByTestId('loan-rate').fill('0')
-    await page.getByTestId('loan-years').fill('1')
-    await expect(page.getByTestId('loan-monthly')).toHaveText('1,000')
-  })
-
   test('percentage calculator: 15% of 200 is 30', async ({ page }) => {
     await page.goto('/en/apps/percentage-calculator')
     await page.getByTestId('pc-q1-p').fill('15')
@@ -1770,5 +1762,21 @@ test.describe('password strength', () => {
     await expect(page.getByTestId('pw-input')).toHaveAttribute('type', 'password')
     await page.getByTestId('pw-show').check()
     await expect(page.getByTestId('pw-input')).toHaveAttribute('type', 'text')
+  })
+})
+
+test.describe('retired tools', () => {
+  test('a removed tool redirects to the catalogue rather than 404ing', async ({ page }) => {
+    // loan-calculator was withdrawn: an interest-based calculator contradicts a
+    // stated product rule. Old links and search results still point at it.
+    await page.goto('/en/apps/loan-calculator')
+    await expect(page).toHaveURL(/\/en\/?$/)
+    await expect(page.locator('.tool-search__input')).toBeVisible()
+  })
+
+  test('it is gone from search and the catalogue', async ({ page }) => {
+    await page.goto('/en')
+    await page.locator('.tool-search__input').fill('loan')
+    await expect(page.locator('[data-testid="tool-loan-calculator"]')).toHaveCount(0)
   })
 })
