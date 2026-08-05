@@ -121,6 +121,11 @@ import { socialResizeTool } from './social-resize/meta'
 import { spinWheelTool } from './spin-wheel/meta'
 import { hmacTool } from './hmac/meta'
 import { cronBuilderTool } from './cron-builder/meta'
+import { csvCleanTool } from './csv-clean/meta'
+import { dataAnonymizeTool } from './data-anonymize/meta'
+import { invisibleCharsTool } from './invisible-chars/meta'
+import { timezonePlannerTool } from './timezone-planner/meta'
+import { calorieNeedsTool } from './calorie-needs/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -157,6 +162,7 @@ export const tools: Tool[] = [
   urlEncoderTool,
   baseConverterTool,
   csvJsonTool,
+  csvCleanTool,
   listToolsTool,
   colorContrastTool,
   loanCalculatorTool,
@@ -168,6 +174,8 @@ export const tools: Tool[] = [
   zakatCalculatorTool,
   ageCalculatorTool,
   workingDaysTool,
+  timezonePlannerTool,
+  calorieNeedsTool,
   cubicBezierTool,
   boxShadowTool,
   gradientGeneratorTool,
@@ -182,6 +190,8 @@ export const tools: Tool[] = [
   svgEditorTool,
   fakeDataTool,
   readabilityTool,
+  dataAnonymizeTool,
+  invisibleCharsTool,
   slugifyTool,
   todoTool,
   flashcardsTool,

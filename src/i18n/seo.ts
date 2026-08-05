@@ -619,6 +619,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'csv-clean',
+    en: { name: 'CSV Cleaner', description: 'Clean up a CSV without opening a spreadsheet — trim stray spaces, drop blank rows and entirely empty columns, and remove duplicate rows. It detects the separator itself and flags rows whose field count does not match the header, which is what usually breaks an import.' },
+    ar: { name: 'منظّف ملفات CSV', description: 'نظّف ملف CSV دون فتح برنامج جداول — شذّب المسافات الزائدة، واحذف الصفوف الفارغة والأعمدة الفارغة، وأزل الصفوف المكرّرة. تكتشف الأداة الفاصل بنفسها وتُظهر الصفوف التي يختلف عدد حقولها عن العناوين، وهو ما يُفسد الاستيراد عادةً.' },
+  },
+  {
+    id: 'data-anonymize',
+    en: { name: 'Data Anonymizer', description: 'Before you send a spreadsheet to a colleague, a vendor or a chatbot, remove the parts that identify a person — emails, phone numbers, IBANs, Saudi ID and iqama numbers, card numbers, IPs. Mask, redact, or replace each value with a stable label. Runs entirely in this page.' },
+    ar: { name: 'إخفاء البيانات الشخصية', description: 'قبل أن ترسل جدولًا إلى زميل أو مورّد أو روبوت محادثة، أزل ما يدل على الأشخاص — البُرد الإلكترونية وأرقام الهواتف والآيبان والهوية والإقامة والبطاقات وعناوين IP. أخفِها أو احجبها أو استبدلها بعلامات ثابتة. تعمل داخل الصفحة بالكامل.' },
+  },
+  {
+    id: 'invisible-chars',
+    en: { name: 'Invisible Character Finder', description: 'Text copied from a web page, a PDF or a chatbot often carries characters that are present but invisible — zero-width spaces, direction marks, exotic spaces, control codes. They break exact matching and search in ways that look like a bug in your code. This finds, names and removes them.' },
+    ar: { name: 'كاشف المحارف الخفية', description: 'النص المنسوخ من صفحة ويب أو PDF أو روبوت محادثة يحمل غالبًا محارف غير مرئية — مسافات بعرض صفري وعلامات اتجاه ومسافات غريبة ورموز تحكّم. وهي تُفسد المطابقة والبحث بطريقة تبدو كخلل في كودك. تكشفها الأداة وتسمّيها وتزيلها.' },
+  },
+  {
+    id: 'timezone-planner',
+    en: { name: 'Time Zone Planner', description: 'Add the places your people are in and see the whole day at once, colour-coded by whether each hour lands in working hours, at the edges, or in the middle of the night. It ranks the best slots for everyone, with daylight saving on the chosen date already handled.' },
+    ar: { name: 'مخطّط المناطق الزمنية', description: 'أضف أماكن فريقك وشاهد اليوم كاملًا دفعة واحدة، ملوّنًا بحسب وقوع كل ساعة في وقت العمل أو على أطرافه أو في منتصف الليل. وترتّب الأداة أفضل الأوقات للجميع، والتوقيت الصيفي في التاريخ المختار محسوب أصلًا.' },
+  },
+  {
+    id: 'calorie-needs',
+    en: { name: 'Calorie & BMI Calculator', description: 'Work out how much you actually burn in a day and what to eat for your goal — resting burn, total daily burn, a calorie target for losing, holding or gaining, and a reasonable protein/carb/fat split, plus your BMI and healthy weight range. Uses Mifflin-St Jeor, which measures closest to reality.' },
+    ar: { name: 'حاسبة السعرات ومؤشر كتلة الجسم', description: 'احسب كم تحرق فعلًا في اليوم وماذا تأكل لهدفك — الحرق في الراحة والحرق اليومي وهدف السعرات للإنقاص أو المحافظة أو الزيادة، وتوزيعًا معقولًا للبروتين والكربوهيدرات والدهون، مع مؤشر كتلة جسمك ونطاق الوزن الصحي. تستخدم معادلة ميفلين-سانت جيور الأقرب للواقع.' },
+  },
+  {
     id: 'screenshot-frame',
     en: { name: 'Screenshot Beautifier', description: 'Paste or drop a screenshot and it comes back padded, rounded and sitting on a backdrop instead of floating on white — ready for a slide, a post or a README. Pick the shape, corner radius and shadow, then export at up to 3×.' },
     ar: { name: 'تجميل لقطات الشاشة', description: 'الصق لقطة شاشة أو ألقِها لتعود بهوامش وحواف دائرية وخلفية بدل أن تطفو على بياض — جاهزة لشريحة أو منشور أو ملف README. اختر الشكل ونصف قطر الحواف والظل، ثم صدّر بدقة تصل إلى ٣ أضعاف.' },

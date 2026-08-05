@@ -1751,4 +1751,74 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cron-builder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cron-builder"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/csv-clean/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-clean"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-clean"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-clean"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/csv-clean/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-clean"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-clean"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-clean"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/data-anonymize/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/data-anonymize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/data-anonymize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/data-anonymize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/data-anonymize/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/data-anonymize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/data-anonymize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/data-anonymize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/invisible-chars/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/invisible-chars"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/invisible-chars"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/invisible-chars"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/invisible-chars/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/invisible-chars"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/invisible-chars"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/invisible-chars"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/timezone-planner/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/timezone-planner"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/timezone-planner"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/timezone-planner"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/timezone-planner/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/timezone-planner"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/timezone-planner"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/timezone-planner"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/calorie-needs/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calorie-needs"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calorie-needs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calorie-needs"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/calorie-needs/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/calorie-needs"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/calorie-needs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calorie-needs"/>
+  </url>
 </urlset>
