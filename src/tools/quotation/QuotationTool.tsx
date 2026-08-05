@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Input, Textarea, Select, Stack, Seg, SegButton, Panel } from '../../components/ui'
+import { Button, Disclaimer, Input, Panel, Seg, SegButton, Select, Stack, Textarea } from '../../components/ui'
 import { TrashIcon, ReceiptIcon } from '../../components/icons'
 
 type Kind = 'quotation' | 'proforma' | 'receipt'
@@ -181,9 +181,9 @@ export default function QuotationTool() {
           <Textarea rows={3} dir="auto" data-testid="qt-notes" placeholder={s.placeholderNotes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
 
-        <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="qt-disclaimer">
+        <Disclaimer kind="legal" locale={locale} tone="quiet">
           {kind === 'receipt' ? s.disclaimerR : s.disclaimerQ}
-        </p>
+        </Disclaimer>
       </div>
 
       <Panel className="print-hide">

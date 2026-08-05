@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Stack, Panel, Input, FieldLabel, Seg, SegButton } from '../../components/ui'
+import { Disclaimer, FieldLabel, Input, Panel, Seg, SegButton, Stack } from '../../components/ui'
 
 const STR = {
   en: {
@@ -8,7 +8,7 @@ const STR = {
     ended: 'Contract ended / dismissed', resigned: 'Resigned',
     award: 'Estimated award', full: 'Full entitlement', breakdown: 'Breakdown',
     firstFive: 'First 5 years (½ month/yr)', beyond: 'Beyond 5 years (1 month/yr)', factor: 'Resignation factor',
-    note: 'Based on Saudi Labour Law Articles 84–85, using your last wage. Resignation reduces the award: nothing under 2 years, one-third for 2–5, two-thirds for 5–10, full at 10+. Informational only — not legal advice. Special cases (unpaid leave, allowances) are not modelled.',
+    note: 'Based on Saudi Labour Law Articles 84–85, using your last wage. Resignation reduces the award: nothing under 2 years, one-third for 2–5, two-thirds for 5–10, full at 10+. Special cases such as unpaid leave and allowances are not modelled.',
     privacy: 'Computed in your browser — nothing is uploaded.',
   },
   ar: {
@@ -74,7 +74,7 @@ export default function EndOfServiceTool() {
         </div>
       </Panel>
 
-      <p className="text-[0.78rem] text-ink-faint leading-relaxed">{s.note}</p>
+      <Disclaimer kind="legal" locale={locale}>{s.note}</Disclaimer>
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </Stack>
   )

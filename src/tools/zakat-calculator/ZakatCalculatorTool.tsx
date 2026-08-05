@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Stack, Panel, Input, FieldLabel } from '../../components/ui'
+import { Disclaimer, FieldLabel, Input, Panel, Stack } from '../../components/ui'
 
 const STR = {
   en: {
     assets: 'Zakatable assets', cash: 'Cash & bank', gold: 'Gold & silver value', trade: 'Trade goods / inventory', receivable: 'Money owed to you',
     debts: 'Short-term debts (subtract)', nisab: 'Niṣāb threshold', net: 'Net zakatable wealth', due: 'Zakat due (2.5%)',
     belowNisab: 'Below the niṣāb — no zakat is due on this amount.', aboveNisab: 'Above the niṣāb.',
-    note: 'Zakat is 2.5% of qualifying wealth once it exceeds the niṣāb (roughly the value of 85g of gold or 595g of silver) and has been held for one lunar year (ḥawl). Set the niṣāb to today’s local value. A helping estimate, not a fatwa — consult a scholar for your situation.',
+    note: 'Zakat is 2.5% of qualifying wealth once it exceeds the niṣāb (roughly the value of 85g of gold or 595g of silver) and has been held for one lunar year (ḥawl). Set the niṣāb to today’s local value. ',
     privacy: 'Computed in your browser — nothing is uploaded.',
   },
   ar: {
     assets: 'الأموال الزكوية', cash: 'النقد والبنك', gold: 'قيمة الذهب والفضة', trade: 'عروض التجارة / المخزون', receivable: 'ديون مرجوّة لك',
     debts: 'ديون قصيرة الأجل (تُطرح)', nisab: 'حدّ النصاب', net: 'صافي المال الزكوي', due: 'الزكاة الواجبة (2.5%)',
     belowNisab: 'دون النصاب — لا زكاة على هذا المبلغ.', aboveNisab: 'فوق النصاب.',
-    note: 'الزكاة 2.5% من المال متى بلغ النصاب (نحو قيمة 85 غرامًا من الذهب أو 595 غرامًا من الفضة) وحال عليه الحول (سنة قمرية). اضبط النصاب على قيمته المحلية اليوم. تقدير مُعين وليس فتوى — راجع أهل العلم لحالتك.',
+    note: 'الزكاة 2.5% من المال متى بلغ النصاب (نحو قيمة 85 غرامًا من الذهب أو 595 غرامًا من الفضة) وحال عليه الحول (سنة قمرية). اضبط النصاب على قيمته المحلية اليوم. ',
     privacy: 'يُحسب في متصفحك — لا يُرفع أي شيء.',
   },
 }
@@ -66,7 +66,7 @@ export default function ZakatCalculatorTool() {
         <p className="text-[0.85rem] text-ink-faint">{above ? s.aboveNisab : s.belowNisab}</p>
       </Panel>
 
-      <p className="text-[0.78rem] text-ink-faint leading-relaxed">{s.note}</p>
+      <Disclaimer kind="religious" locale={locale}>{s.note}</Disclaimer>
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </Stack>
   )

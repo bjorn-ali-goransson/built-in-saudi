@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Input, Select, Stack, Panel } from '../../components/ui'
+import { Button, Disclaimer, Input, Panel, Select, Stack } from '../../components/ui'
 import { TrashIcon, CalendarIcon } from '../../components/icons'
 import { HIJRI_MONTHS } from '../prayer-times/islamic'
 import {
@@ -20,7 +20,7 @@ const STR = {
     todayMsg: 'Expires today',
     renewFrom: (n: number) => `Worth renewing from ${n} days out`,
     privacy: 'Everything here is stored in this browser only. Nothing is uploaded, and there is no account.',
-    notAdvice: 'Dates are counted from what you type. Always confirm the official expiry in Absher or Muqeem before acting on it.',
+    notAdvice: 'A late renewal can carry a fine, and the official record is the one that counts — check Absher or Muqeem, not this.',
     heading: 'What you are tracking',
   },
   ar: {
@@ -33,7 +33,7 @@ const STR = {
     todayMsg: 'ينتهي اليوم',
     renewFrom: (n: number) => `يُستحسن التجديد قبل ${n.toLocaleString('ar')} يومًا`,
     privacy: 'كل ما هنا محفوظ في هذا المتصفح فقط. لا يُرفع شيء، ولا يوجد حساب.',
-    notAdvice: 'تُحسب المدة مما تُدخله. تأكّد دائمًا من تاريخ الانتهاء الرسمي في أبشر أو مقيم قبل التصرّف بناءً عليه.',
+    notAdvice: 'قد يترتّب على التأخير في التجديد غرامة، والسجل الرسمي هو المعتبر — تحقّق من أبشر أو مقيم لا من هذه الأداة.',
     heading: 'ما تتابعه',
   },
 }
@@ -160,7 +160,7 @@ export default function IdExpiryTool() {
       )}
 
       <p className="text-[0.85rem] text-ink-faint rtl:font-ar">{s.privacy}</p>
-      <p className="text-[0.85rem] text-gold-500 rtl:font-ar">{s.notAdvice}</p>
+      <Disclaimer kind="official" locale={locale}>{s.notAdvice}</Disclaimer>
     </Stack>
   )
 }

@@ -181,6 +181,24 @@ regression-checked by `node evals/atscheck.mjs <run-tag>`:
   in place (equal byte length, so no table offsets move). **Re-run it if these
   subsets are ever regenerated.**
 
+## Disclaimers are a component, not a habit
+
+Any tool that estimates **money, health, an entitlement or an official deadline**
+renders `<Disclaimer kind={…} locale={locale}>` from `components/ui`. The `kind`
+(`medical` · `financial` · `legal` · `religious` · `official`) carries the
+standing caveat in both languages; `children` carries what is specific to the
+tool — which article of the law, which equation, which authority to check.
+
+This replaced seven bespoke paragraphs that had drifted apart: the same class of
+caveat looked serious in one calculator and like a footnote in another, and the
+Arabic wording varied. **`e2e/disclaimers.spec.ts` asserts each listed tool
+renders one, with the right `kind`, in BOTH locales** — a new calculator that
+forgets one fails the build rather than shipping quietly. Add the tool to that
+list when you add the tool.
+
+The component spreads `{...rest}` **before** its own `data-testid`/`data-kind`,
+so a caller cannot rename them; if it could, the guard would stop guarding.
+
 ## Evals (`evals/`)
 
 Offline harness for the CV optimizer — the only honest way to answer "did this

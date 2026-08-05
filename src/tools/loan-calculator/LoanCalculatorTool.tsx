@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Stack, Panel, Input, FieldLabel } from '../../components/ui'
+import { Disclaimer, FieldLabel, Input, Panel, Stack } from '../../components/ui'
 
 const STR = {
   en: {
@@ -82,7 +82,7 @@ export default function LoanCalculatorTool() {
               </table>
             </div>
           </div>
-          <p className="text-[0.8rem] text-ink-faint">{s.note}</p>
+          <Disclaimer kind="financial" locale={locale} />
         </>
       )}
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>

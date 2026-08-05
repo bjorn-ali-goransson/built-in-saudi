@@ -127,9 +127,9 @@ test.describe('quotation & receipt', () => {
 
   test('each document says it is not a tax invoice', async ({ page }) => {
     await page.goto('/en/apps/quotation')
-    await expect(page.getByTestId('qt-disclaimer')).toContainText('not a tax invoice')
+    await expect(page.getByTestId('disclaimer')).toContainText('not a tax invoice')
     await page.getByTestId('qt-receipt').click()
-    await expect(page.getByTestId('qt-disclaimer')).toContainText('not a tax invoice')
+    await expect(page.getByTestId('disclaimer')).toContainText('not a tax invoice')
   })
 
   test('lines can be added and removed', async ({ page }) => {

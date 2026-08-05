@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Input, Select, Stack, Seg, SegButton, Panel } from '../../components/ui'
+import { Button, Disclaimer, Input, Panel, Seg, SegButton, Select, Stack } from '../../components/ui'
 import { CalcIcon } from '../../components/icons'
 
 // Mifflin-St Jeor for BMR — the equation that measures best against indirect
@@ -160,8 +160,7 @@ export default function CalorieNeedsTool() {
         {s.bmiRange}: <b>{r.healthyLow.toFixed(0)}–{r.healthyHigh.toFixed(0)} kg</b>
       </p>
 
-      <p className="text-[0.85rem] text-ink-faint rtl:font-ar">{s.method}</p>
-      <Panel><p className="text-[0.88rem] text-gold-500 rtl:font-ar">{s.notAdvice}</p></Panel>
+      <Disclaimer kind="medical" locale={locale}>{s.method}</Disclaimer>
       <Button to={`/${locale}/apps/unit-converter`} className="self-start">
         <CalcIcon /> {locale === 'ar' ? 'حوّل الوحدات' : 'Convert units'}
       </Button>

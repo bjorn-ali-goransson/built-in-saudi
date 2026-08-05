@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, EraseIcon } from '../../components/icons'
-import { Button, Select, Stack, Spinner, FileError, Panel, Check, Input } from '../../components/ui'
+import { Button, Check, Disclaimer, FileError, Input, Select, Spinner, Stack } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
@@ -21,7 +21,7 @@ const STR = {
     sheetOf: (n: number, name: string) => `${n} copies on ${name}`,
     pixels: 'Pixels', low: 'This photo is smaller than the print needs — it will look soft. Use a larger original if you have one.',
     removeBg: 'Remove the background first',
-    disclaimer: 'These are the published dimensions, not legal advice. Requirements change and the office accepting your application has the final say — check theirs before you print.',
+    disclaimer: 'These are the published dimensions. Requirements change, and the office accepting your application has the final say — check theirs before you print a sheet of them.',
     headGuide: 'Fit the top of your head and your chin between the two lines, and your eyes on the dashed line.',
   },
   ar: {
@@ -35,7 +35,7 @@ const STR = {
     sheetOf: (n: number, name: string) => `${n.toLocaleString('ar')} نسخة على ${name}`,
     pixels: 'البكسلات', low: 'هذه الصورة أصغر مما تتطلبه الطباعة — ستبدو غير حادة. استخدم أصلًا أكبر إن توفّر.',
     removeBg: 'أزل الخلفية أولًا',
-    disclaimer: 'هذه المقاسات المنشورة، وليست استشارة نظامية. تتغيّر المتطلبات والجهة التي تستقبل معاملتك هي صاحبة القرار — راجع متطلباتها قبل الطباعة.',
+    disclaimer: 'هذه هي المقاسات المنشورة. تتغيّر المتطلبات، والجهة التي تستقبل معاملتك هي صاحبة القرار — راجع متطلباتها قبل طباعة ورقة كاملة منها.',
     headGuide: 'اجعل أعلى رأسك وذقنك بين الخطين، وعينيك على الخط المتقطّع.',
   },
 }
@@ -168,7 +168,7 @@ export default function PassportPhotoTool() {
         </>
       )}
 
-      <Panel><p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.disclaimer}</p></Panel>
+      <Disclaimer kind="official" locale={locale}>{s.disclaimer}</Disclaimer>
     </Stack>
   )
 }
