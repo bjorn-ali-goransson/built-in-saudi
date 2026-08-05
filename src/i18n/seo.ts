@@ -614,6 +614,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'passphrase',
+    en: { name: 'Passphrase Generator', description: 'Build a passphrase from a 1296-word list — 10.3 bits a word, short enough to type. You can also roll physical dice and enter the numbers, the original diceware method and the only version whose randomness you need not take on trust. There is an Arabic wordlist too.' },
+    ar: { name: 'مولّد عبارات المرور', description: 'ابنِ عبارة مرور من قائمة بـ١٢٩٦ كلمة — ١٠٫٣ بت لكل كلمة، وقصيرة بما يكفي للكتابة. ويمكنك رمي نرد حقيقي وإدخال الأرقام، وهي طريقة diceware الأصلية والنسخة الوحيدة التي لا تضطر لتصديق أحد في عشوائيتها. وهناك قائمة كلمات عربية أيضًا.' },
+  },
+  {
+    id: 'colour-blind',
+    en: { name: 'Colour Blindness Simulator', description: 'See a palette or an image as someone with colour vision deficiency sees it — and which pairs of your colours collapse into the same thing. Around one man in twelve has some form of it, so a chart relying on red-versus-green is unreadable to a real share of your users.' },
+    ar: { name: 'محاكي عمى الألوان', description: 'شاهد لوحة ألوان أو صورة كما يراها من لديه قصور في رؤية الألوان — وأي أزواج ألوانك تنهار إلى الشيء نفسه. فنحو رجل من كل اثني عشر لديه شكل منه، ما يجعل رسمًا يعتمد على الأحمر مقابل الأخضر غير مقروء لشريحة حقيقية من مستخدميك.' },
+  },
+  {
+    id: 'svg-optimise',
+    en: { name: 'SVG Optimiser', description: 'Shrink an SVG by removing Inkscape, Illustrator and Figma metadata, rounding coordinates and squeezing out whitespace — then shows the result rendered so you can see nothing broke. Deliberately conservative: it will not merge paths or strip referenced ids.' },
+    ar: { name: 'محسّن ملفات SVG', description: 'صغّر ملف SVG بإزالة بيانات إنكسكيب وإليستريتور وفيغما، وتقريب الإحداثيات، وعصر المسافات — ثم يعرض الناتج مرسومًا لترى أن شيئًا لم ينكسر. متحفّظ عن قصد: لا يدمج المسارات ولا يحذف معرّفًا مُشارًا إليه.' },
+  },
+  {
+    id: 'batch-watermark',
+    en: { name: 'Batch Watermark', description: 'Watermark a whole folder of images at once with text or a logo, then download them as a zip. The mark is sized as a share of each image rather than in fixed pixels, so a 4000-pixel photo and an 800-pixel one come back looking the same.' },
+    ar: { name: 'علامة مائية على دفعة صور', description: 'ضع علامة مائية نصية أو شعارًا على مجلد صور كامل دفعة واحدة، ثم نزّلها في ملف مضغوط. ويُحسب حجم العلامة كنسبة من كل صورة لا ببكسلات ثابتة، فتعود صورة بعرض ٤٠٠٠ بكسل وأخرى بـ٨٠٠ متشابهتين.' },
+  },
+  {
     id: 'pdf-booklet',
     en: { name: 'Booklet & N-up', description: 'Impose a PDF for printing: booklet order so a folded, stapled stack reads correctly, or two and four pages to a sheet to save paper. A booklet is not pages 1,2,3,4 on sheets — the outermost sheet carries the last page beside the first. Right-to-left binding for Arabic documents.' },
     ar: { name: 'ترتيب الكتيّب وتوفير الورق', description: 'رتّب ملف PDF للطباعة: ترتيب كتيّب ليُقرأ بشكل صحيح بعد الطي والتدبيس، أو صفحتين وأربع صفحات في الورقة لتوفير الورق. فالكتيّب ليس صفحات ١ و٢ و٣ و٤ على الأوراق — إذ تحمل الورقة الخارجية الصفحة الأخيرة بجوار الأولى. مع تجليد من اليمين للمستندات العربية.' },

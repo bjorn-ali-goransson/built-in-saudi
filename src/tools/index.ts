@@ -152,6 +152,10 @@ import { pdfBookletTool } from './pdf-booklet/meta'
 import { pdfStampTool } from './pdf-stamp/meta'
 import { labelSheetTool } from './label-sheet/meta'
 import { certificateTool } from './certificate/meta'
+import { passphraseTool } from './passphrase/meta'
+import { colourBlindTool } from './colour-blind/meta'
+import { svgOptimiseTool } from './svg-optimise/meta'
+import { batchWatermarkTool } from './batch-watermark/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -198,6 +202,7 @@ export const tools: Tool[] = [
   csvMergeTool,
   listToolsTool,
   colorContrastTool,
+  colourBlindTool,
   percentageCalculatorTool,
   splitBillTool,
   aspectRatioTool,
@@ -228,6 +233,7 @@ export const tools: Tool[] = [
   readmeGeneratorTool,
   markdownTableTool,
   svgEditorTool,
+  svgOptimiseTool,
   fakeDataTool,
   readabilityTool,
   dataAnonymizeTool,
@@ -251,6 +257,7 @@ export const tools: Tool[] = [
   labelSheetTool,
   steganographyTool,
   imageRedactTool,
+  batchWatermarkTool,
   photoBoothTool,
   screenRecorderTool,
   fileEncryptTool,
@@ -293,6 +300,7 @@ export const tools: Tool[] = [
   diacritizeTool,
   qiblaTool,
   passwordGeneratorTool,
+  passphraseTool,
   uuidGeneratorTool,
   wordCounterTool,
   caseConverterTool,
