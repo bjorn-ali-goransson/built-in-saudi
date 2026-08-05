@@ -619,6 +619,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'glucose-units',
+    en: { name: 'Blood Sugar Converter', description: 'Convert a blood glucose reading between mg/dL and mmol/L, and HbA1c between % and mmol/mol, with the estimated average glucose. Saudi labs report mg/dL while most research uses mmol/L, and the factor between them is 18. It says where a reading falls and flags one low or high enough to need acting on now.' },
+    ar: { name: 'محوّل قراءات سكر الدم', description: 'حوّل قراءة سكر الدم بين mg/dL وmmol/L، والسكر التراكمي بين ٪ وmmol/mol، مع متوسط السكر التقديري. تستخدم المختبرات في السعودية mg/dL بينما تستخدم معظم الأبحاث mmol/L، والمعامل بينهما ١٨. وتبيّن الأداة أين تقع القراءة وتنبّه إلى ما يستدعي تصرّفًا فوريًا.' },
+  },
+  {
+    id: 'sleep-cycle',
+    en: { name: 'Sleep Cycle Calculator', description: 'Work backwards from when you need to be up, or forwards from now, to the times that land at the end of a ~90-minute sleep cycle rather than mid deep sleep. Allows for the time it takes to fall asleep, shows Fajr, and marks the last third of the night for qiyām.' },
+    ar: { name: 'حاسبة دورات النوم', description: 'احسب رجوعًا من وقت استيقاظك، أو تقدّمًا من الآن، إلى الأوقات التي تقع في نهاية دورة نوم مدتها نحو ٩٠ دقيقة بدل وسط النوم العميق. تحتسب وقت الخلود للنوم، وتعرض الفجر، وتحدّد الثلث الأخير من الليل للقيام.' },
+  },
+  {
+    id: 'water-intake',
+    en: { name: 'Water Intake Calculator', description: 'Work out a day’s water from your body weight, then add what the heat, your activity and time in the sun actually cost — because “eight glasses a day” describes a mild climate and says nothing about a Riyadh summer. Shows how the total is made up and how to fit it between iftar and suhoor.' },
+    ar: { name: 'حاسبة شرب الماء اليومي', description: 'احسب ماء يومك من وزن جسمك، ثم أضف ما يكلّفك إياه الحر والنشاط والشمس فعلًا — فعبارة «ثمانية أكواب يوميًا» تصف مناخًا معتدلًا ولا تقول شيئًا عن صيف الرياض. وتعرض كيف تكوّن المجموع وكيف توزّعه بين الإفطار والسحور.' },
+  },
+  {
+    id: 'hijri-age',
+    en: { name: 'Hijri Age Calculator', description: 'Enter a date of birth in either calendar and get your exact age in both — years, months and days, total days lived, and your next Hijri birthday. A Hijri year is about 354 days, so a Hijri age runs ahead by roughly a year every 33, which is why subtracting year numbers gives the wrong answer.' },
+    ar: { name: 'حاسبة العمر الهجري', description: 'أدخل تاريخ ميلادك بأي من التقويمين لتحصل على عمرك الدقيق بهما — بالسنوات والأشهر والأيام، ومجموع الأيام، وميلادك الهجري القادم. السنة الهجرية نحو ٣٥٤ يومًا، لذا يسبق العمر الهجري بنحو سنة كل ٣٣، ولهذا يعطي طرح أرقام السنوات نتيجة خاطئة.' },
+  },
+  {
+    id: 'medicine-schedule',
+    en: { name: 'Medicine Timing Planner', description: 'Spread doses evenly across your waking day, or across the window between iftar and suhoor — about ten hours rather than twenty-four. Each dose is anchored to the nearest prayer, easier to remember than a clock time, and it warns when four doses will not fit comfortably in a fasting night.' },
+    ar: { name: 'مخطّط مواعيد الدواء', description: 'وزّع الجرعات بالتساوي على ساعات يقظتك، أو على النافذة بين الإفطار والسحور — وهي نحو عشر ساعات لا أربع وعشرين. وتُربط كل جرعة بأقرب صلاة لأنها أسهل في التذكّر، وتنبّهك حين لا تتسع ليلة الصيام لأربع جرعات.' },
+  },
+  {
     id: 'franco-arabic',
     en: { name: 'Franco-Arabic Converter', description: 'Convert Franco-Arabic — the chat alphabet where 3 is ع, 7 is ح and 5 is خ — into proper Arabic writing, or go the other way. Common words are recognised whole so the result reads like Arabic, and genuinely ambiguous letters are listed so you can check them.' },
     ar: { name: 'محوّل الفرانكو إلى عربي', description: 'حوّل الفرانكو — أبجدية الدردشة حيث ٣ تعني ع و٧ تعني ح و٥ تعني خ — إلى كتابة عربية سليمة، أو اعكس الاتجاه. تُعرف الكلمات الشائعة ككلمات كاملة ليقرأ الناتج كعربية، وتُذكر الحروف الملتبسة لتراجعها.' },

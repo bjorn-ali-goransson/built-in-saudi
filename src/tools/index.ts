@@ -140,6 +140,11 @@ import { francoArabicTool } from './franco-arabic/meta'
 import { teamMakerTool } from './team-maker/meta'
 import { quotationTool } from './quotation/meta'
 import { charFinderTool } from './char-finder/meta'
+import { glucoseUnitsTool } from './glucose-units/meta'
+import { sleepCycleTool } from './sleep-cycle/meta'
+import { waterIntakeTool } from './water-intake/meta'
+import { hijriAgeTool } from './hijri-age/meta'
+import { medicineScheduleTool } from './medicine-schedule/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -191,11 +196,16 @@ export const tools: Tool[] = [
   endOfServiceTool,
   zakatCalculatorTool,
   ageCalculatorTool,
+  hijriAgeTool,
   workingDaysTool,
   timezonePlannerTool,
   coordinatesTool,
   sunTimesTool,
   calorieNeedsTool,
+  glucoseUnitsTool,
+  waterIntakeTool,
+  sleepCycleTool,
+  medicineScheduleTool,
   cubicBezierTool,
   boxShadowTool,
   gradientGeneratorTool,

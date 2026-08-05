@@ -6,6 +6,10 @@ import { test, expect } from '@playwright/test'
 // instead of shipping quietly.
 const NEEDS: { id: string; kind: string }[] = [
   { id: 'calorie-needs', kind: 'medical' },
+  { id: 'glucose-units', kind: 'medical' },
+  { id: 'water-intake', kind: 'medical' },
+  { id: 'sleep-cycle', kind: 'medical' },
+  { id: 'medicine-schedule', kind: 'medical' },
   { id: 'end-of-service', kind: 'legal' },
   { id: 'zakat-calculator', kind: 'religious' },
   { id: 'loan-calculator', kind: 'financial' },

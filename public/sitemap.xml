@@ -2017,4 +2017,74 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/char-finder"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/char-finder"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/glucose-units/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/glucose-units"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/glucose-units"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/glucose-units"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/glucose-units/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/glucose-units"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/glucose-units"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/glucose-units"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/sleep-cycle/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sleep-cycle"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sleep-cycle"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sleep-cycle"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/sleep-cycle/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sleep-cycle"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sleep-cycle"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sleep-cycle"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/water-intake/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/water-intake"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/water-intake"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/water-intake"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/water-intake/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/water-intake"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/water-intake"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/water-intake"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/hijri-age/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hijri-age"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hijri-age"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hijri-age"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/hijri-age/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/hijri-age"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/hijri-age"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/hijri-age"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/medicine-schedule/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/medicine-schedule"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/medicine-schedule"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/medicine-schedule"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/medicine-schedule/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/medicine-schedule"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/medicine-schedule"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/medicine-schedule"/>
+  </url>
 </urlset>
