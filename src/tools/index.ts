@@ -116,6 +116,11 @@ import { passportPhotoTool } from './passport-photo/meta'
 import { audioTrimTool } from './audio-trim/meta'
 import { videoAudioTool } from './video-audio/meta'
 import { pdfToTextTool } from './pdf-to-text/meta'
+import { screenshotFrameTool } from './screenshot-frame/meta'
+import { socialResizeTool } from './social-resize/meta'
+import { spinWheelTool } from './spin-wheel/meta'
+import { hmacTool } from './hmac/meta'
+import { cronBuilderTool } from './cron-builder/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -128,6 +133,8 @@ export const tools: Tool[] = [
   callsTool,
   removeBackgroundTool,
   passportPhotoTool,
+  screenshotFrameTool,
+  socialResizeTool,
   weatherTool,
   audioTrimTool,
   videoAudioTool,
@@ -144,6 +151,7 @@ export const tools: Tool[] = [
   regexTesterTool,
   jwtDecoderTool,
   cronExplainerTool,
+  cronBuilderTool,
   textDiffTool,
   unixTimestampTool,
   urlEncoderTool,
@@ -178,6 +186,7 @@ export const tools: Tool[] = [
   todoTool,
   flashcardsTool,
   kanbanTool,
+  spinWheelTool,
   randomPickerTool,
   diceRollerTool,
   countdownTool,
@@ -232,6 +241,7 @@ export const tools: Tool[] = [
   poetryTool,
   languageDetectTool,
   hashGeneratorTool,
+  hmacTool,
   loremTool,
   jsonFormatterTool,
   unitConverterTool,

@@ -619,6 +619,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'screenshot-frame',
+    en: { name: 'Screenshot Beautifier', description: 'Paste or drop a screenshot and it comes back padded, rounded and sitting on a backdrop instead of floating on white — ready for a slide, a post or a README. Pick the shape, corner radius and shadow, then export at up to 3×.' },
+    ar: { name: 'تجميل لقطات الشاشة', description: 'الصق لقطة شاشة أو ألقِها لتعود بهوامش وحواف دائرية وخلفية بدل أن تطفو على بياض — جاهزة لشريحة أو منشور أو ملف README. اختر الشكل ونصف قطر الحواف والظل، ثم صدّر بدقة تصل إلى ٣ أضعاف.' },
+  },
+  {
+    id: 'social-resize',
+    en: { name: 'Social Media Resizer', description: 'Resize one image to every size the platforms want — Instagram square, portrait and story, X post and header, LinkedIn, a YouTube thumbnail, a Facebook cover and an Open Graph preview. Fill and crop or fit the whole image, and take them all as one zip.' },
+    ar: { name: 'محوّل مقاسات السوشال ميديا', description: 'غيّر مقاس صورة واحدة إلى كل ما تطلبه المنصات — انستقرام مربع وطولي وستوري، ومنشور وغلاف إكس، ولينكدإن، وصورة يوتيوب المصغّرة، وغلاف فيسبوك، ومعاينة الرابط. املأ واقتصّ أو أظهر الصورة كاملة، وخذها كلها في ملف مضغوط واحد.' },
+  },
+  {
+    id: 'spin-wheel',
+    en: { name: 'Wheel of Names', description: 'A spinning wheel for picking a name fairly — for a classroom, a giveaway, a team draw or deciding who presents first. Paste the names, spin, and optionally drop each winner. The result uses the browser’s cryptographic random source, not Math.random.' },
+    ar: { name: 'عجلة الأسماء', description: 'عجلة دوّارة لاختيار اسم بعدل — لفصل دراسي أو مسابقة أو توزيع فريق أو تحديد من يعرض أولًا. الصق الأسماء وأدر العجلة، ويمكنك حذف كل فائز. تُختار النتيجة عبر مصدر العشوائية التعموي في المتصفح لا عبر Math.random.' },
+  },
+  {
+    id: 'hmac',
+    en: { name: 'HMAC Generator', description: 'Compute an HMAC over any message with a shared secret — SHA-256, SHA-1, SHA-384 or SHA-512, key as text, hex or base64, output as hex or base64. Paste the value you were sent and it tells you whether it matches, which is what you need when debugging a webhook signature.' },
+    ar: { name: 'مولّد HMAC والتحقق منه', description: 'احسب قيمة HMAC لأي رسالة بمفتاح مشترك — بخوارزميات SHA-256 أو SHA-1 أو SHA-384 أو SHA-512، ومفتاح بصيغة نص أو hex أو base64. الصق القيمة التي وصلتك لتخبرك الأداة إن كانت مطابقة، وهو ما تحتاجه عند تتبّع توقيع ويب هوك.' },
+  },
+  {
+    id: 'cron-builder',
+    en: { name: 'Cron Builder', description: 'Build a cron expression without remembering the field order — choose daily, weekly, monthly or every few minutes. It lists the next five times the schedule would actually fire, and warns about the day-of-month and day-of-week trap where cron fires when either matches.' },
+    ar: { name: 'مولّد تعبير الكرون', description: 'ابنِ تعبير كرون دون حفظ ترتيب الحقول — اختر يوميًا أو أسبوعيًا أو شهريًا أو كل بضع دقائق. تعرض الأداة المواعيد الخمسة القادمة فعلًا، وتنبّهك إلى مأزق يوم الشهر ويوم الأسبوع حيث يعمل الكرون إذا تطابق أحدهما.' },
+  },
+  {
     id: 'passport-photo',
     en: { name: 'Passport Photo Maker', description: 'Turn an ordinary photo into an ID photo at the right size — Saudi 4×6 cm, the 35×45 mm passport standard, US 2×2 in and more. Guides show where your head, chin and eyes must sit, and you can print several on one sheet with cut lines. Never uploaded.' },
     ar: { name: 'مولّد صور الجواز والمعاملات', description: 'حوّل صورة عادية إلى صورة رسمية بالمقاس الصحيح — ٤×٦ سم السعودي، ومعيار الجواز ٣٥×٤٥ مم، و٢×٢ إنش وغيرها. تُظهر الخطوط أين يقع الرأس والذقن والعينان، ويمكنك طباعة عدة نسخ على ورقة واحدة مع خطوط القص. لا تُرفع أبدًا.' },
