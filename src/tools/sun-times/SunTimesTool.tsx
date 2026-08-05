@@ -53,6 +53,7 @@ export default function SunTimesTool() {
   const [loc, setLoc] = useState(() => ({
     lat: saved?.lat ?? DEFAULT_CITY.lat,
     lng: saved?.lng ?? DEFAULT_CITY.lng,
+    tz: saved?.tz ?? DEFAULT_CITY.tz,
     label: saved?.label ?? (locale === 'ar' ? DEFAULT_CITY.ar : DEFAULT_CITY.en),
   }))
   const [date, setDate] = useState(todayIso())
@@ -71,8 +72,13 @@ export default function SunTimesTool() {
   )
   const sunnah = useMemo(() => new SunnahTimes(prayer), [prayer])
 
+  // Times are shown in the PLACE's timezone, not the viewer's: looking up
+  // Makkah's sunrise from London must show Makkah's morning, not the same
+  // instant relabelled into a London hour that means nothing on the ground.
   const fmt = (d: Date | null) =>
-    d ? d.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'
+    d ? d.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-GB', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: loc.tz,
+    }) : '—'
 
   const anyMissing = Object.values(events).some((v) => v === null)
 
@@ -84,7 +90,7 @@ export default function SunTimesTool() {
     setLocating(true)
     const g = await geolocate()
     setLocating(false)
-    if (g) setLoc({ lat: g.lat, lng: g.lng, label: locale === 'ar' ? 'موقعي' : 'My location' })
+    if (g) setLoc({ lat: g.lat, lng: g.lng, tz: g.tz, label: locale === 'ar' ? 'موقعي' : 'My location' })
   }
 
   const ORDER: (keyof SunEvent)[] = [
@@ -101,7 +107,7 @@ export default function SunTimesTool() {
             value={CITIES.find((c) => Math.abs(c.lat - loc.lat) < 0.01)?.id ?? ''}
             onChange={(e) => {
               const c = CITIES.find((x) => x.id === e.target.value)
-              if (c) setLoc({ lat: c.lat, lng: c.lng, label: locale === 'ar' ? c.ar : c.en })
+              if (c) setLoc({ lat: c.lat, lng: c.lng, tz: c.tz, label: locale === 'ar' ? c.ar : c.en })
             }}>
             <option value="">{loc.label}</option>
             {CITIES.map((c) => <option key={c.id} value={c.id}>{locale === 'ar' ? c.ar : c.en}</option>)}
@@ -114,7 +120,9 @@ export default function SunTimesTool() {
         <Button onClick={useMine} disabled={locating} data-testid="st-geo"><CompassIcon /> {s.myLocation}</Button>
       </div>
 
-      <p className="text-[0.85rem] text-ink-faint font-mono" data-testid="st-hijri">{formatHijri(day, locale)}</p>
+      <p className="text-[0.85rem] text-ink-faint font-mono" data-testid="st-hijri">
+        {formatHijri(day, locale)} · <span data-testid="st-tz">{loc.tz}</span>
+      </p>
 
       <Panel className="flex flex-wrap gap-x-8 gap-y-3" data-testid="st-highlights">
         <div className="flex flex-col">

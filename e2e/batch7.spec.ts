@@ -167,10 +167,16 @@ test.describe('hex viewer', () => {
 })
 
 test.describe('sun times', () => {
+  // Pin the browser's timezone: CI runs in UTC and a developer machine usually
+  // does not, and without this the assertions below would only hold in one of
+  // them. The tool renders in the PLACE's zone, so Makkah reads as Makkah here.
+  test.use({ timezoneId: 'UTC' })
+
   test('lists every light of the day for a fixed date', async ({ page }) => {
     await page.goto('/en/apps/sun-times')
     await page.getByTestId('st-date').fill('2026-06-21')
-    // Makkah in June: sunrise is early morning, sunset early evening.
+    // Makkah in June, shown in Asia/Riyadh regardless of where the viewer is.
+    await expect(page.getByTestId('st-tz')).toHaveText('Asia/Riyadh')
     await expect(page.getByTestId('st-sunrise')).toHaveText(/0[45]:\d\d/)
     await expect(page.getByTestId('st-sunset')).toHaveText(/19:\d\d/)
     await expect(page.getByTestId('st-solarNoon')).toBeVisible()

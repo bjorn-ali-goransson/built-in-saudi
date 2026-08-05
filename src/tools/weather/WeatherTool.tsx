@@ -80,16 +80,29 @@ export default function WeatherTool() {
   const prayerTemps = useMemo(() => {
     if (!data) return []
     const times = new PrayerTimes(new Coordinates(loc.lat, loc.lng), new Date(), CalculationMethod.UmmAlQura())
+    // Open-Meteo's hourly stamps are already local to the forecast location and
+    // carry no offset, so their hour must be compared against the prayer time's
+    // hour IN THAT ZONE — not the viewer's, which is a different number whenever
+    // you look up a city you are not standing in.
+    const hourThere = (d: Date) => Number(new Intl.DateTimeFormat('en-US', {
+      timeZone: data.timezone, hour: '2-digit', hour12: false,
+    }).format(d)) % 24
     return PRAYERS.map((p) => {
       const when = times[p] as Date
-      const hour = data.hourly.find((h) => new Date(h.t).getHours() === when.getHours())
+      const target = hourThere(when)
+      const hour = data.hourly.find((h) => Number(h.t.slice(11, 13)) === target)
       return { key: p, when, temp: hour?.temp ?? null, code: hour?.code ?? null }
     })
   }, [data, loc.lat, loc.lng])
 
   const band = dustBand(data?.air.pm10 ?? null)
-  const fmtTime = (d: Date | string) =>
-    new Date(d).toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (d: Date | string, zoned = false) =>
+    new Date(d).toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-GB', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+      // Hourly stamps are already local to the place; only real instants
+      // (the prayer times) need converting into its zone.
+      ...(zoned && data ? { timeZone: data.timezone } : {}),
+    })
   const temp = (n: number) => `${Math.round(n)}°`
 
   return (
@@ -159,7 +172,7 @@ export default function WeatherTool() {
               {prayerTemps.map((p) => (
                 <div key={p.key} className="flex flex-col items-center gap-0.5 border border-[color:var(--line)] rounded-md bg-[var(--surface)] py-2">
                   <span className="text-[0.78rem] text-ink-faint rtl:font-ar">{s.names[p.key]}</span>
-                  <span className="font-mono text-[0.78rem] text-ink-faint">{fmtTime(p.when)}</span>
+                  <span className="font-mono text-[0.78rem] text-ink-faint">{fmtTime(p.when, true)}</span>
                   <span className="font-display text-[1.15rem] text-ink">{p.temp === null ? '—' : temp(p.temp)}</span>
                 </div>
               ))}
