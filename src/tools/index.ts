@@ -148,6 +148,10 @@ import { pdfRedactTool } from './pdf-redact/meta'
 import { videoGifTool } from './video-gif/meta'
 import { carouselSplitTool } from './carousel-split/meta'
 import { csvMergeTool } from './csv-merge/meta'
+import { pdfBookletTool } from './pdf-booklet/meta'
+import { pdfStampTool } from './pdf-stamp/meta'
+import { labelSheetTool } from './label-sheet/meta'
+import { certificateTool } from './certificate/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -244,6 +248,7 @@ export const tools: Tool[] = [
   memeGeneratorTool,
   faviconGeneratorTool,
   paperGeneratorTool,
+  labelSheetTool,
   steganographyTool,
   imageRedactTool,
   photoBoothTool,
@@ -270,8 +275,11 @@ export const tools: Tool[] = [
   pdfEditTool,
   pdfCompressTool,
   pdfRedactTool,
+  pdfBookletTool,
+  pdfStampTool,
   invoiceGeneratorTool,
   quotationTool,
+  certificateTool,
   prayerTimesTool,
   islamicCalendarTool,
   adhkarTool,

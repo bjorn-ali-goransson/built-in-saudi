@@ -614,6 +614,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'pdf-booklet',
+    en: { name: 'Booklet & N-up', description: 'Impose a PDF for printing: booklet order so a folded, stapled stack reads correctly, or two and four pages to a sheet to save paper. A booklet is not pages 1,2,3,4 on sheets — the outermost sheet carries the last page beside the first. Right-to-left binding for Arabic documents.' },
+    ar: { name: 'ترتيب الكتيّب وتوفير الورق', description: 'رتّب ملف PDF للطباعة: ترتيب كتيّب ليُقرأ بشكل صحيح بعد الطي والتدبيس، أو صفحتين وأربع صفحات في الورقة لتوفير الورق. فالكتيّب ليس صفحات ١ و٢ و٣ و٤ على الأوراق — إذ تحمل الورقة الخارجية الصفحة الأخيرة بجوار الأولى. مع تجليد من اليمين للمستندات العربية.' },
+  },
+  {
+    id: 'pdf-stamp',
+    en: { name: 'Page Numbers & Watermark', description: 'Stamp a PDF without flattening it — page numbers in any position and format including Arabic-Indic, a header, a footer and a diagonal watermark. Start numbering after the cover and say what number that page carries. The text underneath stays searchable and selectable.' },
+    ar: { name: 'ترقيم صفحات PDF والعلامة المائية', description: 'اختم ملف PDF دون تسطيحه — أرقام صفحات بأي موضع وصيغة بما فيها الأرقام الهندية، وترويسة وتذييل وعلامة مائية مائلة. ابدأ الترقيم بعد الغلاف وحدّد الرقم الذي تحمله تلك الصفحة. ويبقى النص تحتها قابلًا للبحث والتحديد.' },
+  },
+  {
+    id: 'label-sheet',
+    en: { name: 'Label Sheets', description: 'Print a list onto adhesive labels — addresses, names, asset tags — on the common A4 and US Letter stocks at their published measurements. You can start at any label position, so a sheet with twelve left on it is not wasted. Arabic names are shaped and laid out correctly.' },
+    ar: { name: 'مولّد أوراق الملصقات', description: 'اطبع قائمة على ورقة ملصقات لاصقة — عناوين أو أسماء أو وسوم أصول — على مقاسات A4 وLetter الشائعة وبمقاييسها المنشورة. ويمكنك البدء من أي موضع ملصق، فلا تُهدر ورقة بقي فيها اثنا عشر ملصقًا. وتُشكَّل الأسماء العربية بشكل صحيح.' },
+  },
+  {
+    id: 'certificate',
+    en: { name: 'Certificate Generator', description: 'Make certificates of completion or participation for a whole list at once — paste the names, set the wording and signature lines, and download every page in one PDF. Arabic and Latin names both render correctly, including mixed in one list.' },
+    ar: { name: 'مولّد الشهادات', description: 'أنشئ شهادات إتمام أو مشاركة لقائمة كاملة دفعة واحدة — الصق الأسماء، واضبط النص وسطور التوقيع، ونزّل كل الصفحات في ملف PDF واحد. وتظهر الأسماء العربية واللاتينية بشكل صحيح، حتى مختلطة في قائمة واحدة.' },
+  },
+  {
     id: 'pdf-redact',
     en: { name: 'Redact a PDF', description: 'Drag over anything that has to go. A black rectangle drawn in a PDF viewer hides nothing — the text stays in the file and can be selected, copied or extracted with one command. This rebuilds each page as an image so the words genuinely cease to exist, then re-reads the export to prove none are left.' },
     ar: { name: 'حجب معلومات من ملف PDF', description: 'اسحب فوق كل ما يجب إزالته. فالمربع الأسود المرسوم في قارئ PDF لا يخفي شيئًا — إذ يبقى النص في الملف ويمكن تحديده أو نسخه أو استخراجه بأمر واحد. تعيد الأداة بناء كل صفحة صورةً فتزول الكلمات فعلًا، ثم تعيد قراءة الملف المُصدَّر لتثبت ذلك.' },
