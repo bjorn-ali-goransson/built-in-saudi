@@ -160,6 +160,11 @@ import { metronomeTool } from './metronome/meta'
 import { tunerTool } from './tuner/meta'
 import { bpmTapTool } from './bpm-tap/meta'
 import { soundMeterTool } from './sound-meter/meta'
+import { saudiPlateTool } from './saudi-plate/meta'
+import { shortAddressTool } from './short-address/meta'
+import { worksheetsTool } from './worksheets/meta'
+import { bingoCardsTool } from './bingo-cards/meta'
+import { quizMakerTool } from './quiz-maker/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -263,6 +268,9 @@ export const tools: Tool[] = [
   faviconGeneratorTool,
   paperGeneratorTool,
   labelSheetTool,
+  worksheetsTool,
+  bingoCardsTool,
+  quizMakerTool,
   steganographyTool,
   imageRedactTool,
   batchWatermarkTool,
@@ -303,6 +311,8 @@ export const tools: Tool[] = [
   istikharaTool,
   hijriCalendarTool,
   ibanValidatorTool,
+  saudiPlateTool,
+  shortAddressTool,
   tafqeetTool,
   arabicVerbsTool,
   diacritizeTool,

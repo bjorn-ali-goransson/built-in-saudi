@@ -312,6 +312,16 @@ claim stays literally true:
   (ascii's ≤300-char grid, favicon's 8 icons), or GPU-bound `drawImage` work.
   Functional coverage lives in `e2e/workers.spec.ts` — extend it when you add
   a worker.
+- **Printable sheets are composed on a canvas, then wrapped in a PDF**
+  (`src/lib/printPdf.ts`: `newPage`/`pagesToPdf`, plus a seeded `rng`/`shuffle`
+  and `newSeed`). Same reason as `textImage.ts` — pdf-lib cannot shape Arabic or
+  reorder bidi text, and a worksheet, a label sheet or a bingo card is layout
+  rather than selectable prose. Used by `worksheets`, `bingo-cards`,
+  `quiz-maker`; `label-sheet` and `certificate` predate it and inline the same
+  approach.
+  **Anything randomly generated for print takes a visible seed**: a teacher who
+  reprints after a paper jam must get the *same* sheet, or the answer key in
+  their hand belongs to a different worksheet.
 
 ## Commands
 

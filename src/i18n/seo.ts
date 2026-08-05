@@ -883,4 +883,29 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Fix Garbled Text', description: 'Repair text that arrived as Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© or â€™ instead of readable characters — the classic mojibake you get when UTF-8 is opened as the wrong codepage. It works out which encoding mangled it and undoes the damage.' },
     ar: { name: 'إصلاح النص المشوّه', description: 'أصلح النص الذي وصل على شكل Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© أو â€™ بدل الحروف المقروءة — التشويه المعتاد حين يُفتح ترميز UTF-8 بترميز خاطئ. تكتشف الأداة الترميز الذي أفسده وتُلغي الضرر.' },
   },
+  {
+    id: 'saudi-plate',
+    en: { name: 'Saudi Plate Converter', description: 'Convert a Saudi vehicle plate between its Arabic and Latin halves. Only 17 Arabic letters appear on plates and each maps to one fixed Latin character (ح is J, م is Z), and the letters run in the opposite order on the Arabic side — so type a plate in either script, in either order, with Arabic or Western digits, and get both halves back exactly as they appear.' },
+    ar: { name: 'محوّل اللوحات السعودية', description: 'حوّل لوحة مركبة سعودية بين جانبيها العربي واللاتيني. لا يظهر على اللوحات سوى ١٧ حرفًا عربيًا، ولكل حرف مقابل لاتيني واحد ثابت (ح هي J وم هي Z)، وتسير الحروف بترتيب معاكس في الجانب العربي — فاكتب اللوحة بأي خط وبأي ترتيب، بأرقام هندية أو إنجليزية، واحصل على الجانبين كما يظهران تمامًا.' },
+  },
+  {
+    id: 'short-address',
+    en: { name: 'Short Address Checker', description: 'Check a Saudi National Address short code — four letters then four digits, like RRRD2929 — before you put it on a shipment. It catches the ways that goes wrong (digits typed first, a space in the middle, a zero read as an O, Arabic-Indic numerals) and explains what each part means. Format only: only Saudi Post can turn a code into a street.' },
+    ar: { name: 'مدقّق العنوان المختصر', description: 'تحقّق من رمز العنوان الوطني المختصر — أربعة حروف ثم أربعة أرقام، مثل RRRD2929 — قبل وضعه على شحنة. تلتقط الأداة ما يختل في ذلك (كتابة الأرقام أولًا، أو مسافة في المنتصف، أو صفر مكان الحرف O، أو أرقام هندية) وتشرح معنى كل جزء. الصيغة فقط: فالبريد السعودي وحده يحوّل الرمز إلى شارع.' },
+  },
+  {
+    id: 'worksheets',
+    en: { name: 'Maths Worksheets', description: 'Generate printable arithmetic worksheets — addition, subtraction, multiplication and division in whatever number range you set — with an answer key page that always matches. Every sheet has a code, so a reprint gives you the same questions rather than a new set the key no longer fits. Division problems are built from the answer, so they divide exactly.' },
+    ar: { name: 'أوراق تمارين الرياضيات', description: 'أنشئ أوراق تمارين حسابية قابلة للطباعة — جمعًا وطرحًا وضربًا وقسمة ضمن المدى العددي الذي تحدّده — مع صفحة إجابات مطابقة دائمًا. لكل ورقة رمز، فإعادة الطباعة تعطيك الأسئلة نفسها لا مجموعة جديدة لا تناسبها ورقة الإجابات. وتُبنى مسائل القسمة من الناتج فتنتهي بعدد صحيح.' },
+  },
+  {
+    id: 'bingo-cards',
+    en: { name: 'Bingo Cards', description: 'Turn a list of words, names or numbers into printable bingo cards — 3×3, 4×4 or 5×5, with an optional free centre. Every card is checked against the others so no two players get the same one, and it says so honestly when your list is too short to make as many distinct cards as you asked for. Comes with a shuffled call list.' },
+    ar: { name: 'بطاقات بينغو', description: 'حوّل قائمة كلمات أو أسماء أو أرقام إلى بطاقات بينغو قابلة للطباعة — ٣×٣ أو ٤×٤ أو ٥×٥، مع مربّع حر اختياري في الوسط. تُقارن كل بطاقة بغيرها فلا يحصل لاعبان على البطاقة نفسها، وتخبرك بصراحة حين تكون قائمتك أقصر من أن تصنع العدد المطلوب من البطاقات المختلفة. ومعها قائمة نداء مخلوطة.' },
+  },
+  {
+    id: 'quiz-maker',
+    en: { name: 'Quiz Maker', description: 'Write a quiz — multiple choice, true/false and short answer — then print it as a question paper with a separate answer key, or share a link anyone can take in their browser. The link carries the whole quiz after the # in the URL, and a fragment is never sent to a server: nothing is stored and there is no account.' },
+    ar: { name: 'صانع الاختبارات', description: 'اكتب اختبارًا — اختيار من متعدد وصح/خطأ وإجابة قصيرة — ثم اطبعه ورقة أسئلة مع ورقة إجابات منفصلة، أو شارك رابطًا يستطيع أي أحد أداءه في متصفحه. يحمل الرابط الاختبار كاملًا بعد علامة # في العنوان، وما بعدها لا يُرسل إلى خادم أبدًا: فلا شيء مخزّن ولا حساب.' },
+  },
 ]

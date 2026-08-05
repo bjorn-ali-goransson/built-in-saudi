@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **149 tools are live.** This
+The backlog, and an honest account of what exists. **166 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -18,16 +18,16 @@ optional [backend worker](./BACKEND.md).
 | Category | Count | Shape of it |
 |---|---|---|
 | Developer | 30 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge |
-| Saudi / Local | 21 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather |
+| Saudi / Local | 23 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address |
 | Text | 20 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder |
-| Images | 18 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing |
-| Calculators | 16 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
-| Generators | 10 | QR, barcode, passwords, 2FA, printable paper, wheels and draws |
-| PDF | 10 | merge/split/compress/sign/fill/edit, →images, →text, **true redaction** |
-| Design | 8 | colour, contrast, gradients, bezier, palette-from-image |
+| Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
+| Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
+| Generators | 17 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes |
+| PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
+| Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
 | Files | 7 | archives, metadata, hex, encryption, audio trim/extract, video→GIF |
-| Business | 4 | invoice, quotation/receipt, CV optimizer, Book Me |
-| Converters, Communication | 4 | units, base64, timestamps, Calls |
+| Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
+| Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
 
 Everything is client-side except the documented server-backed tools (Book Me,
 Calls signalling, CV optimizer, link shortener, prompt analyzer, Arabic
@@ -73,19 +73,31 @@ Wanted, but blocked on something real. Do not build these casually.
 
 ## Next, ranked
 
-Dep-free and correctness-safe, so they can be built to the same bar as the rest:
+**The July–August 2026 ranked list is finished.** All six batches shipped:
 
-1. **Print & paper goods** — booklet imposition (n-up), PDF page numbering and
-   watermarking, Avery-style label sheets, certificates. `pdf-lib` is already a
-   dependency and `paper-generator` proved the pattern.
-2. **Passphrase generator** (diceware, with an Arabic wordlist) — distinct from
-   the character-based password generator, and better advice.
-3. **Image finishing** — batch watermark, collage, polaroid frame, device
-   mockup, SVG optimiser, colour-blindness simulator.
-4. **Saudi remainder** — vehicle plate Arabic↔Latin, national short-address
-   format validator.
-5. **Sound** — metronome, tuner, BPM tap, sound meter. Web Audio, no deps.
-6. **Classroom** — printable worksheets, bingo cards, quiz maker.
+1. ~~Print & paper goods~~ — `pdf-booklet`, `pdf-stamp`, `label-sheet`,
+   `certificate`.
+2. ~~Passphrase generator~~ — `passphrase` (diceware, 1296 words so physical
+   dice map honestly).
+3. ~~Image finishing~~ — `batch-watermark`, `svg-optimise`, `colour-blind`.
+4. ~~Saudi remainder~~ — `saudi-plate`, `short-address`.
+5. ~~Sound~~ — `metronome`, `tuner`, `bpm-tap`, `sound-meter`.
+6. ~~Classroom~~ — `worksheets`, `bingo-cards`, `quiz-maker`.
+
+Nothing is queued behind them. The next thing to build should come from a fresh
+look at what people actually search for — or from the **Parked** table above,
+once its blocker is genuinely cleared. Two are worth revisiting first:
+
+- **On-device AI** (Chrome's built-in models) — still the highest-value item
+  left, and the only one that would add AI tools with no backend and no privacy
+  asterisk. It needs a session with a real browser to verify the API surface.
+- **Mirath / inheritance (فرائض)** — the highest-demand Saudi wedge left. It
+  needs scholarly sourcing and review, at the same bar as `zakat` and
+  `end-of-service`, not a weekend of arithmetic.
+
+Resist adding filler to keep the count rising. The catalogue is already large
+enough that discoverability — search, the launcher, sensible categories — is
+worth more than tool 167.
 
 ---
 

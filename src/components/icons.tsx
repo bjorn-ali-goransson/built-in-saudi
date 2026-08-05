@@ -1175,3 +1175,55 @@ export function SubtitlesIcon({ className }: P) {
     </svg>
   )
 }
+
+export function PlateIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2.5" y="6" width="19" height="12" rx="1.5" />
+      <path d="M8.5 6v12" />
+      <path d="M5 10.5h1M5 14h1" />
+      <path d="M11 10h1.5M14.5 10H16M18 10h1" />
+      <path d="M11 14.5h8" />
+    </svg>
+  )
+}
+
+export function WorksheetIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="1.5" />
+      <path d="M8 8h2.5M8 12h2.5M8 16h2.5" />
+      <path d="M14 8h2M14 12h2M14 16h2" />
+      <path d="M7 6.5h10" />
+    </svg>
+  )
+}
+
+export function BingoIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="1.5" />
+      <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+      <circle cx="12" cy="12" r="1.6" />
+    </svg>
+  )
+}
+
+export function QuizIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="3" width="17" height="18" rx="1.5" />
+      <path d="M9.4 9a2.6 2.6 0 1 1 3.1 2.6c-.7.2-1 .7-1 1.4v.4" />
+      <path d="M11.5 17v.01" />
+    </svg>
+  )
+}
+
+export function AddressPinIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z" />
+      <path d="M9 9h6M9 12h3.5" />
+    </svg>
+  )
+}
