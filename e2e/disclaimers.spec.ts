@@ -14,6 +14,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'zakat-calculator', kind: 'religious' },
   { id: 'id-expiry', kind: 'official' },
   { id: 'passport-photo', kind: 'official' },
+  { id: 'sound-meter', kind: 'official' },
   { id: 'quotation', kind: 'legal' },
 ]
 

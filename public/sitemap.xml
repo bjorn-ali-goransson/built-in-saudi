@@ -2241,4 +2241,60 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/batch-watermark"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/batch-watermark"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/metronome/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/metronome"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/metronome"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/metronome"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/metronome/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/metronome"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/metronome"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/metronome"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/tuner/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tuner"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tuner"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tuner"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/tuner/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/tuner"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/tuner"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/tuner"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/bpm-tap/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/bpm-tap"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/bpm-tap"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/bpm-tap"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/bpm-tap/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/bpm-tap"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/bpm-tap"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/bpm-tap"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/sound-meter/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sound-meter"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sound-meter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sound-meter"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/sound-meter/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sound-meter"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sound-meter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sound-meter"/>
+  </url>
 </urlset>

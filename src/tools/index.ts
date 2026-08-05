@@ -156,6 +156,10 @@ import { passphraseTool } from './passphrase/meta'
 import { colourBlindTool } from './colour-blind/meta'
 import { svgOptimiseTool } from './svg-optimise/meta'
 import { batchWatermarkTool } from './batch-watermark/meta'
+import { metronomeTool } from './metronome/meta'
+import { tunerTool } from './tuner/meta'
+import { bpmTapTool } from './bpm-tap/meta'
+import { soundMeterTool } from './sound-meter/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -207,6 +211,10 @@ export const tools: Tool[] = [
   splitBillTool,
   aspectRatioTool,
   pomodoroTool,
+  metronomeTool,
+  tunerTool,
+  bpmTapTool,
+  soundMeterTool,
   endOfServiceTool,
   zakatCalculatorTool,
   ageCalculatorTool,

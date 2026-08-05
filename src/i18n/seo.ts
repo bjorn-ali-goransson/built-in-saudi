@@ -614,6 +614,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'metronome',
+    en: { name: 'Metronome', description: 'Tempo from 30 to 300, any time signature, subdivisions and an accented downbeat. Beats are scheduled on the audio clock rather than a JavaScript timer — a timer drifts by tens of milliseconds under load and stops in a background tab, which is audibly wrong within a few bars.' },
+    ar: { name: 'ميقاتية (متـرونوم)', description: 'إيقاع من ٣٠ إلى ٣٠٠، وأي ميزان، وتقسيمات ونبضة أولى مشدّدة. تُجدوَل النبضات على ساعة الصوت لا على مؤقّت جافاسكربت — فالمؤقّت ينحرف بعشرات الأجزاء من الثانية ويتوقّف في تبويب خلفي، وهو خطأ مسموع خلال مازورات قليلة.' },
+  },
+  {
+    id: 'tuner',
+    en: { name: 'Instrument Tuner', description: 'A chromatic tuner with presets for guitar, bass, ukulele, oud and violin, and an adjustable reference pitch. Pitch is found by autocorrelation — on a guitar or an oud the loudest partial is often the second harmonic, so a peak-picking tuner reads the low string an octave high. The audio never leaves the page.' },
+    ar: { name: 'موالف الآلات الموسيقية', description: 'موالف كروماتي بإعدادات جاهزة للجيتار والباص واليوكوليلي والعود والكمان، مع نغمة مرجعية قابلة للضبط. تُستخرج النغمة بالارتباط الذاتي — ففي الجيتار أو العود يكون أعلى تردد جزئي هو التوافقي الثاني غالبًا، فيقرأ الموالف القائم على القمم الوتر المنخفض أوكتافًا أعلى. ولا يغادر الصوت الصفحة.' },
+  },
+  {
+    id: 'bpm-tap',
+    en: { name: 'Tap BPM', description: 'Find a track’s tempo by tapping along. It averages over a sliding window so it follows a tempo change instead of burying it, and it tells you how steady your tapping was. It also gives the quarter, eighth and dotted-eighth times in milliseconds, which is what a delay pedal wants.' },
+    ar: { name: 'قياس الإيقاع بالنقر', description: 'اعرف إيقاع مقطع بالنقر معه. تحسب الأداة المتوسط على نافذة متحركة فتتابع تغيّر الإيقاع بدل أن تدفنه، وتخبرك بمدى ثبات نقرك. وتعطيك أزمنة النغمة الربعية والثمانية والثمانية المنقوطة بالمللي ثانية، وهو ما يحتاجه جهاز التأخير.' },
+  },
+  {
+    id: 'sound-meter',
+    en: { name: 'Sound Level Meter', description: 'A live level meter using your microphone, with a running graph and peak hold. It shows relative loudness in dBFS, not calibrated decibels — a browser cannot know which microphone it is behind or what gain the system applied. Good for comparing two rooms; not for judging whether a workplace is safe.' },
+    ar: { name: 'مقياس مستوى الصوت', description: 'مقياس مستوى حي عبر الميكروفون، مع رسم متحرك وحفظ للذروة. يعرض الجهارة النسبية بوحدة dBFS لا الديسيبل المعاير — فالمتصفح لا يعرف أي ميكروفون خلفه ولا الكسب الذي طبّقه النظام. مناسب لمقارنة غرفتين؛ لا للحكم على سلامة بيئة عمل.' },
+  },
+  {
     id: 'passphrase',
     en: { name: 'Passphrase Generator', description: 'Build a passphrase from a 1296-word list — 10.3 bits a word, short enough to type. You can also roll physical dice and enter the numbers, the original diceware method and the only version whose randomness you need not take on trust. There is an Arabic wordlist too.' },
     ar: { name: 'مولّد عبارات المرور', description: 'ابنِ عبارة مرور من قائمة بـ١٢٩٦ كلمة — ١٠٫٣ بت لكل كلمة، وقصيرة بما يكفي للكتابة. ويمكنك رمي نرد حقيقي وإدخال الأرقام، وهي طريقة diceware الأصلية والنسخة الوحيدة التي لا تضطر لتصديق أحد في عشوائيتها. وهناك قائمة كلمات عربية أيضًا.' },
