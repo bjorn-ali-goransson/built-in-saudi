@@ -619,6 +619,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'pdf-redact',
+    en: { name: 'Redact a PDF', description: 'Drag over anything that has to go. A black rectangle drawn in a PDF viewer hides nothing — the text stays in the file and can be selected, copied or extracted with one command. This rebuilds each page as an image so the words genuinely cease to exist, then re-reads the export to prove none are left.' },
+    ar: { name: 'حجب معلومات من ملف PDF', description: 'اسحب فوق كل ما يجب إزالته. فالمربع الأسود المرسوم في قارئ PDF لا يخفي شيئًا — إذ يبقى النص في الملف ويمكن تحديده أو نسخه أو استخراجه بأمر واحد. تعيد الأداة بناء كل صفحة صورةً فتزول الكلمات فعلًا، ثم تعيد قراءة الملف المُصدَّر لتثبت ذلك.' },
+  },
+  {
+    id: 'video-gif',
+    en: { name: 'Video to GIF', description: 'Turn a clip into an animated GIF without uploading it anywhere. Choose the start, length, frame rate, width and colour count. All frames share one palette so the animation does not flicker the way cheap converters make it, and it tells you when the file has grown past the point anyone will wait for it.' },
+    ar: { name: 'تحويل الفيديو إلى صورة متحركة', description: 'حوّل مقطعًا إلى صورة GIF متحركة دون رفعه. اختر البداية والمدة ومعدّل الإطارات والعرض وعدد الألوان. وتتشارك كل الإطارات لوحة ألوان واحدة فلا ترتجف الحركة كما تفعل المحوّلات الرديئة، وتنبّهك حين يتجاوز الحجم ما يصبر عليه أحد.' },
+  },
+  {
+    id: 'carousel-split',
+    en: { name: 'Carousel Splitter', description: 'Cut a panorama or wide graphic into Instagram carousel slides that read as one continuous picture when someone swipes. Each slide comes out at the platform’s aspect ratio — which is what makes the seams meet — and the files are numbered so they upload in order.' },
+    ar: { name: 'مقسّم صور الكاروسيل', description: 'قسّم صورة بانورامية أو رسمًا عريضًا إلى شرائح كاروسيل انستقرام تُقرأ كصورة واحدة متصلة عند التمرير. تخرج كل شريحة بنسبة أبعاد المنصة — وهو ما يجعل الحواف تلتقي — وتُرقَّم الملفات لترفعها بالترتيب.' },
+  },
+  {
+    id: 'csv-merge',
+    en: { name: 'CSV Merge & Join', description: 'Match two CSV exports on a column they share — an id, an email, an order number — and get one file with both sides’ data, told how many rows matched and how many found nothing. Or stack two files aligned by column NAME rather than position, because positional stacking silently moves a phone number into the city column.' },
+    ar: { name: 'دمج وربط ملفات CSV', description: 'اربط تصديرَي CSV بعمود مشترك — معرّف أو بريد أو رقم طلب — لتحصل على ملف واحد يحمل بيانات الجانبين، مع عدد الصفوف المطابقة وغير المطابقة. أو ضعهما معًا متوائمين بأسماء الأعمدة لا بمواقعها، لأن الدمج بالمواقع ينقل رقم الهاتف إلى عمود المدينة بصمت.' },
+  },
+  {
     id: 'glucose-units',
     en: { name: 'Blood Sugar Converter', description: 'Convert a blood glucose reading between mg/dL and mmol/L, and HbA1c between % and mmol/mol, with the estimated average glucose. Saudi labs report mg/dL while most research uses mmol/L, and the factor between them is 18. It says where a reading falls and flags one low or high enough to need acting on now.' },
     ar: { name: 'محوّل قراءات سكر الدم', description: 'حوّل قراءة سكر الدم بين mg/dL وmmol/L، والسكر التراكمي بين ٪ وmmol/mol، مع متوسط السكر التقديري. تستخدم المختبرات في السعودية mg/dL بينما تستخدم معظم الأبحاث mmol/L، والمعامل بينهما ١٨. وتبيّن الأداة أين تقع القراءة وتنبّه إلى ما يستدعي تصرّفًا فوريًا.' },

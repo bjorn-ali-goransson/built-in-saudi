@@ -145,6 +145,10 @@ import { sleepCycleTool } from './sleep-cycle/meta'
 import { waterIntakeTool } from './water-intake/meta'
 import { hijriAgeTool } from './hijri-age/meta'
 import { medicineScheduleTool } from './medicine-schedule/meta'
+import { pdfRedactTool } from './pdf-redact/meta'
+import { videoGifTool } from './video-gif/meta'
+import { carouselSplitTool } from './carousel-split/meta'
+import { csvMergeTool } from './csv-merge/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -159,9 +163,11 @@ export const tools: Tool[] = [
   passportPhotoTool,
   screenshotFrameTool,
   socialResizeTool,
+  carouselSplitTool,
   weatherTool,
   audioTrimTool,
   videoAudioTool,
+  videoGifTool,
   currencyConverterTool,
   idExpiryTool,
   totpTool,
@@ -186,6 +192,7 @@ export const tools: Tool[] = [
   baseConverterTool,
   csvJsonTool,
   csvCleanTool,
+  csvMergeTool,
   listToolsTool,
   colorContrastTool,
   loanCalculatorTool,
@@ -264,6 +271,7 @@ export const tools: Tool[] = [
   pdfFillTool,
   pdfEditTool,
   pdfCompressTool,
+  pdfRedactTool,
   invoiceGeneratorTool,
   quotationTool,
   prayerTimesTool,
