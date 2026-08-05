@@ -108,6 +108,10 @@ import { arabicNumeralsTool } from './arabic-numerals/meta'
 import { saudiPhoneTool } from './saudi-phone/meta'
 import { arabicNormalizeTool } from './arabic-normalize/meta'
 import { fixEncodingTool } from './fix-encoding/meta'
+import { weatherTool } from './weather/meta'
+import { idExpiryTool } from './id-expiry/meta'
+import { totpTool } from './totp/meta'
+import { passwordStrengthTool } from './password-strength/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -119,7 +123,11 @@ export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
   removeBackgroundTool,
+  weatherTool,
   currencyConverterTool,
+  idExpiryTool,
+  totpTool,
+  passwordStrengthTool,
   subtitleEditorTool,
   saudiPhoneTool,
   arabicNumeralsTool,

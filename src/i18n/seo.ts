@@ -619,6 +619,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'weather',
+    en: { name: 'Weather', description: 'A clean forecast for any Saudi city or your own location: current conditions, the next 24 hours, the week ahead with Hijri dates, UV, and the dust and PM10 reading that matters here — plus the temperature at each prayer time. Prayer times are worked out on your device.' },
+    ar: { name: 'الطقس', description: 'نشرة جوية نظيفة لأي مدينة سعودية أو لموقعك: الحالة الآن، والـ٢٤ ساعة القادمة، والأسبوع القادم بالتواريخ الهجرية، والأشعة فوق البنفسجية، وقراءة الغبار وPM10 المهمة هنا — مع درجة الحرارة عند كل وقت صلاة. تُحسب أوقات الصلاة على جهازك.' },
+  },
+  {
+    id: 'id-expiry',
+    en: { name: 'Iqama & ID Expiry', description: 'Track when your documents run out. Enter an expiry in either the Hijri or Gregorian calendar and see the days remaining in both, sorted by whichever runs out first — iqama, passport, driving licence, istimara, insurance or a visa. Everything stays in this browser.' },
+    ar: { name: 'انتهاء الإقامة والوثائق', description: 'تابع مواعيد انتهاء وثائقك. أدخل تاريخ الانتهاء بالتقويم الهجري أو الميلادي وشاهد الأيام المتبقية بالتقويمين، مرتّبة بحسب الأقرب انتهاءً — الإقامة أو الجواز أو رخصة القيادة أو الاستمارة أو التأمين أو التأشيرة. كل شيء يبقى في هذا المتصفح.' },
+  },
+  {
+    id: 'totp',
+    en: { name: '2FA Code Generator', description: 'Turn a two-factor secret into the rolling six-digit code, exactly as an authenticator app would (RFC 6238 TOTP, SHA-1/256/512, 6 or 8 digits). Paste the base32 secret or the whole otpauth:// link. The secret never leaves the page.' },
+    ar: { name: 'مولّد رموز التحقق الثنائي', description: 'حوّل مفتاح التحقق الثنائي إلى الرمز المتجدّد من ست خانات، تمامًا كما يفعل تطبيق المصادقة (معيار RFC 6238، وSHA-1 و256 و512، بست أو ثماني خانات). الصق مفتاح base32 أو رابط ‎otpauth://‎ كاملًا. لا يغادر المفتاح الصفحة أبدًا.' },
+  },
+  {
+    id: 'password-strength',
+    en: { name: 'Password Strength', description: 'Check a password honestly. Raw entropy flatters something like Password123!, so this penalises what actually makes a password guessable: common words, keyboard walks, runs, repeats, years and predictable shapes. Nothing you type leaves the page.' },
+    ar: { name: 'قوة كلمة المرور', description: 'افحص كلمة مرورك بصدق. حساب العشوائية وحده يجامل كلمة مثل Password123!‎، لذا تخصم الأداة ما يجعلها فعلًا قابلة للتخمين: الكلمات الشائعة ومسارات لوحة المفاتيح والتسلسلات والتكرار والسنوات والأنماط المتوقّعة. لا يغادر ما تكتبه الصفحة.' },
+  },
+  {
     id: 'fix-encoding',
     en: { name: 'Fix Garbled Text', description: 'Repair text that arrived as Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© or â€™ instead of readable characters — the classic mojibake you get when UTF-8 is opened as the wrong codepage. It works out which encoding mangled it and undoes the damage.' },
     ar: { name: 'إصلاح النص المشوّه', description: 'أصلح النص الذي وصل على شكل Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© أو â€™ بدل الحروف المقروءة — التشويه المعتاد حين يُفتح ترميز UTF-8 بترميز خاطئ. تكتشف الأداة الترميز الذي أفسده وتُلغي الضرر.' },

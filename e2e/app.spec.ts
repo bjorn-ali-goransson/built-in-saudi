@@ -1582,3 +1582,190 @@ test.describe('subtitle editor', () => {
     await expect(page.getByTestId('sub-issues')).toContainText('ends before it starts')
   })
 })
+
+test.describe('weather', () => {
+  // Open-Meteo is mocked: the suite must not depend on a third party being up,
+  // and asserting on real weather is impossible anyway.
+  async function mockApi(page: import('@playwright/test').Page) {
+    await page.route('**/api.open-meteo.com/**', (route) => route.fulfill({
+      json: {
+        timezone: 'Asia/Riyadh',
+        current: {
+          temperature_2m: 41.2, apparent_temperature: 45.8, relative_humidity_2m: 12,
+          wind_speed_10m: 18, weather_code: 0, is_day: 1,
+        },
+        hourly: {
+          time: Array.from({ length: 24 }, (_, i) => `2026-08-05T${String(i).padStart(2, '0')}:00`),
+          temperature_2m: Array.from({ length: 24 }, (_, i) => 30 + i * 0.5),
+          weather_code: Array(24).fill(0),
+          precipitation_probability: Array(24).fill(0),
+        },
+        daily: {
+          time: ['2026-08-05', '2026-08-06'],
+          weather_code: [0, 3], temperature_2m_max: [43, 41], temperature_2m_min: [29, 28],
+          sunrise: ['2026-08-05T05:40'], sunset: ['2026-08-05T18:50'],
+          uv_index_max: [11, 9], precipitation_probability_max: [0, 30],
+        },
+      },
+    }))
+    await page.route('**/air-quality-api.open-meteo.com/**', (route) => route.fulfill({
+      json: { current: { pm10: 220, pm2_5: 60, dust: 180 } },
+    }))
+  }
+
+  test('shows current conditions, dust and per-prayer temperatures', async ({ page }) => {
+    await mockApi(page)
+    await page.goto('/en/apps/weather')
+    await expect(page.getByTestId('wx-temp')).toHaveText('41°')
+    await expect(page.getByTestId('wx-desc')).toHaveText('Clear')
+    // PM10 of 220 lands in the "Dusty" band, the reading that matters here.
+    await expect(page.getByTestId('wx-dust-band')).toHaveText('Dusty')
+    await expect(page.getByTestId('wx-prayers').locator('> div')).toHaveCount(6)
+    await expect(page.getByTestId('wx-hourly').locator('> div')).toHaveCount(24)
+  })
+
+  test('a failing air-quality call still leaves you with a forecast', async ({ page }) => {
+    await mockApi(page)
+    await page.route('**/air-quality-api.open-meteo.com/**', (route) => route.abort())
+    await page.goto('/en/apps/weather')
+    await expect(page.getByTestId('wx-temp')).toHaveText('41°')
+    await expect(page.getByTestId('wx-dust')).toHaveCount(0)
+  })
+
+  test('a dead network surfaces an error rather than an empty page', async ({ page }) => {
+    await page.route('**/*.open-meteo.com/**', (route) => route.abort())
+    await page.goto('/en/apps/weather')
+    await expect(page.getByTestId('wx-error')).toBeVisible()
+  })
+
+  test('only a rounded coordinate is ever sent', async ({ page }) => {
+    await mockApi(page)
+    const urls: string[] = []
+    page.on('request', (r) => { if (r.url().includes('open-meteo')) urls.push(r.url()) })
+    await page.goto('/en/apps/weather')
+    await expect(page.getByTestId('wx-temp')).toBeVisible()
+    expect(urls.length).toBeGreaterThan(0)
+    for (const u of urls) {
+      const lat = new URL(u).searchParams.get('latitude')!
+      expect(lat.split('.')[1]?.length ?? 0).toBeLessThanOrEqual(2)
+    }
+  })
+})
+
+test.describe('id expiry', () => {
+  test('counts the days left and keeps the document after a reload', async ({ page }) => {
+    await page.goto('/en/apps/id-expiry')
+    await expect(page.getByTestId('exp-empty')).toBeVisible()
+    const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10)
+    await page.getByTestId('exp-date').fill(soon)
+    await page.getByTestId('exp-add').click()
+    await expect(page.getByTestId('exp-days')).toHaveText('10 days left')
+    await page.reload()
+    await expect(page.getByTestId('exp-days')).toHaveText('10 days left')
+  })
+
+  test('an already-expired document says so', async ({ page }) => {
+    await page.goto('/en/apps/id-expiry')
+    const past = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+    await page.getByTestId('exp-date').fill(past)
+    await page.getByTestId('exp-add').click()
+    await expect(page.getByTestId('exp-days')).toContainText('Expired 3 days ago')
+  })
+
+  test('a Hijri date is accepted and shown in both calendars', async ({ page }) => {
+    await page.goto('/en/apps/id-expiry')
+    await page.getByTestId('exp-calendar').selectOption('hijri')
+    await page.getByTestId('exp-h-year').fill('1450')
+    await page.getByTestId('exp-h-day').fill('15')
+    await page.getByTestId('exp-add').click()
+    await expect(page.getByTestId('exp-list')).toContainText('1450')
+    await expect(page.getByTestId('exp-list')).toContainText(/20\d\d/)
+  })
+
+  test('removing a document clears it', async ({ page }) => {
+    await page.goto('/en/apps/id-expiry')
+    await page.getByTestId('exp-add').click()
+    await expect(page.getByTestId('exp-list')).toBeVisible()
+    await page.getByTestId('exp-remove').click()
+    await expect(page.getByTestId('exp-empty')).toBeVisible()
+  })
+})
+
+test.describe('2fa code generator', () => {
+  // RFC 6238 test vector: the ASCII secret "12345678901234567890" in base32.
+  const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
+
+  test('produces the RFC 6238 reference code for a known time', async ({ page }) => {
+    // setFixedTime, not install: an installed clock keeps ticking through page
+    // load, which pushed T=59s into the next 30-second window and changed the code.
+    await page.clock.setFixedTime(new Date(59_000))
+    await page.goto('/en/apps/totp')
+    await page.getByTestId('totp-secret').fill(RFC_SECRET)
+    await page.getByTestId('totp-digits').selectOption('8')
+    await page.getByTestId('totp-add').click()
+    await expect(page.getByTestId('totp-code')).toHaveText('94287082')
+  })
+
+  test('parses an otpauth link and picks up its settings', async ({ page }) => {
+    await page.goto('/en/apps/totp')
+    await page.getByTestId('totp-secret').fill('otpauth://totp/ACME:me@example.com?secret=' + RFC_SECRET + '&issuer=ACME&digits=6&period=60')
+    await page.getByTestId('totp-add').click()
+    await expect(page.getByTestId('totp-row')).toContainText('ACME')
+    await expect(page.getByTestId('totp-row')).toContainText('me@example.com')
+    await expect(page.getByTestId('totp-row')).toContainText('60s')
+    await expect(page.getByTestId('totp-code')).toHaveText(/^\d{6}$/)
+  })
+
+  test('rejects a secret that is not base32', async ({ page }) => {
+    await page.goto('/en/apps/totp')
+    await page.getByTestId('totp-secret').fill('not-a-secret-189!')
+    await page.getByTestId('totp-add').click()
+    await expect(page.getByTestId('totp-error')).toBeVisible()
+    await expect(page.getByTestId('totp-empty')).toBeVisible()
+  })
+
+  test('nothing is stored unless the user opts in', async ({ page }) => {
+    await page.goto('/en/apps/totp')
+    await page.getByTestId('totp-secret').fill(RFC_SECRET)
+    await page.getByTestId('totp-add').click()
+    await expect(page.getByTestId('totp-row')).toBeVisible()
+    expect(await page.evaluate(() => localStorage.getItem('bis-totp'))).toBe('[]')
+
+    await page.getByTestId('totp-remember').check()
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bis-totp') || '[]').length)).toBe(1)
+    await page.reload()
+    await expect(page.getByTestId('totp-row')).toBeVisible()
+  })
+})
+
+test.describe('password strength', () => {
+  test('does not let a padded common password look strong', async ({ page }) => {
+    await page.goto('/en/apps/password-strength')
+    await page.getByTestId('pw-input').fill('Password123!')
+    // Raw entropy would call this strong; the penalties are the whole point.
+    await expect(page.getByTestId('pw-score')).toHaveText(/Very weak|Weak/)
+    await expect(page.getByTestId('pw-findings')).toContainText('common word')
+  })
+
+  test('rates a long passphrase highly', async ({ page }) => {
+    await page.goto('/en/apps/password-strength')
+    await page.getByTestId('pw-input').fill('velvet-harbour-tumble-glint-42')
+    await expect(page.getByTestId('pw-score')).toHaveText('Very strong')
+    await expect(page.getByTestId('pw-crack')).not.toHaveText('instantly')
+  })
+
+  test('names the specific weakness it found', async ({ page }) => {
+    await page.goto('/en/apps/password-strength')
+    await page.getByTestId('pw-input').fill('qwerty1234')
+    await expect(page.getByTestId('pw-findings')).toContainText('keyboard walk')
+    await page.getByTestId('pw-input').fill('aaaaaaaaaaaa')
+    await expect(page.getByTestId('pw-findings')).toContainText('repeats')
+  })
+
+  test('the field is masked until asked otherwise', async ({ page }) => {
+    await page.goto('/en/apps/password-strength')
+    await expect(page.getByTestId('pw-input')).toHaveAttribute('type', 'password')
+    await page.getByTestId('pw-show').check()
+    await expect(page.getByTestId('pw-input')).toHaveAttribute('type', 'text')
+  })
+})
