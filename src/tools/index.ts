@@ -136,6 +136,10 @@ import { colorPaletteTool } from './color-palette/meta'
 import { jsonDiffTool } from './json-diff/meta'
 import { hexViewerTool } from './hex-viewer/meta'
 import { sunTimesTool } from './sun-times/meta'
+import { francoArabicTool } from './franco-arabic/meta'
+import { teamMakerTool } from './team-maker/meta'
+import { quotationTool } from './quotation/meta'
+import { charFinderTool } from './char-finder/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -161,6 +165,7 @@ export const tools: Tool[] = [
   saudiPhoneTool,
   arabicNumeralsTool,
   arabicNormalizeTool,
+  francoArabicTool,
   fixEncodingTool,
   promptAnalyzerTool,
   regexTesterTool,
@@ -208,11 +213,13 @@ export const tools: Tool[] = [
   readabilityTool,
   dataAnonymizeTool,
   invisibleCharsTool,
+  charFinderTool,
   slugifyTool,
   todoTool,
   flashcardsTool,
   kanbanTool,
   spinWheelTool,
+  teamMakerTool,
   randomPickerTool,
   diceRollerTool,
   countdownTool,
@@ -248,6 +255,7 @@ export const tools: Tool[] = [
   pdfEditTool,
   pdfCompressTool,
   invoiceGeneratorTool,
+  quotationTool,
   prayerTimesTool,
   islamicCalendarTool,
   adhkarTool,

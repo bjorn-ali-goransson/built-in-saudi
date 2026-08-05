@@ -619,6 +619,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'franco-arabic',
+    en: { name: 'Franco-Arabic Converter', description: 'Convert Franco-Arabic — the chat alphabet where 3 is ع, 7 is ح and 5 is خ — into proper Arabic writing, or go the other way. Common words are recognised whole so the result reads like Arabic, and genuinely ambiguous letters are listed so you can check them.' },
+    ar: { name: 'محوّل الفرانكو إلى عربي', description: 'حوّل الفرانكو — أبجدية الدردشة حيث ٣ تعني ع و٧ تعني ح و٥ تعني خ — إلى كتابة عربية سليمة، أو اعكس الاتجاه. تُعرف الكلمات الشائعة ككلمات كاملة ليقرأ الناتج كعربية، وتُذكر الحروف الملتبسة لتراجعها.' },
+  },
+  {
+    id: 'team-maker',
+    en: { name: 'Random Team Maker', description: 'Paste a list of names and split them into teams — by how many teams you want, or how many people each should hold. Name people to keep apart and they land on different teams. The shuffle uses cryptographic randomness with a proper Fisher-Yates, so every arrangement really is equally likely.' },
+    ar: { name: 'مولّد الفرق العشوائي', description: 'الصق قائمة أسماء ووزّعها على فرق — بعدد الفرق أو بعدد الأفراد في كل فريق. سمِّ من تريد الفصل بينهم فيقعون في فرق مختلفة. يستخدم الخلط عشوائية تعموية بخوارزمية فيشر-ييتس الصحيحة، فيكون كل ترتيب محتملًا بالتساوي.' },
+  },
+  {
+    id: 'quotation',
+    en: { name: 'Quotation & Receipt', description: 'Write a quotation, a proforma invoice or a payment receipt, bilingual and ready to print or save as PDF. Line items, 15% VAT, your terms, and the fields each document actually needs. It says plainly what these are not: neither is a tax invoice.' },
+    ar: { name: 'عرض سعر وسند قبض', description: 'اكتب عرض سعر أو فاتورة مبدئية أو سند قبض، بلغتين وجاهزًا للطباعة أو الحفظ PDF. بنود وضريبة ١٥٪ وشروطك، والحقول التي يحتاجها كل مستند. وتوضّح الأداة صراحةً أن أيًّا منها ليس فاتورة ضريبية.' },
+  },
+  {
+    id: 'char-finder',
+    en: { name: 'Character Finder', description: 'Search for the character you need by name — arrows, maths symbols, currency, Arabic marks and ligatures like ﷺ and ﷼, punctuation, ticks and crosses — then tap to copy. Inspect mode goes the other way: paste anything and see exactly what each character is.' },
+    ar: { name: 'باحث المحارف والرموز', description: 'ابحث عن المحرف الذي تريده بالاسم — أسهم ورموز رياضية وعملات وعلامات عربية وتركيبات مثل ﷺ و﷼ وعلامات ترقيم وصح وخطأ — ثم انقر لنسخه. ووضع الفحص يعمل بالعكس: الصق أي شيء لترى حقيقة كل محرف.' },
+  },
+  {
     id: 'paper-generator',
     en: { name: 'Printable Paper', description: 'Make your own paper and print it: graph paper, dot grid, ruled lines, isometric, Cornell notes, music staves, and a four-line Arabic handwriting guide. Set the spacing in millimetres, the margin, the ink and the page count. Downloads as a PDF, so the spacing you asked for is what prints.' },
     ar: { name: 'مولّد الورق للطباعة', description: 'اصنع ورقك واطبعه: ورق مربعات ونقاط ومسطّر ومتساوي القياس وملاحظات كورنيل ومدرّج موسيقي ومسطّر رباعي لتدريب الخط العربي. حدّد التباعد بالمليمتر والهامش واللون وعدد الصفحات. يُنزَّل بصيغة PDF، فالتباعد الذي طلبته هو ما يُطبع.' },
