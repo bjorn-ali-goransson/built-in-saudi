@@ -13,9 +13,9 @@ interface Section {
 const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; sections: Section[] }> = {
   en: {
     title: 'Privacy Policy',
-    updated: 'Last updated: 6 July 2026',
+    updated: 'Last updated: 5 August 2026',
     intro:
-      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — the Book With Me scheduling tool and the ATS CV Optimizer — with a dedicated section for each, and exactly what we do with it.',
+      'Built in Saudi is a toolbox of free, privacy-first online utilities. Our default is simple: almost every tool runs entirely in your browser, and your files and text never leave your device. This policy explains the few cases where data does reach our servers — scheduling, the CV optimizer, short links, calls and prayer alerts — with a dedicated section for each, and exactly what we do with it.',
     sections: [
       {
         h: 'Tools that run in your browser',
@@ -66,6 +66,15 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
+        h: 'Prayer times, adhkar and your location',
+        p: [
+          'Prayer times, qibla direction and the Hijri calendar are calculated on your device. Your coordinates are not sent to us to work them out.',
+          'If you choose “my location” instead of picking a city from the list, your browser asks a third-party service (BigDataCloud) to turn those coordinates into a city name for the label the tool shows. That single lookup goes straight from your browser and we never see it; picking a city from the list makes no request at all.',
+          'Switching on prayer or adhkar alerts is different, and this is the one place where your location is stored. A notification has to arrive when you are not on the site, so we save your coordinates, timezone, city label and your device’s notification subscription on our server, and use them only to work out when each alert is due.',
+          'That record is anonymous — no account is attached to it — so “Delete my data” below cannot find it. Turn alerts off in the Prayer Times or Adhkar tool and it is deleted immediately. It is also deleted automatically after 90 days if your device stops accepting notifications.',
+        ],
+      },
+      {
         h: 'Email and notifications',
         p: [
           'Booking confirmations are sent by email through Resend (our email provider) and include a calendar invite. Optional booking alerts are sent via Web Push and, if you connect it, Telegram. These carry only the details needed for the notification.',
@@ -85,6 +94,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
           'Client-side tool data lives only in your browser until you clear it. For Book With Me, your host record and bookings are kept while your scheduling link is active. To delete your data, revoke Google access and email us and we will remove your host record and bookings.',
           'The ATS CV Optimizer stores no CV content — only short-lived usage counters that reset over time, so there is nothing of yours to delete there.',
           'Short links you create are kept for 6 months, then expire and are deleted automatically; you can also delete them yourself at any time.',
+          'Prayer and adhkar alert subscriptions (which hold your coordinates) are deleted the moment you turn alerts off, and automatically after 90 days of inactivity. Personal call links are deleted 6 months after their last use, or whenever you remove them.',
         ],
       },
       {
@@ -95,9 +105,9 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
   },
   ar: {
     title: 'سياسة الخصوصية',
-    updated: 'آخر تحديث: ٦ يوليو ٢٠٢٦',
+    updated: 'آخر تحديث: ٥ أغسطس ٢٠٢٦',
     intro:
-      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — أداة «احجز معي» ومحسِّن السيرة الذاتية (ATS)، ولكلٍّ قسم مستقل — وما نفعله بها بالضبط.',
+      '«بُنِيَ في السعودية» صندوق أدوات مجانية تحترم خصوصيتك. الأصل بسيط: تعمل جميع الأدوات تقريبًا داخل متصفحك بالكامل، ولا تغادر ملفاتك ونصوصك جهازك. توضّح هذه السياسة الحالات القليلة التي تصل فيها بيانات إلى خوادمنا — الحجز، ومحسِّن السيرة الذاتية، والروابط المختصرة، والمكالمات، وتنبيهات الصلاة — ولكلٍّ قسم مستقل، وما نفعله بها بالضبط.',
     sections: [
       {
         h: 'أدوات تعمل داخل متصفحك',
@@ -148,6 +158,15 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         ],
       },
       {
+        h: 'أوقات الصلاة والأذكار وموقعك',
+        p: [
+          'تُحسب أوقات الصلاة واتجاه القبلة والتقويم الهجري على جهازك، ولا تُرسَل إحداثياتك إلينا لحسابها.',
+          'إذا اخترت «موقعي» بدل اختيار مدينة من القائمة، فإن متصفحك يسأل خدمة خارجية (BigDataCloud) لتحويل تلك الإحداثيات إلى اسم مدينة يظهر في الأداة. يذهب هذا الطلب الواحد من متصفحك مباشرةً ولا نراه نحن؛ أما اختيار مدينة من القائمة فلا يُرسل أي طلب إطلاقًا.',
+          'أما تفعيل تنبيهات الصلاة أو الأذكار فمختلف، وهو الموضع الوحيد الذي يُخزَّن فيه موقعك. فالإشعار يجب أن يصلك وأنت خارج الموقع، لذلك نحفظ إحداثياتك ومنطقتك الزمنية واسم مدينتك واشتراك الإشعارات لجهازك على خادمنا، ونستخدمها فقط لحساب موعد كل تنبيه.',
+          'هذا السجل مجهول — لا حساب مرتبط به — لذا لا يستطيع «احذف بياناتي» أدناه العثور عليه. أوقف التنبيهات من أداة أوقات الصلاة أو الأذكار فيُحذف فورًا. ويُحذف تلقائيًا بعد ٩٠ يومًا إذا توقّف جهازك عن قبول الإشعارات.',
+        ],
+      },
+      {
         h: 'البريد والإشعارات',
         p: [
           'تُرسَل تأكيدات الحجز بالبريد عبر Resend (مزوّد البريد لدينا) وتتضمن دعوة تقويم. وتُرسَل التنبيهات الاختيارية عبر إشعارات الويب، وتيليجرام إن ربطته، ولا تحمل إلا تفاصيل الإشعار.',
@@ -167,6 +186,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
           'تبقى بيانات الأدوات في متصفحك حتى تمسحها. أما «احجز معي» فيُحفظ سجلك وحجوزاتك ما دام رابط الحجز نشطًا. لحذف بياناتك، ألغِ وصول جوجل وراسلنا وسنحذف سجلك وحجوزاتك.',
           'لا يخزّن محسِّن السيرة الذاتية أي محتوى — بل عدّادات استخدام قصيرة العمر تتجدد مع الوقت، فلا يوجد ما يُحذف هناك.',
           'تُحفظ الروابط القصيرة التي تنشئها لمدة ٦ أشهر ثم تنتهي وتُحذف تلقائيًا، ويمكنك أيضًا حذفها بنفسك في أي وقت.',
+          'تُحذف اشتراكات تنبيهات الصلاة والأذكار (التي تحوي إحداثياتك) فور إيقاف التنبيهات، وتلقائيًا بعد ٩٠ يومًا من الخمول. وتُحذف روابط الاتصال الشخصية بعد ٦ أشهر من آخر استخدام، أو متى أزلتها.',
         ],
       },
       {
