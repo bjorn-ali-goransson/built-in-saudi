@@ -619,6 +619,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'barcode',
+    en: { name: 'Barcode Generator', description: 'Generate a real, scannable barcode — EAN-13 and EAN-8 for retail, UPC-A for North America, and Code 128 for any text on a shipping or shelf label. The check digit is calculated for you and the quiet zone is included, because without it a scanner cannot find the code.' },
+    ar: { name: 'مولّد الباركود', description: 'ولّد باركود حقيقيًا قابلًا للمسح — EAN-13 وEAN-8 للتجزئة، وUPC-A لأمريكا الشمالية، وCode 128 لأي نص على ملصق شحن أو رف. يُحسب رقم التحقق نيابةً عنك، ويُضمَّن الهامش الصامت لأن الماسح لا يجد الرمز بدونه.' },
+  },
+  {
+    id: 'curl-convert',
+    en: { name: 'cURL Converter', description: 'Copy a request as cURL from your browser’s network tab and paste it here to get the same request as fetch, Node, axios, Python requests or HTTPie. Quoting, line continuations, multiple headers and JSON bodies are handled properly, and nothing leaves the page.' },
+    ar: { name: 'محوّل أوامر cURL', description: 'انسخ طلبًا بصيغة cURL من تبويب الشبكة في متصفحك والصقه هنا لتحصل عليه بصيغة fetch أو Node أو axios أو Python requests أو HTTPie. تُعالَج علامات الاقتباس وأسطر المتابعة والترويسات وأجسام JSON بشكل صحيح، ولا يغادر شيء الصفحة.' },
+  },
+  {
+    id: 'coordinates',
+    en: { name: 'Coordinate Converter', description: 'Paste coordinates in any common form — decimal, degrees-minutes-seconds, or degrees and decimal minutes — and get every other form back, including UTM and MGRS for survey and field maps. Add a second point for the distance and bearing between them.' },
+    ar: { name: 'محوّل الإحداثيات', description: 'الصق إحداثيات بأي صيغة شائعة — عشرية أو درجات ودقائق وثوانٍ أو درجات ودقائق عشرية — لتحصل على بقية الصيغ، بما فيها UTM وMGRS لخرائط المساحة والميدان. أضف نقطة ثانية لتعرف المسافة والاتجاه بينهما.' },
+  },
+  {
+    id: 'url-parser',
+    en: { name: 'URL Parser & Builder', description: 'Break a URL into its scheme, host, path, fragment and query parameters, edit any of them, and get a correctly-encoded URL back. It also spots tracking parameters — utm_*, gclid, fbclid and friends — and strips them in one click.' },
+    ar: { name: 'محلّل الروابط ومحرّرها', description: 'فكّك رابطًا إلى بروتوكوله ومضيفه ومساره وجزئه ومعاملاته، وعدّل أيًّا منها، ثم احصل على رابط مُرمّز بشكل صحيح. وتكشف الأداة معاملات التتبّع — ‎utm_*‎ وgclid وfbclid وأمثالها — وتزيلها بنقرة واحدة.' },
+  },
+  {
+    id: 'link-preview',
+    en: { name: 'Link Preview Checker', description: 'Paste your page’s meta tags and see the card WhatsApp, X, LinkedIn and Facebook will actually render, then a list of what will go wrong — a missing og:image, a title that will be truncated, a relative image path crawlers will not resolve.' },
+    ar: { name: 'فاحص معاينة الروابط', description: 'الصق وسوم صفحتك وشاهد البطاقة التي سيعرضها واتساب وإكس ولينكدإن وفيسبوك فعلًا، ثم قائمة بما سيختل — صورة og مفقودة، أو عنوان سيُقتطع، أو مسار صورة نسبي لن تحلّه الزواحف.' },
+  },
+  {
     id: 'csv-clean',
     en: { name: 'CSV Cleaner', description: 'Clean up a CSV without opening a spreadsheet — trim stray spaces, drop blank rows and entirely empty columns, and remove duplicate rows. It detects the separator itself and flags rows whose field count does not match the header, which is what usually breaks an import.' },
     ar: { name: 'منظّف ملفات CSV', description: 'نظّف ملف CSV دون فتح برنامج جداول — شذّب المسافات الزائدة، واحذف الصفوف الفارغة والأعمدة الفارغة، وأزل الصفوف المكرّرة. تكتشف الأداة الفاصل بنفسها وتُظهر الصفوف التي يختلف عدد حقولها عن العناوين، وهو ما يُفسد الاستيراد عادةً.' },

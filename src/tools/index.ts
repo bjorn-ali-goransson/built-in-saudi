@@ -126,6 +126,11 @@ import { dataAnonymizeTool } from './data-anonymize/meta'
 import { invisibleCharsTool } from './invisible-chars/meta'
 import { timezonePlannerTool } from './timezone-planner/meta'
 import { calorieNeedsTool } from './calorie-needs/meta'
+import { barcodeTool } from './barcode/meta'
+import { curlConvertTool } from './curl-convert/meta'
+import { coordinatesTool } from './coordinates/meta'
+import { urlParserTool } from './url-parser/meta'
+import { linkPreviewTool } from './link-preview/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -160,6 +165,8 @@ export const tools: Tool[] = [
   textDiffTool,
   unixTimestampTool,
   urlEncoderTool,
+  urlParserTool,
+  curlConvertTool,
   baseConverterTool,
   csvJsonTool,
   csvCleanTool,
@@ -175,6 +182,7 @@ export const tools: Tool[] = [
   ageCalculatorTool,
   workingDaysTool,
   timezonePlannerTool,
+  coordinatesTool,
   calorieNeedsTool,
   cubicBezierTool,
   boxShadowTool,
@@ -182,6 +190,7 @@ export const tools: Tool[] = [
   ipSubnetTool,
   userAgentTool,
   metaTagsTool,
+  linkPreviewTool,
   robotsTxtTool,
   gitignoreTool,
   jsonToTypesTool,
@@ -213,6 +222,7 @@ export const tools: Tool[] = [
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
+  barcodeTool,
   imageCompressorTool,
   imageFormatConverterTool,
   imageCropperTool,
