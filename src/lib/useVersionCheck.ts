@@ -52,6 +52,11 @@ export function useVersionCheck(): UpdateState {
     // visibilitychange and focus BOTH fire when returning to a mobile tab, so an
     // unguarded check ran twice and could reload twice over. One at a time.
     let checking = false
+    // A trigger that arrives mid-check is remembered, not dropped. The check in
+    // flight was started BEFORE the newer build was published, so it answers
+    // "nothing new" and the user's return-to-tab is silently lost — they then
+    // wait out the 60s poll on a stale shell.
+    let queued: false | { force: boolean } = false
     let reloading = false
     let pendingBuild = ''  // a build we've deferred because work is in progress
 
@@ -72,7 +77,8 @@ export function useVersionCheck(): UpdateState {
     // does reload even mid-call — if you were away, the call is likely stale and you
     // should land on the latest version (#206).
     const check = async (force = false) => {
-      if (checking || reloading) return
+      if (reloading) return
+      if (checking) { queued = { force: force || (queued ? queued.force : false) }; return }
       checking = true
       // Only show the blocking "checking" state if it's actually slow; a normal
       // ~330ms check should be invisible.
@@ -97,6 +103,11 @@ export function useVersionCheck(): UpdateState {
         checking = false
         // Don't clobber an offer or an in-flight reload.
         setState((s) => (s.phase === 'checking' ? { phase: 'idle' } : s))
+        if (queued && !stopped && !reloading) {
+          const again = queued
+          queued = false
+          void check(again.force)
+        }
       }
     }
 

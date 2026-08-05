@@ -1343,6 +1343,11 @@ test.describe('update gate', () => {
   })
 
   test('with an image loaded, the update is OFFERED, never taken', async ({ page }) => {
+    // Route installed BEFORE navigating: otherwise a focus/visibility check fired
+    // during page load races the one this test dispatches, and on a slow runner
+    // the real version.json wins.
+    await page.route('**/version.json*', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
     await page.goto('/en/apps/image-format-converter')
     // Load a real image so the tool declares work in progress.
     await page.locator('input[type=file]').setInputFiles({
@@ -1351,8 +1356,6 @@ test.describe('update gate', () => {
     })
     await expect(page.getByTestId('ifc-download')).toBeVisible({ timeout: 20_000 })
 
-    await page.route('**/version.json*', (r) =>
-      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
     await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
     // Offered, not applied: the work survives and the page did not reload.
