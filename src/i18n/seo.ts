@@ -619,6 +619,26 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'passport-photo',
+    en: { name: 'Passport Photo Maker', description: 'Turn an ordinary photo into an ID photo at the right size — Saudi 4×6 cm, the 35×45 mm passport standard, US 2×2 in and more. Guides show where your head, chin and eyes must sit, and you can print several on one sheet with cut lines. Never uploaded.' },
+    ar: { name: 'مولّد صور الجواز والمعاملات', description: 'حوّل صورة عادية إلى صورة رسمية بالمقاس الصحيح — ٤×٦ سم السعودي، ومعيار الجواز ٣٥×٤٥ مم، و٢×٢ إنش وغيرها. تُظهر الخطوط أين يقع الرأس والذقن والعينان، ويمكنك طباعة عدة نسخ على ورقة واحدة مع خطوط القص. لا تُرفع أبدًا.' },
+  },
+  {
+    id: 'audio-trim',
+    en: { name: 'Audio Trimmer', description: 'Open an MP3, M4A, WAV, OGG or FLAC, drag across the waveform to pick the part you want, listen back, and save just that. A short fade at each end stops the cut clicking. Nothing is uploaded.' },
+    ar: { name: 'قص الملفات الصوتية', description: 'افتح ملف MP3 أو M4A أو WAV أو OGG أو FLAC، واسحب على الموجة لاختيار الجزء الذي تريده، واستمع إليه، ثم احفظه وحده. ويمنع تلاشٍ قصير في الطرفين صوت الطقطقة. لا يُرفع شيء.' },
+  },
+  {
+    id: 'video-audio',
+    en: { name: 'Extract Audio from Video', description: 'Pull the soundtrack out of an MP4, MOV, WebM or MKV and save it as an audio file. The video is decoded in your browser — never uploaded, never watched, and only the audio track is read.' },
+    ar: { name: 'استخراج الصوت من الفيديو', description: 'استخرج المسار الصوتي من ملف MP4 أو MOV أو WebM أو MKV واحفظه ملفًا صوتيًا. يُفك ترميز الفيديو داخل متصفحك — فلا يُرفع، ولا يُشاهَد، ولا يُقرأ منه إلا مسار الصوت.' },
+  },
+  {
+    id: 'pdf-to-text',
+    en: { name: 'PDF to Text', description: 'Get the words out of a PDF as plain text — page by page, in reading order, ready to paste anywhere. If the PDF is a scan with no text in it, the tool says so and points you at OCR instead of handing you an empty box.' },
+    ar: { name: 'PDF إلى نص', description: 'استخرج كلمات ملف PDF كنص عادي — صفحةً صفحة وبترتيب القراءة، جاهزًا للصق. وإن كان الملف صورة ممسوحة بلا نص، تخبرك الأداة وتحيلك إلى التعرّف الضوئي بدل صندوق فارغ.' },
+  },
+  {
     id: 'weather',
     en: { name: 'Weather', description: 'A clean forecast for any Saudi city or your own location: current conditions, the next 24 hours, the week ahead with Hijri dates, UV, and the dust and PM10 reading that matters here — plus the temperature at each prayer time. Prayer times are worked out on your device.' },
     ar: { name: 'الطقس', description: 'نشرة جوية نظيفة لأي مدينة سعودية أو لموقعك: الحالة الآن، والـ٢٤ ساعة القادمة، والأسبوع القادم بالتواريخ الهجرية، والأشعة فوق البنفسجية، وقراءة الغبار وPM10 المهمة هنا — مع درجة الحرارة عند كل وقت صلاة. تُحسب أوقات الصلاة على جهازك.' },

@@ -5,3 +5,4 @@ export { Field, FieldLabel, Check, Stack, StackActions, Panel, CodeOut, Seg, Seg
 export { Sheet, SheetTitle, SheetActions } from './Sheet'
 export { Spinner } from './Spinner'
 export { FileError } from './FileError'
+export { Waveform } from './Waveform'

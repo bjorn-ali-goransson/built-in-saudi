@@ -112,6 +112,10 @@ import { weatherTool } from './weather/meta'
 import { idExpiryTool } from './id-expiry/meta'
 import { totpTool } from './totp/meta'
 import { passwordStrengthTool } from './password-strength/meta'
+import { passportPhotoTool } from './passport-photo/meta'
+import { audioTrimTool } from './audio-trim/meta'
+import { videoAudioTool } from './video-audio/meta'
+import { pdfToTextTool } from './pdf-to-text/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -123,7 +127,10 @@ export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
   removeBackgroundTool,
+  passportPhotoTool,
   weatherTool,
+  audioTrimTool,
+  videoAudioTool,
   currencyConverterTool,
   idExpiryTool,
   totpTool,
@@ -195,6 +202,7 @@ export const tools: Tool[] = [
   pdfMergeTool,
   pdfSplitTool,
   pdfToImagesTool,
+  pdfToTextTool,
   imageToTextTool,
   qrReaderTool,
   metadataRemoveTool,
