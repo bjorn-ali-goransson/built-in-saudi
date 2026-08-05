@@ -131,6 +131,11 @@ import { curlConvertTool } from './curl-convert/meta'
 import { coordinatesTool } from './coordinates/meta'
 import { urlParserTool } from './url-parser/meta'
 import { linkPreviewTool } from './link-preview/meta'
+import { paperGeneratorTool } from './paper-generator/meta'
+import { colorPaletteTool } from './color-palette/meta'
+import { jsonDiffTool } from './json-diff/meta'
+import { hexViewerTool } from './hex-viewer/meta'
+import { sunTimesTool } from './sun-times/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -163,6 +168,7 @@ export const tools: Tool[] = [
   cronExplainerTool,
   cronBuilderTool,
   textDiffTool,
+  jsonDiffTool,
   unixTimestampTool,
   urlEncoderTool,
   urlParserTool,
@@ -183,6 +189,7 @@ export const tools: Tool[] = [
   workingDaysTool,
   timezonePlannerTool,
   coordinatesTool,
+  sunTimesTool,
   calorieNeedsTool,
   cubicBezierTool,
   boxShadowTool,
@@ -214,6 +221,7 @@ export const tools: Tool[] = [
   imageToAsciiTool,
   memeGeneratorTool,
   faviconGeneratorTool,
+  paperGeneratorTool,
   steganographyTool,
   imageRedactTool,
   photoBoothTool,
@@ -269,7 +277,9 @@ export const tools: Tool[] = [
   vatCalculatorTool,
   dateDiffTool,
   zipInspectorTool,
+  hexViewerTool,
   metadataTool,
+  colorPaletteTool,
   colorToolsTool,
 
 ]

@@ -619,6 +619,31 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
   },
   {
+    id: 'paper-generator',
+    en: { name: 'Printable Paper', description: 'Make your own paper and print it: graph paper, dot grid, ruled lines, isometric, Cornell notes, music staves, and a four-line Arabic handwriting guide. Set the spacing in millimetres, the margin, the ink and the page count. Downloads as a PDF, so the spacing you asked for is what prints.' },
+    ar: { name: 'مولّد الورق للطباعة', description: 'اصنع ورقك واطبعه: ورق مربعات ونقاط ومسطّر ومتساوي القياس وملاحظات كورنيل ومدرّج موسيقي ومسطّر رباعي لتدريب الخط العربي. حدّد التباعد بالمليمتر والهامش واللون وعدد الصفحات. يُنزَّل بصيغة PDF، فالتباعد الذي طلبته هو ما يُطبع.' },
+  },
+  {
+    id: 'color-palette',
+    en: { name: 'Palette from Image', description: 'Extract the palette from any image — the colours that are actually in it, ranked by how much of the picture each covers, with hex, RGB and HSL. Export as CSS custom properties, a Tailwind colour block or JSON. The same image always gives the same palette.' },
+    ar: { name: 'استخراج لوحة الألوان من صورة', description: 'استخرج لوحة الألوان من أي صورة — الألوان الموجودة فيها فعلًا، مرتّبة بحسب مساحتها، مع قيم hex وRGB وHSL. صدّرها متغيّرات CSS أو كتلة ألوان Tailwind أو JSON. الصورة نفسها تعطي اللوحة نفسها دائمًا.' },
+  },
+  {
+    id: 'json-diff',
+    en: { name: 'JSON Diff', description: 'A line diff on JSON is close to useless: reformatting makes every line look changed while the data is identical. This compares values by path and lists exactly what was added, removed or changed, with an option to treat arrays as unordered.' },
+    ar: { name: 'مقارنة ملفات JSON', description: 'المقارنة السطرية لملفات JSON عديمة الجدوى تقريبًا: إعادة التنسيق تجعل كل سطر يبدو متغيّرًا والبيانات نفسها. تقارن هذه الأداة القيم بالمسار وتسرد ما أُضيف وما حُذف وما تغيّر، مع خيار التعامل مع المصفوفات كغير مرتّبة.' },
+  },
+  {
+    id: 'hex-viewer',
+    en: { name: 'Hex Viewer', description: 'Open any file and look at its actual bytes, with the printable characters alongside so embedded strings stand out. It reads the magic number to say what the file really is, and tells you when the extension and the contents disagree. Search for text or bytes, and jump to any offset.' },
+    ar: { name: 'عارض الملفات السداسي عشري', description: 'افتح أي ملف واطّلع على بايتاته الفعلية، مع المحارف المقروءة بجانبها لتبرز النصوص المخبوءة. تقرأ الأداة الرقم السحري لتخبرك بحقيقة الملف، وتنبّهك حين يختلف الامتداد عن المحتوى. ابحث عن نص أو بايتات وانتقل إلى أي إزاحة.' },
+  },
+  {
+    id: 'sun-times',
+    en: { name: 'Sunrise, Sunset & Golden Hour', description: 'Sunrise, sunset, solar noon, the three twilights, and the golden and blue hours for any place and date — computed from the sun’s actual altitude rather than a rule of thumb like “an hour after sunrise”. Shows the Hijri date and prayer times for the same spot.' },
+    ar: { name: 'الشروق والغروب والساعة الذهبية', description: 'الشروق والغروب والظهيرة الشمسية والشفق بأنواعه الثلاثة والساعتان الذهبية والزرقاء لأي مكان وتاريخ — محسوبة من ارتفاع الشمس الفعلي لا من قاعدة تقريبية مثل «ساعة بعد الشروق». وتعرض التاريخ الهجري وأوقات الصلاة للموضع نفسه.' },
+  },
+  {
     id: 'barcode',
     en: { name: 'Barcode Generator', description: 'Generate a real, scannable barcode — EAN-13 and EAN-8 for retail, UPC-A for North America, and Code 128 for any text on a shipping or shelf label. The check digit is calculated for you and the quiet zone is included, because without it a scanner cannot find the code.' },
     ar: { name: 'مولّد الباركود', description: 'ولّد باركود حقيقيًا قابلًا للمسح — EAN-13 وEAN-8 للتجزئة، وUPC-A لأمريكا الشمالية، وCode 128 لأي نص على ملصق شحن أو رف. يُحسب رقم التحقق نيابةً عنك، ويُضمَّن الهامش الصامت لأن الماسح لا يجد الرمز بدونه.' },
