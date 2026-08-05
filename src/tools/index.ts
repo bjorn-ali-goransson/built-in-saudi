@@ -103,6 +103,11 @@ import { arabicVerbsTool } from './arabic-verbs/meta'
 import { diacritizeTool } from './diacritize/meta'
 import { removeBackgroundTool } from './remove-background/meta'
 import { currencyConverterTool } from './currency-converter/meta'
+import { subtitleEditorTool } from './subtitle-editor/meta'
+import { arabicNumeralsTool } from './arabic-numerals/meta'
+import { saudiPhoneTool } from './saudi-phone/meta'
+import { arabicNormalizeTool } from './arabic-normalize/meta'
+import { fixEncodingTool } from './fix-encoding/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -115,6 +120,11 @@ export const tools: Tool[] = [
   callsTool,
   removeBackgroundTool,
   currencyConverterTool,
+  subtitleEditorTool,
+  saudiPhoneTool,
+  arabicNumeralsTool,
+  arabicNormalizeTool,
+  fixEncodingTool,
   promptAnalyzerTool,
   regexTesterTool,
   jwtDecoderTool,

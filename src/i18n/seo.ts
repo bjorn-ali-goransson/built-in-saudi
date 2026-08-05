@@ -598,4 +598,29 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'File Metadata', description: 'Reveal a file’s metadata in your browser — size, image dimensions, camera EXIF with GPS, PNG text, PDF info and media tags. Nothing is uploaded.' },
     ar: { name: 'بيانات الملف', description: 'اكشف البيانات الوصفية لملفٍ داخل متصفحك — الحجم وأبعاد الصورة وبيانات EXIF مع GPS ونصوص PNG ومعلومات PDF ووسوم الوسائط. دون رفع أي شيء.' },
   },
+  {
+    id: 'subtitle-editor',
+    en: { name: 'Subtitle Editor', description: 'Open an .srt or .vtt file and fix it: shift every timing earlier or later, apply a frame-rate correction for subtitles that drift, edit any line or timestamp by hand, and save back as SRT or WebVTT. Your file is never uploaded.' },
+    ar: { name: 'محرّر ملفات الترجمة', description: 'افتح ملف ‎.srt أو ‎.vtt وأصلحه: أزِح كل التوقيتات للأمام أو للخلف، وطبّق تصحيح معدّل الإطارات للترجمة المنحرفة، وعدّل أي سطر أو توقيت يدويًا، ثم احفظ بصيغة SRT أو WebVTT. لا يُرفع ملفك أبدًا.' },
+  },
+  {
+    id: 'saudi-phone',
+    en: { name: 'Saudi Phone Formatter', description: 'Clean up and check Saudi phone numbers. Paste one in any shape — with or without +966, the leading zero, spaces or Arabic-Indic digits — and get the E.164, national and international forms, mobile or landline, the area, and a WhatsApp link. Bulk mode validates a whole list.' },
+    ar: { name: 'منسّق الأرقام السعودية', description: 'نظّف أرقام الهاتف السعودية وتحقّق منها. الصق رقمًا بأي صيغة — بـ+966 أو بدونه، بالصفر أو بدونه، بمسافات أو أرقام هندية — واحصل على صيغ E.164 والمحلية والدولية، ونوعه جوال أم أرضي، والمنطقة، ورابط واتساب. ووضع القوائم يتحقق من قائمة كاملة دفعة واحدة.' },
+  },
+  {
+    id: 'arabic-numerals',
+    en: { name: 'Arabic Numerals Converter', description: 'Convert the digits in any text between Western (0123), Arabic-Indic (٠١٢٣) and Persian (۰۱۲۳) shapes — paste a sentence, a table or a whole document and only the numbers change. Decimal and thousands marks travel with them.' },
+    ar: { name: 'محوّل الأرقام العربية والهندية', description: 'حوّل الأرقام داخل أي نص بين الأشكال الإنجليزية (0123) والهندية (٠١٢٣) والفارسية (۰۱۲۳) — الصق جملة أو جدولًا أو مستندًا كاملًا ولن يتغيّر سوى الأرقام، وتنتقل معها علامتا العشرية والآلاف.' },
+  },
+  {
+    id: 'arabic-normalize',
+    en: { name: 'Arabic Text Normalizer', description: 'Clean up Arabic text: remove diacritics (تشكيل) and kashida stretching, unify أ إ آ ٱ to ا and ى to ي, drop invisible characters and collapse stray spaces — so the same word typed two ways finally matches in a search or a database.' },
+    ar: { name: 'موحّد النص العربي', description: 'نظّف النص العربي: أزل التشكيل والتطويل، ووحّد أ إ آ ٱ إلى ا وى إلى ي، واحذف المحارف الخفية، وادمج المسافات الزائدة — لتتطابق الكلمة نفسها مهما اختلفت طريقة كتابتها في البحث أو قاعدة البيانات.' },
+  },
+  {
+    id: 'fix-encoding',
+    en: { name: 'Fix Garbled Text', description: 'Repair text that arrived as Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© or â€™ instead of readable characters — the classic mojibake you get when UTF-8 is opened as the wrong codepage. It works out which encoding mangled it and undoes the damage.' },
+    ar: { name: 'إصلاح النص المشوّه', description: 'أصلح النص الذي وصل على شكل Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© أو â€™ بدل الحروف المقروءة — التشويه المعتاد حين يُفتح ترميز UTF-8 بترميز خاطئ. تكتشف الأداة الترميز الذي أفسده وتُلغي الضرر.' },
+  },
 ]

@@ -1499,4 +1499,74 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-rearrange"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-rearrange"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/subtitle-editor/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/subtitle-editor"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/subtitle-editor"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/subtitle-editor"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/subtitle-editor/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/subtitle-editor"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/subtitle-editor"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/subtitle-editor"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/saudi-phone/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/saudi-phone"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/saudi-phone"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/saudi-phone"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/saudi-phone/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/saudi-phone"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/saudi-phone"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/saudi-phone"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/arabic-numerals/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-numerals"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-numerals"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-numerals"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/arabic-numerals/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-numerals"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-numerals"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-numerals"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/arabic-normalize/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-normalize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-normalize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-normalize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/arabic-normalize/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-normalize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-normalize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-normalize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/fix-encoding/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/fix-encoding"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/fix-encoding"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/fix-encoding"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/fix-encoding/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/fix-encoding"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/fix-encoding"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/fix-encoding"/>
+  </url>
 </urlset>

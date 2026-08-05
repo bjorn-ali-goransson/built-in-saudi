@@ -1439,3 +1439,146 @@ test.describe('rearrange image', () => {
     expect((await dl).suggestedFilename()).toBe('rearranged.png')
   })
 })
+
+test.describe('arabic numerals', () => {
+  test('flips Arabic-Indic digits to Western and back', async ({ page }) => {
+    await page.goto('/en/apps/arabic-numerals')
+    await page.getByTestId('num-input').fill('الفاتورة ١٢٣٤٫٥٦ ريال')
+    await expect(page.getByTestId('num-detected')).toContainText('Arabic-Indic')
+    // Auto-target: text is Arabic-Indic only, so it converts to Western.
+    await expect(page.getByTestId('num-output')).toHaveValue('الفاتورة 1234.56 ريال')
+    await page.getByTestId('num-to-arabic').click()
+    await expect(page.getByTestId('num-output')).toHaveValue('الفاتورة ١٢٣٤٫٥٦ ريال')
+  })
+
+  test('a full stop ending a sentence is not turned into a decimal mark', async ({ page }) => {
+    await page.goto('/en/apps/arabic-numerals')
+    await page.getByTestId('num-input').fill('عدد 5. تم')
+    await page.getByTestId('num-to-arabic').click()
+    await expect(page.getByTestId('num-output')).toHaveValue('عدد ٥. تم')
+  })
+})
+
+test.describe('arabic normalizer', () => {
+  test('strips tashkeel and unifies alef and yaa', async ({ page }) => {
+    await page.goto('/en/apps/arabic-normalize')
+    await page.getByTestId('norm-input').fill('مُحَمَّد أحمد إلى مصطفى')
+    await expect(page.getByTestId('norm-output')).toHaveValue('محمد احمد الي مصطفي')
+    await expect(page.getByTestId('norm-found')).toBeVisible()
+  })
+
+  test('turning a rule off leaves those letters alone', async ({ page }) => {
+    await page.goto('/en/apps/arabic-normalize')
+    await page.getByTestId('norm-input').fill('أحمد')
+    await expect(page.getByTestId('norm-output')).toHaveValue('احمد')
+    await page.getByTestId('norm-alef').uncheck()
+    await expect(page.getByTestId('norm-output')).toHaveValue('أحمد')
+  })
+})
+
+test.describe('fix garbled text', () => {
+  test('recovers Arabic mangled as windows-1252', async ({ page }) => {
+    await page.goto('/en/apps/fix-encoding')
+    await page.getByTestId('enc-sample').click()
+    await expect(page.getByTestId('enc-output')).toHaveValue('السلام عليكم')
+    await expect(page.getByTestId('enc-via')).toContainText('windows-1252')
+  })
+
+  test('intact text is reported as needing no repair', async ({ page }) => {
+    await page.goto('/en/apps/fix-encoding')
+    await page.getByTestId('enc-input').fill('perfectly fine text')
+    await expect(page.getByTestId('enc-none')).toContainText('already looks intact')
+  })
+})
+
+test.describe('saudi phone', () => {
+  test('normalises every shape of the same mobile number', async ({ page }) => {
+    await page.goto('/en/apps/saudi-phone')
+    for (const shape of ['0501234567', '+966 50 123 4567', '966501234567', '٠٥٠١٢٣٤٥٦٧']) {
+      await page.getByTestId('ph-input').fill(shape)
+      await expect(page.getByTestId('ph-e164')).toHaveText('+966501234567')
+      await expect(page.getByTestId('ph-nat')).toHaveText('050 123 4567')
+      await expect(page.getByTestId('ph-kind')).toHaveText('Mobile')
+    }
+    // The prefix is reported as an allocation, never as today's operator.
+    await expect(page.getByTestId('ph-operator')).toContainText('stc')
+  })
+
+  test('recognises a landline and names its region', async ({ page }) => {
+    await page.goto('/en/apps/saudi-phone')
+    await page.getByTestId('ph-input').fill('011 456 7890')
+    await expect(page.getByTestId('ph-kind')).toHaveText('Landline')
+    await expect(page.getByTestId('ph-result')).toContainText('Riyadh')
+  })
+
+  test('rejects a number that is the wrong length', async ({ page }) => {
+    await page.goto('/en/apps/saudi-phone')
+    await page.getByTestId('ph-input').fill('05012345')
+    await expect(page.getByTestId('ph-invalid')).toBeVisible()
+  })
+
+  test('bulk mode counts the valid ones', async ({ page }) => {
+    await page.goto('/en/apps/saudi-phone')
+    await page.getByTestId('ph-mode-many').click()
+    await page.getByTestId('ph-list').fill('0501234567\n0129999999\nnot a number\n+966561112222')
+    await expect(page.getByTestId('ph-summary')).toHaveText('3 of 4 valid')
+  })
+})
+
+test.describe('subtitle editor', () => {
+  const SRT = [
+    '1', '00:00:01,000 --> 00:00:03,000', 'Hello there', '',
+    '2', '00:00:04,500 --> 00:00:06,000', 'Second line', '',
+  ].join('\n')
+
+  test('parses, shifts every cue, and exports SRT', async ({ page }) => {
+    await page.goto('/en/apps/subtitle-editor')
+    await page.getByTestId('sub-paste').fill(SRT)
+    await expect(page.getByTestId('sub-count')).toHaveText('2 cues')
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:01,000')
+
+    await page.getByTestId('sub-offset').fill('2')
+    await page.getByTestId('sub-later').click()
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:03,000')
+    await page.getByTestId('sub-earlier').click()
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:01,000')
+
+    const dl = page.waitForEvent('download')
+    await page.getByTestId('sub-download').click()
+    expect((await dl).suggestedFilename()).toBe('subtitles.srt')
+  })
+
+  test('shifting earlier never produces a negative timestamp', async ({ page }) => {
+    await page.goto('/en/apps/subtitle-editor')
+    await page.getByTestId('sub-paste').fill(SRT)
+    await page.getByTestId('sub-offset').fill('30')
+    await page.getByTestId('sub-earlier').click()
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:00,000')
+  })
+
+  test('converts to WebVTT, dots and all', async ({ page }) => {
+    await page.goto('/en/apps/subtitle-editor')
+    await page.getByTestId('sub-paste').fill(SRT)
+    await page.getByTestId('sub-fmt-vtt').click()
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:01.000')
+    const dl = page.waitForEvent('download')
+    await page.getByTestId('sub-download').click()
+    expect((await dl).suggestedFilename()).toBe('subtitles.vtt')
+  })
+
+  test('a frame-rate fix rescales the timings', async ({ page }) => {
+    await page.goto('/en/apps/subtitle-editor')
+    await page.getByTestId('sub-paste').fill(SRT)
+    await page.getByTestId('sub-from').selectOption('25')
+    await page.getByTestId('sub-to').selectOption('23.976')
+    await page.getByTestId('sub-rate').click()
+    // 1s at 25fps becomes ~1.043s when the film actually runs at 23.976.
+    await expect(page.getByTestId('sub-start-0')).toHaveValue('00:00:01,043')
+  })
+
+  test('flags a cue that ends before it starts', async ({ page }) => {
+    await page.goto('/en/apps/subtitle-editor')
+    await page.getByTestId('sub-paste').fill('1\n00:00:05,000 --> 00:00:02,000\nBackwards\n')
+    await expect(page.getByTestId('sub-issues')).toContainText('ends before it starts')
+  })
+})
