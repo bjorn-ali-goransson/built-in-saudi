@@ -923,4 +923,14 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Video Trimmer', description: 'Trim an MP4 or MOV in your browser by copying its frames rather than re-encoding them — so the output is the same video at the same quality, and a half-hour recording trims in seconds instead of minutes. The start of a cut snaps to the nearest keyframe, which the tool shows you on the timeline. Nothing is uploaded.' },
     ar: { name: 'قص الفيديو', description: 'اقتطع ملف MP4 أو MOV داخل متصفحك بنسخ إطاراته بدل إعادة ترميزها — فيخرج المقطع نفسه بالجودة نفسها، ويُقتطع تسجيل نصف الساعة في ثوانٍ لا دقائق. وتنتقل بداية القص إلى أقرب إطار مفتاحي، وتعرض الأداة هذه الإطارات على الشريط الزمني. ولا يُرفع شيء.' },
   },
+  {
+    id: 'arabic-handwriting',
+    en: { name: 'Arabic Handwriting Sheets', description: 'Printable Arabic handwriting practice — every letter in all four of its positional forms (alone, at the start, in the middle, at the end), or any word or name you type. The letters are shaped and joined properly, which is the thing generic worksheet sites get wrong when they print 28 isolated glyphs a child will never meet in a word. Ruled guide lines, faded or dotted tracing, and as many rows as you want.' },
+    ar: { name: 'كراسة الخط العربي', description: 'أوراق تدريب على الخط العربي قابلة للطباعة — كل حرف في مواضعه الأربعة (مفردًا، وأول الكلمة، ووسطها، وآخرها)، أو أي كلمة أو اسم تكتبه. والحروف تُشكَّل وتُوصَل على وجهها الصحيح، وهو ما تخطئ فيه مواقع أوراق العمل العامة حين تطبع ٢٨ شكلًا مفردًا لا يلقاها الطفل في كلمة قط. مع أسطر مسطّرة، وتتبّع باهت أو منقّط، وعدد الأسطر الذي تريد.' },
+  },
+  {
+    id: 'xlsx-convert',
+    en: { name: 'Excel to CSV / JSON', description: 'Open an Excel .xlsx workbook in your browser and take the data out as CSV, TSV or JSON — nothing is uploaded. Reads every sheet, keeps blank cells in the right columns, and turns date cells back into real dates instead of the five-digit numbers a naive converter emits. Values only: formulas come out as the value the spreadsheet last calculated.' },
+    ar: { name: 'إكسل إلى CSV أو JSON', description: 'افتح مصنّف إكسل ‎.xlsx‎ في متصفحك واستخرج بياناته بصيغة CSV أو TSV أو JSON — دون رفع أي شيء. يقرأ كل الأوراق، ويُبقي الخلايا الفارغة في أعمدتها الصحيحة، ويعيد خلايا التواريخ تواريخَ حقيقية بدل الأرقام ذات الخمس خانات التي تخرجها المحوّلات الساذجة. القيم فقط: فالمعادلات تخرج بالقيمة التي حسبها الجدول آخر مرة.' },
+  },
 ]

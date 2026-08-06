@@ -2409,4 +2409,32 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/video-trim"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/video-trim"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/arabic-handwriting/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-handwriting"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-handwriting"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-handwriting"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/arabic-handwriting/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/arabic-handwriting"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/arabic-handwriting"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/arabic-handwriting"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/xlsx-convert/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/xlsx-convert"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/xlsx-convert"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/xlsx-convert"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/xlsx-convert/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/xlsx-convert"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/xlsx-convert"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/xlsx-convert"/>
+  </url>
 </urlset>

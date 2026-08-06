@@ -168,6 +168,8 @@ import { quizMakerTool } from './quiz-maker/meta'
 import { translateTool } from './translate/meta'
 import { summarizeTool } from './summarize/meta'
 import { videoTrimTool } from './video-trim/meta'
+import { arabicHandwritingTool } from './arabic-handwriting/meta'
+import { xlsxConvertTool } from './xlsx-convert/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -272,6 +274,7 @@ export const tools: Tool[] = [
   faviconGeneratorTool,
   paperGeneratorTool,
   labelSheetTool,
+  arabicHandwritingTool,
   worksheetsTool,
   bingoCardsTool,
   quizMakerTool,
@@ -340,6 +343,7 @@ export const tools: Tool[] = [
   base64Tool,
   vatCalculatorTool,
   dateDiffTool,
+  xlsxConvertTool,
   zipInspectorTool,
   hexViewerTool,
   metadataTool,

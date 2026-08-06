@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **169 tools are live.** This
+The backlog, and an honest account of what exists. **171 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,7 +25,7 @@ optional [backend worker](./BACKEND.md).
 | Generators | 17 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes |
 | PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
-| Files | 8 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)** |
+| Files | 9 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON** |
 | Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
 | Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
 
@@ -103,16 +103,12 @@ the two AI tools above.
 
 **Top of the list now:**
 
-1. **Arabic handwriting practice sheets (كراسة الخط).** Dotted-trace letters in
-   all four positional forms, name tracing, seeded, printable. We can do this
-   better than anyone because `textImage.ts` already shapes and reorders Arabic
-   correctly on a canvas — the exact thing generic worksheet sites get wrong,
-   emitting disconnected letters in the wrong order. No dependencies; fits
-   `printPdf.ts`.
-2. **Excel (.xlsx) → CSV / JSON.** The one file format the site cannot open,
-   sitting next to five CSV tools. No SheetJS needed: an .xlsx is a zip of XML
-   and we already ship a zip library. Read-only, values not formulas.
-3. **Quran khatma / memorisation planner.** Divide the mushaf by pages or juz
+~~1. Arabic handwriting practice sheets~~ — shipped, and it does the four
+positional forms with joiners rather than the deprecated presentation block.
+~~2. Excel (.xlsx) → CSV / JSON~~ — shipped, on a new dependency-free
+`lib/unzip.ts` that also opens the door to .docx/.pptx/.epub.
+
+1. **Quran khatma / memorisation planner.** Divide the mushaf by pages or juz
    across a date range, print a schedule and tick sheet, progress in
    `localStorage`. Big local wedge, and unlike Mirath it is arithmetic over page
    counts, so it carries no scholarly-sourcing risk.
@@ -129,7 +125,6 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Arabic handwriting sheets | See above — the strongest unbuilt tool we have. |
 | Seating chart generator | Seeded, printable, reuses `printPdf`; teachers redo this by hand every term. |
 | Attendance / mark sheet | A printable grid with names down the side — the most-photocopied page in any school. |
 | Times-table charts and drills | Trivial next to `worksheets`, and constantly searched for. |
@@ -155,7 +150,6 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Excel (.xlsx) → CSV/JSON | See above. |
 | CSV → vCard (bulk contacts) | The "300 contacts stuck in a spreadsheet" problem. |
 | `.ics` event builder / parser | We already hand-write ICS for Book Me; dependency-free. |
 | EPUB → text / metadata | A zip of XHTML, and the zip library is already here. |

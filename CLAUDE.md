@@ -223,6 +223,44 @@ off the spec. Re-verify rather than trusting this list if the behaviour changes:
 a real one would fetch hundreds of megabytes), including the streaming-throws and
 create-fails-once quirks, and asserts the typed text never appears in a request.
 
+## Reading a ZIP, and the formats made of one (`lib/unzip.ts`)
+
+`zip.ts` writes store-only archives; **`unzip.ts` reads real ones** — central
+directory walk plus `DecompressionStream('deflate-raw')`, so DEFLATE costs no
+dependency. That unlocks every XML-in-a-zip format: `.xlsx` today, and `.docx`,
+`.pptx`, `.epub` on the same footing. Gotcha baked in: the local header's extra
+field length can differ from the central directory's, so the data offset must be
+read from the local header, not computed from the central one.
+
+**`xlsx-convert`** is the first user. Read-only and values-only on purpose —
+writing xlsx or evaluating formulas is a much bigger problem, and half-doing it
+corrupts people's data quietly. Two things every naive xlsx reader gets wrong,
+both regression-tested against a hand-built fixture (`e2e/fixtures/shared.xlsx`)
+that uses the paths real Excel uses:
+
+- **Text is not in the cell.** `t="s"` holds an *index* into `sharedStrings.xml`,
+  and one string can be split across `<r>` runs when parts are styled
+  differently — take the first `<t>` and you silently truncate the cell.
+- **A date is a number wearing a format.** The style has to be resolved through
+  `cellXfs` → `numFmtId` (built-ins 14–22/45–47, plus any custom code containing
+  y/m/d/h/s outside quotes) and the serial converted from the **1899-12-30**
+  epoch — Excel's, kept deliberately wrong so Lotus's 1900 leap year still
+  works. Serial 60 is that phantom 29 February and is reported as-is rather than
+  silently shifted.
+- A blank cell is simply **absent** from the XML, so each cell must be placed at
+  the column its `r` reference names or the whole row shifts left.
+
+## Arabic handwriting sheets (`arabic-handwriting`)
+
+The four positional forms are **not four characters**. They are produced with
+U+200D ZERO WIDTH JOINER standing in for a neighbour — `ب` + ZWJ is an initial
+form, ZWJ + `ب` + ZWJ a medial — and the canvas's shaper does the rest. The
+deprecated Arabic Presentation Forms block is the wrong answer and does not
+cover every letter. **ا د ذ ر ز و never join to what follows**, so they have no
+initial or medial form at all; those cells are left out rather than filled with
+the isolated shape, which would teach something false. This is the thing generic
+worksheet sites get wrong, and it is the whole reason the tool is worth having.
+
 ## Video trimming (`video-trim`)
 
 The one tool with a container-format dependency (`mp4box`, ~1MB, lazy in its own
