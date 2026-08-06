@@ -908,4 +908,14 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Quiz Maker', description: 'Write a quiz — multiple choice, true/false and short answer — then print it as a question paper with a separate answer key, or share a link anyone can take in their browser. The link carries the whole quiz after the # in the URL, and a fragment is never sent to a server: nothing is stored and there is no account.' },
     ar: { name: 'صانع الاختبارات', description: 'اكتب اختبارًا — اختيار من متعدد وصح/خطأ وإجابة قصيرة — ثم اطبعه ورقة أسئلة مع ورقة إجابات منفصلة، أو شارك رابطًا يستطيع أي أحد أداءه في متصفحه. يحمل الرابط الاختبار كاملًا بعد علامة # في العنوان، وما بعدها لا يُرسل إلى خادم أبدًا: فلا شيء مخزّن ولا حساب.' },
   },
+  {
+    id: 'translate',
+    en: { name: 'Translator', description: 'Translate between Arabic and 50+ languages using a model that runs inside your browser, so nothing you type is uploaded anywhere — and it keeps working with no connection once the language pack is downloaded. Covers the languages actually spoken at work here: Urdu, Hindi, Bengali, Malayalam, Tamil, Nepali, Sinhala, Amharic, Tigrinya, Somali, Pashto and Farsi. Needs Chrome or Edge 138+ on a computer.' },
+    ar: { name: 'المترجم', description: 'ترجم بين العربية وأكثر من ٥٠ لغة عبر نموذج يعمل داخل متصفحك، فلا يُرفع شيء مما تكتبه إلى أي مكان — ويظل يعمل دون اتصال بعد تنزيل حزمة اللغة. ويغطي اللغات المستخدمة فعلًا في العمل هنا: الأردية والهندية والبنغالية والمالايالامية والتاميلية والنيبالية والسنهالية والأمهرية والتيغرينية والصومالية والبشتوية والفارسية. يتطلب Chrome أو Edge 138+ على حاسوب.' },
+  },
+  {
+    id: 'summarize',
+    en: { name: 'Summarizer', description: 'Turn a long article, thread, email or set of meeting notes into key points, a TL;DR, a teaser or a headline — using a model that runs inside your browser, so the text is never uploaded. English, Spanish, Japanese, German and French only: the on-device model does not do Arabic yet, and the tool says so rather than guessing. Needs Chrome or Edge 138+ on a computer.' },
+    ar: { name: 'الملخِّص', description: 'حوّل مقالًا طويلًا أو سلسلة تغريدات أو بريدًا أو محضر اجتماع إلى نقاط رئيسية أو خلاصة مختصرة أو تشويق أو عنوان — عبر نموذج يعمل داخل متصفحك، فلا يُرفع النص أبدًا. الإنجليزية والإسبانية واليابانية والألمانية والفرنسية فقط: فالنموذج على الجهاز لا يدعم العربية بعد، والأداة تقول ذلك صراحةً بدل أن تخمّن. يتطلب Chrome أو Edge 138+ على حاسوب.' },
+  },
 ]

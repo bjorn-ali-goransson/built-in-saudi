@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **166 tools are live.** This
+The backlog, and an honest account of what exists. **168 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -19,7 +19,7 @@ optional [backend worker](./BACKEND.md).
 |---|---|---|
 | Developer | 30 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge |
 | Saudi / Local | 23 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address |
-| Text | 20 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder |
+| Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
 | Generators | 17 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes |
@@ -60,8 +60,8 @@ Wanted, but blocked on something real. Do not build these casually.
 
 | Idea | Blocked on |
 |---|---|
-| **Video trim / convert** | Needs a real MP4 demuxer + muxer (`mp4box.js`, or WebCodecs plumbing). The dependency-free alternative — MediaRecorder realtime capture — is *worse than nothing*: a 10-minute clip takes 10 minutes and silently becomes WebM. Video→GIF shipped because a GIF is short by nature. |
-| **On-device AI** (Chrome's built-in Gemini Nano: Summarizer, Translator, Proofreader, Prompt) | The most interesting item left — it would let us ship AI tools with **no backend and no privacy asterisk**. Chrome-only progressive enhancement; needs a session with a real browser to verify the API surface rather than code written blind. |
+| **Video trim / convert** | Needs a real MP4 demuxer + muxer (`mp4box.js`). WebCodecs itself is now everywhere (`VideoDecoder`/`VideoEncoder` confirmed present August 2026), so this is **one dependency away, not blocked** — it moved down the table for effort, not impossibility. The dependency-free alternative — MediaRecorder realtime capture — is *worse than nothing*: a 10-minute clip takes 10 minutes and silently becomes WebM. |
+| **On-device AI: Prompt / Writer / Rewriter / Proofreader** | Origin trial or flag only, verified in a real browser August 2026. The three **stable** APIs are shipped — see below. Revisit when these leave trial; a Proofreader would be the strongest of them. |
 | **JSON ↔ YAML ↔ TOML** | Needs real parsers. Hand-rolling YAML is how you ship silently-wrong output. |
 | **GOSI contributions** | Rates changed with the 2024 pension law and differ by nationality and hire date. Needs an authoritative current source, not memory. |
 | **Mirath / inheritance (فرائض)** | The highest-demand Saudi wedge left, and the one most in need of scholarly sourcing and review. Same bar as `zakat` and `end-of-service`. |
@@ -71,33 +71,135 @@ Wanted, but blocked on something real. Do not build these casually.
 
 ---
 
+## Shipped: on-device AI (August 2026)
+
+`translate` and `summarize` use Chrome/Edge's built-in models, which run on the
+device. Findings worth keeping, all verified in a real browser rather than read
+off a spec — they should shape anything built on these APIs next:
+
+- **Translator does Arabic with 54 other languages**, including Urdu, Hindi,
+  Bengali, Malayalam, Tamil, Telugu, Nepali, Sinhala, Amharic, Tigrinya, Somali,
+  Pashto and Farsi — nearly every language spoken at work in this country.
+  **Filipino/Tagalog is the notable gap.**
+- **Summarizer does NOT do Arabic** (en, es, ja, de, fr only), as input or
+  output. The tool detects and refuses rather than producing confident nonsense.
+- **The constructors existing proves nothing.** Playwright's Chromium exposes
+  the whole API and has no models. Decide from the *answers*, not the globals.
+- **`translateStreaming` is present and throws** on Edge 151, on the same
+  translator whose `translate()` is perfect. Always have a batch fallback.
+- **The first `create()` after a pack download can reject** with a bare "Other
+  generic failures occurred" and succeed on an immediate retry.
+- **`create()` needs user activation**, even when availability says the pack is
+  present — so live-as-you-type must never be the thing that creates the model.
+- **Capability queries can hang.** They are timed out; a browser that will not
+  say whether it can do something cannot do it.
+
+---
+
 ## Next, ranked
 
-**The July–August 2026 ranked list is finished.** All six batches shipped:
+The July–August 2026 list is finished — print goods, passphrase, image
+finishing, the Saudi remainder, sound, and the classroom set all shipped, plus
+the two AI tools above.
 
-1. ~~Print & paper goods~~ — `pdf-booklet`, `pdf-stamp`, `label-sheet`,
-   `certificate`.
-2. ~~Passphrase generator~~ — `passphrase` (diceware, 1296 words so physical
-   dice map honestly).
-3. ~~Image finishing~~ — `batch-watermark`, `svg-optimise`, `colour-blind`.
-4. ~~Saudi remainder~~ — `saudi-plate`, `short-address`.
-5. ~~Sound~~ — `metronome`, `tuner`, `bpm-tap`, `sound-meter`.
-6. ~~Classroom~~ — `worksheets`, `bingo-cards`, `quiz-maker`.
+**Top of the list now:**
 
-Nothing is queued behind them. The next thing to build should come from a fresh
-look at what people actually search for — or from the **Parked** table above,
-once its blocker is genuinely cleared. Two are worth revisiting first:
+1. **Arabic handwriting practice sheets (كراسة الخط).** Dotted-trace letters in
+   all four positional forms, name tracing, seeded, printable. We can do this
+   better than anyone because `textImage.ts` already shapes and reorders Arabic
+   correctly on a canvas — the exact thing generic worksheet sites get wrong,
+   emitting disconnected letters in the wrong order. No dependencies; fits
+   `printPdf.ts`.
+2. **Excel (.xlsx) → CSV / JSON.** The one file format the site cannot open,
+   sitting next to five CSV tools. No SheetJS needed: an .xlsx is a zip of XML
+   and we already ship a zip library. Read-only, values not formulas.
+3. **Quran khatma / memorisation planner.** Divide the mushaf by pages or juz
+   across a date range, print a schedule and tick sheet, progress in
+   `localStorage`. Big local wedge, and unlike Mirath it is arithmetic over page
+   counts, so it carries no scholarly-sourcing risk.
 
-- **On-device AI** (Chrome's built-in models) — still the highest-value item
-  left, and the only one that would add AI tools with no backend and no privacy
-  asterisk. It needs a session with a real browser to verify the API surface.
-- **Mirath / inheritance (فرائض)** — the highest-demand Saudi wedge left. It
-  needs scholarly sourcing and review, at the same bar as `zakat` and
-  `end-of-service`, not a weekend of arithmetic.
+---
 
-Resist adding filler to keep the count rising. The catalogue is already large
-enough that discoverability — search, the launcher, sensible categories — is
-worth more than tool 167.
+## Backlog
+
+Not ranked against each other — a supply of candidates, so that choosing is
+never limited by what happens to be written down. Each line says why it would
+earn a slot. **`client` unless noted.**
+
+### Classroom and family
+
+| Idea | Why it earns a slot |
+|---|---|
+| Arabic handwriting sheets | See above — the strongest unbuilt tool we have. |
+| Seating chart generator | Seeded, printable, reuses `printPdf`; teachers redo this by hand every term. |
+| Attendance / mark sheet | A printable grid with names down the side — the most-photocopied page in any school. |
+| Times-table charts and drills | Trivial next to `worksheets`, and constantly searched for. |
+| Name tags / desk plates | The `label-sheet` chassis with bigger type and correct Arabic shaping. |
+| Weekly reward charts | `certificate` exists; the weekly version is a different, smaller thing. |
+| Reading log / homework diary | Printable weekly grid, seeded so a reprint matches. |
+| Flashcard printing | `flashcards` is on-screen only; the print path is its own tool. |
+
+### Saudi and local
+
+| Idea | Why it earns a slot |
+|---|---|
+| Quran khatma planner | See above. |
+| Printable monthly prayer timetable | We compute prayer times already; a month for a mosque noticeboard is a real ask. |
+| Electricity bill estimator (SEC tariff) | A real money question. Needs `<Disclaimer kind="financial">` **and a printed tariff-as-of date**, or it rots silently. |
+| Fuel / trip cost calculator | Same shape — let the user set the price rather than baking in a number that goes stale. |
+| Arabic contract and letter templates | Bilingual printable forms; pairs with `quotation` and `invoice`. |
+| Hijri event countdown (print + share) | Ramadan, Hajj, National Day; all the date machinery is here. |
+| Arabic name transliteration helper | The passport-spelling Ahmad/Ahmed problem, with the plate letter table as precedent. |
+| Iqama fee / traffic fine reference | Reference tables only, clearly dated. **Never** a live lookup — that needs an API we should not proxy. |
+
+### Files and formats
+
+| Idea | Why it earns a slot |
+|---|---|
+| Excel (.xlsx) → CSV/JSON | See above. |
+| CSV → vCard (bulk contacts) | The "300 contacts stuck in a spreadsheet" problem. |
+| `.ics` event builder / parser | We already hand-write ICS for Book Me; dependency-free. |
+| EPUB → text / metadata | A zip of XHTML, and the zip library is already here. |
+| SQLite file inspector | `sql.js` is a real dependency — weigh it — but "what is in this .db" has no private alternative. |
+| Diff two spreadsheets | Once .xlsx reads, this is `text-diff` over rows. |
+| Split a large CSV by size or column | The complement to `csv-merge`. |
+
+### Developer
+
+| Idea | Why it earns a slot |
+|---|---|
+| X.509 / PEM certificate decoder | Natural sibling to `jwt-decoder`; `crypto.subtle` does the parsing. |
+| Email header analyser | Hops, delays, SPF/DKIM/DMARC verdicts — all from pasted text, no network. |
+| `.env` ↔ JSON ↔ shell export | Small, constant, and hand-edited by everyone today. |
+| Chmod / umask calculator | Tiny, evergreen, purely arithmetic. |
+| Webhook payload formatter | Paste a payload, get a typed shape; `json-to-types` adjacent. |
+| Regex → plain English | The inverse of `regex-tester`, and much harder to find free. |
+
+### Text and language
+
+| Idea | Why it earns a slot |
+|---|---|
+| Proofreader (on-device) | Blocked on the API leaving origin trial; the strongest of the remaining AI ones. |
+| Arabic → Franco (reverse) | `franco-arabic` only goes one way today. |
+| Tashkeel remover / normaliser | `arabic-normalize` may already cover it — check before building. |
+| Text-to-speech read-aloud | Speech synthesis is on-device; no export, so scope it as read-aloud only. |
+| Speech-to-text | **Do not build.** Verified August 2026: no on-device recognition, so the audio goes to a cloud service. That is the one thing this site does not do. |
+
+### Images and media
+
+| Idea | Why it earns a slot |
+|---|---|
+| Video trim (WebCodecs + mp4box.js) | Moved out of "blocked" — see the parked table. |
+| Remove silence from audio | Web Audio, sits beside `audio-trim`; podcast editors pay for this. |
+| Collage / contact sheet | Print chassis plus image decoding, both already here. |
+| Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |
+
+### Not a tool, and possibly worth more than the next ten
+
+At 168 tools, **discoverability is the constraint, not supply**. A visitor who
+cannot find the right app has the same experience as one for whom it was never
+built. Worth its own piece of work: search ranking, a "what do you need?" entry
+point, and grouping that survives another fifty tools.
 
 ---
 

@@ -165,6 +165,8 @@ import { shortAddressTool } from './short-address/meta'
 import { worksheetsTool } from './worksheets/meta'
 import { bingoCardsTool } from './bingo-cards/meta'
 import { quizMakerTool } from './quiz-maker/meta'
+import { translateTool } from './translate/meta'
+import { summarizeTool } from './summarize/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -325,6 +327,8 @@ export const tools: Tool[] = [
   lineBreaksTool,
   pasteToMarkdownTool,
   poetryTool,
+  translateTool,
+  summarizeTool,
   languageDetectTool,
   hashGeneratorTool,
   hmacTool,

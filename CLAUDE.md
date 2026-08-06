@@ -181,6 +181,48 @@ regression-checked by `node evals/atscheck.mjs <run-tag>`:
   in place (equal byte length, so no table offsets move). **Re-run it if these
   subsets are ever regenerated.**
 
+## On-device AI (`translate`, `summarize`)
+
+Chrome/Edge 138+ expose models that run **on the device** — `Translator`,
+`LanguageDetector`, `Summarizer`. They are the only way to offer translation or
+summarising without posting the user's text to somebody's API, so they get used
+where they fit and are **never** silently swapped for a cloud call. Shared layer:
+`src/lib/builtinAi.ts` (availability, download-with-progress, detection) plus
+`components/ui/ModelGate.tsx`, which renders every state so the tools cannot
+drift apart in how they explain themselves.
+
+Everything below was measured in a real browser (Edge 151, August 2026), not read
+off the spec. Re-verify rather than trusting this list if the behaviour changes:
+
+- **The constructors existing proves nothing.** Playwright's Chromium exposes the
+  whole API with no models behind it. Decide from what `availability()` *answers*
+  — if nothing at all is supported, say "this browser cannot run it", not "try
+  another language pair", or people go off editing a choice that was never the
+  problem.
+- **Capability queries can hang.** `withTimeout` caps them at 4s: a browser that
+  will not say whether it can do something cannot do it, and an awaited promise
+  that never settles leaves the page on "checking…" forever.
+- **`create()` needs user activation** even when availability says the pack is
+  already present. Live-as-you-type must therefore never be the thing that
+  creates a model — it only runs once a button has made one.
+- **The first `create()` after a pack download can reject** with a bare
+  `UnknownError: Other generic failures occurred` and succeed on an identical
+  retry a moment later. Both tools retry once; failing twice is shown.
+- **`translateStreaming`/`summarizeStreaming` can be present and throw** on a
+  browser whose batch call is perfect. Always go through `streamOrBatch`.
+- **Language support is per pair and asking is the only way to know.** Translator
+  does Arabic with 54 languages (Urdu, Hindi, Bengali, Malayalam, Tamil, Nepali,
+  Sinhala, Amharic, Tigrinya, Somali, Pashto, Farsi — but **not Filipino**);
+  **Summarizer does not do Arabic at all**, which the tool states plainly instead
+  of guessing. Hard-coding either list would be wrong within a release.
+- The model download is a **third-party request to Google**. It carries none of
+  the user's text, and `ModelGate` says so — that is the honest version of the
+  privacy claim, not a footnote to it.
+
+`e2e/builtin-ai.spec.ts` drives all of this against a stub (CI has no models and
+a real one would fetch hundreds of megabytes), including the streaming-throws and
+create-fails-once quirks, and asserts the typed text never appears in a request.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

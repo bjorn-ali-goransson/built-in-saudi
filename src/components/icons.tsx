@@ -1188,6 +1188,24 @@ export function PlateIcon({ className }: P) {
   )
 }
 
+export function TranslateIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 5.5h8M6.8 3.5v2M8.6 5.5c0 3.4-2.2 6.2-5.1 7.4M5.2 8.4c.9 1.9 2.6 3.4 4.7 4.1" />
+      <path d="m12.5 20.5 3.6-9 3.6 9M13.9 17.4h4.4" />
+    </svg>
+  )
+}
+
+export function SummarizeIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 5h16M4 8.5h16M4 12h11" />
+      <path d="M4 16.5h8M4 20h5" />
+    </svg>
+  )
+}
+
 export function WorksheetIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">
