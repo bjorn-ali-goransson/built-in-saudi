@@ -480,7 +480,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   function** — Google prints the redirect URI's domain on the consent screen, so it
   must be a domain we own, not `cloudfunctions.net`. **Google's brand/scope review
   passed (2026-07-26)**, so the consent screen no longer shows an "unverified app"
-  interstitial and the pre-emptive in-app warning was removed), `save-schedule`, `get-availability`,
+  interstitial and the pre-emptive in-app warning was removed.
+  **An authorization code is single-use, and a replay is the normal case, not an
+  edge case (#251):** a back button or a refresh makes Google re-issue its
+  redirect with the *same* code, we exchange it a second time and Google
+  refuses. This endpoint's only ever logged failure was exactly that — a 500
+  fifteen seconds after its own successful 302 — and it printed
+  `token exchange 400: {"error":"invalid_grant"}` raw on a `cloudfunctions.net`
+  page, so the host read a successful sign-in as a failure and never came back.
+  Guarded twice: the forwarder remembers the code in `sessionStorage` and skips
+  a second forward, and the callback treats `invalid_grant` as "already signed
+  in" and 302s to the app. **The callback must never `res.status(500).send(e.message)`
+  again** — a Google token-response body is not something to put on a stranger's
+  screen; genuine failures go to `?signin=failed`, which the tool renders as a
+  retry bar), `save-schedule`, `get-availability`,
   `book`, `telegram-webhook`, plus **`delete-host`** (deletes the host record +
   all its bookings), **`my-data`** (see the data-deletion note below),
   **`host-status`** (is the stored token still connected + does it have Calendar

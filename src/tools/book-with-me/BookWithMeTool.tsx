@@ -116,6 +116,8 @@ const STR = {
     calWarn: 'Google Calendar isn’t connected, so your existing events won’t block booking times and new bookings won’t be added to your calendar. Reconnect and allow Calendar access.',
     reconnectExpired: 'Your Google connection has expired or was revoked — your booking page won’t work until you reconnect.',
     reconnect: 'Reconnect Calendar',
+    signinFailed: 'Signing in with Google did not finish. Nothing was saved — try again.',
+    signinRetry: 'Try again',
     syncConflict: 'You have unpublished changes on this device that differ from your published booking page. Which do you want to keep?',
     keepLocal: 'My unpublished changes',
     useServer: 'The published version',
@@ -196,6 +198,8 @@ const STR = {
     calWarn: 'تقويم Google غير مربوط، لذا لن تحجب مواعيدك الحالية أوقات الحجز ولن تُضاف الحجوزات الجديدة إلى تقويمك. أعد الربط واسمح بالوصول إلى التقويم.',
     reconnectExpired: 'انتهت صلاحية ربط Google أو تم إلغاؤه — لن تعمل صفحة الحجز حتى تعيد الربط.',
     reconnect: 'إعادة ربط التقويم',
+    signinFailed: 'لم يكتمل تسجيل الدخول عبر Google. ولم يُحفظ شيء — أعد المحاولة.',
+    signinRetry: 'أعد المحاولة',
     syncConflict: 'لديك تغييرات غير منشورة على هذا الجهاز تختلف عن صفحة الحجز المنشورة. أيّها تريد الإبقاء عليه؟',
     keepLocal: 'تغييراتي غير المنشورة',
     useServer: 'النسخة المنشورة',
@@ -287,6 +291,7 @@ export default function BookWithMeTool() {
   const [deleting, setDeleting] = useState(false)
   const [tokenStatus, setTokenStatus] = useState<'unknown' | 'ok' | 'nocal' | 'disconnected'>('unknown')
   const [syncState, setSyncState] = useState<'loading' | 'ok' | 'conflict'>('ok')
+  const [signinFailed, setSigninFailed] = useState(false)
   const [serverCfg, setServerCfg] = useState<ConfigLike | null>(null)
   const savedSnapshotRef = useRef('')
   const [dragId, setDragId] = useState<string | null>(null)
@@ -306,6 +311,16 @@ export default function BookWithMeTool() {
       if (hsid) localStorage.setItem(HSID_KEY, hsid)
       if (code) setCfg((c) => ({ ...c, code }))
       history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+    // The callback sends a genuine failure back here rather than printing
+    // Google's raw error on a cloudfunctions.net page. Landing silently would
+    // be its own kind of confusing, so say what happened and clear the marker.
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('signin') === 'failed') {
+      setSigninFailed(true)
+      q.delete('signin')
+      const qs = q.toString()
+      history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
     }
     setSession(readSession())
   }, [])
@@ -609,6 +624,14 @@ export default function BookWithMeTool() {
           <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{tokenStatus === 'disconnected' ? s.reconnectExpired : s.calWarn}</span>
           <button type="button" data-testid="reconnect-cal" onClick={() => { window.location.href = connectGoogleUrl(cfg.code, locale) }}
             className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.reconnect}</button>
+        </div>
+      )}
+
+      {signinFailed && (
+        <div className="flex items-center gap-3 flex-wrap border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_14%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="signin-failed">
+          <span className="text-[0.85rem] text-ink leading-snug flex-1 min-w-[14rem]">{s.signinFailed}</span>
+          <button type="button" data-testid="signin-retry" onClick={() => { window.location.href = connectGoogleUrl(cfg.code, locale) }}
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-gold-500 text-white text-[0.82rem] font-semibold border-0 cursor-pointer hover:bg-gold-400">{s.signinRetry}</button>
         </div>
       )}
 

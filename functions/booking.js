@@ -341,11 +341,14 @@ http('bookingGoogleStart', async (req, res) => {
 
 // GET ?code=…&state=… → exchange, upsert host, redirect back with #hsid.
 http('bookingGoogleCallback', async (req, res) => {
+  // Parsed outside the try so the error paths can still send them somewhere
+  // sensible in their own language.
+  let st = {}
+  try { st = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString()) } catch { /* ignore */ }
+  const backTo = `${SITE}/${st.locale === 'ar' ? 'ar' : 'en'}/apps/book-me`
   try {
     const code = req.query.code
-    if (!code) return res.status(400).send('missing code')
-    let st = {}
-    try { st = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString()) } catch { /* ignore */ }
+    if (!code) return res.redirect(302, backTo)
     const tokens = await exchangeCode(code)
     const id = decodeJwtPayload(tokens.id_token || '')
     const sub = id.sub
@@ -377,10 +380,24 @@ http('bookingGoogleCallback', async (req, res) => {
       { merge: true },
     )
     const hsid = signSession({ sub, email: id.email, name: id.name, picture: id.picture, cal: calGranted })
-    const locale = st.locale === 'ar' ? 'ar' : 'en'
-    res.redirect(302, `${SITE}/${locale}/apps/book-me#hsid=${hsid}&code=${hostCode}`)
+    res.redirect(302, `${backTo}#hsid=${hsid}&code=${hostCode}`)
   } catch (e) {
-    res.status(500).send(String((e && e.message) || e))
+    const msg = String((e && e.message) || e)
+    // An authorization code is single-use. The way this actually happens is a
+    // back button or a refresh AFTER a sign-in that already worked: Google
+    // re-issues the redirect with the same code, we exchange it again, and it
+    // is refused. Measured 2026-08-05: the only failure this endpoint has ever
+    // logged was exactly that, 15 seconds after its own successful 302 — and
+    // the host it created never came back, because the screen said
+    // `invalid_grant: Bad Request` and looked like their sign-in had failed.
+    //
+    // So a replayed code sends them to the app, which they are already signed
+    // in to, rather than to an error.
+    if (/invalid_grant/.test(msg)) return res.redirect(302, backTo)
+    // Anything else is ours to look at, not theirs to read: the raw body of a
+    // Google token response is not something to put on a stranger's screen.
+    console.error('booking-google-callback failed:', msg)
+    res.redirect(302, `${backTo}?signin=failed`)
   }
 })
 

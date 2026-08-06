@@ -24,6 +24,8 @@ function makeHsid(payload: Record<string, unknown>) {
 }
 
 let server: Server, mock: string
+// Authorization codes the mock has already exchanged — see the callback below.
+const usedCodes = new Set<string>()
 
 test.beforeAll(async () => {
   server = createServer((req, res) => {
@@ -53,6 +55,16 @@ test.beforeAll(async () => {
     if (path === '/booking-google-callback') {
       let st: { code?: string; locale?: string } = {}
       try { st = JSON.parse(Buffer.from(url.searchParams.get('state') || '', 'base64url').toString()) } catch { /* ignore */ }
+      const locale0 = st.locale === 'ar' ? 'ar' : 'en'
+      // An authorization code is single-use, and the real endpoint's only ever
+      // logged failure was a replay of one. Refuse a second exchange exactly as
+      // Google does, and redirect rather than showing its raw error.
+      const authCode = url.searchParams.get('code') || ''
+      if (authCode && usedCodes.has(authCode)) {
+        res.writeHead(302, { Location: `${BASE}/${locale0}/apps/book-me` })
+        return res.end()
+      }
+      if (authCode) usedCodes.add(authCode)
       const hostCode = st.code || 'mockcode'
       const hsid = makeHsid({ sub: 'mock-sub', email: 'host@example.com', name: 'Björn Test', cal: true })
       const locale = st.locale === 'ar' ? 'ar' : 'en'
@@ -73,6 +85,32 @@ test.beforeAll(async () => {
   mock = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`
 })
 test.afterAll(() => server?.close())
+
+test('a replayed authorization code lands on the app, not on a raw Google error', async ({ page, context }) => {
+  // The reported failure (2026-08-05): sign-in succeeds, then a back button or a
+  // refresh re-issues Google's redirect with the SAME code, the exchange is
+  // refused, and the host is shown `invalid_grant: Bad Request`. It reads as a
+  // failed sign-in even though the account was created — the host who hit it
+  // never granted Calendar and never came back.
+  await context.addInitScript(([fn, cb]) => {
+    ;(window as unknown as { __BOOKING_FN: string }).__BOOKING_FN = fn
+    ;(window as unknown as { __BOOKING_CALLBACK_FN: string }).__BOOKING_CALLBACK_FN = cb
+  }, [mock, `${mock}/booking-google-callback`])
+
+  await page.goto('/en/apps/book-me')
+  await page.getByTestId('save-schedule').click()
+  await expect(page.getByTestId('open-page')).toBeVisible({ timeout: 15_000 })
+
+  // Now replay the very same callback URL, as the back button does.
+  const state = Buffer.from(JSON.stringify({ code: 'replay', locale: 'en' })).toString('base64url')
+  await page.goto(`/oauth/callback/?code=mock-auth-code&state=${state}`)
+
+  await expect(page).toHaveURL(/\/en\/apps\/book-me/, { timeout: 15_000 })
+  await expect(page.getByTestId('save-schedule').or(page.getByTestId('open-page')).first()).toBeVisible()
+  // Whatever else happens, the raw token-exchange error must not be on screen.
+  await expect(page.locator('body')).not.toContainText('invalid_grant')
+  await expect(page.locator('body')).not.toContainText('token exchange')
+})
 
 test('before sign-in: the publish CTA shows, with no unverified-app warning', async ({ page }) => {
   await page.goto('/en/apps/book-me')

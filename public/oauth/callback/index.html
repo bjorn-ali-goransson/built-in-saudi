@@ -25,7 +25,29 @@
     // window.__BOOKING_CALLBACK_FN lets e2e forward to a mock server instead
     // (set via addInitScript before this runs); production uses the real host.
     var fn = window.__BOOKING_CALLBACK_FN || 'https://us-central1-blitz-ksa.cloudfunctions.net/booking-google-callback'
-    location.replace(fn + location.search)
+
+    var params = new URLSearchParams(location.search)
+    var code = params.get('code')
+    var locale = 'en'
+    try {
+      // The state is base64url({code, locale, n}); we only want the locale, and
+      // a malformed one must never stop the sign-in.
+      var st = JSON.parse(atob((params.get('state') || '').replace(/-/g, '+').replace(/_/g, '/')))
+      if (st && st.locale === 'ar') locale = 'ar'
+    } catch (e) { /* default to en */ }
+
+    // An authorization code can be exchanged exactly once. Landing here twice
+    // with the same one means a back button or a refresh after a sign-in that
+    // already succeeded — Google re-issues its redirect with the same code.
+    // Forwarding it again would earn an invalid_grant, so send them to the app
+    // they are already signed in to instead.
+    var KEY = 'bis-oauth-code'
+    if (code && sessionStorage.getItem(KEY) === code) {
+      location.replace('/' + locale + '/apps/book-me')
+    } else {
+      if (code) { try { sessionStorage.setItem(KEY, code) } catch (e) { /* private mode */ } }
+      location.replace(fn + location.search)
+    }
   </script>
   <noscript>JavaScript is required to finish signing in.</noscript>
 </body>
