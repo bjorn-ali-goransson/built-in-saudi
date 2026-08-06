@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **168 tools are live.** This
+The backlog, and an honest account of what exists. **169 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,7 +25,7 @@ optional [backend worker](./BACKEND.md).
 | Generators | 17 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes |
 | PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
-| Files | 7 | archives, metadata, hex, encryption, audio trim/extract, video→GIF |
+| Files | 8 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)** |
 | Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
 | Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
 
@@ -60,7 +60,6 @@ Wanted, but blocked on something real. Do not build these casually.
 
 | Idea | Blocked on |
 |---|---|
-| **Video trim / convert** | Needs a real MP4 demuxer + muxer (`mp4box.js`). WebCodecs itself is now everywhere (`VideoDecoder`/`VideoEncoder` confirmed present August 2026), so this is **one dependency away, not blocked** — it moved down the table for effort, not impossibility. The dependency-free alternative — MediaRecorder realtime capture — is *worse than nothing*: a 10-minute clip takes 10 minutes and silently becomes WebM. |
 | **On-device AI: Prompt / Writer / Rewriter / Proofreader** | Origin trial or flag only, verified in a real browser August 2026. The three **stable** APIs are shipped — see below. Revisit when these leave trial; a Proofreader would be the strongest of them. |
 | **JSON ↔ YAML ↔ TOML** | Needs real parsers. Hand-rolling YAML is how you ship silently-wrong output. |
 | **GOSI contributions** | Rates changed with the 2024 pension law and differ by nationality and hire date. Needs an authoritative current source, not memory. |
@@ -189,7 +188,8 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Video trim (WebCodecs + mp4box.js) | Moved out of "blocked" — see the parked table. |
+| Progressive MP4 muxer for `video-trim` | The trimmer ships with fragmented output (a moof+mdat per sample). It plays, but a real muxer would make friendlier files. |
+| Video convert / re-encode | The trimmer copies samples; changing codec or size needs WebCodecs encode, which is a different tool with different honesty problems. |
 | Remove silence from audio | Web Audio, sits beside `audio-trim`; podcast editors pay for this. |
 | Collage / contact sheet | Print chassis plus image decoding, both already here. |
 | Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |

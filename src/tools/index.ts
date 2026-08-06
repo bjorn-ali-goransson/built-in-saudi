@@ -167,6 +167,7 @@ import { bingoCardsTool } from './bingo-cards/meta'
 import { quizMakerTool } from './quiz-maker/meta'
 import { translateTool } from './translate/meta'
 import { summarizeTool } from './summarize/meta'
+import { videoTrimTool } from './video-trim/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -185,6 +186,7 @@ export const tools: Tool[] = [
   weatherTool,
   audioTrimTool,
   videoAudioTool,
+  videoTrimTool,
   videoGifTool,
   currencyConverterTool,
   idExpiryTool,

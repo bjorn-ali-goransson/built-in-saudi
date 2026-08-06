@@ -918,4 +918,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Summarizer', description: 'Turn a long article, thread, email or set of meeting notes into key points, a TL;DR, a teaser or a headline — using a model that runs inside your browser, so the text is never uploaded. English, Spanish, Japanese, German and French only: the on-device model does not do Arabic yet, and the tool says so rather than guessing. Needs Chrome or Edge 138+ on a computer.' },
     ar: { name: 'الملخِّص', description: 'حوّل مقالًا طويلًا أو سلسلة تغريدات أو بريدًا أو محضر اجتماع إلى نقاط رئيسية أو خلاصة مختصرة أو تشويق أو عنوان — عبر نموذج يعمل داخل متصفحك، فلا يُرفع النص أبدًا. الإنجليزية والإسبانية واليابانية والألمانية والفرنسية فقط: فالنموذج على الجهاز لا يدعم العربية بعد، والأداة تقول ذلك صراحةً بدل أن تخمّن. يتطلب Chrome أو Edge 138+ على حاسوب.' },
   },
+  {
+    id: 'video-trim',
+    en: { name: 'Video Trimmer', description: 'Trim an MP4 or MOV in your browser by copying its frames rather than re-encoding them — so the output is the same video at the same quality, and a half-hour recording trims in seconds instead of minutes. The start of a cut snaps to the nearest keyframe, which the tool shows you on the timeline. Nothing is uploaded.' },
+    ar: { name: 'قص الفيديو', description: 'اقتطع ملف MP4 أو MOV داخل متصفحك بنسخ إطاراته بدل إعادة ترميزها — فيخرج المقطع نفسه بالجودة نفسها، ويُقتطع تسجيل نصف الساعة في ثوانٍ لا دقائق. وتنتقل بداية القص إلى أقرب إطار مفتاحي، وتعرض الأداة هذه الإطارات على الشريط الزمني. ولا يُرفع شيء.' },
+  },
 ]

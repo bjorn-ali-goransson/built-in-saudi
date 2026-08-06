@@ -223,6 +223,35 @@ off the spec. Re-verify rather than trusting this list if the behaviour changes:
 a real one would fetch hundreds of megabytes), including the streaming-throws and
 create-fails-once quirks, and asserts the typed text never appears in a request.
 
+## Video trimming (`video-trim`)
+
+The one tool with a container-format dependency (`mp4box`, ~1MB, lazy in its own
+chunk — there is an e2e asserting it is NOT fetched until a video is picked).
+It trims by **copying compressed samples**, never re-encoding: a half-hour
+recording trims in seconds and the output is the same video, frame for frame.
+Everything below was measured against real files (a 6s clip and a 60s 720p one),
+not read off a spec:
+
+- **The start snaps back to a keyframe.** A frame mid-GOP is a difference from
+  earlier frames, so a copy starting there opens on grey mush. The keyframes are
+  drawn as ticks on the bar and the snap is stated in words when it happens —
+  the constraint is aimable rather than a surprise. The end needs no snap.
+- **Every track must share ONE time origin** — the snapped keyframe. Resetting
+  each track to its own first sample is the obvious code and it desynchronised
+  the audio by however far the video snapped back (~0.95s, caught in a probe
+  before this shipped).
+- **`addTrack` needs the source's own entry type** (`entry.type`) or it defaults
+  to `avc1` and the audio track comes out claiming to be video; and it needs
+  `description_boxes` (avcC/hvcC/esds copied verbatim) or the file parses fine
+  and no decoder can play it.
+- **mp4box never rejects a non-MP4** — it just never calls `onReady`, leaving the
+  tool spinning forever. Guarded by an ISO-BMFF sniff at offset 4 plus a
+  post-flush check, since `appendBuffer`/`flush` parse synchronously.
+- **KNOWN LIMIT:** `addSample` writes a moof+mdat per sample, so output is a
+  *fragmented* MP4 (1604 fragments for a 22s 720p clip, ~2% overhead, no seek
+  index). ffmpeg decodes it clean and Chromium plays it — verified — but a
+  hand-written progressive muxer is the right follow-up.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
