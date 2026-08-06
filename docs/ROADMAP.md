@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **171 tools are live.** This
+The backlog, and an honest account of what exists. **172 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -18,7 +18,7 @@ optional [backend worker](./BACKEND.md).
 | Category | Count | Shape of it |
 |---|---|---|
 | Developer | 30 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge |
-| Saudi / Local | 23 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address |
+| Saudi / Local | 24 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner** |
 | Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
@@ -108,10 +108,15 @@ positional forms with joiners rather than the deprecated presentation block.
 ~~2. Excel (.xlsx) → CSV / JSON~~ — shipped, on a new dependency-free
 `lib/unzip.ts` that also opens the door to .docx/.pptx/.epub.
 
-1. **Quran khatma / memorisation planner.** Divide the mushaf by pages or juz
-   across a date range, print a schedule and tick sheet, progress in
-   `localStorage`. Big local wedge, and unlike Mirath it is arithmetic over page
-   counts, so it carries no scholarly-sourcing risk.
+~~3. Quran khatma planner~~ — shipped. Built on exactly one piece of reference
+data (the page each juz opens on in the 604-page Madani mushaf), stated in the
+UI, because a plan quoting pages from an edition you do not own is worse than no
+plan. **No surah/ayah division on purpose**: that needs a verified table of 114
+starting pages, and half-remembered reference data has no place in a tool people
+use for worship.
+
+**Nothing is queued above the backlog now.** Pick from it, or from a fresh look
+at what people search for.
 
 ---
 
@@ -137,7 +142,6 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Quran khatma planner | See above. |
 | Printable monthly prayer timetable | We compute prayer times already; a month for a mosque noticeboard is a real ask. |
 | Electricity bill estimator (SEC tariff) | A real money question. Needs `<Disclaimer kind="financial">` **and a printed tariff-as-of date**, or it rots silently. |
 | Fuel / trip cost calculator | Same shape — let the user set the price rather than baking in a number that goes stale. |

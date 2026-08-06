@@ -933,4 +933,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Excel to CSV / JSON', description: 'Open an Excel .xlsx workbook in your browser and take the data out as CSV, TSV or JSON — nothing is uploaded. Reads every sheet, keeps blank cells in the right columns, and turns date cells back into real dates instead of the five-digit numbers a naive converter emits. Values only: formulas come out as the value the spreadsheet last calculated.' },
     ar: { name: 'إكسل إلى CSV أو JSON', description: 'افتح مصنّف إكسل ‎.xlsx‎ في متصفحك واستخرج بياناته بصيغة CSV أو TSV أو JSON — دون رفع أي شيء. يقرأ كل الأوراق، ويُبقي الخلايا الفارغة في أعمدتها الصحيحة، ويعيد خلايا التواريخ تواريخَ حقيقية بدل الأرقام ذات الخمس خانات التي تخرجها المحوّلات الساذجة. القيم فقط: فالمعادلات تخرج بالقيمة التي حسبها الجدول آخر مرة.' },
   },
+  {
+    id: 'khatma',
+    en: { name: 'Khatma Planner', description: 'Plan a khatma over any stretch of days — Ramadan, a month, a week — divided evenly by page or by juz, with Gregorian and Hijri dates side by side. Print it with a tick box per day, or tick the days off here; your progress stays on this device. Page numbers follow the 604-page Madani mushaf, and the tool says so, because a plan quoting pages from an edition you do not own is worse than no plan.' },
+    ar: { name: 'مخطّط الختمة', description: 'خطّط ختمة على أي عدد من الأيام — رمضان أو شهر أو أسبوع — مقسّمة بالتساوي بالصفحات أو بالأجزاء، مع التاريخين الميلادي والهجري جنبًا إلى جنب. اطبعها بمربّع تعليم لكل يوم، أو علّم الأيام هنا؛ ويبقى تقدّمك على جهازك. وأرقام الصفحات بحسب مصحف المدينة ذي الـ٦٠٤ صفحات، والأداة تصرّح بذلك، لأن خطة بأرقام طبعة لا تملكها أسوأ من لا خطة.' },
+  },
 ]

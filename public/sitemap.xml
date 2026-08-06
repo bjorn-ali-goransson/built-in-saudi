@@ -2437,4 +2437,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/xlsx-convert"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/xlsx-convert"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/khatma/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/khatma"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/khatma"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/khatma"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/khatma/</loc>
+    <lastmod>2026-08-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/khatma"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/khatma"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/khatma"/>
+  </url>
 </urlset>
