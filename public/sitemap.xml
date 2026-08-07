@@ -2493,4 +2493,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/email-headers"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/email-headers"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/seating-chart/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/seating-chart"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/seating-chart"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/seating-chart"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/seating-chart/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/seating-chart"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/seating-chart"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/seating-chart"/>
+  </url>
 </urlset>

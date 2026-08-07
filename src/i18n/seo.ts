@@ -953,4 +953,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Email Header Analyser', description: 'Paste the raw headers of an email and see the route it actually took, with the delay at each hop, plus the SPF, DKIM and DMARC verdicts explained in plain words and a note of anything worth a second look — a reply address on another domain, an authentication failure. Parsed in your browser, never uploaded.' },
     ar: { name: 'محلّل ترويسات البريد', description: 'الصق ترويسات رسالة بريدية خامًا لترى الطريق الذي سلكته فعلًا وزمن كل محطة، مع نتائج SPF وDKIM وDMARC مشروحة بكلام واضح، وتنبيهًا لما يستحق نظرة ثانية — كعنوان رد على نطاق آخر، أو فشل في التوثيق. يجري التحليل في متصفحك ولا يُرفع شيء.' },
   },
+  {
+    id: 'seating-chart',
+    en: { name: 'Seating Chart', description: 'Paste your class list, set the room out in rows and desks, and get a printable seating chart. Name the pairs who must not sit together and it works around them — and says so plainly when the room is too full to manage it, rather than quietly seating them side by side. Every chart has a code, so a reprint seats the same people in the same desks.' },
+    ar: { name: 'مخطط جلوس الفصل', description: 'الصق قائمة فصلك، ورتّب القاعة صفوفًا ومقاعد، واحصل على مخطط جلوس قابل للطباعة. سمِّ من يجب ألا يجلسا معًا فيتفادى الأداة ذلك — وتقول لك صراحةً حين تكون القاعة أضيق من أن يتحقق، بدل أن تُجلسهما متجاورين في صمت. ولكل مخطط رمز، فتُجلس إعادةُ الطباعة الطلابَ أنفسهم في المقاعد نفسها.' },
+  },
 ]
