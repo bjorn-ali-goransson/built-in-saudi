@@ -506,7 +506,35 @@ cannot drift from the code. Measured over that bench, the fixes were worth
   half its users. When adding a tool, list the words a person would use, not the
   ones the code uses.
 
-`e2e/search.spec.ts` freezes the cases that failed.
+**Adding tools makes search worse unless the metadata is written for it**, and
+that is measurable rather than theoretical. Four file tools were added and the
+same 81-query bench fell to **top-1 88%**; the causes were all metadata, none
+of them the scorer:
+
+- **A new tool captured a generic query.** "OCR a Scanned PDF" *starts* with
+  OCR, so it outscored "Image to Text (OCR)" on a bare `ocr` — a query that
+  means the general tool. Renamed to **Scanned PDF to Text**, which also puts it
+  in the site's own X-to-Y family. **Do not open a specific tool's name with the
+  generic term another tool owns.**
+- **The reader of a format did not lead with the format.** `xlsx-convert` is
+  what opens an .xlsx and its name says only "Excel"; it tied exactly with the
+  tool that *writes* xlsx, so the winner was whichever was registered first.
+- **A converter was unfindable by its output.** "contacts to spreadsheet"
+  ranked `vcard-to-csv` **fourth**, behind the tool that goes the other way,
+  because it never used the word "spreadsheet".
+
+Fixing those three took the bench to **top-1 91%, top-3 100%**, with no change
+to `fuzzy.ts` at all.
+
+**A coverage/shorter-name tie-break was tried and rejected on measurement.** A
+one-word query often ties two tools exactly, and preferring the tool whose name
+the query covers more of fixed `hijri` but broke `qr` (QR Reader over QR Code)
+and `password` (the strength checker over the generator) — a shorter name is
+not evidence of being the more central tool. Ties therefore fall through to
+**catalogue order**, which is an editorial judgement about which tool is
+primary. Don't reintroduce it without re-running the bench.
+
+`e2e/search.spec.ts` freezes the cases that failed, in both rounds.
 
 ## Conventions
 

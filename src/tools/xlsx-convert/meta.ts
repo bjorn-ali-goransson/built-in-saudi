@@ -11,7 +11,7 @@ export const xlsxConvertTool: Tool = {
     'Open an Excel .xlsx workbook in your browser and take the data out as CSV, TSV or JSON — nothing is uploaded. Reads every sheet, keeps blank cells in the right columns, and turns date cells back into real dates instead of the five-digit numbers a naive converter emits. Values only: formulas come out as the value the spreadsheet last calculated.',
   category: 'Files',
   keywords: [
-    'excel', 'xlsx', 'csv', 'json', 'spreadsheet', 'convert', 'export', 'tsv', 'sheet', 'data', 'offline',
+    'xlsx', 'excel', 'csv', 'json', 'spreadsheet', 'convert', 'export', 'tsv', 'sheet', 'data', 'offline',
     'إكسل', 'جدول', 'تحويل', 'بيانات', 'تصدير', 'ورقة', 'دون رفع',
   ],
   status: 'stable',

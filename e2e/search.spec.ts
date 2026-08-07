@@ -72,3 +72,48 @@ test('a query nothing matches still says so rather than showing everything', asy
   await search(page, 'zzzzqqqq')
   await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
 })
+
+// A second round, after four file tools were added. Adding tools measurably
+// DEGRADED search: on the same 81-query bench, top-1 fell to 88% because a new
+// tool captured a generic query and another was unfindable by the words people
+// use for it. Fixing the metadata (not the scorer) took it to 91% / 100% top-3.
+// These are the cases that moved.
+
+test('a new tool must not capture a generic term from the established one', async ({ page }) => {
+  // "Scanned PDF to Text" was first called "OCR a Scanned PDF", which starts
+  // with OCR and therefore outscored "Image to Text (OCR)" on a bare "ocr" —
+  // a query that means the general tool, not the PDF one.
+  await search(page, 'ocr')
+  await expect(top(page)).toContainText(/image to text/i)
+  // ...while the specific query still reaches the specific tool.
+  await search(page, 'scanned pdf')
+  await expect(top(page)).toContainText(/scanned pdf/i)
+})
+
+test('the tool that READS a format leads on that format', async ({ page }) => {
+  // Both the reader and the writer list "xlsx"; they tied exactly, so the
+  // winner was whichever was registered first.
+  await search(page, 'xlsx')
+  await expect(page.getByTestId('tool-xlsx-convert')).toBeVisible()
+  await expect(top(page)).toContainText(/excel to csv/i)
+  await search(page, 'csv to excel')
+  await expect(top(page)).toContainText(/csv to excel/i)
+})
+
+test('a converter is findable by what people call the output, not the format', async ({ page }) => {
+  // "contacts to spreadsheet" ranked vCard to CSV FOURTH, behind the tool that
+  // converts the other way, because it never used the word "spreadsheet".
+  await search(page, 'contacts to spreadsheet')
+  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
+  await search(page, 'export phone contacts')
+  await expect(top(page)).toContainText(/vcard/i)
+})
+
+test('the new file tools are reachable by their plain names', async ({ page }) => {
+  await search(page, 'word to text')
+  await expect(top(page)).toContainText(/word to text/i)
+  await search(page, 'docx')
+  await expect(top(page)).toContainText(/word to text/i)
+  await search(page, 'vcf to csv')
+  await expect(top(page)).toContainText(/vcard/i)
+})

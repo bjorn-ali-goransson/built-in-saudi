@@ -13,6 +13,16 @@ export function fuzzyScore(query: string, text: string): number {
   if (idx !== -1) {
     let score = 120 - Math.min(idx, 40)
     if (idx === 0 || /\W/.test(t[idx - 1])) score += 30
+    // NO length/coverage bonus here, and that is a measured decision rather
+    // than an omission. A one-word query often ties two tools exactly ("qr",
+    // "password", "hijri"), and the obvious tie-break — prefer the tool whose
+    // name the query covers more of — was tried and made things WORSE: it
+    // fixed "hijri" and broke "qr" (QR Reader over QR Code) and "password"
+    // (the strength checker over the generator), because a shorter name is not
+    // evidence of being the more central tool. Ties fall through to the order
+    // the tools are sorted in, which is the curated catalogue order — an
+    // editorial judgement about which tool is primary, and a better answer
+    // than any string statistic.
     return score
   }
 

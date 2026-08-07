@@ -1010,8 +1010,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'pdf-ocr',
-    en: { name: 'OCR a Scanned PDF', description: 'A scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
-    ar: { name: 'استخراج نص من PDF ممسوح', description: 'عقد ممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
+    en: { name: 'Scanned PDF to Text', description: 'A scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
+    ar: { name: 'نص من PDF ممسوح', description: 'عقد ممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
   },
   {
     id: 'docx-to-text',

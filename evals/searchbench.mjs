@@ -103,6 +103,22 @@ const BENCH = [
   ['ضغط صورة', 'image-compressor'],
   ['ترجمة', 'translate'],
   ['فاتورة', 'invoice-generator'],
+  // The file tools added in the code-sweep batch. A tool nobody can find is a
+  // tool that does not exist, so each one is benched on the words a person
+  // would actually type — not the words the code uses.
+  ['scanned pdf', 'pdf-ocr'],
+  ['pdf ocr', 'pdf-ocr'],
+  ['read a scanned document', 'pdf-ocr'],
+  ['word to text', 'docx-to-text'],
+  ['docx', 'docx-to-text'],
+  ['open a word file', 'docx-to-text'],
+  ['csv to excel', 'csv-to-xlsx'],
+  ['leading zeros', 'csv-to-xlsx'],
+  ['vcf to csv', 'vcard-to-csv'],
+  ['contacts to spreadsheet', 'vcard-to-csv'],
+  ['export phone contacts', 'vcard-to-csv'],
+  ['مسح ضوئي', 'pdf-ocr'],
+  ['جهات الاتصال', 'vcard-to-csv'],
 ]
 
 function rank(query, wanted) {
