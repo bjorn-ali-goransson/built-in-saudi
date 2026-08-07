@@ -988,4 +988,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'EPUB to Text', description: 'Open an EPUB and take its text out — the whole book or one chapter at a time, as plain text or Markdown — along with its title, authors, publisher and ISBN. Chapters come out in the order the book says to read them, not the order the files happen to be named. Read in your browser; the file is never uploaded.' },
     ar: { name: 'كتاب EPUB إلى نص', description: 'افتح ملف EPUB واستخرج نصّه — الكتاب كله أو فصلًا فصلًا، نصًّا عاديًا أو ماركداون — مع عنوانه ومؤلفيه وناشره ورقمه الدولي. وتخرج الفصول بالترتيب الذي يقول الكتاب أن يُقرأ به، لا بترتيب أسماء الملفات. تجري القراءة في متصفحك؛ ولا يُرفع الملف أبدًا.' },
   },
+  {
+    id: 'csv-split',
+    en: { name: 'Split a CSV', description: 'Break one big spreadsheet into several smaller CSVs — by row count, by file size, or one file per value in a column, so a staff list becomes one file per department. Every part keeps the header row, and a byte-order mark is added by default so Excel reads Arabic correctly instead of turning it into mojibake. Downloads as a zip.' },
+    ar: { name: 'تقسيم ملف CSV', description: 'قسّم جدولًا كبيرًا إلى ملفات CSV أصغر — بعدد الصفوف أو بحجم الملف أو ملفًا لكل قيمة في عمود، فتصير قائمة الموظفين ملفًا لكل إدارة. ويحتفظ كل جزء بصف العناوين، وتُضاف علامة ترتيب البايتات افتراضيًا ليقرأ إكسل العربية صحيحة بدل أن يحيلها رموزًا. ويُنزَّل الكل في ملف مضغوط.' },
+  },
 ]
