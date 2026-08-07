@@ -7,12 +7,18 @@ declare global {
 }
 
 test.describe('home', () => {
+  // `await locator.count()` resolves once and never retries: on a slow runner the
+  // lazily-loaded tool chunk has not rendered yet, the count reads 0, and a
+  // perfectly healthy page fails the assertion. Every count assertion here uses
+  // expect.poll, which re-reads until it passes or times out. This suite runs
+  // with retries:0 on purpose, so a test that depends on render timing is a
+  // defect in the test.
   test('opens to the app grid + search', async ({ page }) => {
     await page.goto('/en')
     await expect(page.locator('.tool-search__input')).toBeVisible()
     const cards = page.locator('[data-testid^="tool-"]')
     await expect(cards.first()).toBeVisible()
-    expect(await cards.count()).toBeGreaterThan(8)
+    await expect.poll(() => cards.count()).toBeGreaterThan(8)
     // The marketing hero is gone.
     await expect(page.locator('.hero__title')).toHaveCount(0)
   })
@@ -23,7 +29,7 @@ test.describe('home', () => {
     await page.locator('.tool-search__input').fill('qibla')
     const cards = page.locator('[data-testid^="tool-"]')
     await expect(cards.first()).toContainText(/Qibla/i) // ranked top
-    expect(await cards.count()).toBeLessThan(all)       // and the list is filtered down
+    await expect.poll(() => cards.count()).toBeLessThan(all) // and the list is filtered down
   })
 
   test('the app-launcher is hidden on home, opens + searches on tool pages', async ({ page }) => {
@@ -450,17 +456,17 @@ test.describe('tools', () => {
     await page.goto('/en/tools/prayer-times')
     await expect(page.getByTestId('next-prayer')).toBeVisible()
     const rows = page.locator('[data-testid^="prow-"]')
-    expect(await rows.count()).toBeGreaterThanOrEqual(5)
+    await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(5)
   })
 
   test('islamic calendar: renders a month grid', async ({ page }) => {
     await page.goto('/en/tools/islamic-calendar')
     await expect(page.getByTestId('cal-title')).toBeVisible()
     const days = page.locator('.cal2__cell:not(.is-blank)')
-    expect(await days.count()).toBeGreaterThan(27)
+    await expect.poll(() => days.count()).toBeGreaterThan(27)
     // toggling to Gregorian keeps the grid populated
     await page.getByTestId('cal-mode-greg').click()
-    expect(await page.locator('.cal2__cell:not(.is-blank)').count()).toBeGreaterThan(27)
+    await expect.poll(() => page.locator('.cal2__cell:not(.is-blank)').count()).toBeGreaterThan(27)
   })
 
   test('hijri calendar: dual month calendars convert both ways, no BC bug', async ({ page }) => {
@@ -493,12 +499,12 @@ test.describe('tools', () => {
   test('hisn al-muslim: lists chapters and opens one', async ({ page }) => {
     await page.goto('/en/tools/hisn-al-muslim')
     const chapters = page.locator('[data-testid^="hisn-ch-"]')
-    expect(await chapters.count()).toBeGreaterThan(50)
+    await expect.poll(() => chapters.count()).toBeGreaterThan(50)
     await chapters.first().click()
     await expect(page.getByTestId('hisn-back')).toBeVisible()
     await page.getByTestId('hisn-back').click()
     await page.getByTestId('hisn-search').fill('الاستيقاظ')
-    expect(await page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
+    await expect.poll(() => page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
   })
 
   test('regex tester: highlights matches and counts them', async ({ page }) => {

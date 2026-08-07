@@ -77,6 +77,9 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   Business: { en: 'Business', ar: 'أعمال' },
   Communication: { en: 'Communication', ar: 'تواصل' },
   Files: { en: 'Files', ar: 'ملفات' },
+  // Kept though no tool uses it today: a category label with no mapping
+  // renders its raw English string on the Arabic side, and that is a silent
+  // bug waiting for whoever invents a new category.
   Utilities: { en: 'Utilities', ar: 'أدوات' },
   'Saudi / Local': { en: 'Saudi / Local', ar: 'أدوات سعودية' },
 }

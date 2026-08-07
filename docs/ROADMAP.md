@@ -144,6 +144,56 @@ specific *obligation* (ZATCA) and a specific *fear* (uploading a payslip).
 Search for what people are forced to do and what they are afraid to hand over,
 not for lists of tools.
 
+## Code sweep, 7 August 2026
+
+Read for what the codebase already knows how to do but does not offer, and for
+the gaps between tools that only show up when you list them all out. Every claim
+below was checked against the source, not assumed.
+
+### Capabilities built and under-used
+
+| Already here | What it would unlock |
+|---|---|
+| **`lib/unzip.ts`** — used by 2 tools | A **.docx → text** reader is the same shape as the EPUB one: a zip of XML, walk `word/document.xml`, honour block elements. Word documents are the format people most often need text out of, and it is the one big office format we still cannot open. `.pptx` after it. |
+| **`lib/zip.ts` `zipStore` (writes)** + the xlsx reader | **CSV/table → .xlsx.** We read xlsx and write only CSV, so the loop is one-way. Writing one means `sharedStrings.xml` + a sheet + a content-types file, zipped — all of which we now have the parts for. Closes a gap people hit whenever the thing on the other end insists on a real workbook. |
+| **`lib/pdfRender.ts`** (pdf.js) | The **password-protected PDF** opener from the web sweep. pdf.js decrypts given a password the user knows. |
+| **`lib/builtinAi.ts`** | `detect-language` still uses a hand-rolled heuristic while the platform `LanguageDetector` is `available` with NO download on every browser that has it. Wiring it in as progressive enhancement is a small change with a real accuracy win. |
+
+### Gaps between tools we already have
+
+- **A PDF page organiser — rotate, reorder, delete pages.** Verified missing:
+  `pdf-edit` rotates *images inside* a page, not pages, and the `pdfOps` worker
+  has `pageCount`/`merge`/`extract`/`burst` and no rotate. This is the most
+  common thing anyone does to a PDF after merging, and we have twelve PDF tools
+  without it. pdf-lib does `page.setRotation()` and reordering is a copy in a
+  different order.
+- **OCR a scanned PDF.** We have `pdf-to-images` and we have `image-to-text`,
+  and not the combination — so a scanned, stamped document, which is most
+  official paper in this country, cannot be turned into text in one step.
+- **vCard → CSV.** `csv-vcard` goes one way only. The reverse is how you get a
+  phone's contacts into a spreadsheet.
+- **ZATCA invoice QR** extends `qr-reader` — see the web sweep above.
+
+### Discoverability faults found while reading (fixed in this pass)
+
+- **`Utilities` held exactly one tool.** A one-tool category costs a heading and
+  a section break to show a single item, and it sorted to the end because it was
+  not in `CATEGORY_ORDER` either. `qr-reader` decodes an image, so it moved to
+  Images and the category is gone.
+- **`Communication` was falling off the end of the order** for the same reason.
+  It is a deliberate one-tool section — Calls is its own thing — so it is now
+  placed explicitly rather than by accident.
+- Still uneven, and worth a decision rather than a drive-by edit: `Calculators`
+  (18) has become a grab-bag holding `sound-meter`, `bpm-tap`, `pomodoro` and
+  `countdown`, none of which calculate anything; and `base-converter` sits in
+  Developer while `unit-converter` sits in Converters.
+
+### Nothing half-done
+
+Grepped for `TODO`, `FIXME`, `HACK`, "for now", "not yet". The only hits are
+descriptive comments and one honest disclaimer in `pdf-edit` about what it
+cannot do. For a codebase this size that is worth noting as a finding in itself.
+
 ## Backlog
 
 Not ranked against each other — a supply of candidates, so that choosing is
