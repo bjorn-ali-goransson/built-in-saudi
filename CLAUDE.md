@@ -250,6 +250,65 @@ that uses the paths real Excel uses:
 - A blank cell is simply **absent** from the XML, so each cell must be placed at
   the column its `r` reference names or the whole row shifts left.
 
+**`docx-to-text`** (`lib/docx.ts`) is the second. The body is one part,
+`word/document.xml`, and "strip the tags" gets three things wrong — each a
+visible bug, each covered in `e2e/docx-to-text.spec.ts`:
+
+- **A word is often several `<w:t>` runs.** Word splits a run at every
+  formatting, spell-check and revision boundary, so `Riyadh` really does arrive
+  as `Riy` + `adh`. Runs concatenate with **nothing** between them; join them
+  with a space and real documents come out full of "Riy adh".
+- **Structure carries no characters.** `</w:p>` and `<w:br/>` are the only
+  things that make a line, and `<w:tab/>` the only thing that makes a tab —
+  without them the whole document is one run-on line.
+- **A table row must be assembled before it is emitted.** The paragraph inside a
+  cell closes *before* the cell does, so flushing on `</w:p>` puts every cell on
+  its own line and turns a row of figures into a column. Cells accumulate until
+  `</w:tr>`, then join with tabs.
+
+Headers/footers/footnotes are read from their own parts and returned
+**separately** — they repeat on every page, so folding them into the body
+interleaves nonsense. A `.doc` is an OLE compound file, not a zip; it is
+detected by its `D0CF11E0` signature and named, because "could not read" sends
+people back to try the same file again.
+
+## Reading a .vcf (`lib/vcardRead.ts`, `vcard-to-csv`)
+
+The inverse of `tools/csv-vcard/vcard.ts`, and much the harder direction —
+four things must be right before the text is even readable, each one a real
+export in the wild, each covered in `e2e/vcard-to-csv.spec.ts`:
+
+- **Unfold before parsing anything.** A line starting with a space or tab
+  continues the one before it, and the fold is at 75 *octets*, so for Arabic it
+  lands mid-name.
+- **vCard 2.1 quoted-printable.** Android's own exporter writes
+  `N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=B3…` and continues a long value
+  with a trailing `=` on an **unindented** next line — the one fold with no
+  marker on the continuation side. Skip this and every Arabic contact from an
+  Android phone is gibberish, which is most contacts here.
+- **Only the first *unquoted* colon splits name from value**, or `URL:https://…`
+  breaks; parameters come in three shapes (`TYPE=CELL`, the 2.1 shorthand
+  `;CELL`, and `TYPE="CELL,VOICE"`).
+- **Apple prefixes properties with a group** (`item1.TEL:`) — match after the
+  dot or half an iPhone export vanishes.
+
+`PHOTO`/`LOGO` are dropped on purpose: base64 blobs make the spreadsheet
+unopenable and say nothing in a cell.
+
+## Writing an .xlsx (`lib/writeXlsx.ts`)
+
+`buildXlsx` is used by `csv-to-xlsx` and by `vcard-to-csv`'s Excel export.
+Store-only via `zip.ts` (the ZIP spec allows uncompressed entries and Excel
+reads them), strings written **inline** (`t="inlineStr"`) so there is no
+`sharedStrings` index to get wrong. The reason the tool exists at all is that
+sending someone a CSV damages their data and no setting on their end fixes it:
+Excel eats the leading zero off `0501234567`, rounds a 16-digit IBAN into
+scientific notation, and renders Arabic as mojibake. So `looksNumeric` is
+deliberately **conservative** — a leading zero, a leading `+`, or more than 15
+significant digits stays text. Two Excel quirks are load-bearing in the styles
+part: the fills list must have `none` at 0 and `gray125` at 1 or Excel calls the
+workbook corrupt, and two sheets sharing a name make a file it refuses to open.
+
 ## Arabic handwriting sheets (`arabic-handwriting`)
 
 The four positional forms are **not four characters**. They are produced with
@@ -379,11 +438,14 @@ facts, and `--roundtrip` — re-uploading our own output, the case users report 
 "it lowered my score". Add a variant rather than editing `champion` in place, and
 keep `legacy` untouched so there is always a fixed baseline.
 
-## OCR (`image-to-text`)
+## OCR (`image-to-text`, `pdf-ocr`)
 
 The one tool with a genuinely heavy dependency — `tesseract.js`, because there is
-no platform OCR API worth using. Everything about it is arranged so the privacy
-claim stays literally true:
+no platform OCR API worth using. **The configuration lives in `src/lib/ocr.ts`
+(`createOcrWorker`) and is shared by both tools** — every setting in it is
+load-bearing, so a tool that reaches for `createWorker` directly will quietly
+lose the privacy guarantee below. Everything about it is arranged so that claim
+stays literally true:
 
 - **All assets are served from our own origin**, never a CDN. Left at its
   defaults tesseract.js fetches `worker.min.js` from jsdelivr and the language
@@ -404,6 +466,11 @@ claim stays literally true:
 - Models are cached by tesseract.js in IndexedDB after first use. The service
   worker deliberately does not cache `/ocr` (it only caches navigations and
   `/assets/`), so 19MB never lands in the shell cache.
+- **`pdf-ocr` never OCRs a page that already has text.** It asks
+  `pdf-to-text`'s `extractPdf` first and takes any page with a real text layer
+  verbatim, OCRing only the picture-only ones — running the engine over a
+  perfect copy would replace it with a guess. A file that is text throughout
+  says so and links to `pdf-to-text` instead of pretending to help.
 
 ## Search ranking (`src/lib/fuzzy.ts`)
 

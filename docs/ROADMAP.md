@@ -154,8 +154,8 @@ below was checked against the source, not assumed.
 
 | Already here | What it would unlock |
 |---|---|
-| **`lib/unzip.ts`** — used by 2 tools | A **.docx → text** reader is the same shape as the EPUB one: a zip of XML, walk `word/document.xml`, honour block elements. Word documents are the format people most often need text out of, and it is the one big office format we still cannot open. `.pptx` after it. |
-| **`lib/zip.ts` `zipStore` (writes)** + the xlsx reader | **CSV/table → .xlsx.** We read xlsx and write only CSV, so the loop is one-way. Writing one means `sharedStrings.xml` + a sheet + a content-types file, zipped — all of which we now have the parts for. Closes a gap people hit whenever the thing on the other end insists on a real workbook. |
+| **`lib/unzip.ts`** — used by 3 tools | ~~A **.docx → text** reader~~ — **shipped** as `docx-to-text`. It was not the same shape as the EPUB one: Word splits a single word across runs, and a table row has to be assembled before it is emitted. `.pptx` is the next one, and it is genuinely the same shape as EPUB (one XML part per slide). |
+| **`lib/zip.ts` `zipStore` (writes)** + the xlsx reader | ~~**CSV/table → .xlsx.**~~ **Shipped** as `csv-to-xlsx` (`lib/writeXlsx.ts`), and it needed no `sharedStrings.xml` at all — inline strings do the job with one part fewer. The real argument for it turned out not to be "the other end insists on a workbook" but that sending a CSV *damages the data*: Excel eats leading zeros and rounds long IBANs. |
 | **`lib/pdfRender.ts`** (pdf.js) | The **password-protected PDF** opener from the web sweep. pdf.js decrypts given a password the user knows. |
 | **`lib/builtinAi.ts`** | `detect-language` still uses a hand-rolled heuristic while the platform `LanguageDetector` is `available` with NO download on every browser that has it. Wiring it in as progressive enhancement is a small change with a real accuracy win. |
 
@@ -167,11 +167,14 @@ below was checked against the source, not assumed.
   common thing anyone does to a PDF after merging, and we have twelve PDF tools
   without it. pdf-lib does `page.setRotation()` and reordering is a copy in a
   different order.
-- **OCR a scanned PDF.** We have `pdf-to-images` and we have `image-to-text`,
-  and not the combination — so a scanned, stamped document, which is most
-  official paper in this country, cannot be turned into text in one step.
-- **vCard → CSV.** `csv-vcard` goes one way only. The reverse is how you get a
-  phone's contacts into a spreadsheet.
+- ~~**OCR a scanned PDF.**~~ **Shipped** as `pdf-ocr`. The one design decision
+  worth remembering: it asks the text extractor first and only OCRs the pages
+  that are genuinely pictures — a page with a real text layer is copied out
+  exactly, because OCR would turn a perfect copy into a guess.
+- ~~**vCard → CSV.**~~ **Shipped** as `vcard-to-csv`. The inverse turned out to
+  be much the harder direction: Android writes Arabic names as vCard 2.1
+  quoted-printable, Apple hides half its properties behind `item1.` groups, and
+  a folded line has to be rejoined before anything is parsed at all.
 - **ZATCA invoice QR** extends `qr-reader` — see the web sweep above.
 
 ### Discoverability faults found while reading (fixed in this pass)

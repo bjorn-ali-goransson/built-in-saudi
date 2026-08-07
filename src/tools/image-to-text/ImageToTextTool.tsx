@@ -1,33 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { setWorkInProgress } from '../../lib/workInProgress'
+import { createOcrWorker, type OcrLang } from '../../lib/ocr'
 import { UploadIcon, DownloadIcon, CopyIcon, LockIcon } from '../../components/icons'
 import { Button, Stack, Field, Textarea, Seg, SegButton, Spinner, FileError } from '../../components/ui'
 import { whyUnreadable } from '../../lib/imageInput'
 import { decodeImage } from '../../lib/decodeImage'
 
-// Tesseract's engine and language models are served from OUR origin
-// (public/ocr — the wasm core is copied there at build by
-// scripts/copy-ocr-core.mjs, the .traineddata files are committed). The default
-// is a CDN, which would mean a third-party request on a page whose whole promise
-// is that nothing about your file leaves the browser — and would break wherever
-// that CDN is slow or blocked.
-const OCR_BASE = `${import.meta.env.BASE_URL}ocr`
+// The tesseract configuration — our own origin, an explicitly chosen core
+// build, plain .traineddata — lives in lib/ocr.ts, shared with pdf-ocr.
 
-// Pick the core build ourselves and hand tesseract.js an exact file. Given only
-// a directory it probes for relaxed-SIMD as well and asks for a third variant we
-// don't ship — and a missing file here does NOT 404: the SPA fallback answers
-// 200 with index.html, so the worker's importScripts dies on HTML with a
-// confusing NetworkError. Two builds, chosen explicitly, no guessing.
-// (The probe is the standard wasm-feature-detect SIMD module.)
-const SIMD_PROBE = Uint8Array.of(0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11)
-function corePath(): string {
-  let simd = false
-  try { simd = WebAssembly.validate(SIMD_PROBE) } catch { /* ancient engine — take the plain build */ }
-  return `${OCR_BASE}/tesseract-core-${simd ? 'simd-' : ''}lstm.wasm.js`
-}
-
-type Lang = 'eng' | 'ara' | 'eng+ara'
+type Lang = OcrLang
 
 const STR = {
   en: {
@@ -101,18 +84,9 @@ export default function ImageToTextTool() {
     setErr(''); setText(''); setConf(null); setPct(0); setPhase('loading')
     let worker: Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>> | null = null
     try {
-      const { createWorker } = await import('tesseract.js')
-      worker = await createWorker(lang, 1, {
-        corePath: corePath(),
-        langPath: OCR_BASE,
-        // Without this the worker script itself is fetched from jsdelivr.
-        workerPath: `${OCR_BASE}/worker.min.js`,
-        // The models are plain .traineddata here, not the .gz the CDN serves.
-        gzip: false,
-        logger: (m: { status: string; progress: number }) => {
-          if (run !== runRef.current) return
-          if (m.status === 'recognizing text') { setPhase('reading'); setPct(Math.round(m.progress * 100)) }
-        },
+      worker = await createOcrWorker(lang, (m) => {
+        if (run !== runRef.current) return
+        if (m.status === 'recognizing text') { setPhase('reading'); setPct(Math.round(m.progress * 100)) }
       })
       if (run !== runRef.current) return
       setPhase('reading')

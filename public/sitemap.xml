@@ -2647,4 +2647,60 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-organise"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-organise"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/pdf-ocr/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-ocr"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-ocr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-ocr"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-ocr/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-ocr"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-ocr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-ocr"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/docx-to-text/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/docx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/docx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/docx-to-text"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/docx-to-text/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/docx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/docx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/docx-to-text"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/csv-to-xlsx/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-to-xlsx"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-to-xlsx"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-to-xlsx"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/csv-to-xlsx/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-to-xlsx"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-to-xlsx"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-to-xlsx"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/vcard-to-csv/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vcard-to-csv"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vcard-to-csv"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vcard-to-csv"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/vcard-to-csv/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vcard-to-csv"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vcard-to-csv"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vcard-to-csv"/>
+  </url>
 </urlset>

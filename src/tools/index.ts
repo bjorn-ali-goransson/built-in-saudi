@@ -185,6 +185,10 @@ import { csvSplitTool } from './csv-split/meta'
 import { nameSpellingTool } from './name-spelling/meta'
 import { zatcaQrTool } from './zatca-qr/meta'
 import { pdfOrganiseTool } from './pdf-organise/meta'
+import { pdfOcrTool } from './pdf-ocr/meta'
+import { docxToTextTool } from './docx-to-text/meta'
+import { csvToXlsxTool } from './csv-to-xlsx/meta'
+import { vcardToCsvTool } from './vcard-to-csv/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -318,6 +322,10 @@ export const tools: Tool[] = [
   pdfMergeTool,
   pdfSplitTool,
   pdfOrganiseTool,
+  pdfOcrTool,
+  docxToTextTool,
+  csvToXlsxTool,
+  vcardToCsvTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,

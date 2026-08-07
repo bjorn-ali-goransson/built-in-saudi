@@ -1008,4 +1008,24 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Organise PDF Pages', description: 'Turn sideways pages the right way up, drag them into the right order, and drop the ones you do not want — all on one screen, then save. Pages are copied rather than re-drawn, so text stays text and a scan stays exactly the scan it was. The file never leaves your device.' },
     ar: { name: 'ترتيب صفحات PDF', description: 'اضبط اتجاه الصفحات المائلة، واسحبها إلى ترتيبها الصحيح، واحذف ما لا تريده — كل ذلك في شاشة واحدة، ثم احفظ. وتُنسخ الصفحات ولا يُعاد رسمها، فيبقى النص نصًا وتبقى الصورة الممسوحة كما هي تمامًا. ولا يغادر الملف جهازك.' },
   },
+  {
+    id: 'pdf-ocr',
+    en: { name: 'OCR a Scanned PDF', description: 'A scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
+    ar: { name: 'استخراج نص من PDF ممسوح', description: 'عقد ممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
+  },
+  {
+    id: 'docx-to-text',
+    en: { name: 'Word to Text', description: 'Read a Word document as plain text, with the paragraphs where they were and the table columns still apart — ready to paste into anything, on a machine with no Word on it. Headers, footers and footnotes are kept separate rather than mixed into the body. The file is read in your browser and never uploaded.' },
+    ar: { name: 'وورد إلى نص', description: 'اقرأ مستند وورد نصًا عاديًا، بفقراته في مواضعها وأعمدة جداوله متباعدة كما كانت — جاهزًا للصق في أي شيء، وعلى جهاز لا وورد فيه. وتُفصل الرؤوس والتذييلات والحواشي عن المتن بدل أن تختلط به. ويُقرأ الملف في متصفحك ولا يُرفع أبدًا.' },
+  },
+  {
+    id: 'csv-to-xlsx',
+    en: { name: 'CSV to Excel', description: 'Turn a CSV into a real .xlsx, so opening it does not damage it. A CSV carries no types, so Excel guesses — and its guesses eat the leading zero off every phone number and national ID, and round a 16-digit IBAN into scientific notation. Here each column declares what it is, and the file is UTF-8 by definition, so Arabic arrives as Arabic. The conversion runs in your browser.' },
+    ar: { name: 'CSV إلى إكسل', description: 'حوّل ملف CSV إلى ملف ‎.xlsx‎ حقيقي، حتى لا يفسده مجرد فتحه. فملف CSV لا يحمل أنواعًا، فيخمّن إكسل — وتخمينه يأكل الصفر الأول من كل رقم جوال وهوية، ويقرّب رقم آيبان من ستة عشر رقمًا إلى صيغة أُسّية. أما هنا فيعلن كل عمود عن نوعه، والملف بترميز UTF-8 أصلًا، فتصل العربية عربيةً.' },
+  },
+  {
+    id: 'vcard-to-csv',
+    en: { name: 'vCard to CSV', description: 'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number.' },
+    ar: { name: 'vCard إلى CSV', description: 'حوّل ملف ‎.vcf‎ الذي يصدّره هاتفك إلى جدول. فالأسماء العربية المكتوبة بالطريقة التي يرمّزها بها أندرويد تخرج أسماءً لا طلاسم، وتصدير آيفون يحتفظ بالأرقام التي يخفيها خلف المجموعات، ومن له ثلاثة أرقام يحصل على ثلاثة أعمدة. ونزّله ملف CSV أو ملف إكسل يحفظ الصفر الأول في كل رقم جوال.' },
+  },
 ]
