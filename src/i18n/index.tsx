@@ -71,6 +71,7 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   Design: { en: 'Design', ar: 'تصميم' },
   Converters: { en: 'Converters', ar: 'محوّلات' },
   Developer: { en: 'Developer', ar: 'أدوات المطوّرين' },
+  Web: { en: 'Web', ar: 'الويب' },
   Text: { en: 'Text', ar: 'نصوص' },
   Calculators: { en: 'Calculators', ar: 'حاسبات' },
   PDF: { en: 'PDF', ar: 'PDF' },

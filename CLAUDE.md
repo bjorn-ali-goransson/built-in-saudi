@@ -74,6 +74,14 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
 `components/ToolCatalog.tsx`, fed by `lib/toolSections.ts` (the `RECOMMENDED`
 list + category grouping).
 
+**Testing a store written from an effect:** `recordRecent` runs in a
+`useEffect` after mount while Playwright's `goto` resolves on load, so a spec
+that navigates straight on can beat it. That passed every time the spec ran
+alone and failed under full-suite load. `e2e/recent-tools.spec.ts` waits on the
+store itself (`expect.poll` over `localStorage`) rather than sleeping — waiting
+for the thing under test, not for time to pass. Worth copying for any future
+store written from an effect.
+
 **Recently used** (`lib/recentTools.ts`, `bis-recent-tools`) is the first row of
 both, capped at 8. At 192 tools the catalogue is a place you visit once, and the
 three or four you came back for were reachable only by scrolling thirteen
@@ -714,12 +722,18 @@ The rule now applied, and worth keeping when adding a tool:
 Section sizes after: Converters 3 → 8, Files 16 → 11, Text 24 → 22,
 Calculators 18 → 20, with search unchanged at 92% top-1 / 100% top-3.
 
-**Still outstanding: `Developer` is 32 tools**, by far the biggest section and
-an undifferentiated wall — it mixes data tools (json, csv, diff), security
-(jwt, cert, hmac), web (url, ip, user-agent, meta-tags, robots) and project
-scaffolding (readme, gitignore). Splitting it is a product-shaping call about
-32 tools rather than a mechanical fix, so it is left for a deliberate decision
-rather than done in passing.
+**`Developer` was 32 tools** — the biggest section by a distance and an
+undifferentiated wall. Only the **uncontested** part has been split off, into
+`Web`: the seven tools you point at a **site or a URL** rather than at code
+(`meta-tags`, `robots-txt`, `link-preview`, `url-encoder`, `url-parser`,
+`user-agent`, `link-shortener`). `ip-subnet` deliberately stayed — a subnet
+calculator is a networking tool a developer reaches for, not something you use
+on a site. Developer is now 25, in line with Saudi/Local (23) and Text (22)
+rather than an outlier, and search is unchanged at 92% / 100%.
+
+Splitting the remaining 25 further (data vs security vs project scaffolding) is
+still open, and deliberately so: there is no single principle that settles it
+the way "a file converter belongs in Converters" settled the last one.
 
 ## Conventions
 

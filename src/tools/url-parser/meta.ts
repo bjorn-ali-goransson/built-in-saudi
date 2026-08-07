@@ -9,7 +9,7 @@ export const urlParserTool: Tool = {
   tagline: 'Pull a URL apart, edit the query, put it back.',
   description:
     'Break a URL into its scheme, host, port, path, fragment and query parameters, edit any of them, and get a correctly-encoded URL back — without hand-counting ampersands or guessing at percent-encoding. It also spots tracking parameters (utm_*, gclid, fbclid and friends) and strips them in one click, and flags a hostname using non-ASCII characters.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['url', 'parser', 'query string', 'parameters', 'utm', 'encode', 'link', 'رابط', 'معاملات', 'تحليل', 'ترميز', 'تتبع'],
   status: 'stable',
   Icon: LinkIcon,

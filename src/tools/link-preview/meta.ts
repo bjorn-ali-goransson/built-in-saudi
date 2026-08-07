@@ -9,7 +9,7 @@ export const linkPreviewTool: Tool = {
   tagline: 'See how your link will look when shared.',
   description:
     'Paste your page’s meta tags and see the card WhatsApp, X, LinkedIn and Facebook will actually render — then a list of what will go wrong: a missing og:image, a title that will be truncated, a relative image path crawlers will not resolve. Nothing is fetched: a browser cannot read another site’s HTML, and any tool that claims to is proxying your URL through its own server.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['open graph', 'og:image', 'link preview', 'social', 'twitter card', 'meta tags', 'share', 'معاينة الرابط', 'وسوم', 'مشاركة', 'سوشال'],
   status: 'stable',
   Icon: ShareIcon,

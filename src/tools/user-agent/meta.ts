@@ -8,7 +8,7 @@ export const userAgentTool: Tool = {
   tagline: 'See the browser, engine and OS behind a UA string.',
   description:
     'Read your own browser’s user-agent string, or paste any other, and see the detected browser, rendering engine, operating system and device type broken out. Everything is parsed locally — your UA is never sent anywhere.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['user agent', 'ua', 'browser', 'parser', 'os', 'engine', 'detect', 'وكيل المستخدم', 'متصفح'],
   status: 'stable',
   Icon: DeviceIcon,

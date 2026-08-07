@@ -9,7 +9,7 @@ export const linkShortenerTool: Tool = {
   tagline: 'Turn long URLs into tidy built-in-saudi.com/s/… links.',
   description:
     'Shorten any long link into a clean built-in-saudi.com/s/… URL you can share anywhere. Sign in with Google to create and manage your links and see their click counts. Each link is kept for 6 months. Free, no ads, no tracking beyond a simple click tally.',
-  category: 'Developer',
+  category: 'Web',
   keywords: [
     'link shortener', 'url shortener', 'short link', 'shorten url', 'short url', 'tinyurl', 'link',
     'اختصار الروابط', 'رابط قصير', 'مختصر روابط', 'اختصار رابط',

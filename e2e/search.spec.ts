@@ -147,3 +147,23 @@ test('a tool with a stronger family keeps it', async ({ page }) => {
   // put even though it converts a file.
   await expect(page.getByTestId('section-PDF').getByTestId('tool-pdf-to-text')).toBeVisible()
 })
+
+test('the tools about a website live under Web, not buried in Developer', async ({ page }) => {
+  // Developer was 32 tools — the biggest section by a distance and an
+  // undifferentiated wall. Only the uncontested part was split off: things you
+  // point at a site or a URL, rather than at code.
+  await page.goto('/en')
+  const web = page.getByTestId('section-Web')
+  await expect(web).toBeVisible()
+  for (const id of ['meta-tags', 'robots-txt', 'link-preview', 'url-parser', 'user-agent']) {
+    await expect(web.getByTestId(`tool-${id}`)).toBeVisible()
+  }
+  // A subnet calculator is a networking tool a developer reaches for, not
+  // something you use on a site — it deliberately stayed put.
+  await expect(page.getByTestId('section-Developer').getByTestId('tool-ip-subnet')).toBeVisible()
+})
+
+test('the new category has an Arabic label, not a raw English fallback', async ({ page }) => {
+  await page.goto('/ar')
+  await expect(page.getByTestId('section-Web')).toContainText('الويب')
+})

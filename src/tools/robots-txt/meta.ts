@@ -8,7 +8,7 @@ export const robotsTxtTool: Tool = {
   tagline: 'Build a robots.txt with the right rules.',
   description:
     'Generate a valid robots.txt: allow or block crawlers, add disallowed paths, set a crawl-delay and point to your sitemap — then copy or download the file. Runs entirely in your browser.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['robots.txt', 'crawler', 'seo', 'user-agent', 'disallow', 'sitemap', 'روبوتس', 'زواحف', 'سيو'],
   status: 'stable',
   Icon: RobotIcon,

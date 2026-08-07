@@ -8,7 +8,7 @@ export const metaTagsTool: Tool = {
   tagline: 'SEO, Open Graph and Twitter tags for your page.',
   description:
     'Fill in a page’s title, description, URL and preview image to generate the full set of SEO, Open Graph and Twitter Card meta tags — with a live social-share preview — ready to paste into your <head>. Runs entirely in your browser.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['meta tags', 'seo', 'open graph', 'og', 'twitter card', 'social', 'head', 'وسوم', 'سيو', 'أوبن غراف'],
   status: 'stable',
   Icon: TagIcon,

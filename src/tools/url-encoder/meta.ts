@@ -8,7 +8,7 @@ export const urlEncoderTool: Tool = {
   tagline: 'Encode and decode URLs and HTML entities.',
   description:
     'Encode or decode text for URLs (percent-encoding, whole-URL or component) and HTML (entities like &amp; and &#39;), both directions, as you type. Handy for query strings, links and escaping markup. Runs entirely in your browser.',
-  category: 'Developer',
+  category: 'Web',
   keywords: ['url encode', 'url decode', 'percent encoding', 'html entities', 'escape', 'uri', 'encode', 'ترميز', 'رابط'],
   status: 'stable',
   Icon: LinkIcon,
