@@ -426,8 +426,9 @@ stays checkable while the evals are blocked.
 the catalogue branch that renders it are unreachable. Harmless, but it is one
 of those things that quietly becomes load-bearing if left.
 
-**Still latent, in rough order of value:** extract a ZIP (we list entries and
-already do DEFLATE — extraction is the missing verb); `.docx` → Markdown
+**Still latent, in rough order of value:** ~~extract a ZIP~~ (**done** — it was
+the clearest half-done edge in the codebase: `archive-inspector` listed every
+entry and could not produce one); `.docx` → Markdown
 (`lib/docx.ts` already walks the structure and throws it away); `.eml`/`.msg`
 reader (`email-headers` takes a paste, but the file is what people have);
 merging spreadsheets across files (`readTableFile` already reads xlsx);

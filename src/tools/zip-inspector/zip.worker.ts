@@ -1,8 +1,20 @@
 // Archive sniffing + ZIP central-directory parsing run here so a multi-GB
 // archive is read and walked off the main thread (#154).
-export interface Entry { name: string; size: number; comp: number; method: number; date: Date | null; dir: boolean }
-export interface ZipRequest { id: number; file: File }
-export interface ZipResponse { id: number; format: string; entries: Entry[] | null }
+export interface Entry {
+  name: string; size: number; comp: number; method: number; date: Date | null; dir: boolean
+  /** Where the local header starts — needed to get the bytes out. */
+  offset: number
+  /** General purpose bit 0. An encrypted entry can be LISTED but not read. */
+  encrypted: boolean
+}
+export interface ZipRequest { id: number; file: File; extract?: number }
+export interface ZipResponse {
+  id: number; format: string; entries: Entry[] | null
+  /** Set when the request asked for one entry's bytes. */
+  bytes?: Uint8Array | null
+  /** Why extraction failed, when it did. */
+  reason?: 'encrypted' | 'method' | 'corrupt'
+}
 
 // Detect common archive/compression formats by magic bytes.
 function detectFormat(b: Uint8Array): string {
@@ -36,6 +48,7 @@ function parseZip(buf: ArrayBuffer): Entry[] | null {
   const out: Entry[] = []
   for (let i = 0; i < count && off + 46 <= n; i++) {
     if (dv.getUint32(off, true) !== 0x02014b50) break
+    const flags = dv.getUint16(off + 8, true)
     const method = dv.getUint16(off + 10, true)
     const dosTime = dv.getUint16(off + 12, true)
     const dosDate = dv.getUint16(off + 14, true)
@@ -50,16 +63,50 @@ function parseZip(buf: ArrayBuffer): Entry[] | null {
       date = new Date(1980 + (dosDate >> 9), ((dosDate >> 5) & 0xf) - 1, dosDate & 0x1f,
         dosTime >> 11, (dosTime >> 5) & 0x3f, (dosTime & 0x1f) * 2)
     }
-    out.push({ name, size, comp, method, date, dir: name.endsWith('/') })
+    const offset = dv.getUint32(off + 42, true)
+    out.push({ name, size, comp, method, date, dir: name.endsWith('/'), offset, encrypted: (flags & 1) === 1 })
     off += 46 + nameLen + extraLen + commentLen
   }
   return out
 }
 
+/**
+ * Pull one entry's bytes out.
+ *
+ * The local header repeats the name and extra fields and its extra length can
+ * DIFFER from the central directory's, so the data offset has to be read from
+ * the local header rather than computed from the central one — the single
+ * classic way to read a zip and get garbage.
+ */
+async function extractOne(buf: ArrayBuffer, entry: Entry): Promise<{ bytes: Uint8Array | null; reason?: ZipResponse['reason'] }> {
+  // A password-protected entry lists perfectly and decompresses to noise. Say
+  // so rather than handing someone a corrupt file that looks like ours.
+  if (entry.encrypted) return { bytes: null, reason: 'encrypted' }
+  const dv = new DataView(buf)
+  if (dv.getUint32(entry.offset, true) !== 0x04034b50) return { bytes: null, reason: 'corrupt' }
+  const nameLen = dv.getUint16(entry.offset + 26, true)
+  const extraLen = dv.getUint16(entry.offset + 28, true)
+  const start = entry.offset + 30 + nameLen + extraLen
+  const raw = new Uint8Array(buf, start, entry.comp)
+  if (entry.method === 0) return { bytes: new Uint8Array(raw) }
+  if (entry.method !== 8) return { bytes: null, reason: 'method' }
+  try {
+    const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+    return { bytes: new Uint8Array(await new Response(stream).arrayBuffer()) }
+  } catch {
+    return { bytes: null, reason: 'corrupt' }
+  }
+}
+
 self.onmessage = async (e: MessageEvent<ZipRequest>) => {
-  const { id, file } = e.data
+  const { id, file, extract } = e.data
   const buf = await file.arrayBuffer()
   const format = detectFormat(new Uint8Array(buf.slice(0, 512)))
   const entries = format === 'ZIP' ? parseZip(buf) : null
-  postMessage({ id, format, entries } satisfies ZipResponse)
+  if (extract == null || !entries?.[extract]) {
+    postMessage({ id, format, entries } satisfies ZipResponse)
+    return
+  }
+  const { bytes, reason } = await extractOne(buf, entries[extract])
+  postMessage({ id, format, entries, bytes, reason } satisfies ZipResponse)
 }

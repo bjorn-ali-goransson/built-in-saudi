@@ -250,6 +250,25 @@ that uses the paths real Excel uses:
 - A blank cell is simply **absent** from the XML, so each cell must be placed at
   the column its `r` reference names or the whole row shifts left.
 
+**`archive-inspector` extracts as well as lists** (folder `zip-inspector`, route
+id `archive-inspector` — they differ, which has already cost one debugging
+round). Listing without extracting was the tool's own half-done edge: you could
+read every filename and size and had no way to get a file out. Two things it has
+to get right:
+
+- **The data offset comes from the LOCAL header.** Its extra-field length can
+  differ from the central directory's, so computing the offset from the central
+  record lands short and inflates to noise. Same trap as `unzip.ts`, and now
+  regression-tested with a fixture whose local extra field is deliberately 12
+  bytes longer than the central one claims.
+- **An encrypted entry lists perfectly and decompresses to garbage.** General
+  purpose bit 0 says so; it is marked in the list and refused on extract,
+  because handing someone a corrupt file that looks like ours is worse than
+  handing them nothing.
+
+Extraction runs in the same worker as the listing (#154) — a multi-GB archive
+must not be re-read on the main thread to save one file out of it.
+
 **`docx-to-text`** (`lib/docx.ts`) is the second. The body is one part,
 `word/document.xml`, and "strip the tags" gets three things wrong — each a
 visible bug, each covered in `e2e/docx-to-text.spec.ts`:
