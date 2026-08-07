@@ -179,6 +179,7 @@ import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
 import { sheetDiffTool } from './sheet-diff/meta'
 import { prayerTimetableTool } from './prayer-timetable/meta'
+import { removeSilenceTool } from './remove-silence/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -196,6 +197,7 @@ export const tools: Tool[] = [
   carouselSplitTool,
   weatherTool,
   audioTrimTool,
+  removeSilenceTool,
   videoAudioTool,
   videoTrimTool,
   videoGifTool,

@@ -978,4 +978,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Monthly Prayer Timetable', description: 'Print a whole month of prayer times for any Saudi city — Fajr through Isha, with Hijri dates alongside and Fridays shaded so the sheet can be read from across a room. For a fridge, a noticeboard or a mosque door. Calculated on your device with the Umm al-Qura method, the same one the Prayer Times app here uses, so the two never disagree.' },
     ar: { name: 'تقويم مواقيت الصلاة', description: 'اطبع شهرًا كاملًا من مواقيت الصلاة لأي مدينة سعودية — من الفجر إلى العشاء، مع التواريخ الهجرية بجانبها وتظليل أيام الجمعة ليمكن قراءة الورقة من بعيد. للثلاجة أو لوحة الإعلانات أو باب المسجد. تُحسب على جهازك بطريقة أم القرى، وهي نفسها التي يستخدمها تطبيق مواقيت الصلاة هنا، فلا يختلف الاثنان.' },
   },
+  {
+    id: 'remove-silence',
+    en: { name: 'Remove Silence', description: 'Cut the silence out of an audio recording — the pauses in a lecture, the gaps in an interview, the dead air at the start. Set how quiet counts as silent and how long a gap has to be, and see exactly what will go before it goes. A margin is kept at each edge so a breath before a word survives, because a cut made exactly on the silence sounds chopped.' },
+    ar: { name: 'حذف الصمت', description: 'احذف الصمت من تسجيل صوتي — سكتات المحاضرة، وفجوات المقابلة، والفراغ في البداية. حدّد ما يُعدّ صمتًا وكم يجب أن تطول السكتة، وشاهد بالضبط ما سيُحذف قبل حذفه. ويُترك هامش عند كل طرف لتبقى الشهقة قبل الكلمة، فالقص على حدّ الصمت تمامًا يجعل النتيجة مبتورة.' },
+  },
 ]

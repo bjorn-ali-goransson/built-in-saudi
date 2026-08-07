@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **180 tools are live.** This
+The backlog, and an honest account of what exists. **181 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,7 +25,7 @@ optional [backend worker](./BACKEND.md).
 | Generators | 21 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, Arabic handwriting sheets, .ics events, seating charts, attendance sheets |
 | PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
-| Files | 11 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff** |
+| Files | 12 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff**, **remove silence** |
 | Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
 | Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
 
@@ -180,7 +180,6 @@ earn a slot. **`client` unless noted.**
 |---|---|
 | Progressive MP4 muxer for `video-trim` | The trimmer ships with fragmented output (a moof+mdat per sample). It plays, but a real muxer would make friendlier files. |
 | Video convert / re-encode | The trimmer copies samples; changing codec or size needs WebCodecs encode, which is a different tool with different honesty problems. |
-| Remove silence from audio | Web Audio, sits beside `audio-trim`; podcast editors pay for this. |
 | Collage / contact sheet | Print chassis plus image decoding, both already here. |
 | Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |
 

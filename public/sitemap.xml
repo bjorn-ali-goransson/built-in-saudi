@@ -2563,4 +2563,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/prayer-timetable"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/prayer-timetable"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/remove-silence/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/remove-silence"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/remove-silence"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/remove-silence"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/remove-silence/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/remove-silence"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/remove-silence"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/remove-silence"/>
+  </url>
 </urlset>
