@@ -76,9 +76,16 @@ export interface Cv {
   languages: CvLanguage[]
 }
 
-/** Build a filename like "Mirza Hussain CV 2026-07-06". */
+/**
+ * Build a filename like "Mirza Hussain CV 2026-07-06".
+ *
+ * The date is the LOCAL one. `toISOString()` is UTC, which east of Greenwich
+ * names yesterday between local midnight and UTC midnight — so a CV exported at
+ * half past midnight in Riyadh was dated the day before, on the file the
+ * candidate then sends to an employer.
+ */
 export function cvFilename(cv: Cv, date = new Date()): string {
   const safe = (cv.name || 'Resume').replace(/[^\p{L}\p{N} .-]/gu, '').trim() || 'Resume'
-  const d = date.toISOString().slice(0, 10)
+  const d = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   return `${safe} CV ${d}`
 }

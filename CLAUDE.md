@@ -684,6 +684,29 @@ to a human. The benchmark that scores 5.0 still opens with a boilerplate summary
 unattributable metric. Summary quality and metric attribution are the next things
 worth policing.
 
+**How much raw material is even there — measured deterministically, no judge**
+(`node evals/quantified.mjs`). The standing claim below is that the ceiling on
+`impact` is the candidate's facts rather than our wording. That is a claim about
+the INPUT, so it can be checked without asking a model anything, and until now
+it had only ever been inferred from judged runs. Over the real 32-CV corpus,
+counting claim-like lines (30+ chars, not headings, not contact details) and
+excluding bare years and date ranges because neither is an achievement:
+
+| | |
+|---|---|
+| claim-like lines | 1991 |
+| lines carrying a figure | **208 — 10.4%** |
+| per-CV share | min 0%, median 11.1%, max 39.5% |
+| CVs under 1 line in 5 | **29 / 32** |
+| CVs under 1 line in 10 | 16 / 32 |
+
+Nine lines in ten carry no number at all, and the counter is **generous** (it
+accepts "5 years", which is a figure but not an achievement), so the true share
+is lower. That is the ceiling, independently confirmed: with ~62 claim-like
+lines per CV, the improve loop's ~4 questions can move the quantified share by
+single-digit percentage points even when every answer lands — which is exactly
+the size of the **+0.38** `impact` movement recorded below.
+
 **Where the score actually comes from (measured, and it shapes the product):**
 after the rewrite, `keywords` (4.6) and `completeness` (4.65) are near the top,
 `format`/`clarity`/`conciseness` sit at ~3.9–4.0, and **`impact` (3.65) is the
