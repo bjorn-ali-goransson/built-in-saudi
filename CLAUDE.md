@@ -272,6 +272,22 @@ interleaves nonsense. A `.doc` is an OLE compound file, not a zip; it is
 detected by its `D0CF11E0` signature and named, because "could not read" sends
 people back to try the same file again.
 
+**`pptx-to-text`** (`lib/pptx.ts`) is the third, and the one `unzip.ts` was
+really written for: one XML part per slide, so the work is deciding what a slide
+is and putting them in order. Three traps, all covered in
+`e2e/pptx-to-text.spec.ts`:
+
+- **Slide order is not filename order.** `slide10.xml` sorts before `slide2.xml`
+  as a string, so a twelve-slide deck comes out shuffled — which reads as the
+  tool losing content rather than mis-sorting it. Sort on the trailing NUMBER.
+- **A line is several `<a:t>` runs**, split at every formatting boundary exactly
+  as Word splits `<w:t>`; `<a:p>` is what makes a line.
+- **Speaker notes are a separate part** (`ppt/notesSlides/notesSlideN.xml`) and
+  are usually the half of the deck worth having — but they are what the
+  presenter saw, not the audience, so they are returned per slide and are off by
+  default. PowerPoint also writes the **slide number itself** into that part as
+  its own paragraph; emit it and every note reads "[Notes] 7".
+
 ## Reading a .vcf (`lib/vcardRead.ts`, `vcard-to-csv`)
 
 The inverse of `tools/csv-vcard/vcard.ts`, and much the harder direction —

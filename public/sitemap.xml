@@ -2703,4 +2703,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vcard-to-csv"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vcard-to-csv"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/pptx-to-text/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pptx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pptx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pptx-to-text"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/pptx-to-text/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pptx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pptx-to-text"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pptx-to-text"/>
+  </url>
 </urlset>

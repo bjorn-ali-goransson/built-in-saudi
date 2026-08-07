@@ -1028,4 +1028,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'vCard to CSV', description: 'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number.' },
     ar: { name: 'vCard إلى CSV', description: 'حوّل ملف ‎.vcf‎ الذي يصدّره هاتفك إلى جدول. فالأسماء العربية المكتوبة بالطريقة التي يرمّزها بها أندرويد تخرج أسماءً لا طلاسم، وتصدير آيفون يحتفظ بالأرقام التي يخفيها خلف المجموعات، ومن له ثلاثة أرقام يحصل على ثلاثة أعمدة. ونزّله ملف CSV أو ملف إكسل يحفظ الصفر الأول في كل رقم جوال.' },
   },
+  {
+    id: 'pptx-to-text',
+    en: { name: 'PowerPoint to Text', description: 'Pull the words out of a .pptx — every slide in the right order, with the speaker notes if you want them. Useful when you have the deck but not PowerPoint, or when what you need is the text itself: to quote it, translate it, or search it. Slides are ordered by their real number rather than by filename, so slide 10 does not land between 1 and 2. The file is read in your browser and never uploaded.' },
+    ar: { name: 'بوربوينت إلى نص', description: 'استخرج كلمات ملف ‎.pptx‎ — كل شريحة بترتيبها الصحيح، ومعها ملاحظات المُقدِّم إن أردتها. مفيد حين يكون لديك العرض دون بوربوينت، أو حين يكون ما تحتاجه هو النص نفسه. وتُرتَّب الشرائح برقمها الحقيقي لا باسم الملف. ويُقرأ الملف في متصفحك ولا يُرفع أبدًا.' },
+  },
 ]

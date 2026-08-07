@@ -335,9 +335,9 @@ the Saudi-local wedge rather than in generic utilities.
 
 ### Documents — the formats the new `unzip`/`writeXlsx` work makes cheap
 
-11. **`.pptx` → text/outline.** Same zip-of-XML shape as `.docx` and `.epub`;
-    one XML part per slide, so it is genuinely the EPUB shape rather than the
-    Word one.
+11. ~~**`.pptx` → text/outline.**~~ **Shipped** as `pptx-to-text`. The trap was
+    not the XML: it was that `slide10.xml` sorts before `slide2.xml`, so a
+    naive read shuffles any deck with ten or more slides.
 12. **`.docx` → Markdown**, keeping headings, lists and tables — `docx-to-text`
     already walks the structure and currently throws it away.
 13. **`.eml` / `.msg` reader.** `email-headers` takes a paste; the file is what
@@ -378,3 +378,46 @@ that do exist, and the AI-tool directories are all wrappers on somebody's API �
 which is the opposite of this site's premise. The useful signal was entirely in
 **recently changed local rules**, not in tool-idea lists. Worth remembering for
 the next sweep: search the regulator, not the roundup.
+
+## Code sweep, 8 August 2026
+
+Read for capabilities already built that are one step from being a tool, and
+for anything half-done.
+
+**Shipped this round:** `pptx-to-text` (above).
+
+**Searchable PDF — costed, and it is not free.** Writing `pdf-ocr`'s text back
+into the scan as an invisible layer is the highest-value idea on either sweep,
+and the parts look present (`pdf-lib` exports `TextRenderingMode.Invisible`,
+`images-to-pdf` and `pdf-ocr` both exist). But pdf-lib derives a PDF's
+**ToUnicode** map from a real embedded font, and embedding one needs
+`@pdf-lib/fontkit`, which is not a dependency — and `public/fonts/` ships only
+**Latin** IBM Plex subsets. So Arabic, which is the point here, needs a new npm
+package *and* a full Arabic TTF (a subset will not do: OCR output is
+open-vocabulary). English-only would work today with `StandardFonts`, but
+shipping an Arabic-first site's OCR feature as English-only is the kind of
+half-doing this repo avoids. **Worth building deliberately as its own piece of
+work**, not squeezed into a batch.
+
+**Two .docx readers now exist, and that is deliberate but worth knowing.**
+`mammoth` has been a dependency since #42 and the CV optimizer's
+`extract.ts` uses `extractRawText` on it; `lib/docx.ts` is the dependency-free
+one written for `docx-to-text`. They are not redundant — `extractRawText`
+flattens structure, while ours keeps paragraphs, tabs and **table rows**, which
+matters because plenty of CVs are laid out in tables and a flattened table
+becomes a run-on line. Switching the CV extractor to `lib/docx.ts` would very
+likely improve extraction *and* drop a heavy dependency — but it changes what
+the scorer sees, and **the evals that would prove it are blocked on the dead
+`OPENAI_KEY`**. Not a change to make blind.
+
+**Dead machinery:** `comingSoonTools` in `src/tools/index.ts` filters for
+`status: 'coming-soon'` and there are now zero such entries, so the export and
+the catalogue branch that renders it are unreachable. Harmless, but it is one
+of those things that quietly becomes load-bearing if left.
+
+**Still latent, in rough order of value:** extract a ZIP (we list entries and
+already do DEFLATE — extraction is the missing verb); `.docx` → Markdown
+(`lib/docx.ts` already walks the structure and throws it away); `.eml`/`.msg`
+reader (`email-headers` takes a paste, but the file is what people have);
+merging spreadsheets across files (`readTableFile` already reads xlsx);
+exporting a filled PDF form's data as CSV (`pdf-fill` knows the fields).
