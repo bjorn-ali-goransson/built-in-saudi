@@ -266,6 +266,14 @@ visible bug, each covered in `e2e/docx-to-text.spec.ts`:
   its own line and turns a row of figures into a column. Cells accumulate until
   `</w:tr>`, then join with tabs.
 
+**Measured limit, worth knowing before reusing this reader:** assembling the
+row is right for a table of data and *wrong* for a document that merely uses a
+table for layout. A CV with dates in the left column and the role and its
+bullets in the right comes out with the role glued to all its bullets on one
+line, where `mammoth`'s `extractRawText` — what the CV tool actually uses —
+puts each on its own. `evals/docxextract.mjs` measures it, needs no API key,
+and exists because the code sweep guessed the opposite.
+
 Headers/footers/footnotes are read from their own parts and returned
 **separately** — they repeat on every page, so folding them into the body
 interleaves nonsense. A `.doc` is an OLE compound file, not a zip; it is

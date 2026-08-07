@@ -399,16 +399,26 @@ shipping an Arabic-first site's OCR feature as English-only is the kind of
 half-doing this repo avoids. **Worth building deliberately as its own piece of
 work**, not squeezed into a batch.
 
-**Two .docx readers now exist, and that is deliberate but worth knowing.**
-`mammoth` has been a dependency since #42 and the CV optimizer's
-`extract.ts` uses `extractRawText` on it; `lib/docx.ts` is the dependency-free
-one written for `docx-to-text`. They are not redundant — `extractRawText`
-flattens structure, while ours keeps paragraphs, tabs and **table rows**, which
-matters because plenty of CVs are laid out in tables and a flattened table
-becomes a run-on line. Switching the CV extractor to `lib/docx.ts` would very
-likely improve extraction *and* drop a heavy dependency — but it changes what
-the scorer sees, and **the evals that would prove it are blocked on the dead
-`OPENAI_KEY`**. Not a change to make blind.
+**Two .docx readers now exist — and MEASURED, the CV one is already the right
+one.** `mammoth` has been a dependency since #42 and the CV optimizer's
+`extract.ts` uses `extractRawText`; `lib/docx.ts` is the dependency-free one
+written for `docx-to-text`. The code sweep guessed that switching the CV
+extractor to ours would improve extraction *and* drop a heavy dependency.
+**`evals/docxextract.mjs` shows the opposite**, on the two-column table layout
+that half of CVs use (dates left, role and bullets right):
+
+| | `mammoth` (production) | `lib/docx.ts` |
+|---|---|---|
+| quantified bullets on their own line | **3** | 2 |
+| role and its bullets | separate lines | **merged into one line** |
+
+`extractRawText` emits every paragraph on its own line, which is exactly what a
+résumé parser wants. Ours assembles the ROW and tab-joins the cells — correct
+for a table of data, wrong for a document that merely uses a table for layout,
+because it glues a role to all of its bullets. Since `impact` grades how many
+bullets carry a number, the switch would have lowered the very metric we are
+trying to raise. **Do not make it.** The harness needs no API key, so this
+stays checkable while the evals are blocked.
 
 **Dead machinery:** `comingSoonTools` in `src/tools/index.ts` filters for
 `status: 'coming-soon'` and there are now zero such entries, so the export and
