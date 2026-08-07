@@ -183,6 +183,28 @@ Android every one used to be a dead end. `libheif-js` (wasm) fills the gap:
 
 ## The exported CV PDF must survive machine reading (#249)
 
+**`node evals/pdfguard.mjs` checks both of the failures below with NO API key**
+— run it after touching `CvPdf.tsx` or the bundled fonts. `atscheck.mjs` also
+checks them but takes a `<run-tag>`, so it needs a generate pass and therefore
+OpenAI; with the key dead, the guard on the two worst regressions this template
+has ever had was itself unavailable. `pdfguard` renders one fixed synthetic CV
+through the real component instead.
+
+It is **verified to fail**, not just to pass: reintroducing the old 0.15em
+heading spacing drops readable headings from 4/4 to **1/4** and trips the
+letter-spacing detector. Two things learned writing it, both worth keeping:
+
+- **A check that finds neither the good string nor the bad one is vacuously
+  green.** The bold-boundary test originally reported "glued: none" while also
+  matching nothing at all. It now prints the lines it examined and asserts the
+  boundary is actually present before concluding anything from its absence.
+- **The name table stores UTF-16 big-endian**, and decoding it the wrong way
+  round still yields a *distinct* string per face — so the uniqueness check
+  passed while the printout was mojibake. A check can be right for the wrong
+  reason; print what it saw.
+
+
+
 The CV the candidate sends employers is the **PDF** (`src/tools/cv-generator/CvPdf.tsx`),
 and an ATS re-extracts text from it. Two template properties silently destroyed
 that, on every CV the tool had ever produced — both invisible on screen, both now
