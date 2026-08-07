@@ -2759,4 +2759,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vehicle-renewal"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vehicle-renewal"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/rent-rules/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/rent-rules"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/rent-rules"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/rent-rules"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/rent-rules/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/rent-rules"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/rent-rules"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/rent-rules"/>
+  </url>
 </urlset>

@@ -474,3 +474,13 @@ obviously settles it. Worth a human call.
   75's 25% reduction — needs the exact window length from a primary source);
   vehicle insurance renewal; driving-licence renewal periods, which differ by
   age band.
+
+### Web sweep, 8 August 2026 (fifth pass — housing)
+
+- ~~**Rent freeze / renewal rules.**~~ **Shipped** as `rent-rules`. As with the
+  vehicle tool, the find was not the headline rule but the exception to it: a
+  pre-decree escalation clause survives the freeze, so the signing date decides
+  the answer.
+- **Still open:** REDF / Sakani eligibility (means-tested and detailed — would
+  need a primary source); a rent-to-income affordability check; an Ejar contract
+  reader, which is the PDF-stack idea from the second sweep and still stands.

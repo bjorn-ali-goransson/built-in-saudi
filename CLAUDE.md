@@ -548,6 +548,28 @@ available, which is what people discover at the counter on the day.
 Carries an `official` Disclaimer which says outright that fines can block a
 renewal for reasons the tool cannot see, and is in `e2e/disclaimers.spec.ts`.
 
+## Rent rules (`rent-rules`)
+
+Two rules and the date that separates them, in `src/tools/rent-rules/rent.ts`:
+
+- **The Riyadh freeze.** A royal decree of **25 September 2025** suspends rent
+  increases inside Riyadh's urban boundary for five years, residential and
+  commercial alike. The catch is not the freeze, it is the exception: an
+  **escalation clause in a contract already in place on that date stays valid
+  and enforceable**, while a contract entered on or after it may not apply
+  escalation during the freeze even if its term runs longer. Two tenants in one
+  building can get opposite answers, decided by which side of a single day their
+  signature falls — which is why the tool asks for the signing date at all.
+- **The reference rent depends on the property's situation**: already let (the
+  rent as it stood), previously let but vacant (the last Ejar contract's total
+  value), never let (whatever the parties agree, then frozen).
+- **Automatic renewal is NATIONWIDE, not a Riyadh rule.** A lease renews itself
+  unless one party gives **60 days** notice, so that deadline is shown outside
+  Riyadh too — it is the more common and more expensive miss.
+
+The  Disclaimer says outright that the tool cannot know whether an
+address falls inside the urban boundary, which is what the freeze turns on.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

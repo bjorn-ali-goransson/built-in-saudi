@@ -193,6 +193,7 @@ import { pptxToTextTool } from './pptx-to-text/meta'
 import { gosiSalaryTool } from './gosi-salary/meta'
 import { vatRegistrationTool } from './vat-registration/meta'
 import { vehicleRenewalTool } from './vehicle-renewal/meta'
+import { rentRulesTool } from './rent-rules/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -334,6 +335,7 @@ export const tools: Tool[] = [
   gosiSalaryTool,
   vatRegistrationTool,
   vehicleRenewalTool,
+  rentRulesTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,

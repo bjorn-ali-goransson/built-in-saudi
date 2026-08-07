@@ -1048,4 +1048,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Fahes & Istimara Due Dates', description: 'Work out when your periodic inspection and your vehicle registration are due — and, the part people find out at the counter, which one has to happen first. A valid Fahes is required to renew the istimara, so an overdue inspection blocks the renewal outright. A new private car is exempt from inspection for three years from first registration, which means the first one falls due on an anniversary nobody has a reminder for. Every date is shown in both Gregorian and Hijri.' },
     ar: { name: 'مواعيد الفحص والاستمارة', description: 'اعرف متى يستحق الفحص الدوري ومتى تنتهي استمارتك — والأهم أيّهما قبل الآخر. فالفحص الساري شرط لتجديد الاستمارة، ومن ثمّ فالفحص المتأخر يمنع التجديد أصلًا. والسيارة الخاصة الجديدة معفاة من الفحص ثلاث سنوات من أول تسجيل، ومعنى ذلك أن أول فحص يستحق في ذكرى سنوية لا تذكير لأحد بها. وكل تاريخ معروض بالميلادي والهجري معًا.' },
   },
+  {
+    id: 'rent-rules',
+    en: { name: 'Rent Increase & Renewal Rules', description: 'Whether your rent can legally be increased, and the date you have to give notice by. Increases inside Riyadh’s urban boundary are frozen for five years from 25 September 2025 — but an escalation clause in a contract already in place on that date still stands, so two tenants in the same building can get different answers depending on which side of one day their signature falls. Separately, and everywhere in the Kingdom, a lease renews itself automatically unless one party gives the other 60 days’ notice.' },
+    ar: { name: 'قواعد زيادة الإيجار والتجديد', description: 'هل يجوز نظامًا رفع إيجارك، وما التاريخ الذي يلزمك الإشعار قبله. فالزيادات داخل النطاق العمراني للرياض مجمّدة خمس سنوات من 25 سبتمبر 2025 — لكن شرط الزيادة في عقد كان قائمًا قبل ذلك التاريخ يظل نافذًا. وبمعزل عن ذلك، وفي المملكة كلها، يتجدد العقد تلقائيًا ما لم يُشعر أحد الطرفين الآخر بستين يومًا.' },
+  },
 ]
