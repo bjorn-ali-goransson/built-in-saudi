@@ -1033,4 +1033,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'PowerPoint to Text', description: 'Pull the words out of a .pptx — every slide in the right order, with the speaker notes if you want them. Useful when you have the deck but not PowerPoint, or when what you need is the text itself: to quote it, translate it, or search it. Slides are ordered by their real number rather than by filename, so slide 10 does not land between 1 and 2. The file is read in your browser and never uploaded.' },
     ar: { name: 'بوربوينت إلى نص', description: 'استخرج كلمات ملف ‎.pptx‎ — كل شريحة بترتيبها الصحيح، ومعها ملاحظات المُقدِّم إن أردتها. مفيد حين يكون لديك العرض دون بوربوينت، أو حين يكون ما تحتاجه هو النص نفسه. وتُرتَّب الشرائح برقمها الحقيقي لا باسم الملف. ويُقرأ الملف في متصفحك ولا يُرفع أبدًا.' },
   },
+  {
+    id: 'gosi-salary',
+    en: { name: 'GOSI & Net Salary', description: 'Work out your real GOSI deduction and your take-home pay. Contributions are charged on basic salary plus housing allowance only — not transport, phone, commission or bonus — and stop at SAR 45,000 a month, which is why "just take 10% of your salary" is wrong for anyone with allowances. It also knows there are two systems: anyone registered before 3 July 2024 stays on the old rates, while the newer scheme rises half a point every July. A non-Saudi employee has nothing deducted at all.' },
+    ar: { name: 'التأمينات وصافي الراتب', description: 'احسب خصم التأمينات الحقيقي وصافي راتبك. فالاشتراكات تُحتسب على الراتب الأساسي وبدل السكن فقط — لا على النقل ولا الجوال ولا العمولة ولا المكافأة — وتتوقف عند 45,000 ريال شهريًا. وتعرف الأداة أن هناك نظامين: من سُجّل قبل 3 يوليو 2024 يبقى على النسب القديمة، أما النظام الأحدث فيرتفع نصف نقطة كل يوليو. والموظف غير السعودي لا يُخصم منه شيء إطلاقًا.' },
+  },
 ]

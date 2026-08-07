@@ -18,6 +18,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'sound-meter', kind: 'official' },
   { id: 'zatca-qr', kind: 'official' },
   { id: 'quotation', kind: 'legal' },
+  { id: 'gosi-salary', kind: 'financial' },
 ]
 
 for (const { id, kind } of NEEDS) {

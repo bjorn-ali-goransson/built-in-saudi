@@ -373,6 +373,35 @@ not read off a spec:
   index). ffmpeg decodes it clean and Chromium plays it — verified — but a
   hand-written progressive muxer is the right follow-up.
 
+## GOSI and net salary (`gosi-salary`)
+
+The arithmetic is trivial; the *rules* are the tool, and each one is a thing the
+free calculators get wrong. All of it lives in `src/tools/gosi-salary/gosi.ts`
+so it can be corrected in one place when the rates move again:
+
+- **Two parallel systems, chosen by first registration date.** Anyone with a
+  GOSI subscription before **3 July 2024** stays on the old rates permanently;
+  a Saudi with no history before then is on the newer scheme. It is not decided
+  by age, employer, or when the current job started — which is the thing people
+  get wrong about themselves.
+- **Only the PENSION part moves, and only on the new scheme**, half a point
+  every July: 9% (2024) → 9.5% → 10% → 10.5% → 11% (2028), on each side. The
+  published totals (9.75% / 11.75% rising to 11.75% / 13.75%) look like whole
+  rates but are pension + SANED, and + 2% occupational hazards on the employer.
+  The old scheme's 9% never changes.
+- **The contributable wage is basic + housing ONLY**, capped at **SAR 45,000 a
+  month**. Transport, phone, commission and bonus are outside it, so "take 10%
+  of your salary" is wrong for anyone with allowances. The tool shows what was
+  excluded and what the cap removed, because a number with no explanation is
+  indistinguishable from a wrong one.
+- **A non-Saudi employee contributes NOTHING** — the employer pays 2% for
+  occupational hazards and that is all. The tool says so outright, because a
+  GOSI deduction on a non-Saudi payslip is an error worth querying, and that is
+  more useful than a number.
+
+Carries a `financial` Disclaimer naming GOSI, and is in
+`e2e/disclaimers.spec.ts`.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

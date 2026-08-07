@@ -293,8 +293,9 @@ the Saudi-local wedge rather than in generic utilities.
 
 ### Saudi money and work — the strongest gap, and we have none of it
 
-1. **GOSI / net salary calculator.** The pick of the whole sweep, because the
-   rules are precise, recently changed, and almost universally got wrong:
+1. ~~**GOSI / net salary calculator.**~~ **Shipped** as `gosi-salary`. It was
+   the pick of the sweep because the rules are precise, recently changed, and
+   almost universally got wrong:
    - **Two parallel systems.** Registered *before* 3 July 2024: total 21.5%
      (employer 11.75%, employee 9.75%). Registered *after*: the total rose in
      **July 2026** from 22.5% to **23.5%** (employer 12.75%, employee 10.75%).
