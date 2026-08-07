@@ -600,6 +600,13 @@ Two deliberate choices worth keeping:
 **Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
 is the only thing standing behind the sentence on 109 tool pages.
 
+Coverage is **15 tools** across every family that takes one — PDF (read, page
+ops, OCR), Office (docx, pptx), tabular (4 CSV tools, vCard both directions),
+archives, raw bytes, subtitles and SVG. It started at six, which were simply the
+tools I had written most recently; a guard scoped to my own memory is not a
+guard. `src/tools/*/` can be grepped for a `type="file"` input to find what is
+still missing.
+
 ## Early loan settlement (`early-settlement`)
 
 The rule is SAMA's and it is the opposite of what most people assume: settling a

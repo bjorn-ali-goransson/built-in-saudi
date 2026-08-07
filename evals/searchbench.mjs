@@ -142,6 +142,9 @@ const BENCH = [
   ['rent freeze', 'rent-rules'],
   ['lease renewal notice', 'rent-rules'],
   ['زيادة الإيجار', 'rent-rules'],
+  ['early settlement', 'early-settlement'],
+  ['pay off my loan early', 'early-settlement'],
+  ['السداد المبكر', 'early-settlement'],
 ]
 
 function rank(query, wanted) {

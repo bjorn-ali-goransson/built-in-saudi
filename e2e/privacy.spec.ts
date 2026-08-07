@@ -59,11 +59,24 @@ async function tokenPdf(): Promise<Buffer> {
 
 interface Case { id: string; testid: string; name: string; mime: string; make: () => Promise<Buffer> | Buffer }
 
+/** An Office/EPUB-shaped zip: one XML part where the reader expects it. */
+const xmlZip = (part: string, xml: string, extra: { name: string; data: Buffer }[] = []) =>
+  zip([{ name: '[Content_Types].xml', data: Buffer.from('<?xml version="1.0"?><Types/>') },
+    { name: part, data: Buffer.from(xml, 'utf8') }, ...extra])
+
 const CASES: Case[] = [
+  // A spread across every family that takes a file, because the promise is
+  // made on all of them and a guard that only covers the tools I happened to
+  // write last is a guard over my own memory.
   { id: 'pdf-to-text', testid: 'p2t-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-organise', testid: 'po-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-ocr', testid: 'pk-file', name: 'scan.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'file-metadata', testid: 'meta-file', name: 'notes.txt', mime: 'text/plain', make: () => Buffer.from(TOKEN) },
+  { id: 'hex-viewer', testid: 'hx-file', name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN) },
   { id: 'csv-to-xlsx', testid: 'cx-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,note\nSara,${TOKEN}\n`) },
   { id: 'csv-split', testid: 'cs-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n2,x\n`) },
+  { id: 'csv-clean', testid: 'cc-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
+  { id: 'csv-vcard', testid: 'cv-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,phone\n${TOKEN},0501234567\n`) },
   {
     id: 'vcard-to-csv', testid: 'vc-file', name: 'contacts.vcf', mime: 'text/vcard',
     make: () => Buffer.from(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${TOKEN}\r\nN:;${TOKEN};;;\r\nEND:VCARD\r\n`),
@@ -71,6 +84,26 @@ const CASES: Case[] = [
   {
     id: 'archive-inspector', testid: 'zip-file', name: 'bundle.zip', mime: 'application/zip',
     make: () => zip([{ name: 'secret.txt', data: Buffer.from(TOKEN) }]),
+  },
+  {
+    id: 'docx-to-text', testid: 'dx-file', name: 'letter.docx',
+    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    make: () => xmlZip('word/document.xml',
+      `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${TOKEN}</w:t></w:r></w:p></w:body></w:document>`),
+  },
+  {
+    id: 'pptx-to-text', testid: 'pt-file', name: 'deck.pptx',
+    mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    make: () => xmlZip('ppt/slides/slide1.xml',
+      `<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree><a:p><a:r><a:t>${TOKEN}</a:t></a:r></a:p></p:spTree></p:cSld></p:sld>`),
+  },
+  {
+    id: 'subtitle-editor', testid: 'sub-file', name: 'movie.srt', mime: 'text/plain',
+    make: () => Buffer.from(`1\n00:00:01,000 --> 00:00:03,000\n${TOKEN}\n`),
+  },
+  {
+    id: 'svg-optimise', testid: 'so-file', name: 'logo.svg', mime: 'image/svg+xml',
+    make: () => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><title>${TOKEN}</title><rect width="10" height="10"/></svg>`),
   },
 ]
 
