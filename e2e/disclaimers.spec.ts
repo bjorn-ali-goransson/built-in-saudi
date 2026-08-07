@@ -12,6 +12,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'medicine-schedule', kind: 'medical' },
   { id: 'end-of-service', kind: 'legal' },
   { id: 'zakat-calculator', kind: 'religious' },
+  { id: 'prayer-timetable', kind: 'religious' },
   { id: 'id-expiry', kind: 'official' },
   { id: 'passport-photo', kind: 'official' },
   { id: 'sound-meter', kind: 'official' },
