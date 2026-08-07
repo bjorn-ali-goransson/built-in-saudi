@@ -191,6 +191,7 @@ import { csvToXlsxTool } from './csv-to-xlsx/meta'
 import { vcardToCsvTool } from './vcard-to-csv/meta'
 import { pptxToTextTool } from './pptx-to-text/meta'
 import { gosiSalaryTool } from './gosi-salary/meta'
+import { vatRegistrationTool } from './vat-registration/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -330,6 +331,7 @@ export const tools: Tool[] = [
   vcardToCsvTool,
   pptxToTextTool,
   gosiSalaryTool,
+  vatRegistrationTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,

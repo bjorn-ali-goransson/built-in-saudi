@@ -2731,4 +2731,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gosi-salary"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gosi-salary"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/vat-registration/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vat-registration"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vat-registration"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vat-registration"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/vat-registration/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/vat-registration"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/vat-registration"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/vat-registration"/>
+  </url>
 </urlset>

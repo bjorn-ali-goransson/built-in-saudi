@@ -438,6 +438,28 @@ so it can be corrected in one place when the rates move again:
 Carries a `financial` Disclaimer naming GOSI, and is in
 `e2e/disclaimers.spec.ts`.
 
+## VAT registration (`vat-registration`)
+
+`vat-calculator` works out 15%; this answers the prior question, which is the
+one people get wrong. Both mistakes are in `src/tools/vat-registration/vat.ts`:
+
+- **It is ANY twelve consecutive months, not a calendar year.** A business that
+  never crosses within a calendar year can have crossed on the rolling window
+  months earlier — and the 30-day clock started then. The month-by-month mode
+  reports the peak window and names the month it happened, because "you should
+  have registered in March" is the useful output, not "yes".
+- **Exempt supplies do not count; zero-rated ones do.** Counting exempt income
+  manufactures a registration nobody needed.
+- **The forward test is part of the rule**, not a courtesy: expecting to cross
+  in the next twelve months makes registration due now, which is how a business
+  can owe it before it has earned anything.
+- A short history still counts — six months at 70,000 have crossed, and telling
+  someone to come back when they have twelve months of history would be wrong.
+
+Thresholds: **375,000 mandatory / 187,500 voluntary**, register within **30
+days**, SAR 10,000 penalty for missing it. Carries a `legal` Disclaimer naming
+ZATCA and is in `e2e/disclaimers.spec.ts`.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

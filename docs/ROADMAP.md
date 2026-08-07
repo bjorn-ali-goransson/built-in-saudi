@@ -433,3 +433,20 @@ entry and could not produce one); `.docx` → Markdown
 reader (`email-headers` takes a paste, but the file is what people have);
 merging spreadsheets across files (`readTableFile` already reads xlsx);
 exporting a filled PDF form's data as CSV (`pdf-fill` knows the fields).
+
+### Web sweep, 8 August 2026 (third pass — freelancers and small business)
+
+Searched a domain the first two sweeps missed. The freelance work document
+(`freelance.sa`) is free and issued in minutes, so there is no tool in it — but
+the rules around it produced one:
+
+- ~~**VAT registration threshold checker.**~~ **Shipped** as `vat-registration`.
+  The sources name the mistake outright: founders "miscalculate by including
+  exempt income or by looking only at a single calendar year rather than the
+  rolling 12-month window that ZATCA actually uses."
+- **Still open from this pass:** GOSI *voluntary* contributions for the
+  self-employed (rules not clearly published — would need a primary source);
+  ZATCA e-invoicing wave lookup (which Fatoora wave a business falls in, by
+  turnover); a freelance invoice template that is ZATCA-compliant for a
+  non-registered freelancer, which is a different document from the VAT invoice
+  `invoice-generator` produces.

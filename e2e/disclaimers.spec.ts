@@ -19,6 +19,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'zatca-qr', kind: 'official' },
   { id: 'quotation', kind: 'legal' },
   { id: 'gosi-salary', kind: 'financial' },
+  { id: 'vat-registration', kind: 'legal' },
 ]
 
 for (const { id, kind } of NEEDS) {
