@@ -567,7 +567,7 @@ Two rules and the date that separates them, in `src/tools/rent-rules/rent.ts`:
   unless one party gives **60 days** notice, so that deadline is shown outside
   Riyadh too — it is the more common and more expensive miss.
 
-The  Disclaimer says outright that the tool cannot know whether an
+The `legal` Disclaimer says outright that the tool cannot know whether an
 address falls inside the urban boundary, which is what the freeze turns on.
 
 ## Disclaimers are a component, not a habit
