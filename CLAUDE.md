@@ -635,6 +635,31 @@ Near the end of a term there are fewer than three payments left, so the
 compensation is bounded by what remains — covered in the spec, along with a
 zero-rate loan (nothing to save, nothing to charge) and a fully paid one.
 
+## Leave, overtime and notice (`leave-overtime`)
+
+`end-of-service` covers leaving; this covers being employed. Constants live in
+`src/tools/leave-overtime/labour.ts`. Three of them are routinely got wrong,
+which is why the tool exists:
+
+- **Annual leave steps at five years**, from at least 21 days to at least 30,
+  and only on **continuous** service with the same employer. It is a cliff with
+  a date on it that nobody tells you, so the tool names the date and counts down
+  to it.
+- **Notice is asymmetric: 30 days if the employee resigns, 60 if the employer
+  terminates.** People assume a single number applies to both, and which one
+  applies is decided by who is giving notice.
+- **Overtime is capped at 720 hours a year**, beyond which the worker's explicit
+  written consent is required — so the cap is a protection, not a payroll limit,
+  and the copy says so.
+
+Overtime is 150% of the hourly wage. The hourly rate is derived on the usual
+**30-day month / 8-hour day** basis, and the tool shows the daily and hourly
+figures it derived rather than only the total, because a contract may set a
+different basis and the reader needs to be able to see that.
+
+Carries a `legal` Disclaimer whose point is that these are **minimums**: a
+contract may give more and cannot give less.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

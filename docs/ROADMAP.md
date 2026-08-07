@@ -509,3 +509,13 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
   A confident number there would be wrong for many readers on a question where
   being wrong costs them, so it is not built. Same standard that kept the
   Citizen Account taper and the traffic-fine window unbuilt.
+
+### Web sweep, 8 August 2026 (seventh pass — labour law)
+
+- ~~**Leave and overtime calculator.**~~ **Shipped** as `leave-overtime`, which
+  was idea #5 from the very first sweep. Same pattern as the vehicle and rent
+  tools: the value is in the asymmetry and the cliff, not the arithmetic.
+- **Still open:** unused-leave encashment on exit — the entitlement was not
+  confirmed by the sources read, so the tool shows what a day of leave is worth
+  without asserting a right to be paid for it. Worth a primary source before
+  going further.

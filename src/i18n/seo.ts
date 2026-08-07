@@ -1058,4 +1058,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Early Loan Settlement', description: 'Work out what it costs to settle a personal finance early, and what that saves you against carrying on. The rule is the opposite of what most people assume: settling early does not mean paying the rest of the term cost. You pay the outstanding balance plus the term cost for the three months following repayment, worked out on a declining balance, and the rest of the term is waived. The three months is a ceiling set by SAMA, not a fee the lender chooses.' },
     ar: { name: 'السداد المبكر للتمويل', description: 'احسب كلفة سداد تمويلك الشخصي مبكرًا، وكم يوفّر عليك ذلك مقارنةً بالاستمرار. والقاعدة عكس ما يظنه أكثر الناس: فالسداد المبكر لا يعني دفع بقية تكلفة الأجل. إنما تدفع الرصيد القائم مع تكلفة أجل الأشهر الثلاثة التالية، محسوبة على رصيد متناقص، ويُسقط باقي الأجل. والأشهر الثلاثة حدٌّ أعلى وضعته مؤسسة النقد لا رسمٌ يختاره الممول.' },
   },
+  {
+    id: 'leave-overtime',
+    en: { name: 'Leave, Overtime & Notice', description: 'Your annual leave, what overtime is worth, and how much notice either side has to give — the entitlements that apply while you are still working. Three of them are routinely got wrong: leave steps from 21 days to 30 after five continuous years with the same employer, and the tool tells you the date; notice is 30 days if you resign but 60 if your employer ends it; and overtime is capped at 720 hours a year, a cap that exists to protect you rather than to limit what you can be paid for.' },
+    ar: { name: 'الإجازة والعمل الإضافي والإشعار', description: 'إجازتك السنوية، وكم يساوي العمل الإضافي، وكم مدة الإشعار على كل طرف — وهي الحقوق التي تسري وأنت على رأس العمل. وثلاثة منها يخطئ فيها الناس كثيرًا: الإجازة ترتفع من 21 يومًا إلى 30 بعد خمس سنوات متصلة، والأداة تخبرك بالتاريخ؛ ومدة الإشعار 30 يومًا إن استقلت و60 إن أنهاه صاحب العمل؛ والعمل الإضافي محدود بـ720 ساعة سنويًا لحمايتك.' },
+  },
 ]
