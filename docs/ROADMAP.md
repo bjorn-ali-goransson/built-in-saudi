@@ -450,3 +450,17 @@ the rules around it produced one:
   turnover); a freelance invoice template that is ZATCA-compliant for a
   non-registered freelancer, which is a different document from the VAT invoice
   `invoice-generator` produces.
+
+### Code sweep, 8 August 2026 (second pass)
+
+Scanned for tools with **no e2e reference at all**: exactly one of 193,
+`file-metadata`. Writing its coverage found a silent bug (compressed PDFs
+showed no document info) — see CLAUDE.md. Worth repeating that scan
+occasionally; it is one grep and it found the least-defended corner of the
+codebase in seconds.
+
+Also noted and NOT acted on: `Developer` is still 32 tools and the biggest
+section by a distance, mixing data tools, security, web and project
+scaffolding. Deferred three times now — it is a taxonomy decision about 32
+tools, and unlike the Converters fix there is no single principle that
+obviously settles it. Worth a human call.

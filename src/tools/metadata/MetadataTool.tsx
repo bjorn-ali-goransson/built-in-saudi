@@ -163,6 +163,46 @@ function parsePdf(b: Uint8Array): Row[] | null {
   return rows
 }
 
+/**
+ * The same information, from a PDF that keeps it in a compressed object stream.
+ *
+ * The regex above reads the info dictionary straight out of the bytes, which is
+ * instant and free — and finds NOTHING in any PDF written with cross-reference
+ * streams, which is what Word, Acrobat and pdf-lib all produce by default. The
+ * tool promised "PDF document info" and silently showed a version number for a
+ * large share of real files. pdf.js is already a dependency; it is loaded only
+ * when the cheap path came up empty.
+ */
+async function parsePdfDeep(b: Uint8Array): Promise<Row[]> {
+  try {
+    const [pdfjs, worker] = await Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ])
+    // Without a worker src, getDocument rejects and the fallback silently does
+    // nothing — which is the bug it exists to fix.
+    pdfjs.GlobalWorkerOptions.workerSrc = worker.default
+    const doc = await pdfjs.getDocument({
+      data: b.slice(), disableStream: true, disableAutoFetch: true,
+    }).promise
+    const { info } = await doc.getMetadata() as unknown as { info: Record<string, unknown> }
+    const rows: Row[] = []
+    const add = (key: string, label: string) => {
+      const v = info?.[key]
+      if (typeof v === 'string' && v.trim()) rows.push({ label, value: v.trim().slice(0, 200) })
+    }
+    add('Title', 'Title'); add('Author', 'Author'); add('Subject', 'Subject')
+    add('Creator', 'Creator'); add('Producer', 'Producer')
+    const cd = typeof info?.CreationDate === 'string' ? info.CreationDate.match(/D:(\d{8})/) : null
+    if (cd) rows.push({ label: 'Created', value: `${cd[1].slice(0, 4)}-${cd[1].slice(4, 6)}-${cd[1].slice(6, 8)}` })
+    rows.push({ label: 'Pages', value: String(doc.numPages) })
+    return rows
+  } catch {
+    // A locked or damaged PDF: the cheap path's version number is still true.
+    return []
+  }
+}
+
 // ── RIFF (WAV / AVI) INFO ──
 function parseRiff(b: Uint8Array): Row[] | null {
   if (!(b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46)) return null
@@ -226,7 +266,13 @@ export default function MetadataTool() {
     }
 
     const png = parsePngText(b); if (png.length) g.push({ title: s.text, rows: png })
-    const pdf = parsePdf(b); if (pdf && pdf.length) g.push({ title: s.document, rows: pdf })
+    const pdf = parsePdf(b)
+    if (pdf) {
+      // "Only the version" means the info dictionary was not in the clear.
+      const thin = pdf.filter((r) => r.label !== 'PDF version').length === 0
+      const rows = thin ? [...await parsePdfDeep(b), ...pdf] : pdf
+      if (rows.length) g.push({ title: s.document, rows })
+    }
     const riff = parseRiff(b); if (riff && riff.length) g.push({ title: s.media, rows: riff })
 
     setGroups(g)

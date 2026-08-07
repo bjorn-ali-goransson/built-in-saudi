@@ -460,6 +460,30 @@ Thresholds: **375,000 mandatory / 187,500 voluntary**, register within **30
 days**, SAR 10,000 penalty for missing it. Carries a `legal` Disclaimer naming
 ZATCA and is in `e2e/disclaimers.spec.ts`.
 
+## Reading a file's metadata (`file-metadata`, folder `src/tools/metadata/`)
+
+Hand-parses EXIF, PNG text chunks, PDF info and RIFF tags rather than taking a
+dependency, which is right — but it was the **only tool of 193 with no e2e
+coverage at all**, and writing that coverage found a real bug:
+
+- **A PDF's info dictionary is usually NOT in the clear.** The fast path reads
+  `/Title (…)` straight out of the bytes, and finds nothing in any PDF written
+  with cross-reference streams — which is what Word, Acrobat and pdf-lib all
+  produce by default. The tool promised "PDF document info" and showed a
+  version number and nothing else for a large share of real files. There is now
+  a `parsePdfDeep` fallback through pdf.js, taken **only when the cheap read
+  came back with nothing but the version**, so an uncompressed PDF still costs
+  no download.
+- **A pdf.js fallback with no `GlobalWorkerOptions.workerSrc` rejects silently**
+  and looks exactly like "this PDF has no metadata" — i.e. like the bug it was
+  added to fix. Every other pdf.js caller in the repo sets it; this one now
+  does too.
+
+The fixtures are built to the real formats (an APP1 EXIF segment with IFD0,
+Exif and GPS sub-IFDs; a PNG `tEXt` chunk with a valid CRC; a RIFF `LIST/INFO`
+block), because a mocked fixture would have proved nothing about a hand-written
+binary parser.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
