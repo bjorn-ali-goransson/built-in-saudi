@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { tools } from '../tools'
 import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
@@ -13,6 +13,22 @@ export function HomePage() {
   useDocumentMeta(locale, '/')
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // The 9-dot launcher is deliberately not rendered here — home IS the
+  // catalogue — so Ctrl/Cmd+K would have been dead on the most visited page.
+  // It focuses the search that is already on screen instead of opening an
+  // overlay listing what is already listed underneath it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== 'k' && e.key !== 'K') || (!e.metaKey && !e.ctrlKey)) return
+      if ((e.target as HTMLElement | null)?.isContentEditable) return
+      e.preventDefault()
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const indexOf = useMemo(() => new Map(tools.map((tl, i) => [tl.id, i])), [])
   const idx = (id: string) => indexOf.get(id) ?? 0

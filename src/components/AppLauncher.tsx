@@ -15,6 +15,30 @@ export function AppLauncher() {
   const { locale, t } = useLocale()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // Worked out on the client only: the pages are prerendered, so reading the
+  // platform during render would put one machine's label in everyone's HTML.
+  const [combo, setCombo] = useState('Ctrl K')
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.userAgent)) setCombo('⌘ K')
+  }, [])
+
+  // Ctrl/Cmd+K from anywhere. At 194 tools the launcher is the fastest route to
+  // any of them and it could only be reached by finding and clicking a 9-dot
+  // icon in the header — so on a keyboard the slow path was the only path.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'k' && e.key !== 'K') return
+      if (!e.metaKey && !e.ctrlKey) return
+      // A rich-text surface may bind Cmd+K to "insert link", and taking that
+      // key off it would break the tool to speed up leaving it.
+      const el = e.target as HTMLElement | null
+      if (el?.isContentEditable) return
+      e.preventDefault()
+      setOpen((o) => !o)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     if (!open) { setQuery(''); return }
@@ -64,6 +88,7 @@ export function AppLauncher() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t.nav.tools}
+        title={`${t.nav.tools} (${combo})`}
         data-testid="app-launcher"
         onClick={() => setOpen((o) => !o)}
       >
@@ -81,6 +106,8 @@ export function AppLauncher() {
                 className="tool-search__input flex-1 min-w-0 border-none bg-transparent outline-none appearance-none font-body text-[1rem] text-ink py-[0.5rem] placeholder:text-ink-faint truncate [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
                 placeholder={t.catalog.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={t.catalog.searchAria}
               />
+              {/* Only where there is a keyboard to press it with. */}
+              <kbd className="hidden min-[860px]:block flex-none font-mono text-[0.7rem] text-ink-faint border border-[color:var(--line)] rounded-sm px-1.5 py-0.5" data-testid="launcher-combo">{combo}</kbd>
             </div>
           </div>
 

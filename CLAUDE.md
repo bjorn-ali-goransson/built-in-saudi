@@ -82,6 +82,17 @@ store itself (`expect.poll` over `localStorage`) rather than sleeping — waitin
 for the thing under test, not for time to pass. Worth copying for any future
 store written from an effect.
 
+**Ctrl/Cmd+K** opens the launcher from anywhere — except on **home, where the
+launcher is deliberately not rendered** (`Header.tsx`: `{!isHome && <AppLauncher />}`),
+because home IS the catalogue. The shortcut was therefore dead on the most
+visited page until the spec caught it; on home it now focuses and selects the
+search that is already on screen, rather than opening an overlay listing what is
+already listed underneath. It skips `contentEditable` targets, since a rich-text
+tool may bind the same key to 'insert link' — breaking a tool to speed up
+leaving it is a bad trade. The combo is shown on the launcher button's title and
+as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
+not a feature.
+
 **Recently used** (`lib/recentTools.ts`, `bis-recent-tools`) is the first row of
 both, capped at 8. At 192 tools the catalogue is a place you visit once, and the
 three or four you came back for were reachable only by scrolling thirteen
