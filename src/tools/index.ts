@@ -173,6 +173,7 @@ import { xlsxConvertTool } from './xlsx-convert/meta'
 import { khatmaTool } from './khatma/meta'
 import { icsBuilderTool } from './ics-builder/meta'
 import { certDecoderTool } from './cert-decoder/meta'
+import { emailHeadersTool } from './email-headers/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -207,6 +208,7 @@ export const tools: Tool[] = [
   regexTesterTool,
   jwtDecoderTool,
   certDecoderTool,
+  emailHeadersTool,
   cronExplainerTool,
   cronBuilderTool,
   textDiffTool,

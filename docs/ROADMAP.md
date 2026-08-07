@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **174 tools are live.** This
+The backlog, and an honest account of what exists. **175 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -17,7 +17,7 @@ optional [backend worker](./BACKEND.md).
 
 | Category | Count | Shape of it |
 |---|---|---|
-| Developer | 31 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge, X.509 certificates |
+| Developer | 32 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers |
 | Saudi / Local | 24 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner** |
 | Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
@@ -164,7 +164,6 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Email header analyser | Hops, delays, SPF/DKIM/DMARC verdicts — all from pasted text, no network. |
 | `.env` ↔ JSON ↔ shell export | Small, constant, and hand-edited by everyone today. |
 | Chmod / umask calculator | Tiny, evergreen, purely arithmetic. |
 | Webhook payload formatter | Paste a payload, get a typed shape; `json-to-types` adjacent. |
