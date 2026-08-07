@@ -15,13 +15,25 @@ export interface ToolSection {
   tools: Tool[]
 }
 
-/** Ordered, de-duplicated sections for the default (non-search) app catalog. */
-export function buildToolSections(locale: Locale): ToolSection[] {
+/**
+ * Ordered, de-duplicated sections for the default (non-search) app catalog.
+ *
+ * `recentIds` prepends a shortcut row of the tools this person actually opened.
+ * Unlike Recommended and Duʿāʾ, a recent tool is NOT consumed — it still
+ * appears under its own category. Recents change as you use the site, and a
+ * catalogue whose sections reshuffle because of what you opened yesterday is
+ * worse than a slightly repeated tile.
+ */
+export function buildToolSections(locale: Locale, recentIds: string[] = []): ToolSection[] {
   const used = new Set<string>()
   const pick = (ids: string[]) => ids.map((id) => liveTools.find((tl) => tl.id === id)).filter((tl): tl is Tool => !!tl)
   const out: ToolSection[] = []
   const rec = pick(RECOMMENDED); rec.forEach((tl) => used.add(tl.id))
   const dua = pick(DUA); dua.forEach((tl) => used.add(tl.id))
+  const recent = recentIds
+    .map((id) => liveTools.find((tl) => tl.id === id))
+    .filter((tl): tl is Tool => !!tl)
+  if (recent.length) out.push({ key: '__recent', title: locale === 'ar' ? 'استخدمتها مؤخرًا' : 'Recently used', tools: recent })
   out.push({ key: '__rec', title: locale === 'ar' ? 'موصى به' : 'Recommended', tools: rec })
   out.push({ key: '__dua', title: locale === 'ar' ? 'دعاء وذكر' : 'Duʿāʾ & Dhikr', tools: dua })
   const cats = [...CATEGORY_ORDER, ...liveTools.map((tl) => tl.category).filter((c) => !CATEGORY_ORDER.includes(c))]

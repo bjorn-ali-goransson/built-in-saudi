@@ -6,6 +6,7 @@ import { scoreTool } from '../lib/fuzzy'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
 import { GridIcon, SearchIcon } from './icons'
+import { useRecentTools } from '../lib/recentTools'
 
 /** 9-dot launcher → a full-screen, searchable app drawer that mirrors the home
  *  catalog exactly (same category sections + tool cards). The close ✕ sits at the
@@ -26,7 +27,8 @@ export function AppLauncher() {
 
   const indexOf = useMemo(() => new Map(tools.map((tl, i) => [tl.id, i])), [])
   const idx = (id: string) => indexOf.get(id) ?? 0
-  const sections = useMemo(() => buildToolSections(locale), [locale])
+  const recent = useRecentTools()
+  const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
 
   const results = useMemo(() => {
     if (!query.trim()) return []

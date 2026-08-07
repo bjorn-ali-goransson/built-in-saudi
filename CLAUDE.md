@@ -72,7 +72,24 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
 
 **Catalog rendering:** the home catalog and the 9-dot `AppLauncher` share
 `components/ToolCatalog.tsx`, fed by `lib/toolSections.ts` (the `RECOMMENDED`
-list + category grouping). The **Recommended** section renders as full
+list + category grouping).
+
+**Recently used** (`lib/recentTools.ts`, `bis-recent-tools`) is the first row of
+both, capped at 8. At 192 tools the catalogue is a place you visit once, and the
+three or four you came back for were reachable only by scrolling thirteen
+sections or typing the name again — the "personalisation over preferences"
+principle going unapplied where it pays most. Two decisions worth keeping:
+
+- **A recent tool is NOT consumed**, unlike `RECOMMENDED` and `DUA` which are
+  removed from their categories. Recents change as you use the site, and a
+  catalogue that reshuffles because of what you opened yesterday is worse than
+  a slightly repeated tile.
+- **The visit is recorded in `ToolPage`**, not on the card, so arriving by URL,
+  from a search result or from a link all count the same.
+
+It follows the store-writes-must-notify rule (#223): `recordRecent` dispatches
+`bis-recent-changed` and the hook re-reads on it (plus `storage`, since another
+tab is the same person). The **Recommended** section renders as full
 `ToolCard`s; every other section renders as **compact icon+name tiles** (max 3
 columns on desktop, the description un-truncates on hover; a 4-up icon grid on
 mobile). Search results always use full cards.

@@ -3,6 +3,7 @@ import { tools } from '../tools'
 import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
 import { buildToolSections } from '../lib/toolSections'
+import { useRecentTools } from '../lib/recentTools'
 import { scoreTool } from '../lib/fuzzy'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localizeTool } from '../i18n'
@@ -41,7 +42,8 @@ export function HomePage() {
       .sort((a, b) => b.score - a.score)
   }, [query, locale])
 
-  const sections = useMemo(() => buildToolSections(locale), [locale])
+  const recent = useRecentTools()
+  const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
 
   return (
     <section className="wrap pt-[clamp(1.2rem,4vw,2rem)] pb-[clamp(3rem,8vw,5.5rem)]" aria-labelledby="catalog-title">
