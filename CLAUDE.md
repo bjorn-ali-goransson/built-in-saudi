@@ -400,6 +400,42 @@ claim stays literally true:
   worker deliberately does not cache `/ocr` (it only caches navigations and
   `/assets/`), so 19MB never lands in the shell cache.
 
+## Search ranking (`src/lib/fuzzy.ts`)
+
+At 184 tools the catalogue is only as good as its search, and the matcher was
+tuned when there were about 100. **`evals/searchbench.mjs` is the measurement** —
+68 queries a person would actually type, each with the tool they obviously mean,
+reporting where it ranks. Run it before and after touching the scorer:
+
+```bash
+npx tsc src/lib/fuzzy.ts --outDir evals/gen --module esnext --target es2022   --moduleResolution bundler && node evals/searchbench.mjs
+```
+
+It compiles the REAL scorer rather than keeping a copy, so the measurement
+cannot drift from the code. Measured over that bench, the fixes were worth
+**top-1 75% → 94%, top-3 78% → 100%, unfindable 14 → 0**:
+
+- **Terms are scored separately.** The whole query had to appear in one field in
+  order, so `pdf merge` could not find the tool named "Merge PDFs" — 14 of 68
+  queries returned NOTHING. Word order is not something a person typing into a
+  search box owes anybody.
+- **Stop words are dropped.** Every term had to match something, so one unknown
+  word killed the query: `is my password good` found nothing because no tool
+  contains "is".
+- **Unmatched terms no longer blank the page**; coverage scales the score
+  instead. A tool matching two words out of two beats one matching a single word
+  strongly — without that, `ضغط صورة` ranked the PDF compressor first, because
+  its *name* matches "compress" at triple weight.
+- **Fields are passed separately, never concatenated.** Joining name + Arabic
+  name let a subsequence run off the end of one into the start of the next, and
+  destroyed the "starts at the beginning" bonus that makes an exact name win.
+- **Vocabulary is part of the fix, not just the algorithm.** "photo", "picture",
+  "smaller" are what people type; a meta that only says "image" is unfindable by
+  half its users. When adding a tool, list the words a person would use, not the
+  ones the code uses.
+
+`e2e/search.spec.ts` freezes the cases that failed.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.

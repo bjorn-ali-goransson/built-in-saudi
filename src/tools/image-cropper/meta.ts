@@ -10,7 +10,7 @@ export const imageCropperTool: Tool = {
   description:
     'Crop an image right in your browser: drag and resize the crop box, lock it to 1:1 / 4:3 / 16:9 or crop freely, see the exact output pixel size, and download as PNG/JPG/WebP. The crop runs at full resolution and the image is never uploaded.',
   category: 'Images',
-  keywords: ['image', 'crop', 'cropper', 'trim', 'aspect ratio', 'square', 'avatar', 'قص الصور', 'اقتصاص', 'صور'],
+  keywords: ['image', 'photo', 'picture', 'crop', 'cropper', 'resize', 'trim', 'aspect ratio', 'square', 'avatar', 'قص', 'صورة', 'قص الصور', 'اقتصاص', 'صور'],
   status: 'stable',
   Icon: CropIcon,
   component: lazyTool(() => import('./ImageCropperTool')),

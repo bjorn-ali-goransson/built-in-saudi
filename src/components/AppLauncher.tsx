@@ -33,7 +33,20 @@ export function AppLauncher() {
     return liveTools
       .map((tool) => {
         const l = localizeTool(tool, locale)
-        return { tool, score: scoreTool(query, { name: `${l.name} ${tool.name}`, tagline: `${l.tagline} ${tool.tagline}`, category: `${l.category} ${tool.category}`, keywords: tool.keywords }) }
+        // Fields stay separate rather than being concatenated: joining them let a
+        // subsequence run off the end of one and into the start of the next, which
+        // is a match nobody meant, and it destroyed the "starts at the beginning"
+        // bonus that makes an exact name win.
+        return {
+          tool,
+          score: scoreTool(query, {
+            name: tool.name,
+            nameAr: l.name,
+            tagline: `${l.tagline} ${tool.tagline}`,
+            category: `${l.category} ${tool.category}`,
+            keywords: tool.keywords,
+          }),
+        }
       })
       .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)

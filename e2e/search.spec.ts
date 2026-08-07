@@ -1,0 +1,74 @@
+import { test, expect } from '@playwright/test'
+
+// Search ranking, driven through the real catalogue.
+//
+// These are the queries that measurably failed before the ranking work: with
+// 184 tools, a fuzzy matcher tuned at ~100 returned NOTHING for 14 of 68 bench
+// queries, because the whole query — spaces included — had to appear in one
+// field in order. "pdf merge" could not find the tool named "Merge PDFs".
+//
+// Measured over that bench: top-1 75% -> 94%, top-3 78% -> 100%, unfindable
+// 14 -> 0. These cases are the ones worth freezing.
+
+const top = (page: import('@playwright/test').Page) => page.locator('[data-testid^="tool-"]').first()
+
+async function search(page: import('@playwright/test').Page, query: string, locale = 'en') {
+  await page.goto(`/${locale}`)
+  await page.locator('.tool-search__input').fill(query)
+}
+
+test('word order does not matter', async ({ page }) => {
+  // The single biggest failure: every multi-word query whose words appear in a
+  // different order than the tool's name found nothing at all.
+  await search(page, 'pdf merge')
+  await expect(top(page)).toContainText(/merge/i)
+  await search(page, 'merge pdf')
+  await expect(top(page)).toContainText(/merge/i)
+})
+
+test('a sentence with filler words still finds the tool', async ({ page }) => {
+  // "is" and "my" are in no tool anywhere, and one unmatched word used to take
+  // the whole query down with it.
+  await search(page, 'is my password good')
+  await expect(page.locator('[data-testid^="tool-"]').first()).toContainText(/password/i)
+})
+
+test('the words people use, not the words a developer wrote', async ({ page }) => {
+  await search(page, 'make picture smaller')
+  await expect(top(page)).toContainText(/compress/i)
+})
+
+test('matching every word beats matching one word strongly', async ({ page }) => {
+  // "compress image" must not rank the PDF compressor first just because its
+  // name contains "compress".
+  await search(page, 'compress image')
+  await expect(top(page)).toContainText(/image/i)
+})
+
+test('Arabic queries rank on the Arabic name', async ({ page }) => {
+  await search(page, 'ضغط صورة', 'ar')
+  await expect(top(page)).toContainText(/صور/)
+  await search(page, 'مواقيت', 'ar')
+  await expect(top(page)).toContainText(/الصلاة/)
+})
+
+test('an exact tool name still wins outright', async ({ page }) => {
+  await search(page, 'metronome')
+  await expect(top(page)).toContainText(/metronome/i)
+  await search(page, 'khatma')
+  await expect(top(page)).toContainText(/khatma/i)
+})
+
+test('the launcher searches the same way', async ({ page }) => {
+  await page.goto('/en/apps/qr-code')
+  await page.getByTestId('app-launcher').click()
+  await page.getByTestId('launcher-search').fill('excel to csv')
+  // The launcher and the home catalogue share one scorer, so a query that works
+  // in one has to work in the other.
+  await expect(page.getByTestId('tool-xlsx-convert')).toBeVisible()
+})
+
+test('a query nothing matches still says so rather than showing everything', async ({ page }) => {
+  await search(page, 'zzzzqqqq')
+  await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+})

@@ -1,3 +1,4 @@
 # Real CVs are personal data — never commit them, or anything derived from them.
 cvs/
 out/
+gen/
