@@ -282,3 +282,99 @@ forget:
 Per-tool specs live in [`docs/tools/`](./tools/). The many small single-purpose
 utilities are built straight from the checklist; write a spec when the tool is
 substantial.
+
+## Web sweep, 8 August 2026
+
+Second sweep. The first one went looking for tool *categories*; this one went
+looking for **rules that changed recently**, on the theory that a calculator is
+only worth building when the correct answer is non-obvious and most of the
+free ones are wrong. That is exactly what turned up, and it is concentrated in
+the Saudi-local wedge rather than in generic utilities.
+
+### Saudi money and work — the strongest gap, and we have none of it
+
+1. **GOSI / net salary calculator.** The pick of the whole sweep, because the
+   rules are precise, recently changed, and almost universally got wrong:
+   - **Two parallel systems.** Registered *before* 3 July 2024: total 21.5%
+     (employer 11.75%, employee 9.75%). Registered *after*: the total rose in
+     **July 2026** from 22.5% to **23.5%** (employer 12.75%, employee 10.75%).
+     A calculator with one rate in it is wrong for half the workforce.
+   - **The contributable wage is basic + housing ONLY**, capped at **SAR
+     45,000/month**. Transport, phone, commission and bonus are excluded — this
+     is the error every "just take 10% of your salary" answer makes.
+   - **SANED** unemployment insurance is a further 0.75% each side.
+   - **A non-Saudi employee contributes nothing**; the employer pays 2% for
+     occupational hazards only. Someone on an iqama looking at a GOSI line on
+     their payslip is looking at a mistake.
+   Needs a `financial` Disclaimer naming GOSI as the authority.
+2. **Citizen Account (حساب المواطن) estimator.** 720 SAR basic for the head of
+   household, 720 additional (running to end-2026), 360 per dependent over 18
+   and 216 under, tapered against household income up to a preventing limit,
+   with the household counted to a reference cap of 6. Deposited on the 10th.
+   Needs an `official` Disclaimer — this is an entitlement, and the estimate is
+   not the decision.
+3. **Saudization / Nitaqat band calculator.** Headcount ratio to band colour,
+   including the **30% engineering quota from 30 June 2026**. The audience is
+   every small employer in the country and the arithmetic is genuinely fiddly.
+4. **Expat levy and dependent fee planner.** Monthly per-dependant cost and the
+   company-ratio levy, projected over a contract.
+5. **Labour-law leave and overtime calculator.** Overtime at 150%, annual leave
+   21 days rising to 30, and what unused leave is worth on exit. Complements
+   `end-of-service`, which stops at the gratuity.
+6. **Traffic fine early-payment calculator.** Article 75 gives a standard 25%
+   reduction inside the window — so the useful tool is a **deadline countdown**
+   showing what it costs to be late.
+7. **Real-estate transaction tax (RETT) estimator** — 5%, plus the white-land
+   levy.
+8. **Ejar contract reader.** Riyadh has a five-year rent freeze from September
+   2025 pinned to the rent recorded at the effective date; an Ejar PDF is the
+   document that settles an argument. Reading one and surfacing the dates and
+   the rent is squarely on our PDF stack.
+9. **Customs duty + VAT on an imported parcel.**
+10. **SEC electricity bill estimator** (tiered tariff) and the water equivalent.
+
+### Documents — the formats the new `unzip`/`writeXlsx` work makes cheap
+
+11. **`.pptx` → text/outline.** Same zip-of-XML shape as `.docx` and `.epub`;
+    one XML part per slide, so it is genuinely the EPUB shape rather than the
+    Word one.
+12. **`.docx` → Markdown**, keeping headings, lists and tables — `docx-to-text`
+    already walks the structure and currently throws it away.
+13. **`.eml` / `.msg` reader.** `email-headers` takes a paste; the file is what
+    people actually have, and it carries the body and attachments too.
+14. **Extract a ZIP in the browser.** `archive-inspector` lists entries and
+    `unzip.ts` already does DEFLATE — extraction is the missing verb.
+15. **Merge spreadsheets across files.** `csv-merge` exists; `readTableFile`
+    already reads xlsx, so the xlsx version is nearly free.
+16. **Export filled PDF form data as CSV** — `pdf-fill` knows the fields.
+17. **RTF → text.**
+18. **Diff two PDFs** at the text level, on `pdf-to-text` + `text-diff`.
+
+### The one that follows directly from this week's work
+
+19. **Searchable PDF.** `pdf-ocr` reads a scan and hands back text; writing that
+    text back into the PDF as an invisible layer produces a file that is still
+    the scan to look at and is **selectable and searchable** — which is what
+    people actually wanted when they asked for OCR. Nothing free does this
+    client-side. `images-to-pdf` + `pdf-ocr` + pdf-lib are all already here.
+20. **Image → searchable PDF**, the same idea from photos of pages.
+
+### Media and developer, lower priority
+
+21. **Video compressor** (WebCodecs re-encode) — the honest complement to
+    `video-trim`, which deliberately never re-encodes.
+22. **Audio format converter** (wav ↔ opus/mp3).
+23. **GIF → MP4**, the inverse of `video-gif`.
+24. **On-device dictation** (Web Speech API), same stance as the built-in AI
+    tools: it runs here or it does not ship.
+25. **JSON ↔ YAML ↔ TOML** and **`.env` ↔ JSON**.
+26. **SQL formatter.**
+27. **Whole-palette contrast check** — `color-contrast` does pairs.
+
+### What the sweep did NOT find
+
+Searching for "tools people want that do not exist" returns listicles of tools
+that do exist, and the AI-tool directories are all wrappers on somebody's API —
+which is the opposite of this site's premise. The useful signal was entirely in
+**recently changed local rules**, not in tool-idea lists. Worth remembering for
+the next sweep: search the regulator, not the roundup.
