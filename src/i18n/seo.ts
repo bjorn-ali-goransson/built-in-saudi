@@ -938,4 +938,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Khatma Planner', description: 'Plan a khatma over any stretch of days — Ramadan, a month, a week — divided evenly by page or by juz, with Gregorian and Hijri dates side by side. Print it with a tick box per day, or tick the days off here; your progress stays on this device. Page numbers follow the 604-page Madani mushaf, and the tool says so, because a plan quoting pages from an edition you do not own is worse than no plan.' },
     ar: { name: 'مخطّط الختمة', description: 'خطّط ختمة على أي عدد من الأيام — رمضان أو شهر أو أسبوع — مقسّمة بالتساوي بالصفحات أو بالأجزاء، مع التاريخين الميلادي والهجري جنبًا إلى جنب. اطبعها بمربّع تعليم لكل يوم، أو علّم الأيام هنا؛ ويبقى تقدّمك على جهازك. وأرقام الصفحات بحسب مصحف المدينة ذي الـ٦٠٤ صفحات، والأداة تصرّح بذلك، لأن خطة بأرقام طبعة لا تملكها أسوأ من لا خطة.' },
   },
+  {
+    id: 'ics-builder',
+    en: { name: 'Calendar File (.ics)', description: 'Build a calendar invite anyone can open in Apple Calendar, Outlook or Google, with repeats and a reminder — or paste an .ics you have been sent and see plainly what it says in your own timezone. Follows the parts of RFC 5545 that generators usually skip: lines folded at 75 octets, commas and semicolons escaped, and all-day events written as dates rather than midnight-to-midnight.' },
+    ar: { name: 'ملف تقويم (‎.ics‎)', description: 'أنشئ دعوة تقويم يفتحها أي أحد في Apple Calendar أو Outlook أو Google، مع التكرار والتذكير — أو الصق ملف ‎.ics‎ وصلك وشاهد بوضوح ما فيه بتوقيتك أنت. تلتزم الأداة بما تتخطاه المولّدات عادةً من معيار RFC 5545: طيّ الأسطر عند ٧٥ ثمانية، وتهريب الفواصل والفواصل المنقوطة، وكتابة أحداث اليوم الكامل تواريخَ لا من منتصف ليل إلى منتصف ليل.' },
+  },
 ]

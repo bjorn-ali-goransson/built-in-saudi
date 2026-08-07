@@ -171,6 +171,7 @@ import { videoTrimTool } from './video-trim/meta'
 import { arabicHandwritingTool } from './arabic-handwriting/meta'
 import { xlsxConvertTool } from './xlsx-convert/meta'
 import { khatmaTool } from './khatma/meta'
+import { icsBuilderTool } from './ics-builder/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -287,6 +288,7 @@ export const tools: Tool[] = [
   fileEncryptTool,
   cvGeneratorTool,
   linkShortenerTool,
+  icsBuilderTool,
   qrCodeTool,
   barcodeTool,
   imageCompressorTool,

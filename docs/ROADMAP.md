@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **172 tools are live.** This
+The backlog, and an honest account of what exists. **173 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -22,7 +22,7 @@ optional [backend worker](./BACKEND.md).
 | Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
-| Generators | 17 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes |
+| Generators | 19 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, Arabic handwriting sheets, .ics events |
 | PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
 | Files | 9 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON** |
@@ -155,7 +155,6 @@ earn a slot. **`client` unless noted.**
 | Idea | Why it earns a slot |
 |---|---|
 | CSV → vCard (bulk contacts) | The "300 contacts stuck in a spreadsheet" problem. |
-| `.ics` event builder / parser | We already hand-write ICS for Book Me; dependency-free. |
 | EPUB → text / metadata | A zip of XHTML, and the zip library is already here. |
 | SQLite file inspector | `sql.js` is a real dependency — weigh it — but "what is in this .db" has no private alternative. |
 | Diff two spreadsheets | Once .xlsx reads, this is `text-diff` over rows. |
