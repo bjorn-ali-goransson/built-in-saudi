@@ -124,6 +124,24 @@ const BENCH = [
   ['slides to text', 'pptx-to-text'],
   ['speaker notes', 'pptx-to-text'],
   ['بوربوينت', 'pptx-to-text'],
+  // The Saudi tools from the August sweeps. These are the ones where being
+  // unfindable costs most: someone looking for "what is deducted from my
+  // salary" will not browse a catalogue for it.
+  ['gosi', 'gosi-salary'],
+  ['net salary', 'gosi-salary'],
+  ['what is deducted from my salary', 'gosi-salary'],
+  ['التأمينات', 'gosi-salary'],
+  ['صافي الراتب', 'gosi-salary'],
+  ['vat registration', 'vat-registration'],
+  ['do i need to register for vat', 'vat-registration'],
+  ['fahes', 'vehicle-renewal'],
+  ['periodic inspection', 'vehicle-renewal'],
+  ['istimara', 'vehicle-renewal'],
+  ['الفحص الدوري', 'vehicle-renewal'],
+  ['rent increase', 'rent-rules'],
+  ['rent freeze', 'rent-rules'],
+  ['lease renewal notice', 'rent-rules'],
+  ['زيادة الإيجار', 'rent-rules'],
 ]
 
 function rank(query, wanted) {

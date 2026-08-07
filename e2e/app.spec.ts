@@ -1654,10 +1654,26 @@ test.describe('weather', () => {
 })
 
 test.describe('id expiry', () => {
+  /**
+   * A date `n` days from today in LOCAL terms — which is how the tool counts,
+   * and how a person means it.
+   *
+   * `toISOString().slice(0, 10)` was used here and is wrong east of Greenwich:
+   * between local midnight and UTC midnight it names YESTERDAY, so the tool
+   * counted one day more (or fewer) than the test expected. Caught at 00:25
+   * Riyadh time — the failure window is three hours a night and had been there
+   * all along.
+   */
+  const localDay = (n: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + n)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
   test('counts the days left and keeps the document after a reload', async ({ page }) => {
     await page.goto('/en/apps/id-expiry')
     await expect(page.getByTestId('exp-empty')).toBeVisible()
-    const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10)
+    const soon = localDay(10)
     await page.getByTestId('exp-date').fill(soon)
     await page.getByTestId('exp-add').click()
     await expect(page.getByTestId('exp-days')).toHaveText('10 days left')
@@ -1667,7 +1683,7 @@ test.describe('id expiry', () => {
 
   test('an already-expired document says so', async ({ page }) => {
     await page.goto('/en/apps/id-expiry')
-    const past = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+    const past = localDay(-3)
     await page.getByTestId('exp-date').fill(past)
     await page.getByTestId('exp-add').click()
     await expect(page.getByTestId('exp-days')).toContainText('Expired 3 days ago')

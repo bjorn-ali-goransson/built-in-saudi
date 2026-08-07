@@ -838,6 +838,21 @@ not evidence of being the more central tool. Ties therefore fall through to
 **catalogue order**, which is an editorial judgement about which tool is
 primary. Don't reintroduce it without re-running the bench.
 
+**Arabic morphology defeats substring matching**, and it cost two tools their
+own query. A name in the plural, or as an agent noun, does not CONTAIN the
+singular or verbal noun a person types — so the merely-related tool won by
+accident:
+
+| query | was winning | why |
+|---|---|---|
+| `فاتورة` | Invoice **QR reader** (`قارئ رمز الفاتورة`) | the generator was `منشئ الفواتير` — plural, no substring match |
+| `ترجمة` | **Subtitle** editor (`محرّر الترجمة`) | the translator was `المترجم` — agent noun, no substring match |
+
+Renamed to the form people actually type (`إنشاء فاتورة`, `ترجمة النصوص`),
+which reads more naturally as a label anyway. Bench: **top-1 93% → 95%** over
+101 queries. **When adding a tool, check the Arabic name contains the word
+somebody would type, not a grammatical relative of it.**
+
 `e2e/search.spec.ts` freezes the cases that failed, in both rounds.
 
 **The catalogue's SHAPE is the other half of findability, and it is measurable
@@ -924,6 +939,13 @@ expose. `npm run test:e2e` builds nothing itself — it starts `vite preview` on
 stale build). Container path: `docker compose -f docker-compose.e2e.yml run --rm
 e2e` (Playwright's official image, tag must match the `@playwright/test`
 version). **Keep tests green and add a spec when you add a tool.**
+
+**Build a test date in LOCAL terms, never `toISOString().slice(0, 10)`.** East
+of Greenwich those disagree between local midnight and UTC midnight, so a date
+built in UTC names yesterday while the tool counts from local midnight — three
+hours a night, every night, on a machine in Riyadh. Two `id-expiry` cases had
+carried that since they were written and only failed when a run happened to
+cross 00:00. The tool was right; the test was wrong.
 
 **The suite gates the deploy** (`.github/workflows/deploy.yml`): typecheck →
 build → Playwright, and nothing reaches Pages unless all three pass. The same

@@ -167,3 +167,35 @@ test('the new category has an Arabic label, not a raw English fallback', async (
   await page.goto('/ar')
   await expect(page.getByTestId('section-Web')).toContainText('الويب')
 })
+
+// Arabic morphology defeats substring matching, and it cost two tools their own
+// query. A name in the plural or as an agent noun does not contain the singular
+// or verbal noun a person types, so the SPECIFIC tool won by accident: the QR
+// reader is "قارئ رمز الفاتورة" and beat the invoice generator on "فاتورة"; the
+// subtitle editor is "محرّر الترجمة" and beat the translator on "ترجمة".
+
+test('an Arabic query finds the tool that does the thing, not the one that mentions it', async ({ page }) => {
+  await search(page, 'فاتورة', 'ar')
+  await expect(top(page)).toContainText('فاتورة')
+  await expect(page.getByTestId('tool-invoice-generator')).toBeVisible()
+
+  await search(page, 'ترجمة', 'ar')
+  await expect(page.getByTestId('tool-translate')).toBeVisible()
+  await expect(top(page)).toContainText('ترجمة')
+})
+
+test('the newest Saudi tools are reachable by what people call them', async ({ page }) => {
+  for (const [q, id] of [['gosi', 'gosi-salary'], ['fahes', 'vehicle-renewal'],
+    ['rent increase', 'rent-rules'], ['vat registration', 'vat-registration']] as const) {
+    await search(page, q)
+    await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
+  }
+})
+
+test('and by their Arabic names', async ({ page }) => {
+  for (const [q, id] of [['التأمينات', 'gosi-salary'], ['الفحص الدوري', 'vehicle-renewal'],
+    ['زيادة الإيجار', 'rent-rules']] as const) {
+    await search(page, q, 'ar')
+    await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
+  }
+})

@@ -321,7 +321,7 @@ export const liveToolSeo: ToolSeo[] = [
   {
     id: 'invoice-generator',
     en: { name: 'Invoice Generator', description: 'Create a bilingual (AR/EN) SAR invoice with line items, automatic 15% Saudi VAT and the total in Arabic words. Print or save as PDF; nothing uploaded.' },
-    ar: { name: 'منشئ الفواتير', description: 'أنشئ فاتورة ثنائية اللغة بالريال ببنودٍ وضريبة ١٥٪ تلقائيًا والإجمالي بالأحرف العربية. اطبعها أو احفظها PDF؛ لا يُرفع شيء.' },
+    ar: { name: 'إنشاء فاتورة', description: 'أنشئ فاتورة ثنائية اللغة بالريال ببنودٍ وضريبة ١٥٪ تلقائيًا والإجمالي بالأحرف العربية. اطبعها أو احفظها PDF؛ لا يُرفع شيء.' },
   },
   {
     id: 'pdf-split',
@@ -911,7 +911,7 @@ export const liveToolSeo: ToolSeo[] = [
   {
     id: 'translate',
     en: { name: 'Translator', description: 'Translate between Arabic and 50+ languages using a model that runs inside your browser, so nothing you type is uploaded anywhere — and it keeps working with no connection once the language pack is downloaded. Covers the languages actually spoken at work here: Urdu, Hindi, Bengali, Malayalam, Tamil, Nepali, Sinhala, Amharic, Tigrinya, Somali, Pashto and Farsi. Needs Chrome or Edge 138+ on a computer.' },
-    ar: { name: 'المترجم', description: 'ترجم بين العربية وأكثر من ٥٠ لغة عبر نموذج يعمل داخل متصفحك، فلا يُرفع شيء مما تكتبه إلى أي مكان — ويظل يعمل دون اتصال بعد تنزيل حزمة اللغة. ويغطي اللغات المستخدمة فعلًا في العمل هنا: الأردية والهندية والبنغالية والمالايالامية والتاميلية والنيبالية والسنهالية والأمهرية والتيغرينية والصومالية والبشتوية والفارسية. يتطلب Chrome أو Edge 138+ على حاسوب.' },
+    ar: { name: 'ترجمة النصوص', description: 'ترجم بين العربية وأكثر من ٥٠ لغة عبر نموذج يعمل داخل متصفحك، فلا يُرفع شيء مما تكتبه إلى أي مكان — ويظل يعمل دون اتصال بعد تنزيل حزمة اللغة. ويغطي اللغات المستخدمة فعلًا في العمل هنا: الأردية والهندية والبنغالية والمالايالامية والتاميلية والنيبالية والسنهالية والأمهرية والتيغرينية والصومالية والبشتوية والفارسية. يتطلب Chrome أو Edge 138+ على حاسوب.' },
   },
   {
     id: 'summarize',
