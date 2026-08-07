@@ -958,4 +958,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Seating Chart', description: 'Paste your class list, set the room out in rows and desks, and get a printable seating chart. Name the pairs who must not sit together and it works around them — and says so plainly when the room is too full to manage it, rather than quietly seating them side by side. Every chart has a code, so a reprint seats the same people in the same desks.' },
     ar: { name: 'مخطط جلوس الفصل', description: 'الصق قائمة فصلك، ورتّب القاعة صفوفًا ومقاعد، واحصل على مخطط جلوس قابل للطباعة. سمِّ من يجب ألا يجلسا معًا فيتفادى الأداة ذلك — وتقول لك صراحةً حين تكون القاعة أضيق من أن يتحقق، بدل أن تُجلسهما متجاورين في صمت. ولكل مخطط رمز، فتُجلس إعادةُ الطباعة الطلابَ أنفسهم في المقاعد نفسها.' },
   },
+  {
+    id: 'attendance-sheet',
+    en: { name: 'Attendance Sheet', description: 'Paste a class list and print a register: columns for school days, numbered sessions, or your own headings like Quiz 1 and Final. Weekend days are skipped, defaulted to Friday and Saturday — a sheet built on a Saturday-Sunday weekend prints two columns nobody ticks and misses two teaching days. Optional Hijri dates and a total column.' },
+    ar: { name: 'كشف الحضور', description: 'الصق قائمة فصلك واطبع سجلًا: أعمدة لأيام الدراسة، أو حصصًا مرقّمة، أو عناوين من عندك مثل «اختبار ١» و«النهائي». وتُتخطّى أيام العطلة، والافتراضي الجمعة والسبت — فالورقة المبنية على عطلة السبت والأحد تطبع عمودين لا يعلّم فيهما أحد وتسقط يومَي تدريس. مع تواريخ هجرية اختيارية وعمود للمجموع.' },
+  },
 ]

@@ -175,6 +175,7 @@ import { icsBuilderTool } from './ics-builder/meta'
 import { certDecoderTool } from './cert-decoder/meta'
 import { emailHeadersTool } from './email-headers/meta'
 import { seatingChartTool } from './seating-chart/meta'
+import { attendanceSheetTool } from './attendance-sheet/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -282,6 +283,7 @@ export const tools: Tool[] = [
   paperGeneratorTool,
   labelSheetTool,
   seatingChartTool,
+  attendanceSheetTool,
   arabicHandwritingTool,
   worksheetsTool,
   bingoCardsTool,
