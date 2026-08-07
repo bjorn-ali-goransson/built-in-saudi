@@ -2521,4 +2521,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/attendance-sheet"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/attendance-sheet"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/csv-vcard/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-vcard"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-vcard"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-vcard"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/csv-vcard/</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/csv-vcard"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/csv-vcard"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-vcard"/>
+  </url>
 </urlset>

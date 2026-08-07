@@ -963,4 +963,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Attendance Sheet', description: 'Paste a class list and print a register: columns for school days, numbered sessions, or your own headings like Quiz 1 and Final. Weekend days are skipped, defaulted to Friday and Saturday — a sheet built on a Saturday-Sunday weekend prints two columns nobody ticks and misses two teaching days. Optional Hijri dates and a total column.' },
     ar: { name: 'كشف الحضور', description: 'الصق قائمة فصلك واطبع سجلًا: أعمدة لأيام الدراسة، أو حصصًا مرقّمة، أو عناوين من عندك مثل «اختبار ١» و«النهائي». وتُتخطّى أيام العطلة، والافتراضي الجمعة والسبت — فالورقة المبنية على عطلة السبت والأحد تطبع عمودين لا يعلّم فيهما أحد وتسقط يومَي تدريس. مع تواريخ هجرية اختيارية وعمود للمجموع.' },
   },
+  {
+    id: 'csv-vcard',
+    en: { name: 'Spreadsheet to Contacts', description: 'Turn a CSV or Excel list of people into a .vcf your phone will import — names, numbers, emails, companies and job titles. Columns are matched by their headings and you can correct them. Saudi numbers are rewritten in international form, because 0512345678 stops meaning anything once the phone leaves the country. Nothing is uploaded.' },
+    ar: { name: 'جدول إلى جهات اتصال', description: 'حوّل قائمة أشخاص في ملف CSV أو إكسل إلى ملف ‎.vcf‎ يستورده هاتفك — أسماء وأرقام وبُرد إلكترونية وشركات ومسمّيات وظيفية. تُطابَق الأعمدة من عناوينها ويمكنك تصحيحها. وتُعاد كتابة الأرقام السعودية بالصيغة الدولية، لأن 0512345678 يفقد معناه متى خرج الهاتف من البلد. ولا يُرفع شيء.' },
+  },
 ]
