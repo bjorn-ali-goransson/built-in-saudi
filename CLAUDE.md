@@ -514,6 +514,29 @@ Exif and GPS sub-IFDs; a PNG `tEXt` chunk with a valid CRC; a RIFF `LIST/INFO`
 block), because a mocked fixture would have proved nothing about a hand-written
 binary parser.
 
+## Vehicle inspection and registration (`vehicle-renewal`)
+
+The dates are trivial; the **relationship** between them is the tool. A valid
+Fahes is required to renew the istimara — no pass, no renewal and no ownership
+transfer — so an overdue inspection blocks a renewal that otherwise looks
+available, which is what people discover at the counter on the day.
+
+- **Exemption is 3 years for a private car, 2 for a taxi or public transport**,
+  from FIRST registration. Until then an inspection buys nothing; after it the
+  first one falls due on an anniversary nobody has a reminder for.
+- **The next inspection is counted from the LAST one, not from first
+  registration.** A certificate is valid a year from the day it was passed. An
+  earlier draft walked anniversaries forward from first registration instead,
+  which looks equivalent and is not: it can only ever return a FUTURE date, so
+  "overdue" was unreachable and the warning that depends on it was dead code.
+  The e2e caught that — worth remembering that a branch no test can reach is
+  not a passing branch.
+- **The renewal window opens 180 days before expiry.**
+- Dates render in **both Gregorian and Hijri**, because the card may be either.
+
+Carries an `official` Disclaimer which says outright that fines can block a
+renewal for reasons the tool cannot see, and is in `e2e/disclaimers.spec.ts`.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

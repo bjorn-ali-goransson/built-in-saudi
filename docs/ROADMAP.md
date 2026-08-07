@@ -464,3 +464,13 @@ section by a distance, mixing data tools, security, web and project
 scaffolding. Deferred three times now — it is a taxonomy decision about 32
 tools, and unlike the Converters fix there is no single principle that
 obviously settles it. Worth a human call.
+
+### Web sweep, 8 August 2026 (fourth pass — vehicles)
+
+- ~~**Fahes / istimara due dates.**~~ **Shipped** as `vehicle-renewal`. The
+  find was not a date rule but a DEPENDENCY: the inspection gates the
+  registration, so the useful output is the order, not two countdowns.
+- **Still open from this pass:** traffic-fine early-payment countdown (Article
+  75's 25% reduction — needs the exact window length from a primary source);
+  vehicle insurance renewal; driving-licence renewal periods, which differ by
+  age band.
