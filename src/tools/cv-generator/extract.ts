@@ -6,6 +6,7 @@ import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 // @ts-expect-error - the browser build ships no types
 import mammoth from 'mammoth/mammoth.browser'
+import { columnGroups, type Item } from './columns'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -24,20 +25,27 @@ async function fromPdf(buf: ArrayBuffer): Promise<string> {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
     const content = await page.getTextContent()
-    // Rebuild lines from text items using their vertical position.
-    let line = ''
-    let lastY: number | null = null
+    const items = content.items as Item[]
     const out: string[] = []
-    for (const item of content.items as { str: string; transform: number[] }[]) {
-      const y = item.transform[5]
-      if (lastY !== null && Math.abs(y - lastY) > 3) {
-        out.push(line.trimEnd())
-        line = ''
+    // A sidebar layout shares a Y between the two columns, so grouping by Y
+    // alone interleaves them ("Python  Senior Analyst, Aramco"). Columns are
+    // read one after the other; a single-column page comes back as one group
+    // and behaves exactly as before.
+    for (const group of columnGroups(items, page.view[2] - page.view[0])) {
+      // Rebuild lines from text items using their vertical position.
+      let line = ''
+      let lastY: number | null = null
+      for (const item of group) {
+        const y = item.transform[5]
+        if (lastY !== null && Math.abs(y - lastY) > 3) {
+          out.push(line.trimEnd())
+          line = ''
+        }
+        line += item.str + (item.str.endsWith(' ') ? '' : ' ')
+        lastY = y
       }
-      line += item.str + (item.str.endsWith(' ') ? '' : ' ')
-      lastY = y
+      if (line.trim()) out.push(line.trimEnd())
     }
-    if (line.trim()) out.push(line.trimEnd())
     pages.push(out.join('\n'))
   }
   return pages.join('\n\n')

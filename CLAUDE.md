@@ -517,6 +517,29 @@ moves `impact` **+0.38** and interview likelihood **+6.3pp**. When tuning, treat
 "how many numbers do we get out of the candidate" as the lever — not the wording
 of the rewrite.
 
+**Extraction is upstream of every score, and it is measurable with no API key**
+— which is how the two harnesses below exist while the LLM evals are blocked.
+Nothing a prompt does can repair text that arrived wrong.
+
+- **`evals/pdfextract.mjs` + `evals/pdfcolumns.mjs`** found the real one: the
+  line rebuild grouped pdf.js items by Y alone, so a **two-column sidebar CV
+  interleaved**. Every row merged — `SKILLS  EXPERIENCE`, then
+  `Python  Senior Analyst, Aramco` — and the rewriter and scorer both worked
+  from a document nobody wrote. `cv-generator/columns.ts` now reads the columns
+  one after the other. The gutter test is deliberately conservative (an empty
+  vertical band ≥4.5% of page width, between 20% and 80% across, with ≥4 items
+  each side) because splitting a single-column CV would be worse than the bug:
+  measured over the 32-CV corpus it fires on **2**, leaves **30** byte-identical,
+  and loses no text on either (same characters, reordered).
+- **`evals/docxextract.mjs`** refuted a plausible-sounding change: swapping the
+  CV's `mammoth` extractor for `lib/docx.ts` would have *lowered* `impact`. See
+  the `lib/docx.ts` note above.
+- **A hypothesis that did NOT hold, worth not re-testing:** the rebuild inserts
+  a space between items, so it looked like it would break a keyword split across
+  runs (`Java` + `Script`). It does not — pdf.js merges genuinely abutting runs
+  into one item, and only emits a separate one where there is a real gap, where
+  a space is correct.
+
 It extracts text exactly as the browser does (`evals/lib/extract.mjs` mirrors
 `extract.ts`), runs each **variant** (`evals/variants/*.mjs` — `champion` is
 production, `legacy` is the frozen old prompt), then blind-scores the original and
