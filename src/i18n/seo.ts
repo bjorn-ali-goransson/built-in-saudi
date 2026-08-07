@@ -943,4 +943,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Calendar File (.ics)', description: 'Build a calendar invite anyone can open in Apple Calendar, Outlook or Google, with repeats and a reminder — or paste an .ics you have been sent and see plainly what it says in your own timezone. Follows the parts of RFC 5545 that generators usually skip: lines folded at 75 octets, commas and semicolons escaped, and all-day events written as dates rather than midnight-to-midnight.' },
     ar: { name: 'ملف تقويم (‎.ics‎)', description: 'أنشئ دعوة تقويم يفتحها أي أحد في Apple Calendar أو Outlook أو Google، مع التكرار والتذكير — أو الصق ملف ‎.ics‎ وصلك وشاهد بوضوح ما فيه بتوقيتك أنت. تلتزم الأداة بما تتخطاه المولّدات عادةً من معيار RFC 5545: طيّ الأسطر عند ٧٥ ثمانية، وتهريب الفواصل والفواصل المنقوطة، وكتابة أحداث اليوم الكامل تواريخَ لا من منتصف ليل إلى منتصف ليل.' },
   },
+  {
+    id: 'cert-decoder',
+    en: { name: 'Certificate Decoder', description: 'Paste a PEM certificate and read what is actually in it: who it was issued to and by, when it expires and in how many days, the key and signature algorithms, every hostname it covers, its extensions and its SHA-256 fingerprint. Decoded in your browser by a small ASN.1 parser — nothing is uploaded, and no online checker sees your certificate.' },
+    ar: { name: 'فاحص الشهادات', description: 'الصق شهادة بصيغة PEM واقرأ ما فيها فعلًا: لمن صدرت ومن أصدرها، ومتى تنتهي وكم بقي لها، وخوارزميتَي المفتاح والتوقيع، وكل اسم نطاق تغطيه، وامتداداتها وبصمة SHA-256. تُفك في متصفحك عبر محلّل ASN.1 صغير — فلا يُرفع شيء، ولا يطّلع فاحص إلكتروني على شهادتك.' },
+  },
 ]
