@@ -36,6 +36,17 @@ export class PdfOps {
     return new Promise((res) => this.post({ id, op: 'extract', file, indices }, (r) => res(r.op === 'extract' ? r.blob : null)))
   }
 
+  /**
+   * Reorder, rotate and drop pages in one pass.
+   *
+   * `pages` is the OUTPUT order: each entry names the source index it came from
+   * and how much further to turn it. A deleted page is simply not in the list.
+   */
+  organise(file: File, pages: { from: number; rotate: number }[]): Promise<Blob | null> {
+    const id = ++this.seq
+    return new Promise((res) => this.post({ id, op: 'organise', file, pages }, (r) => res(r.op === 'organise' ? r.blob : null)))
+  }
+
   /** Split into one PDF per page; resolves the raw bytes per page. */
   burst(file: File): Promise<ArrayBuffer[] | null> {
     const id = ++this.seq

@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **185 tools are live.** This
+The backlog, and an honest account of what exists. **186 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -23,7 +23,7 @@ optional [backend worker](./BACKEND.md).
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
 | Generators | 21 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, Arabic handwriting sheets, .ics events, seating charts, attendance sheets |
-| PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
+| PDF | 13 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **page organiser**, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
 | Files | 14 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff**, **remove silence**, **EPUB→text**, **CSV split** |
 | Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
@@ -161,7 +161,7 @@ below was checked against the source, not assumed.
 
 ### Gaps between tools we already have
 
-- **A PDF page organiser — rotate, reorder, delete pages.** Verified missing:
+- ~~A PDF page organiser — rotate, reorder, delete pages.~~ **SHIPPED** as `pdf-organise`. Was verified missing:
   `pdf-edit` rotates *images inside* a page, not pages, and the `pdfOps` worker
   has `pageCount`/`merge`/`extract`/`burst` and no rotate. This is the most
   common thing anyone does to a PDF after merging, and we have twelve PDF tools

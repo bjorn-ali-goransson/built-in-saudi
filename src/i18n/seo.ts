@@ -1003,4 +1003,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Invoice QR Reader', description: 'Photograph a receipt, or paste its QR text, and read what the invoice says: the seller, their VAT registration number, when it was issued, the total and the VAT. It also checks the arithmetic — a standard-rated sale whose VAT is not 15% of the pre-VAT amount is worth a second look. Everything happens on your device. It reads the invoice; it does not verify the signature, which needs ZATCA own certificates.' },
     ar: { name: 'قارئ رمز الفاتورة', description: 'صوّر إيصالًا أو الصق نص رمزه واقرأ ما تقوله الفاتورة: البائع ورقمه الضريبي ووقت الإصدار والإجمالي والضريبة. وتتحقق الأداة من الحساب أيضًا — فبيع خاضع للنسبة العادية لا تساوي ضريبته ١٥٪ من المبلغ قبل الضريبة يستحق نظرة ثانية. كل ذلك على جهازك. وهي تقرأ الفاتورة ولا تتحقق من توقيعها، فذلك يحتاج شهادات زاتكا نفسها.' },
   },
+  {
+    id: 'pdf-organise',
+    en: { name: 'Organise PDF Pages', description: 'Turn sideways pages the right way up, drag them into the right order, and drop the ones you do not want — all on one screen, then save. Pages are copied rather than re-drawn, so text stays text and a scan stays exactly the scan it was. The file never leaves your device.' },
+    ar: { name: 'ترتيب صفحات PDF', description: 'اضبط اتجاه الصفحات المائلة، واسحبها إلى ترتيبها الصحيح، واحذف ما لا تريده — كل ذلك في شاشة واحدة، ثم احفظ. وتُنسخ الصفحات ولا يُعاد رسمها، فيبقى النص نصًا وتبقى الصورة الممسوحة كما هي تمامًا. ولا يغادر الملف جهازك.' },
+  },
 ]
