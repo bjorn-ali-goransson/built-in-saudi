@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **181 tools are live.** This
+The backlog, and an honest account of what exists. **182 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,7 +25,7 @@ optional [backend worker](./BACKEND.md).
 | Generators | 21 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, Arabic handwriting sheets, .ics events, seating charts, attendance sheets |
 | PDF | 12 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **true redaction** |
 | Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
-| Files | 12 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff**, **remove silence** |
+| Files | 13 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff**, **remove silence**, **EPUB→text** |
 | Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
 | Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
 
@@ -151,7 +151,6 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| EPUB → text / metadata | A zip of XHTML, and the zip library is already here. |
 | SQLite file inspector | `sql.js` is a real dependency — weigh it — but "what is in this .db" has no private alternative. |
 | Split a large CSV by size or column | The complement to `csv-merge`. |
 

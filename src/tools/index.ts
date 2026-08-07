@@ -180,6 +180,7 @@ import { csvVcardTool } from './csv-vcard/meta'
 import { sheetDiffTool } from './sheet-diff/meta'
 import { prayerTimetableTool } from './prayer-timetable/meta'
 import { removeSilenceTool } from './remove-silence/meta'
+import { epubTextTool } from './epub-text/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -364,6 +365,7 @@ export const tools: Tool[] = [
   xlsxConvertTool,
   csvVcardTool,
   sheetDiffTool,
+  epubTextTool,
   zipInspectorTool,
   hexViewerTool,
   metadataTool,

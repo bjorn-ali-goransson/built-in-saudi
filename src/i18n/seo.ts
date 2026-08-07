@@ -983,4 +983,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Remove Silence', description: 'Cut the silence out of an audio recording — the pauses in a lecture, the gaps in an interview, the dead air at the start. Set how quiet counts as silent and how long a gap has to be, and see exactly what will go before it goes. A margin is kept at each edge so a breath before a word survives, because a cut made exactly on the silence sounds chopped.' },
     ar: { name: 'حذف الصمت', description: 'احذف الصمت من تسجيل صوتي — سكتات المحاضرة، وفجوات المقابلة، والفراغ في البداية. حدّد ما يُعدّ صمتًا وكم يجب أن تطول السكتة، وشاهد بالضبط ما سيُحذف قبل حذفه. ويُترك هامش عند كل طرف لتبقى الشهقة قبل الكلمة، فالقص على حدّ الصمت تمامًا يجعل النتيجة مبتورة.' },
   },
+  {
+    id: 'epub-text',
+    en: { name: 'EPUB to Text', description: 'Open an EPUB and take its text out — the whole book or one chapter at a time, as plain text or Markdown — along with its title, authors, publisher and ISBN. Chapters come out in the order the book says to read them, not the order the files happen to be named. Read in your browser; the file is never uploaded.' },
+    ar: { name: 'كتاب EPUB إلى نص', description: 'افتح ملف EPUB واستخرج نصّه — الكتاب كله أو فصلًا فصلًا، نصًّا عاديًا أو ماركداون — مع عنوانه ومؤلفيه وناشره ورقمه الدولي. وتخرج الفصول بالترتيب الذي يقول الكتاب أن يُقرأ به، لا بترتيب أسماء الملفات. تجري القراءة في متصفحك؛ ولا يُرفع الملف أبدًا.' },
+  },
 ]
