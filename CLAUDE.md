@@ -752,7 +752,18 @@ not our wording, and the **gaps → improve loop is the only honest way up**. Th
 loop used to be dead (it moved `impact` by 0.00 even when the candidate supplied
 real figures) because it asked 2.6 questions against a CV with ~20 unquantified
 bullets. It now asks for a headline number **per role** (4.1 questions), which
-moves `impact` **+0.38** and interview likelihood **+6.3pp**. When tuning, treat
+moves `impact` **+0.38** and interview likelihood **+6.3pp**.
+
+**That 4.1 is calibrated, and now checked without a model** (`node
+evals/roles.mjs`, which counts dated positions and excludes study entries).
+Over the corpus: **mean 4.4 positions per CV, median 4** — so asking about four
+roles is the right order of magnitude, and the "per role" change was sized
+correctly rather than by luck. The caveat is the tail: **13 of 32 CVs have more
+than four positions and 6 have more than six**, and for those the loop asks
+fewer questions than the CV has roles, leaving numbers unclaimed in the one
+dimension that blocks nine CVs in ten. Scaling the budget with the role count
+(with a cap, since nobody answers twelve questions) is the obvious next
+experiment — and it is a prompt change, so it needs the judge to confirm. When tuning, treat
 "how many numbers do we get out of the candidate" as the lever — not the wording
 of the rewrite.
 
