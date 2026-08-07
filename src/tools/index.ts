@@ -183,6 +183,7 @@ import { removeSilenceTool } from './remove-silence/meta'
 import { epubTextTool } from './epub-text/meta'
 import { csvSplitTool } from './csv-split/meta'
 import { nameSpellingTool } from './name-spelling/meta'
+import { zatcaQrTool } from './zatca-qr/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -339,6 +340,7 @@ export const tools: Tool[] = [
   prayerTimetableTool,
   khatmaTool,
   hijriCalendarTool,
+  zatcaQrTool,
   ibanValidatorTool,
   nameSpellingTool,
   saudiPlateTool,

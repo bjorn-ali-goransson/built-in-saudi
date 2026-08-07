@@ -16,6 +16,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'id-expiry', kind: 'official' },
   { id: 'passport-photo', kind: 'official' },
   { id: 'sound-meter', kind: 'official' },
+  { id: 'zatca-qr', kind: 'official' },
   { id: 'quotation', kind: 'legal' },
 ]
 

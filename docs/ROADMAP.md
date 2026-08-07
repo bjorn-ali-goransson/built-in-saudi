@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **184 tools are live.** This
+The backlog, and an honest account of what exists. **185 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -18,7 +18,7 @@ optional [backend worker](./BACKEND.md).
 | Category | Count | Shape of it |
 |---|---|---|
 | Developer | 32 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers |
-| Saudi / Local | 26 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner**, **monthly prayer timetable**, **name spelling** |
+| Saudi / Local | 27 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner**, **monthly prayer timetable**, **name spelling**, **invoice QR reader** |
 | Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
@@ -129,7 +129,7 @@ so the next sweep does not repeat them.
 
 | Idea | Why, and what makes it hard |
 |---|---|
-| **ZATCA invoice QR decoder** | E-invoicing became mandatory in mid-2026 for any business over SAR 375k, so every till receipt in the country now carries a QR. It is TLV (tag-length-value) plus base64: tags 1–5 are seller name, VAT number, ISO timestamp, total with VAT, and VAT amount. Decoding it is **explicitly allowed by our own out-of-scope rule** — we may decode a QR, we must never call anything "a compliant invoice" — and it is entirely client-side on top of the QR reader we already have. The trap is that the length byte counts UTF-8 BYTES, so an Arabic seller name breaks any decoder that counts characters. |
+| ~~ZATCA invoice QR decoder~~ **SHIPPED** as `zatca-qr`. | E-invoicing became mandatory in mid-2026 for any business over SAR 375k, so every till receipt in the country now carries a QR. It is TLV (tag-length-value) plus base64: tags 1–5 are seller name, VAT number, ISO timestamp, total with VAT, and VAT amount. Decoding it is **explicitly allowed by our own out-of-scope rule** — we may decode a QR, we must never call anything "a compliant invoice" — and it is entirely client-side on top of the QR reader we already have. The trap is that the length byte counts UTF-8 BYTES, so an Arabic seller name breaks any decoder that counts characters. |
 | **Password-protected PDF** | Payslips and bank statements arrive encrypted, and "unlock my payslip" tools are exactly the sites you must never hand a payslip to. pdf.js decrypts with a password the user already knows, so opening one and getting the text or the pages out is honest and feasible. **Caveat to disclose loudly:** rebuilding a *decrypted PDF that keeps its text* needs something like qpdf-wasm; rendering pages to images loses the text layer, and a tool that quietly rasterises someone's payslip has damaged it. |
 
 **Checked and not worth it:** the 2026 web-platform baseline (zstd content encoding,

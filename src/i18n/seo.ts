@@ -998,4 +998,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Name in English Letters', description: 'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.' },
     ar: { name: 'كتابة الاسم بالإنجليزية', description: 'اكتب اسمًا عربيًا بحروف لاتينية، جزءًا جزءًا، مختارًا بين الكتابات التي تظهر فعلًا في الوثائق هنا. ولا جواب صحيح واحد — فمحمد تُكتب Mohammed وMuhammad وMohamed وMohammad وMuhammed في خمسة جوازات لأسرة واحدة — ولذلك تعرض الأداة الخيارات ولا تدّعي حكمًا، وتنصحك بنسخ جوازك إن كان لديك واحد.' },
   },
+  {
+    id: 'zatca-qr',
+    en: { name: 'Invoice QR Reader', description: 'Photograph a receipt, or paste its QR text, and read what the invoice says: the seller, their VAT registration number, when it was issued, the total and the VAT. It also checks the arithmetic — a standard-rated sale whose VAT is not 15% of the pre-VAT amount is worth a second look. Everything happens on your device. It reads the invoice; it does not verify the signature, which needs ZATCA own certificates.' },
+    ar: { name: 'قارئ رمز الفاتورة', description: 'صوّر إيصالًا أو الصق نص رمزه واقرأ ما تقوله الفاتورة: البائع ورقمه الضريبي ووقت الإصدار والإجمالي والضريبة. وتتحقق الأداة من الحساب أيضًا — فبيع خاضع للنسبة العادية لا تساوي ضريبته ١٥٪ من المبلغ قبل الضريبة يستحق نظرة ثانية. كل ذلك على جهازك. وهي تقرأ الفاتورة ولا تتحقق من توقيعها، فذلك يحتاج شهادات زاتكا نفسها.' },
+  },
 ]
