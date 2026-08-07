@@ -120,6 +120,30 @@ at what people search for.
 
 ---
 
+## Web sweep, 7 August 2026
+
+What a fresh look at the open web turned up. Recorded including the dead ends,
+so the next sweep does not repeat them.
+
+**Worth building:**
+
+| Idea | Why, and what makes it hard |
+|---|---|
+| **ZATCA invoice QR decoder** | E-invoicing became mandatory in mid-2026 for any business over SAR 375k, so every till receipt in the country now carries a QR. It is TLV (tag-length-value) plus base64: tags 1–5 are seller name, VAT number, ISO timestamp, total with VAT, and VAT amount. Decoding it is **explicitly allowed by our own out-of-scope rule** — we may decode a QR, we must never call anything "a compliant invoice" — and it is entirely client-side on top of the QR reader we already have. The trap is that the length byte counts UTF-8 BYTES, so an Arabic seller name breaks any decoder that counts characters. |
+| **Password-protected PDF** | Payslips and bank statements arrive encrypted, and "unlock my payslip" tools are exactly the sites you must never hand a payslip to. pdf.js decrypts with a password the user already knows, so opening one and getting the text or the pages out is honest and feasible. **Caveat to disclose loudly:** rebuilding a *decrypted PDF that keeps its text* needs something like qpdf-wasm; rendering pages to images loses the text layer, and a tool that quietly rasterises someone's payslip has damaged it. |
+
+**Checked and not worth it:** the 2026 web-platform baseline (zstd content encoding,
+Trusted Types, the Navigation API, `shape()`, container-query changes) is
+infrastructure rather than capability — none of it unlocks a tool we could not
+already build. Worth re-checking only when something like HTML-in-Canvas is
+broadly available, which would matter to the print tools.
+
+**A note on method:** "best free online tools 2026" style queries returned pure
+SEO filler in every variation tried. The productive queries were about a
+specific *obligation* (ZATCA) and a specific *fear* (uploading a payslip).
+Search for what people are forced to do and what they are afraid to hand over,
+not for lists of tools.
+
 ## Backlog
 
 Not ranked against each other — a supply of candidates, so that choosing is

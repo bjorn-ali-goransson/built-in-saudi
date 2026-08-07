@@ -344,6 +344,11 @@ probing rather than by reading the prompt, both easy to reintroduce:
   in that role, and vary in unit across the CV, and caps the dimension at 3 when
   most bullets are padded. `node evals/gameable.mjs` is the regression test.
 
+**BLOCKED as of 7 Aug 2026:** the `OPENAI_KEY` in the root `.env` is rejected
+with `invalid_api_key` (key ending `q6UA`), so none of these can be run and no
+claim about the `impact` ceiling can be re-measured until it is replaced. The
+harness itself is fine — a key is read and sent, it is the key that is refused.
+
 **Known limit, honestly:** a 5.0 on this rubric is not yet the same as a strong CV
 to a human. The benchmark that scores 5.0 still opens with a boilerplate summary
 ("Accomplished Software Engineer… proven track record…") and contains at least one
