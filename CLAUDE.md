@@ -570,6 +570,36 @@ Two rules and the date that separates them, in `src/tools/rent-rules/rent.ts`:
 The `legal` Disclaimer says outright that the tool cannot know whether an
 address falls inside the urban boundary, which is what the freeze turns on.
 
+## The privacy claim is now tested, not just written (`e2e/privacy.spec.ts`)
+
+"Files are never uploaded" is product principle #1 and the reason this site
+exists rather than the adware incumbents. **109 tools say it in their own
+copy**, and until now almost none of them tested it — the specs that watch the
+network do so for other reasons (asset origin, mocked backends), so the claim
+rested on nobody having made a mistake.
+
+The spec puts a file through a tool and asserts two things:
+
+- **no request carries the file's contents**, matched on a token unique to the
+  run so a hit cannot be coincidence;
+- **no request with a body goes anywhere at all.** These tools have no backend,
+  so a POST is wrong whatever is in it — and that is what catches an upload
+  whose body is compressed or encoded past recognising, which the token match
+  alone would miss.
+
+Two deliberate choices worth keeping:
+
+- **Analytics is a separate claim and gets a separate test.** "We do not upload
+  your file" and "we count page views" are different promises; the analytics
+  origin is allowlisted for the body check and then asserted never to carry the
+  token.
+- **The guard proves it can fail.** One test fires exactly the request an
+  uploading tool would make and asserts the same listeners catch it — so a green
+  run means the tools are clean rather than the detector being asleep.
+
+**Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
+is the only thing standing behind the sentence on 109 tool pages.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

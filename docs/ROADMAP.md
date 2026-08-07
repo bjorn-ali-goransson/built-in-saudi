@@ -484,3 +484,16 @@ obviously settles it. Worth a human call.
 - **Still open:** REDF / Sakani eligibility (means-tested and detailed — would
   need a primary source); a rent-to-income affordability check; an Ejar contract
   reader, which is the PDF-stack idea from the second sweep and still stands.
+
+### Code sweep, 8 August 2026 (third pass)
+
+Scanned for **claims the codebase makes that nothing checks** — the same shape
+as the two previous finds (a guard that needed an API key, a guard that was
+circular). The biggest by far: 109 tools state that files never leave the
+browser, and the claim was untested. `e2e/privacy.spec.ts` now tests it, and
+proves it can fail.
+
+Still latent: `.docx` → Markdown; an `.eml`/`.msg` reader; merging spreadsheets
+across files; exporting a filled PDF form's data as CSV; the searchable PDF
+(costed in the first code sweep — needs `@pdf-lib/fontkit` and a full Arabic
+TTF); and `comingSoonTools`, which filters for a status no tool has any more.
