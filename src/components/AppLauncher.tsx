@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
-import { useLocale, localizeTool } from '../i18n'
+import { useLocale, localePath, localizeTool } from '../i18n'
 import { scoreTool } from '../lib/fuzzy'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
@@ -79,7 +80,19 @@ export function AppLauncher() {
       .map((r) => r.tool)
   }, [query, locale])
 
+  const navigate = useNavigate()
   const close = () => setOpen(false)
+
+  /** Enter goes to the top result — the other half of Ctrl+K. */
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || !results.length) return
+    e.preventDefault()
+    const top = results[0]
+    close()
+    // An external/showcase tool has an href instead of a route.
+    if (top.href) window.open(top.href, '_blank', 'noreferrer noopener')
+    else navigate(localePath(locale, `/apps/${top.id}`))
+  }
 
   return (
     <>
@@ -105,6 +118,7 @@ export function AppLauncher() {
                 type="search" autoFocus data-testid="launcher-search"
                 className="tool-search__input flex-1 min-w-0 border-none bg-transparent outline-none appearance-none font-body text-[1rem] text-ink py-[0.5rem] placeholder:text-ink-faint truncate [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
                 placeholder={t.catalog.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={t.catalog.searchAria}
+                onKeyDown={onSearchKey}
               />
               {/* Only where there is a keyboard to press it with. */}
               <kbd className="hidden min-[860px]:block flex-none font-mono text-[0.7rem] text-ink-faint border border-[color:var(--line)] rounded-sm px-1.5 py-0.5" data-testid="launcher-combo">{combo}</kbd>

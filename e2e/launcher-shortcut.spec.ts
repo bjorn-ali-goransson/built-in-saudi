@@ -89,3 +89,39 @@ test('on home it selects what is already typed, so the next keystroke replaces i
   await page.keyboard.type('iban')
   await expect(input).toHaveValue('iban')
 })
+
+// Ctrl+K opened the search and you typed — and then had to reach for the mouse,
+// which is the half of a command palette that makes it worth having.
+
+test('type and press Enter to land on the top result', async ({ page }) => {
+  await page.goto('/en/apps/qr-code')
+  await page.keyboard.press('Control+k')
+  await page.keyboard.type('iban')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/en\/apps\/iban-validator/)
+  // And the panel gets out of the way rather than covering where you landed.
+  await expect(panel(page)).toHaveCount(0)
+})
+
+test('Enter on the home search does the same thing', async ({ page }) => {
+  await page.goto('/en')
+  await page.locator('.tool-search__input').fill('gosi')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/en\/apps\/gosi-salary/)
+})
+
+test('Enter with nothing to open does nothing', async ({ page }) => {
+  // A query matching no tool must not navigate anywhere, least of all to
+  // whatever happened to be first before the search began.
+  await page.goto('/en')
+  await page.locator('.tool-search__input').fill('zzzzqqqq')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/en\/?$/)
+})
+
+test('Enter works in Arabic, on the Arabic name', async ({ page }) => {
+  await page.goto('/ar')
+  await page.locator('.tool-search__input').fill('التأمينات')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/ar\/apps\/gosi-salary/)
+})

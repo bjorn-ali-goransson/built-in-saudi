@@ -82,6 +82,13 @@ store itself (`expect.poll` over `localStorage`) rather than sleeping — waitin
 for the thing under test, not for time to pass. Worth copying for any future
 store written from an effect.
 
+**Type, then Enter, opens the top result** — in the launcher and in the home
+search alike. Ctrl+K without it left you typing and then reaching for the mouse,
+which is the half of a command palette that makes it worth having. It gets no
+hint in the UI, unlike Ctrl+K: every search box on earth already behaves this
+way, so it needs no advertising. An external/showcase tool has an `href`
+rather than a route, so Enter opens it in a new tab instead of navigating.
+
 **Ctrl/Cmd+K** opens the launcher from anywhere — except on **home, where the
 launcher is deliberately not rendered** (`Header.tsx`: `{!isHome && <AppLauncher />}`),
 because home IS the catalogue. The shortcut was therefore dead on the most

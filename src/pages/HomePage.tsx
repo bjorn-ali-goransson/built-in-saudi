@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { tools } from '../tools'
 import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
@@ -6,13 +7,14 @@ import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
 import { scoreTool } from '../lib/fuzzy'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
-import { useLocale, localizeTool } from '../i18n'
+import { useLocale, localePath, localizeTool } from '../i18n'
 
 export function HomePage() {
   const { locale, t } = useLocale()
   useDocumentMeta(locale, '/')
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   // The 9-dot launcher is deliberately not rendered here — home IS the
   // catalogue — so Ctrl/Cmd+K would have been dead on the most visited page.
@@ -76,6 +78,15 @@ export function HomePage() {
           onChange={(e) => setQuery(e.target.value)}
           aria-label={t.catalog.searchAria}
           autoComplete="off"
+          onKeyDown={(e) => {
+            // Same as the launcher: type, press Enter, you are there. Unlike
+            // Ctrl+K this needs no advertising — every search box does it.
+            if (e.key !== "Enter" || !results.length) return
+            e.preventDefault()
+            const top = results[0].tool
+            if (top.href) window.open(top.href, "_blank", "noreferrer noopener")
+            else navigate(localePath(locale, `/apps/${top.id}`))
+          }}
         />
         {query && (
           <button
