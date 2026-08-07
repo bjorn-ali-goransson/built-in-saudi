@@ -9,7 +9,7 @@ export const unitConverterTool: Tool = {
   tagline: 'Length, mass, temperature, data, speed…',
   description:
     'Convert between units across eight categories — length, mass, temperature, data, area, volume, speed and time — live as you type, with a swap button and copy. Exact conversion tables (1 mile = 1.609344 km, 1 KiB = 1024 B); temperature handled with proper offsets.',
-  category: 'Converters',
+  category: 'Calculators',
   keywords: ['unit', 'converter', 'cm to inches', 'kg to lb', 'celsius fahrenheit', 'km miles', 'وحدات', 'تحويل', 'محول'],
   status: 'stable',
   Icon: RulerIcon,

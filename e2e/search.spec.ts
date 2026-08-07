@@ -117,3 +117,33 @@ test('the new file tools are reachable by their plain names', async ({ page }) =
   await search(page, 'vcf to csv')
   await expect(top(page)).toContainText(/vcard/i)
 })
+
+// The catalogue's SHAPE, not its ranking. Measured at 191 tools: "Converters"
+// held three tools while the turn-this-file-into-that family was scattered
+// across Text, Files and Converters — so the section named for the intent was
+// the one place you would not find it. Two of its three were VALUE converters
+// (units, currency), which is a different job entirely.
+
+test('the section named for converting holds the file converters', async ({ page }) => {
+  await page.goto('/en')
+  const converters = page.getByTestId('section-Converters')
+  await expect(converters).toBeVisible()
+  for (const id of ['docx-to-text', 'pptx-to-text', 'csv-to-xlsx', 'xlsx-convert', 'vcard-to-csv', 'epub-text']) {
+    await expect(converters.getByTestId(`tool-${id}`)).toBeVisible()
+  }
+})
+
+test('converting a value is a calculator, not a file converter', async ({ page }) => {
+  await page.goto('/en')
+  // Unit and currency conversion sit with percentage/VAT/zakat, where someone
+  // doing arithmetic is already looking.
+  await expect(page.getByTestId('section-Calculators').getByTestId('tool-unit-converter')).toBeVisible()
+  await expect(page.getByTestId('section-Converters').getByTestId('tool-unit-converter')).toHaveCount(0)
+})
+
+test('a tool with a stronger family keeps it', async ({ page }) => {
+  await page.goto('/en')
+  // Nobody hunts for the PDF converter anywhere but PDF, so pdf-to-text stays
+  // put even though it converts a file.
+  await expect(page.getByTestId('section-PDF').getByTestId('tool-pdf-to-text')).toBeVisible()
+})

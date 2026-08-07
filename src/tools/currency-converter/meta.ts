@@ -9,7 +9,7 @@ export const currencyConverterTool: Tool = {
   tagline: 'Convert between currencies at daily rates — SAR-first.',
   description:
     'Convert between the Saudi Riyal and world currencies at up-to-date daily reference rates. Pick two currencies, type an amount, and see the conversion instantly — swap direction in a tap. Rates are fetched from a free public feed and cached so it keeps working offline; your amounts never leave your browser.',
-  category: 'Converters',
+  category: 'Calculators',
   keywords: ['currency', 'converter', 'exchange rate', 'forex', 'sar', 'riyal', 'usd', 'eur', 'dollar', 'euro', 'عملات', 'محول', 'سعر الصرف', 'ريال', 'دولار', 'تحويل عملة'],
   status: 'stable',
   Icon: ExchangeIcon,

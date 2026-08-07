@@ -9,7 +9,7 @@ export const pptxToTextTool: Tool = {
   tagline: 'Every slide, in order, plus the notes.',
   description:
     'Pull the words out of a .pptx — every slide in the right order, with the speaker notes if you want them. Useful when you have the deck but not PowerPoint, or when what you need is the text itself: to quote it, translate it, or search it. Slides are ordered by their real number rather than by filename, so slide 10 does not land between 1 and 2. The file is read in your browser and never uploaded.',
-  category: 'Text',
+  category: 'Converters',
   keywords: [
     'pptx', 'powerpoint', 'slides', 'deck', 'presentation', 'to text', 'speaker notes', 'extract', 'convert', 'open pptx', 'read slides',
     'بوربوينت', 'شرائح', 'عرض تقديمي', 'نص', 'استخراج', 'ملاحظات', 'تحويل', 'فتح',

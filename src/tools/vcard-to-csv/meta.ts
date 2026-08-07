@@ -9,7 +9,7 @@ export const vcardToCsvTool: Tool = {
   tagline: 'Contacts export, made readable.',
   description:
     'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number. A contacts file is about as personal as a file gets — this one never leaves your device.',
-  category: 'Files',
+  category: 'Converters',
   keywords: [
     'vcf', 'vcard', 'contacts', 'contacts to csv', 'contacts to excel', 'spreadsheet', 'csv', 'export', 'phone contacts', 'address book', 'excel', 'convert', 'android', 'iphone', 'backup',
     'جهات الاتصال', 'تصدير', 'دفتر عناوين', 'تحويل', 'إكسل', 'نسخة احتياطية', 'أندرويد', 'آيفون',

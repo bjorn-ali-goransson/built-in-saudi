@@ -9,7 +9,7 @@ export const docxToTextTool: Tool = {
   tagline: 'Get the words out of a .docx.',
   description:
     'Read a Word document as plain text, with the paragraphs where they were and the table columns still apart — ready to paste into anything, on a machine with no Word on it. Headers, footers and footnotes are kept separate rather than mixed into the body, because they repeat on every page. The file is read in your browser and never uploaded.',
-  category: 'Text',
+  category: 'Converters',
   keywords: [
     'docx', 'word', 'doc', 'to text', 'txt', 'extract', 'convert', 'open word', 'read docx', 'plain text',
     'وورد', 'ملف وورد', 'نص', 'استخراج', 'تحويل', 'فتح', 'نص عادي',

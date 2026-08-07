@@ -119,6 +119,11 @@ const BENCH = [
   ['export phone contacts', 'vcard-to-csv'],
   ['مسح ضوئي', 'pdf-ocr'],
   ['جهات الاتصال', 'vcard-to-csv'],
+  ['powerpoint to text', 'pptx-to-text'],
+  ['pptx', 'pptx-to-text'],
+  ['slides to text', 'pptx-to-text'],
+  ['speaker notes', 'pptx-to-text'],
+  ['بوربوينت', 'pptx-to-text'],
 ]
 
 function rank(query, wanted) {

@@ -9,7 +9,7 @@ export const csvToXlsxTool: Tool = {
   tagline: 'Convert without losing leading zeros.',
   description:
     'Turn a CSV into a real .xlsx, so opening it does not damage it. A CSV carries no types, so Excel guesses — and its guesses eat the leading zero off every phone number and national ID, and round a 16-digit IBAN into scientific notation. Here each column declares what it is, and the file is UTF-8 by definition, so Arabic arrives as Arabic. The conversion runs in your browser.',
-  category: 'Files',
+  category: 'Converters',
   keywords: [
     'csv', 'xlsx', 'excel', 'convert', 'spreadsheet', 'leading zeros', 'scientific notation', 'iban', 'phone numbers', 'arabic csv', 'encoding', 'utf-8',
     'إكسل', 'تحويل', 'جدول', 'أصفار', 'آيبان', 'ترميز', 'عربي',

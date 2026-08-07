@@ -9,7 +9,7 @@ export const epubTextTool: Tool = {
   tagline: 'Get the text out of an ebook you own.',
   description:
     'Open an EPUB and take its text out — the whole book or one chapter at a time, as plain text or Markdown — along with its title, authors, publisher and ISBN. Chapters come out in the order the book says to read them, not the order the files happen to be named. Read in your browser; the file is never uploaded.',
-  category: 'Files',
+  category: 'Converters',
   keywords: [
     'epub', 'ebook', 'book', 'text', 'extract', 'convert', 'markdown', 'chapters', 'metadata', 'isbn', 'reader',
     'كتاب', 'إلكتروني', 'نص', 'استخراج', 'تحويل', 'فصول', 'ماركداون',

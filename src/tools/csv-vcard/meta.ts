@@ -9,7 +9,7 @@ export const csvVcardTool: Tool = {
   tagline: 'Get 300 people out of a spreadsheet and into your phone.',
   description:
     'Turn a CSV or Excel list of people into a .vcf your phone will import — names, numbers, emails, companies and job titles. Columns are matched by their headings and you can correct them. Saudi numbers are rewritten in international form, because 0512345678 stops meaning anything once the phone leaves the country. Nothing is uploaded.',
-  category: 'Files',
+  category: 'Converters',
   keywords: [
     'vcard', 'vcf', 'contacts', 'csv', 'excel', 'xlsx', 'import', 'phone', 'address book', 'convert', 'bulk',
     'جهات اتصال', 'جدول', 'استيراد', 'هاتف', 'دفتر عناوين', 'تحويل', 'إكسل',

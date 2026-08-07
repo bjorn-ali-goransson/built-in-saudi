@@ -552,6 +552,33 @@ primary. Don't reintroduce it without re-running the bench.
 
 `e2e/search.spec.ts` freezes the cases that failed, in both rounds.
 
+**The catalogue's SHAPE is the other half of findability, and it is measurable
+too** (`evals/` has no harness for it; the one-off is easy to rewrite — count
+tools per section). Measured at 191 tools, **`Converters` held three tools**
+while the turn-this-file-into-that family was scattered across `Text`, `Files`
+and `Converters` — so the section named for the intent was the one place you
+would not find it. Worse, two of its three converted a **value** (units,
+currency), which is a different job from converting a **file**.
+
+The rule now applied, and worth keeping when adding a tool:
+
+- **`Converters` = turn a document or data file into another FORMAT.**
+- **Converting a value is a `Calculator`**, sitting with percentage/VAT/zakat
+  where someone doing arithmetic already is.
+- **A tool with a stronger family keeps it.** `pdf-to-text` converts a file and
+  stays in `PDF`, because nobody hunts for the PDF converter anywhere else. The
+  same goes for the image and video tools.
+
+Section sizes after: Converters 3 → 8, Files 16 → 11, Text 24 → 22,
+Calculators 18 → 20, with search unchanged at 92% top-1 / 100% top-3.
+
+**Still outstanding: `Developer` is 32 tools**, by far the biggest section and
+an undifferentiated wall — it mixes data tools (json, csv, diff), security
+(jwt, cert, hmac), web (url, ip, user-agent, meta-tags, robots) and project
+scaffolding (readme, gitignore). Splitting it is a product-shaping call about
+32 tools rather than a mechanical fix, so it is left for a deliberate decision
+rather than done in passing.
+
 ## Conventions
 
 - TypeScript strict; run `npm run typecheck` before pushing.
