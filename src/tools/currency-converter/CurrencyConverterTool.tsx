@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Stack, Select } from '../../components/ui'
+import { Stack, Select, Disclaimer } from '../../components/ui'
 import { ExchangeIcon, RefreshIcon } from '../../components/icons'
 import { CURRENCIES, byCode } from './currencies'
 import { getRates } from './rates'
@@ -127,6 +127,12 @@ export default function CurrencyConverterTool() {
       </div>
 
       <p className="text-[0.78rem] text-ink-faint">{s.privacy}</p>
+
+      <Disclaimer kind="financial" locale={locale}>
+        {locale === 'ar'
+          ? 'هذا سعر السوق الوسطي. والبنك أو شركة التحويل أو بطاقتك ستعطيك سعرًا أسوأ منه وتضيف رسومًا — فالمبلغ الذي يصل فعلًا أقل مما ترى هنا.'
+          : 'This is the mid-market rate. A bank, an exchange or your card will give you a worse one and add a fee — the amount that actually arrives is less than what you see here.'}
+      </Disclaimer>
     </Stack>
   )
 }

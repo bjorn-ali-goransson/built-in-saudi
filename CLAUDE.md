@@ -555,6 +555,25 @@ list when you add the tool.
 The component spreads `{...rest}` **before** its own `data-testid`/`data-kind`,
 so a caller cannot rename them; if it could, the guard would stop guarding.
 
+**That guard was half circular, and `scripts/check-disclaimers.mjs` (wired into
+`prebuild`) closes the mechanical half.** The e2e asserts that every tool ON ITS
+LIST renders one — which guards against a disclaimer being deleted, and not at
+all against the case it was written for, because a tool that should have one and
+does not is simply absent from the list. The two could drift apart forever and
+stay green. They had: **`prayer-times`, `invoice-generator`, `currency-converter`
+and `vat-calculator` rendered nothing while their twins were guarded** —
+`prayer-timetable` (the print sheet) carried a religious caveat that the
+Recommended prayer tool did not, and `quotation` carried a legal one that the
+invoice did not. The script now fails the build when a rendered disclaimer is
+missing from the spec, or listed with the wrong kind, or listed and no longer
+rendered.
+
+What no script can decide is whether a tool with **neither** ought to have one.
+That stays the judgement above. Adding a `disclaimer` field to the `Tool` meta
+would move the declaration next to the tool and is the better long-term shape;
+it is not done, because it touches twenty metas for a guard the script already
+covers.
+
 ## Evals (`evals/`)
 
 Offline harness for the CV optimizer — the only honest way to answer "did this

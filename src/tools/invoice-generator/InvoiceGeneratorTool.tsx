@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { DownloadIcon, ShareIcon, ExpandIcon } from '../../components/icons'
 import { tafqeetSAR } from '../tafqeet/tafqeet'
-import { Stack, Button } from '../../components/ui'
+import { Stack, Button, Disclaimer } from '../../components/ui'
 
 interface Row { id: string; desc: string; qty: string; price: string }
 let uid = 0
@@ -166,6 +166,12 @@ export default function InvoiceGeneratorTool() {
         </div>,
         document.body,
       )}
+
+      <Disclaimer kind="legal" locale={locale}>
+        {locale === 'ar'
+          ? 'هذه الأداة تُنسّق فاتورة، ولا تجعلها متوافقة مع متطلبات الفوترة الإلكترونية. فالفاتورة الضريبية النظامية لها حقول إلزامية ورمز استجابة سريعة وربط بمنصة فاتورة — راجع هيئة الزكاة والضريبة والجمارك إن كنت مسجَّلًا في ضريبة القيمة المضافة.'
+          : 'This lays out an invoice; it does not make one e-invoicing compliant. A compliant tax invoice has mandatory fields, a QR code and a Fatoora integration — check with ZATCA if you are registered for VAT.'}
+      </Disclaimer>
     </Stack>
   )
 }

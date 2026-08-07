@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan'
 import { useLocale } from '../../i18n'
 import { BellIcon, CogIcon } from '../../components/icons'
-import { Spinner } from '../../components/ui'
+import { Spinner, Disclaimer } from '../../components/ui'
 import { Button, Pill, Select, Sheet, SheetTitle, SheetActions } from '../../components/ui'
 import { pushSupported, currentSubscription, enablePush, disablePush, touchSubscription } from '../../lib/push'
 import { alertsHelp } from './alertsHelp'
@@ -575,6 +575,14 @@ export default function PrayerTimesTool() {
           {followToast}
         </div>
       )}
+
+      {/* prayer-timetable carried this from the start and this tool did not,
+          which is the same information with the caveat on only one of them. */}
+      <Disclaimer kind="religious" locale={locale}>
+        {locale === 'ar'
+          ? 'المواقيت محسوبة من موقعك وطريقة الحساب المختارة، وقد تختلف عن أذان مسجدك بدقائق. والمسجد هو المرجع.'
+          : 'Times are calculated from your location and the chosen method, and can differ from your mosque by a few minutes. The mosque is what to go by.'}
+      </Disclaimer>
     </div>
   )
 }

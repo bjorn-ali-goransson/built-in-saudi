@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { CopyIcon } from '../../components/icons'
-import { Button, Input, Field, Stack, Seg, SegButton } from '../../components/ui'
+import { Button, Input, Field, Stack, Seg, SegButton, Disclaimer } from '../../components/ui'
 
 const STR = {
   en: {
@@ -79,6 +79,12 @@ export default function VatCalculatorTool() {
       </div>
 
       <Button className="self-start" onClick={copy}><CopyIcon /> {copied ? s.copied : s.copy}</Button>
+
+      <Disclaimer kind="financial" locale={locale}>
+        {locale === 'ar'
+          ? 'النسبة الأساسية 15% تحددها هيئة الزكاة والضريبة والجمارك. وليس كل توريد خاضعًا لها — فبعضها بنسبة صفر وبعضها معفى، وذلك يتوقّف على ما تبيعه لا على الحساب.'
+          : 'The 15% standard rate is set by ZATCA. Not every supply is standard-rated — some are zero-rated and some exempt, and which is which turns on what you sell rather than on the arithmetic.'}
+      </Disclaimer>
     </Stack>
   )
 }
