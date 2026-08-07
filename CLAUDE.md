@@ -669,6 +669,17 @@ Nothing a prompt does can repair text that arrived wrong.
   into one item, and only emits a separate one where there is a real gap, where
   a space is correct.
 
+- **`evals/cvtextcheck.mjs`** guards the claim both `functions/cvText.js` and
+  its mirror open with: that they produce 'the plain text an ATS recovers from
+  the exported PDF'. That claim carries weight — the blind scorer grades
+  `cvToText(cv)` rather than our JSON, so if it drifts the scorer is grading a
+  document nobody receives. Nothing tested it, and it was **wrong**: the PDF
+  renders `<Link src={url}>{label}</Link>`, so the label is the visible text
+  while the URL lives in a link annotation that no text extraction recovers —
+  and `cvToText` emitted `label (url)`, crediting the scorer with characters
+  the employer's parser never sees. Now 84 words in, 84 words out, with the
+  mirror checked against production in the same run.
+
 It extracts text exactly as the browser does (`evals/lib/extract.mjs` mirrors
 `extract.ts`), runs each **variant** (`evals/variants/*.mjs` — `champion` is
 production, `legacy` is the frozen old prompt), then blind-scores the original and

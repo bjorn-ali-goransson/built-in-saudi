@@ -19,7 +19,11 @@ export function cvToText(cv) {
   if (cv.contact?.location) contact.push(cv.contact.location)
   if (cv.contact?.phone) contact.push(cv.contact.phone)
   if (cv.contact?.email) contact.push(cv.contact.email)
-  for (const l of cv.contact?.links || []) contact.push(`${l.label} (${l.url})`)
+  // The PDF renders <Link src={url}>{label}</Link>, so the LABEL is the
+  // visible text and the URL lives in the link annotation, which no text
+  // extraction recovers. Emitting the URL here credited the scorer with
+  // characters the employer's parser never sees.
+  for (const l of cv.contact?.links || []) contact.push(l.label)
   if (contact.length) L.push(contact.join('   |   '))
 
   const headline = [cv.role, cv.available].filter(Boolean).map(strip)
