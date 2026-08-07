@@ -177,6 +177,7 @@ import { emailHeadersTool } from './email-headers/meta'
 import { seatingChartTool } from './seating-chart/meta'
 import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
+import { sheetDiffTool } from './sheet-diff/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -358,6 +359,7 @@ export const tools: Tool[] = [
   dateDiffTool,
   xlsxConvertTool,
   csvVcardTool,
+  sheetDiffTool,
   zipInspectorTool,
   hexViewerTool,
   metadataTool,

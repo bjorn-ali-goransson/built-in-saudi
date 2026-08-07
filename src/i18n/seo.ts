@@ -968,4 +968,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Spreadsheet to Contacts', description: 'Turn a CSV or Excel list of people into a .vcf your phone will import — names, numbers, emails, companies and job titles. Columns are matched by their headings and you can correct them. Saudi numbers are rewritten in international form, because 0512345678 stops meaning anything once the phone leaves the country. Nothing is uploaded.' },
     ar: { name: 'جدول إلى جهات اتصال', description: 'حوّل قائمة أشخاص في ملف CSV أو إكسل إلى ملف ‎.vcf‎ يستورده هاتفك — أسماء وأرقام وبُرد إلكترونية وشركات ومسمّيات وظيفية. تُطابَق الأعمدة من عناوينها ويمكنك تصحيحها. وتُعاد كتابة الأرقام السعودية بالصيغة الدولية، لأن 0512345678 يفقد معناه متى خرج الهاتف من البلد. ولا يُرفع شيء.' },
   },
+  {
+    id: 'sheet-diff',
+    en: { name: 'Compare Spreadsheets', description: 'Compare two versions of the same spreadsheet — CSV or Excel — and see which rows were added, removed or changed, and exactly which cell changed in each. Rows are matched on a key column rather than their position, because by the time you need a diff somebody has already sorted or inserted something. Duplicate keys are reported instead of quietly picking one.' },
+    ar: { name: 'مقارنة الجداول', description: 'قارن نسختين من الجدول نفسه — CSV أو إكسل — وشاهد أي الصفوف أُضيفت وأيها حُذفت وأيها تغيّرت، وأي خلية تغيّرت في كل منها. وتُطابَق الصفوف على عمود مفتاح لا على مواضعها، لأنه حين تحتاج المقارنة يكون أحدهم قد فرز أو أدرج شيئًا. وتُذكر المفاتيح المكرّرة بدل اختيار أحدها في صمت.' },
+  },
 ]
