@@ -993,4 +993,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Split a CSV', description: 'Break one big spreadsheet into several smaller CSVs — by row count, by file size, or one file per value in a column, so a staff list becomes one file per department. Every part keeps the header row, and a byte-order mark is added by default so Excel reads Arabic correctly instead of turning it into mojibake. Downloads as a zip.' },
     ar: { name: 'تقسيم ملف CSV', description: 'قسّم جدولًا كبيرًا إلى ملفات CSV أصغر — بعدد الصفوف أو بحجم الملف أو ملفًا لكل قيمة في عمود، فتصير قائمة الموظفين ملفًا لكل إدارة. ويحتفظ كل جزء بصف العناوين، وتُضاف علامة ترتيب البايتات افتراضيًا ليقرأ إكسل العربية صحيحة بدل أن يحيلها رموزًا. ويُنزَّل الكل في ملف مضغوط.' },
   },
+  {
+    id: 'name-spelling',
+    en: { name: 'Name in English Letters', description: 'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.' },
+    ar: { name: 'كتابة الاسم بالإنجليزية', description: 'اكتب اسمًا عربيًا بحروف لاتينية، جزءًا جزءًا، مختارًا بين الكتابات التي تظهر فعلًا في الوثائق هنا. ولا جواب صحيح واحد — فمحمد تُكتب Mohammed وMuhammad وMohamed وMohammad وMuhammed في خمسة جوازات لأسرة واحدة — ولذلك تعرض الأداة الخيارات ولا تدّعي حكمًا، وتنصحك بنسخ جوازك إن كان لديك واحد.' },
+  },
 ]

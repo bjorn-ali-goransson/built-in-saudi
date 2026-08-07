@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **183 tools are live.** This
+The backlog, and an honest account of what exists. **184 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -18,7 +18,7 @@ optional [backend worker](./BACKEND.md).
 | Category | Count | Shape of it |
 |---|---|---|
 | Developer | 32 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers |
-| Saudi / Local | 25 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner**, **monthly prayer timetable** |
+| Saudi / Local | 26 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner**, **monthly prayer timetable**, **name spelling** |
 | Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
 | Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
 | Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
@@ -144,7 +144,6 @@ earn a slot. **`client` unless noted.**
 | Fuel / trip cost calculator | Same shape — let the user set the price rather than baking in a number that goes stale. |
 | Arabic contract and letter templates | Bilingual printable forms; pairs with `quotation` and `invoice`. |
 | Hijri event countdown (print + share) | Ramadan, Hajj, National Day; all the date machinery is here. |
-| Arabic name transliteration helper | The passport-spelling Ahmad/Ahmed problem, with the plate letter table as precedent. |
 | Iqama fee / traffic fine reference | Reference tables only, clearly dated. **Never** a live lookup — that needs an API we should not proxy. |
 
 ### Files and formats

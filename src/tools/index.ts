@@ -182,6 +182,7 @@ import { prayerTimetableTool } from './prayer-timetable/meta'
 import { removeSilenceTool } from './remove-silence/meta'
 import { epubTextTool } from './epub-text/meta'
 import { csvSplitTool } from './csv-split/meta'
+import { nameSpellingTool } from './name-spelling/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -339,6 +340,7 @@ export const tools: Tool[] = [
   khatmaTool,
   hijriCalendarTool,
   ibanValidatorTool,
+  nameSpellingTool,
   saudiPlateTool,
   shortAddressTool,
   tafqeetTool,
