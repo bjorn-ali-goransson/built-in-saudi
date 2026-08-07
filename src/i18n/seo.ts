@@ -1053,4 +1053,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Rent Increase & Renewal Rules', description: 'Whether your rent can legally be increased, and the date you have to give notice by. Increases inside Riyadh’s urban boundary are frozen for five years from 25 September 2025 — but an escalation clause in a contract already in place on that date still stands, so two tenants in the same building can get different answers depending on which side of one day their signature falls. Separately, and everywhere in the Kingdom, a lease renews itself automatically unless one party gives the other 60 days’ notice.' },
     ar: { name: 'قواعد زيادة الإيجار والتجديد', description: 'هل يجوز نظامًا رفع إيجارك، وما التاريخ الذي يلزمك الإشعار قبله. فالزيادات داخل النطاق العمراني للرياض مجمّدة خمس سنوات من 25 سبتمبر 2025 — لكن شرط الزيادة في عقد كان قائمًا قبل ذلك التاريخ يظل نافذًا. وبمعزل عن ذلك، وفي المملكة كلها، يتجدد العقد تلقائيًا ما لم يُشعر أحد الطرفين الآخر بستين يومًا.' },
   },
+  {
+    id: 'early-settlement',
+    en: { name: 'Early Loan Settlement', description: 'Work out what it costs to settle a personal finance early, and what that saves you against carrying on. The rule is the opposite of what most people assume: settling early does not mean paying the rest of the term cost. You pay the outstanding balance plus the term cost for the three months following repayment, worked out on a declining balance, and the rest of the term is waived. The three months is a ceiling set by SAMA, not a fee the lender chooses.' },
+    ar: { name: 'السداد المبكر للتمويل', description: 'احسب كلفة سداد تمويلك الشخصي مبكرًا، وكم يوفّر عليك ذلك مقارنةً بالاستمرار. والقاعدة عكس ما يظنه أكثر الناس: فالسداد المبكر لا يعني دفع بقية تكلفة الأجل. إنما تدفع الرصيد القائم مع تكلفة أجل الأشهر الثلاثة التالية، محسوبة على رصيد متناقص، ويُسقط باقي الأجل. والأشهر الثلاثة حدٌّ أعلى وضعته مؤسسة النقد لا رسمٌ يختاره الممول.' },
+  },
 ]

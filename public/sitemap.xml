@@ -2773,4 +2773,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/rent-rules"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/rent-rules"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/early-settlement/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/early-settlement"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/early-settlement"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/early-settlement"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/early-settlement/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/early-settlement"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/early-settlement"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/early-settlement"/>
+  </url>
 </urlset>

@@ -497,3 +497,15 @@ Still latent: `.docx` → Markdown; an `.eml`/`.msg` reader; merging spreadsheet
 across files; exporting a filled PDF form's data as CSV; the searchable PDF
 (costed in the first code sweep — needs `@pdf-lib/fontkit` and a full Arabic
 TTF); and `comingSoonTools`, which filters for a status no tool has any more.
+
+### Web sweep, 8 August 2026 (sixth pass — consumer finance)
+
+- ~~**Early settlement calculator.**~~ **Shipped** as `early-settlement`. The
+  SAMA rule is precise: outstanding balance plus the term cost for the three
+  months following, on a declining balance, rest waived.
+- **Rejected on the same sweep: a "how much can I borrow" DBR calculator.** The
+  33% personal-loan cap and 25% for pensioners are well established, but every
+  source hedges the mortgage figure — "typically", "varies by lender", 45–55%.
+  A confident number there would be wrong for many readers on a question where
+  being wrong costs them, so it is not built. Same standard that kept the
+  Citizen Account taper and the traffic-fine window unbuilt.

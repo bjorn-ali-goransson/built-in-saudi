@@ -600,6 +600,27 @@ Two deliberate choices worth keeping:
 **Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
 is the only thing standing behind the sentence on 109 tool pages.
 
+## Early loan settlement (`early-settlement`)
+
+The rule is SAMA's and it is the opposite of what most people assume: settling a
+personal finance early does **not** mean paying the rest of the term cost. The
+borrower pays the outstanding balance plus the term cost for the **three months
+following** repayment, on a **declining balance**, and the remaining term cost is
+waived. The three months is a **ceiling**, not a fee the lender picks.
+
+Two things `src/tools/early-settlement/settle.ts` gets right on purpose:
+
+- **The compensation is the interest portion of the next three payments**, each
+  on the reducing balance — not three times the first month's, which would
+  overstate it.
+- **The headline is the SAVING**, not the settlement figure. A lender's quote
+  gives you the amount to pay; nothing puts the comparison against carrying on
+  in front of you, and that is the number that decides it.
+
+Near the end of a term there are fewer than three payments left, so the
+compensation is bounded by what remains — covered in the spec, along with a
+zero-rate loan (nothing to save, nothing to charge) and a fully paid one.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
