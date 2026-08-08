@@ -684,6 +684,23 @@ different basis and the reader needs to be able to see that.
 Carries a `legal` Disclaimer whose point is that these are **minimums**: a
 contract may give more and cannot give less.
 
+## Exit & re-entry visa fee (`exit-reentry`)
+
+Fees in `src/tools/exit-reentry/visa.ts`. Single: **SAR 200 covering two
+months**, each further month **100**. Multiple: **500 covering three months**,
+each further month **200**. Applying from **abroad doubles the per-month
+figure**. Two traps carry the tool:
+
+- **Months are whole 30-day blocks, not pro rata.** 1–30 days is one month,
+  31–60 is two — so 31 days costs what 60 costs, and 61 costs a month more. The
+  step is invisible until the fee appears, so the tool says how many days remain
+  before the next one.
+- **The visa cannot outrun the iqama.** A trip returning after it expires is not
+  a dearer visa, it is no visa at all until the iqama is renewed. That is a
+  dependency of the same shape as the inspection gating the vehicle
+  registration, so it is stated **before** the fee and names the longest trip
+  the current iqama does allow — "no" with a number beside it.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

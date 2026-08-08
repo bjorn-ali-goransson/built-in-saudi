@@ -519,3 +519,12 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
   confirmed by the sources read, so the tool shows what a day of leave is worth
   without asserting a right to be paid for it. Worth a primary source before
   going further.
+
+### Web sweep, 8 August 2026 (eighth pass — travel and residency)
+
+- ~~**Exit/re-entry visa fee.**~~ **Shipped** as `exit-reentry`. Third tool in a
+  row where the find was a *dependency or a step*, not the arithmetic: the fee
+  steps every 30 days, and the iqama gates the visa.
+- **Still open:** final exit rules and their timing; the Muqeem/Absher status
+  checks (they need an account, so nothing to compute); dependant fee planning,
+  which overlaps the levy idea from the first sweep.

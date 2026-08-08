@@ -44,6 +44,7 @@ const CLUSTERS: string[][] = [
   ['rent-rules', 'vehicle-renewal', 'id-expiry'],
   ['prayer-times', 'prayer-timetable', 'qibla', 'hijri-calendar'],
   ['hajj-umrah', 'qibla', 'prayer-times'],
+  ['exit-reentry', 'id-expiry', 'hajj-umrah'],
   ['saudi-phone', 'iban-validator', 'short-address'],
 ]
 

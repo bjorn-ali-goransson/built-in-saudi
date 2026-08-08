@@ -2801,4 +2801,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/leave-overtime"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/leave-overtime"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/exit-reentry/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/exit-reentry"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/exit-reentry"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/exit-reentry"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/exit-reentry/</loc>
+    <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/exit-reentry"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/exit-reentry"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/exit-reentry"/>
+  </url>
 </urlset>

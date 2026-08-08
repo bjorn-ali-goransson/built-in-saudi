@@ -24,6 +24,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },
+  { id: 'exit-reentry', kind: 'official' },
   // Found by scripts/check-disclaimers.mjs: each of these had a guarded twin
   // carrying the same class of caveat while it carried none.
   { id: 'prayer-times', kind: 'religious' },

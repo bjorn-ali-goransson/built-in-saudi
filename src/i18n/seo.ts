@@ -1063,4 +1063,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Leave, Overtime & Notice', description: 'Your annual leave, what overtime is worth, and how much notice either side has to give — the entitlements that apply while you are still working. Three of them are routinely got wrong: leave steps from 21 days to 30 after five continuous years with the same employer, and the tool tells you the date; notice is 30 days if you resign but 60 if your employer ends it; and overtime is capped at 720 hours a year, a cap that exists to protect you rather than to limit what you can be paid for.' },
     ar: { name: 'الإجازة والعمل الإضافي والإشعار', description: 'إجازتك السنوية، وكم يساوي العمل الإضافي، وكم مدة الإشعار على كل طرف — وهي الحقوق التي تسري وأنت على رأس العمل. وثلاثة منها يخطئ فيها الناس كثيرًا: الإجازة ترتفع من 21 يومًا إلى 30 بعد خمس سنوات متصلة، والأداة تخبرك بالتاريخ؛ ومدة الإشعار 30 يومًا إن استقلت و60 إن أنهاه صاحب العمل؛ والعمل الإضافي محدود بـ720 ساعة سنويًا لحمايتك.' },
   },
+  {
+    id: 'exit-reentry',
+    en: { name: 'Exit & Re-entry Visa Fee', description: 'Work out the fee for the trip you are actually taking, and see the two things that catch people out. Months are charged in whole 30-day blocks, so 31 days costs the same as 60 while 61 costs a month more — the tool shows how many days you have before the price steps again. And the visa cannot outrun your iqama: a trip that returns after it expires is no visa at all until you renew. Extending from abroad costs double per month.' },
+    ar: { name: 'رسوم تأشيرة الخروج والعودة', description: 'احسب رسوم الرحلة التي ستسافرها فعلًا، واطّلع على الأمرين اللذين يغفل عنهما الناس. فالأشهر تُحتسب كتلًا كاملة من ثلاثين يومًا، فـ31 يومًا كـ60 يومًا في السعر بينما 61 يومًا تزيد شهرًا. والتأشيرة لا تتجاوز إقامتك: فالرحلة التي تعود بعد انتهائها لا تأشيرة لها حتى تجدّد. والتمديد من الخارج يكلّف ضعف قيمة الشهر.' },
+  },
 ]
