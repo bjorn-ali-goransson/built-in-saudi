@@ -206,6 +206,9 @@ const BENCH = [
   ['weighted percentage', 'admission-score'],
   ['النسبة الموزونة', 'admission-score'],
   ['stopwatch', 'stopwatch'],
+  ['iqama renewal cost', 'iqama-fees'],
+  ['dependent fee', 'iqama-fees'],
+  ['رسوم المرافقين', 'iqama-fees'],
 ]
 
 // A row's expectation may be an ARRAY when the query genuinely has no single

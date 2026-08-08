@@ -727,6 +727,37 @@ figure**. Two traps carry the tool:
   registration, so it is stated **before** the fee and names the longest trip
   the current iqama does allow — "no" with a number beside it.
 
+## Iqama renewal cost (`iqama-fees`)
+
+Constants in `src/tools/iqama-fees/iqama.ts`. The arithmetic is two
+multiplications; three things carry the tool, and one number it **refuses to
+compute** carries it most.
+
+- **The dependent fee is per dependent, per MONTH, collected up front for the
+  whole period.** It reads like an annual charge and is not: a spouse and two
+  children renewed for a year is 3 x 400 x 12 = **SAR 14,400**, due in one
+  payment, against an iqama fee of 650. So the fee everyone names is 4% of the
+  bill, and the tool states what share of the total is dependents.
+- **The shorter periods are exactly pro rata** (650/12 x months, so a quarter is
+  163). Quarterly renewal therefore costs the same over a year and **splits the
+  payment into four** — a real lever nobody mentions. The tool says outright that
+  it splits rather than reduces, and withdraws the suggestion once you are
+  already on the shortest period.
+- **The work permit levy is the EMPLOYER'S, and Article 40 of the Labour Law
+  forbids charging it to the worker.** Same shape as the GOSI tool's "a non-Saudi
+  contributes nothing": the most useful thing on the page is not a number.
+
+**Its rate is deliberately not calculated, and that is the interesting
+decision.** Published sources disagree — 700/800 by Saudization band, 800/900,
+or a flat 800 — it is set by the employer's band rather than by anything the
+worker can see, and it is not the worker's to pay. Printing a confident figure
+we cannot stand behind, for a charge the reader does not owe, would be worse
+than naming who owes it. **When sources disagree on a number, say so and say
+who owes it; do not average them into a number that is nobody's.**
+
+Carries an `official` Disclaimer which names the levy as the thing it will not
+compute, and is in `e2e/disclaimers.spec.ts`.
+
 ## Electricity bill (`electricity-bill`)
 
 Residential tariff: **18 halalas/kWh up to 6,000 a month, 30 above**, plus a

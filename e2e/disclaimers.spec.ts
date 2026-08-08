@@ -25,6 +25,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },
   { id: 'exit-reentry', kind: 'official' },
+  { id: 'iqama-fees', kind: 'official' },
   { id: 'electricity-bill', kind: 'financial' },
   { id: 'admission-score', kind: 'official' },
   // Found by scripts/check-disclaimers.mjs: each of these had a guarded twin

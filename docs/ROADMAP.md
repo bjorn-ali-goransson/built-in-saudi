@@ -602,3 +602,31 @@ Next, in order, when a working key exists:
 3. Re-run `evals/perfect.mjs` and `evals/gameable.mjs` to confirm the 1–5 scale
    has not compressed while all of this was untestable.
 
+### Web sweep, 8 August 2026 (eleventh pass)
+
+- ~~**Iqama renewal cost.**~~ **Shipped** as `iqama-fees`. Heavily searched, and
+  every incumbent calculator prints a work-permit levy figure that the published
+  sources disagree about. Ours refuses to, and says who owes it instead.
+- **Open a password-protected PDF.** Still the strongest unbuilt idea and still
+  blocked on the same thing: pdf.js decrypts with a password the user knows, but
+  nothing in our stack re-emits a decrypted PDF **with its text layer**.
+  Rasterising someone's payslip damages it, and OCRing it back would replace
+  perfect text with a guess — which `pdf-ocr` already refuses to do on principle.
+  The honest versions are "get the text out" and "get the pages out", both
+  clearly labelled; the lossless version needs `qpdf-wasm`. **Verify the pdf-lib
+  `ignoreEncryption` route before assuming** — it parses the structure but does
+  not decrypt streams, so it is expected to produce a broken file.
+- **Flatten a PDF** (make filled form fields and annotations uneditable).
+  `pdf-lib` has `form.flatten()`, so this is small and complete — and it is a gap
+  between our OWN tools: `pdf-fill` fills a form and nothing makes it final
+  before you send it.
+- **Compare two PDFs.** We have `text-diff`, `json-diff` and `sheet-diff`, plus
+  `pdf-to-text` — and no PDF diff. Assembling the three is most of the work.
+- **Declined: the 2026 skill-based work permit classification.** It sorts expats
+  into skill bands, and the mapping is a maintained lookup table that would go
+  stale silently. Same test that rejected the debt-burden calculator.
+- **Declined: Musaned domestic worker package costs.** SAR 8,000–21,000
+  depending on nationality and agency — a range we would have to invent a point
+  inside. The domestic-worker LEVY (first four exempt, then SAR 800/month) is a
+  clean rule but applies to very few households.
+

@@ -197,6 +197,7 @@ import { rentRulesTool } from './rent-rules/meta'
 import { earlySettlementTool } from './early-settlement/meta'
 import { leaveOvertimeTool } from './leave-overtime/meta'
 import { exitReentryTool } from './exit-reentry/meta'
+import { iqamaFeesTool } from './iqama-fees/meta'
 import { electricityBillTool } from './electricity-bill/meta'
 import { stopwatchTool } from './stopwatch/meta'
 import { admissionScoreTool } from './admission-score/meta'
@@ -347,6 +348,7 @@ export const tools: Tool[] = [
   earlySettlementTool,
   leaveOvertimeTool,
   exitReentryTool,
+  iqamaFeesTool,
   stopwatchTool,
   admissionScoreTool,
   pdfToImagesTool,
