@@ -1069,6 +1069,66 @@ of them the scorer:
 Fixing those three took the bench to **top-1 91%, top-3 100%**, with no change
 to `fuzzy.ts` at all.
 
+**A tuned bench measures your memory. `evals/untuned.mjs` is the antidote.**
+The tuned bench reached **100%**, which is the least believable number in this
+file — every fix in it was made while looking at it. So 50 queries were written
+straight off the tool list, in one sitting, before any was run. They scored
+**88% top-1 / 94% top-3**, and that gap *is* the finding: six defects the tuned
+bench could not see, five of them general.
+
+The most expensive was **`heic` returning nothing at all**. The site decodes
+HEIC everywhere an image is taken (#226, a deliberate, documented, non-trivial
+piece of work) and **not one tool indexed the word** — so the query an iPhone
+owner on Android actually types found nothing. A shipped capability nobody can
+name is not shipped. **When a capability lands, index the word for it**, not
+just the tool that hosts it.
+
+The others, each a reusable rule:
+
+- **A keyword must say what the tool DOES, not what it tolerates.** Organise PDF
+  Pages listed `scan`/`مسح ضوئي` because it *preserves* a scan, and took the
+  query from the tool that reads one. The image cropper listed `resize` because
+  you drag-resize the *crop box*; the image is never resized. Both were stealing
+  queries from the tool that answers them. (The second also proved a **bench row
+  wrong**: "resize photo" means the compressor, which takes a max width.)
+- **Word order carries the direction, and we discard it on purpose.** So a
+  converter and its inverse are the same query to the scorer. `vCard to CSV` was
+  named in file formats while its inverse was named in concepts
+  (`Spreadsheet to Contacts`) — so the tool going the WRONG way owned both
+  concept words at name weight. Renaming it `Contacts to Spreadsheet` fixed two
+  queries and broke two others, **net zero**, until both metas indexed the
+  directional PHRASE (`vcf to csv`, `csv to vcf`) for the whole-query path to
+  bite on. Name a converter pair symmetrically, in concepts, and index both
+  arrows.
+- **A bare noun goes to the tool that MAKES the thing.** `password`, `hijri` and
+  `cron` each tie their twin at exactly 450.00, so catalogue order decides — by
+  design. The rule is the one `qr` already followed: generator over reader,
+  calendar over age, builder over explainer. Fixing it is a registry reorder, not
+  a scorer change.
+- **A stop list that stops one person of a verb and not another is not a stop
+  list.** `is`/`are` were there, `am` was not, so "how old am i" spent half its
+  coverage on two letters that subsequence-match half the catalogue. Ranked the
+  age calculator **10th**.
+- **A substring starting mid-word is weak evidence** — `old` is inside *Golden*
+  Hour, which is how the sunrise tool beat the age calculator. Now halved, and
+  **only when the preceding character is Latin**: Arabic agglutinates (the
+  article, و, ب all attach to the front of the word they modify), so the same
+  penalty applied there would wreck the Arabic half to tidy the English one.
+
+**The harness was unfaithful a third time** (after the fields, then the tie
+order): it read the top-level `nameAr` meta field, while the UI passes
+`localizeTool(tool, locale).name` — the `ar` block's name, which is where most
+tools put it. Every such tool's Arabic name was simply **absent from the index**,
+and `حاسبة النسبة` ranked its own calculator **seventh**. Fixing that alone moved
+the held-out set 88% → 90%. It also **read its own comments as data**: the
+keyword extractor pulls quoted strings out of the meta source, so a note
+explaining why a keyword was removed re-indexed the word it named, and reported
+the removal as having had no effect. It now strips `//` lines first.
+
+After all six fixes both sets read 100% — so **`untuned.mjs` is burned and says
+so at the top**. The 88% is the number to quote. Anyone tuning the scorer again
+must write a fresh held-out set before believing anything.
+
 **A coverage/shorter-name tie-break was tried and rejected on measurement.** A
 one-word query often ties two tools exactly, and preferring the tool whose name
 the query covers more of fixed `hijri` but broke `qr` (QR Reader over QR Code)

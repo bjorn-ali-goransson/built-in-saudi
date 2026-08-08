@@ -10,7 +10,10 @@ export const hashGeneratorTool: Tool = {
   description:
     'Compute the SHA-1, SHA-256, SHA-384 or SHA-512 of any text or file — hex and Base64, copied in a tap. Files are hashed locally and never uploaded, so tokens and sensitive files stay on your device.',
   category: 'Generators',
-  keywords: ['hash', 'sha', 'sha256', 'sha-256', 'sha512', 'checksum', 'digest', 'بصمة', 'تجزئة', 'هاش'],
+  // sha256 leads: HMAC also does SHA-256 and was winning a bare "sha256" on
+  // keyword position alone, which is not an editorial judgement about which
+  // tool is primary -- it is an accident of list order.
+  keywords: ['sha256', 'sha-256', 'hash', 'sha', 'sha512', 'checksum', 'digest', 'بصمة', 'تجزئة', 'هاش'],
   status: 'stable',
   Icon: HashIcon,
   component: lazyTool(() => import('./HashGeneratorTool')),

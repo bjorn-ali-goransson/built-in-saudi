@@ -12,7 +12,18 @@ export function fuzzyScore(query: string, text: string): number {
   const idx = t.indexOf(q)
   if (idx !== -1) {
     let score = 120 - Math.min(idx, 40)
-    if (idx === 0 || /\W/.test(t[idx - 1])) score += 30
+    const prev = idx === 0 ? '' : t[idx - 1]
+    if (!prev || /\W/.test(prev)) score += 30
+    // A match that STARTS mid-word is much weaker evidence, and it was scoring
+    // almost as well as a real one: "old" is inside "Golden Hour", so the
+    // sunrise tool beat the age calculator for "how old am i".
+    //
+    // Penalised only when the character before it is LATIN. Arabic agglutinates
+    // — the definite article, و and ب all attach to the front of the word they
+    // modify — so a mid-word hit there is the normal way a real match looks,
+    // and penalising it would quietly wreck the Arabic half of the catalogue to
+    // tidy up the English one.
+    else if (!/[؀-ۿ]/.test(prev)) score *= 0.5
     // NO length/coverage bonus here, and that is a measured decision rather
     // than an omission. A one-word query often ties two tools exactly ("qr",
     // "password", "hijri"), and the obvious tie-break — prefer the tool whose
@@ -104,6 +115,13 @@ const STOP = new Set([
   // "when is ramadan" spent half its coverage on a word no tool contains and
   // returned the water-intake calculator.
   'how', 'what', 'when', 'where', 'why', 'which', 'who',
+  // The rest of the copula. `is` and `are` were here from the start and `am`
+  // was not, which is the whole of why "how old am i" ranked the age calculator
+  // TENTH: `how` and `i` dropped out, `old` matched, and `am` — two letters that
+  // are a subsequence of half the catalogue — spent the other half of the
+  // query's coverage on noise. A stop list that stops one person of a verb and
+  // not another is not a stop list.
+  'am', 'was', 'were', 'be', 'been', 'does', 'did',
   'في', 'من', 'الى', 'إلى', 'على', 'عن', 'كيف', 'هل', 'ال',
   'ما', 'هو', 'هي', 'متى', 'اين', 'أين', 'كم',
 ])

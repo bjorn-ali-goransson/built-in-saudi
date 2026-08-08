@@ -24,7 +24,13 @@ const AR_CATEGORY = {
 
 const tools = []
 for (const d of dirs) {
-  const src = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
+  const raw = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
+  // Strip whole-line // comments BEFORE pulling quoted strings out. Without
+  // this the harness reads a comment as data: a note saying why a keyword was
+  // removed mentions the word in quotes, and the bench dutifully re-indexed it
+  // — reporting the removal as having had no effect. A parser that reads the
+  // explanation as the thing being explained is worse than no parser.
+  const src = raw.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')
   if (/status: 'coming-soon'/.test(src)) continue
   const pick = (k) => (new RegExp(`${k}: '((?:[^'\\\\]|\\\\.)*)'`).exec(src)?.[1] ?? '')
   const kwBlock = /keywords: \[([\s\S]*?)\]/.exec(src)?.[1] ?? ''
@@ -39,7 +45,11 @@ for (const d of dirs) {
   tools.push({
     id: pick('id'),
     name: pick('name'),
-    nameAr: pick('nameAr'),
+    // The UI passes localizeTool(tool, locale).name -- the ar BLOCK'"'"'s name --
+    // not the top-level nameAr field, which most metas do not even define. The
+    // bench read the field, so for every such tool the Arabic name was simply
+    // absent from the index: حاسبة النسبة ranked its own calculator SEVENTH.
+    nameAr: arPick('name') || pick('nameAr'),
     tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
     category: `${AR_CATEGORY[category] ?? category} ${category}`.trim(),
     keywords,
@@ -64,6 +74,7 @@ tools.sort((a, b) => (orderRank.get(varOf.get(a.id)) ?? 1e9) - (orderRank.get(va
 
 // --- the REAL scorer, compiled from src/lib/fuzzy.ts by tsc ---
 import { scoreTool } from './gen/fuzzy.js'
+import { UNTUNED } from './untuned.mjs'
 
 // --- the bench: what someone types -> what they obviously mean ---
 const BENCH = [
@@ -72,7 +83,12 @@ const BENCH = [
   ['combine pdfs', 'pdf-merge'],
   ['compress image', 'image-compressor'],
   ['make picture smaller', 'image-compressor'],
-  ['resize photo', 'image-cropper'],
+  // The expectation here was WRONG, and the bench was scoring the right answer
+  // as a failure. The cropper never changes an image's dimensions — it returns
+  // the pixels inside the box — while the compressor takes a max width. So the
+  // compressor is what "resize photo" means, and the cropper's `resize` keyword
+  // (which described dragging the crop box) has been removed.
+  ['resize photo', 'image-compressor'],
   ['qr', 'qr-code'],
   ['scan qr', 'qr-reader'],
   ['password', 'password-generator'],
@@ -93,7 +109,8 @@ const BENCH = [
   ['xlsx', 'xlsx-convert'],
   ['split csv', 'csv-split'],
   ['compare spreadsheets', 'sheet-diff'],
-  ['contacts vcf', 'csv-vcard'],
+  // Directionless: whichever way you read it, one of the pair is right.
+  ['contacts vcf', ['csv-vcard', 'vcard-to-csv']],
   ['trim video', 'video-trim'],
   ['cut video', 'video-trim'],
   ['remove silence', 'remove-silence'],
@@ -191,23 +208,35 @@ const BENCH = [
   ['stopwatch', 'stopwatch'],
 ]
 
+// A row's expectation may be an ARRAY when the query genuinely has no single
+// right answer — "contacts vcf" names a thing and a format and no direction, so
+// both the reader and the writer of a .vcf are correct readings. Flipping such a
+// row to whichever tool currently wins would be scoring the bench against
+// itself; saying it is ambiguous keeps the number honest and is counted below.
 function rank(query, wanted) {
+  const want = Array.isArray(wanted) ? wanted : [wanted]
   const scored = tools
     .map((t) => ({ id: t.id, score: scoreTool(query, t) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-  const at = scored.findIndex((x) => x.id === wanted)
+  const at = scored.findIndex((x) => want.includes(x.id))
   return { at: at < 0 ? Infinity : at + 1, top: scored.slice(0, 3).map((x) => x.id) }
 }
 
 let top1 = 0, top3 = 0, missing = 0
 const bad = []
+let ambiguous = 0
+// Everything that is not rank 1, not only what falls outside the top 3. A
+// rank-2 result is a real miss — nobody scans a list for the tool they named.
+const near = []
 for (const [q, want] of BENCH) {
+  if (Array.isArray(want)) ambiguous += 1
   const r = rank(q, want)
   if (r.at === 1) top1++
   if (r.at <= 3) top3++
   if (r.at === Infinity) missing++
   if (r.at > 3) bad.push(`${q.padEnd(24)} want ${want.padEnd(20)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+  else if (r.at > 1) near.push(`${q.padEnd(24)} want ${want.padEnd(20)} rank ${r.at}  beaten by ${r.top.slice(0, r.at - 1).join(', ')}`)
 }
 
 console.log(`tools indexed: ${tools.length}`)
@@ -215,7 +244,29 @@ console.log(`queries: ${BENCH.length}`)
 console.log(`top-1: ${top1}/${BENCH.length} (${Math.round((top1 / BENCH.length) * 100)}%)`)
 console.log(`top-3: ${top3}/${BENCH.length} (${Math.round((top3 / BENCH.length) * 100)}%)`)
 console.log(`not found at all: ${missing}`)
+console.log(`rows with more than one acceptable answer: ${ambiguous}`)
+if (near.length) {
+  console.log('\n--- rank 2-3 (found, but not first) ---')
+  for (const line of near) console.log(line)
+}
 if (bad.length) {
   console.log('\n--- outside the top 3 ---')
   for (const line of bad) console.log(line)
 }
+
+// --- the held-out set, reported every run so overfitting cannot hide ---
+let u1 = 0, u3 = 0, uMiss = 0
+const uBad = []
+for (const [q, want] of UNTUNED) {
+  const r = rank(q, want)
+  if (r.at === 1) u1++
+  if (r.at <= 3) u3++
+  if (r.at === Infinity) uMiss++
+  if (r.at > 1) uBad.push(`${q.padEnd(24)} want ${(Array.isArray(want) ? want.join('|') : want).padEnd(24)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT (never tuned against): ${UNTUNED.length} queries`)
+console.log(`  top-1: ${u1}/${UNTUNED.length} (${Math.round((u1 / UNTUNED.length) * 100)}%)`)
+console.log(`  top-3: ${u3}/${UNTUNED.length} (${Math.round((u3 / UNTUNED.length) * 100)}%)`)
+console.log(`  not found at all: ${uMiss}`)
+if (uBad.length) { console.log('  --- not first ---'); for (const l of uBad) console.log('  ' + l) }

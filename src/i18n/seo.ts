@@ -1025,8 +1025,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'vcard-to-csv',
-    en: { name: 'vCard to CSV', description: 'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number.' },
-    ar: { name: 'vCard إلى CSV', description: 'حوّل ملف ‎.vcf‎ الذي يصدّره هاتفك إلى جدول. فالأسماء العربية المكتوبة بالطريقة التي يرمّزها بها أندرويد تخرج أسماءً لا طلاسم، وتصدير آيفون يحتفظ بالأرقام التي يخفيها خلف المجموعات، ومن له ثلاثة أرقام يحصل على ثلاثة أعمدة. ونزّله ملف CSV أو ملف إكسل يحفظ الصفر الأول في كل رقم جوال.' },
+    en: { name: 'Contacts to Spreadsheet', description: 'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number.' },
+    ar: { name: 'جهات الاتصال إلى جدول', description: 'حوّل ملف ‎.vcf‎ الذي يصدّره هاتفك إلى جدول. فالأسماء العربية المكتوبة بالطريقة التي يرمّزها بها أندرويد تخرج أسماءً لا طلاسم، وتصدير آيفون يحتفظ بالأرقام التي يخفيها خلف المجموعات، ومن له ثلاثة أرقام يحصل على ثلاثة أعمدة. ونزّله ملف CSV أو ملف إكسل يحفظ الصفر الأول في كل رقم جوال.' },
   },
   {
     id: 'pptx-to-text',

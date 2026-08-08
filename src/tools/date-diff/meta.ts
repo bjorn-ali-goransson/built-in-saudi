@@ -9,7 +9,10 @@ export const dateDiffTool: Tool = {
   description:
     'Find the exact duration between two dates: years, months and days, plus total days and weeks. Great for ages, deadlines and durations. Runs entirely in your browser.',
   category: 'Calculators',
-  keywords: ['date', 'difference', 'duration', 'days between', 'age', 'how many days', 'الفرق بين تاريخين'],
+  // The whole phrase, so the query has something to match as one string. Term
+  // scoring alone let "two" match noise elsewhere and the working-days
+  // calculator took the query.
+  keywords: ['days between two dates', 'date', 'difference', 'duration', 'days between', 'age', 'how many days', 'الفرق بين تاريخين'],
   status: 'stable',
   Icon: CalendarIcon,
   component: lazyTool(() => import('./DateDiffTool')),

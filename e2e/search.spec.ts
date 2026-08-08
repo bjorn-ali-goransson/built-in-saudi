@@ -105,8 +105,12 @@ test('a converter is findable by what people call the output, not the format', a
   // converts the other way, because it never used the word "spreadsheet".
   await search(page, 'contacts to spreadsheet')
   await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
+  // Asserted on the testid, not the display name: this tool has since been
+  // RENAMED (vCard to CSV -> Contacts to Spreadsheet) precisely so the direction
+  // is recoverable from the name, and a spec that pins the old name turns a
+  // deliberate rename into a red build for no reason.
   await search(page, 'export phone contacts')
-  await expect(top(page)).toContainText(/vcard/i)
+  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
 })
 
 test('the new file tools are reachable by their plain names', async ({ page }) => {
@@ -115,7 +119,7 @@ test('the new file tools are reachable by their plain names', async ({ page }) =
   await search(page, 'docx')
   await expect(top(page)).toContainText(/word to text/i)
   await search(page, 'vcf to csv')
-  await expect(top(page)).toContainText(/vcard/i)
+  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
 })
 
 // The catalogue's SHAPE, not its ranking. Measured at 191 tools: "Converters"
@@ -248,4 +252,68 @@ test('a bare فاتورة means the invoice tool, not the electricity bill', asy
   await search(page, 'فاتورة', 'ar')
   await expect(top(page)).toContainText('فاتورة')
   await expect(page.getByTestId('tool-invoice-generator')).toBeVisible()
+})
+
+// --- A held-out set of 50 queries, written from the tool list and never tuned
+// against, scored 88% top-1 where the tuned bench read 100%. Everything below
+// is one of the defects it found. See evals/untuned.mjs.
+
+test('a shipped capability is findable by its name', async ({ page }) => {
+  // The site decodes HEIC everywhere an image is taken (#226) and NOT ONE tool
+  // indexed the word, so the query an iPhone owner on Android actually types
+  // returned no tool at all. A capability nobody can name is not shipped.
+  await search(page, 'heic')
+  await expect(page.getByTestId('tool-image-format-converter')).toBeVisible()
+})
+
+test('a substring inside another word is not a match', async ({ page }) => {
+  // "old" is inside "Golden Hour", so the sunrise tool beat the age calculator.
+  // The mid-word penalty is Latin-only on purpose: Arabic agglutinates, so a
+  // mid-word hit there is what a real match looks like.
+  await search(page, 'how old am i')
+  await expect(page.getByTestId('tool-age-calculator')).toBeVisible()
+  await expect(top(page)).toContainText(/age/i)
+  // The Arabic side of that decision: the article is attached to the noun.
+  await search(page, 'حاسبة النسبة', 'ar')
+  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
+})
+
+test('a converter is findable in the direction it converts', async ({ page }) => {
+  // Word order is discarded on purpose, so "contacts to spreadsheet" and
+  // "spreadsheet to contacts" are the same query to the scorer — and the tool
+  // that goes the WRONG way was winning, because its name held both concepts
+  // while its inverse was named in file formats. Both now index the phrase.
+  await search(page, 'contacts to spreadsheet')
+  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
+  await search(page, 'spreadsheet to contacts')
+  await expect(page.getByTestId('tool-csv-vcard')).toBeVisible()
+})
+
+test('a bare noun goes to the tool that makes the thing', async ({ page }) => {
+  // These tie EXACTLY, so they are decided by catalogue order. The editorial
+  // rule, consistent with qr -> generator: for a bare noun, the tool that makes
+  // the thing is primary.
+  await search(page, 'password')
+  await expect(top(page)).toContainText(/generator/i)
+  await search(page, 'hijri')
+  await expect(top(page)).toContainText(/calendar/i)
+  await search(page, 'cron')
+  await expect(top(page)).toContainText(/builder/i)
+})
+
+test('asking whether a password is any good finds the checker', async ({ page }) => {
+  // The evaluative words were missing from the checker entirely — nobody types
+  // "entropy" — so the generator won on a scattered subsequence of "good".
+  await search(page, 'is my password good')
+  await expect(page.getByTestId('tool-password-strength')).toBeVisible()
+  // ...without stealing the generator's own query.
+  await search(page, 'strong password')
+  await expect(top(page)).toContainText(/generator/i)
+})
+
+test('a keyword must describe what the tool does, not what it tolerates', async ({ page }) => {
+  // Organise PDF Pages listed "مسح ضوئي" because it PRESERVES a scan, and so
+  // took the query from the tool that reads one.
+  await search(page, 'مسح ضوئي', 'ar')
+  await expect(page.getByTestId('tool-pdf-ocr')).toBeVisible()
 })

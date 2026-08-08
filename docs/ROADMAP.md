@@ -554,3 +554,27 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
 - **Still open:** admission cut-offs by university and year, which are exactly
   the sort of thing that would need a maintained dataset and would go stale
   silently — the reason it is not built.
+
+### Discoverability pass, 8 August 2026 (held-out measurement)
+
+The tuned search bench said 100%; a **held-out set of 50 queries** written off
+the tool list said **88% top-1 / 94% top-3**. That gap is the point — see the
+search section of CLAUDE.md for the six defects it found and the rules they
+produced. Both sets now read 100%, and `evals/untuned.mjs` is marked BURNED.
+
+Still open, and worth doing before the next tuning round:
+
+- **Write a fresh held-out set.** The existing one no longer measures anything.
+  Fifty queries, off the tool list, run once, reported as found.
+- **A bad query returns junk rather than nothing.** `heic` used to return
+  `archive-inspector, admission-score, totp` — three scattered subsequence hits
+  presented exactly like real answers. A relevance floor (or an honest "nothing
+  matched") is untested territory; measure before changing.
+- **Sweep the catalogue for keywords describing what a tool tolerates.** Two
+  were found by accident (`scan` on the PDF organiser, `resize` on the cropper).
+  There is no reason to think those were the only two, and each one silently
+  costs another tool its own query.
+- **Sweep for capabilities with no word.** HEIC was indexed nowhere despite
+  being a headline feature. Workers, Arabic shaping and the ZIP reader are the
+  obvious next candidates to check.
+

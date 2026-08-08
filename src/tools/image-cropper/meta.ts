@@ -10,7 +10,11 @@ export const imageCropperTool: Tool = {
   description:
     'Crop an image right in your browser: drag and resize the crop box, lock it to 1:1 / 4:3 / 16:9 or crop freely, see the exact output pixel size, and download as PNG/JPG/WebP. The crop runs at full resolution and the image is never uploaded.',
   category: 'Images',
-  keywords: ['image', 'photo', 'picture', 'crop', 'cropper', 'resize', 'trim', 'aspect ratio', 'square', 'avatar', 'قص', 'صورة', 'قص الصور', 'اقتصاص', 'صور'],
+  // No 'resize'. What resizes here is the CROP BOX, not the image — the output
+  // is whatever pixels the box encloses. The tool that actually changes an
+  // image's dimensions is the compressor (its max-width), so claiming the word
+  // here only took the query off the tool that answers it.
+  keywords: ['image', 'photo', 'picture', 'crop', 'cropper', 'trim', 'aspect ratio', 'square', 'avatar', 'قص', 'صورة', 'قص الصور', 'اقتصاص', 'صور'],
   status: 'stable',
   Icon: CropIcon,
   component: lazyTool(() => import('./ImageCropperTool')),
