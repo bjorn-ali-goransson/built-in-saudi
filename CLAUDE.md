@@ -131,8 +131,30 @@ vehicle registration share no vocabulary at all even though anyone dealing with
 one is plausibly dealing with another. So the derived half is thresholded at
 **120** — below which it measured as noise — and eight domain **clusters** are
 named by hand, which is eight groups of curation rather than 197 rows of it. A
-tool with nothing above the threshold and no cluster shows **no row**, rather
-than four arbitrary tools.
+tool with nothing above the threshold and no cluster used to show **no row**,
+rather than four arbitrary tools — and that was finally measured, and found to be
+the wrong trade for most of the site.
+
+**81 of 203 tool pages (40%) had no related row at all** (`node
+evals/relatedcheck.mjs`). "Nothing rather than something arbitrary" is the right
+answer to a bad *suggestion* and the wrong answer to a *page*: a tool with no row
+is somewhere the catalogue leads you and cannot lead you out of, except back to
+the search box.
+
+The fix is a third source after the clusters and the scorer: **the tool's own
+CATEGORY**, which is the site's hand-curated life-domain grouping and therefore
+precisely the signal this section already documents the lexical scorer as being
+blind to. A sibling someone deliberately filed together is not arbitrary the way
+a below-threshold lexical hit is. **Lowering `MIN_SCORE` was the obvious
+alternative and would have reintroduced exactly the noise it was measured to
+exclude** (gosi-salary → ip-subnet at 75).
+
+Measured after: **dead ends 81 → 0, full rows of four 38 → 202.** The order is
+curated → lexical → category, so a real relation still comes first and the
+filler only takes what is left — `qr-code` still leads with `qr-reader`, and
+there is a test for that so the filler cannot quietly take over. The one tool
+the category fill could not help was `calls`, alone in `Communication`, so it
+got a cluster with `book-me`: both are "meet someone".
 
 **Recently used** (`lib/recentTools.ts`, `bis-recent-tools`) is the first row of
 both, capped at 8. At 192 tools the catalogue is a place you visit once, and the

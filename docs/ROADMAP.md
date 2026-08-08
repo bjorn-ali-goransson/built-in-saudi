@@ -762,3 +762,20 @@ Next, in order:
   tools, which need a byte sniff for `/Encrypt` and a route to `pdf-to-text`
   rather than a generic failure.
 
+### Discoverability, 8 August 2026 (second pass) — the dead ends
+
+Search is saturated on both benches, so this looked at the other reachable
+surface: the related-tools row. 81 of 203 pages (40%) had none. Filling from the
+tool's own category takes that to 0 without touching the threshold — see the
+related-tools note in CLAUDE.md, and `node evals/relatedcheck.mjs`.
+
+Still open in discoverability:
+
+- **The scorer does not index a tool's `description`**, only name, tagline,
+  category and keywords. A long description carries real vocabulary and might
+  help the long tail — but it is a scorer change, and `evals/untuned.mjs` is
+  burned, so it needs **a fresh held-out set written first**. Do not measure it
+  against the tuned bench alone.
+- **`Developer` at 25** remains the largest section and remains deliberately
+  unsplit.
+
