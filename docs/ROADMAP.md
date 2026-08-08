@@ -858,3 +858,15 @@ experiments still need a key, unchanged in priority:
 3. Only then consider enlarging it.
 4. Re-run `perfect.mjs` and `gameable.mjs`.
 
+### Web sweep, 8 August 2026 (fifteenth pass)
+
+- ~~**Which ZATCA e-invoicing wave am I in?**~~ **Shipped** as `zatca-wave`.
+  Waves 23 (>750k, 31 Mar 2026), 24 (>375k, 30 Jun 2026) and 25 (>187.5k, 1 Feb
+  2027), verified against two independent sources for 23 and 24; wave 25 has one
+  source and is noted as the most recent announcement.
+- **This tool WILL date.** When wave 26 is announced, add it to `WAVES` and move
+  the SOURCES date. The "no announced wave reaches you yet" branch is written so
+  that a business below the lowest threshold is told "not yet", never "never".
+- **Waves 1–22 stay unenumerated** until their thresholds can be verified. Do
+  not fill them in from a blog table.
+

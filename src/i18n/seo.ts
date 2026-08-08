@@ -1069,6 +1069,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'رسوم تأشيرة الخروج والعودة', description: 'احسب رسوم الرحلة التي ستسافرها فعلًا، واطّلع على الأمرين اللذين يغفل عنهما الناس. فالأشهر تُحتسب كتلًا كاملة من ثلاثين يومًا، فـ31 يومًا كـ60 يومًا في السعر بينما 61 يومًا تزيد شهرًا. والتأشيرة لا تتجاوز إقامتك: فالرحلة التي تعود بعد انتهائها لا تأشيرة لها حتى تجدّد. والتمديد من الخارج يكلّف ضعف قيمة الشهر.' },
   },
   {
+    id: 'zatca-wave',
+    en: { name: 'Which E-Invoicing Wave Am I In?', description: 'Find which ZATCA e-invoicing wave your business falls into and by when it must be integrated with Fatoora. Two things about the rule catch people out: the threshold is met if ANY ONE of 2022, 2023 or 2024 crossed it, so a good 2022 followed by two quiet years still counts; and a bigger business has an EARLIER deadline, because the waves started at SAR 3 billion and step down. ZATCA notifies each taxpayer directly at least six months ahead, and that letter is the official trigger.' },
+    ar: { name: 'أي موجة فوترة إلكترونية أنا فيها؟', description: 'اعرف في أي موجة من موجات الفوترة الإلكترونية تقع منشأتك، ومتى يجب ربطها مع فاتورة. وأمران يخدعان الناس: يتحقق الحد إذا تجاوزته أي سنة من 2022 أو 2023 أو 2024، فسنة جيدة تليها سنتان هادئتان تكفي؛ والمنشأة الأكبر موعدها أبكر لأن الموجات بدأت من ثلاثة مليارات ريال وتنزل تدريجيًا. وتخاطب الهيئة كل مكلّف مباشرةً قبل موعده بستة أشهر على الأقل، وذلك الإشعار هو المرجع الرسمي.' },
+  },
+  {
     id: 'video-frames',
     en: { name: 'Video to Image', description: 'Scrub to the moment you want and save it as a PNG, JPG or WebP — a thumbnail, a poster frame, or the one shot you needed out of a long clip. Or take one frame every few seconds and download the lot as a zip. The video is read by your own browser and never uploaded, which is the whole difference from the sites that ask for the file first. A browser seeks to the nearest frame it can decode by itself, so the frame is shown before you save it.' },
     ar: { name: 'لقطة من الفيديو', description: 'انتقل إلى اللحظة التي تريدها واحفظها بصيغة PNG أو JPG أو WebP — مصغّرة أو لقطة غلاف أو الصورة الوحيدة التي احتجتها من مقطع طويل. أو خُذ لقطة كل بضع ثوانٍ ونزّلها كلها في ملف مضغوط. ويقرأ متصفحك الفيديو ولا يُرفع أبدًا. وتُعرض اللقطة قبل حفظها لأن المتصفح يقفز إلى أقرب لقطة يفك ترميزها وحدها.' },

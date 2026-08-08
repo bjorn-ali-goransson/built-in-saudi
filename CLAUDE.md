@@ -674,6 +674,37 @@ so it can be corrected in one place when the rates move again:
 Carries a `financial` Disclaimer naming GOSI, and is in
 `e2e/disclaimers.spec.ts`.
 
+## Which e-invoicing wave (`zatca-wave`)
+
+`vat-registration` answers whether you must register; this answers when you must
+be *integrated with Fatoora*. Rules in `src/tools/zatca-wave/wave.ts`, and the
+arithmetic is one comparison — the rule is the tool.
+
+- **The threshold is met if ANY ONE of 2022, 2023 or 2024 crossed it.** Not the
+  latest year, not an average, not all three. A good 2022 followed by two quiet
+  years still puts a business in scope, which is the same shape of mistake as
+  reading VAT registration against a calendar year.
+- **A BIGGER business has an EARLIER deadline**, which is the opposite of what
+  the falling thresholds suggest. Waves started at SAR 3 billion and step down,
+  so someone over 750,000 who reads "375,000 → June 2026" has handed themselves
+  three months they do not have.
+- **The tool's answer is not the notice.** ZATCA writes to each taxpayer at
+  least six months ahead and that letter is the official trigger; the page says
+  so rather than implying its own authority.
+
+**Waves 1–22 are deliberately not enumerated, and that decision was made twice.**
+The first version used wave 23's OWN threshold as the top of the earlier range,
+so a business at SAR 800,000 — which wave 23 plainly covers, "exceeding SAR
+750,000" — was told it belonged to an unnamed earlier wave and shown no date at
+all. Its own e2e caught it. The boundaries of 1–22 are not published in a form
+this could verify, so a large business now gets its wave AND a caveat in words:
+**a caveat must never replace an answer the rule actually gives.** Same family
+of error as averaging a rate from disagreeing sources.
+
+Badged `beta` and carries a `legal` Disclaimer which admits the thing that will
+date this tool: waves are added over time, so a business under the lowest
+threshold here may be in scope by a later announcement.
+
 ## VAT registration (`vat-registration`)
 
 `vat-calculator` works out 15%; this answers the prior question, which is the

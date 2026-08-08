@@ -20,6 +20,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'quotation', kind: 'legal' },
   { id: 'gosi-salary', kind: 'financial' },
   { id: 'vat-registration', kind: 'legal' },
+  { id: 'zatca-wave', kind: 'legal' },
   { id: 'vehicle-renewal', kind: 'official' },
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
