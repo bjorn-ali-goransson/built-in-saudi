@@ -25,6 +25,7 @@ const hasCorpus = existsSync(corpus) && readdirSync(corpus).some((f) => /\.pdf$/
 const GATES = [
   ['pdfguard.mjs', 'the exported CV survives machine reading (headings, bold boundaries, font names)'],
   ['cvtextcheck.mjs', 'cvToText is what an ATS actually recovers, and its mirror has not drifted'],
+  ['columncheck.mjs', 'the column-splitting mirror in evals/ still matches production'],
 ]
 
 /** Numbers a person reads. No pass/fail, and some need the real corpus. */
