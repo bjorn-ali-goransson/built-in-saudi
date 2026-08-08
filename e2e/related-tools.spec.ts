@@ -52,3 +52,35 @@ test('the row is localized, not an English fallback', async ({ page }) => {
   await expect(row(page)).toContainText('أدوات ذات صلة')
   await expect(page.getByTestId('related-qibla')).toBeVisible()
 })
+
+// --- Measured at 203 tools: 81 pages (40%) showed NO related row at all
+// (`node evals/relatedcheck.mjs`). "Nothing rather than something arbitrary" is
+// the right answer to a bad suggestion and the wrong answer to a page: a tool
+// with no row is somewhere the catalogue leads you and cannot lead you out of.
+
+test('no tool page is a dead end any more', async ({ page }) => {
+  // Each of these had an empty row: nothing in a cluster, nothing above the
+  // lexical threshold. They are filled from the tool's own category now.
+  for (const id of ['dice-roller', 'base64', 'flashcards', 'coordinates', 'calls']) {
+    await page.goto(`/en/apps/${id}`)
+    await expect(row(page), `${id} should not be a dead end`).toBeVisible()
+    await expect(row(page).locator('a')).not.toHaveCount(0)
+  }
+})
+
+test('a category sibling fills the row, it does not take it over', async ({ page }) => {
+  // The order is curated cluster, then lexical match, then category — so a real
+  // relation still comes first and the filler only occupies what is left.
+  await page.goto('/en/apps/qr-code')
+  const links = row(page).locator('a')
+  await expect(links.first()).toContainText(/reader/i)
+})
+
+test('the row is still capped rather than listing a whole category', async ({ page }) => {
+  // The crawlable block below already links to every tool; this row exists
+  // because a list of 200 is the same as no list.
+  await page.goto('/en/apps/image-compressor')
+  const n = await row(page).locator('a').count()
+  expect(n).toBeGreaterThan(0)
+  expect(n).toBeLessThanOrEqual(4)
+})

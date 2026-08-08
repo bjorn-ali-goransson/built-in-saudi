@@ -49,6 +49,8 @@ const CLUSTERS: string[][] = [
   ['stopwatch', 'pomodoro', 'countdown', 'bpm-tap'],
   ['admission-score', 'percentage-calculator', 'ats-cv-optimizer'],
   ['saudi-phone', 'iban-validator', 'short-address'],
+  // Communication holds one tool, so nothing else can fill this row.
+  ['calls', 'book-me'],
 ]
 
 /** Curated partners for a tool, in the order they were written. */
@@ -90,6 +92,29 @@ export function relatedTools(tool: Tool, limit = 4): Tool[] {
     .sort((a, b) => b.score - a.score)
 
   for (const { tool: t } of scored) {
+    if (out.length >= limit) break
+    take(t)
+  }
+  if (out.length >= limit) return out.slice(0, limit)
+
+  // Last, the tool's OWN CATEGORY — which is the site's hand-curated
+  // life-domain grouping, and therefore exactly the signal the lexical scorer
+  // is documented above as being blind to.
+  //
+  // This was added on a measurement: **81 of 203 tool pages (40%) showed no
+  // related row at all** (`node evals/relatedcheck.mjs`). "Nothing rather than
+  // something arbitrary" is the right answer to a bad suggestion and the wrong
+  // answer to a page — a tool with no row is somewhere the catalogue leads you
+  // and cannot lead you out of, except back to the search box.
+  //
+  // A sibling in the same category is not arbitrary the way a below-threshold
+  // lexical hit is: someone put it there. Lowering MIN_SCORE instead would have
+  // reintroduced the exact noise it was measured to exclude (gosi-salary →
+  // ip-subnet at 75). Measured after: dead ends 81 → 1, full rows 38 → 202.
+  //
+  // Catalogue order, so the curated primary tools of a category come first.
+  const mine = liveTools.filter((t) => t.category === tool.category)
+  for (const t of mine) {
     if (out.length >= limit) break
     take(t)
   }
