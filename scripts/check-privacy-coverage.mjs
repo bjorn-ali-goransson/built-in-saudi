@@ -35,12 +35,14 @@ const SENDS_DATA = new Set([
  *
  * Measured 8 August 2026: of 65 tools that take a file, 17 were proved and 46
  * were not — so the claim on those 46 pages rested on nobody having made a
- * mistake. Two batches have taken it to 57 proved of 66. Work it down; do not
- * add to it without a reason.
+ * mistake. Four batches took it from 17 to ALL of them. This list is now
+ * empty, and the right number of entries for it is zero — a tool here is a
+ * page making a promise nothing checks.
  */
 const UNVERIFIED = new Set([
-  'image-format-converter', 'image-to-text', 'qr-code', 'sheet-diff', 'svg-editor',
-  'xlsx-convert', 'zatca-qr',
+  // Empty. Every tool that takes a file is proved or declared as sending data
+  // by design. Keep it that way: the coverage script fails the build on a new
+  // tool that is neither.
 ])
 
 const root = process.cwd()

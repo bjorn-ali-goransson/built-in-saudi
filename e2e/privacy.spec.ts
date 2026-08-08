@@ -249,6 +249,23 @@ ${TOKEN}
   { id: 'video-audio', testid: 'va-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-trim', testid: 'vt-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
+  // --- The last of the UNVERIFIED list except the two OCR tools, which pull
+  // the tesseract models and belong in a slower pass of their own.
+  { id: 'image-format-converter', testid: 'ifc-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'sheet-diff', testid: 'sd-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b
+1,${TOKEN}
+`) },
+  { id: 'xlsx-convert', testid: 'xl-file', name: 'book.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', make: () => xmlZip('xl/sharedStrings.xml', `<sst><si><t>${TOKEN}</t></si></sst>`) },
+  { id: 'zatca-qr', testid: 'zq-file', name: 'invoice.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'svg-editor', testid: 'svg-file', name: 'art.svg', mime: 'image/svg+xml', make: () => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><title>${TOKEN}</title></svg>`) },
+  // The file here is an OPTIONAL centre logo, not the tool's subject — but it
+  // is still a file leaving the user's machine if anything went wrong.
+  { id: 'qr-code', testid: 'qr-logo-file', name: 'logo.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  // The last one. It pulls the tesseract wasm core and a ~2MB language model,
+  // which is exactly why it was left until last — but those are same-origin
+  // GETs with no body, so the guard's two assertions still hold and the only
+  // cost is time. If it ever goes off-origin, `e2e/ocr.spec.ts` fails first.
+  { id: 'image-to-text', testid: 'ocr-drop', within: true, name: 'scan.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
 
   // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
   // 65 tools take a file and 17 were proved; these are the next 14. Chosen

@@ -122,7 +122,7 @@ export default function SvgEditorTool() {
         <Button variant="primary" onClick={copy} data-testid="svg-copy"><CopyIcon /> {copied ? s.copied : s.copy}</Button>
         <Button onClick={download} data-testid="svg-download"><DownloadIcon /> {s.download}</Button>
         <Button onClick={() => fileRef.current?.click()} data-testid="svg-import">{s.importer}</Button>
-        <input ref={fileRef} type="file" accept=".svg,image/svg+xml" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept=".svg,image/svg+xml" className="hidden" data-testid="svg-file" onChange={(e) => onFile(e.target.files?.[0])} />
         <Button onClick={() => ed.load({ shapes: [], width: ed.doc.width, height: ed.doc.height })} data-testid="svg-clear">{s.clear}</Button>
         <Button onClick={() => ed.load(initialDoc)} data-testid="svg-sample">{s.sample}</Button>
       </div>

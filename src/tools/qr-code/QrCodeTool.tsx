@@ -366,7 +366,7 @@ export default function QrCodeTool() {
             {logo
               ? <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" onClick={() => { setLogo(null); setLogoName('') }}>✕ {L.centerOn} · {logoName.slice(0, 10)}</button>
               : <button type="button" className="px-3 py-1.5 rounded-md border border-[color:var(--line)] text-[0.82rem] font-semibold text-ink-soft hover:border-green-500 cursor-pointer" data-testid="qr-add-logo" onClick={() => logoInput.current?.click()}>＋ {L.addCenter}</button>}
-            <input ref={logoInput} type="file" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
+            <input ref={logoInput} type="file" className="hidden" data-testid="qr-logo-file" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = '' }} />
             <FileError message={logoErr} />
           </div>
         </div>

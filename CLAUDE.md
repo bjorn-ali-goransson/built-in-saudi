@@ -833,11 +833,22 @@ file input and demands each be classified: proved in `CASES`, listed in
 NOT be asserted), or listed in `UNVERIFIED` — believed client-side, nobody has
 proved it. Measured 8 August 2026: **65 tools take a file, 17 were proved, 46
 were not.** A new tool with a file input now fails the build until classified.
-Two batches have taken it to **57 proved, 7 unproved** — chosen by family
-rather than by recency, which is how the list got short in the first place.
+Four batches took it from 17 to **all of them: 64 proved, 0 unproved, 2 that
+send data by design.** The `UNVERIFIED` list is empty, and **zero is the right
+number of entries for it** — a tool on that list is a page making a promise
+nothing checks. The guard fails the build on a new tool that is neither proved
+nor declared, so it stays empty by construction rather than by discipline.
 
-**The second batch was 25 tools in one pass because of one change to the
-harness:** a `Case` may name the testid of the element the file input sits
+Batches were chosen by FAMILY rather than by recency, which is how the list got
+short three times in the first place.
+
+**The OCR tool was left until last and then simply worked.** It pulls the
+tesseract wasm core and a ~2MB language model, which is why it looked expensive
+— but those are same-origin GETs with no body, so both assertions hold and the
+only cost is time. Worth remembering before deferring something again on a guess
+about its cost.
+
+**One batch was 25 tools in one pass because of one change to the harness:** a `Case` may name the testid of the element the file input sits
 *inside* (`within: true`) rather than the input's own. Almost every tool puts a
 testid on its dropzone and none on the `<input>`, so reaching in through the
 container covered twenty of them **without editing twenty product files for the

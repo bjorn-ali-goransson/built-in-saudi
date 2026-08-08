@@ -907,3 +907,21 @@ the spec cannot do yet, and are worth naming rather than leaving as a number:
 - **Worth considering later:** the same checks over an uploaded `.html` file
   rather than a paste, which would need a row in the privacy `CASES` list.
 
+### Code sweep, 8 August 2026 (fifth pass) — the privacy list is empty
+
+**64 of 66 file-taking tools proved, 0 unproved**, the other 2 declared as
+sending data by design. Product principle #1 is now tested on every page that
+claims it.
+
+Three inputs needed a `data-testid` added (`svg-file`, `qr-logo-file`, and
+earlier `ps-file`/`p2i-file`); everything else was reachable through the
+dropzone that wraps it.
+
+Still open elsewhere:
+
+- `csv-json` carries its own private `parseCsv` rather than `lib/csv`.
+- `pdf-merge` and `pdf-organise` have the encrypted-vs-unreadable copy but only
+  `pdf-split` renders the route to `pdf-to-text`; six more tools load pdf-lib
+  directly and never see the reason at all.
+- The five known misses on held-out set #2, deliberately unfixed.
+
