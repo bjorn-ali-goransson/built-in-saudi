@@ -844,3 +844,17 @@ set #3:
   Arabic: the fix that worked for the vCard pair was indexing the directional
   phrase, and neither PDF tool does.
 
+### CV evals, 8 August 2026 (fifth pass) — the untested export
+
+Key still 401. `evals/docxguard.mjs` now guards the exported Word file, which
+had no test of any kind despite being one of three documents the tool gives a
+candidate. Six gates in `evals/check.mjs`.
+
+Nothing new is open on the deterministic side of the CV pipeline. The prompt
+experiments still need a key, unchanged in priority:
+
+1. Grade `impact` per-ROLE rather than per-line density.
+2. Target the question budget at unquantified roles.
+3. Only then consider enlarging it.
+4. Re-run `perfect.mjs` and `gameable.mjs`.
+

@@ -255,6 +255,35 @@ Android every one used to be a dead end. `libheif-js` (wasm) fills the gap:
   `pillow-heif`). ffmpeg cannot make one — its mp4 muxer with `-brand heic` writes an
   HEVC video container that libheif rejects.
 
+## The exported .docx had no test at all (`evals/docxguard.mjs`)
+
+`pdfguard` exists because the PDF path carried two silent catastrophic bugs for
+as long as nobody looked. The Word export is a **hand-written Office Open XML
+writer** with no dependency, it is the THIRD document the tool hands a
+candidate, and until now nothing tested it. Same argument, same force.
+
+It is now a gate in `evals/check.mjs`, and **verified to fail**: removing the
+XML escaper trips three checks.
+
+Two decisions in how it checks, both about not fooling itself:
+
+- **The structural checks do NOT go through our own reader.** It round-trips
+  through `src/lib/docx.ts`, and two hand-written implementations agreeing is
+  weaker evidence than one being right — a shared misconception would satisfy
+  both. So the ZIP parts and the XML escaping are read off the raw bytes, and
+  the round-trip only answers "does the content survive".
+- **It does not assert `word/_rels/document.xml.rels`.** The first version did,
+  and failed on a perfectly valid file: that part is required only when
+  `document.xml` carries relationship references (images, hyperlinks, an
+  external style part), and this writer emits none. **A check asserting a
+  requirement nobody verified is just a wrong test.**
+
+And a lesson worth keeping alongside the vacuous-green one: **a guard can be
+vacuously RED.** Its first run reported all eight content checks failing against
+a file that was completely fine, because the reader's field is `text` and the
+guard asked for `body`. The only reason that was cheap to find is that it
+printed the string it went looking for.
+
 ## The exported CV PDF must survive machine reading (#249)
 
 **`node evals/pdfguard.mjs` checks both of the failures below with NO API key**
