@@ -821,8 +821,8 @@ Still open, and still needing a key, in this order:
   `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`, `pdf-sign` and
   `pdf-compress` load pdf-lib directly rather than through `PdfOps`, so they
   never see `why` at all.
-- **Still open:** 32 tools remain on the `UNVERIFIED` privacy list, and
-  `csv-json` still carries its own private `parseCsv`.
+- **Privacy list: 57 proved of 66, 7 unproved.** `csv-json` still carries its
+  own private `parseCsv`.
 
 ### Held-out set #2, 8 August 2026 — baseline and known misses
 
@@ -869,4 +869,18 @@ experiments still need a key, unchanged in priority:
   that a business below the lowest threshold is told "not yet", never "never".
 - **Waves 1–22 stay unenumerated** until their thresholds can be verified. Do
   not fill them in from a blog table.
+
+### Code sweep, 8 August 2026 (fourth pass)
+
+The privacy guard is at **57 proved of 66**. The seven left each need something
+the spec cannot do yet, and are worth naming rather than leaving as a number:
+
+- `image-format-converter` — its file input has no enclosing testid at all, so
+  it needs one adding to the product.
+- `image-to-text` and `pdf-ocr`'s OCR path pull the tesseract models; they will
+  be slow and belong in a pass of their own.
+- `sheet-diff` builds its testid dynamically per side.
+- `svg-editor` — the only testid near its input is `svg-clear`.
+- `xlsx-convert` and `zatca-qr` — `zq-camera` is the camera input, not the file
+  one; find the right testid rather than guessing.
 

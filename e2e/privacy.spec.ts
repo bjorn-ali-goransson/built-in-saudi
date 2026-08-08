@@ -59,7 +59,19 @@ async function tokenPdf(): Promise<Buffer> {
 }
 
 interface Case {
-  id: string; testid: string; name: string; mime: string
+  id: string
+  /**
+   * The file input's own testid, OR — when it has none — the testid of the
+   * element it sits inside, with `within: true`.
+   *
+   * Most tools put a testid on the dropzone and none on the `<input>` itself.
+   * Reaching in through the container covers twenty of them without editing
+   * twenty product files for the sake of a test, and it is no more fragile: the
+   * dropzone testid is the thing those tools' own specs already click.
+   */
+  testid: string
+  within?: boolean
+  name: string; mime: string
   make: () => Promise<Buffer> | Buffer
   /**
    * Some tools keep the file input behind a mode or tab, so it is not on the
@@ -193,6 +205,51 @@ const CASES: Case[] = [
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'video-frames', testid: 'vf-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
 
+  // --- Second batch off the UNVERIFIED list. These twenty reach the input
+  // through the dropzone that wraps it, which is what let the batch be this
+  // size without touching twenty product files.
+  { id: 'image-compressor', testid: 'imgcomp-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'image-cropper', testid: 'crop-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'image-rearrange', testid: 'rearr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'image-redact', testid: 'redact-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'images-to-pdf', testid: 'i2p-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'image-to-ascii', testid: 'ascii-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'meme-generator', testid: 'meme-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'metadata-remove', testid: 'mr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'remove-background', testid: 'rmbg-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'steganography', testid: 'stego-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'favicon-generator', testid: 'favicon-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'qr-reader', testid: 'qr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'pdf-compress', testid: 'cmp-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-edit', testid: 'edit-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-fill', testid: 'fill-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-merge', testid: 'pm-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-sign', testid: 'sign-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-split', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-to-images', testid: 'p2i-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'file-encrypt', testid: 'fe-drop', within: true, name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN) },
+  {
+    id: 'hash-generator', testid: 'hash-drop', within: true,
+    name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN),
+    // Hashes TEXT by default; the dropzone only exists in file mode. Caught by
+    // the input never appearing, which is the right failure — a container that
+    // is not on the page is indistinguishable from a wrong selector until you
+    // look.
+    reveal: async (page) => {
+      await expect(async () => {
+        await page.getByTestId('hash-mode-file').click()
+        await expect(page.getByTestId('hash-drop')).toBeVisible({ timeout: 1000 })
+      }).toPass({ timeout: 15000 })
+    },
+  },
+  { id: 'cert-decoder', testid: 'cd-file', name: 'cert.pem', mime: 'application/x-pem-file', make: () => Buffer.from(`-----BEGIN CERTIFICATE-----
+${TOKEN}
+-----END CERTIFICATE-----
+`) },
+  { id: 'video-audio', testid: 'va-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
+  { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
+  { id: 'video-trim', testid: 'vt-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
+
   // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
   // 65 tools take a file and 17 were proved; these are the next 14. Chosen
   // because their fixtures are shapes this file already builds — the image,
@@ -273,7 +330,10 @@ for (const c of CASES) {
 
     await page.goto(`/en/apps/${c.id}`)
     if (c.reveal) await c.reveal(page)
-    await page.getByTestId(c.testid).setInputFiles({ name: c.name, mimeType: c.mime, buffer: await c.make() })
+    const input = c.within
+      ? page.getByTestId(c.testid).locator('input[type="file"]')
+      : page.getByTestId(c.testid)
+    await input.setInputFiles({ name: c.name, mimeType: c.mime, buffer: await c.make() })
     // Give the tool time to do its work — and to make a request if it were going to.
     await page.waitForTimeout(1500)
 

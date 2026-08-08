@@ -35,17 +35,12 @@ const SENDS_DATA = new Set([
  *
  * Measured 8 August 2026: of 65 tools that take a file, 17 were proved and 46
  * were not — so the claim on those 46 pages rested on nobody having made a
- * mistake. The first batch of 14 took it to 31 proved. Work it down; do not
+ * mistake. Two batches have taken it to 57 proved of 66. Work it down; do not
  * add to it without a reason.
  */
 const UNVERIFIED = new Set([
-  'cert-decoder', 'favicon-generator', 'file-encrypt', 'hash-generator',
-  'image-compressor', 'image-cropper', 'image-format-converter', 'image-rearrange',
-  'image-redact', 'images-to-pdf', 'image-to-ascii', 'image-to-text', 'meme-generator',
-  'metadata-remove', 'pdf-compress', 'pdf-edit', 'pdf-fill', 'pdf-merge', 'pdf-sign',
-  'pdf-split', 'pdf-to-images', 'qr-code', 'qr-reader', 'remove-background', 'sheet-diff',
-  'steganography', 'svg-editor', 'video-audio', 'video-gif', 'video-trim', 'xlsx-convert',
-  'zatca-qr',
+  'image-format-converter', 'image-to-text', 'qr-code', 'sheet-diff', 'svg-editor',
+  'xlsx-convert', 'zatca-qr',
 ])
 
 const root = process.cwd()

@@ -833,10 +833,16 @@ file input and demands each be classified: proved in `CASES`, listed in
 NOT be asserted), or listed in `UNVERIFIED` — believed client-side, nobody has
 proved it. Measured 8 August 2026: **65 tools take a file, 17 were proved, 46
 were not.** A new tool with a file input now fails the build until classified.
-The first batch took it to **31 proved, 32 unproved** — the image, PDF, audio
-and archive families, chosen because their fixtures are shapes the spec already
-builds rather than because they were the tools most recently written, which is
-how the list got short in the first place.
+Two batches have taken it to **57 proved, 7 unproved** — chosen by family
+rather than by recency, which is how the list got short in the first place.
+
+**The second batch was 25 tools in one pass because of one change to the
+harness:** a `Case` may name the testid of the element the file input sits
+*inside* (`within: true`) rather than the input's own. Almost every tool puts a
+testid on its dropzone and none on the `<input>`, so reaching in through the
+container covered twenty of them **without editing twenty product files for the
+sake of a test** — and it is no more fragile, because the dropzone testid is
+what those tools' own specs already click.
 
 Two things that batch taught:
 
