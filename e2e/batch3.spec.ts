@@ -287,6 +287,30 @@ test.describe('a locked PDF is named as such, and routed', () => {
     await expect(page.getByTestId('ps-to-text')).toBeVisible()
   })
 
+  test('pdf-merge names the locked file and offers the way out', async ({ page }) => {
+    // It had the copy and never rendered it: only pdf-split showed the route.
+    await page.goto('/en/apps/pdf-merge')
+    await page.getByTestId('pm-drop').locator('input[type="file"]')
+      .setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('pm-to-text')).toBeVisible()
+  })
+
+  test('pdf-organise names the lock, and does not blame a damaged file on one', async ({ page }) => {
+    // It cannot take the password even if asked: pdf-lib writes the rearranged
+    // file and cannot decrypt. So the honest move is the route, not a prompt.
+    await page.goto('/en/apps/pdf-organise')
+    await page.getByTestId('po-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('po-to-text')).toBeVisible()
+    await expect(page.getByTestId('file-error')).toContainText('password-protected')
+
+    // A file that is not a PDF at all must NOT be reported as locked — that was
+    // the old copy's single message for every failure.
+    await page.reload()
+    await page.getByTestId('po-file').setInputFiles('e2e/fixtures/diff-small.png')
+    await expect(page.getByTestId('file-error')).toBeVisible()
+    await expect(page.getByTestId('po-to-text')).toHaveCount(0)
+  })
+
   test('a corrupt PDF is not called password-protected', async ({ page }) => {
     // The distinction the worker's `why` exists for: before it, both failures
     // produced the same message and neither could be acted on.

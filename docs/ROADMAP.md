@@ -816,13 +816,45 @@ Still open, and still needing a key, in this order:
 - ~~**`pdf-to-images` takes a password.**~~ Done, at both pdf.js call sites.
 - ~~**The pdf-lib tools fail generically on an encrypted PDF.**~~ They now
   distinguish encrypted from unreadable and route to `pdf-to-text`.
-- **Still open:** `pdf-merge` and `pdf-organise` have the new copy but only
-  `pdf-split` renders the route; the other two need the same two lines.
-  `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`, `pdf-sign` and
-  `pdf-compress` load pdf-lib directly rather than through `PdfOps`, so they
-  never see `why` at all.
+- ~~**`pdf-merge` and `pdf-organise` have the copy and never render it.**~~
+  Both now distinguish and route (9 Aug 2026). `pdf-merge` reads
+  `PdfOps.lastFailure`; `pdf-organise` reads pdf.js's `PasswordException`,
+  because it renders thumbnails before pdf-lib is involved — and it deliberately
+  does not offer to take the password, since pdf-lib still could not write the
+  result and the offer would fail at save.
+- **Still open:** `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`,
+  `pdf-sign` and `pdf-compress` load pdf-lib directly rather than through
+  `PdfOps`, so they never see `why` at all. Six tools, one shared fix: route the
+  load through `PdfOps` or lift the message-sniff into a helper both can call.
 - ~~**`csv-json` carries its own private `parseCsv`.**~~ Fixed — it was
   mishandling a BOM and assuming a comma.
+
+### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
+
+Three tools have now been caught with an Arabic name that does not CONTAIN the
+word a person types — `فاتورة` (the name was the plural `الفواتير`), `ترجمة`
+(the agent noun `المترجم`), `كلمة مرور` (the plural `كلمات المرور`). All three
+were found by accident, by a held-out query happening to cover them, so the
+obvious move was a harness that sweeps all 241 Arabic names for the pattern.
+
+**It was built, measured across three tightenings, and deleted.** It could not
+separate signal from noise at any of them:
+
+| version | rule | "misses" | verdict |
+|---|---|---|---|
+| v1 | strip `ات`/`ين`, does the singular still find the tool | 98 / 241 | noise — the dual rule invented non-words (`تبا` from `التباين`) |
+| v2 | drop `ين`, strip the `و`, report only rank 3+ | 25 | dominated by `ملفة`, which is not a word: the singular of `ملفات` is the masculine `ملف` |
+| v3 | generate both candidate singulars, findable by either passes | 11 | almost all `ملف` ranking 3rd for tools whose names contain "files" — which is CORRECT for a generic word |
+
+The reason is structural rather than a bug in the rules: **Arabic plurals are
+mostly broken, and a broken plural is not derivable from its singular by any
+suffix rule.** The one plural that IS derivable by suffix (the sound feminine
+`ات`) yields, in this catalogue, generic words like "file" and "image" whose
+third place is the right answer. A harness whose every finding needs a human to
+overturn it is not a guard.
+
+**What actually catches this class of defect is a held-out query set**, which is
+what caught all three. Write one rather than reaching for a sweep.
 
 ### Held-out set #2, 8 August 2026 — baseline and known misses
 

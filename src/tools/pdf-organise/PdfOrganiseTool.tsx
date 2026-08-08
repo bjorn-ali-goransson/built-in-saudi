@@ -24,7 +24,9 @@ const STR = {
     empty: 'Every page has been removed — there is nothing left to save.',
     rotateAll: 'Turn every page',
     hint: 'Drag a page to move it, or use the arrows. Changes apply when you save.',
-    error: 'That PDF could not be opened. A password-protected file will not open here.',
+    error: 'That PDF could not be opened. The file may be damaged, or it may not be a PDF at all.',
+    locked: 'That PDF is password-protected. Its pages cannot be rearranged here even with the password, because the library that writes the new file cannot decrypt one.',
+    toText: 'Open it in PDF to Text',
     again: 'Choose another PDF',
     quality: 'Pages are copied, not re-drawn. Text stays text, a scan stays exactly the scan it was, and the file is the same size it should be — the only things that change are the order, the rotation, and which pages are there.',
   },
@@ -41,7 +43,9 @@ const STR = {
     empty: 'حُذفت كل الصفحات — لم يبق شيء ليُحفظ.',
     rotateAll: 'أدر كل الصفحات',
     hint: 'اسحب الصفحة لنقلها، أو استخدم الأسهم. وتُطبَّق التغييرات عند الحفظ.',
-    error: 'تعذّر فتح ملف PDF هذا. والملف المحمي بكلمة مرور لن يُفتح هنا.',
+    error: 'تعذّر فتح ملف PDF هذا. قد يكون تالفًا، أو قد لا يكون ملف PDF أصلًا.',
+    locked: 'هذا الملف محمي بكلمة مرور. ولا يمكن ترتيب صفحاته هنا حتى مع كلمة المرور، لأن المكتبة التي تكتب الملف الجديد لا تفك التشفير.',
+    toText: 'افتحه في أداة PDF إلى نص',
     again: 'اختر ملفًا آخر',
     quality: 'تُنسخ الصفحات ولا يُعاد رسمها. فيبقى النص نصًا، وتبقى الصورة الممسوحة كما هي تمامًا، ويبقى حجم الملف كما ينبغي — ولا يتغير إلا الترتيب والاتجاه وأي الصفحات موجودة.',
   },
@@ -56,6 +60,7 @@ export default function PdfOrganiseTool() {
   const [slots, setSlots] = useState<Slot[]>([])
   const [busy, setBusy] = useState<'' | 'read' | 'save'>('')
   const [error, setError] = useState('')
+  const [locked, setLocked] = useState(false)
   const [drag, setDrag] = useState<number | null>(null)
   const opsRef = useRef<PdfOps | null>(null)
 
@@ -67,7 +72,7 @@ export default function PdfOrganiseTool() {
 
   async function pick(f: File | undefined | null) {
     if (!f) return
-    setError('')
+    setError(''); setLocked(false)
     setBusy('read')
     try {
       const rendered = await renderPdf(await f.arrayBuffer(), 1)
@@ -76,8 +81,16 @@ export default function PdfOrganiseTool() {
       setPages(rendered)
       setSlots(rendered.map((_, i) => ({ from: i, rotate: 0 })))
       setWorkInProgress(WIP, true)
-    } catch {
-      setError(s.error)
+    } catch (e) {
+      // Every failure used to say "a password-protected file will not open
+      // here", so a damaged file was blamed on a password it does not have.
+      // pdf.js names this one; unlike pdf-to-images we do NOT offer to take the
+      // password, because pdf-lib writes the rearranged file and cannot decrypt
+      // one — accepting it would let someone reorder forty pages and fail at
+      // save. The route below leads somewhere that can use it.
+      const why = (e as { name?: string } | null)?.name
+      if (why === 'PasswordException') { setLocked(true); setError(s.locked) }
+      else setError(s.error)
     } finally { setBusy('') }
   }
 
@@ -125,6 +138,9 @@ export default function PdfOrganiseTool() {
 
       {busy === 'read' && <p className="flex items-center gap-2 text-ink-faint rtl:font-ar" data-testid="po-reading"><Spinner /> {s.reading}</p>}
       {error && <FileError message={error} />}
+      {locked && (
+        <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="po-to-text">{s.toText}</Button>
+      )}
 
       {file && pages.length > 0 && (
         <>

@@ -1606,6 +1606,25 @@ usefully. Three things were wrong before:
 the callers already treat null as "it did not work", and only the ones that want
 to say something better need to look.
 
+**The copy existed for a while before it was rendered anywhere but `pdf-split`.**
+`pdf-merge` carried a `toText` string that nothing displayed, and `pdf-organise`
+had the pre-fix single message — "a password-protected file will not open here"
+— on *every* failure, so a damaged file was still blamed on a password it does
+not have. Both now distinguish and both route. Two things worth keeping:
+
+- **`pdf-organise` learns the reason from pdf.js, not from `PdfOps`**, because
+  it reads its thumbnails with pdf.js before pdf-lib ever sees the file. The
+  marker is `e.name === 'PasswordException'`.
+- **It deliberately does NOT offer to take the password**, unlike
+  `pdf-to-images`. pdf.js would render the thumbnails happily and pdf-lib still
+  cannot write the rearranged file, so accepting it would let someone reorder
+  forty pages and fail at save. A tool that can only do half the job with the
+  password should ask for the password for neither half.
+
+The e2e drives the locked fixture AND a PNG through `pdf-organise`, since a
+guard that only ever sees a locked file cannot tell "names the lock" from "calls
+everything locked", which is the bug it exists to prevent.
+
 ## OCR (`image-to-text`, `pdf-ocr`)
 
 The one tool with a genuinely heavy dependency — `tesseract.js`, because there is

@@ -4,7 +4,7 @@ import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Stack, Button } from '../../components/ui'
 import { PdfOps } from '../../lib/pdfOps'
 
-interface Item { id: string; file: File; pages: number | null; error?: boolean }
+interface Item { id: string; file: File; pages: number | null; error?: boolean; encrypted?: boolean }
 
 const STR = {
   en: {
@@ -48,7 +48,12 @@ export default function PdfMergeTool() {
     opsRef.current ??= new PdfOps()
     for (const it of fresh) {
       const n = await opsRef.current.pageCount(it.file)
-      setItems((cur) => cur.map((x) => x.id === it.id ? (n === null ? { ...x, pages: 0, error: true } : { ...x, pages: n }) : x))
+      // Every failure used to read "locked / encrypted", so a corrupt file was
+      // called password-protected. The worker reports which now.
+      const why = opsRef.current.lastFailure
+      setItems((cur) => cur.map((x) => x.id === it.id
+        ? (n === null ? { ...x, pages: 0, error: true, encrypted: why === 'encrypted' } : { ...x, pages: n })
+        : x))
     }
   }
   function move(i: number, d: -1 | 1) {
@@ -69,6 +74,8 @@ export default function PdfMergeTool() {
     } finally { setBusy(false) }
   }
 
+  const anyEncrypted = items.some((i) => i.encrypted)
+
   return (
     <Stack data-testid="pdf-merge">
       <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="pm-drop" onClick={() => fileRef.current?.click()}
@@ -86,7 +93,7 @@ export default function PdfMergeTool() {
                 <div className="flex-1 min-w-0">
                   <div className="truncate text-[0.9rem]">{it.file.name}</div>
                   <div className={`text-[0.78rem] ${it.error ? 'text-[color:var(--danger)]' : 'text-ink-faint'}`}>
-                    {it.error ? s.locked : it.pages === null ? '…' : `${it.pages} ${s.pages}`}
+                    {it.error ? (it.encrypted ? s.locked : s.unreadable) : it.pages === null ? '…' : `${it.pages} ${s.pages}`}
                   </div>
                 </div>
                 <Button className="px-2 min-w-[2rem] justify-center" aria-label={s.up} disabled={i === 0} onClick={() => move(i, -1)}>↑</Button>
@@ -98,6 +105,12 @@ export default function PdfMergeTool() {
 
           <p className="text-ink-soft text-[0.9rem]" data-testid="pm-total">{s.total}: <span className="font-semibold">{total}</span> {s.pages}</p>
           {anyLocked && <p className="text-[color:var(--danger)] text-[0.9rem]">{s.someLocked}</p>}
+          {anyEncrypted && (
+            // pdf-lib cannot open an encrypted PDF at all, but pdf.js can with
+            // the password the reader already has. A refusal with nowhere to go
+            // is a dead end; this is the same route pdf-split offers.
+            <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="pm-to-text">{s.toText}</Button>
+          )}
 
           <div className="flex gap-2 items-center">
             {!out ? (
