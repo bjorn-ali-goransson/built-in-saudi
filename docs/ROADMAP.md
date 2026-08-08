@@ -645,3 +645,27 @@ Next, in order, when a working key exists:
 - **Sweep the privacy `CASES` list against a grep, not against memory.**
   `csv-merge` had always taken a file and was never listed. That is the second
   time this list has been found short.
+
+### CV evals, 8 August 2026 (second pass) — the unit mismatch
+
+`OPENAI_KEY` still 401. Measured without it (`node evals/roleimpact.mjs`):
+
+**`impact` grades bullets; the improve loop asks about roles; a role holds 9.9
+claim-like lines.** So a perfect run of the loop moves the graded quantity by
+5.8pp (11.2% → 17.0%) while moving role coverage by 57.9pp (42.1% → 100%). The
+loop is not underperforming — it is measured in the wrong unit, which explains
+the +0.38 already recorded.
+
+Revised order for when a key exists:
+
+1. **Change the `impact` anchor to grade per-ROLE coverage** — does every role
+   carry at least one concrete, attributable number? — rather than per-line
+   density. Judge before/after. This also removes an incentive toward the
+   padding failure mode that `evals/gameable.mjs` exists to catch, since a
+   density target is precisely what rewards inventing a percentage per bullet.
+2. **Then** target the question budget at unquantified roles (+11.1pp coverage,
+   no extra questions), as measured in the first pass.
+3. Only after both, consider enlarging the budget.
+4. Re-run `perfect.mjs` and `gameable.mjs` — the scale has been untestable for a
+   while and both guard against it compressing.
+

@@ -107,3 +107,31 @@ const gainTargeted = targetedCovered - naiveCovered
 console.log(`\n=> Targeting the SAME budget reaches ${gainTargeted} more roles (${pct(gainTargeted, needTotal)}pp).`)
 console.log(`=> Raising the budget could reach at most ${needTotal - targetedCovered} beyond that,`)
 console.log(`   and only by asking candidates more questions than they answer today.`)
+
+// --- the ceiling: can this lever move the thing it is graded on? ---
+//
+// `impact` grades how many BULLETS carry a concrete number. The improve loop
+// asks for one headline number per ROLE. Those are different units, and the
+// ratio between them decides whether the strategy can work at all — so it is
+// worth computing rather than assuming, and it needs no model.
+let allClaims = 0
+let allFigures = 0
+for (const r of rows) {
+  for (const role of r.roles) { allClaims += role.claims; allFigures += role.figures }
+}
+// Lines outside any role (header, summary, skills) are counted by
+// quantified.mjs but belong to no role, so they are reported separately rather
+// than quietly folded in — the whole point of this file is that a ratio must
+// have the same denominator on both sides.
+const perRoleLines = allClaims ? (allClaims / all.length).toFixed(1) : '0'
+
+console.log(`\nCLAIM-LIKE LINES INSIDE ROLES: ${allClaims}  (${perRoleLines} per role)`)
+console.log(`  carrying a figure now: ${allFigures}  (${pct(allFigures, allClaims)}%)`)
+
+const bestCase = allFigures + without.length
+console.log(`\nIF THE LOOP WORKED PERFECTLY — one number per unquantified role:`)
+console.log(`  quantified lines: ${allFigures} -> ${bestCase}  (${pct(allFigures, allClaims)}% -> ${pct(bestCase, allClaims)}%)`)
+console.log(`  roles with a figure: ${withFig.length} -> ${all.length}  (${pct(withFig.length, all.length)}% -> 100%)`)
+console.log(`\n=> One number per role moves LINE density by ${(pct(bestCase, allClaims) - pct(allFigures, allClaims)).toFixed(1)}pp,`)
+console.log(`   because a role holds ${perRoleLines} claim-like lines and the loop asks for one.`)
+console.log(`   The same effort moves ROLE coverage by ${(100 - pct(withFig.length, all.length)).toFixed(1)}pp.`)

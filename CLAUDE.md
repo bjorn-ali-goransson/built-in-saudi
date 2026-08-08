@@ -905,6 +905,27 @@ would move the declaration next to the tool and is the better long-term shape;
 it is not done, because it touches twenty metas for a guard the script already
 covers.
 
+## The six ATS dimensions are written down three times
+
+Client `ATS_DIMS` (which drives the radar), server `ATS_DIMENSIONS`, and the
+JSON shape inside `SCORE_SYSTEM` itself. Nothing checked they agreed, and the
+failure is silent AND misleading rather than merely silent: the radar reads
+`scores[ATS_DIMS[i].key] || 0`, so a dimension renamed on the server makes the
+client read `undefined`, fall back to **0**, and draw that axis at the origin —
+where `heat()` paints it bright red. The candidate is shown a confident failing
+score on a dimension that actually scored fine.
+
+`scripts/check-ats-dims.mjs` (in `prebuild`, and a gate in `evals/check.mjs`)
+fails the build on any disagreement, and is **verified to fail** by renaming a
+dimension in each file in turn.
+
+Writing it produced the usual lesson in miniature: the first version anchored on
+the first `Return ONLY JSON:` in `cvPrompts.js` — there are three, and the
+rebuild prompt's comes first — so it compared `[cv]` against the six dimensions
+and failed on a clean tree. Loudly wrong beat quietly wrong, but it is the same
+class of error as a vacuous green. **Anchor to the thing you mean, not to the
+first thing that looks like it.**
+
 ## Evals (`evals/`)
 
 Offline harness for the CV optimizer — the only honest way to answer "did this
@@ -1039,6 +1060,36 @@ beyond that, and only by asking more. Target first, enlarge second; and the
 targeting is decidable from the CV, so it need not be left to the model to
 notice. Both are prompt changes and still need the judge to confirm they move
 `impact`.
+
+**The bigger finding: the loop pulls a ROLE-shaped lever and is graded on LINE
+density.** `impact` grades how many *bullets* carry a concrete number; the
+improve loop asks for one headline number per *role*. Those are different units,
+and the ratio between them is a property of the corpus, so it is computable with
+no model (`node evals/roleimpact.mjs`):
+
+| | |
+|---|---|
+| claim-like lines inside roles | 1392 — **9.9 per role** |
+| carrying a figure now | 156 — 11.2% |
+| **if the loop worked perfectly** (one number per unquantified role) | 237 — **17.0%** |
+| the same effort, measured as ROLE coverage | 42.1% → **100%** |
+
+So a perfect run of the loop moves the graded quantity by **5.8pp**, because it
+adds one line to a role that holds ten. The same candidate effort moves role
+coverage by **57.9pp** — about ten times the leverage. That is consistent with
+the +0.38 on `impact` already recorded: the loop is not underperforming, it is
+being measured in the wrong unit.
+
+**The recommendation, and why it is not rubric-gaming.** Grading per-ROLE
+coverage ("does every role carry at least one concrete, attributable number?")
+instead of per-line density is not a softer test — it is a better one. Per-line
+density actively rewards the failure mode already patched once: `impact` was
+gameable by bolting invented percentages onto every bullet, which is exactly
+what a density target pushes a candidate toward. Role coverage asks for one real
+figure per job and cannot be satisfied by padding. It also aligns what we ask
+the candidate for with what we grade them on, which is currently a mismatch.
+
+Still a prompt change, so it still needs the judge before it can be believed.
 
 The three harnesses share one set of detectors (`evals/lib/cvfacts.mjs`).
 They were duplicated while each answered its own question and stopped being
