@@ -13,6 +13,15 @@ const reg = readFileSync(`${ROOT}/src/tools/index.ts`, 'utf8')
 const dirs = readdirSync(`${ROOT}/src/tools`).filter(
   (d) => existsSync(`${ROOT}/src/tools/${d}/meta.ts`) && reg.includes(`'./${d}/meta'`),
 )
+// Mirrors CATEGORY_LABELS in src/i18n/index.tsx — the UI scores against the
+// localized label as well as the English one.
+const AR_CATEGORY = {
+  Generators: 'مولّدات', Images: 'صور', Design: 'تصميم', Converters: 'محوّلات',
+  Developer: 'أدوات المطوّرين', Web: 'الويب', Text: 'نصوص', Calculators: 'حاسبات',
+  PDF: 'PDF', Business: 'أعمال', Communication: 'تواصل', Files: 'ملفات',
+  Utilities: 'أدوات', 'Saudi / Local': 'أدوات سعودية',
+}
+
 const tools = []
 for (const d of dirs) {
   const src = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
@@ -20,12 +29,19 @@ for (const d of dirs) {
   const pick = (k) => (new RegExp(`${k}: '((?:[^'\\\\]|\\\\.)*)'`).exec(src)?.[1] ?? '')
   const kwBlock = /keywords: \[([\s\S]*?)\]/.exec(src)?.[1] ?? ''
   const keywords = [...kwBlock.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1])
+  // The UI passes the localized AND English tagline/category joined together
+  // (see AppLauncher). Passing only the English ones measured a scorer the site
+  // does not run: "stopwatch" returned nothing here and one result in the
+  // browser, because an Arabic tagline it never saw contained the subsequence.
+  const arBlock = /ar:\s*\{([\s\S]*?)\n  \}/.exec(src)?.[1] ?? ''
+  const arPick = (k) => (new RegExp(`${k}:\\s*'((?:[^'\\\\]|\\\\.)*)'`).exec(arBlock)?.[1] ?? '')
+  const category = pick('category')
   tools.push({
     id: pick('id'),
     name: pick('name'),
     nameAr: pick('nameAr'),
-    tagline: pick('tagline'),
-    category: pick('category'),
+    tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
+    category: `${AR_CATEGORY[category] ?? category} ${category}`.trim(),
     keywords,
   })
 }

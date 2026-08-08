@@ -133,7 +133,13 @@ export function scoreTool(query: string, tool: Searchable): number {
   const whole = bestField(query, tool)
 
   const list = terms(query)
-  if (list.length < 2) return whole
+  // One surviving term is where the stop-word filtering EARNS its place, and
+  // it used to be where the filtering was thrown away: this returned `whole`,
+  // the score of the full query with the stop words still in it. So "make a
+  // qr" was matched as the literal string "make a qr" and found NOTHING, while
+  // a bare "qr" ranked the QR generator first. Same for "my iqama". Measured
+  // over 32 untuned queries, this was 2 of the 4 that returned nothing at all.
+  if (list.length < 2) return Math.max(whole, list.length === 1 ? bestField(list[0], tool) : 0)
 
   let sum = 0
   let matched = 0

@@ -199,3 +199,25 @@ test('and by their Arabic names', async ({ page }) => {
     await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
   }
 })
+
+// Found by measuring queries the bench had never seen: when stop-word removal
+// left ONE term, the scorer threw the filtering away and matched the whole
+// query, stop words included. So a bare "qr" ranked the generator first while
+// "make a qr" found nothing at all.
+
+test('a query that is one real word plus filler still finds the tool', async ({ page }) => {
+  await search(page, 'make a qr')
+  await expect(page.getByTestId('tool-qr-code')).toBeVisible()
+
+  await search(page, 'my iqama')
+  await expect(page.getByTestId('tool-id-expiry')).toBeVisible()
+})
+
+test('the filler words do not dilute the ranking either', async ({ page }) => {
+  // Not merely findable — FIRST. The one real word has to carry the query, or
+  // the fix would just be trading one kind of wrong answer for another.
+  await search(page, 'make a qr')
+  await expect(top(page)).toContainText(/qr/i)
+  await search(page, 'qr')
+  await expect(top(page)).toContainText(/qr/i)
+})

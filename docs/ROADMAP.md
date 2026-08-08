@@ -528,3 +528,11 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
 - **Still open:** final exit rules and their timing; the Muqeem/Absher status
   checks (they need an account, so nothing to compute); dependant fee planning,
   which overlaps the levy idea from the first sweep.
+
+### Measured gap, 8 August 2026
+
+- **A stopwatch.** `countdown` counts down and `pomodoro` runs intervals;
+  nothing counts up. Found by measuring untuned queries rather than by asking
+  what was missing — "stopwatch" is a thing people type and we genuinely do not
+  have it. Deliberately NOT solved by adding the word to another tool's
+  keywords.

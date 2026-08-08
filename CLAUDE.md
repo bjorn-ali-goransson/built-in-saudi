@@ -1019,6 +1019,28 @@ which reads more naturally as a label anyway. Bench: **top-1 93% → 95%** over
 101 queries. **When adding a tool, check the Arabic name contains the word
 somebody would type, not a grammatical relative of it.**
 
+**A bench only contains queries somebody thought of**, which is the sample most
+likely to flatter the scorer. Measured against **32 untuned queries** — brand
+names used as verbs, the wrong word for the right thing, near-misses — **4
+returned nothing at all**, and two of those were one bug:
+
+- **When stop-word removal left ONE term, the filtering was thrown away.**
+  `scoreTool` returned the score of the whole query, stop words included, so
+  `make a qr` was matched as the literal string "make a qr" and found nothing
+  while a bare `qr` ranked the generator first. `my iqama` failed the same way.
+  Fixed; untuned zero-results **4 → 2**, bench unchanged at 95% / 100%.
+- The remaining two are **correct**: `photoshop` is a product we do not imitate,
+  and `stopwatch` is a tool we do not have (the countdown counts down). Stuffing
+  either word into a tool that does something else is the adware-site move, and
+  the roadmap records the stopwatch as a gap instead.
+
+**`evals/searchbench.mjs` now passes the fields the UI passes** — the localized
+AND English tagline and category, joined, as `AppLauncher` does. It previously
+passed the English ones only, so it measured a scorer the site does not run:
+`stopwatch` returned nothing in the bench and one result in the browser, because
+of an Arabic tagline the bench never saw. The headline numbers did not move, but
+the measurement is now faithful rather than approximately faithful.
+
 `e2e/search.spec.ts` freezes the cases that failed, in both rounds.
 
 **The catalogue's SHAPE is the other half of findability, and it is measurable
