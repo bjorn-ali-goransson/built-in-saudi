@@ -751,3 +751,14 @@ Next, in order:
 - **Lossless unlock stays parked.** Revisit only if `qpdf-wasm` proves small and
   maintained; the bar is the one HEIC cleared, not lower.
 
+### Code sweep, 8 August 2026 (second pass)
+
+- ~~**`pdf-ocr` takes a password.**~~ Done, for free — it shares
+  `pdf-to-text`'s extractor. The prompt is now `components/ui/PdfPassword.tsx`.
+- **Saudi rule tools are badged beta**, enforced by
+  `scripts/check-saudi-beta.mjs` and shown on the tool page rather than only as
+  an unlabelled dot in the catalogue.
+- **Still open:** `pdf-to-images` (two pdf.js call sites) and the eight pdf-lib
+  tools, which need a byte sniff for `/Encrypt` and a route to `pdf-to-text`
+  rather than a generic failure.
+

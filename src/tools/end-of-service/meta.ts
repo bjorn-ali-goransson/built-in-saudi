@@ -10,7 +10,7 @@ export const endOfServiceTool: Tool = {
     'Estimate the end-of-service gratuity (mukāfaʾat nihāyat al-khidma) under the Saudi Labour Law: half a month per year for the first five years and a full month per year thereafter, adjusted for whether you resigned or the contract ended. Based on Articles 84–85 — informational only, not legal advice. Runs entirely in your browser.',
   category: 'Saudi / Local',
   keywords: ['end of service', 'gratuity', 'mukafaa', 'saudi labor law', 'severance', 'مكافأة نهاية الخدمة', 'نظام العمل', 'استقالة'],
-  status: 'stable',
+  status: 'beta',
   Icon: BriefcaseIcon,
   component: lazyTool(() => import('./EndOfServiceTool')),
   ar: {

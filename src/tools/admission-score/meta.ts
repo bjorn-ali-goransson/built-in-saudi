@@ -14,7 +14,7 @@ export const admissionScoreTool: Tool = {
     'admission', 'weighted percentage', 'qudurat', 'gat', 'tahsili', 'university', 'college', 'score', 'ksu', 'kfupm', 'high school', 'gpa', 'nisbah',
     'النسبة الموزونة', 'القبول', 'القدرات', 'التحصيلي', 'الثانوية', 'جامعة', 'نسبة', 'قياس', 'موزونة',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CalcIcon,
   component: lazyTool(() => import('./AdmissionScoreTool')),
   ar: {

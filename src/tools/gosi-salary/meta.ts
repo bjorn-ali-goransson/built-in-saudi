@@ -14,7 +14,7 @@ export const gosiSalaryTool: Tool = {
     'gosi', 'net salary', 'take home pay', 'salary calculator', 'deduction', 'payroll', 'saned', 'social insurance', 'contribution', 'basic salary', 'housing allowance', 'employer cost',
     'التأمينات', 'التأمينات الاجتماعية', 'صافي الراتب', 'راتب', 'خصم', 'ساند', 'اشتراك', 'مسير رواتب', 'بدل سكن', 'حاسبة الراتب',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CoinsIcon,
   component: lazyTool(() => import('./GosiSalaryTool')),
   ar: {

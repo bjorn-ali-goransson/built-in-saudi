@@ -14,7 +14,7 @@ export const vehicleRenewalTool: Tool = {
     'fahes', 'fahas', 'mvpi', 'periodic inspection', 'istimara', 'vehicle registration', 'renewal', 'car', 'absher', 'expiry', 'due date', 'exemption',
     'الفحص الدوري', 'فحص', 'استمارة', 'تجديد', 'رخصة سير', 'سيارة', 'أبشر', 'انتهاء', 'موعد', 'إعفاء',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CalendarCheckIcon,
   component: lazyTool(() => import('./VehicleRenewalTool')),
   ar: {

@@ -70,20 +70,36 @@ test.describe('pdf to text', () => {
     // (scripts/make-locked-pdf.mjs); pdf-lib cannot make one.
     await page.goto('/en/apps/pdf-to-text')
     await page.getByTestId('p2t-file').setInputFiles('e2e/fixtures/locked.pdf')
-    await expect(page.getByTestId('p2t-locked')).toBeVisible()
+    await expect(page.getByTestId('p2t-lock-panel')).toBeVisible()
     await expect(page.getByTestId('p2t-output')).toHaveCount(0)
 
     // A wrong password is reported AS a wrong password. Repeating "this is
     // locked" would read as though nothing had been tried.
-    await page.getByTestId('p2t-password').fill('not-the-password')
-    await page.getByTestId('p2t-unlock').click()
-    await expect(page.getByTestId('p2t-wrong-password')).toBeVisible()
+    await page.getByTestId('p2t-lock-input').fill('not-the-password')
+    await page.getByTestId('p2t-lock-unlock').click()
+    await expect(page.getByTestId('p2t-lock-wrong')).toBeVisible()
 
     // And the right one reads the text out, on this device.
-    await page.getByTestId('p2t-password').fill('letmein')
-    await page.getByTestId('p2t-unlock').click()
+    await page.getByTestId('p2t-lock-input').fill('letmein')
+    await page.getByTestId('p2t-lock-unlock').click()
     await expect(page.getByTestId('p2t-output')).toHaveValue(/net pay 12345 SAR/)
-    await expect(page.getByTestId('p2t-locked')).toHaveCount(0)
+    await expect(page.getByTestId('p2t-lock-panel')).toHaveCount(0)
+  })
+
+  test('the OCR tool inherits the password ask from the same extractor', async ({ page }) => {
+    // A scanned payslip that is ALSO password-protected is the exact document
+    // this tool is for, and it used to be turned away at the door. Sharing
+    // pdf-to-text's extractor means the capability arrived here for free — the
+    // panel is one component so three tools cannot drift into three answers.
+    await page.goto('/en/apps/pdf-ocr')
+    await page.getByTestId('pk-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('pk-lock-panel')).toBeVisible()
+    await page.getByTestId('pk-lock-input').fill('wrong')
+    await page.getByTestId('pk-lock-unlock').click()
+    await expect(page.getByTestId('pk-lock-wrong')).toBeVisible()
+    await page.getByTestId('pk-lock-input').fill('letmein')
+    await page.getByTestId('pk-lock-unlock').click()
+    await expect(page.getByTestId('pk-lock-panel')).toHaveCount(0)
   })
 
   test('tells you when the PDF is a scan instead of showing an empty box', async ({ page }) => {

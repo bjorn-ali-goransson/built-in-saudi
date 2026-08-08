@@ -16,7 +16,7 @@ export const iqamaFeesTool: Tool = {
     'رسوم الإقامة', 'تجديد الإقامة', 'رسوم المرافقين', 'مرافق', 'مكتب العمل', 'رخصة العمل',
     'تجديد', 'مقيم', 'أبشر', 'جوازات', 'كفيل', 'غرامة التأخير',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CardIcon,
   component: lazyTool(() => import('./IqamaFeesTool')),
   ar: {

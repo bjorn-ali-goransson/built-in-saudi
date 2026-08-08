@@ -14,7 +14,7 @@ export const vatRegistrationTool: Tool = {
     'vat', 'vat registration', 'zatca', 'threshold', 'register', '375000', '187500', 'taxable turnover', 'freelance', 'small business', 'tax', 'rolling 12 months',
     'ضريبة القيمة المضافة', 'التسجيل', 'الزكاة والضريبة', 'حد التسجيل', 'إيرادات', 'عمل حر', 'منشأة صغيرة', 'ضريبة',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: PercentIcon,
   component: lazyTool(() => import('./VatRegistrationTool')),
   ar: {

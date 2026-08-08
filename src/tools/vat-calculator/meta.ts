@@ -11,7 +11,7 @@ export const vatCalculatorTool: Tool = {
     'Add or remove Saudi VAT (15% by default, with 5% and 0% presets or any rate) — see the net, VAT amount and gross in SAR, rounded to the halala, with a copyable breakdown. Bilingual, entirely in your browser.',
   category: 'Calculators',
   keywords: ['vat', 'tax', 'saudi', 'ksa', '15%', 'ضريبة', 'القيمة المضافة', 'حاسبة', 'ضريبة القيمة المضافة'],
-  status: 'stable',
+  status: 'beta',
   Icon: PercentIcon,
   component: lazyTool(() => import('./VatCalculatorTool')),
   ar: {

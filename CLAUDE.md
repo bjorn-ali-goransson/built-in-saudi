@@ -934,6 +934,34 @@ by `e2e/disclaimers.spec.ts` and `scripts/check-disclaimers.mjs`. The SOURCES
 block is the maintainer-facing half — it makes the number auditable rather than
 merely caveated.
 
+## A tool that encodes a Saudi rule is badged BETA
+
+**The badge is an honesty signal, not a maturity one.** These tools are as well
+tested as any on the site; what makes them different is that their output can
+become wrong **without anyone touching the code** — GOSI's pension rate steps
+every July, tariffs and thresholds move, a royal decree lands. Beta says: check
+this against the authority named in the disclaimer before acting on it.
+
+`scripts/check-saudi-beta.mjs` (in `prebuild`, verified to fail) enforces it,
+anchored on something objective: **a logic module carrying a SOURCES block cites
+an authority, therefore its tool must be `status: 'beta'`.** The editorial half —
+tools that satisfy a Saudi requirement without a rule module of their own
+(`vat-calculator`, `zakat-calculator`, `end-of-service`, `id-expiry`,
+`zatca-qr`, `invoice-generator`, `quotation`) — is written down in `EXTRA` with
+a reason each, because it cannot be derived. `NOT_A_RULE` records the deliberate
+exclusions: a naming standard (`saudi-plate`, `short-address`, `saudi-phone`,
+`name-spelling`) is not a rule that can move.
+
+**The badge is on the TOOL PAGE, which is what made it worth doing.** The
+catalogue tile showed only an unlabelled gold dot for a non-stable tool, and the
+tool page showed nothing at all — so a person reading a GOSI figure and deciding
+to act on it would never have seen it. `ToolPage` now renders the `StatusBadge`
+above the tool, in both locales.
+
+One rule worth keeping: **if everything is beta, nothing is.** There is an e2e
+asserting an ordinary tool is NOT badged, so the signal cannot be diluted into
+decoration.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
@@ -1269,9 +1297,20 @@ any step wrong and pdf.js simply refuses the file, so the e2e passing is proof
 the crypto is right. Verified to produce code 1 with no password, the text with
 the right one, and code 2 with a wrong one.
 
-**Still to do:** `pdf-to-images` and `pdf-ocr` use pdf.js too and would take a
-password the same way; the pdf-lib tools (merge, split, stamp…) cannot open an
-encrypted file at all and should say so and route here.
+**`pdf-ocr` inherits it for free**, because it already imported this extractor
+rather than forming a second opinion about encryption — a scanned payslip that
+is *also* locked is the exact document that tool is for, and it used to be
+turned away at the door. The prompt itself is
+`components/ui/PdfPassword.tsx`: extracting it on the second use rather than the
+third is the point, since the wording is the substance here and three tools
+drifting into three answers about where the password goes would be worse than
+the duplication.
+
+**Still to do:** `pdf-to-images` loads through pdf.js at two call sites and
+would take a password the same way. The pdf-lib tools (merge, split, stamp…)
+cannot open an encrypted file at all — pdf-lib throws a plain `Error` whose
+message merely mentions encryption, so detection there should sniff the bytes
+for `/Encrypt` rather than match a string.
 
 ## OCR (`image-to-text`, `pdf-ocr`)
 

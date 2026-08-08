@@ -14,7 +14,7 @@ export const exitReentryTool: Tool = {
     'exit reentry', 'exit re-entry', 'visa fee', 'khuruj', 'iqama', 'travel', 'absher', 'muqeem', 'single visa', 'multiple visa', 'extension', 'expat',
     'خروج وعودة', 'تأشيرة', 'رسوم', 'إقامة', 'سفر', 'أبشر', 'مقيم', 'مفردة', 'متعددة', 'تمديد',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: GlobeIcon,
   component: lazyTool(() => import('./ExitReentryTool')),
   ar: {

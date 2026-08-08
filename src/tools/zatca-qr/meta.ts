@@ -14,7 +14,7 @@ export const zatcaQrTool: Tool = {
     'zatca', 'fatoora', 'invoice', 'qr', 'receipt', 'vat', 'tax', 'e-invoice', 'scan', 'decode', 'tlv',
     'زاتكا', 'فاتورة', 'فاتورة إلكترونية', 'رمز', 'باركود', 'ضريبة', 'القيمة المضافة', 'إيصال', 'مسح',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: ReceiptIcon,
   component: lazyTool(() => import('./ZatcaQrTool')),
   ar: {

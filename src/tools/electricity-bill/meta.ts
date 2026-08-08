@@ -14,7 +14,7 @@ export const electricityBillTool: Tool = {
     'electricity', 'bill', 'sec', 'kwh', 'tariff', 'power', 'energy', 'consumption', 'meter', 'utility', '6000', 'halalas', 'estimate',
     'الكهرباء', 'فاتورة', 'فاتورة الكهرباء', 'تعرفة', 'استهلاك', 'كيلوواط', 'عداد', 'شريحة', 'تقدير',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: BoltIcon,
   component: lazyTool(() => import('./ElectricityBillTool')),
   ar: {

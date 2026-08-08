@@ -14,7 +14,7 @@ export const rentRulesTool: Tool = {
     'rent', 'rent increase', 'rent freeze', 'riyadh', 'ejar', 'lease', 'renewal', 'notice', 'tenant', 'landlord', 'contract', 'rega', '60 days', 'escalation',
     'إيجار', 'زيادة الإيجار', 'تجميد الإيجار', 'الرياض', 'عقد إيجار', 'تجديد', 'إشعار', 'مستأجر', 'مؤجر', 'الهيئة العامة للعقار',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CardIcon,
   component: lazyTool(() => import('./RentRulesTool')),
   ar: {

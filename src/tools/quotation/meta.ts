@@ -11,7 +11,7 @@ export const quotationTool: Tool = {
     'Write a quotation, a proforma invoice or a payment receipt, bilingual and ready to print or save as PDF. Line items, 15% VAT, your terms, and the fields each document actually needs — a validity date on a quote, a payment method and reference on a receipt. It also says plainly what these documents are not: neither is a tax invoice.',
   category: 'Business',
   keywords: ['quotation', 'quote', 'proforma', 'receipt', 'invoice', 'vat', 'business', 'عرض سعر', 'سند قبض', 'فاتورة مبدئية', 'ضريبة', 'أعمال'],
-  status: 'stable',
+  status: 'beta',
   Icon: ReceiptIcon,
   component: lazyTool(() => import('./QuotationTool')),
   ar: {

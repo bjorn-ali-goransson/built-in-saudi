@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon, ScanTextIcon } from '../../components/icons'
-import { Button, Textarea, Stack, Spinner, Check, FileError, Panel, Field, Input } from '../../components/ui'
+import { Button, Textarea, Stack, Spinner, Check, FileError, Panel, PdfPassword } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import type { Extracted } from './extract'
 
@@ -15,10 +15,6 @@ const STR = {
     copy: 'Copy', copied: 'Copied!', download: 'Download .txt',
     scanned: 'This PDF has almost no text in it — it is a scan, a picture of a page. There is nothing to extract, but the OCR tool can read the words off the image.',
     toOcr: 'Open Image to Text',
-    locked: 'This PDF is password-protected. Type the password and the text will be read here, on your device — the password is passed to the PDF engine in this tab and is neither stored nor sent.',
-    wrongPassword: 'That password did not open it. Check it and try again.',
-    passwordLabel: 'Password',
-    unlock: 'Unlock and read',
     failed: 'That file could not be read as a PDF.',
     hint: 'The text comes straight out of the PDF, exactly as it was written into it — no upload, no conversion service.',
     empty: 'No text on this page.',
@@ -32,10 +28,6 @@ const STR = {
     copy: 'نسخ', copied: 'تم النسخ!', download: 'نزّل ملف ‎.txt',
     scanned: 'لا يكاد هذا الملف يحتوي على نص — إنه صورة ممسوحة للصفحة. لا يوجد ما يُستخرج، لكن أداة التعرّف الضوئي تستطيع قراءة الكلمات من الصورة.',
     toOcr: 'افتح أداة الصورة إلى نص',
-    locked: 'هذا الملف محمي بكلمة مرور. اكتب كلمة المرور ليُقرأ النص هنا على جهازك — فكلمة المرور تُمرَّر إلى محرّك PDF في هذه الصفحة ولا تُحفظ ولا تُرسل.',
-    wrongPassword: 'لم تفتحه كلمة المرور هذه. تأكّد منها وأعد المحاولة.',
-    passwordLabel: 'كلمة المرور',
-    unlock: 'افتح واقرأ',
     failed: 'تعذّرت قراءة هذا الملف كـPDF.',
     hint: 'يخرج النص من ملف PDF مباشرةً كما كُتب فيه — بلا رفع، وبلا خدمة تحويل.',
     empty: 'لا نص في هذه الصفحة.',
@@ -54,7 +46,6 @@ export default function PdfToTextTool() {
   // The picked file is kept so the password can be applied to it without
   // asking the person to choose it a second time.
   const [locked, setLocked] = useState<File | null>(null)
-  const [password, setPassword] = useState('')
   const [wrongPassword, setWrongPassword] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -122,31 +113,13 @@ export default function PdfToTextTool() {
       {error && <FileError message={error} />}
 
       {locked && (
-        <Panel className="gap-2 border-gold-500" data-testid="p2t-locked">
-          <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.locked}</p>
-          <form
-            className="flex flex-wrap items-end gap-2"
-            onSubmit={(e) => { e.preventDefault(); void pick(locked, password) }}
-          >
-            <Field label={s.passwordLabel} className="flex-1 min-w-[12rem]">
-              <Input
-                type="password"
-                value={password}
-                data-testid="p2t-password"
-                autoComplete="off"
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-            <Button variant="primary" type="submit" disabled={busy || !password} data-testid="p2t-unlock">
-              {s.unlock}
-            </Button>
-          </form>
-          {wrongPassword && (
-            <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="p2t-wrong-password">
-              {s.wrongPassword}
-            </p>
-          )}
-        </Panel>
+        <PdfPassword
+          locale={locale}
+          wrong={wrongPassword}
+          busy={busy}
+          testid="p2t-lock"
+          onSubmit={(pw) => void pick(locked, pw)}
+        />
       )}
       {!result && !busy && !error && <p className="text-ink-faint text-[0.95rem] rtl:font-ar">{s.hint}</p>}
 

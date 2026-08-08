@@ -11,7 +11,7 @@ export const idExpiryTool: Tool = {
     'Track when your documents run out. Enter an expiry date in either the Hijri or Gregorian calendar and see the days remaining in both, sorted by whichever runs out first — iqama, passport, driving licence, vehicle registration, insurance or a visa. Everything stays in this browser: no account, nothing uploaded.',
   category: 'Saudi / Local',
   keywords: ['iqama', 'expiry', 'residency', 'passport', 'licence', 'istimara', 'إقامة', 'انتهاء', 'صلاحية', 'جواز', 'استمارة', 'رخصة', 'تجديد'],
-  status: 'stable',
+  status: 'beta',
   Icon: CalendarCheckIcon,
   component: lazyTool(() => import('./IdExpiryTool')),
   ar: {

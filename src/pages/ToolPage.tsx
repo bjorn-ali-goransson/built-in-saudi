@@ -6,6 +6,7 @@ import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localizeTool } from '../i18n'
 import { NotFoundPage } from './NotFoundPage'
 import { recordRecent } from '../lib/recentTools'
+import { StatusBadge } from '../components/ui'
 import { relatedTools } from '../lib/relatedTools'
 import { Link } from 'react-router-dom'
 import { localePath } from '../i18n'
@@ -23,7 +24,7 @@ export function ToolPage() {
 }
 
 function LoadedTool({ tool }: { tool: Tool }) {
-  const { locale } = useLocale()
+  const { locale, t } = useLocale()
   const l = localizeTool(tool, locale)
   // The tool name now lives in the app-bar (Header); the page goes straight to the tool.
   useDocumentMeta(locale, `/apps/${tool.id}`, l.name, l.description)
@@ -37,6 +38,20 @@ function LoadedTool({ tool }: { tool: Tool }) {
   const ToolComponent = tool.component!
   return (
     <div className="wrap py-[clamp(1.5rem,4vw,2.5rem)] animate-[fadeUp_0.5s_ease_both]">
+      {/* The catalogue tile shows an unlabelled gold dot for a non-stable tool,
+          which nobody can read. The badge belongs HERE, above the tool, because
+          this is where a person reads the numbers and decides to act on them.
+          On the Saudi rule tools it means: this figure can go stale without the
+          code changing — GOSI's pension rate steps every July, tariffs and
+          thresholds move, a decree lands — so check it against the authority
+          named in the disclaimer below. */}
+      {tool.status !== 'stable' && (
+        <p className="mb-3" data-testid="tool-status">
+          <StatusBadge status={tool.status}>
+            {tool.status === 'coming-soon' ? t.card.comingSoon : t.card.beta}
+          </StatusBadge>
+        </p>
+      )}
       <ToolComponent />
 
       {/* The crawlable "More free tools" block below links to EVERY tool, which

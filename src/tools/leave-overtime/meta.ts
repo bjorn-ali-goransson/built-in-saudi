@@ -14,7 +14,7 @@ export const leaveOvertimeTool: Tool = {
     'annual leave', 'leave days', 'overtime', 'notice period', 'probation', 'labour law', 'labor law', 'resign', 'termination', 'working hours', 'entitlement', '21 days', '30 days', 'employee rights',
     'الإجازة السنوية', 'إجازة', 'العمل الإضافي', 'ساعات إضافية', 'مدة الإشعار', 'فترة التجربة', 'نظام العمل', 'استقالة', 'حقوق الموظف', 'أجر الساعة',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: BriefcaseIcon,
   component: lazyTool(() => import('./LeaveOvertimeTool')),
   ar: {

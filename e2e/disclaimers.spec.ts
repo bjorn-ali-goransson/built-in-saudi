@@ -65,3 +65,26 @@ test('the Arabic copy is Arabic, not an untranslated fallback', async ({ page })
   expect(/[؀-ۿ]/.test(text)).toBe(true)
   expect(text).toContain('فتوى')
 })
+
+// A tool that encodes a Saudi authority's rule is badged BETA — and the badge
+// is on the TOOL PAGE, not only the catalogue tile, because that is where a
+// person reads the numbers and decides to act on them. It is an honesty signal
+// rather than a maturity one: these figures can go stale without the code
+// changing, since GOSI's pension rate steps every July and tariffs move.
+// scripts/check-saudi-beta.mjs keeps the list from drifting.
+test.describe('Saudi rule tools are badged beta', () => {
+  for (const id of ['gosi-salary', 'iqama-fees', 'vat-registration', 'electricity-bill', 'rent-rules']) {
+    test(`${id} shows the beta badge, in both languages`, async ({ page }) => {
+      await page.goto(`/en/apps/${id}`)
+      await expect(page.getByTestId('tool-status')).toHaveText('Beta')
+      await page.goto(`/ar/apps/${id}`)
+      await expect(page.getByTestId('tool-status')).toHaveText('تجريبي')
+    })
+  }
+
+  test('a tool that encodes no official rule is not badged', async ({ page }) => {
+    // Otherwise the badge means nothing: if everything is beta, nothing is.
+    await page.goto('/en/apps/qr-code')
+    await expect(page.getByTestId('tool-status')).toHaveCount(0)
+  })
+})

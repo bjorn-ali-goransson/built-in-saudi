@@ -14,7 +14,7 @@ export const earlySettlementTool: Tool = {
     'early settlement', 'early repayment', 'loan payoff', 'personal finance', 'sama', 'settle loan', 'pay off early', 'three months', 'declining balance', 'saving', 'bank', 'murabaha',
     'السداد المبكر', 'إطفاء التمويل', 'تمويل شخصي', 'قرض', 'ساما', 'مؤسسة النقد', 'رصيد متناقص', 'توفير', 'بنك',
   ],
-  status: 'stable',
+  status: 'beta',
   Icon: CoinsIcon,
   component: lazyTool(() => import('./EarlySettlementTool')),
   ar: {

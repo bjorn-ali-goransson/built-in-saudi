@@ -11,7 +11,7 @@ export const invoiceGeneratorTool: Tool = {
     'Create a clean, bilingual (AR/EN) invoice with line items, automatic 15% Saudi VAT and totals in SAR — with the grand total spelled out in Arabic words. Print or save as PDF straight from your browser; your seller details are saved locally and nothing is uploaded.',
   category: 'Business',
   keywords: ['invoice', 'vat', 'saudi', 'sar', 'billing', 'receipt', 'فاتورة', 'ضريبة', 'فواتير', 'محاسبة'],
-  status: 'stable',
+  status: 'beta',
   Icon: ReceiptIcon,
   component: lazyTool(() => import('./InvoiceGeneratorTool')),
   ar: {

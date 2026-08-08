@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Select, Field, Stack, Panel, FileError, Spinner } from '../../components/ui'
+import { Button, Select, Field, Stack, Panel, FileError, Spinner, PdfPassword } from '../../components/ui'
 import { CopyIcon, DownloadIcon, UploadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { createOcrWorker, type OcrLang } from '../../lib/ocr'
@@ -61,6 +61,8 @@ export default function PdfOcrTool() {
   const s = STR[locale]
 
   const [file, setFile] = useState<File | null>(null)
+  const [locked, setLocked] = useState<File | null>(null)
+  const [wrongPassword, setWrongPassword] = useState(false)
   const [lang, setLang] = useState<OcrLang>(locale === 'ar' ? 'ara' : 'eng')
   const [pages, setPages] = useState<PageText[]>([])
   const [embedded, setEmbedded] = useState<string[]>([])
@@ -72,17 +74,26 @@ export default function PdfOcrTool() {
 
   useEffect(() => () => { setWorkInProgress(WIP, false) }, [])
 
-  async function pick(f: File | undefined | null) {
+  async function pick(f: File | undefined | null, pw = '') {
     if (!f) return
     setError('')
     setPages([])
     setPhase('render')
+    setWrongPassword(false)
     try {
       // pdf-to-text's extractor already knows how to pull the text layer out and
       // how to recognise an encrypted file — no reason to have a second opinion
       // about either.
-      const { pages: extracted, encrypted } = await extractPdf(f)
-      if (encrypted) { setError(s.error); setFile(null); return }
+      const { pages: extracted, encrypted, wrongPassword } = await extractPdf(f, pw || undefined)
+      if (encrypted) {
+        // Inherited from the same extractor: a locked file is an ASK. A scanned
+        // payslip that is also password-protected is the exact document this
+        // tool exists for, and it used to be turned away at the door.
+        setLocked(f)
+        setWrongPassword(!!wrongPassword)
+        return
+      }
+      setLocked(null)
       setEmbedded(extracted.map((p) => p.text.trim()))
       setFile(f)
       setWorkInProgress(WIP, true)
@@ -163,6 +174,16 @@ export default function PdfOcrTool() {
       )}
 
       {error && <FileError message={error} />}
+
+      {locked && (
+        <PdfPassword
+          locale={locale}
+          wrong={wrongPassword}
+          busy={phase !== ''}
+          testid="pk-lock"
+          onSubmit={(pw) => void pick(locked, pw)}
+        />
+      )}
 
       {file && allHaveText && (
         <Panel className="gap-2" data-testid="pk-has-text">
