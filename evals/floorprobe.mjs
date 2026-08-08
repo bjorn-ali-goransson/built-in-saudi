@@ -21,7 +21,7 @@ const AR_CATEGORY = {
   Generators: 'مولّدات', Images: 'صور', Design: 'تصميم', Converters: 'محوّلات',
   Developer: 'أدوات المطوّرين', Web: 'الويب', Text: 'نصوص', Calculators: 'حاسبات',
   PDF: 'PDF', Business: 'أعمال', Communication: 'تواصل', Files: 'ملفات',
-  Utilities: 'أدوات', 'Saudi / Local': 'أدوات سعودية',
+  Utilities: 'أدوات', 'Saudi / Local': 'أدوات سعودية', Islamic: 'إسلاميات', Arabic: 'العربية',
 }
 const tools = []
 for (const d of dirs) {

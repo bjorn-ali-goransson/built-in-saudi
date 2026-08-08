@@ -9,7 +9,7 @@ export const diacritizeTool: Tool = {
   tagline: 'Add full tashkīl to Arabic text with AI',
   description:
     'Paste Arabic text and an AI pass adds full diacritics (تشكيل) — including the grammatical case endings — then hand it back for copy. Sign in with Google (free); to keep the AI budget fair it is limited to one run per 24 hours. The tool checks your text is Arabic before sending.',
-  category: 'Saudi / Local',
+  category: 'Arabic',
   keywords: ['arabic', 'diacritics', 'tashkeel', 'tashkil', 'harakat', 'vowels', 'تشكيل', 'حركات', 'ضبط', 'إعراب', 'نطق'],
   status: 'beta',
   Icon: FeatherIcon,

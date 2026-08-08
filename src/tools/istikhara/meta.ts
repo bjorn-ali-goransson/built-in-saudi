@@ -9,7 +9,7 @@ export const istikharaTool: Tool = {
   tagline: 'The prayer for guidance — how to pray it + the du‘a.',
   description:
     'The du‘a of Ṣalāt al-Istikhāra (the prayer for guidance) — the prophetic Arabic text with transliteration, an English meaning, how to pray the two rakʿahs, and the source (Jābir ibn ʿAbdillāh · Ṣaḥīḥ al-Bukhārī). Fully offline.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: ['istikhara', 'istikhaara', 'guidance prayer', 'dua', 'salat al-istikhara', 'استخارة', 'دعاء', 'صلاة الاستخارة'],
   status: 'stable',
   Icon: CompassStarIcon,

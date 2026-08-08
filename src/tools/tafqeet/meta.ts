@@ -9,7 +9,7 @@ export const tafqeetTool: Tool = {
   tagline: 'Spell an amount in Arabic words (تفقيط).',
   description:
     'Write any number or amount in Arabic words (tafqeet) — Saudi Riyals with halalas ("فقط … ريالاً و… هللة لا غير") or a plain number, with the correct Arabic grammar for hundreds, thousands and millions. For cheques, invoices and contracts. In your browser.',
-  category: 'Saudi / Local',
+  category: 'Arabic',
   keywords: ['tafqeet', 'number to words', 'arabic', 'amount in words', 'cheque', 'تفقيط', 'الأرقام كتابة', 'كتابة المبلغ', 'ريال'],
   status: 'stable',
   Icon: TextIcon,

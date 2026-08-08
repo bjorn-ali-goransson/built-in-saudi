@@ -9,7 +9,7 @@ export const khatmaTool: Tool = {
   tagline: 'Finish the Qur’an by a date you choose.',
   description:
     'Plan a khatma over any stretch of days — Ramadan, a month, a week — divided evenly by page or by juz, with Gregorian and Hijri dates side by side. Print it with a tick box per day, or tick the days off here; your progress stays on this device. Page numbers follow the 604-page Madani mushaf, and the tool says so, because a plan quoting pages from an edition you do not own is worse than no plan.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: [
     'quran', 'khatma', 'ramadan', 'reading plan', 'juz', 'mushaf', 'memorisation', 'schedule', 'daily', 'hijri',
     'ختمة', 'قرآن', 'رمضان', 'خطة قراءة', 'جزء', 'مصحف', 'ورد يومي', 'جدول', 'حفظ',

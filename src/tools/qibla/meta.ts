@@ -9,7 +9,7 @@ export const qiblaTool: Tool = {
   tagline: 'Find the direction of the Kaaba from anywhere.',
   description:
     'Find the Qibla direction from your location — the exact bearing to the Kaaba in Makkah, plus a live compass (where your device supports it) and the distance. Computed in your browser.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: ['qibla', 'qiblah', 'kaaba', 'makkah', 'mecca', 'compass', 'direction', 'prayer', 'قبلة', 'الكعبة', 'مكة', 'بوصلة'],
   status: 'stable',
   Icon: CompassIcon,

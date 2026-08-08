@@ -9,7 +9,7 @@ export const adhkarTool: Tool = {
   tagline: 'The daily remembrances with a tap counter.',
   description:
     'The core morning and evening adhkār from the Qur’an and authentic Sunnah — Arabic with transliteration, an English meaning, the repeat count and source, and a tap-to-count tracker that remembers today’s progress. Fully offline.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: ['adhkar', 'azkar', 'morning evening', 'remembrance', 'dhikr', 'أذكار', 'الصباح', 'المساء', 'ذكر'],
   status: 'stable',
   Icon: SunHorizonIcon,

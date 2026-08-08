@@ -9,7 +9,7 @@ export const islamicCalendarTool: Tool = {
   tagline: 'Hijri month view with moon phases, white days & holidays.',
   description:
     'A month-at-a-glance Islamic calendar (Umm al-Qura): switch between Hijri and Gregorian, see the moon phase for each day, the white days (ayyām al-bīḍ, 13–15), and Islamic dates like Ramadan and the two Eids. Tap a day for details. Computed in your browser.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: ['islamic calendar', 'hijri', 'month', 'moon', 'white days', 'ayyam al beed', 'ramadan', 'eid', 'umm al-qura', 'تقويم', 'هجري', 'الأيام البيض', 'رمضان'],
   status: 'stable',
   Icon: IslamicCalendarIcon,

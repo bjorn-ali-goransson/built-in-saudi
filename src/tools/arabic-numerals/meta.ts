@@ -9,7 +9,7 @@ export const arabicNumeralsTool: Tool = {
   tagline: 'Switch ٠١٢٣ to 0123 and back, anywhere in your text.',
   description:
     'Convert the digits in any text between Western (0123), Arabic-Indic (٠١٢٣) and Persian (۰۱۲۳) shapes — paste a sentence, a table or a whole document and only the numbers change. Decimal and thousands marks (٫ ٬) travel with them so amounts stay readable. Runs entirely in your browser.',
-  category: 'Saudi / Local',
+  category: 'Arabic',
   keywords: ['arabic numerals', 'indic', 'digits', 'convert', 'هندية', 'أرقام', 'تحويل الأرقام', 'عربية', '٠١٢٣', '0123', 'persian'],
   status: 'stable',
   Icon: ExchangeIcon,

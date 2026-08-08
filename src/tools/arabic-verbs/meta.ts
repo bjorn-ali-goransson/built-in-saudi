@@ -9,7 +9,7 @@ export const arabicVerbsTool: Tool = {
   tagline: 'Every form, tense, person — تصريف الأفعال',
   description:
     'Enter an Arabic root and get the full conjugation: past, present (indicative/subjunctive/jussive), imperative and passive across all 13 pronouns, for triliteral Forms I–X and quadriliteral forms — plus the derived nouns (اسم الفاعل، اسم المفعول، المصدر) and the emphatic forms. For Form I you pick the middle-radical vowel. Weak and irregular roots are flagged, with a note for common ones like وصل ⇐ يصل versus وجل ⇐ يوجل. Runs entirely in your browser.',
-  category: 'Saudi / Local',
+  category: 'Arabic',
   keywords: ['arabic', 'verb', 'conjugation', 'morphology', 'sarf', 'tasreef', 'أفعال', 'تصريف', 'صرف', 'اسم الفاعل', 'المصدر', 'أوزان'],
   status: 'stable',
   Icon: FeatherIcon,

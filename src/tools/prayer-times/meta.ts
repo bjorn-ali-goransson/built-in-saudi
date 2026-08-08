@@ -9,7 +9,7 @@ export const prayerTimesTool: Tool = {
   tagline: 'Umm al-Qura prayer times, with optional alerts.',
   description:
     'Accurate daily prayer times using the Umm al-Qura method. Pick a Saudi city or use your location — everything is computed in your browser. Optionally get a notification a few minutes before each prayer.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: [
     'prayer times', 'salah', 'salat', 'umm al-qura', 'adhan', 'fajr', 'maghrib',
     'notifications', 'مواقيت الصلاة', 'صلاة', 'أذان', 'الفجر', 'المغرب',

@@ -82,6 +82,13 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   // renders its raw English string on the Arabic side, and that is a silent
   // bug waiting for whoever invents a new category.
   Utilities: { en: 'Utilities', ar: 'أدوات' },
+  // Split out of Saudi / Local when it reached 31 tools, 1.6x the median
+  // section. Neither of these is a Saudi ADMINISTRATIVE matter: a Muslim in
+  // Malaysia wants the Hijri calendar and an Egyptian writer wants the
+  // diacritizer, and filing both under a country was a categorisation error
+  // as much as a discoverability one.
+  Islamic: { en: 'Islamic', ar: 'إسلاميات' },
+  Arabic: { en: 'Arabic', ar: 'العربية' },
   'Saudi / Local': { en: 'Saudi / Local', ar: 'أدوات سعودية' },
 }
 

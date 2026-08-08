@@ -354,3 +354,31 @@ test('a query we cannot serve at all returns nothing rather than a guess', async
     await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
   }
 })
+
+// --- The catalogue's SHAPE, measured by evals/catalogshape.mjs. Saudi / Local
+// had reached 31 tools, 1.6x the median section, largely from this session's
+// own additions. Three unrelated families were mashed together in it.
+
+test('Islamic and Arabic tools are not filed under a country', async ({ page }) => {
+  // A Muslim in Malaysia wants the Hijri calendar; an Egyptian writer wants the
+  // diacritizer. Filing either under "Saudi / Local" was a categorisation error
+  // as much as a discoverability one.
+  await page.goto('/en')
+  await expect(page.getByTestId('section-Islamic')).toBeVisible()
+  await expect(page.getByTestId('section-Islamic')).toContainText('Islamic')
+  await expect(page.getByTestId('section-Arabic')).toBeVisible()
+  const islamic = page.getByTestId('section-Islamic')
+  await expect(islamic.getByTestId('tool-hijri-calendar')).toBeVisible()
+  const arabic = page.getByTestId('section-Arabic')
+  await expect(arabic.getByTestId('tool-diacritize')).toBeVisible()
+  // And they have left the section they came from.
+  await expect(page.getByTestId('section-Saudi / Local').getByTestId('tool-hijri-calendar')).toHaveCount(0)
+})
+
+test('the new sections are labelled in Arabic too', async ({ page }) => {
+  // A category with no entry in CATEGORY_LABELS renders its raw English string
+  // on the Arabic side — a silent bug the map's own comment warns about.
+  await page.goto('/ar')
+  await expect(page.getByTestId('section-Islamic')).toContainText('إسلاميات')
+  await expect(page.getByTestId('section-Arabic')).toContainText('العربية')
+})

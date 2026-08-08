@@ -9,7 +9,7 @@ export const hisnAlMuslimTool: Tool = {
   tagline: 'The Fortress of the Muslim — browsable du‘a collection.',
   description:
     'Ḥiṣn al-Muslim (the Fortress of the Muslim) — the full collection of adhkār and du‘as for daily life, compiled by Saʿīd b. Wahf al-Qaḥṭānī. Search the ~130 chapters and read the vocalized Arabic du‘as. Fully offline.',
-  category: 'Saudi / Local',
+  category: 'Islamic',
   keywords: ['hisn al muslim', 'hisnul muslim', 'fortress of the muslim', 'dua', 'adhkar', 'حصن المسلم', 'أذكار', 'أدعية', 'القحطاني'],
   status: 'stable',
   Icon: ShieldIcon,

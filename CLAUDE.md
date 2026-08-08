@@ -1489,6 +1489,38 @@ The rule now applied, and worth keeping when adding a tool:
 Section sizes after: Converters 3 → 8, Files 16 → 11, Text 24 → 22,
 Calculators 18 → 20, with search unchanged at 92% top-1 / 100% top-3.
 
+**The shape is now measured rather than counted once and forgotten**
+(`node evals/catalogshape.mjs`). Both previous reshapes rested on a count typed
+into a shell and thrown away, so nobody could tell later whether the change held
+or the section had grown back. It had: **`Saudi / Local` reached 31 tools, 1.6x
+the median**, and almost all of the growth was this session's own Saudi
+additions.
+
+Three unrelated families were mashed together in that 31, and the split is a
+matter of principle rather than tidiness — **neither Islamic practice nor the
+Arabic language is a Saudi ADMINISTRATIVE matter.** A Muslim in Malaysia wants
+the Hijri calendar; an Egyptian writer wants the diacritizer. Filing either
+under a country is a categorisation error before it is a discoverability one.
+
+- **`Islamic`** (6 in the section, 12 tools in total): hajj-umrah, hijri-age,
+  hijri-calendar, khatma, prayer-timetable, zakat-calculator.
+- **`Arabic`** (7): arabic-normalize, arabic-numerals, arabic-verbs, diacritize,
+  franco-arabic, name-spelling, tafqeet.
+- `Saudi / Local` keeps the 18 that are genuinely administrative — iqama, GOSI,
+  VAT, Fahes, rent, plates, IBAN, short address.
+
+**A tool's category describes the tool, not which curated section eats it.** The
+six Islamic tools consumed by `RECOMMENDED`/`DUA` (prayer-times, qibla,
+islamic-calendar, adhkar, hisn-al-muslim, istikhara) were also filed under
+`Saudi / Local`, invisibly — they render under their hand-picked heading, so
+nothing showed it. If either list is ever edited they would have fallen back
+into the wrong section. They are `Islamic` now.
+
+Search is unchanged at 100% on both benches, which is the check that matters:
+**category is a scored field**, so a recategorisation can move ranking, and this
+one did not. Sections went 12 → 14, median 20 → 14, largest back to
+`Developer` at 25.
+
 **`Developer` was 32 tools** — the biggest section by a distance and an
 undifferentiated wall. Only the **uncontested** part has been split off, into
 `Web`: the seven tools you point at a **site or a URL** rather than at code

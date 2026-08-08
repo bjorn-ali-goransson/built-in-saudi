@@ -690,3 +690,24 @@ Revised order for when a key exists:
   video-audio), an SVG, an xlsx with a dynamic token, a PEM — or sit behind an
   interaction like the two that needed `reveal`. `image-to-text` and `pdf-ocr`
   pull the OCR models, so they will be slow and belong in their own pass.
+
+### Catalogue shape, 8 August 2026
+
+Now measured by `node evals/catalogshape.mjs` rather than counted once and
+forgotten. `Saudi / Local` had grown to 31 (1.6x the median) and is back to 18,
+with `Islamic` and `Arabic` split out on the principle that neither is a Saudi
+administrative matter.
+
+Still open:
+
+- **`Developer` at 25** is the largest section again, and splitting it further
+  remains genuinely undecided — there is no single principle that settles data
+  vs security vs scaffolding the way "a file converter belongs in Converters"
+  settled the last one. Do not split it just to flatten the histogram.
+- **`weather` is filed under `Saudi / Local` and is not a Saudi tool.** It is
+  the last obvious miscategorisation, and it has nowhere good to go: `Utilities`
+  exists in the label map but has no other member, and a one-tool section is
+  pooled into "Other" anyway. Left alone deliberately.
+- **`Business` has 3 tools.** Small enough to be worth asking whether it earns a
+  heading, but not wrong.
+
