@@ -382,3 +382,14 @@ test('the new sections are labelled in Arabic too', async ({ page }) => {
   await expect(page.getByTestId('section-Islamic')).toContainText('إسلاميات')
   await expect(page.getByTestId('section-Arabic')).toContainText('العربية')
 })
+
+test('a description is not indexed, and the compress query proves why', async ({ page }) => {
+  // Indexing the long `description` was tried and rejected on measurement: it
+  // left both held-out sets unchanged (the second at exactly 45/50 with exactly
+  // the same misses) and cost this query, because the PDF compressor's
+  // description is full of compression vocabulary. Frozen here so the idea
+  // cannot be re-added on the strength of it sounding reasonable.
+  await search(page, 'ضغط صورة', 'ar')
+  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(top(page)).toContainText(/صور/)
+})

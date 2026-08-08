@@ -771,11 +771,9 @@ related-tools note in CLAUDE.md, and `node evals/relatedcheck.mjs`.
 
 Still open in discoverability:
 
-- **The scorer does not index a tool's `description`**, only name, tagline,
-  category and keywords. A long description carries real vocabulary and might
-  help the long tail — but it is a scorer change, and `evals/untuned.mjs` is
-  burned, so it needs **a fresh held-out set written first**. Do not measure it
-  against the tuned bench alone.
+- ~~**The scorer does not index a tool's `description`.**~~ **Tried and
+  rejected on measurement** — it cost a tuned-bench fix and changed neither
+  held-out set. See the note above `Searchable` in `src/lib/fuzzy.ts`.
 - **`Developer` at 25** remains the largest section and remains deliberately
   unsplit.
 
@@ -825,4 +823,24 @@ Still open, and still needing a key, in this order:
   never see `why` at all.
 - **Still open:** 32 tools remain on the `UNVERIFIED` privacy list, and
   `csv-json` still carries its own private `parseCsv`.
+
+### Held-out set #2, 8 August 2026 — baseline and known misses
+
+`evals/untuned2.mjs`: 50 fresh queries, **90% top-1 / 100% top-3 / 0
+unfindable**. Deliberately NOT fixed, so the set stays a measuring instrument
+rather than being spent on its first reading. Fix them only alongside writing
+set #3:
+
+- `what does this cron mean` → cron-builder first. That IS the documented rule
+  for a bare noun, but this query is not a bare noun; "mean" carries the intent
+  and matches nothing.
+- `make a certificate` → the SSL decoder wins. `make` is a stop word, so this is
+  a bare tie on "certificate" resolved by catalogue order — and the site's own
+  rule says a bare noun goes to the tool that MAKES the thing, which would put
+  the generator first.
+- `strong passphrase` → the password generator wins on "Strong" in its tagline.
+- `is this colour readable` → the contrast checker is third.
+- `ملف pdf إلى صور` → images-to-pdf wins. The direction problem again, in
+  Arabic: the fix that worked for the vCard pair was indexing the directional
+  phrase, and neither PDF tool does.
 

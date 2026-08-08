@@ -1586,6 +1586,33 @@ After all six fixes both sets read 100% — so **`untuned.mjs` is burned and say
 so at the top**. The 88% is the number to quote. Anyone tuning the scorer again
 must write a fresh held-out set before believing anything.
 
+**Indexing the `description` was tried and rejected on measurement**, and the
+protocol was followed properly this time: `evals/untuned.mjs` was burned, so a
+SECOND held-out set was written FIRST (`evals/untuned2.mjs`, 50 fresh queries,
+no phrasing shared with either earlier list), measured once, and only then was
+the change tried.
+
+| | before | after |
+|---|---|---|
+| tuned bench | 122/122 | **121/122** |
+| held out #1 | 50/50 | 50/50 |
+| held out #2 (fresh) | **45/50 (90%)** | 45/50, the SAME five misses |
+
+So at weight 0.6 — below every other field — it cost a hard-won fix and bought
+**nothing** across a hundred held-out queries. What it broke is the instructive
+part: `ضغط صورة` went to the PDF compressor, whose description is full of
+compression vocabulary. That is exactly the failure the coverage multiplier
+exists to stop. **A description explains a tool to a reader; it is not a list of
+the words that mean it.** Put those in `keywords`. Frozen by an e2e so the idea
+cannot be re-added on the strength of sounding reasonable.
+
+**The fresh set's 90% is the honest generalisation number**, and it is better
+than the first set's 88% — so the earlier metadata work did generalise rather
+than merely fitting its own bench. Its five misses were deliberately **NOT
+fixed**: fixing them is precisely what burned set #1, and an instrument spent on
+its first reading measures one change and then nothing. They are recorded in
+`docs/ROADMAP.md`, and the set stays usable for the next scorer change.
+
 **A coverage/shorter-name tie-break was tried and rejected on measurement.** A
 one-word query often ties two tools exactly, and preferring the tool whose name
 the query covers more of fixed `hijri` but broke `qr` (QR Reader over QR Code)

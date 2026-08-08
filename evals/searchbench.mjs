@@ -75,6 +75,7 @@ tools.sort((a, b) => (orderRank.get(varOf.get(a.id)) ?? 1e9) - (orderRank.get(va
 // --- the REAL scorer, compiled from src/lib/fuzzy.ts by tsc ---
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
+import { UNTUNED2 } from './untuned2.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
 
@@ -141,6 +142,23 @@ console.log(`  top-1: ${u1}/${UNTUNED.length} (${Math.round((u1 / UNTUNED.length
 console.log(`  top-3: ${u3}/${UNTUNED.length} (${Math.round((u3 / UNTUNED.length) * 100)}%)`)
 console.log(`  not found at all: ${uMiss}`)
 if (uBad.length) { console.log('  --- not first ---'); for (const l of uBad) console.log('  ' + l) }
+
+// --- the SECOND held-out set, written after the first was burned ---
+let v1 = 0, v3 = 0, vMiss = 0
+const vBad = []
+for (const [q, want] of UNTUNED2) {
+  const r = rank(q, want)
+  if (r.at === 1) v1++
+  if (r.at <= 3) v3++
+  if (r.at === Infinity) vMiss++
+  if (r.at > 1) vBad.push(`${q.padEnd(30)} want ${String(want).padEnd(22)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT #2 (fresh, never tuned against): ${UNTUNED2.length} queries`)
+console.log(`  top-1: ${v1}/${UNTUNED2.length} (${Math.round((v1 / UNTUNED2.length) * 100)}%)`)
+console.log(`  top-3: ${v3}/${UNTUNED2.length} (${Math.round((v3 / UNTUNED2.length) * 100)}%)`)
+console.log(`  not found at all: ${vMiss}`)
+if (vBad.length) { console.log('  --- not first ---'); for (const l of vBad) console.log('  ' + l) }
 
 // --- and the opposite question: do we admit to having nothing? ---
 let noisy = 0

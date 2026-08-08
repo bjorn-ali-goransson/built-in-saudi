@@ -106,6 +106,23 @@ export function aboveFloor<T extends { score: number }>(sorted: T[]): T[] {
   return sorted.filter((x) => x.score >= floor)
 }
 
+/**
+ * The DESCRIPTION is deliberately not a field here. Tried and rejected on
+ * measurement, 8 August 2026, at weight 0.6 — below every other field:
+ *
+ *   tuned bench    122/122 -> 121/122
+ *   held out #1     50/50  ->  50/50
+ *   held out #2     45/50  ->  45/50, the SAME five misses
+ *
+ * So it cost a hard-won fix and bought nothing across a hundred held-out
+ * queries. What it broke is instructive: `ضغط صورة` went to the PDF compressor,
+ * because that tool's description is full of compression vocabulary — exactly
+ * the failure the coverage multiplier was introduced to stop. A description
+ * explains a tool to a reader; it is not a list of the words that mean it, and
+ * indexing prose adds far more noise than signal.
+ *
+ * Put the words people type in `keywords`. That is what the field is for.
+ */
 export interface Searchable {
   name: string
   tagline: string
@@ -126,6 +143,8 @@ function fieldsOf(tool: Searchable): Field[] {
     { text: tool.nameAr ?? '', weight: 3 },
     { text: tool.category, weight: 1.5 },
     { text: tool.tagline, weight: 1.2 },
+    // The long `description` is deliberately NOT indexed, and that was measured
+    // rather than assumed — see the note above `Searchable`.
   ]
 }
 
