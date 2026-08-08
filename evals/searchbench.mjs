@@ -76,6 +76,7 @@ tools.sort((a, b) => (orderRank.get(varOf.get(a.id)) ?? 1e9) - (orderRank.get(va
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
+import { UNTUNED_AR } from './untunedar.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
 
@@ -159,6 +160,23 @@ console.log(`  top-1: ${v1}/${UNTUNED2.length} (${Math.round((v1 / UNTUNED2.leng
 console.log(`  top-3: ${v3}/${UNTUNED2.length} (${Math.round((v3 / UNTUNED2.length) * 100)}%)`)
 console.log(`  not found at all: ${vMiss}`)
 if (vBad.length) { console.log('  --- not first ---'); for (const l of vBad) console.log('  ' + l) }
+
+// --- the ARABIC held-out set ---
+let a1 = 0, a3 = 0, aMiss = 0
+const aBad = []
+for (const [q, want] of UNTUNED_AR) {
+  const r = rank(q, want)
+  if (r.at === 1) a1++
+  if (r.at <= 3) a3++
+  if (r.at === Infinity) aMiss++
+  if (r.at > 1) aBad.push(`${q.padEnd(32)} want ${String(want).padEnd(22)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT, ARABIC (fresh, never tuned against): ${UNTUNED_AR.length} queries`)
+console.log(`  top-1: ${a1}/${UNTUNED_AR.length} (${Math.round((a1 / UNTUNED_AR.length) * 100)}%)`)
+console.log(`  top-3: ${a3}/${UNTUNED_AR.length} (${Math.round((a3 / UNTUNED_AR.length) * 100)}%)`)
+console.log(`  not found at all: ${aMiss}`)
+if (aBad.length) { console.log('  --- not first ---'); for (const l of aBad) console.log('  ' + l) }
 
 // --- and the opposite question: do we admit to having nothing? ---
 let noisy = 0

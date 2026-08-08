@@ -406,3 +406,25 @@ test('British and American spellings both find the tool', async ({ page }) => {
   await search(page, 'optimizer for svg')
   await expect(page.getByTestId('tool-svg-optimise')).toBeVisible()
 })
+
+// --- A dedicated ARABIC held-out set (evals/untunedar.mjs). The three existing
+// sets were 10–16% Arabic on a site whose audience is half Arabic-speaking, and
+// the two worst search defects ever found here were both Arabic morphology.
+// First run: 90% top-1, the same as the English set — but it found two real
+// defects that thin coverage had hidden.
+
+test('an Arabic name must be in the form people type, not the plural', async ({ page }) => {
+  // The password generator was «مولّد كلمات المرور». The PLURAL «كلمات» does not
+  // contain the singular «كلمة» somebody types, so the name could never match
+  // and the query went to the strength checker. Same trap as فاتورة and ترجمة.
+  await search(page, 'كلمة مرور قوية', 'ar')
+  await expect(page.getByTestId('tool-password-generator')).toBeVisible()
+  await expect(top(page)).toContainText(/مولّد/)
+})
+
+test('the redactor is findable by the Arabic word for redaction', async ({ page }) => {
+  // «طمس» was missing from its keywords entirely: it scored 41.67, BELOW the
+  // relevance floor, so the tool did not appear at all for its own subject.
+  await search(page, 'طمس وجه في صورة', 'ar')
+  await expect(page.getByTestId('tool-image-redact')).toBeVisible()
+})

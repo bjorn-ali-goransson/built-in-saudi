@@ -1816,6 +1816,29 @@ not evidence of being the more central tool. Ties therefore fall through to
 **catalogue order**, which is an editorial judgement about which tool is
 primary. Don't reintroduce it without re-running the bench.
 
+**The benches were 10–16% Arabic on a bilingual site**, which is how the two
+morphology defects below survived so long. `evals/untunedar.mjs` is a dedicated
+Arabic held-out set: 41 phrasings, written off the tool list before any was run.
+
+**First run: 90% top-1, 98% top-3, 0 unfindable — the same as the English set.**
+That refutes the hypothesis it was built on; the Arabic half is not markedly
+worse. But it found two real defects that thin coverage had hidden, and it got
+three of its own rows wrong, which is worth being equally plain about:
+
+- **The password generator's Arabic name was the PLURAL.** «مولّد كلمات المرور»
+  — and «كلمات» does not contain the singular «كلمة» a person types, so the name
+  could never match «كلمة مرور قوية» and the strength checker took it. Exactly
+  the trap recorded below for فاتورة and ترجمة, on a tool nobody thought to
+  re-check. Renamed to «مولّد كلمة المرور»; 90% → 93%.
+- **«طمس» was missing from the image redactor entirely** — the ordinary Arabic
+  word for blacking something out. It scored **41.67, below the relevance
+  floor**, so the tool did not appear at all for its own subject. Now 279.
+- **Three rows were the bench being wrong**, not the site: «إخفاء معلومات في
+  صورة» literally means hiding information *inside* an image, which IS
+  steganography; and «مولّد باركود» and «عجلة الاختيار العشوائي» are genuinely
+  ambiguous — the first because this file already records that Saudi usage calls
+  a QR code «باركود».
+
 **Arabic morphology defeats substring matching**, and it cost two tools their
 own query. A name in the plural, or as an agent noun, does not CONTAIN the
 singular or verbal noun a person types — so the merely-related tool won by

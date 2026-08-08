@@ -968,3 +968,18 @@ Still open:
   encode, as `end-of-service` needed: `leave-overtime` and `exit-reentry` first.
 - The five known misses on held-out set #2, deliberately unfixed.
 
+### Discoverability, 9 August 2026 — measuring the Arabic half
+
+The three benches were 10–16% Arabic. `evals/untunedar.mjs` fixes that: 41
+Arabic phrasings, first run **90% top-1 / 98% top-3 / 0 unfindable**, the same
+as English.
+
+- Two real defects found (a plural tool name, a missing keyword), two rows
+  ambiguous, one row simply wrong. Partly burned as a result — write a new
+  Arabic set before believing a number from it about unseen queries.
+- **Worth doing next: sweep every tool's Arabic NAME for the same plural trap.**
+  Three have now been caught one at a time (فاتورة, ترجمة, كلمات المرور) and
+  there is no reason to think they are the last. A script could list every
+  `nameAr` whose head noun is plural where the tool's own keywords use the
+  singular.
+

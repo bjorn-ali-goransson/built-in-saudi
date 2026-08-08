@@ -9,7 +9,14 @@ export const imageRedactTool: Tool = {
   description:
     'Drop an image and drag boxes over anything sensitive — faces, names, numbers — to pixelate or black it out, then download the redacted picture. The redaction is baked into the pixels (not a removable overlay), and everything runs on your device.',
   category: 'Images',
-  keywords: ['redact', 'blur', 'censor', 'hide', 'privacy', 'pixelate', 'black out', 'تمويه', 'حجب', 'خصوصية'],
+  // «طمس» is the ordinary Arabic word for blacking something out and was
+  // missing entirely: «طمس وجه في صورة» scored 41.67 here — BELOW the relevance
+  // floor, so the tool did not appear at all — while the steganography tool won
+  // on «إخفاء». Three keywords and a phrase, measured before and after.
+  keywords: [
+    'طمس', 'طمس الوجه', 'إخفاء أجزاء من صورة', 'تمويه', 'حجب', 'خصوصية', 'إخفاء بيانات',
+    'redact', 'blur', 'censor', 'hide', 'privacy', 'pixelate', 'black out',
+  ],
   status: 'stable',
   Icon: RedactIcon,
   component: lazyTool(() => import('./ImageRedactTool')),

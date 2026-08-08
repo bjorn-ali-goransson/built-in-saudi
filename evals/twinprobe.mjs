@@ -51,7 +51,7 @@ for (const d of dirs) {
   byId.set(t.id, t)
 }
 
-const PAIRS = [['مسح ضوئي','pdf-ocr','pdf-organise'],['جهات الاتصال','vcard-to-csv','csv-vcard']]
+const PAIRS = [['طمس وجه في صورة','image-redact','steganography'],['إخفاء أجزاء من صورة','image-redact','steganography']]
 
 for (const [q, want, beat] of PAIRS) {
   const a = byId.get(want), b = byId.get(beat)
