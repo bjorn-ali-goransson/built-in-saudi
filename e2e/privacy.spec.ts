@@ -64,6 +64,53 @@ const xmlZip = (part: string, xml: string, extra: { name: string; data: Buffer }
   zip([{ name: '[Content_Types].xml', data: Buffer.from('<?xml version="1.0"?><Types/>') },
     { name: part, data: Buffer.from(xml, 'utf8') }, ...extra])
 
+/**
+ * A real, decodable WAV that carries the run's token in a RIFF LIST/INFO chunk.
+ *
+ * The audio tools decode with `decodeAudioData`, so the fixture has to be valid
+ * audio — otherwise the tool never gets far enough to upload anything and the
+ * case passes for the wrong reason, which is the failure mode this whole spec
+ * exists to avoid. Unknown chunks are skipped by every WAV parser, which is
+ * what makes INFO the right place to hide a marker.
+ */
+function wavWithToken(token: string): Buffer {
+  const rate = 8000
+  const data = Buffer.alloc(rate / 5) // a tenth of a second of silence, 16-bit
+  const info = Buffer.from(token, 'ascii')
+  const pad = info.length % 2 // RIFF chunks are word-aligned
+
+  const cmt = Buffer.alloc(8 + info.length + pad)
+  cmt.write('ICMT', 0, 'ascii')
+  cmt.writeUInt32LE(info.length, 4)
+  info.copy(cmt, 8)
+
+  const list = Buffer.concat([Buffer.alloc(12), cmt])
+  list.write('LIST', 0, 'ascii')
+  list.writeUInt32LE(4 + cmt.length, 4)
+  list.write('INFO', 8, 'ascii')
+  const listChunk = Buffer.concat([list.subarray(0, 12), cmt])
+
+  const fmt = Buffer.alloc(24)
+  fmt.write('fmt ', 0, 'ascii')
+  fmt.writeUInt32LE(16, 4)
+  fmt.writeUInt16LE(1, 8)   // PCM
+  fmt.writeUInt16LE(1, 10)  // mono
+  fmt.writeUInt32LE(rate, 12)
+  fmt.writeUInt32LE(rate * 2, 16)
+  fmt.writeUInt16LE(2, 20)
+  fmt.writeUInt16LE(16, 22)
+
+  const dataChunk = Buffer.concat([Buffer.alloc(8), data])
+  dataChunk.write('data', 0, 'ascii')
+  dataChunk.writeUInt32LE(data.length, 4)
+
+  const body = Buffer.concat([Buffer.from('WAVE', 'ascii'), fmt, listChunk, dataChunk])
+  const head = Buffer.alloc(8)
+  head.write('RIFF', 0, 'ascii')
+  head.writeUInt32LE(body.length, 4)
+  return Buffer.concat([head, body])
+}
+
 const CASES: Case[] = [
   // A spread across every family that takes a file, because the promise is
   // made on all of them and a guard that only covers the tools I happened to
@@ -82,6 +129,7 @@ const CASES: Case[] = [
   // documented failure mode of a guard scoped to whatever was written most
   // recently — grep src/tools for a file input, do not rely on memory.
   { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
+  { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   {
     id: 'vcard-to-csv', testid: 'vc-file', name: 'contacts.vcf', mime: 'text/vcard',
     make: () => Buffer.from(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${TOKEN}\r\nN:;${TOKEN};;;\r\nEND:VCARD\r\n`),

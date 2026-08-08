@@ -509,6 +509,33 @@ initial or medial form at all; those cells are left out rather than filled with
 the isolated shape, which would teach something false. This is the thing generic
 worksheet sites get wrong, and it is the whole reason the tool is worth having.
 
+## Audio conversion (`audio-convert`)
+
+Everything it needs already existed: `lib/audio.ts` decodes with
+`decodeAudioData` (mp3, m4a/aac, ogg, flac, wav, and the audio track of a video)
+and `lib/wavEncoder.ts` encodes WAV in a worker. Three tools used that pair and
+none of them was a converter, which is a gap the web sweep found from the
+outside — every privacy-first converter site lists audio and we did not.
+
+- **Resampling is `OfflineAudioContext`, not arithmetic.** A context created AT
+  THE TARGET RATE resamples on render with a properly band-limited filter. The
+  obvious linear interpolation aliases badly on exactly the case this tool is
+  for — downsampling to 16 kHz — folding everything above 8 kHz back down as a
+  metallic whine. The platform has a correct implementation; shipping a worse
+  one would be a choice.
+- **The source buffer must be created at the SOURCE rate.** Creating it at the
+  target rate relabels the samples instead of converting them, and the file
+  plays at the wrong speed and pitch. That is the classic way to get this wrong.
+- **The size is shown before the encode**, because the decision the tool exists
+  for is a trade: 16 kHz mono is what transcription software expects and is
+  about a sixth the size of 44.1 kHz stereo. It also reports honestly when a
+  choice makes the file *larger* — a converter that only ever claims to shrink
+  things is lying half the time.
+- **Output is WAV, and the tool says why.** That stance is already documented in
+  `lib/audio.ts`: MP3 would need a real encoder shipped to the browser and would
+  discard quality a second time. Stating it beats looking like a missing
+  feature.
+
 ## Video trimming (`video-trim`)
 
 The one tool with a container-format dependency (`mp4box`, ~1MB, lazy in its own
@@ -687,6 +714,26 @@ Two deliberate choices worth keeping:
 
 **Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
 is the only thing standing behind the sentence on 109 tool pages.
+
+**That instruction was not enough, and the numbers say by how much.**
+`scripts/check-privacy-coverage.mjs` (in `prebuild`) counts every tool with a
+file input and demands each be classified: proved in `CASES`, listed in
+`SENDS_DATA` (a backend is involved, so the claim is worded differently and must
+NOT be asserted), or listed in `UNVERIFIED` — believed client-side, nobody has
+proved it. Measured 8 August 2026: **65 tools take a file, 17 were proved, 46
+were not.** A new tool with a file input now fails the build until classified.
+
+Two things about that measurement are worth keeping:
+
+- **The list had been found short three times, always by accident** while doing
+  something else. A guard scoped to what someone remembered is not a guard, and
+  the fix is a script rather than a firmer instruction.
+- **`/id: '…'/` also matches `testid: '…'`.** Counting the covered tools with
+  that pattern in a shell reports 32 where 17 are real, and 32 is the number
+  that was believed and reported before the script existed. It happens not to
+  change the script's verdict — a testid never collides with a tool id — but a
+  regex that is wrong in a way the logic tolerates still poisons everything a
+  human reads off it. `` matters.
 
 Coverage is **15 tools** across every family that takes one — PDF (read, page
 ops, OCR), Office (docx, pptx), tabular (4 CSV tools, vCard both directions),

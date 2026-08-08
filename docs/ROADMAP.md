@@ -669,3 +669,23 @@ Revised order for when a key exists:
 4. Re-run `perfect.mjs` and `gameable.mjs` — the scale has been untestable for a
    while and both guard against it compressing.
 
+### Web sweep, 8 August 2026 (twelfth pass)
+
+- ~~**Audio converter.**~~ **Shipped** as `audio-convert`. Found from outside:
+  every privacy-first converter site lists audio and we had none, while the
+  decode and WAV-encode halves had been sitting in `lib/` behind three other
+  tools.
+- **Declined: health insurance cost.** It is a genuine dependency — no valid
+  policy means no iqama renewal and no school enrolment, the same shape as
+  Fahes gating the istimara — but the premium is a 1,200–8,000 SAR range that
+  varies by class, age and plan. That is a number we would have to invent a
+  point inside, which is the test that also rejected the Musaned packages.
+- **Open a password-protected PDF — worth one more look.** A competitor
+  advertises client-side PDF *unlocking*, which is evidence the lossless route
+  exists rather than proof. Before building: verify what pdf.js `saveDocument`
+  emits for an encrypted document, and price `qpdf-wasm`.
+- **Work the `UNVERIFIED` list in `scripts/check-privacy-coverage.mjs` down.**
+  46 tools take a file and have never had the upload claim tested. The image
+  and PDF families are the biggest blocks and are mechanically similar, so they
+  can go in batches.
+

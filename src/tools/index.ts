@@ -114,6 +114,7 @@ import { passwordStrengthTool } from './password-strength/meta'
 import { passportPhotoTool } from './passport-photo/meta'
 import { audioTrimTool } from './audio-trim/meta'
 import { videoAudioTool } from './video-audio/meta'
+import { audioConvertTool } from './audio-convert/meta'
 import { pdfToTextTool } from './pdf-to-text/meta'
 import { screenshotFrameTool } from './screenshot-frame/meta'
 import { socialResizeTool } from './social-resize/meta'
@@ -220,6 +221,7 @@ export const tools: Tool[] = [
   audioTrimTool,
   removeSilenceTool,
   videoAudioTool,
+  audioConvertTool,
   videoTrimTool,
   videoGifTool,
   currencyConverterTool,
