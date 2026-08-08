@@ -11,6 +11,10 @@ export const nameSpellingTool: Tool = {
     'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.',
   category: 'Arabic',
   keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'romanization',
     'name', 'transliteration', 'spelling', 'english', 'passport', 'romanisation', 'arabic name', 'ticket', 'booking',
     'اسم', 'كتابة', 'إنجليزي', 'جواز', 'تهجئة', 'حجز', 'تذكرة', 'اسم عربي',
   ],

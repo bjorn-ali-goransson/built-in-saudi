@@ -14,6 +14,10 @@ export const cvGeneratorTool: Tool = {
     'Upload your existing CV and get it rewritten into a clean, ATS-ready résumé — signal only, no noise — then see how it scores across six ATS dimensions on a spider chart. The tool asks the few questions only you can answer and folds your replies back in to raise the score. Photos, colours, GPAs, references and month-level dates are stripped; skills and a punchy summary are synthesised from your whole history, key terms bolded. Export as PDF or Word. Sign-in with Google keeps it free and abuse-free.',
   category: 'Business',
   keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'optimise', 'optimiser',
     'cv', 'resume', 'résumé', 'cv optimizer', 'ats cv optimizer', 'resume optimizer', 'cv checker',
     'ats', 'ats checker', 'ats score', 'cv generator', 'resume builder', 'job', 'career', 'pdf', 'word',
     'سيرة ذاتية', 'سيرة', 'ريزيومي', 'محسن السيرة', 'تحسين السيرة', 'أنظمة التتبع', 'منشئ السيرة', 'وظيفة', 'توظيف',

@@ -10,7 +10,12 @@ export const promptAnalyzerTool: Tool = {
   description:
     'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, positive framing, an escape hatch, and downstream stakes — shown as a heatmap spider chart, with concrete issues listed headline-first. Then answer the gaps it finds and a second pass rewrites your prompt into a stronger one. Built on the idea that the best prompt is a coherent explanation, not a pile of shouted commands. Three analyses per 24 hours.',
   category: 'Developer',
-  keywords: ['prompt', 'llm', 'ai', 'prompt engineering', 'system prompt', 'analyze', 'grade', 'gpt', 'موجّه', 'ذكاء اصطناعي', 'هندسة الموجّهات', 'تحليل'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'analyse', 'analyser',
+    'prompt', 'llm', 'ai', 'prompt engineering', 'system prompt', 'analyze', 'grade', 'gpt', 'موجّه', 'ذكاء اصطناعي', 'هندسة الموجّهات', 'تحليل'],
   status: 'beta',
   Icon: RadarIcon,
   component: lazyTool(() => import('./PromptAnalyzerTool')),

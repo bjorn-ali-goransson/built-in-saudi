@@ -1530,7 +1530,26 @@ cannot drift from the code. Measured over that bench, the fixes were worth
 - **Fields are passed separately, never concatenated.** Joining name + Arabic
   name let a subsequence run off the end of one into the start of the next, and
   destroyed the "starts at the beginning" bonus that makes an exact name win.
-- **Vocabulary is part of the fix, not just the algorithm.** "photo", "picture",
+- **Index BOTH spellings of an -ise/-ize word.** This site writes British English
+in its own copy while a keyword list, written by a developer, drifts to the
+American form — and both are typed by real people. Measured: **8 of 12 variants
+missed their tool and 5 returned NOTHING AT ALL** (`node evals/coverprobe.mjs`).
+`anonymise` found no tool on a site that ships an anonymiser. Now 0 of 12, with
+both benches and the held-out set unchanged.
+
+**A "which of your words matched nothing" caveat was measured and rejected.**
+The idea: `order pizza` and `translate my dog` return a plausible wrong answer,
+and the scorer already computes how many TERMS matched — so it could say which
+word it ignored. It cannot usefully: only **1 of 15** unanswerable queries has a
+term matching nothing, against **2 of 225** real ones, so the signal is 33%
+precise and fires almost never. The reason is the subsequence fallback — `dog`
+is a subsequence of half the taglines, so almost every word matches *something*.
+That confirms with data what was previously only asserted: **an unanswerable
+query is a semantic problem, and nothing the scorer computes separates it.** The
+probe found the spelling gap on its way past, which is the only reason it
+earned its place.
+
+**Vocabulary is part of the fix, not just the algorithm.** "photo", "picture",
   "smaller" are what people type; a meta that only says "image" is unfindable by
   half its users. When adding a tool, list the words a person would use, not the
   ones the code uses.

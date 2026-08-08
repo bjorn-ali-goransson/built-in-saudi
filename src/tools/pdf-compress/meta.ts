@@ -10,7 +10,11 @@ export const pdfCompressTool: Tool = {
   description:
     'Make a PDF smaller in your browser. “Keep text” recompresses the embedded photos/JPEGs and leaves your text selectable; “Smallest” re-renders each page as an optimised image for maximum shrink (great for scans). See the size saved before you download. Runs with pdf.js + pdf-lib, so your document is never uploaded.',
   category: 'PDF',
-  keywords: ['pdf', 'compress', 'shrink', 'reduce', 'smaller', 'optimize', 'compress pdf', 'ضغط', 'ضغط pdf', 'تصغير', 'تقليل حجم'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'optimise','pdf', 'compress', 'shrink', 'reduce', 'smaller', 'optimize', 'compress pdf', 'ضغط', 'ضغط pdf', 'تصغير', 'تقليل حجم'],
   status: 'stable',
   Icon: CompressIcon,
   component: lazyTool(() => import('./PdfCompressTool')),

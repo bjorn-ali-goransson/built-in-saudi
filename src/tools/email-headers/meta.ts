@@ -11,6 +11,10 @@ export const emailHeadersTool: Tool = {
     'Paste the raw headers of an email and see the route it actually took, with the delay at each hop, plus the SPF, DKIM and DMARC verdicts explained in plain words and a note of anything worth a second look — a reply address on another domain, an authentication failure. Parsed in your browser. That matters more here than usual: the headers of a suspicious message carry your own address and your employer’s internal hostnames, and every online analyser asks you to paste exactly that into their server.',
   category: 'Developer',
   keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'analyze', 'analyzer',
     'email', 'headers', 'spf', 'dkim', 'dmarc', 'phishing', 'spam', 'received', 'trace', 'analyse', 'source', 'message',
     'بريد', 'ترويسات', 'تصيد', 'تحليل', 'مصدر', 'رسالة', 'توثيق',
   ],

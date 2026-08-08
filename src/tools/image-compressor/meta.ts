@@ -10,7 +10,11 @@ export const imageCompressorTool: Tool = {
   description:
     'Compress and resize images right in your browser — pick JPEG/WebP/PNG, a quality level and an optional max width, and see the before→after size and how much you saved. Unlike the ad-driven sites, the image is never uploaded — it never leaves your device.',
   category: 'Images',
-  keywords: ['image', 'photo', 'picture', 'compress', 'compressor', 'resize', 'shrink', 'smaller', 'reduce', 'jpeg', 'webp', 'optimize', 'ضغط', 'صورة', 'ضغط الصور', 'تصغير', 'صور'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'optimise','image', 'photo', 'picture', 'compress', 'compressor', 'resize', 'shrink', 'smaller', 'reduce', 'jpeg', 'webp', 'optimize', 'ضغط', 'صورة', 'ضغط الصور', 'تصغير', 'صور'],
   status: 'stable',
   Icon: ImageIcon,
   component: lazyTool(() => import('./ImageCompressorTool')),

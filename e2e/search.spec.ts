@@ -393,3 +393,16 @@ test('a description is not indexed, and the compress query proves why', async ({
   await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
   await expect(top(page)).toContainText(/صور/)
 })
+
+test('British and American spellings both find the tool', async ({ page }) => {
+  // Measured: 8 of 12 -ise/-ize variants missed their tool and 5 returned
+  // NOTHING AT ALL — the site writes British English in its own copy while a
+  // keyword list, written by a developer, tends to the American form. Both are
+  // typed by real people.
+  await search(page, 'anonymise')
+  await expect(page.getByTestId('tool-data-anonymize')).toBeVisible()
+  await search(page, 'normalise')
+  await expect(page.getByTestId('tool-arabic-normalize')).toBeVisible()
+  await search(page, 'optimizer for svg')
+  await expect(page.getByTestId('tool-svg-optimise')).toBeVisible()
+})

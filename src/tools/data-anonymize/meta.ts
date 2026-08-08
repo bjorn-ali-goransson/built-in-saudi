@@ -10,7 +10,12 @@ export const dataAnonymizeTool: Tool = {
   description:
     'Before you send a spreadsheet to a colleague, a vendor or a chatbot, remove the parts that identify a person — emails, phone numbers, IBANs, Saudi ID and iqama numbers, card numbers, IPs. Mask them, redact them, or replace each value with a stable label so the data still joins on itself. It runs entirely in this page, which is rather the point.',
   category: 'Text',
-  keywords: ['anonymize', 'redact', 'pii', 'mask', 'privacy', 'sanitize', 'إخفاء', 'بيانات شخصية', 'خصوصية', 'حجب', 'تعمية'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'anonymise', 'anonymiser', 'sanitise',
+    'anonymize', 'redact', 'pii', 'mask', 'privacy', 'sanitize', 'إخفاء', 'بيانات شخصية', 'خصوصية', 'حجب', 'تعمية'],
   status: 'stable',
   Icon: RedactIcon,
   component: lazyTool(() => import('./DataAnonymizeTool')),

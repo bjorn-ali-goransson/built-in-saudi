@@ -10,7 +10,12 @@ export const diacritizeTool: Tool = {
   description:
     'Paste Arabic text and an AI pass adds full diacritics (تشكيل) — including the grammatical case endings — then hand it back for copy. Sign in with Google (free); to keep the AI budget fair it is limited to one run per 24 hours. The tool checks your text is Arabic before sending.',
   category: 'Arabic',
-  keywords: ['arabic', 'diacritics', 'tashkeel', 'tashkil', 'harakat', 'vowels', 'تشكيل', 'حركات', 'ضبط', 'إعراب', 'نطق'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'diacritise', 'diacritiser',
+    'arabic', 'diacritics', 'tashkeel', 'tashkil', 'harakat', 'vowels', 'تشكيل', 'حركات', 'ضبط', 'إعراب', 'نطق'],
   status: 'beta',
   Icon: FeatherIcon,
   component: lazyTool(() => import('./DiacritizeTool')),

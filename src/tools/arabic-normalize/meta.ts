@@ -10,7 +10,12 @@ export const arabicNormalizeTool: Tool = {
   description:
     'Clean up Arabic text: remove diacritics (تشكيل) and kashida stretching, unify أ إ آ ٱ to ا and ى to ي, drop invisible characters, and collapse stray spaces. The same word typed two ways will never match in a search or a database — this makes it match. Runs entirely in your browser.',
   category: 'Arabic',
-  keywords: ['arabic', 'normalize', 'tashkeel', 'diacritics', 'harakat', 'تشكيل', 'تطويل', 'توحيد', 'ألف', 'همزة', 'نص عربي', 'search'],
+  keywords: [
+    // Both spellings. This site writes British English in its own copy while
+    // a keyword list, written by a developer, tends to the American form —
+    // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
+    'normalise', 'normaliser',
+    'arabic', 'normalize', 'tashkeel', 'diacritics', 'harakat', 'تشكيل', 'تطويل', 'توحيد', 'ألف', 'همزة', 'نص عربي', 'search'],
   status: 'stable',
   Icon: EraseIcon,
   component: lazyTool(() => import('./ArabicNormalizeTool')),

@@ -884,3 +884,14 @@ the spec cannot do yet, and are worth naming rather than leaving as a number:
 - `xlsx-convert` and `zatca-qr` — `zq-camera` is the camera input, not the file
   one; find the right testid rather than guessing.
 
+### Discoverability, 8 August 2026 (third pass)
+
+- **Both spellings now indexed** across 13 tools. 8 of 12 -ise/-ize variants
+  missed before, 5 returning nothing; 0 of 12 after.
+- **The dead-term caveat is rejected on measurement** — see the note in
+  CLAUDE.md. Do not revisit it without a different signal; the subsequence
+  fallback means "matched nothing" almost never happens.
+- **Still open:** the five known misses on held-out set #2, deliberately unfixed
+  so the set stays a measuring instrument; `Developer` at 25, deliberately
+  unsplit; and `weather` filed under `Saudi / Local` with nowhere better to go.
+
