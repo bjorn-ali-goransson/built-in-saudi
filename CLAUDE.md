@@ -1378,11 +1378,28 @@ third is the point, since the wording is the substance here and three tools
 drifting into three answers about where the password goes would be worse than
 the duplication.
 
-**Still to do:** `pdf-to-images` loads through pdf.js at two call sites and
-would take a password the same way. The pdf-lib tools (merge, split, stamp…)
-cannot open an encrypted file at all — pdf-lib throws a plain `Error` whose
-message merely mentions encryption, so detection there should sniff the bytes
-for `/Encrypt` rather than match a string.
+**`pdf-to-images` takes one too**, at both of its pdf.js call sites — the load
+and the render must be given the same password or the preview succeeds and the
+export fails.
+
+**The pdf-lib tools cannot open an encrypted PDF at all**, and now say so
+usefully. Three things were wrong before:
+
+- **Every failure was reported as "locked / encrypted"**, so a corrupt file was
+  called password-protected and a password-protected one gave no more
+  information than a corrupt one. `pdfOps.worker.ts` now returns a `why`
+  (`encrypted` | `unreadable`) alongside the null.
+- **The reason comes from pdf-lib's own message**, not a byte sniff for
+  `/Encrypt`. A heuristic here is wrong in the direction that matters — telling
+  somebody their perfectly ordinary PDF is locked — and pdf-lib is authoritative
+  about what pdf-lib could not open.
+- **A refusal now has somewhere to go.** pdf-lib genuinely cannot open the file,
+  but pdf.js can with the password the reader already has, so `pdf-split` offers
+  a link to `pdf-to-text` instead of a dead end.
+
+`PdfOps.lastFailure` is a field rather than a change to every return type: all
+the callers already treat null as "it did not work", and only the ones that want
+to say something better need to look.
 
 ## OCR (`image-to-text`, `pdf-ocr`)
 

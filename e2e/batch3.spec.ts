@@ -261,3 +261,41 @@ test.describe('passport photo', () => {
     await expect(page.getByTestId('pp-lowres')).toBeVisible()
   })
 })
+
+test.describe('a locked PDF is named as such, and routed', () => {
+  test('pdf-to-images asks for the password instead of calling everything locked', async ({ page }) => {
+    // It used to report ANY load failure as "locked or encrypted", so a corrupt
+    // file and a password-protected one got the same wrong answer.
+    await page.goto('/en/apps/pdf-to-images')
+    await page.getByTestId('p2i-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('p2i-lock-panel')).toBeVisible()
+    await page.getByTestId('p2i-lock-input').fill('wrong')
+    await page.getByTestId('p2i-lock-unlock').click()
+    await expect(page.getByTestId('p2i-lock-wrong')).toBeVisible()
+    await page.getByTestId('p2i-lock-input').fill('letmein')
+    await page.getByTestId('p2i-lock-unlock').click()
+    await expect(page.getByTestId('p2i-lock-panel')).toHaveCount(0)
+  })
+
+  test('pdf-split says WHY it cannot open it, and where to go', async ({ page }) => {
+    // pdf-lib genuinely cannot open an encrypted PDF — ignoreEncryption parses
+    // the structure and leaves the streams encrypted. So the honest answer is
+    // to name the cause and point at the tool that can.
+    await page.goto('/en/apps/pdf-split')
+    await page.getByTestId('ps-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('ps-error')).toContainText('password-protected')
+    await expect(page.getByTestId('ps-to-text')).toBeVisible()
+  })
+
+  test('a corrupt PDF is not called password-protected', async ({ page }) => {
+    // The distinction the worker's `why` exists for: before it, both failures
+    // produced the same message and neither could be acted on.
+    await page.goto('/en/apps/pdf-split')
+    await page.getByTestId('ps-file').setInputFiles({
+      name: 'broken.pdf', mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\nthis is not a real pdf at all\n'),
+    })
+    await expect(page.getByTestId('ps-error')).toContainText('could not be read')
+    await expect(page.getByTestId('ps-to-text')).toHaveCount(0)
+  })
+})

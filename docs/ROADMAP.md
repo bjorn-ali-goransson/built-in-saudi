@@ -813,3 +813,16 @@ Still open, and still needing a key, in this order:
   changes yearly and private schools differ by a few days — the same test that
   rejected the skill-band table.
 
+### Code sweep, 8 August 2026 (third pass)
+
+- ~~**`pdf-to-images` takes a password.**~~ Done, at both pdf.js call sites.
+- ~~**The pdf-lib tools fail generically on an encrypted PDF.**~~ They now
+  distinguish encrypted from unreadable and route to `pdf-to-text`.
+- **Still open:** `pdf-merge` and `pdf-organise` have the new copy but only
+  `pdf-split` renders the route; the other two need the same two lines.
+  `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`, `pdf-sign` and
+  `pdf-compress` load pdf-lib directly rather than through `PdfOps`, so they
+  never see `why` at all.
+- **Still open:** 32 tools remain on the `UNVERIFIED` privacy list, and
+  `csv-json` still carries its own private `parseCsv`.
+

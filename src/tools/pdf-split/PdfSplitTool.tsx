@@ -7,13 +7,17 @@ import { PdfOps } from '../../lib/pdfOps'
 
 const STR = {
   en: {
-    drop: 'Drop a PDF, or tap to choose', another: 'Choose another', pages: 'pages', locked: 'This PDF is locked / encrypted.',
+    drop: 'Drop a PDF, or tap to choose', another: 'Choose another', pages: 'pages', locked: 'This PDF is password-protected, so pdf-lib cannot open it — but you can still read its text.'
+    , unreadable: 'That file could not be read as a PDF.'
+    , toText: 'Open it in PDF to Text',
     range: 'Extract range', burst: 'Split to pages', rangeLabel: 'Pages (e.g. 1-3, 5, 8-10)', rangeBad: 'Enter a valid range like 1-3,5.',
     extract: 'Extract', splitting: 'Splitting…', extracting: 'Extracting…', download: 'Download', dlAll: 'Download all (ZIP)',
     split: 'Split into single pages', page: 'Page', privacy: 'Processed on your device — your PDF is never uploaded.',
   },
   ar: {
-    drop: 'أفلت ملف PDF أو اضغط للاختيار', another: 'اختر آخر', pages: 'صفحة', locked: 'هذا الملف مقفل / مشفّر.',
+    drop: 'أفلت ملف PDF أو اضغط للاختيار', another: 'اختر آخر', pages: 'صفحة', locked: 'هذا الملف محمي بكلمة مرور فلا تستطيع المكتبة فتحه — لكنك تستطيع قراءة نصه.'
+    , unreadable: 'تعذّرت قراءة هذا الملف كـPDF.'
+    , toText: 'افتحه في أداة PDF إلى نص',
     range: 'استخراج نطاق', burst: 'تقسيم لصفحات', rangeLabel: 'الصفحات (مثل 1-3، 5، 8-10)', rangeBad: 'أدخل نطاقًا صحيحًا مثل 1-3،5.',
     extract: 'استخراج', splitting: 'جارٍ التقسيم…', extracting: 'جارٍ الاستخراج…', download: 'تنزيل', dlAll: 'تنزيل الكل (ZIP)',
     split: 'تقسيم إلى صفحات مفردة', page: 'صفحة', privacy: 'يُعالَج على جهازك — لا يُرفع ملفك أبدًا.',
@@ -38,6 +42,7 @@ export default function PdfSplitTool() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [src, setSrc] = useState<{ name: string; file: File; pages: number } | null>(null)
   const [err, setErr] = useState('')
+  const [encrypted, setEncrypted] = useState(false)
   const [mode, setMode] = useState<'range' | 'burst'>('range')
   const [range, setRange] = useState('')
   const [busy, setBusy] = useState(false)
@@ -56,7 +61,16 @@ export default function PdfSplitTool() {
     setErr(''); reset()
     opsRef.current ??= new PdfOps()
     const n = await opsRef.current.pageCount(f)
-    if (n === null) { setSrc(null); setErr(s.locked); return }
+    if (n === null) {
+      // 'locked' used to be shown for ANY failure, so a corrupt PDF was reported
+      // as password-protected and vice versa. The worker now says which.
+      const why = opsRef.current.lastFailure
+      setSrc(null)
+      setEncrypted(why === 'encrypted')
+      setErr(why === 'encrypted' ? s.locked : s.unreadable)
+      return
+    }
+    setEncrypted(false)
     setSrc({ name: f.name.replace(/\.pdf$/i, ''), file: f, pages: n })
   }
 
@@ -96,7 +110,7 @@ export default function PdfSplitTool() {
         <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="ps-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" data-testid="ps-file" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>
@@ -141,6 +155,12 @@ export default function PdfSplitTool() {
       )}
 
       {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="ps-error">{err}</p>}
+      {encrypted && (
+        // The actionable half. pdf-lib genuinely cannot open this file, but
+        // pdf.js can with the password the reader already has — so send them
+        // there rather than leaving a refusal with nowhere to go.
+        <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="ps-to-text">{s.toText}</Button>
+      )}
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </Stack>
   )

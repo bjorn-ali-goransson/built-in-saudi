@@ -1,16 +1,26 @@
 // Promise client for pdfOps.worker.ts (#154) — same shape as ImageEncoder:
 // one worker per tool instance, dispose on unmount, null = failed/locked.
-import type { PdfRequest, PdfResponse } from './pdfOps.worker'
+import type { PdfRequest, PdfResponse, PdfFailure } from './pdfOps.worker'
 
 export class PdfOps {
   private worker: Worker | null = null
   private seq = 0
   private pending = new Map<number, (r: PdfResponse) => void>()
 
+  /**
+   * Why the last op returned null. Read it straight after a null result.
+   *
+   * Kept as a field rather than folded into every return type because every
+   * caller already treats null as "it did not work"; only the ones that want to
+   * say something better need to look, and none of them had to change shape.
+   */
+  lastFailure: PdfFailure | null = null
+
   private post(req: PdfRequest, resolve: (r: PdfResponse) => void) {
     if (!this.worker) {
       this.worker = new Worker(new URL('./pdfOps.worker.ts', import.meta.url), { type: 'module' })
       this.worker.onmessage = (e: MessageEvent<PdfResponse>) => {
+        this.lastFailure = e.data.why ?? null
         this.pending.get(e.data.id)?.(e.data)
         this.pending.delete(e.data.id)
       }

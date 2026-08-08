@@ -3,7 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, LockIcon } from '../../components/icons'
 import { zipStore } from '../../lib/zip'
 import { setWorkInProgress } from '../../lib/workInProgress'
-import { Button, Field, Input, Select, Stack, Seg, SegButton, Spinner } from '../../components/ui'
+import { Button, Field, Input, Select, Stack, Seg, SegButton, Spinner, PdfPassword } from '../../components/ui'
 
 // pdf.js is heavy, so it loads only once a PDF is actually picked. Note we do
 // NOT wrap this in a Web Worker of our own: pdf.js already runs its parsing and
@@ -37,7 +37,6 @@ const DPIS = [72, 150, 300, 600] as const
 const STR = {
   en: {
     drop: 'Drop a PDF, or tap to choose', another: 'Choose another', pages: 'pages', page: 'Page',
-    locked: 'This PDF is locked or encrypted, so its pages can’t be read.',
     notPdf: 'That doesn’t look like a PDF.', failed: 'Couldn’t render this PDF.',
     format: 'Format', quality: 'Quality', dpi: 'Resolution', rangeLabel: 'Pages (e.g. 1-3, 5, 8-10 — blank for all)',
     rangeBad: 'Enter a valid range like 1-3,5.',
@@ -50,7 +49,6 @@ const STR = {
   },
   ar: {
     drop: 'أفلت ملف PDF أو اضغط للاختيار', another: 'اختر آخر', pages: 'صفحة', page: 'صفحة',
-    locked: 'هذا الملف مقفل أو مشفّر، لذا لا يمكن قراءة صفحاته.',
     notPdf: 'لا يبدو هذا ملف PDF.', failed: 'تعذّر تحويل هذا الملف.',
     format: 'الصيغة', quality: 'الجودة', dpi: 'الدقة', rangeLabel: 'الصفحات (مثل 1-3، 5 — اتركه فارغًا للكل)',
     rangeBad: 'أدخل نطاقًا صحيحًا مثل 1-3،5.',
@@ -95,6 +93,13 @@ export default function PdfToImagesTool() {
   const [dpi, setDpi] = useState<number>(150)
   const [range, setRange] = useState('')
   const [err, setErr] = useState('')
+  // pdf.js decrypts given the password the reader already has. This tool used
+  // to report ANY load failure as "locked or encrypted", so a corrupt file and
+  // a password-protected one got the same wrong answer and neither could be
+  // acted on.
+  const [locked, setLocked] = useState<File | null>(null)
+  const [password, setPassword] = useState('')
+  const [wrongPassword, setWrongPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(0)
   const [outs, setOuts] = useState<Out[]>([])
@@ -117,22 +122,30 @@ export default function PdfToImagesTool() {
     setDone(0)
   }
 
-  async function onFile(f: File | undefined) {
+  async function onFile(f: File | undefined, pw = '') {
     if (!f) return
-    setErr(''); clearOuts()
+    setErr(''); clearOuts(); setWrongPassword(false)
     if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { setSrc(null); setErr(s.notPdf); return }
     const run = ++runRef.current
     try {
       const pdfjs = await loadPdfjs()
       // Keep the loading task: PDFDocumentProxy has no destroy(), the task does.
-      const task = pdfjs.getDocument({ data: await f.arrayBuffer(), ...PDF_OPTS })
+      const task = pdfjs.getDocument({ data: await f.arrayBuffer(), ...PDF_OPTS, ...(pw ? { password: pw } : {}) })
       const doc = await task.promise
       if (run !== runRef.current) return
+      setLocked(null); setPassword(pw)
       setSrc({ name: f.name.replace(/\.pdf$/i, ''), file: f, pages: doc.numPages })
       await task.destroy()
-    } catch {
+    } catch (e) {
       if (run !== runRef.current) return
-      setSrc(null); setErr(s.locked)
+      const err = e as { name?: string; code?: number }
+      if (err?.name === 'PasswordException') {
+        // An ask, not a failure — and code 2 means the password was WRONG,
+        // which is a different thing to be told than "this file is locked".
+        setSrc(null); setLocked(f); setWrongPassword(err.code === 2)
+        return
+      }
+      setSrc(null); setErr(s.failed)
     }
   }
 
@@ -145,7 +158,7 @@ export default function PdfToImagesTool() {
     const made: Out[] = []
     try {
       const pdfjs = await loadPdfjs()
-      const task = pdfjs.getDocument({ data: await src.file.arrayBuffer(), ...PDF_OPTS })
+      const task = pdfjs.getDocument({ data: await src.file.arrayBuffer(), ...PDF_OPTS, ...(password ? { password } : {}) })
       const doc = await task.promise
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
@@ -209,7 +222,7 @@ export default function PdfToImagesTool() {
         <button className="flex flex-col items-center gap-[0.4rem] py-8 px-4 border-2 border-dashed border-[color:var(--line)] rounded-[var(--r-md)] bg-[var(--surface)] text-center cursor-pointer transition-[border-color,background] duration-150 hover:border-[color:color-mix(in_srgb,var(--green-500)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)] [&_small]:text-[color:var(--ink-faint)] [&_small]:text-[0.82rem]" data-testid="p2i-drop" onClick={() => fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
           <UploadIcon /><span>{s.drop}</span>
-          <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" data-testid="p2i-file" onChange={(e) => onFile(e.target.files?.[0])} />
         </button>
       ) : (
         <>
@@ -276,6 +289,15 @@ export default function PdfToImagesTool() {
       )}
 
       {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="p2i-error">{err}</p>}
+
+      {locked && (
+        <PdfPassword
+          locale={locale}
+          wrong={wrongPassword}
+          testid="p2i-lock"
+          onSubmit={(pw) => void onFile(locked, pw)}
+        />
+      )}
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><LockIcon className="w-3.5 h-3.5 flex-none" /> {s.privacy}</p>
     </Stack>
   )

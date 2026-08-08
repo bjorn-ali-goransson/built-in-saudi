@@ -8,13 +8,17 @@ interface Item { id: string; file: File; pages: number | null; error?: boolean }
 
 const STR = {
   en: {
-    drop: 'Drop PDFs, or tap to choose', add: 'Add more', pages: 'pages', locked: 'Locked / encrypted — cannot merge',
+    drop: 'Drop PDFs, or tap to choose', add: 'Add more', pages: 'pages', locked: 'Password-protected — cannot be merged, but its text can still be read.'
+    , unreadable: 'Could not be read as a PDF.'
+    , toText: 'Open it in PDF to Text',
     total: 'Total', merge: 'Merge PDFs', merging: 'Merging…', download: 'Download merged PDF', clear: 'Clear all',
     up: 'Move up', down: 'Move down', remove: 'Remove', someLocked: 'Remove the locked file(s) to merge.',
     privacy: 'Merged on your device — your PDFs are never uploaded.',
   },
   ar: {
-    drop: 'أفلت ملفات PDF أو اضغط للاختيار', add: 'إضافة المزيد', pages: 'صفحة', locked: 'مقفل / مشفّر — تعذّر الدمج',
+    drop: 'أفلت ملفات PDF أو اضغط للاختيار', add: 'إضافة المزيد', pages: 'صفحة', locked: 'محمي بكلمة مرور — لا يمكن دمجه، لكن يمكن قراءة نصه.'
+    , unreadable: 'تعذّرت قراءته كـPDF.'
+    , toText: 'افتحه في أداة PDF إلى نص',
     total: 'الإجمالي', merge: 'دمج الملفات', merging: 'جارٍ الدمج…', download: 'تنزيل الملف المدموج', clear: 'مسح الكل',
     up: 'أعلى', down: 'أسفل', remove: 'إزالة', someLocked: 'أزل الملفات المقفلة للدمج.',
     privacy: 'يُدمج على جهازك — لا تُرفع ملفاتك أبدًا.',

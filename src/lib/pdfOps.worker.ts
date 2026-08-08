@@ -11,12 +11,23 @@ export type PdfRequest =
   // mean re-parsing and re-saving the document three times, and pdf-lib's
   // copyPages is the only step that has to happen at all.
   | { id: number; op: 'organise'; file: File; pages: { from: number; rotate: number }[] }
+/**
+ * Why an op failed, when it is worth acting on.
+ *
+ * `encrypted` is the one that matters: pdf-lib CANNOT open a password-protected
+ * PDF at all — `ignoreEncryption` parses the structure and leaves the streams
+ * encrypted — so every tool built on it returned a bare null and said something
+ * generic. That is a dead end for a file the reader can perfectly well open, in
+ * `pdf-to-text`, with the password they already have.
+ */
+export type PdfFailure = 'encrypted' | 'unreadable'
+
 export type PdfResponse =
-  | { id: number; op: 'pageCount'; pages: number | null }
-  | { id: number; op: 'merge'; blob: Blob | null }
-  | { id: number; op: 'extract'; blob: Blob | null }
-  | { id: number; op: 'burst'; pages: ArrayBuffer[] | null }
-  | { id: number; op: 'organise'; blob: Blob | null }
+  | { id: number; op: 'pageCount'; pages: number | null; why?: PdfFailure }
+  | { id: number; op: 'merge'; blob: Blob | null; why?: PdfFailure }
+  | { id: number; op: 'extract'; blob: Blob | null; why?: PdfFailure }
+  | { id: number; op: 'burst'; pages: ArrayBuffer[] | null; why?: PdfFailure }
+  | { id: number; op: 'organise'; blob: Blob | null; why?: PdfFailure }
 
 let lib: typeof import('pdf-lib') | null = null
 const pdf = async () => (lib ??= await import('pdf-lib'))
@@ -74,8 +85,14 @@ self.onmessage = async (e: MessageEvent<PdfRequest>) => {
       // transfer the page buffers — no copy back to the main thread
       ;(postMessage as (m: PdfResponse, t: Transferable[]) => void)({ id: req.id, op: 'burst', pages }, pages)
     }
-  } catch {
+  } catch (e) {
+    // pdf-lib's own message is the authority here — it says "Input document to
+    // `PDFDocument.load` is encrypted". Sniffing the bytes for /Encrypt would be
+    // a heuristic that can be wrong in the direction that matters, telling
+    // somebody their perfectly ordinary PDF is locked.
+    const msg = (e as { message?: string })?.message || ''
+    const why: PdfFailure = /encrypted/i.test(msg) ? 'encrypted' : 'unreadable'
     const nulls = { pageCount: { pages: null }, merge: { blob: null }, extract: { blob: null }, burst: { pages: null }, organise: { blob: null } } as const
-    postMessage({ id: req.id, op: req.op, ...nulls[req.op] } as PdfResponse)
+    postMessage({ id: req.id, op: req.op, ...nulls[req.op], why } as PdfResponse)
   }
 }
