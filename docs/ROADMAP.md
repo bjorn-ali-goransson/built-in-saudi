@@ -895,3 +895,15 @@ the spec cannot do yet, and are worth naming rather than leaving as a number:
   so the set stays a measuring instrument; `Developer` at 25, deliberately
   unsplit; and `weather` filed under `Saudi / Local` with nowhere better to go.
 
+### Web sweep, 8 August 2026 (sixteenth pass)
+
+- ~~**Accessibility checker.**~~ **Shipped** as `a11y-check`, paste-HTML rather
+  than fetch-a-URL, because fetching someone else's page needs a server and this
+  site does not have one for it.
+- **Deliberately not attempted:** the WCAG 2.2 criteria that need layout —
+  Target Size, Focus Appearance, Dragging Movements. They are not in the markup,
+  and guessing them from HTML would be the false-certificate failure the tool
+  exists to avoid.
+- **Worth considering later:** the same checks over an uploaded `.html` file
+  rather than a paste, which would need a row in the privacy `CASES` list.
+

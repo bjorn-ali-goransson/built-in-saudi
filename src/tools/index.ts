@@ -57,6 +57,7 @@ import { baseConverterTool } from './base-converter/meta'
 import { csvJsonTool } from './csv-json/meta'
 import { listToolsTool } from './list-tools/meta'
 import { colorContrastTool } from './color-contrast/meta'
+import { a11yCheckTool } from './a11y-check/meta'
 import { percentageCalculatorTool } from './percentage-calculator/meta'
 import { splitBillTool } from './split-bill/meta'
 import { aspectRatioTool } from './aspect-ratio/meta'
@@ -258,6 +259,7 @@ export const tools: Tool[] = [
   csvMergeTool,
   listToolsTool,
   colorContrastTool,
+  a11yCheckTool,
   colourBlindTool,
   percentageCalculatorTool,
   splitBillTool,

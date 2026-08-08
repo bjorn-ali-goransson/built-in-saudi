@@ -1079,6 +1079,36 @@ One rule worth keeping: **if everything is beta, nothing is.** There is an e2e
 asserting an ordinary tool is NOT badged, so the signal cannot be diluted into
 decoration.
 
+## Accessibility checking, and the half it refuses to claim (`a11y-check`)
+
+Every accessibility scanner worth using fetches a URL, which needs a server. The
+half that does NOT is static-markup checking, and that is the half a person can
+run on the component they are writing — so this takes pasted HTML, parses it
+with `DOMParser`, and never touches the network.
+
+What it checks is chosen to be **decidable from markup alone**: a missing `alt`,
+alt text that is only the file name, a skipped heading level, `click here` link
+text, an unlabelled field, a nameless icon button, duplicate ids, positive
+`tabindex`, a data table with no `th`.
+
+**The distinction that matters most is `alt=""` versus no `alt` at all.** An
+empty alt is how you say "decorative, skip me"; a missing one is how a screen
+reader ends up reading a file name aloud. They look alike and mean opposite
+things, so the tool treats only the missing one as a fault.
+
+**And it will not hand out a pass.** A clean result says "no problems in the
+markup — which is not the same as accessible", and a standing panel names what
+no static check can judge: whether alt text is MEANINGFUL (`image1` and a
+careful description both pass), whether a keyboard user can finish a form,
+whether a modal traps focus, whether a tap target is big enough. The research
+this came from makes the same point; stating it is the difference between a
+useful floor and a false certificate.
+
+**Search note:** `wcag` now leads this tool's keywords. The contrast checker
+listed it second and was winning a bare `wcag` on keyword position alone — but
+that tool covers ONE success criterion and this one is the standard as a whole.
+Same editorial judgement as `sha256` leading the hash generator over HMAC.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
