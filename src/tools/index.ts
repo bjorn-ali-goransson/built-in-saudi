@@ -147,6 +147,7 @@ import { hijriAgeTool } from './hijri-age/meta'
 import { medicineScheduleTool } from './medicine-schedule/meta'
 import { pdfRedactTool } from './pdf-redact/meta'
 import { videoGifTool } from './video-gif/meta'
+import { videoFramesTool } from './video-frames/meta'
 import { carouselSplitTool } from './carousel-split/meta'
 import { csvMergeTool } from './csv-merge/meta'
 import { pdfBookletTool } from './pdf-booklet/meta'
@@ -224,6 +225,7 @@ export const tools: Tool[] = [
   audioConvertTool,
   videoTrimTool,
   videoGifTool,
+  videoFramesTool,
   currencyConverterTool,
   idExpiryTool,
   totpTool,

@@ -558,6 +558,35 @@ outside — every privacy-first converter site lists audio and we did not.
   discard quality a second time. Stating it beats looking like a missing
   feature.
 
+## Taking a still out of a video (`video-frames`)
+
+No new dependency and no WebCodecs: a `<video>` element, a seek, and
+`drawImage` onto a canvas. `video-trim` needed mp4box because it rearranges
+compressed samples; grabbing a picture needs only what the browser already does
+to show you the video.
+
+- **Waiting for `seeked` is the whole trick, and it has a trap.** If
+  `currentTime` is already the requested value the event never fires again and
+  the promise hangs forever, so the wait short-circuits when it is already
+  there.
+- **The seek is NOT frame-exact, and the tool says so.** A browser seeks to the
+  nearest independently decodable frame, so on a video with widely spaced
+  keyframes you land a moment either side of the time you asked for. Claiming
+  millisecond accuracy would be a lie; the frame is shown before it is saved so
+  the choice can be nudged, and the limit is written down. Frame-exact would
+  need `VideoDecoder`, which Safari does not have.
+- **The filename carries the timestamp**, so several stills from one clip do not
+  overwrite each other in the downloads folder.
+- Named **Video to Image**, joining the site's X-to-Y family, and deliberately
+  NOT anything starting with "Frame" — `screenshot-frame` is a device-frame
+  beautifier and owns that word.
+
+**The privacy fixture is the real sample video with the token in a trailing
+`free` box.** An ISO-BMFF reader skips a box it does not recognise, so the video
+still plays and the bytes still carry a marker — the same discipline as the PNG
+`tEXt` and WAV `LIST/INFO` fixtures. A fixture the tool cannot open never
+reaches the code that could upload, and the case passes having tested nothing.
+
 ## Video trimming (`video-trim`)
 
 The one tool with a container-format dependency (`mp4box`, ~1MB, lazy in its own

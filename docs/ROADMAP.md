@@ -792,3 +792,24 @@ Still open, and still needing a key, in this order:
 4. Re-run `perfect.mjs` and `gameable.mjs`; the 1–5 scale has been untestable
    for a while and both exist to catch it compressing.
 
+### Web sweep, 8 August 2026 (fourteenth pass)
+
+- ~~**Take a still out of a video.**~~ **Shipped** as `video-frames`. The video
+  family had trim, GIF and audio-extract and no way to get one picture out.
+- **Video compression is now feasible client-side, and is the biggest unbuilt
+  tool these sweeps have found.** WebCodecs (`VideoDecoder`/`VideoEncoder`) is
+  in Chrome 94+ and Firefox 130+, encoding runs on the GPU, and we already carry
+  mp4box for the container. It is a substantial build, so it is written down
+  rather than half-started:
+  - **Safari has no `VideoEncoder`.** The tool must detect and say so plainly,
+    the way `ModelGate` does for the on-device AI — not fail obscurely on an
+    iPhone.
+  - Audio has to be re-encoded too; check whether `AudioEncoder` offers AAC or
+    only Opus, because the answer decides the output container.
+  - `mp4box.addSample` writes a moof+mdat per sample (a *fragmented* MP4, ~2%
+    overhead, no seek index — already recorded under `video-trim`). A compressor
+    is the point at which a progressive muxer stops being optional.
+- **Declined: the school calendar.** MOE dates are a maintained dataset that
+  changes yearly and private schools differ by a few days — the same test that
+  rejected the skill-band table.
+

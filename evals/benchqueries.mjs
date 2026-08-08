@@ -135,6 +135,9 @@ export const BENCH_QUERIES = [
   ['النسبة الموزونة', 'admission-score'],
   ['stopwatch', 'stopwatch'],
   ['iqama renewal cost', 'iqama-fees'],
+  ['video to image', 'video-frames'],
+  ['grab a frame from a video', 'video-frames'],
+  ['thumbnail from video', 'video-frames'],
   ['dependent fee', 'iqama-fees'],
   ['رسوم المرافقين', 'iqama-fees'],
 ]

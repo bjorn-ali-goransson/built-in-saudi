@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { deflateRawSync, deflateSync, crc32 } from 'node:zlib'
+import { readFileSync } from 'node:fs'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 
 // "Files are never uploaded" is the site's first principle and the reason it
@@ -153,6 +154,24 @@ function wavWithToken(token: string): Buffer {
   return Buffer.concat([head, body])
 }
 
+/**
+ * The real sample video with the token hidden in a trailing `free` box.
+ *
+ * Same discipline as the PNG and WAV above: the tool must be able to PLAY the
+ * file, or it errors out before reaching any code that could upload, and the
+ * case passes having tested nothing. An ISO-BMFF reader skips a box it does not
+ * recognise, and `free` is defined as skippable — so the video still decodes
+ * and the bytes still carry a marker.
+ */
+function mp4WithToken(token: string): Buffer {
+  const body = Buffer.from(token, 'ascii')
+  const box = Buffer.alloc(8 + body.length)
+  box.writeUInt32BE(box.length, 0)
+  box.write('free', 4, 'ascii')
+  body.copy(box, 8)
+  return Buffer.concat([readFileSync('e2e/fixtures/sample.mp4'), box])
+}
+
 const CASES: Case[] = [
   // A spread across every family that takes a file, because the promise is
   // made on all of them and a guard that only covers the tools I happened to
@@ -172,6 +191,7 @@ const CASES: Case[] = [
   // recently — grep src/tools for a file input, do not rely on memory.
   { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
+  { id: 'video-frames', testid: 'vf-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
 
   // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
   // 65 tools take a file and 17 were proved; these are the next 14. Chosen

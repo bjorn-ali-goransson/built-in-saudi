@@ -1069,6 +1069,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'رسوم تأشيرة الخروج والعودة', description: 'احسب رسوم الرحلة التي ستسافرها فعلًا، واطّلع على الأمرين اللذين يغفل عنهما الناس. فالأشهر تُحتسب كتلًا كاملة من ثلاثين يومًا، فـ31 يومًا كـ60 يومًا في السعر بينما 61 يومًا تزيد شهرًا. والتأشيرة لا تتجاوز إقامتك: فالرحلة التي تعود بعد انتهائها لا تأشيرة لها حتى تجدّد. والتمديد من الخارج يكلّف ضعف قيمة الشهر.' },
   },
   {
+    id: 'video-frames',
+    en: { name: 'Video to Image', description: 'Scrub to the moment you want and save it as a PNG, JPG or WebP — a thumbnail, a poster frame, or the one shot you needed out of a long clip. Or take one frame every few seconds and download the lot as a zip. The video is read by your own browser and never uploaded, which is the whole difference from the sites that ask for the file first. A browser seeks to the nearest frame it can decode by itself, so the frame is shown before you save it.' },
+    ar: { name: 'لقطة من الفيديو', description: 'انتقل إلى اللحظة التي تريدها واحفظها بصيغة PNG أو JPG أو WebP — مصغّرة أو لقطة غلاف أو الصورة الوحيدة التي احتجتها من مقطع طويل. أو خُذ لقطة كل بضع ثوانٍ ونزّلها كلها في ملف مضغوط. ويقرأ متصفحك الفيديو ولا يُرفع أبدًا. وتُعرض اللقطة قبل حفظها لأن المتصفح يقفز إلى أقرب لقطة يفك ترميزها وحدها.' },
+  },
+  {
     id: 'audio-convert',
     en: { name: 'Audio Converter', description: 'Turn an M4A voice memo, an OGG, an AAC or a FLAC into a WAV that every piece of software accepts — and pick the sample rate and channels while you are there. 16 kHz mono is what transcription and speech software expects and is roughly a sixth the size of 44.1 kHz stereo; the tool shows the resulting size before you commit to it. Resampling is done by the browser’s own band-limited resampler, so downsampling does not alias. The file is decoded on your device and never uploaded.' },
     ar: { name: 'محوّل الصوت', description: 'حوّل مذكرة صوتية بصيغة M4A أو ملف OGG أو AAC أو FLAC إلى ملف WAV يقبله كل برنامج — واختر معدّل العيّنات وعدد القنوات. فـ16 كيلوهرتز أحادي هو ما تتوقعه برامج التفريغ، وحجمه نحو سدس 44.1 كيلوهرتز ثنائي، والأداة تعرض الحجم الناتج قبل أن تلتزم به. ويُفكّ ترميز الملف على جهازك ولا يُرفع أبدًا.' },
