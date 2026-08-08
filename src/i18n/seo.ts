@@ -1073,4 +1073,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Electricity Bill Estimate', description: 'Work out roughly what a month of electricity costs, with the breakdown that shows where it came from — units at each rate, the meter service charge and VAT. It also corrects the thing almost everyone gets wrong: the tariff is marginal, not a cliff. The first 6,000 kWh are charged at 18 halalas however much you use in total, and only the units above that cost 30, so crossing the threshold adds a few riyals rather than repricing the whole bill.' },
     ar: { name: 'تقدير فاتورة الكهرباء', description: 'احسب تقريبًا كم يكلّف شهر من الكهرباء، مع تفصيل يبيّن من أين جاء المبلغ — الوحدات بكل سعر، ورسم خدمة العداد، والضريبة. وتصحّح الأداة ما يخطئ فيه أكثر الناس: فالتعرفة تصاعدية لا قفزة. إذ تُحتسب أول 6000 كيلوواط بـ18 هللة مهما بلغ استهلاكك، ولا تُحتسب بـ30 إلا ما فوقها، فتجاوز الحد يزيد بضعة ريالات لا أن يُعيد تسعير الفاتورة كلها.' },
   },
+  {
+    id: 'stopwatch',
+    en: { name: 'Stopwatch & Timer', description: 'A stopwatch with laps and a countdown timer with an alarm, in one place. Both take their time from the clock rather than by counting ticks, so switching tabs, locking the phone or leaving it in the background does not lose the minutes in between — which is what usually goes wrong with a timer in a browser.' },
+    ar: { name: 'ساعة إيقاف ومؤقّت', description: 'ساعة إيقاف بلفّات ومؤقّت تنازلي بمنبّه، في مكان واحد. وكلاهما يأخذ وقته من الساعة نفسها لا بعدّ النبضات، فلا تضيع الدقائق حين تنتقل بين التبويبات أو تُقفل الهاتف أو تتركه في الخلفية.' },
+  },
 ]

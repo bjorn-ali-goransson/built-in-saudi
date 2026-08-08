@@ -531,11 +531,10 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
 
 ### Measured gap, 8 August 2026
 
-- **A stopwatch.** `countdown` counts down and `pomodoro` runs intervals;
-  nothing counts up. Found by measuring untuned queries rather than by asking
-  what was missing — "stopwatch" is a thing people type and we genuinely do not
-  have it. Deliberately NOT solved by adding the word to another tool's
-  keywords.
+- ~~**A stopwatch.**~~ **Shipped** as `stopwatch`, with a countdown timer in the
+  same tool. Found by measuring untuned queries rather than by asking what was
+  missing, and deliberately not solved by adding the word to another tool's
+  keywords — which would have made the query succeed and the user fail.
 
 ### Web sweep, 8 August 2026 (ninth pass — utilities)
 

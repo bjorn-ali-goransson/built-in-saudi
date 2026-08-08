@@ -744,6 +744,24 @@ Also shown, because a total with no working is indistinguishable from a guess:
 the units at each rate, what the **next** kWh costs at this level of use, and how
 far the higher band is.
 
+## Stopwatch & timer (`stopwatch`)
+
+Found by measurement, not by asking what was missing: `stopwatch` was one of the
+untuned search queries that returned **nothing**, because `countdown` counts down
+to a *date*, `pomodoro` runs fixed sprints and `bpm-tap` taps tempo. Nothing
+counted up, and nothing was a plain kitchen timer.
+
+**Elapsed time is derived from timestamps, never accumulated per tick.** A
+counter that adds 10ms on every interval drifts — and, far worse, *stops* when
+the tab is backgrounded, because browsers throttle timers and pause
+`requestAnimationFrame`. Someone who starts a timer and switches app comes back
+to a clock that lost the intervening minutes, which is the usual way a browser
+timer betrays you. Recording *when* it started and subtracting on each frame is
+correct however irregularly the frames arrive, and correct after the tab was
+never painted at all. The frame loop only repaints; it never counts.
+
+No `Disclaimer` — it measures time, not money, health or an entitlement.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

@@ -168,6 +168,8 @@ const BENCH = [
   ['exit reentry', 'exit-reentry'],
   ['visa fee', 'exit-reentry'],
   ['خروج وعودة', 'exit-reentry'],
+  ['electricity bill', 'electricity-bill'],
+  ['فاتورة الكهرباء', 'electricity-bill'],
 ]
 
 function rank(query, wanted) {
