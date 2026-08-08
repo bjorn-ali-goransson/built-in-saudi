@@ -1068,4 +1068,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Exit & Re-entry Visa Fee', description: 'Work out the fee for the trip you are actually taking, and see the two things that catch people out. Months are charged in whole 30-day blocks, so 31 days costs the same as 60 while 61 costs a month more — the tool shows how many days you have before the price steps again. And the visa cannot outrun your iqama: a trip that returns after it expires is no visa at all until you renew. Extending from abroad costs double per month.' },
     ar: { name: 'رسوم تأشيرة الخروج والعودة', description: 'احسب رسوم الرحلة التي ستسافرها فعلًا، واطّلع على الأمرين اللذين يغفل عنهما الناس. فالأشهر تُحتسب كتلًا كاملة من ثلاثين يومًا، فـ31 يومًا كـ60 يومًا في السعر بينما 61 يومًا تزيد شهرًا. والتأشيرة لا تتجاوز إقامتك: فالرحلة التي تعود بعد انتهائها لا تأشيرة لها حتى تجدّد. والتمديد من الخارج يكلّف ضعف قيمة الشهر.' },
   },
+  {
+    id: 'electricity-bill',
+    en: { name: 'Electricity Bill Estimate', description: 'Work out roughly what a month of electricity costs, with the breakdown that shows where it came from — units at each rate, the meter service charge and VAT. It also corrects the thing almost everyone gets wrong: the tariff is marginal, not a cliff. The first 6,000 kWh are charged at 18 halalas however much you use in total, and only the units above that cost 30, so crossing the threshold adds a few riyals rather than repricing the whole bill.' },
+    ar: { name: 'تقدير فاتورة الكهرباء', description: 'احسب تقريبًا كم يكلّف شهر من الكهرباء، مع تفصيل يبيّن من أين جاء المبلغ — الوحدات بكل سعر، ورسم خدمة العداد، والضريبة. وتصحّح الأداة ما يخطئ فيه أكثر الناس: فالتعرفة تصاعدية لا قفزة. إذ تُحتسب أول 6000 كيلوواط بـ18 هللة مهما بلغ استهلاكك، ولا تُحتسب بـ30 إلا ما فوقها، فتجاوز الحد يزيد بضعة ريالات لا أن يُعيد تسعير الفاتورة كلها.' },
+  },
 ]

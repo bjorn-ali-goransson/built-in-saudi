@@ -536,3 +536,11 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
   what was missing — "stopwatch" is a thing people type and we genuinely do not
   have it. Deliberately NOT solved by adding the word to another tool's
   keywords.
+
+### Web sweep, 8 August 2026 (ninth pass — utilities)
+
+- ~~**Electricity bill estimator.**~~ **Shipped** as `electricity-bill`. Closes
+  idea #10 from the second sweep. The find was a *misconception* rather than a
+  rule: people believe crossing 6,000 kWh reprices the whole bill.
+- **Still open:** the water tariff, which is banded by consumption in a similar
+  way but whose published schedule was not confirmed by the sources read.

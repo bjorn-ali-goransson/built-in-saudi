@@ -197,6 +197,7 @@ import { rentRulesTool } from './rent-rules/meta'
 import { earlySettlementTool } from './early-settlement/meta'
 import { leaveOvertimeTool } from './leave-overtime/meta'
 import { exitReentryTool } from './exit-reentry/meta'
+import { electricityBillTool } from './electricity-bill/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -342,6 +343,7 @@ export const tools: Tool[] = [
   earlySettlementTool,
   leaveOvertimeTool,
   exitReentryTool,
+  electricityBillTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,

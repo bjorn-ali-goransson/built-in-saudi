@@ -727,6 +727,23 @@ figure**. Two traps carry the tool:
   registration, so it is stated **before** the fee and names the longest trip
   the current iqama does allow — "no" with a number beside it.
 
+## Electricity bill (`electricity-bill`)
+
+Residential tariff: **18 halalas/kWh up to 6,000 a month, 30 above**, plus a
+**SAR 10** meter fee and **15% VAT** on the whole charge. The arithmetic is two
+multiplications; the tool exists for the misconception.
+
+**The tariff is marginal, not a cliff.** The first 6,000 units stay at 18
+halalas however much is used in total, and only the units above are charged at
+30 — so going from 5,999 to 6,001 kWh costs **about 14 halalas more**, not
+hundreds of riyals. That is the fear people actually have about tiered pricing,
+so the tool states it in words as well as showing it in the breakdown, and the
+spec asserts the two bills differ by **less than one riyal**.
+
+Also shown, because a total with no working is indistinguishable from a guess:
+the units at each rate, what the **next** kWh costs at this level of use, and how
+far the higher band is.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**
