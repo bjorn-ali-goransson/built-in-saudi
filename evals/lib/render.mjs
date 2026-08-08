@@ -13,7 +13,9 @@ export async function getRenderer() {
   fs.mkdirSync(tmp, { recursive: true })
   const entry = path.join(tmp, 'entry.mjs')
   const src = path.join(ROOT, 'src/tools/cv-generator/CvPdf.tsx').replace(/\\/g, '/')
-  fs.writeFileSync(entry, `export { CvDocument } from ${JSON.stringify(src)}\n`)
+  const report = path.join(ROOT, 'src/tools/cv-generator/AtsReport.tsx').replace(/\\/g, '/')
+  fs.writeFileSync(entry, `export { CvDocument } from ${JSON.stringify(src)}\n`
+    + `export { AtsReportDoc } from ${JSON.stringify(report)}\n`)
 
   const esbuild = (await import('esbuild')).default
   await esbuild.build({
@@ -28,7 +30,7 @@ export async function getRenderer() {
     logLevel: 'warning',
   })
 
-  const { CvDocument } = await import(pathToFileURL(path.join(tmp, 'cvpdf.mjs')).href)
+  const { CvDocument, AtsReportDoc } = await import(pathToFileURL(path.join(tmp, 'cvpdf.mjs')).href)
   const { Font, renderToBuffer } = await import('@react-pdf/renderer')
   const React = (await import('react')).default
 
@@ -40,5 +42,10 @@ export async function getRenderer() {
   Font.registerHyphenationCallback((word) => [word])
 
   renderer = (cv) => renderToBuffer(React.createElement(CvDocument, { cv }))
+  // The ATS report is the OTHER PDF the candidate downloads, and it carries the
+  // same letter-spacing risk as the CV — a report about machine readability
+  // that is not machine readable would be quite the thing to ship.
+  renderer.report = (cv, ats, issues, gaps) =>
+    renderToBuffer(React.createElement(AtsReportDoc, { cv, ats, issues, gaps }))
   return renderer
 }

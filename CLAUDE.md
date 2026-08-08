@@ -242,6 +242,22 @@ OpenAI; with the key dead, the guard on the two worst regressions this template
 has ever had was itself unavailable. `pdfguard` renders one fixed synthetic CV
 through the real component instead.
 
+**It covers BOTH PDFs the tool hands the candidate**, which it did not at
+first — and asking what else was rendered found a live instance of the very
+regression it exists to catch. `AtsReport.tsx` had its section headings at
+**0.14em**, above the measured 0.12em break point, because the original
+investigation and the guard both only ever looked at `CvPdf`. Extracted, the
+report read:
+
+```
+" W H AT N E E D S YO U"
+" A N S W E R T O R A I S E YO U R AT S S C O R E"
+```
+
+A document whose whole subject is machine readability, which was not machine
+readable. Now 0.08em like the CV, letter-spaced lines **2 → 0**, and the guard
+fails if it comes back.
+
 It is **verified to fail**, not just to pass: reintroducing the old 0.15em
 heading spacing drops readable headings from 4/4 to **1/4** and trips the
 letter-spacing detector. Two things learned writing it, both worth keeping:

@@ -119,6 +119,24 @@ const boundaryPresent = keywordLines.some((l) => /using Python|Python, SQL|and \
 console.log(`  boundary visible in the text: ${boundaryPresent}`)
 console.log(`  glued: ${glued.length ? JSON.stringify(glued) : 'none'}`)
 
-const ok = unique === weights.length && spacedOut.length === 0 && glued.length === 0 && found.length === HEADINGS.length && boundaryPresent
-console.log(`\n${ok ? 'PASS' : 'FAIL'} — fonts distinct: ${unique === weights.length}, headings readable: ${found.length}/${HEADINGS.length}, no letter-spacing: ${spacedOut.length === 0}, no glued keywords: ${glued.length === 0}, boundary actually checked: ${boundaryPresent}`)
+
+// ── the OTHER PDF: the ATS report ──────────────────────────────────────────
+// Found by asking what else this tool hands the candidate. The report's section
+// headings were at 0.14em — above the 0.12em break point measured for the CV,
+// and never checked because the original investigation only looked at CvPdf.
+const ATS = { keywords: 4, impact: 3, clarity: 4, format: 5, completeness: 4, conciseness: 3 }
+const ISSUES = [{ title: 'Few quantified results', detail: 'Most bullets carry no figure.', severity: 'high' }]
+const GAPS = [{ question: 'What did reporting time fall to?', targets: ['exp-1'] }]
+
+const reportPdf = await render.report(cv, ATS, ISSUES, GAPS)
+const reportText = await pdfToText(reportPdf)
+const reportSpaced = reportText.split('\n').filter((l) => /(?:[A-Z]\s){3,}[A-Z]/.test(l))
+const REPORT_HEADS = ['SCORE', 'ISSUES', 'QUESTIONS', 'WHAT']
+const reportFound = REPORT_HEADS.filter((h) => reportText.includes(h))
+console.log('\n=== the ATS report PDF ===')
+console.log(`  headings found: ${reportFound.join(', ') || 'none'}`)
+console.log(`  letter-spaced apart: ${reportSpaced.length}${reportSpaced.length ? '  ' + JSON.stringify(reportSpaced.slice(0, 3)) : ''}`)
+
+const ok = reportSpaced.length === 0 && unique === weights.length && spacedOut.length === 0 && glued.length === 0 && found.length === HEADINGS.length && boundaryPresent
+console.log(`\n${ok ? 'PASS' : 'FAIL'} — fonts distinct: ${unique === weights.length}, headings readable: ${found.length}/${HEADINGS.length}, no letter-spacing: ${spacedOut.length === 0}, no glued keywords: ${glued.length === 0}, boundary actually checked: ${boundaryPresent}, report headings readable: ${reportSpaced.length === 0}`)
 process.exit(ok ? 0 : 1)

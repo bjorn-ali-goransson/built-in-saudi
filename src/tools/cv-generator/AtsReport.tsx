@@ -46,7 +46,10 @@ const s = StyleSheet.create({
   big5: { fontSize: pt(14), color: C.muted, marginLeft: pt(4) },
   overallLbl: { fontSize: pt(11.5), color: C.muted, marginLeft: pt(10), textTransform: 'uppercase', letterSpacing: pt(11.5) * 0.06 },
   section: { marginTop: pt(16) },
-  secHead: { fontSize: pt(10.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: pt(10.5) * 0.14, color: C.accent, marginBottom: pt(7) },
+  // 0.08em, not 0.14: above ~0.12em at heading size a PDF text extractor
+  // reads the glyph gaps as spaces and "WHAT NEEDS YOUR ANSWER" comes back as
+  // "W H AT N E E D S". Measured — see CLAUDE.md and evals/pdfguard.mjs.
+  secHead: { fontSize: pt(10.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: pt(10.5) * 0.08, color: C.accent, marginBottom: pt(7) },
   secLead: { fontSize: pt(11), color: C.muted, marginTop: pt(-3), marginBottom: pt(8) },
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: pt(6) },
   barLabel: { width: pt(96), fontSize: pt(11), color: C.inkSoft },
@@ -65,7 +68,7 @@ const s = StyleSheet.create({
   foot: { position: 'absolute', bottom: '8mm', left: '16mm', right: '16mm', textAlign: 'center', fontSize: pt(9), color: C.muted },
 })
 
-function AtsReportDoc({ cv, ats, issues, gaps }: { cv: Cv; ats: CvAts; issues: CvIssue[]; gaps: CvGap[] }) {
+export function AtsReportDoc({ cv, ats, issues, gaps }: { cv: Cv; ats: CvAts; issues: CvIssue[]; gaps: CvGap[] }) {
   const overall = Math.round((ATS_ORDER.reduce((a, k) => a + (ats[k] || 0), 0) / ATS_ORDER.length) * 10) / 10
   return (
     <Document title={`ATS report — ${cv.name || 'CV'}`}>
