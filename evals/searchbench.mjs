@@ -145,6 +145,10 @@ const BENCH = [
   ['early settlement', 'early-settlement'],
   ['pay off my loan early', 'early-settlement'],
   ['السداد المبكر', 'early-settlement'],
+  ['annual leave', 'leave-overtime'],
+  ['overtime pay', 'leave-overtime'],
+  ['notice period', 'leave-overtime'],
+  ['الإجازة السنوية', 'leave-overtime'],
 ]
 
 function rank(query, wanted) {

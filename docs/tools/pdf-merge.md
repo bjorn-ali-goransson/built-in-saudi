@@ -1,7 +1,7 @@
 # Merge PDF
 
-- **Slug:** `/tools/pdf-merge` · **Category:** PDF · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/pdf-merge` · **Category:** PDF · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `pdf-lib`
 
 ## Why

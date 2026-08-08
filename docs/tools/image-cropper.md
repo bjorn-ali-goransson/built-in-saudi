@@ -1,7 +1,7 @@
 # Image Cropper
 
-- **Slug:** `/tools/image-cropper` · **Category:** Images · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/image-cropper` · **Category:** Images · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** Canvas API; optional small cropper UI helper
 
 ## Why

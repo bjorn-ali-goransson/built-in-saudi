@@ -1,7 +1,7 @@
 # Split PDF
 
-- **Slug:** `/tools/pdf-split` · **Category:** PDF · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/pdf-split` · **Category:** PDF · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `pdf-lib` (+ `pdf.js` for page thumbnails, optional)
 
 ## Why

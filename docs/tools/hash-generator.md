@@ -1,7 +1,7 @@
 # Hash Generator
 
-- **Slug:** `/tools/hash-generator` · **Category:** Generators · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/hash-generator` · **Category:** Generators · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `SubtleCrypto` (SHA family); small MD5 lib if MD5 needed
 
 ## Why

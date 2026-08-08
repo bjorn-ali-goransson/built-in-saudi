@@ -1174,7 +1174,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   Functions host, in `src/lib/bookingApi.ts`) and `window.__BOOKING_CALLBACK_FN`
   (the forward target in `public/oauth/callback/index.html`). The mock drives the
   real redirect chain — start → static `/oauth/callback/` page → callback → signed
-  in — so the sign-in flow is covered without hitting Google. See [`docs/tools/book-with-me.md`](./docs/tools/book-with-me.md).
+  in — so the sign-in flow is covered without hitting Google. See [`docs/tools/book-me.md`](./docs/tools/book-me.md).
 - **"Delete my data" is one consolidated endpoint** (`my-data` in `functions/booking.js`,
   surfaced on the **Privacy page**): sign in with Google → it reports and deletes
   **everything** stored for that user across the whole site. **Whenever you add any
@@ -1473,6 +1473,26 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/
   `VAPID_PRIVATE`/`SENDER_SECRET`/`GOOGLE_OAUTH_CLIENT_SECRET`/`RESEND_API_KEY`/
   `TELEGRAM_BOT_TOKEN` feed it.
+
+## The tool specs are checked against the registry
+
+`docs/tools/<id>.md` had gone stale in three ways at once, quietly, because
+nothing read them — and this file opens by saying a stale doc is a bug:
+
+- **All twenty** gave the route as `/tools/<id>`, which only 301-redirects; it
+  has been `/apps/<id>` for a long time.
+- **Eighteen said "Status: Coming soon", and sixteen of those tools had
+  shipped.** Anyone reading the folder to understand the product would have
+  concluded the site barely existed.
+- **Three were named for a tool renamed before it shipped** (`word-counter` →
+  `text-counter`, `hijri-converter` → `hijri-calendar`, `book-with-me` →
+  `book-me`), so the document could not be connected to any tool at all.
+
+`scripts/check-tool-docs.mjs` (in `prebuild`) now fails the build on any of the
+three, and is verified to do so. None of it was catchable by a typecheck or a
+browser test, which is exactly why it survived — but all of it is catchable by
+three greps. **A spec's filename is the tool's `id`, its slug is `/apps/<id>`,
+and its status is Live once the tool is registered.**
 
 ## Roadmap
 

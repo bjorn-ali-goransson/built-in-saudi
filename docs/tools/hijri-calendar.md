@@ -1,7 +1,7 @@
 # Hijri ↔ Gregorian Converter
 
-- **Slug:** `/tools/hijri-converter` · **Category:** Saudi / Local · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/hijri-calendar` · **Category:** Saudi / Local · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `Intl.DateTimeFormat` with `islamic-umalqura` calendar (native)
 - **Locale wedge:** 🇸🇦 High Saudi relevance, weak/adware competition
 

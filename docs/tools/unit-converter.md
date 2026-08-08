@@ -1,7 +1,7 @@
 # Unit Converter
 
-- **Slug:** `/tools/unit-converter` · **Category:** Converters · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/unit-converter` · **Category:** Converters · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (static conversion tables)
 
 ## Why

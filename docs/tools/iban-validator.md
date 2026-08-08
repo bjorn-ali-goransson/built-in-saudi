@@ -1,6 +1,6 @@
 # Saudi IBAN Validator & Formatter
 
-- **Slug:** `/tools/iban-validator` · **Category:** Saudi / Local · **Priority:** Tier 2
+- **Slug:** `/apps/iban-validator` · **Category:** Saudi / Local · **Priority:** Tier 2
 - **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `qrcode` (share card only); ISO 7064 mod-97 check implemented directly
 - **Locale wedge:** 🇸🇦 Saudi-first, useful for anyone entering bank details

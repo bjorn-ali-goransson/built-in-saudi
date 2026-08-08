@@ -1,6 +1,6 @@
 # Book With Me (Calendly-style scheduler)
 
-- **Slug:** `/tools/book-with-me` (host dashboard) · **Public booking:** `built-in-saudi.com/book/<code>`
+- **Slug:** `/apps/book-me` (host dashboard) · **Public booking:** `built-in-saudi.com/book/<code>`
   (path-based; the `book-a-meeting` subdomain is deferred, so no Cloudflare)
 - **Category:** Business · **Priority:** Tier 1 (flagship)
 - **Runs:** hybrid — host UI is client-side; booking/notifications need the backend (badge ⚙︎)

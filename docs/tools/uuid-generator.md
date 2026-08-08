@@ -1,7 +1,7 @@
 # UUID Generator
 
-- **Slug:** `/tools/uuid-generator` · **Category:** Generators · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/uuid-generator` · **Category:** Generators · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (`crypto.randomUUID`)
 
 ## Why

@@ -1,7 +1,7 @@
 # Images → PDF
 
-- **Slug:** `/tools/images-to-pdf` · **Category:** PDF · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/images-to-pdf` · **Category:** PDF · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `pdf-lib` (or `jsPDF`)
 
 ## Why

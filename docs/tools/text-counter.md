@@ -1,7 +1,7 @@
 # Word & Character Counter
 
-- **Slug:** `/tools/word-counter` · **Category:** Text · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/text-counter` · **Category:** Text · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (`Intl.Segmenter` for robust word/grapheme counts)
 
 ## Why

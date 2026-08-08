@@ -1,7 +1,7 @@
 # Base64 Encoder / Decoder
 
-- **Slug:** `/tools/base64` · **Category:** Converters · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/base64` · **Category:** Converters · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (`btoa`/`atob` with UTF-8 handling; `FileReader` for files)
 
 ## Why

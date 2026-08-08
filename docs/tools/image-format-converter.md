@@ -1,7 +1,7 @@
 # Image Format Converter
 
-- **Slug:** `/tools/image-format-converter` · **Category:** Images · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/image-format-converter` · **Category:** Images · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** Canvas API (`canvas.toBlob`); HEIC needs `heic2any` (fast follow)
 
 ## Why

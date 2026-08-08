@@ -1,7 +1,7 @@
 # Invoice Generator
 
-- **Slug:** `/tools/invoice-generator` · **Category:** Business · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/invoice-generator` · **Category:** Business · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** `pdf-lib` or `jsPDF` (client-side PDF); no server
 - **Locale wedge:** 🇸🇦 SAR + 15% VAT + bilingual (AR/EN) by default
 

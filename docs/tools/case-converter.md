@@ -1,7 +1,7 @@
 # Case Converter
 
-- **Slug:** `/tools/case-converter` · **Category:** Text · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/case-converter` · **Category:** Text · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none
 
 ## Why

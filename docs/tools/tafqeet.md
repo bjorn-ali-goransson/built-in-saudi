@@ -1,7 +1,7 @@
 # Tafqeet — Amount to Arabic Words (تفقيط)
 
-- **Slug:** `/tools/tafqeet` · **Category:** Saudi / Local · **Priority:** Tier 2
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/tafqeet` · **Category:** Saudi / Local · **Priority:** Tier 2
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (custom Arabic number-spelling)
 - **Locale wedge:** 🇸🇦 Genuinely Saudi/Arab; used on every invoice & cheque
 
@@ -34,5 +34,5 @@ e.g. `فقط ألف ومئتان وخمسون ريالاً وخمس وسبعون
 - Edge cases (0, 2/dual, 11–19, exact hundreds/thousands) read correctly.
 
 ## Out of scope (v1)
-- English number-to-words (separate `/tools/number-to-words`), legal contract
+- English number-to-words (separate `/apps/number-to-words`), legal contract
   templating.

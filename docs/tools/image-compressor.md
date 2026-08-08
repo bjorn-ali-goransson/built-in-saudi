@@ -1,7 +1,7 @@
 # Image Compressor & Resizer
 
-- **Slug:** `/tools/image-compressor` · **Category:** Images · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/image-compressor` · **Category:** Images · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** Canvas API (`createImageBitmap`, `canvas.toBlob`); optional `browser-image-compression`
 
 ## Why

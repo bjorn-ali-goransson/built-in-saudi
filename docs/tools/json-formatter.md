@@ -1,7 +1,7 @@
 # JSON Formatter & Validator
 
-- **Slug:** `/tools/json-formatter` · **Category:** Developer · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Coming soon
+- **Slug:** `/apps/json-formatter` · **Category:** Developer · **Priority:** Tier 1
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** none (native `JSON`); optional tiny error-locator
 
 ## Why
