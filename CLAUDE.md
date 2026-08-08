@@ -729,6 +729,8 @@ own evidence. Needs `OPENAI_KEY` in the gitignored root `.env`. **Real CVs and a
 run output are gitignored** (`evals/cvs/`, `evals/out/`) — never commit them.
 
 ```bash
+node evals/check.mjs                              # every guard that needs NO key
+node evals/check.mjs --all                        # plus the measurements
 node evals/run.mjs --roundtrip                    # full corpus, production prompts
 node evals/run.mjs --variants champion,legacy     # A/B against the pre-2026-08 prompt
 node evals/improve.mjs                            # does answering the gaps raise the score?
@@ -756,6 +758,25 @@ probing rather than by reading the prompt, both easy to reintroduce:
   now requires a figure to name what was measured, be attributable to that person
   in that role, and vary in unit across the CV, and caps the dimension at 3 when
   most bullets are padded. `node evals/gameable.mjs` is the regression test.
+
+**`node evals/check.mjs` runs everything that needs no key**, and is the thing
+to run before touching the CV pipeline or the PDF template. It separates two
+kinds of check, because conflating them is how a guard stops guarding:
+
+- **Gates** exit non-zero — `pdfguard` (the exported PDF survives machine
+  reading) and `cvtextcheck` (`cvToText` is what an ATS recovers, and its mirror
+  has not drifted). Both run on fixed synthetic input, so they work on any
+  machine with no corpus.
+- **Measurements** (`--all`) report numbers a person has to interpret —
+  quantified lines, positions per CV, which `.docx` reader keeps a CV's bullets.
+  They cannot pass or fail and never affect the exit code. Three need the real
+  corpus and say so rather than silently reporting zero.
+
+Verified end to end: a clean tree exits **0**, and reintroducing the 0.15em
+heading spacing exits **1**. Worth knowing that the injected regression trips
+BOTH gates — letter-spacing changes what the extractor recovers, so `cvtextcheck`
+sees the text diverge too. The gates are not independent, and that redundancy is
+useful rather than wasteful.
 
 **BLOCKED as of 7 Aug 2026:** the `OPENAI_KEY` in the root `.env` is rejected
 with `invalid_api_key` (key ending `q6UA`), so none of these can be run and no
