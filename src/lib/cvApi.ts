@@ -170,5 +170,20 @@ export async function improveCv(idToken: string, cv: Cv, answers: { question: st
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
   const patch = data.patch && typeof data.patch === 'object' ? (data.patch as Partial<Cv>) : {}
-  return { ...parseResult(data), cv: { ...cv, ...patch } }
+  // Drop any section the patch sends back EMPTY, mirroring `normalizePatch` on
+  // the server. This merge is section-level, so an empty value would replace a
+  // section wholesale — and "unchanged" is expressed in this format by omitting
+  // the key, so an empty one carries no information. `experience: []` deleted
+  // the candidate's entire work history (see evals/patchcheck.mjs).
+  //
+  // Duplicated deliberately rather than trusted to the server: the client ships
+  // via Pages and the functions via their own workflow, so a rollback of one
+  // can pair a new client with an old server. The failure this prevents is a
+  // person sending an employer a CV with a section missing.
+  const safe: Partial<Cv> = {}
+  for (const [k, v] of Object.entries(patch)) {
+    const empty = Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : v == null
+    if (!empty) (safe as Record<string, unknown>)[k] = v
+  }
+  return { ...parseResult(data), cv: { ...cv, ...safe } }
 }

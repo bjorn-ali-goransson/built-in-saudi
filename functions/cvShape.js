@@ -76,6 +76,13 @@ export function normalize(cv) {
 // (each present array/scalar is a complete replacement of that section), so
 // unchanged sections the model didn't re-emit are left untouched on merge.
 const SECTION_KEYS = ['name', 'role', 'available', 'contact', 'summary', 'skills', 'experience', 'projects', 'talks', 'certifications', 'publications', 'education', 'languages']
+/** Did this section survive normalization with anything in it? */
+function hasContent(v) {
+  if (Array.isArray(v)) return v.length > 0
+  if (typeof v === 'string') return v.trim().length > 0
+  return v != null && v !== ''
+}
+
 export function normalizePatch(raw) {
   if (!raw || typeof raw !== 'object') return {}
   const present = {}
@@ -83,7 +90,25 @@ export function normalizePatch(raw) {
   // Reuse the full normalizer, then keep only the sections that were present.
   const full = normalize(present)
   const out = {}
-  for (const k of Object.keys(present)) out[k] = full[k]
+  for (const k of Object.keys(present)) {
+    // An EMPTY section is dropped from the patch, not carried into it.
+    //
+    // The client merges section-level — `{ ...cv, ...patch }` — so whatever a
+    // patch says about a section replaces it wholesale. In this wire format
+    // "unchanged" is expressed by OMITTING the key, which means an empty value
+    // carries no information at all: `experience: []` is indistinguishable from
+    // a model that simply had nothing to say. Keeping it deleted the
+    // candidate's entire work history from the improved CV.
+    //
+    // The two readings are not symmetric, which is what settles it. A stale
+    // section is recoverable — they can improve again. A deleted one is their
+    // career missing from the document they send an employer. And the rebuild
+    // prompt is preserve-first by contract and forbidden from dropping content,
+    // so an empty section is a malformed response rather than an instruction.
+    //
+    // Verified by `node evals/patchcheck.mjs`, which fails if this regresses.
+    if (hasContent(full[k])) out[k] = full[k]
+  }
   return out
 }
 

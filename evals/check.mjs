@@ -27,6 +27,7 @@ const GATES = [
   ['cvtextcheck.mjs', 'cvToText is what an ATS actually recovers, and its mirror has not drifted'],
   ['columncheck.mjs', 'the column-splitting mirror in evals/ still matches production'],
   ['../scripts/check-ats-dims.mjs', 'the six ATS dimensions agree across client, server and prompt'],
+  ['patchcheck.mjs', 'an improve pass cannot delete a section of the candidate CV'],
 ]
 
 /** Numbers a person reads. No pass/fail, and some need the real corpus. */

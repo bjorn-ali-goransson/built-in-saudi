@@ -971,6 +971,35 @@ would move the declaration next to the tool and is the better long-term shape;
 it is not done, because it touches twenty metas for a guard the script already
 covers.
 
+## An improve pass could delete a section of the candidate's CV
+
+The highest-stakes bug found in this pipeline, and it needed no API key to find
+— `node evals/patchcheck.mjs`, now a gate in `evals/check.mjs`.
+
+To save output tokens the improve pass returns only the CHANGED sections as a
+`patch`, and both sides merge it **section-level**: `{ ...cv, ...patch }`. So
+whatever a patch says about a section replaces it wholesale. That makes one
+question load-bearing: what does the protocol mean by `experience: []`?
+
+In this wire format **"unchanged" is expressed by OMITTING the key**, so an
+empty value carries no information at all — and `normalizePatch` tested `k in
+raw`, which treats present-but-empty as present. Measured: **four patch shapes
+(`null`, `[]`, `''`, an emptied array) deleted a section outright.** A model
+returning `experience: []` wiped the candidate's entire work history from the
+improved CV, silently, on a document they then send to an employer.
+
+The two readings are not symmetric, which is what settles it: a stale section is
+recoverable — improve again — while a deleted one is their career missing. And
+the rebuild prompt is preserve-first by contract and forbidden from dropping
+content, so an empty section is a **malformed response, not an instruction**.
+Empty sections are now dropped from the patch.
+
+**Guarded on BOTH sides deliberately**, against the repo's usual
+single-point-of-truth preference: `functions/cvShape.js` and `src/lib/cvApi.ts`
+ship through *different* workflows — Pages for the client,
+`deploy-functions.yml` for the backend — so a rollback of one can pair a new
+client with an old server. The duplication is the point.
+
 ## The six ATS dimensions are written down three times
 
 Client `ATS_DIMS` (which drives the radar), server `ATS_DIMENSIONS`, and the

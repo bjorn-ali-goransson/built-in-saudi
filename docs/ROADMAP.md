@@ -711,3 +711,20 @@ Still open:
 - **`Business` has 3 tools.** Small enough to be worth asking whether it earns a
   heading, but not wrong.
 
+### CV evals, 8 August 2026 (third pass) — a real bug, no key needed
+
+`OPENAI_KEY` still 401. Looked instead at the deterministic logic in the same
+pipeline and found the worst bug of the three passes: an improve pass could
+**delete a section of the candidate's CV**. See the patch note in CLAUDE.md.
+
+Still open:
+
+- **The client-side half of that guard has no end-to-end test.** `patchcheck`
+  covers `normalizePatch` on the server; the mirrored four lines in
+  `cvApi.ts` are unexercised, because the CV spec has no mock of the
+  generate/improve flow to hang one on. Building that mock would also unlock
+  testing the review dialog and the improve budget.
+- The prompt experiments from passes one and two remain blocked on a key, in
+  this order: grade `impact` per-ROLE rather than per-line; then target the
+  question budget at unquantified roles; then consider enlarging it.
+
