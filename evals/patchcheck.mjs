@@ -20,7 +20,32 @@
 // prompt is preserve-first by design and is explicitly forbidden from dropping
 // content, so a patch that empties a section is a malformed response, not an
 // instruction.
+import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { normalizePatch } from '../functions/cvShape.js'
+
+// `evals/gen/` is gitignored, and this file is a GATE in evals/check.mjs — which
+// is meant to run on any machine with no setup. So compile the client half here
+// rather than relying on someone having run tsc first.
+const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+if (!existsSync(`${here}gen/cvPatch.js`)) {
+  // node on tsc's own entry point, not npx: spawnSync('npx.cmd') is EINVAL on
+  // Windows without a shell, and a shell is not worth needing here.
+  execFileSync(process.execPath, [
+    `${root}/node_modules/typescript/bin/tsc`,
+    `${root}/src/lib/cvPatch.ts`,
+    '--outDir', `${here}gen`,
+    '--module', 'esnext', '--target', 'es2022', '--moduleResolution', 'bundler',
+  ], { stdio: 'inherit' })
+}
+const { mergePatch } = await import('./gen/cvPatch.js')
+
+// BOTH halves are checked, because they ship through different workflows: the
+// client via Pages, the functions via deploy-functions.yml. A rollback of one
+// can pair a new client with an old server, so the client cannot lean on the
+// server having dropped the empties. Compile the client half first:
+//   npx tsc src/lib/cvPatch.ts --outDir evals/gen --module esnext
 
 const CV = {
   name: 'Sara Al-Otaibi',
@@ -47,7 +72,11 @@ let failures = 0
 console.log('what a patch does to the merged CV (client does { ...cv, ...patch })\n')
 for (const [label, raw] of cases) {
   const patch = normalizePatch(raw)
-  const merged = { ...CV, ...patch }
+  // Server-normalized then client-merged, which is the real path.
+  const merged = mergePatch(CV, patch)
+  // And the client ALONE, as though the server had not dropped anything —
+  // which is exactly the deploy-skew case the duplication exists for.
+  const clientOnly = mergePatch(CV, raw)
   const lost = []
   for (const k of Object.keys(CV)) {
     const before = CV[k]
@@ -55,8 +84,15 @@ for (const [label, raw] of cases) {
     const size = (v) => (Array.isArray(v) ? v.length : typeof v === 'string' ? v.length : v ? 1 : 0)
     if (size(before) > 0 && size(after) === 0) lost.push(k)
   }
-  const verdict = lost.length ? `LOST ${lost.join(', ')}` : 'nothing lost'
-  if (lost.length) failures++
+  const lostClient = []
+  for (const k of Object.keys(CV)) {
+    const size = (v) => (Array.isArray(v) ? v.length : typeof v === 'string' ? v.length : v ? 1 : 0)
+    if (size(CV[k]) > 0 && size(clientOnly[k]) === 0) lostClient.push(k)
+  }
+  const verdict = lost.length ? `LOST ${lost.join(', ')}`
+    : lostClient.length ? `client alone LOST ${lostClient.join(', ')}`
+    : 'nothing lost'
+  if (lost.length || lostClient.length) failures++
   console.log(`  ${label.padEnd(32)} keys in patch: ${JSON.stringify(Object.keys(patch))}  ->  ${verdict}`)
 }
 

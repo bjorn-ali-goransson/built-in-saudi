@@ -719,11 +719,11 @@ pipeline and found the worst bug of the three passes: an improve pass could
 
 Still open:
 
-- **The client-side half of that guard has no end-to-end test.** `patchcheck`
-  covers `normalizePatch` on the server; the mirrored four lines in
-  `cvApi.ts` are unexercised, because the CV spec has no mock of the
-  generate/improve flow to hang one on. Building that mock would also unlock
-  testing the review dialog and the improve budget.
+- ~~**The client-side half of that guard has no end-to-end test.**~~ Done, but
+  not where expected: the merge moved to `src/lib/cvPatch.ts` and `patchcheck`
+  now checks both halves, because a react-pdf canvas cannot be asserted on.
+  `e2e/cv-improve.spec.ts` mocks the flow and covers the review dialog, the
+  before/after radar and the improve budget.
 - The prompt experiments from passes one and two remain blocked on a key, in
   this order: grade `impact` per-ROLE rather than per-line; then target the
   question budget at unquantified roles; then consider enlarging it.
@@ -778,4 +778,17 @@ Still open in discoverability:
   against the tuned bench alone.
 - **`Developer` at 25** remains the largest section and remains deliberately
   unsplit.
+
+### CV evals, 8 August 2026 (fourth pass) — coverage, not prompts
+
+Key still 401. Closed the last recorded deterministic gap: the client half of
+the patch guard, plus a mocked generate → review → improve flow.
+
+Still open, and still needing a key, in this order:
+
+1. Grade `impact` per-ROLE rather than per-line density.
+2. Target the question budget at unquantified roles.
+3. Only then consider enlarging the budget.
+4. Re-run `perfect.mjs` and `gameable.mjs`; the 1–5 scale has been untestable
+   for a while and both exist to catch it compressing.
 

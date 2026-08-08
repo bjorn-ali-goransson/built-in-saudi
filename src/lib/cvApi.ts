@@ -3,6 +3,8 @@ import type { Cv } from '../tools/cv-generator/schema'
 // Google Identity Services sign-in + the CV generation call. The client ID is
 // public (like the VAPID key in push.ts).
 export const GOOGLE_CLIENT_ID = '736023550280-71bb5sl89i1trt8p1obk8h35jrn6t7a3.apps.googleusercontent.com'
+import { mergePatch } from './cvPatch'
+
 const FN = 'https://us-central1-blitz-ksa.cloudfunctions.net'
 
 interface GisId {
@@ -170,20 +172,8 @@ export async function improveCv(idToken: string, cv: Cv, answers: { question: st
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
   const patch = data.patch && typeof data.patch === 'object' ? (data.patch as Partial<Cv>) : {}
-  // Drop any section the patch sends back EMPTY, mirroring `normalizePatch` on
-  // the server. This merge is section-level, so an empty value would replace a
-  // section wholesale — and "unchanged" is expressed in this format by omitting
-  // the key, so an empty one carries no information. `experience: []` deleted
-  // the candidate's entire work history (see evals/patchcheck.mjs).
-  //
-  // Duplicated deliberately rather than trusted to the server: the client ships
-  // via Pages and the functions via their own workflow, so a rollback of one
-  // can pair a new client with an old server. The failure this prevents is a
-  // person sending an employer a CV with a section missing.
-  const safe: Partial<Cv> = {}
-  for (const [k, v] of Object.entries(patch)) {
-    const empty = Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : v == null
-    if (!empty) (safe as Record<string, unknown>)[k] = v
-  }
-  return { ...parseResult(data), cv: { ...cv, ...safe } }
+  // The merge lives in `lib/cvPatch.ts` so a node harness can check the real
+  // function — see evals/patchcheck.mjs. An empty section in a patch means
+  // "nothing to say", never "delete this".
+  return { ...parseResult(data), cv: mergePatch(cv, patch) }
 }

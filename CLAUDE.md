@@ -1045,10 +1045,31 @@ content, so an empty section is a **malformed response, not an instruction**.
 Empty sections are now dropped from the patch.
 
 **Guarded on BOTH sides deliberately**, against the repo's usual
-single-point-of-truth preference: `functions/cvShape.js` and `src/lib/cvApi.ts`
-ship through *different* workflows — Pages for the client,
-`deploy-functions.yml` for the backend — so a rollback of one can pair a new
-client with an old server. The duplication is the point.
+single-point-of-truth preference: the client and the backend ship through
+*different* workflows — Pages for one, `deploy-functions.yml` for the other — so
+a rollback can pair a new client with an old server. The duplication is the
+point, and **both halves are now checked**: the client's merge lives alone in
+`src/lib/cvPatch.ts` with no runtime imports, so `patchcheck` compiles it with
+tsc and exercises the REAL function rather than a copy. It compiles it itself,
+because `evals/gen/` is gitignored and this is a gate that must run on a clean
+clone. (`spawnSync('npx.cmd')` is `EINVAL` on Windows without a shell — call
+`process.execPath` on `node_modules/typescript/bin/tsc` instead.)
+
+**`e2e/cv-improve.spec.ts` mocks the generate → review → improve flow**, which
+nothing did before: the real endpoint costs an OpenAI call and is capped at 2
+per day per user, so the review dialog, the before/after radar and the improve
+budget had no coverage at all. Two things it cost to write, both worth knowing:
+
+- **A mock CV must match the shape `normalize()` guarantees**, and a near-miss
+  crashes the renderer outright rather than degrading — `skills[].items` is a
+  comma-joined STRING, not an array, and experience uses `company` +
+  `startDate`/`endDate`. `(r || '').replace is not a function` is what that
+  looks like. The client is entitled to assume the server normalized; a mock
+  that invents its own shape is testing nothing.
+- **The patch-merge assertion does NOT belong in an e2e.** It was tried there
+  first: the CV preview is a react-pdf canvas, so no text assertion reaches it,
+  and downloading and re-extracting a PDF to prove a four-line merge is a worse
+  test than the harness. That is why the merge was extracted to its own module.
 
 ## The six ATS dimensions are written down three times
 
