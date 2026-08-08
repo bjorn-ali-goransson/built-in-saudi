@@ -1,3 +1,12 @@
+// SOURCES — checked 8 August 2026
+//   Royal decree of 25 September 2025 suspending rent increases inside the
+//     Riyadh urban boundary for five years, residential and commercial.
+//   Ministry of Justice / Ejar (ejar.sa) — the tenancy register the reference
+//     rent is read from, and the 60-day notice for automatic renewal, which is
+//     NATIONWIDE rather than a Riyadh rule.
+//   The tool cannot know whether an address falls inside the urban boundary,
+//     which is what the freeze turns on; its disclaimer says so.
+
 // Two rules a tenant or a landlord actually needs, and the date that separates
 // them.
 //

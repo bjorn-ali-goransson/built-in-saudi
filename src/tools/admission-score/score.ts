@@ -1,3 +1,11 @@
+// SOURCES — checked 8 August 2026
+//   Education & Training Evaluation Commission (etec.gov.sa) — Qudurat (GAT)
+//     and Tahsili (SAAT) are ETEC tests; the scores are the student's own.
+//   The WEIGHTS are each university's own published admission formula (e.g.
+//     KSU 30/30/40, KFUPM 20/30/50) and differ by programme. They are an INPUT
+//     the student can look up, not a threshold this tool invents — which is why
+//     custom weights are accepted and a set that does not total 100 is refused.
+
 // The weighted admission percentage, and where a student's points actually are.
 //
 // The formula is exact — GPA, Qudurat and Tahsili each multiplied by a weight —

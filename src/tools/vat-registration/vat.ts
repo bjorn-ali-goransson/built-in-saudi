@@ -1,3 +1,11 @@
+// SOURCES — checked 8 August 2026
+//   Zakat, Tax and Customs Authority (ZATCA), zatca.gov.sa
+//     · VAT Implementing Regulations: mandatory registration at SAR 375,000 and
+//       voluntary at SAR 187,500, measured over ANY twelve consecutive months
+//       or expected over the next twelve.
+//     · 30 days to register once the threshold is crossed; SAR 10,000 penalty.
+//     · Exempt supplies are excluded from the threshold; zero-rated are not.
+
 // Must you register for VAT in Saudi Arabia?
 //
 // The arithmetic is addition. What makes it worth a tool is that the two

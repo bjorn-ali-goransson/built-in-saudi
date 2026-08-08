@@ -1,3 +1,11 @@
+// SOURCES — checked 8 August 2026
+//   Ministry of Interior — Jawazat (Directorate General of Passports), via
+//     Absher (absher.sa) and Muqeem (muqeem.sa).
+//     · Single: SAR 200 covering two months, SAR 100 each further month.
+//     · Multiple: SAR 500 covering three months, SAR 200 each further month.
+//     · Applying from abroad doubles the per-month figure.
+//     · Validity cannot exceed the iqama's expiry.
+
 // What an exit/re-entry visa costs, and the two things that catch people.
 //
 // - **Months are charged in whole 30-day blocks.** 1–30 days is one month,

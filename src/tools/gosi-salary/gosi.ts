@@ -1,3 +1,13 @@
+// SOURCES — checked 8 August 2026
+//   General Organization for Social Insurance (GOSI), gosi.gov.sa
+//     · Social Insurance Law; the scheme applying to anyone first registered
+//       from 3 July 2024, and the pension rate rising half a point each July
+//       from 2024 (9%) to 2028 (11%) on each side.
+//     · Occupational hazards: 2% employer-only, and the only contribution for
+//       a non-Saudi employee.
+//     · Contributable wage = basic + housing, capped at SAR 45,000 a month.
+//   RATES MOVE EVERY JULY. When one does, change it here and move the date.
+
 // GOSI contributions and net salary, as the rules actually are.
 //
 // Everything here is a rule most calculators get wrong, which is the reason the

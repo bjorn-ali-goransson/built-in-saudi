@@ -846,6 +846,28 @@ Two things beyond the arithmetic:
 Reading a number out of the Arabic UI has a trap in it \u2014 see **Reading numbers
 in a spec** under Testing.
 
+## Every Saudi rule cites its source, in the file that encodes it
+
+Each rule module (`gosi.ts`, `vat.ts`, `rent.ts`, `settle.ts`, `labour.ts`,
+`visa.ts`, `vehicle.ts`, `iqama.ts`, `bill.ts`, `score.ts`) opens with a
+**SOURCES block naming the authority, the instrument, and the date checked**.
+Before this, every rate on the site was uncited: a future maintainer could not
+re-verify a figure without redoing the research, and could not tell whether it
+had been checked last week or last year. **These rates move** — GOSI's pension
+step is annual, tariffs and thresholds change — so the date is the load-bearing
+part. When a rate changes, change it there and move the date.
+
+**Authority and domain root only, never a deep link.** A fabricated URL that
+404s is worse than no URL, because it looks like it was checked. What a reader
+needs is which body to ask: GOSI, ZATCA, SAMA, HRSD, Jawazat/Absher, Fahes,
+WERA/SEC, ETEC, Ejar.
+
+The **user-facing** half of this is already enforced: every one of these tools
+renders a `<Disclaimer>` naming the authority to check, in both locales, guarded
+by `e2e/disclaimers.spec.ts` and `scripts/check-disclaimers.mjs`. The SOURCES
+block is the maintainer-facing half — it makes the number auditable rather than
+merely caveated.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

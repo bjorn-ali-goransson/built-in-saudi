@@ -1,3 +1,10 @@
+// SOURCES — checked 8 August 2026
+//   Water & Electricity Regulatory Authority (WERA) tariff, as billed by Saudi
+//     Electricity Company (se.com.sa).
+//     · Residential: 18 halalas/kWh up to 6,000 a month, 30 above — MARGINAL,
+//       so only the units above 6,000 are charged at the higher rate.
+//     · SAR 10 meter fee, then 15% VAT on the whole charge.
+
 // A residential electricity bill, and the misconception that makes people
 // misjudge it.
 //

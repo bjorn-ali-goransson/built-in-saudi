@@ -1,3 +1,15 @@
+// SOURCES — checked 8 August 2026
+//   Ministry of Interior — Jawazat, via Absher (absher.sa) and Muqeem
+//     (muqeem.sa): iqama issuance/renewal SAR 650 a year (SAR 600 for a
+//     domestic worker), charged pro rata for 3/6/9 months.
+//   Dependent (muraafiq) fee: SAR 400 per dependent per month, introduced in
+//     2017 at 100 and stepped to 400 in July 2020.
+//   Ministry of Human Resources and Social Development (hrsd.gov.sa)
+//     · Labour Law art. 40: iqama and work permit fees are the employer's and
+//       may not be charged to the worker.
+//   The work permit levy's RATE is deliberately not encoded — see the note
+//     below; published figures disagree and it is not the worker's to pay.
+
 // What renewing an iqama actually costs a family, and who is supposed to pay.
 //
 // The arithmetic is two multiplications. The tool exists for three things people

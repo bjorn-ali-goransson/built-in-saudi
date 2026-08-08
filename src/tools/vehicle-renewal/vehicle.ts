@@ -1,3 +1,12 @@
+// SOURCES — checked 8 August 2026
+//   Ministry of Interior — Traffic Department (Muroor), via Absher (absher.sa).
+//     · Istimara renewal requires a valid periodic inspection; the renewal
+//       window opens 180 days before expiry.
+//   Fahes (fahes.com.sa) — periodic inspection.
+//     · Exemption from first registration: 3 years for a private car, 2 for a
+//       taxi or public transport. A certificate is valid one year from the day
+//       it was passed, so the next one counts from the LAST inspection.
+
 // When a vehicle's inspection and registration are actually due.
 //
 // The dates are simple; the RELATIONSHIP between them is what people get

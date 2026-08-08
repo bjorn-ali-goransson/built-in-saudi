@@ -1,3 +1,10 @@
+// SOURCES — checked 8 August 2026
+//   Saudi Central Bank (SAMA), sama.gov.sa
+//     · Finance Companies Control Law / responsible lending principles: on
+//       early repayment the borrower pays the outstanding balance plus the term
+//       cost of the THREE months following repayment, on a declining balance.
+//       The three months is a CEILING, not a fee the lender chooses.
+
 // What it costs to pay a personal finance off early — and what it saves.
 //
 // The rule is SAMA's, not the lender's, and it is the opposite of what most

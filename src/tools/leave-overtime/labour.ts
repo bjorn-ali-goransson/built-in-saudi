@@ -1,3 +1,12 @@
+// SOURCES — checked 8 August 2026
+//   Ministry of Human Resources and Social Development (HRSD), hrsd.gov.sa
+//     · Labour Law: annual leave at least 21 days, rising to at least 30 after
+//       five continuous years with the same employer (art. 109).
+//     · Notice 30 days on resignation, 60 on employer termination (art. 75).
+//     · Overtime at 150% of the hourly wage; 720 hours a year beyond which the
+//       worker's explicit written consent is required.
+//   These are MINIMUMS. A contract may give more and cannot give less.
+
 // What the Saudi Labour Law gives you, in numbers.
 //
 // `end-of-service` stops at the gratuity. These are the entitlements that apply
