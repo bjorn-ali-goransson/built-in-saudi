@@ -317,3 +317,40 @@ test('a keyword must describe what the tool does, not what it tolerates', async 
   await search(page, 'مسح ضوئي', 'ar')
   await expect(page.getByTestId('tool-pdf-ocr')).toBeVisible()
 })
+
+// --- A relevance floor. Neither the home catalogue nor the launcher capped the
+// result list, so at 202 tools a query rendered every tool that matched at all —
+// 31 cards on average, three of them worth looking at.
+
+test('a query does not render a card for every tool that matched at all', async ({ page }) => {
+  await search(page, 'pdf merge')
+  const cards = page.locator('[data-testid^="tool-"]')
+  // The right answer is still first; the tail is gone.
+  await expect(cards.first()).toContainText(/merge/i)
+  const n = await cards.count()
+  // Measured: 35 tools score above zero for this, 16 survive the floor — and
+  // those sixteen are all real PDF tools, so the bound is set from what was
+  // measured rather than from a round number that felt tidy. The point is that
+  // the long tail of one-character subsequence hits is gone, not that the PDF
+  // family is trimmed.
+  expect(n).toBeGreaterThan(0)
+  expect(n).toBeLessThan(25)
+})
+
+test('a broad query keeps its whole family, because the floor is relative', async ({ page }) => {
+  // The reason the floor is a share of the top hit rather than a fixed score:
+  // a broad query legitimately has many good answers, and they all score alike.
+  await search(page, 'pdf')
+  await expect(page.locator('[data-testid^="tool-"]')).not.toHaveCount(0)
+  const n = await page.locator('[data-testid^="tool-"]').count()
+  expect(n).toBeGreaterThan(8)
+})
+
+test('a query we cannot serve at all returns nothing rather than a guess', async ({ page }) => {
+  // Measured: the top hit for these sits far below the worst genuinely correct
+  // answer (128), so the absolute floor catches them and nothing legitimate.
+  for (const q of ['buy bitcoin', 'asdfghjkl', 'قهوة']) {
+    await search(page, q)
+    await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+  }
+})

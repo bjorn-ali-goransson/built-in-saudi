@@ -28,6 +28,25 @@
 // because the queries are still worth regression-testing; it is no longer
 // evidence about unseen queries. THE NEXT PERSON TO TUNE THE SCORER MUST WRITE
 // A NEW HELD-OUT SET before believing any number here.
+/**
+ * Queries the site genuinely CANNOT answer.
+ *
+ * The other two lists measure whether the right tool wins. This one measures
+ * the opposite and equally important thing: whether we admit to having nothing.
+ * Returning three scattered subsequence hits, laid out exactly like real
+ * answers, is the adware-site move — always show something — and it is worse
+ * than an empty state, because the person cannot tell the difference between
+ * "here are your answers" and "I found nothing and guessed".
+ *
+ * Half of these are nonsense; half name a real thing we deliberately do not do.
+ */
+export const NOMATCH = [
+  'photoshop', 'book a flight', 'order pizza', 'play music', 'buy bitcoin',
+  'my bank balance', 'send an email', 'translate my dog',
+  'asdfghjkl', 'xyzzy', 'wqertyuiop', 'zzzz',
+  'حجز طيران', 'قهوة', 'لالالا',
+]
+
 export const UNTUNED = [
   ['split a pdf', 'pdf-split'],
   ['sign a document', 'pdf-sign'],

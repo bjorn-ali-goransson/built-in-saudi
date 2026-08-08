@@ -566,10 +566,14 @@ Still open, and worth doing before the next tuning round:
 
 - **Write a fresh held-out set.** The existing one no longer measures anything.
   Fifty queries, off the tool list, run once, reported as found.
-- **A bad query returns junk rather than nothing.** `heic` used to return
-  `archive-inspector, admission-score, totp` — three scattered subsequence hits
-  presented exactly like real answers. A relevance floor (or an honest "nothing
-  matched") is untested territory; measure before changing.
+- ~~**A bad query returns junk rather than nothing.**~~ **Measured and partly
+  fixed.** `aboveFloor` cuts below 25% of the top hit or an absolute 50: real
+  result lists go from 31 to 5 on average with no bench answer leaving the top
+  3, and 7 of 15 unanswerable queries now return nothing. **Still open:** the
+  other 8 return a plausible-looking wrong answer (`order pizza` → the screen
+  recorder, `book a flight` → Book Me). That is semantic, not a threshold
+  problem — an empty-state that says "nothing here does that" would need to know
+  the query is unanswerable, which the score cannot tell it.
 - **Sweep the catalogue for keywords describing what a tool tolerates.** Two
   were found by accident (`scan` on the PDF organiser, `resize` on the cropper).
   There is no reason to think those were the only two, and each one silently
@@ -641,4 +645,3 @@ Next, in order, when a working key exists:
 - **Sweep the privacy `CASES` list against a grep, not against memory.**
   `csv-merge` had always taken a file and was never listed. That is the second
   time this list has been found short.
-

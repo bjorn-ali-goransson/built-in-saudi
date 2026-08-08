@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
 import { useLocale, localePath, localizeTool } from '../i18n'
-import { scoreTool } from '../lib/fuzzy'
+import { scoreTool, aboveFloor } from '../lib/fuzzy'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
 import { GridIcon, SearchIcon } from './icons'
@@ -57,7 +57,7 @@ export function AppLauncher() {
 
   const results = useMemo(() => {
     if (!query.trim()) return []
-    return liveTools
+    const scored = liveTools
       .map((tool) => {
         const l = localizeTool(tool, locale)
         // Fields stay separate rather than being concatenated: joining them let a
@@ -77,7 +77,7 @@ export function AppLauncher() {
       })
       .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)
-      .map((r) => r.tool)
+    return aboveFloor(scored).map((r) => r.tool)
   }, [query, locale])
 
   const navigate = useNavigate()

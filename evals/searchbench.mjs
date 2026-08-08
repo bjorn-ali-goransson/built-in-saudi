@@ -73,143 +73,11 @@ for (const d of dirs) {
 tools.sort((a, b) => (orderRank.get(varOf.get(a.id)) ?? 1e9) - (orderRank.get(varOf.get(b.id)) ?? 1e9))
 
 // --- the REAL scorer, compiled from src/lib/fuzzy.ts by tsc ---
-import { scoreTool } from './gen/fuzzy.js'
-import { UNTUNED } from './untuned.mjs'
+import { scoreTool, aboveFloor } from './gen/fuzzy.js'
+import { UNTUNED, NOMATCH } from './untuned.mjs'
 
-// --- the bench: what someone types -> what they obviously mean ---
-const BENCH = [
-  ['pdf merge', 'pdf-merge'],
-  ['merge pdf', 'pdf-merge'],
-  ['combine pdfs', 'pdf-merge'],
-  ['compress image', 'image-compressor'],
-  ['make picture smaller', 'image-compressor'],
-  // The expectation here was WRONG, and the bench was scoring the right answer
-  // as a failure. The cropper never changes an image's dimensions — it returns
-  // the pixels inside the box — while the compressor takes a max width. So the
-  // compressor is what "resize photo" means, and the cropper's `resize` keyword
-  // (which described dragging the crop box) has been removed.
-  ['resize photo', 'image-compressor'],
-  ['qr', 'qr-code'],
-  ['scan qr', 'qr-reader'],
-  ['password', 'password-generator'],
-  ['strong password', 'password-generator'],
-  ['is my password good', 'password-strength'],
-  ['prayer', 'prayer-times'],
-  ['prayer times print', 'prayer-timetable'],
-  ['hijri', 'hijri-calendar'],
-  ['zakat', 'zakat-calculator'],
-  ['iban', 'iban-validator'],
-  ['vat', 'vat-calculator'],
-  ['end of service', 'end-of-service'],
-  ['iqama expiry', 'id-expiry'],
-  ['translate', 'translate'],
-  ['summarize', 'summarize'],
-  ['summarise', 'summarize'],
-  ['excel to csv', 'xlsx-convert'],
-  ['xlsx', 'xlsx-convert'],
-  ['split csv', 'csv-split'],
-  ['compare spreadsheets', 'sheet-diff'],
-  // Directionless: whichever way you read it, one of the pair is right.
-  ['contacts vcf', ['csv-vcard', 'vcard-to-csv']],
-  ['trim video', 'video-trim'],
-  ['cut video', 'video-trim'],
-  ['remove silence', 'remove-silence'],
-  ['epub', 'epub-text'],
-  ['certificate ssl', 'cert-decoder'],
-  ['email headers', 'email-headers'],
-  ['seating', 'seating-chart'],
-  ['attendance', 'attendance-sheet'],
-  ['worksheet', 'worksheets'],
-  ['bingo', 'bingo-cards'],
-  ['quiz', 'quiz-maker'],
-  ['khatma', 'khatma'],
-  ['handwriting', 'arabic-handwriting'],
-  ['calendar invite', 'ics-builder'],
-  ['ics', 'ics-builder'],
-  ['plate', 'saudi-plate'],
-  ['short address', 'short-address'],
-  ['name in english', 'name-spelling'],
-  ['metronome', 'metronome'],
-  ['tuner', 'tuner'],
-  ['invoice', 'invoice-generator'],
-  ['cv', 'ats-cv-optimizer'],
-  ['resume', 'ats-cv-optimizer'],
-  ['book meeting', 'book-me'],
-  ['video call', 'calls'],
-  ['background remove', 'remove-background'],
-  ['ocr', 'image-to-text'],
-  ['text from image', 'image-to-text'],
-  ['json format', 'json-formatter'],
-  ['regex', 'regex-tester'],
-  ['jwt', 'jwt-decoder'],
-  ['cron', 'cron-builder'],
-  ['unit convert', 'unit-converter'],
-  ['currency', 'currency-converter'],
-  ['weather', 'weather'],
-  ['قبلة', 'qibla'],
-  ['مواقيت', 'prayer-times'],
-  ['زكاة', 'zakat-calculator'],
-  ['ضغط صورة', 'image-compressor'],
-  ['ترجمة', 'translate'],
-  ['فاتورة', 'invoice-generator'],
-  // The file tools added in the code-sweep batch. A tool nobody can find is a
-  // tool that does not exist, so each one is benched on the words a person
-  // would actually type — not the words the code uses.
-  ['scanned pdf', 'pdf-ocr'],
-  ['pdf ocr', 'pdf-ocr'],
-  ['read a scanned document', 'pdf-ocr'],
-  ['word to text', 'docx-to-text'],
-  ['docx', 'docx-to-text'],
-  ['open a word file', 'docx-to-text'],
-  ['csv to excel', 'csv-to-xlsx'],
-  ['leading zeros', 'csv-to-xlsx'],
-  ['vcf to csv', 'vcard-to-csv'],
-  ['contacts to spreadsheet', 'vcard-to-csv'],
-  ['export phone contacts', 'vcard-to-csv'],
-  ['مسح ضوئي', 'pdf-ocr'],
-  ['جهات الاتصال', 'vcard-to-csv'],
-  ['powerpoint to text', 'pptx-to-text'],
-  ['pptx', 'pptx-to-text'],
-  ['slides to text', 'pptx-to-text'],
-  ['speaker notes', 'pptx-to-text'],
-  ['بوربوينت', 'pptx-to-text'],
-  // The Saudi tools from the August sweeps. These are the ones where being
-  // unfindable costs most: someone looking for "what is deducted from my
-  // salary" will not browse a catalogue for it.
-  ['gosi', 'gosi-salary'],
-  ['net salary', 'gosi-salary'],
-  ['what is deducted from my salary', 'gosi-salary'],
-  ['التأمينات', 'gosi-salary'],
-  ['صافي الراتب', 'gosi-salary'],
-  ['vat registration', 'vat-registration'],
-  ['do i need to register for vat', 'vat-registration'],
-  ['fahes', 'vehicle-renewal'],
-  ['periodic inspection', 'vehicle-renewal'],
-  ['istimara', 'vehicle-renewal'],
-  ['الفحص الدوري', 'vehicle-renewal'],
-  ['rent increase', 'rent-rules'],
-  ['rent freeze', 'rent-rules'],
-  ['lease renewal notice', 'rent-rules'],
-  ['زيادة الإيجار', 'rent-rules'],
-  ['early settlement', 'early-settlement'],
-  ['pay off my loan early', 'early-settlement'],
-  ['السداد المبكر', 'early-settlement'],
-  ['annual leave', 'leave-overtime'],
-  ['overtime pay', 'leave-overtime'],
-  ['notice period', 'leave-overtime'],
-  ['الإجازة السنوية', 'leave-overtime'],
-  ['exit reentry', 'exit-reentry'],
-  ['visa fee', 'exit-reentry'],
-  ['خروج وعودة', 'exit-reentry'],
-  ['electricity bill', 'electricity-bill'],
-  ['فاتورة الكهرباء', 'electricity-bill'],
-  ['weighted percentage', 'admission-score'],
-  ['النسبة الموزونة', 'admission-score'],
-  ['stopwatch', 'stopwatch'],
-  ['iqama renewal cost', 'iqama-fees'],
-  ['dependent fee', 'iqama-fees'],
-  ['رسوم المرافقين', 'iqama-fees'],
-]
+import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
+
 
 // A row's expectation may be an ARRAY when the query genuinely has no single
 // right answer — "contacts vcf" names a thing and a format and no direction, so
@@ -273,3 +141,20 @@ console.log(`  top-1: ${u1}/${UNTUNED.length} (${Math.round((u1 / UNTUNED.length
 console.log(`  top-3: ${u3}/${UNTUNED.length} (${Math.round((u3 / UNTUNED.length) * 100)}%)`)
 console.log(`  not found at all: ${uMiss}`)
 if (uBad.length) { console.log('  --- not first ---'); for (const l of uBad) console.log('  ' + l) }
+
+// --- and the opposite question: do we admit to having nothing? ---
+let noisy = 0
+let noiseRows = 0
+let shownRows = 0
+for (const q of NOMATCH) {
+  const hits = tools.map((t) => ({ id: t.id, score: scoreTool(q, t) })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
+  // What the USER sees: the relevance floor the UI applies, not the raw list.
+  const shown = aboveFloor(hits)
+  if (shown.length) noisy++
+  noiseRows += hits.length
+  shownRows += shown.length
+  console.log(`  ${q.padEnd(18)} ${String(hits.length).padStart(3)} raw -> ${String(shown.length).padStart(2)} shown   ${shown.slice(0, 3).map((h) => `${h.id}(${h.score.toFixed(0)})`).join(', ')}`)
+}
+console.log(`\nUNANSWERABLE (${NOMATCH.length} queries the site cannot serve)`)
+console.log(`  return something anyway: ${noisy}/${NOMATCH.length}  <- the floor does NOT fix this, and cannot`)
+console.log(`  junk rows: ${noiseRows} raw -> ${shownRows} shown`)

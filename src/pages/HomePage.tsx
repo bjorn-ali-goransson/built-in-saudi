@@ -5,7 +5,7 @@ import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
-import { scoreTool } from '../lib/fuzzy'
+import { scoreTool, aboveFloor } from '../lib/fuzzy'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localePath, localizeTool } from '../i18n'
 
@@ -38,7 +38,7 @@ export function HomePage() {
   // Search matches both the localized and English fields so either language works.
   const results = useMemo(() => {
     if (!query.trim()) return []
-    return tools
+    const scored = tools
       .map((tool) => {
         const l = localizeTool(tool, locale)
         // Fields stay separate rather than being concatenated: joining them let a
@@ -58,6 +58,9 @@ export function HomePage() {
       })
       .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)
+    // Nothing capped this list, so a query rendered every tool that matched at
+    // all — 31 cards on average, three of them worth looking at.
+    return aboveFloor(scored)
   }, [query, locale])
 
   const recent = useRecentTools()

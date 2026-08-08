@@ -1179,6 +1179,43 @@ of them the scorer:
 Fixing those three took the bench to **top-1 91%, top-3 100%**, with no change
 to `fuzzy.ts` at all.
 
+**Ranking was only half the problem: NOTHING capped the result list.** At 202
+tools a query rendered every tool that scored above zero — **31 cards on
+average** — so "pdf merge" returned thirty-one, three worth looking at. Neither
+the home catalogue nor the launcher sliced. `aboveFloor` in `fuzzy.ts` now cuts
+anything below **25% of the top hit OR an absolute 50**, and both numbers were
+measured rather than picked (`node evals/floorprobe.mjs`).
+
+**The obvious fix was refuted first.** An absolute floor alone cannot work here:
+the best hit for a query the site genuinely cannot serve scores **232** ("my
+bank balance" → the loan settlement tool) while the worst genuinely correct
+answer scores **128** ("blur a face" → the image redactor). There is no
+threshold between them, so any single absolute cut deletes a right answer.
+
+So the floor is **relative**, which also makes it safe for a broad query,
+because it keeps ties: `pdf` keeps 17 of 31 and `image` 27 of 32 — the family
+survives and the tail goes. 25% because 35% starts trimming those families and
+15% buys nothing over 25% on them.
+
+**The absolute 50 exists because the relative floor is blind to a uniformly bad
+list.** "buy bitcoin" tops out at 9, so a quarter of 9 is 2 and all ten rows
+survived. 50 is **free by measurement**: across all 169 benched queries the
+count of real result rows is unchanged at 598, while junk rows fall 84 → 27 and
+unanswerable queries returning honestly nothing go 5 → 7 of 15. It sits 2.5x
+below that 128.
+
+**What it does NOT do, and the harness says so on every run:** it does not make
+an unanswerable query return nothing. 8 of 15 still return something — `order
+pizza` still leads with the screen recorder, `book a flight` with Book Me. That
+is semantics ("book" means two things), not scoring, and no threshold fixes it.
+Claiming the floor solved that would be the easy sentence to write and it would
+be false.
+
+`evals/untuned.mjs` also exports **`NOMATCH`** — queries the site genuinely
+cannot answer — because the other two lists only measure whether the right tool
+wins. Returning scattered subsequence hits laid out exactly like real answers is
+the adware move: always show something.
+
 **A tuned bench measures your memory. `evals/untuned.mjs` is the antidote.**
 The tuned bench reached **100%**, which is the least believable number in this
 file — every fix in it was made while looking at it. So 50 queries were written

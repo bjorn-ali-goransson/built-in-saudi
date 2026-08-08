@@ -56,6 +56,56 @@ export function fuzzyScore(query: string, text: string): number {
   return qi === q.length ? score : 0
 }
 
+/**
+ * Results scoring less than this share of the BEST result are dropped.
+ *
+ * At 202 tools a query returned **31 tools on average** and neither the home
+ * catalogue nor the launcher capped the list, so "pdf merge" rendered thirty-one
+ * cards with three worth looking at. Measured over the bench (`evals/floorprobe.mjs`):
+ * 31.3 results on average become 5.0, and **no bench answer leaves the top 3**.
+ *
+ * Relative, not absolute, and that was measured rather than assumed. An absolute
+ * floor cannot work here: the best hit for a query the site CANNOT serve scores
+ * 232 ("my bank balance" → the loan settlement tool) while the worst genuinely
+ * correct answer scores 128 ("blur a face" → the image redactor). There is no
+ * threshold between them, so any absolute cut deletes a right answer.
+ *
+ * A relative floor keeps ties, which is what makes it safe for a BROAD query:
+ * `pdf` keeps 17 of 31 and `image` 27 of 32 — the family survives and the tail
+ * goes. It is 25% because 35% starts trimming those families while 15% buys
+ * nothing over 25% on them.
+ *
+ * **What this does NOT do**, and the probe is explicit about it: it does not
+ * make an unanswerable query return nothing. `order pizza` still leads with the
+ * screen recorder. That is a semantic problem — "book" means two things — and no
+ * score threshold can fix it.
+ */
+export const RELEVANCE_FLOOR = 0.25
+
+/**
+ * A floor in absolute score as well, because the relative one cannot help when
+ * EVERYTHING scores badly. "buy bitcoin" tops out at 9 and kept all ten of its
+ * rows, since a quarter of 9 is 2 — the list is uniformly terrible, so nothing
+ * stands out to measure the rest against.
+ *
+ * 50 is **free, by measurement**: across all 169 benched queries the number of
+ * real result rows is unchanged (598), while junk rows fall from 84 to 27 and
+ * the unanswerable queries that honestly return NOTHING go from 5 to 7 of 15.
+ * The lowest-scoring genuinely correct answer anywhere in the benches is 128
+ * ("blur a face" → the image redactor), so this sits 2.5x below it. 80 and 100
+ * cut more junk and start removing real rows; 120 is too near that 128 to be
+ * worth the two extra empty states.
+ */
+export const MIN_SCORE = 50
+
+/** Drop results far below the best one. Input must already be sorted, best first. */
+export function aboveFloor<T extends { score: number }>(sorted: T[]): T[] {
+  const top = sorted[0]?.score ?? 0
+  if (top <= 0) return sorted
+  const floor = Math.max(top * RELEVANCE_FLOOR, MIN_SCORE)
+  return sorted.filter((x) => x.score >= floor)
+}
+
 export interface Searchable {
   name: string
   tagline: string
