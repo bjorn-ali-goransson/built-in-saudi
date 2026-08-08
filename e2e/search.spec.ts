@@ -221,3 +221,31 @@ test('the filler words do not dilute the ranking either', async ({ page }) => {
   await search(page, 'qr')
   await expect(top(page)).toContainText(/qr/i)
 })
+
+// A second set of untuned queries, sharing no members with the first, found
+// two more Arabic defects. Both fail in the direction nobody checks: the QUERY
+// is longer than the indexed text, so neither substring nor subsequence can
+// bridge it.
+
+test('the Arabic definite article does not hide the tool', async ({ page }) => {
+  // A person types الزكاة; the keyword is زكاة. Before stripping ال- this
+  // returned the VAT registration tool.
+  await search(page, 'كيف احسب الزكاة', 'ar')
+  await expect(page.getByTestId('tool-zakat-calculator')).toBeVisible()
+})
+
+test('a question word is filler, in either language', async ({ page }) => {
+  // "how" was a stop word from the start and the other interrogatives were not.
+  await search(page, 'when is ramadan')
+  await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
+  await search(page, 'ما هو الايبان', 'ar')
+  await expect(page.getByTestId('tool-iban-validator')).toBeVisible()
+})
+
+test('a bare فاتورة means the invoice tool, not the electricity bill', async ({ page }) => {
+  // They tie exactly, so this is decided by catalogue order — which is an
+  // editorial judgement, and the judgement is that an invoice is the invoice.
+  await search(page, 'فاتورة', 'ar')
+  await expect(top(page)).toContainText('فاتورة')
+  await expect(page.getByTestId('tool-invoice-generator')).toBeVisible()
+})

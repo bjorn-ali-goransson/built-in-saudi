@@ -1085,6 +1085,35 @@ returned nothing at all**, and two of those were one bug:
   either word into a tool that does something else is the adware-site move, and
   the roadmap records the stopwatch as a gap instead.
 
+**The bench also iterates in REGISTRY order now**, because that is how the UI
+iterates and therefore how it breaks ties — and ties are decided by catalogue
+order by design. Reading the directory gave alphabetical order instead, so every
+tie was resolved by a rule the site does not use. **All the 95% figures reported
+before this were computed that way; the faithful number is 93%.** The bench was
+measuring a plausible scorer rather than the running one, twice over — first the
+fields, now the ordering.
+
+That fidelity fix immediately paid: a bare **`فاتورة`** ties the invoice
+generator with the electricity-bill estimator at 432.00, and registry order was
+giving it to the electricity tool. Ties falling through to catalogue order is
+deliberate, so the fix is the editorial one — `invoiceGeneratorTool` now precedes
+`electricityBillTool`. An invoice is the invoice.
+
+**A second untuned set (33 queries, no overlap with the first) returned nothing
+for none of them**, so the stop-word fix generalises rather than having been
+tuned to the two cases that exposed it. It found two more Arabic defects, both
+failing in the direction nobody checks — the QUERY longer than the indexed text:
+
+- **The definite article.** A person types `الزكاة`; the keyword is `زكاة`.
+  Neither substring nor subsequence can bridge that, so `كيف احسب الزكاة`
+  returned the VAT registration tool. `stripAl` handles it.
+- **Interrogatives were not stop words** except `how`, so `when is ramadan` spent
+  half its coverage on a word no tool contains. `what/when/where/why/which/who`
+  and `ما/هو/هي/متى/أين/كم` are now filler too.
+
+Net on the faithful bench: **105/113 both before and after** — the Arabic gains
+cost nothing measurable, which is the trade worth having.
+
 **`evals/searchbench.mjs` now passes the fields the UI passes** — the localized
 AND English tagline and category, joined, as `AppLauncher` does. It previously
 passed the English ones only, so it measured a scorer the site does not run:

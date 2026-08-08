@@ -99,12 +99,32 @@ function bestField(term: string, tool: Searchable): number {
  */
 const STOP = new Set([
   'a', 'an', 'the', 'my', 'me', 'is', 'are', 'to', 'for', 'of', 'in', 'on', 'from',
-  'with', 'and', 'or', 'how', 'do', 'i', 'can', 'get', 'make', 'it', 'this', 'that',
+  'with', 'and', 'or', 'do', 'i', 'can', 'get', 'make', 'it', 'this', 'that',
+  // Interrogatives. `how` was here from the start and the rest were not, so
+  // "when is ramadan" spent half its coverage on a word no tool contains and
+  // returned the water-intake calculator.
+  'how', 'what', 'when', 'where', 'why', 'which', 'who',
   'في', 'من', 'الى', 'إلى', 'على', 'عن', 'كيف', 'هل', 'ال',
+  'ما', 'هو', 'هي', 'متى', 'اين', 'أين', 'كم',
 ])
 
+/**
+ * Strip the Arabic definite article.
+ *
+ * A person searching types `الزكاة`; the tool's keyword is `زكاة`. The query is
+ * the LONGER string, so neither the substring path nor the subsequence path can
+ * bridge it — the match fails silently and in the direction nobody thinks to
+ * check. Measured: "كيف احسب الزكاة" returned the VAT registration tool.
+ *
+ * Only stripped when something is left worth matching, so `ال` alone (already a
+ * stop word) and short words like `الي` are not mangled.
+ */
+function stripAl(term: string): string {
+  return /^ال.{2,}/.test(term) ? term.slice(2) : term
+}
+
 function terms(query: string): string[] {
-  const all = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+  const all = query.toLowerCase().trim().split(/\s+/).filter(Boolean).map(stripAl)
   const kept = all.filter((t) => !STOP.has(t))
   // If someone searched for nothing but stop words, they still meant something
   // by them — fall back rather than matching everything.

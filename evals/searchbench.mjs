@@ -46,6 +46,22 @@ for (const d of dirs) {
   })
 }
 
+// Registry order, because that is how the UI iterates and therefore how it
+// breaks ties. Reading the directory gives alphabetical order instead, which
+// silently resolved every tie the wrong way: "فاتورة" ties the invoice
+// generator with the electricity bill at 432.00, and the bench called it a
+// failure while the site ranks them the way the catalogue is curated.
+const order = [...reg.matchAll(/^  ([a-zA-Z0-9]+Tool),$/gm)].map((m, i) => [m[1], i])
+const orderRank = new Map(order)
+const varOf = new Map()
+for (const d of dirs) {
+  const src = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
+  const v = /export const ([a-zA-Z0-9]+Tool)/.exec(src)?.[1]
+  const id = /id: '([^']+)'/.exec(src)?.[1]
+  if (v && id) varOf.set(id, v)
+}
+tools.sort((a, b) => (orderRank.get(varOf.get(a.id)) ?? 1e9) - (orderRank.get(varOf.get(b.id)) ?? 1e9))
+
 // --- the REAL scorer, compiled from src/lib/fuzzy.ts by tsc ---
 import { scoreTool } from './gen/fuzzy.js'
 
