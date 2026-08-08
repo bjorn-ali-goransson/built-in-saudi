@@ -35,6 +35,7 @@ const MEASURES = [
   ['pdfcolumns.mjs', 'how often the column split fires on real CVs', true],
   ['quantified.mjs', 'how many lines of a real CV carry a figure', true],
   ['roles.mjs', 'positions per CV, against the improve loop’s question count', true],
+  ['roleimpact.mjs', 'which roles already have a number — targeting vs enlarging the budget', true],
 ]
 
 function run(script) {

@@ -578,3 +578,27 @@ Still open, and worth doing before the next tuning round:
   being a headline feature. Workers, Arabic shaping and the ZIP reader are the
   obvious next candidates to check.
 
+### CV evals, 8 August 2026 — the lever, sized without a key
+
+`OPENAI_KEY` is still refused (401, key ending `q6UA`), so nothing judged can be
+re-measured. The named lever — "how many real numbers we get out of the
+candidate" — is a property of the INPUT, so it was sized anyway
+(`node evals/roleimpact.mjs`).
+
+**42.1% of roles in the 32-CV corpus already carry a figure.** The recorded next
+experiment (scale the improve loop's question budget with the role count) was
+therefore aimed at the smaller and more expensive half of the opportunity:
+
+- targeting today's 4 questions at roles that LACK a figure: 66.7% → 77.8% of
+  them asked about, +9 roles, no extra questions for the candidate;
+- enlarging the budget: at most 18 roles beyond that, and only by asking more.
+
+Next, in order, when a working key exists:
+
+1. **Target the gaps prompt at unquantified roles** (identify them from the CV
+   rather than leaving the model to notice), then judge `impact` before/after.
+2. **Only then** consider a larger budget, capped — nobody answers twelve
+   questions.
+3. Re-run `evals/perfect.mjs` and `evals/gameable.mjs` to confirm the 1–5 scale
+   has not compressed while all of this was untestable.
+

@@ -931,11 +931,37 @@ roles is the right order of magnitude, and the "per role" change was sized
 correctly rather than by luck. The caveat is the tail: **13 of 32 CVs have more
 than four positions and 6 have more than six**, and for those the loop asks
 fewer questions than the CV has roles, leaving numbers unclaimed in the one
-dimension that blocks nine CVs in ten. Scaling the budget with the role count
-(with a cap, since nobody answers twelve questions) is the obvious next
-experiment — and it is a prompt change, so it needs the judge to confirm. When tuning, treat
-"how many numbers do we get out of the candidate" as the lever — not the wording
-of the rewrite.
+dimension that blocks nine CVs in ten. When tuning, treat "how many numbers do
+we get out of the candidate" as the lever — not the wording of the rewrite.
+
+**Scaling the budget with the role count WAS the recorded next experiment, and
+measuring the input first says to do something else** (`node
+evals/roleimpact.mjs`, no key needed). That plan assumed the budget is what
+binds. It is not, because **42.1% of roles already carry a figure**:
+
+| | |
+|---|---|
+| roles in the corpus | 140 (mean 4.4 per CV) |
+| already carry a figure | 59 — **42.1%** |
+| carry none | 81 |
+| of those, asked about under today's 4 questions | 54 — **66.7%** |
+| asked about if the SAME 4 are aimed at them | 63 — **77.8%** |
+
+So a loop that asks for "a headline number per role" spends roughly two of its
+four questions re-asking about roles that already have one. **Targeting the same
+budget reaches 9 more roles (+11.1pp) and costs the candidate nothing** — they
+answer the same number of questions. Raising the budget can reach at most 18
+beyond that, and only by asking more. Target first, enlarge second; and the
+targeting is decidable from the CV, so it need not be left to the model to
+notice. Both are prompt changes and still need the judge to confirm they move
+`impact`.
+
+The three harnesses share one set of detectors (`evals/lib/cvfacts.mjs`).
+They were duplicated while each answered its own question and stopped being
+acceptable the moment a third **joined** them — a role counted by one rule
+against a figure counted by another is a ratio of nothing. Extracted verbatim,
+and both original harnesses re-run to confirm byte-identical output, because a
+refactor of a measurement tool that changes the measurement is not a refactor.
 
 **Extraction is upstream of every score, and it is measurable with no API key**
 — which is how the two harnesses below exist while the LLM evals are blocked.

@@ -14,6 +14,8 @@
 
 import { readdir, readFile } from 'node:fs/promises'
 import { pdfToText } from './lib/extract.mjs'
+// Shared with quantified.mjs and roleimpact.mjs — see evals/lib/cvfacts.mjs.
+import { RANGE, STUDY } from './lib/cvfacts.mjs'
 
 const dir = new URL('./cvs/', import.meta.url)
 const files = (await readdir(dir)).filter((f) => /\.pdf$/i.test(f))
@@ -21,21 +23,6 @@ if (!files.length) {
   console.log('No CVs in evals/cvs — nothing to measure.')
   process.exit(0)
 }
-
-const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*'
-// "Mar 2021 – Present", "2019 - 2021", "01/2019 – 03/2021".
-const RANGE = new RegExp(
-  `(?:${MONTH}\\s*\\.?\\s*)?(?:\\d{1,2}[/.])?(?:19|20)\\d{2}\\s*(?:[-–—]|to|until|till)\\s*` +
-  `(?:(?:${MONTH}\\s*\\.?\\s*)?(?:\\d{1,2}[/.])?(?:19|20)\\d{2}|present|current|now|date)`,
-  'gi',
-)
-
-/**
- * Education entries carry date ranges too, and asking a graduate for a headline
- * number about a degree is not the point — so lines that look like study are
- * excluded rather than inflating the count.
- */
-const STUDY = /bachelor|master|b\.?sc|m\.?sc|ph\.?d|diploma|university|college|institute|degree|high school|جامعة|بكالوريوس|ماجستير|دبلوم/i
 
 const rows = []
 for (const name of files) {
