@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readNumber } from './helpers'
 
 async function open(page: import('@playwright/test').Page, kwh?: string, locale = 'en') {
   await page.goto(`/${locale}/apps/electricity-bill`)
@@ -6,23 +7,21 @@ async function open(page: import('@playwright/test').Page, kwh?: string, locale 
   if (kwh) await page.getByTestId('eb-kwh').fill(kwh)
 }
 
-const num = async (page: import('@playwright/test').Page, id: string) =>
-  Number((await page.getByTestId(id).innerText()).replace(/[^\d.]/g, ''))
 
 test.describe('electricity bill estimate', () => {
   test('below the threshold it is one rate plus the fee and VAT', async ({ page }) => {
     // 1000 kWh × 0.18 = 180, + 10 meter = 190, + 15% = 218.50
     await open(page, '1000')
-    expect(await num(page, 'eb-total')).toBeCloseTo(218.5, 1)
+    expect(await readNumber(page, 'eb-total')).toBeCloseTo(218.5, 1)
     await expect(page.getByTestId('eb-high')).toHaveCount(0)
   })
 
   test('crossing 6,000 costs pennies, not a repriced bill', async ({ page }) => {
     // The whole reason the tool exists. 5,999 -> 6,001 must differ by cents.
     await open(page, '5999')
-    const before = await num(page, 'eb-total')
+    const before = await readNumber(page, 'eb-total')
     await page.getByTestId('eb-kwh').fill('6001')
-    const after = await num(page, 'eb-total')
+    const after = await readNumber(page, 'eb-total')
     expect(after - before).toBeLessThan(1)
     expect(after).toBeGreaterThan(before)
   })
@@ -32,7 +31,7 @@ test.describe('electricity bill estimate', () => {
     await open(page, '7000')
     await expect(page.getByTestId('eb-high')).toContainText('1,000 kWh at 30 halalas')
     // If it repriced everything it would be 7000 × 0.30 = 2100 before VAT.
-    const total = await num(page, 'eb-total')
+    const total = await readNumber(page, 'eb-total')
     expect(total).toBeCloseTo((1380 + 10) * 1.15, 0)
     expect(total).toBeLessThan(2100)
   })
@@ -53,15 +52,15 @@ test.describe('electricity bill estimate', () => {
 
   test('another 500 kWh costs more once you are in the upper band', async ({ page }) => {
     await open(page, '1000')
-    const cheap = await num(page, 'eb-plus500')
+    const cheap = await readNumber(page, 'eb-plus500')
     await page.getByTestId('eb-kwh').fill('6500')
-    const dear = await num(page, 'eb-plus500')
+    const dear = await readNumber(page, 'eb-plus500')
     expect(dear).toBeGreaterThan(cheap)
   })
 
   test('zero consumption still owes the meter fee and its VAT', async ({ page }) => {
     await open(page, '0')
-    expect(await num(page, 'eb-total')).toBeCloseTo(11.5, 1)
+    expect(await readNumber(page, 'eb-total')).toBeCloseTo(11.5, 1)
   })
 
   test('the myth is stated in words, not just implied by the numbers', async ({ page }) => {
@@ -76,8 +75,12 @@ test.describe('electricity bill estimate', () => {
     await expect(d).toContainText('subsidy')
   })
 
-  test('it works in Arabic', async ({ page }) => {
+  test('it works in Arabic, numbers included', async ({ page }) => {
     await open(page, '7000', 'ar')
     await expect(page.getByTestId('eb-myth')).toContainText('لا مئات الريالات')
+    // ar-SA renders Arabic-Indic digits, so this assertion is the reason the
+    // shared readNumber helper exists — a naive one returns 0 here and passes
+    // or fails for reasons that have nothing to do with the tool.
+    expect(await readNumber(page, 'eb-total')).toBeCloseTo((1380 + 10) * 1.15, 0)
   })
 })

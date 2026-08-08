@@ -781,9 +781,8 @@ Two things beyond the arithmetic:
   to give, so sorting by weight alone would send people to revise the wrong
   thing.
 
-**Testing note: `ar-SA` renders Arabic-Indic digits.** A spec helper that strips
-non-ASCII digits leaves an empty string, so every Arabic numeric assertion
-silently compares zero and passes. Convert `\u0660-\u0669` before parsing.
+Reading a number out of the Arabic UI has a trap in it \u2014 see **Reading numbers
+in a spec** under Testing.
 
 ## Disclaimers are a component, not a habit
 
@@ -1245,6 +1244,27 @@ verified before merge) but the `deploy` job is guarded to `push` on `main`, so a
 PR never publishes. A failed run uploads the Playwright report as an artifact.
 Don't treat a local full-suite run as the gate — CI is the gate; run locally only
 what you're actively working on.
+
+**Reading numbers in a spec: use `readNumber` from `e2e/helpers.ts`.** Never
+hand-roll it. `ar-SA` does not merely swap the digits, and each half of that
+breaks a different way:
+
+- **Arabic-Indic digits** (`٧٩`, U+0660–U+0669). The obvious helper strips
+  everything outside `[\d.]`, which on an Arabic page leaves the **empty
+  string** — and `Number('')` is **0**. An assertion expecting a real figure
+  fails with a baffling "received 0"; one that happens to expect a small number
+  *passes for the wrong reason*. Four specs shipped with a private copy of that
+  helper.
+- **Arabic's own separators**: `٫` (U+066B) is the decimal point and `٬`
+  (U+066C) the thousands mark. Convert only the digits and `١٬٥٩٨٫٥` becomes
+  **15985** — off by a factor of ten, and still perfectly number-shaped, so
+  nothing about the failure points at the parser. This one was caught by
+  deliberately adding an Arabic numeric assertion to a tool whose Arabic test
+  had only ever checked *text*; without that assertion the helper looked
+  finished.
+
+The lesson generalises past numbers: an Arabic test that only asserts on prose
+is not testing the Arabic rendering of anything computed.
 
 ## Deploy
 

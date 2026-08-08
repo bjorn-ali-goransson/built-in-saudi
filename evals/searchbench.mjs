@@ -186,6 +186,9 @@ const BENCH = [
   ['خروج وعودة', 'exit-reentry'],
   ['electricity bill', 'electricity-bill'],
   ['فاتورة الكهرباء', 'electricity-bill'],
+  ['weighted percentage', 'admission-score'],
+  ['النسبة الموزونة', 'admission-score'],
+  ['stopwatch', 'stopwatch'],
 ]
 
 function rank(query, wanted) {
