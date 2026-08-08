@@ -100,6 +100,30 @@ leaving it is a bad trade. The combo is shown on the launcher button's title and
 as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
 not a feature.
 
+**Related tools** (`lib/relatedTools.ts`) is a short row at the foot of each
+tool page. The crawlable "More free tools" block already links to EVERY tool,
+which is right for a crawler and useless for a person — a list of 197 is the
+same as no list.
+
+Deriving the relations from `scoreTool` was **measured before it was built**,
+and the result splits cleanly by score:
+
+| tool | derived | verdict |
+|---|---|---|
+| `csv-to-xlsx` | xlsx-convert (385), csv-vcard (266), csv-split (261) | good |
+| `qr-code` | qr-reader (273), zatca-qr (212), barcode (149) | good |
+| `gosi-salary` | ip-subnet (75), calorie-needs (63), water-intake (56) | noise |
+| `early-settlement` | data-anonymize (12), dice-roller (5) | noise |
+
+That is not a bug in the scorer. **Lexical similarity finds format families and
+is blind to life-domains**: PDF tools share the word "PDF", while GOSI, rent and
+vehicle registration share no vocabulary at all even though anyone dealing with
+one is plausibly dealing with another. So the derived half is thresholded at
+**120** — below which it measured as noise — and eight domain **clusters** are
+named by hand, which is eight groups of curation rather than 197 rows of it. A
+tool with nothing above the threshold and no cluster shows **no row**, rather
+than four arbitrary tools.
+
 **Recently used** (`lib/recentTools.ts`, `bis-recent-tools`) is the first row of
 both, capped at 8. At 192 tools the catalogue is a place you visit once, and the
 three or four you came back for were reachable only by scrolling thirteen
