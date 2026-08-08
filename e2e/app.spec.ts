@@ -627,6 +627,35 @@ test.describe('tools', () => {
     await expect(page.getByTestId('eos-award')).toHaveText('30,000.00')
   })
 
+  test('end-of-service: a resignation the law treats as a termination is NOT reduced', async ({ page }) => {
+    // Article 85's reduction is not the whole rule, and the missing half was
+    // the half that costs money: Article 87 gives a female worker the FULL
+    // award if she ends the contract within six months of marriage or three of
+    // childbirth, and Article 81 does the same when the employer broke the
+    // contract. Without this the tool told her she was owed two-thirds.
+    await page.goto('/en/apps/end-of-service')
+    await page.getByTestId('eos-wage').fill('10000')
+    await page.getByTestId('eos-years').fill('7')
+    await page.getByTestId('eos-months').fill('0')
+    await page.getByTestId('eos-resigned').click()
+    await expect(page.getByTestId('eos-award')).toHaveText('30,000.00')
+    await page.getByTestId('eos-exempt-yes').click()
+    await expect(page.getByTestId('eos-award')).toHaveText('45,000.00')
+    await expect(page.getByTestId('eos-exempt-applied')).toBeVisible()
+  })
+
+  test('end-of-service: the exemption is only offered where it can apply', async ({ page }) => {
+    // It is a question about a resignation. Asking it of someone whose contract
+    // ended would be a form pretending the answer mattered.
+    await page.goto('/en/apps/end-of-service')
+    await expect(page.getByTestId('eos-exempt')).toHaveCount(0)
+    await page.getByTestId('eos-resigned').click()
+    await expect(page.getByTestId('eos-exempt')).toBeVisible()
+    await expect(page.getByTestId('eos-exempt-why')).toContainText('Article 87')
+    await page.getByTestId('eos-ended').click()
+    await expect(page.getByTestId('eos-exempt')).toHaveCount(0)
+  })
+
   test('zakat: 2.5% above nisab', async ({ page }) => {
     await page.goto('/en/apps/zakat-calculator')
     await page.getByTestId('zk-cash').fill('100000')

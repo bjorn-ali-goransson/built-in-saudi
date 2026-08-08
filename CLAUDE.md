@@ -932,6 +932,36 @@ Near the end of a term there are fewer than three payments left, so the
 compensation is bounded by what remains — covered in the spec, along with a
 zero-rate loan (nothing to save, nothing to charge) and a fully paid one.
 
+## End of service: the half of the rule that was missing (`end-of-service`)
+
+The tool had Article 84 (the accrual) and Article 85 (the resignation
+reduction) and stopped there — which is not vague, it is **wrong in the
+direction that costs the reader money**. A resignation is treated as though the
+contract had ENDED, with no reduction at all, when:
+
+- **Article 87** — a female worker ends the contract within **six months of the
+  marriage contract or three months of delivery**;
+- **Article 81** — she or he leaves because the employer broke the contract
+  (unpaid wages, assault);
+- force majeure.
+
+Without that, the tool told a woman resigning after seven years she was owed
+**two-thirds** of an award the law gives her in **full** — 30,000 against
+45,000 on the numbers in its own test.
+
+**Article 87's time limits were only encoded after two independent sources
+agreed on them.** A third named Articles 84–85 only and did not mention the
+exception at all, which is exactly the situation where the `iqama-fees` rule
+applies: an uncorroborated figure does not go in. The tool now carries a SOURCES
+block recording which article each rule comes from and that this one was
+corroborated.
+
+**The question is asked only where it can matter** — it appears when
+"Resigned" is chosen and disappears when it is not. And it is ONE yes/no with
+the three grounds written out beside it, rather than four buttons: they are
+mutually exclusive legal grounds with the same consequence, and a form offering
+a choice between them would pretend the distinction changed the answer.
+
 ## Leave, overtime and notice (`leave-overtime`)
 
 `end-of-service` covers leaving; this covers being employed. Constants live in

@@ -939,3 +939,18 @@ mirrors `extract.ts` and `evals/lib/cvText.mjs` mirrors `functions/cvText.js`.
 Both have a check that they still agree; `relatedcheck` had none, which is why
 it drifted silently.
 
+### Web sweep, 8 August 2026 (seventeenth pass)
+
+No new tool. The sweep found something better: an EXISTING tool giving a
+materially wrong answer. `end-of-service` implemented Articles 84 and 85 and not
+Article 87, so it under-reported the award for every resignation the law treats
+as a termination. Fixed, with sources.
+
+- **Worth auditing the other rule tools the same way**: each encodes the rule it
+  was built for, and the question is what sits NEXT to that rule in the statute.
+  `leave-overtime` (annual leave, notice, overtime) and `exit-reentry` are the
+  obvious candidates.
+- **Declined again: browser-native PDF annotation.** Chrome shipped markup and
+  signing in Feb 2026, and we already have `pdf-sign` and `pdf-edit`. Nothing to
+  add.
+
