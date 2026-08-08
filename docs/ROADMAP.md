@@ -983,3 +983,14 @@ as English.
   `nameAr` whose head noun is plural where the tool's own keywords use the
   singular.
 
+### Web sweep, 9 August 2026 (eighteenth pass)
+
+- ~~**Compare two images.**~~ **Shipped** as `image-diff`. The gap was in our own
+  diff family: text, JSON and spreadsheets were covered and images were not.
+- **DECLINED: the traffic black-points calculator.** The interesting half — when
+  do points clear — is contested between sources. One says a full Hijri year
+  after your last violation, another says they reset at the Hijri new year.
+  Those give different answers, and by the `iqama-fees` rule a contested figure
+  does not get encoded. What is uncontested (24 points, 3/6/12-month escalation)
+  is too thin to be a tool. Revisit only with an official MOI/Absher source.
+

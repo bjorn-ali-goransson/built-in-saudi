@@ -266,6 +266,7 @@ ${TOKEN}
   // GETs with no body, so the guard's two assertions still hold and the only
   // cost is time. If it ever goes off-origin, `e2e/ocr.spec.ts` fails first.
   { id: 'image-to-text', testid: 'ocr-drop', within: true, name: 'scan.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'image-diff', testid: 'idf-file-a', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
 
   // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
   // 65 tools take a file and 17 were proved; these are the next 14. Chosen

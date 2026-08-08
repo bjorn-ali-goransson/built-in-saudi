@@ -2816,6 +2816,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/exit-reentry"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/image-diff/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-diff"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-diff"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-diff"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/image-diff/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/image-diff"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/image-diff"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/image-diff"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/a11y-check/</loc>
     <lastmod>2026-08-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/a11y-check"/>

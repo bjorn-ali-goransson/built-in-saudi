@@ -1189,6 +1189,35 @@ listed it second and was winning a bare `wcag` on keyword position alone — but
 that tool covers ONE success criterion and this one is the standard as a whole.
 Same editorial judgement as `sha256` leading the hash generator over HMAC.
 
+## Comparing two images (`image-diff`)
+
+The diff family was `text-diff`, `json-diff` and `sheet-diff` — so somebody
+wanting to compare two screenshots left the site. Two decisions carry the tool,
+and both are refusals to fudge a number:
+
+- **Different sizes are NOT scaled to fit.** Only the overlapping region is
+  compared, and the pixels left outside it are counted and named. Scaling one
+  image to match the other reports a difference on almost every pixel — true,
+  and useless. A 20×40 against a 40×40 says so and reports the 800 it left out.
+- **The tolerance is adjustable and explained.** Two screenshots of the same
+  page on different machines disagree on thousands of pixels by one or two
+  levels — different font rasterisers, different GPU — so at zero tolerance
+  every glyph edge lights up and the real change vanishes in the noise. It
+  defaults to 4% of the maximum RGBA distance, and the panel says what it is
+  for rather than leaving a magic slider.
+
+The metric is plain Euclidean distance over RGBA, deliberately not perceptual: a
+perceptual one needs a colour-space conversion per pixel and would make "6.25%
+different" a number no reader could check. The fixtures are built so that
+percentage is exact — 40×40 white against the same with a 10×10 black corner is
+100 of 1600 pixels.
+
+**Adding it immediately took a query off `text-diff`**, which is the documented
+risk of every new tool: `مقارنة نصين` went to the image comparer, because a bare
+«مقارنة» plus the shared dual ending «-ين» was enough. Caught by the Arabic
+held-out set dropping 41/41 → 40/41, and fixed the documented way — the
+established tool gets the exact phrase.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

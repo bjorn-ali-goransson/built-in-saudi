@@ -9,7 +9,12 @@ export const textDiffTool: Tool = {
   description:
     'Paste two versions of a text and see a line-by-line diff — additions, removals and unchanged lines colour-coded, with a count of what changed. Useful for config, prose or code snippets. Runs entirely in your browser.',
   category: 'Developer',
-  keywords: ['diff', 'compare', 'text', 'difference', 'changes', 'merge', 'مقارنة', 'فرق النص'],
+  // «مقارنة نصين» leads. Adding the image comparer put «مقارنة صورتين» into the
+  // index, and a bare «مقارنة» plus the shared dual ending «-ين» was enough for
+  // it to take THIS tool's own query. The documented rule: a new tool must not
+  // capture a generic term the established one owns, and the fix is to give the
+  // established tool the exact phrase.
+  keywords: ['مقارنة نصين', 'مقارنة النصوص', 'diff', 'compare', 'text', 'difference', 'changes', 'merge', 'مقارنة', 'فرق النص'],
   status: 'stable',
   Icon: DiffIcon,
   component: lazyTool(() => import('./TextDiffTool')),

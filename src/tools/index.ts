@@ -181,6 +181,7 @@ import { seatingChartTool } from './seating-chart/meta'
 import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
 import { sheetDiffTool } from './sheet-diff/meta'
+import { imageDiffTool } from './image-diff/meta'
 import { prayerTimetableTool } from './prayer-timetable/meta'
 import { removeSilenceTool } from './remove-silence/meta'
 import { epubTextTool } from './epub-text/meta'
@@ -413,6 +414,7 @@ export const tools: Tool[] = [
   xlsxConvertTool,
   csvVcardTool,
   sheetDiffTool,
+  imageDiffTool,
   epubTextTool,
   zipInspectorTool,
   hexViewerTool,
