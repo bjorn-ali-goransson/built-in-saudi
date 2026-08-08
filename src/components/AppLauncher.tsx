@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
@@ -6,6 +6,7 @@ import { useLocale, localePath, localizeTool } from '../i18n'
 import { scoreTool, aboveFloor } from '../lib/fuzzy'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
+import { SectionNav } from './SectionNav'
 import { GridIcon, SearchIcon } from './icons'
 import { useRecentTools } from '../lib/recentTools'
 
@@ -16,6 +17,7 @@ export function AppLauncher() {
   const { locale, t } = useLocale()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
   // Worked out on the client only: the pages are prerendered, so reading the
   // platform during render would put one machine's label in everyone's HTML.
   const [combo, setCombo] = useState('Ctrl K')
@@ -125,7 +127,7 @@ export function AppLauncher() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto wrap py-5">
+          <div className="flex-1 overflow-y-auto wrap py-5" ref={scrollRef}>
             {query.trim() ? (
               results.length > 0 ? (
                 <ToolGrid tools={results} indexOf={idx} onNavigate={close} />
@@ -133,7 +135,12 @@ export function AppLauncher() {
                 <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
               )
             ) : (
-              <CategorySections sections={sections} indexOf={idx} onNavigate={close} />
+              <>
+                {/* This overlay scrolls itself, not the window, so the bar is
+                    told which element to observe and to scroll. */}
+                <SectionNav sections={sections} scrollRef={scrollRef} />
+                <CategorySections sections={sections} indexOf={idx} onNavigate={close} />
+              </>
             )}
           </div>
         </div>,

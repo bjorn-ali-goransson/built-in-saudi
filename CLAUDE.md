@@ -84,6 +84,42 @@ injecting each omission and watching it be named.
 `components/ToolCatalog.tsx`, fed by `lib/toolSections.ts` (the `RECOMMENDED`
 list + category grouping).
 
+**The catalogue was 7.4 screens deep and had no way to jump** — measured, not
+guessed, by reading section offsets out of a real render at two viewport sizes:
+**7.4 screens on desktop (1280×900), 9.6 on a phone (390×844)**, sixteen section
+headings, the last one starting at screen 9. Reaching `Design` cost nine screens
+of scrolling and going back cost nine more, so search was the only fast path —
+which makes the catalogue a fallback for people who already know the word for
+what they want, and the site has 207 tools precisely because not everyone does.
+
+`components/SectionNav.tsx` is a chip row docked under the header. Measured
+after: from the very bottom of the page a jump is **one tap** and the heading
+lands at y≈124 (desktop) / 102 (mobile), clear of both sticky bars, with **0px**
+of horizontal page overflow at either size. Four things it has to get right:
+
+- **It sticks BELOW the header, not at the top of the document.** A jump list
+  you have to scroll to the top to reach has saved nobody anything.
+- **`scrollRef` for the launcher.** That overlay scrolls its own container
+  rather than the window, so both the "you are here" measurement and the jump
+  have to be told which element to use — a window-based jump does nothing at
+  all in there. It is the case most likely to break silently, so it has its own
+  spec.
+- **The active chip is the LAST section whose heading has crossed the line**,
+  recomputed on scroll. An IntersectionObserver taking the topmost intersecting
+  section was written first and is subtly wrong: sections here are several
+  screens tall, so the one ABOVE what you are reading is usually still
+  intersecting and still topmost, and the chip lags a whole section behind.
+- **The bar scrolls sideways; the page must not.** A full-bleed bar out of a
+  padded container is how a page starts scrolling horizontally on a phone, so it
+  stays inside the content column and the spec asserts `scrollWidth` at 390px.
+
+**And it found the prefix-collision trap again, in a new place.** The observer
+was keyed on `[data-testid^="section-"]` — which also matches `section-nav` and
+every one of its chips, so the bar watched itself and no chip ever lit up. Same
+family as `/id: '…'/` matching `testid: '…'`. Sections now carry a distinct
+**`data-section`** attribute and that is what is queried. **A prefix is not an
+identifier.**
+
 **Testing a store written from an effect:** `recordRecent` runs in a
 `useEffect` after mount while Playwright's `goto` resolves on load, so a spec
 that navigates straight on can beat it. That passed every time the spec ran

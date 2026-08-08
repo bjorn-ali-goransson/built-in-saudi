@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { tools } from '../tools'
 import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
+import { SectionNav } from '../components/SectionNav'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
 import { scoreTool, aboveFloor } from '../lib/fuzzy'
@@ -110,7 +111,12 @@ export function HomePage() {
           <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
         )
       ) : (
-        <CategorySections sections={sections} indexOf={idx} />
+        <>
+          {/* Not rendered over search results: those are one flat grid, so
+              there is nothing to jump between. */}
+          <SectionNav sections={sections} />
+          <CategorySections sections={sections} indexOf={idx} />
+        </>
       )}
     </section>
   )

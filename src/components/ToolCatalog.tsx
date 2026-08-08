@@ -94,8 +94,11 @@ function CompactToolGrid({ tools, onNavigate }: { tools: Tool[]; onNavigate?: ()
 export function CategorySections({ sections, indexOf, onNavigate }: { sections: ToolSection[]; indexOf: (id: string) => number; onNavigate?: () => void }) {
   return (
     <>
+      {/* `data-section` rather than reusing the testid prefix: the jump bar is
+          `section-nav` and its chips are `section-nav-<key>`, so anything
+          keyed on "section-" also matches the bar and every chip. */}
       {sections.map((sec) => (
-        <div key={sec.key} className="mb-7 max-[560px]:mb-6" data-testid={`section-${sec.key}`}>
+        <div key={sec.key} className="mb-7 max-[560px]:mb-6" data-section={sec.key} data-testid={`section-${sec.key}`}>
           <div className="flex items-center gap-3 mb-[1.1rem]">
             {/* A div (not <h2>) so the unlayered base h1–h4 rule in theme.css
                 doesn't override these utility classes — cascade layers mean

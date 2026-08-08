@@ -829,6 +829,28 @@ Still open, and still needing a key, in this order:
 - ~~**`csv-json` carries its own private `parseCsv`.**~~ Fixed — it was
   mishandling a BOM and assuming a comma.
 
+### Browsing was 7.4 screens with no jump — measured and fixed (9 Aug 2026)
+
+Search has been benched to saturation (tuned 100%, held-out #1 98%, #2 90%,
+Arabic 100%), and the browse path had no instrument at all. Reading section
+offsets out of a real render:
+
+| | desktop 1280x900 | mobile 390x844 |
+|---|---|---|
+| page height | 6623px — **7.4 screens** | 8093px — **9.6 screens** |
+| last section starts at | screen 7 | **screen 9** |
+| ways to jump to a section | none | none |
+
+`SectionNav` docks a chip row under the header on both the home catalogue and
+the launcher. After: one tap from the very bottom, heading lands at y=124/102
+(clear of both sticky bars), 0px horizontal page overflow at either size.
+
+**Still open on discoverability:** the catalogue has no per-category PAGE, so a
+section cannot be linked to, shared, or landed on from a search engine — the
+chips are an in-page jump, not a URL. `/{locale}/apps/c/<category>` would be
+16 more prerendered pages with real internal links, and is the obvious next
+move if organic traffic to the catalogue matters.
+
 ### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
 
 Three tools have now been caught with an Arabic name that does not CONTAIN the
