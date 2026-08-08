@@ -543,3 +543,14 @@ TTF); and `comingSoonTools`, which filters for a status no tool has any more.
   rule: people believe crossing 6,000 kWh reprices the whole bill.
 - **Still open:** the water tariff, which is banded by consumption in a similar
   way but whose published schedule was not confirmed by the sources read.
+
+### Web sweep, 8 August 2026 (tenth pass — education)
+
+- ~~**Weighted admission score.**~~ **Shipped** as `admission-score`. The test
+  that decided it: a rule "varies" in two different ways, and only one of them
+  disqualifies a tool. A varying THRESHOLD we would have to guess (the DBR cap)
+  does; a varying INPUT the user can look up (the university's weighting) does
+  not.
+- **Still open:** admission cut-offs by university and year, which are exactly
+  the sort of thing that would need a maintained dataset and would go stale
+  silently — the reason it is not built.

@@ -762,6 +762,29 @@ never painted at all. The frame loop only repaints; it never counts.
 
 No `Disclaimer` — it measures time, not money, health or an entitlement.
 
+## Weighted admission score (`admission-score`)
+
+GPA, Qudurat and Tahsili, each times a weight. The formula is exact; **only the
+weights differ**, by university and by programme (KSU 30/30/40, KFUPM 20/30/50).
+That is why this shipped where the debt-burden calculator did not: there the
+varying number was a *threshold we would have had to invent*, here it is an
+**input the student can look up**. Presets are offered and custom weights are
+accepted, with a refusal when they do not total 100 rather than a meaningless
+answer.
+
+Two things beyond the arithmetic:
+
+- **Every common weighting at once**, so a student can see which university
+  values what they already have.
+- **Where the remaining points are**, sorted by `headroom × weight` rather than
+  by weight — a heavily weighted subject already at 98 has almost nothing left
+  to give, so sorting by weight alone would send people to revise the wrong
+  thing.
+
+**Testing note: `ar-SA` renders Arabic-Indic digits.** A spec helper that strips
+non-ASCII digits leaves an empty string, so every Arabic numeric assertion
+silently compares zero and passes. Convert `\u0660-\u0669` before parsing.
+
 ## Disclaimers are a component, not a habit
 
 Any tool that estimates **money, health, an entitlement or an official deadline**

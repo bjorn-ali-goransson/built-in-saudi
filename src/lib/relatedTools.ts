@@ -47,6 +47,7 @@ const CLUSTERS: string[][] = [
   ['exit-reentry', 'id-expiry', 'hajj-umrah'],
   ['electricity-bill', 'vat-calculator', 'percentage-calculator'],
   ['stopwatch', 'pomodoro', 'countdown', 'bpm-tap'],
+  ['admission-score', 'percentage-calculator', 'ats-cv-optimizer'],
   ['saudi-phone', 'iban-validator', 'short-address'],
 ]
 

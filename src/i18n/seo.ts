@@ -1078,4 +1078,9 @@ export const liveToolSeo: ToolSeo[] = [
     en: { name: 'Stopwatch & Timer', description: 'A stopwatch with laps and a countdown timer with an alarm, in one place. Both take their time from the clock rather than by counting ticks, so switching tabs, locking the phone or leaving it in the background does not lose the minutes in between — which is what usually goes wrong with a timer in a browser.' },
     ar: { name: 'ساعة إيقاف ومؤقّت', description: 'ساعة إيقاف بلفّات ومؤقّت تنازلي بمنبّه، في مكان واحد. وكلاهما يأخذ وقته من الساعة نفسها لا بعدّ النبضات، فلا تضيع الدقائق حين تنتقل بين التبويبات أو تُقفل الهاتف أو تتركه في الخلفية.' },
   },
+  {
+    id: 'admission-score',
+    en: { name: 'Weighted Admission Score', description: 'Your weighted admission percentage from high school, Qudurat and Tahsili — at whatever weighting the university actually uses. The formula is exact and only the weights differ between universities and programmes, so they are yours to set, with the common ones ready to pick. It shows the same three scores under every common weighting, and works out where your remaining points really are: at 30/30/40 a point of Tahsili is worth a third more than a point of school.' },
+    ar: { name: 'النسبة الموزونة للقبول', description: 'نسبتك الموزونة للقبول من الثانوية والقدرات والتحصيلي — بأي ترجيح تستخدمه الجامعة فعلًا. فالمعادلة ثابتة ولا يختلف إلا الترجيح بين الجامعات والبرامج، والأشهر منه جاهز للاختيار. وتعرض الأداة الدرجات نفسها بكل ترجيح شائع، وتبيّن أين نقاطك المتبقية: فعند 30/30/40 تساوي نقطة التحصيلي ثلث زيادة على نقطة الثانوية.' },
+  },
 ]

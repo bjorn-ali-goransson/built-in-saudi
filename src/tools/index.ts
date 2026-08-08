@@ -199,6 +199,7 @@ import { leaveOvertimeTool } from './leave-overtime/meta'
 import { exitReentryTool } from './exit-reentry/meta'
 import { electricityBillTool } from './electricity-bill/meta'
 import { stopwatchTool } from './stopwatch/meta'
+import { admissionScoreTool } from './admission-score/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -345,6 +346,7 @@ export const tools: Tool[] = [
   leaveOvertimeTool,
   exitReentryTool,
   stopwatchTool,
+  admissionScoreTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,
