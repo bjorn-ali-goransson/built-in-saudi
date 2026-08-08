@@ -925,3 +925,17 @@ Still open elsewhere:
   directly and never see the reason at all.
 - The five known misses on held-out set #2, deliberately unfixed.
 
+### Discoverability, 8 August 2026 (fourth pass) — the harness was lying
+
+Nine tools shipped since the catalogue and related-row properties were measured,
+so both were re-run rather than assumed. The catalogue is unchanged (Developer
+still the largest at 25, deliberately). The related-row harness reported **77
+dead ends** — and was wrong: it kept a copy of the selection logic that predated
+the category fill.
+
+Fixed by extracting `src/lib/relatedPick.ts` so the harness calls production.
+**The remaining mirrors are worth auditing the same way:** `evals/lib/extract.mjs`
+mirrors `extract.ts` and `evals/lib/cvText.mjs` mirrors `functions/cvText.js`.
+Both have a check that they still agree; `relatedcheck` had none, which is why
+it drifted silently.
+

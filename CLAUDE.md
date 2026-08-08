@@ -149,6 +149,28 @@ a below-threshold lexical hit is. **Lowering `MIN_SCORE` was the obvious
 alternative and would have reintroduced exactly the noise it was measured to
 exclude** (gosi-salary → ip-subnet at 75).
 
+**The harness that measured this was itself wrong for a while, which is the
+more useful lesson.** `evals/relatedcheck.mjs` kept a COPY of the selection
+logic, because `relatedTools.ts` imports `liveTools` and through it every React
+component. The copy drifted the instant the category fill landed in production
+and not in it — so the harness went on reporting **77 dead ends, 37% of pages**,
+long after the fix took that to 0. Anyone reading it would have been sent to fix
+what was already fixed, or concluded the fix never worked.
+
+The selection now lives in **`src/lib/relatedPick.ts`**, which takes the tool
+list as an ARGUMENT and imports only `./fuzzy` (which has no runtime imports of
+its own). So it compiles standalone with tsc and the harness calls the real
+function — the same arrangement as `cvPatch.ts`. **Verified by deleting the
+category fill from production and watching the harness go to 77, then
+restoring it.** Before the change it said 77 either way.
+
+Two smaller notes: `tsc` emits an import specifier exactly as written, so the
+compiled `./fuzzy` is unresolvable under Node ESM — the harness rewrites it to
+`./fuzzy.js` rather than putting `.js` extensions into the product's own imports
+and making one file inconsistent with every other. And a mirror is worth keeping
+only where production genuinely cannot be imported; **prefer extracting the pure
+part.**
+
 Measured after: **dead ends 81 → 0, full rows of four 38 → 202.** The order is
 curated → lexical → category, so a real relation still comes first and the
 filler only takes what is left — `qr-code` still leads with `qr-reader`, and

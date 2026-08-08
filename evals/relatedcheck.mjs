@@ -16,7 +16,7 @@
 //
 // This mirrors `relatedTools` rather than importing it, because the real one
 // pulls in `../tools` and therefore every React component on the site.
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs'
 import { scoreTool } from './gen/fuzzy.js'
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -52,35 +52,34 @@ for (const d of dirs) {
   })
 }
 
-// Mirrored from src/lib/relatedTools.ts — keep in step.
-const MIN_SCORE = 120
-const src = readFileSync(`${ROOT}/src/lib/relatedTools.ts`, 'utf8')
-const clusterBlock = /const CLUSTERS: string\[\]\[\] = \[([\s\S]*?)\n\]/.exec(src)?.[1] ?? ''
-const CLUSTERS = [...clusterBlock.matchAll(/\[([^\]]*)\]/g)]
-  .map((m) => [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]))
-const threshold = Number(/const MIN_SCORE = (\d+)/.exec(src)?.[1] ?? MIN_SCORE)
-
-const curated = (id) => {
-  const out = []
-  for (const g of CLUSTERS) {
-    if (!g.includes(id)) continue
-    for (const other of g) if (other !== id && !out.includes(other)) out.push(other)
-  }
-  return out
+// The REAL selection, compiled from src/lib/relatedPick.ts — not a copy.
+//
+// It used to be a copy, and the copy drifted the moment the category fill was
+// added to production and not to it: this file went on reporting 77 dead ends,
+// 37% of pages, long after the fix took that to 0. Anyone reading it would have
+// been sent to fix what was already fixed. `relatedPick.ts` takes the tool list
+// as an argument precisely so this can call it.
+import { execFileSync } from 'node:child_process'
+const hereDir = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+if (!existsSync(`${hereDir}gen/relatedPick.js`)) {
+  execFileSync(process.execPath, [
+    `${ROOT}/node_modules/typescript/bin/tsc`, `${ROOT}/src/lib/relatedPick.ts`,
+    '--outDir', `${hereDir}gen`, '--module', 'esnext', '--target', 'es2022',
+    '--moduleResolution', 'bundler',
+  ], { stdio: 'inherit' })
 }
-
-const related = (t, limit = 4) => {
-  const out = curated(t.id).filter((id) => tools.some((x) => x.id === id)).slice(0, limit)
-  if (out.length >= limit) return out
-  const query = [t.name, ...t.keywords.slice(0, 4)].join(' ')
-  const scored = tools
-    .filter((x) => x.id !== t.id && !out.includes(x.id))
-    .map((x) => ({ id: x.id, score: scoreTool(query, x) }))
-    .filter((x) => x.score >= threshold)
-    .sort((a, b) => b.score - a.score)
-  for (const x of scored) { if (out.length >= limit) break; out.push(x.id) }
-  return out
+// tsc emits the import specifier exactly as written — `./fuzzy` — and Node ESM
+// will not resolve an extensionless path. Rewriting it here rather than putting
+// `.js` extensions into the product's own imports, which would be correct ESM
+// and inconsistent with every other file in src/.
+{
+  const out = `${hereDir}gen/relatedPick.js`
+  const js = readFileSync(out, 'utf8')
+  if (js.includes("from './fuzzy'")) writeFileSync(out, js.replace("from './fuzzy'", "from './fuzzy.js'"))
 }
+const { pickRelated, MIN_SCORE, CLUSTERS } = await import('./gen/relatedPick.js')
+const threshold = MIN_SCORE
+const related = (t, limit = 4) => pickRelated(t, tools, limit).map((x) => x.id)
 
 const rows = tools.map((t) => ({ id: t.id, n: related(t).length, list: related(t) }))
 const dead = rows.filter((r) => r.n === 0)
@@ -99,37 +98,3 @@ if (process.argv.includes('--list')) {
   console.log('\nthin rows:')
   for (const r of thin) console.log(`  ${r.id.padEnd(24)} ${r.list.join(', ')}`)
 }
-
-// --- would filling from the tool's OWN CATEGORY close the gap, and at what cost?
-//
-// Category is the site's hand-curated life-domain grouping. It is precisely the
-// signal the lexical scorer is blind to, and it is already maintained — so it
-// costs nothing to consult and is not arbitrary the way a below-threshold
-// lexical hit is.
-const rawCat = new Map()
-for (const d of dirs) {
-  const src2 = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
-  const id = /id: '([^']+)'/.exec(src2)?.[1]
-  const cat = /category: '([^']+)'/.exec(src2)?.[1]
-  if (id && cat) rawCat.set(id, cat)
-}
-const order = new Map(tools.map((t, i) => [t.id, i]))
-
-const withCat = (t, limit = 4) => {
-  const out = related(t, limit)
-  if (out.length >= limit) return out
-  const mine = rawCat.get(t.id)
-  const siblings = tools
-    .filter((x) => x.id !== t.id && !out.includes(x.id) && rawCat.get(x.id) === mine)
-    .sort((a, b) => order.get(a.id) - order.get(b.id))
-  for (const x of siblings) { if (out.length >= limit) break; out.push(x.id) }
-  return out
-}
-
-const rows2 = tools.map((t) => ({ id: t.id, n: withCat(t).length }))
-const dead2 = rows2.filter((r) => r.n === 0)
-console.log(`
-WITH SAME-CATEGORY FILL:`)
-console.log(`  no related row at all: ${dead2.length}  (was ${dead.length})`)
-console.log(`  a full row of four:    ${rows2.filter((r) => r.n >= 4).length}  (was ${rows.filter((r) => r.n >= 4).length})`)
-if (dead2.length) console.log(`  still dead: ${dead2.map((r) => r.id).join(', ')}`)
