@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { parseCsv, sniffDelimiter } from '../../lib/csv'
 import { Stack, Textarea, Seg, SegButton, Button, FieldLabel } from '../../components/ui'
 import { CopyIcon } from '../../components/icons'
 
@@ -16,21 +17,23 @@ const STR = {
   },
 }
 
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = [], field = '', inQ = false
-  const t = text.replace(/\r\n?/g, '\n')
-  for (let i = 0; i < t.length; i++) {
-    const c = t[i]
-    if (inQ) {
-      if (c === '"') { if (t[i + 1] === '"') { field += '"'; i++ } else inQ = false }
-      else field += c
-    } else if (c === '"') inQ = true
-    else if (c === ',') { row.push(field); field = '' }
-    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = '' }
-    else field += c
-  }
-  if (field !== '' || row.length) { row.push(field); rows.push(row) }
+// Uses `lib/csv`, not a private copy. The copy that used to live here was the
+// last CSV parser on the site not sharing that module, and it differed in two
+// ways that both produced silently wrong output:
+//
+// 1. **It did not strip the UTF-8 BOM.** Excel writes one, and so do OUR OWN
+//    csv tools deliberately — `csv-split` and `csv-clean` prepend it so Excel
+//    reads Arabic instead of mojibake. So a file this site produced, converted
+//    here, came back with its first JSON key as "﻿name": invisible in any
+//    viewer, and `obj.name` undefined for every consumer downstream.
+// 2. **It assumed a comma.** A semicolon-separated export — the default in
+//    several European and Arabic Excel locales — parsed as one column per row.
+//
+// `sniffDelimiter` handles the second and `parseCsv` the first.
+function readCsv(text: string): string[][] {
+  const rows = parseCsv(text, sniffDelimiter(text))
+  // The private copy dropped blank rows; keep that, or a trailing newline in a
+  // pasted file becomes a null object in the JSON.
   return rows.filter((r) => r.length > 1 || r[0] !== '')
 }
 
@@ -50,7 +53,7 @@ export default function CsvJsonTool() {
     if (!input.trim()) return { output: '', error: '' }
     try {
       if (dir === 'toJson') {
-        const rows = parseCsv(input)
+        const rows = readCsv(input)
         if (!rows.length) return { output: '', error: s.errCsv }
         const [head, ...body] = rows
         const objs = body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ''])))

@@ -574,6 +574,30 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cj-output')).toContainText('"a": "1"')
   })
 
+  test('csv to json: a BOM does not become part of the first key', async ({ page }) => {
+    // Excel writes a UTF-8 BOM, and so do this site's OWN csv tools on purpose,
+    // so Excel reads Arabic rather than mojibake. The private parser this tool
+    // used to carry did not strip it, so the first JSON key came out as
+    // "﻿name" — invisible in any viewer, and undefined for every consumer
+    // downstream.
+    await page.goto('/en/apps/csv-json')
+    await page.getByTestId('cj-input').fill('﻿name,city\nSara,Riyadh')
+    await expect(page.getByTestId('cj-output')).toContainText('"name": "Sara"')
+    // Checked by codepoint, not by substring: U+FEFF is zero-width, so
+    // `not.toContainText('﻿')` compares against what is effectively the
+    // empty string and can never hold. An assertion that cannot pass is as
+    // useless as one that cannot fail.
+    const out = await page.getByTestId('cj-output').inputValue()
+    expect([...out].some((c) => c.codePointAt(0) === 0xfeff)).toBe(false)
+  })
+
+  test('csv to json: a semicolon file is not one column', async ({ page }) => {
+    // The default separator in several European and Arabic Excel locales.
+    await page.goto('/en/apps/csv-json')
+    await page.getByTestId('cj-input').fill('name;city\nSara;Riyadh')
+    await expect(page.getByTestId('cj-output')).toContainText('"city": "Riyadh"')
+  })
+
   test('list tools: dedupes and sorts', async ({ page }) => {
     await page.goto('/en/apps/list-tools')
     await page.getByTestId('list-input').fill('banana\napple\nbanana')

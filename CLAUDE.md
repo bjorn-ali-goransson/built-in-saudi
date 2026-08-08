@@ -548,10 +548,27 @@ you can see what was read; **a text file is passed through byte for byte** and
 never round-tripped through the parser, because a paste box should show you what
 you gave it rather than renormalising your quoting.
 
-Still outstanding: **`csv-json` carries its own private `parseCsv`** rather than
-`lib/csv`, so quoting and embedded-newline handling can drift from every other
-CSV tool on the site. `csv-to-xlsx` correctly takes CSV only — its whole job is
-the CSV→xlsx direction.
+**`csv-json` used to carry its own private `parseCsv`, and the drift was
+already there.** It handled quoting and embedded newlines correctly and differed
+in two ways that both produced silently wrong output:
+
+- **It did not strip the UTF-8 BOM.** Excel writes one — and so do OUR OWN csv
+  tools, deliberately, so Excel reads Arabic instead of mojibake. So a file this
+  site produced, converted here, came back with its first JSON key as
+  `"﻿name"`: **invisible in every viewer, and `obj.name` undefined for
+  every consumer downstream.** Demonstrated against the old parser before it was
+  replaced, not inferred.
+- **It assumed a comma.** A semicolon export — the default in several European
+  and Arabic Excel locales — parsed as one column per row.
+
+Both gone; it uses `parseCsv` + `sniffDelimiter` now. `csv-to-xlsx` correctly
+takes CSV only — its whole job is the CSV→xlsx direction.
+
+**A test can be vacuous in the RED direction too**, and the BOM case is a neat
+example: `not.toContainText('﻿')` compares against a zero-width character,
+which is effectively the empty string, so it can never hold. The assertion is by
+codepoint instead. An assertion that cannot pass is as useless as one that
+cannot fail.
 
 **The privacy guard had a hole in the same place.** `csv-merge` takes a file and
 had never been in `e2e/privacy.spec.ts` `CASES` — the documented failure mode of

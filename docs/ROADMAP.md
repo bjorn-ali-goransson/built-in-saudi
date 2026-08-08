@@ -821,8 +821,8 @@ Still open, and still needing a key, in this order:
   `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`, `pdf-sign` and
   `pdf-compress` load pdf-lib directly rather than through `PdfOps`, so they
   never see `why` at all.
-- **Privacy list: 57 proved of 66, 7 unproved.** `csv-json` still carries its
-  own private `parseCsv`.
+- ~~**`csv-json` carries its own private `parseCsv`.**~~ Fixed — it was
+  mishandling a BOM and assuming a comma.
 
 ### Held-out set #2, 8 August 2026 — baseline and known misses
 
@@ -953,4 +953,18 @@ as a termination. Fixed, with sources.
 - **Declined again: browser-native PDF annotation.** Chrome shipped markup and
   signing in Feb 2026, and we already have `pdf-sign` and `pdf-edit`. Nothing to
   add.
+
+### Code sweep, 8 August 2026 (sixth pass)
+
+`csv-json` was the last CSV tool not using `lib/csv`, and the duplication had
+already cost correctness — see the note in CLAUDE.md.
+
+Still open:
+
+- `pdf-merge` and `pdf-organise` carry the encrypted-vs-unreadable copy but only
+  `pdf-split` renders the route to `pdf-to-text`; six more tools load pdf-lib
+  directly and never see the reason at all.
+- Audit the remaining rule tools for the statute sitting NEXT to the one they
+  encode, as `end-of-service` needed: `leave-overtime` and `exit-reentry` first.
+- The five known misses on held-out set #2, deliberately unfixed.
 
