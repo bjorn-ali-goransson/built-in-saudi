@@ -728,3 +728,26 @@ Still open:
   this order: grade `impact` per-ROLE rather than per-line; then target the
   question budget at unquantified roles; then consider enlarging it.
 
+### Web sweep, 8 August 2026 (thirteenth pass) — the PDF unlock question, settled
+
+The recorded question was whether client-side PDF unlocking is feasible. Answer:
+**the lossless version is not, without a new dependency** — `pdf-lib`'s
+`ignoreEncryption` parses structure and leaves streams encrypted, and only
+`qpdf-wasm` or sPDF.js (which overrides pdf-lib internals) would re-emit a
+decrypted file with its text layer.
+
+But the question was the wrong one. **pdf.js already decrypts given the
+password**, and `pdf-to-text` had been detecting encryption and giving up since
+its first version. No new tool and no dependency — see the note in CLAUDE.md.
+
+Next, in order:
+
+- **`pdf-to-images` and `pdf-ocr` take a password the same way.** Both are
+  pdf.js; the change is the one just made to `extract.ts`.
+- **The pdf-lib tools cannot open an encrypted PDF at all** (merge, split,
+  stamp, organise, booklet, redact, fill, sign). They currently fail with a
+  generic message. They should name the cause and route to `pdf-to-text`, the
+  same way `pdf-ocr` routes a text-layer PDF away from OCR.
+- **Lossless unlock stays parked.** Revisit only if `qpdf-wasm` proves small and
+  maintained; the bar is the one HEIC cleared, not lower.
+

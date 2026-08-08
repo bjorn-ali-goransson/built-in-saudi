@@ -62,6 +62,30 @@ test.describe('pdf to text', () => {
     await expect(out).not.toHaveValue(/--- Page/)
   })
 
+  test('a password-protected PDF is an ASK, not a dead end', async ({ page }) => {
+    // The tool detected PasswordException from the start and then said the text
+    // "can't be read" — which is false. pdf.js decrypts given the password the
+    // reader already has, and a locked payslip is exactly the document nobody
+    // should hand to an upload site. The fixture is a real RC4-40 encrypted PDF
+    // (scripts/make-locked-pdf.mjs); pdf-lib cannot make one.
+    await page.goto('/en/apps/pdf-to-text')
+    await page.getByTestId('p2t-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('p2t-locked')).toBeVisible()
+    await expect(page.getByTestId('p2t-output')).toHaveCount(0)
+
+    // A wrong password is reported AS a wrong password. Repeating "this is
+    // locked" would read as though nothing had been tried.
+    await page.getByTestId('p2t-password').fill('not-the-password')
+    await page.getByTestId('p2t-unlock').click()
+    await expect(page.getByTestId('p2t-wrong-password')).toBeVisible()
+
+    // And the right one reads the text out, on this device.
+    await page.getByTestId('p2t-password').fill('letmein')
+    await page.getByTestId('p2t-unlock').click()
+    await expect(page.getByTestId('p2t-output')).toHaveValue(/net pay 12345 SAR/)
+    await expect(page.getByTestId('p2t-locked')).toHaveCount(0)
+  })
+
   test('tells you when the PDF is a scan instead of showing an empty box', async ({ page }) => {
     await page.goto('/en/apps/pdf-to-text')
     await page.getByTestId('p2t-file').setInputFiles({ name: 'scan.pdf', mimeType: 'application/pdf', buffer: await blankPdf() })

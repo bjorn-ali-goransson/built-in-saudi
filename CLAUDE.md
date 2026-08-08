@@ -1237,6 +1237,42 @@ facts, and `--roundtrip` — re-uploading our own output, the case users report 
 "it lowered my score". Add a variant rather than editing `champion` in place, and
 keep `legacy` untouched so there is always a fixed baseline.
 
+## A password-protected PDF is an ASK, not a dead end (`pdf-to-text`)
+
+The site's longest-standing "strongest unbuilt idea" turned out not to need a
+tool at all. `pdf-to-text` had detected `PasswordException` from the very first
+version and then said the text **"can't be read"** — which is false. **pdf.js
+decrypts given the password the reader already has**; the hard half was done and
+only the input was missing. Payslips and bank statements arrive locked, and they
+are precisely the documents nobody should hand to an upload site.
+
+- **The two PasswordException codes are different things to be told.**
+  `NEED_PASSWORD` (1) and `INCORRECT_PASSWORD` (2). Conflating them — repeating
+  "this file is locked" after a wrong attempt — makes a correct retry look
+  futile.
+- **The password never leaves the function.** It goes to pdf.js, which runs in a
+  worker on the device. Nothing stores or sends it, and the copy says so rather
+  than leaving the reader to wonder.
+- **What is still NOT possible, and why the tool does not pretend otherwise:**
+  handing back a *decrypted PDF with its text layer*. `pdf-lib` cannot decrypt —
+  `ignoreEncryption` parses the structure and leaves the streams encrypted — so
+  a lossless unlock needs a new dependency (`qpdf-wasm`, or sPDF.js overriding
+  pdf-lib internals). Getting the CONTENT out covers the actual need without
+  either.
+
+**The fixture is a real RC4-40 encrypted PDF** (`scripts/make-locked-pdf.mjs`,
+run once, committed as `e2e/fixtures/locked.pdf`), because nothing in the repo
+can make one — pdf-lib explicitly cannot. It implements the PDF 1.4 standard
+security handler at V=1/R=2: the O and U entries, the MD5-derived file key, and
+a per-object RC4 key for every string and stream. It is **self-validating**: get
+any step wrong and pdf.js simply refuses the file, so the e2e passing is proof
+the crypto is right. Verified to produce code 1 with no password, the text with
+the right one, and code 2 with a wrong one.
+
+**Still to do:** `pdf-to-images` and `pdf-ocr` use pdf.js too and would take a
+password the same way; the pdf-lib tools (merge, split, stamp…) cannot open an
+encrypted file at all and should say so and route here.
+
 ## OCR (`image-to-text`, `pdf-ocr`)
 
 The one tool with a genuinely heavy dependency — `tesseract.js`, because there is

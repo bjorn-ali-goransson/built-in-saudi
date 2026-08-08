@@ -14,6 +14,12 @@ export interface Extracted {
   /** True when the PDF has pages but almost no extractable text — i.e. a scan. */
   looksScanned: boolean
   encrypted: boolean
+  /**
+   * Set when a password WAS supplied and pdf.js rejected it, so the tool can
+   * say "that password is wrong" rather than repeating "this is locked" — which
+   * reads as though nothing was tried.
+   */
+  wrongPassword?: boolean
 }
 
 interface Item { str: string; transform: number[]; hasEOL?: boolean }
@@ -49,14 +55,29 @@ function itemsToText(items: Item[]): string {
   return out.join('\n')
 }
 
-export async function extractPdf(file: File): Promise<Extracted> {
+/**
+ * pdf.js DECRYPTS given the password the reader already has — it just has to be
+ * asked. This tool detected `PasswordException` from the start and then said
+ * the text "can't be read", which is not true: the hard half was already done
+ * and only the input was missing. Payslips and bank statements arrive locked,
+ * and they are exactly the documents nobody should hand to an upload site.
+ *
+ * The password stays in this function. It is passed to pdf.js, which runs in a
+ * worker on this device; nothing about it is stored or sent.
+ */
+export async function extractPdf(file: File, password?: string): Promise<Extracted> {
   const data = await file.arrayBuffer()
   let doc
   try {
-    doc = await pdfjs.getDocument({ data, ...PDF_OPTS }).promise
+    doc = await pdfjs.getDocument({ data, ...PDF_OPTS, ...(password ? { password } : {}) }).promise
   } catch (e) {
-    const name = (e as { name?: string })?.name
-    if (name === 'PasswordException') return { pages: [], looksScanned: false, encrypted: true }
+    const err = e as { name?: string; code?: number }
+    if (err?.name === 'PasswordException') {
+      // pdf.js distinguishes the two cases (NEED_PASSWORD = 1, INCORRECT = 2),
+      // and so must the UI: "locked" and "wrong password" are different things
+      // to be told, and conflating them makes a correct retry look futile.
+      return { pages: [], looksScanned: false, encrypted: true, wrongPassword: err.code === 2 }
+    }
     throw e
   }
   const pages: Page[] = []

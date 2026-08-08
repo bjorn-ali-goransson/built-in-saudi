@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon, ScanTextIcon } from '../../components/icons'
-import { Button, Textarea, Stack, Spinner, Check, FileError, Panel } from '../../components/ui'
+import { Button, Textarea, Stack, Spinner, Check, FileError, Panel, Field, Input } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import type { Extracted } from './extract'
 
@@ -15,7 +15,10 @@ const STR = {
     copy: 'Copy', copied: 'Copied!', download: 'Download .txt',
     scanned: 'This PDF has almost no text in it — it is a scan, a picture of a page. There is nothing to extract, but the OCR tool can read the words off the image.',
     toOcr: 'Open Image to Text',
-    encrypted: 'This PDF is password-protected, so its text can’t be read.',
+    locked: 'This PDF is password-protected. Type the password and the text will be read here, on your device — the password is passed to the PDF engine in this tab and is neither stored nor sent.',
+    wrongPassword: 'That password did not open it. Check it and try again.',
+    passwordLabel: 'Password',
+    unlock: 'Unlock and read',
     failed: 'That file could not be read as a PDF.',
     hint: 'The text comes straight out of the PDF, exactly as it was written into it — no upload, no conversion service.',
     empty: 'No text on this page.',
@@ -29,7 +32,10 @@ const STR = {
     copy: 'نسخ', copied: 'تم النسخ!', download: 'نزّل ملف ‎.txt',
     scanned: 'لا يكاد هذا الملف يحتوي على نص — إنه صورة ممسوحة للصفحة. لا يوجد ما يُستخرج، لكن أداة التعرّف الضوئي تستطيع قراءة الكلمات من الصورة.',
     toOcr: 'افتح أداة الصورة إلى نص',
-    encrypted: 'هذا الملف محمي بكلمة مرور، فلا يمكن قراءة نصه.',
+    locked: 'هذا الملف محمي بكلمة مرور. اكتب كلمة المرور ليُقرأ النص هنا على جهازك — فكلمة المرور تُمرَّر إلى محرّك PDF في هذه الصفحة ولا تُحفظ ولا تُرسل.',
+    wrongPassword: 'لم تفتحه كلمة المرور هذه. تأكّد منها وأعد المحاولة.',
+    passwordLabel: 'كلمة المرور',
+    unlock: 'افتح واقرأ',
     failed: 'تعذّرت قراءة هذا الملف كـPDF.',
     hint: 'يخرج النص من ملف PDF مباشرةً كما كُتب فيه — بلا رفع، وبلا خدمة تحويل.',
     empty: 'لا نص في هذه الصفحة.',
@@ -45,19 +51,32 @@ export default function PdfToTextTool() {
   const [error, setError] = useState('')
   const [separators, setSeparators] = useState(true)
   const [copied, setCopied] = useState(false)
+  // The picked file is kept so the password can be applied to it without
+  // asking the person to choose it a second time.
+  const [locked, setLocked] = useState<File | null>(null)
+  const [password, setPassword] = useState('')
+  const [wrongPassword, setWrongPassword] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => () => setWorkInProgress('pdf-to-text', false), [])
 
-  async function pick(f: File | undefined) {
+  async function pick(f: File | undefined, pw = '') {
     if (!f) return
-    setBusy(true); setError(''); setResult(null)
+    setBusy(true); setError(''); setResult(null); setWrongPassword(false)
     setName(f.name.replace(/\.pdf$/i, '') || 'document')
     try {
       // pdf.js is heavy; it loads only once a PDF is actually chosen.
       const { extractPdf } = await import('./extract')
-      const r = await extractPdf(f)
-      if (r.encrypted) { setError(s.encrypted); return }
+      const r = await extractPdf(f, pw || undefined)
+      if (r.encrypted) {
+        // Not an error any more — an ASK. pdf.js decrypts given the password
+        // the reader already has, so the old dead end was saying the text could
+        // not be read when it could.
+        setLocked(f)
+        setWrongPassword(!!r.wrongPassword)
+        return
+      }
+      setLocked(null)
       setResult(r)
       setWorkInProgress('pdf-to-text', true)
     } catch {
@@ -101,6 +120,34 @@ export default function PdfToTextTool() {
       </div>
 
       {error && <FileError message={error} />}
+
+      {locked && (
+        <Panel className="gap-2 border-gold-500" data-testid="p2t-locked">
+          <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.locked}</p>
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={(e) => { e.preventDefault(); void pick(locked, password) }}
+          >
+            <Field label={s.passwordLabel} className="flex-1 min-w-[12rem]">
+              <Input
+                type="password"
+                value={password}
+                data-testid="p2t-password"
+                autoComplete="off"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Button variant="primary" type="submit" disabled={busy || !password} data-testid="p2t-unlock">
+              {s.unlock}
+            </Button>
+          </form>
+          {wrongPassword && (
+            <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="p2t-wrong-password">
+              {s.wrongPassword}
+            </p>
+          )}
+        </Panel>
+      )}
       {!result && !busy && !error && <p className="text-ink-faint text-[0.95rem] rtl:font-ar">{s.hint}</p>}
 
       {result?.looksScanned && (
