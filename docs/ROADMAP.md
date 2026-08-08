@@ -685,7 +685,8 @@ Revised order for when a key exists:
   exists rather than proof. Before building: verify what pdf.js `saveDocument`
   emits for an encrypted document, and price `qpdf-wasm`.
 - **Work the `UNVERIFIED` list in `scripts/check-privacy-coverage.mjs` down.**
-  46 tools take a file and have never had the upload claim tested. The image
-  and PDF families are the biggest blocks and are mechanically similar, so they
-  can go in batches.
-
+  First batch done: 17 proved → **31 proved, 32 remaining**. The rest need
+  fixtures the spec does not build yet — a video (video-trim, video-gif,
+  video-audio), an SVG, an xlsx with a dynamic token, a PEM — or sit behind an
+  interaction like the two that needed `reveal`. `image-to-text` and `pdf-ocr`
+  pull the OCR models, so they will be slow and belong in their own pass.

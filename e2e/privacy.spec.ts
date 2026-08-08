@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { deflateRawSync, crc32 } from 'node:zlib'
+import { deflateRawSync, deflateSync, crc32 } from 'node:zlib'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 
 // "Files are never uploaded" is the site's first principle and the reason it
@@ -57,12 +57,54 @@ async function tokenPdf(): Promise<Buffer> {
   return Buffer.from(await doc.save())
 }
 
-interface Case { id: string; testid: string; name: string; mime: string; make: () => Promise<Buffer> | Buffer }
+interface Case {
+  id: string; testid: string; name: string; mime: string
+  make: () => Promise<Buffer> | Buffer
+  /**
+   * Some tools keep the file input behind a mode or tab, so it is not on the
+   * page at load. Reveal it here. Both of the tools that needed this were
+   * caught by the input simply never appearing — which is the right failure,
+   * but it is worth naming rather than dropping the tool from the guard.
+   */
+  reveal?: (page: import('@playwright/test').Page) => Promise<void>
+}
 
 /** An Office/EPUB-shaped zip: one XML part where the reader expects it. */
 const xmlZip = (part: string, xml: string, extra: { name: string; data: Buffer }[] = []) =>
   zip([{ name: '[Content_Types].xml', data: Buffer.from('<?xml version="1.0"?><Types/>') },
     { name: part, data: Buffer.from(xml, 'utf8') }, ...extra])
+
+/**
+ * A real, decodable PNG carrying the token in a tEXt chunk.
+ *
+ * Same discipline as the WAV below: the image tools decode with
+ * `createImageBitmap`, so a fixture that is not a valid image never reaches the
+ * code that could upload it, and the case would pass having tested nothing.
+ * tEXt is ignored by every decoder, which is what makes it the right hiding
+ * place. (Shape borrowed from `e2e/file-metadata.spec.ts`, which builds the
+ * same chunk for the opposite reason — to be read rather than ignored.)
+ */
+function pngWithToken(token: string): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0)
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body) >>> 0, 0)
+    return Buffer.concat([len, body, crc])
+  }
+  const w = 4, h = 3
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8; ihdr[9] = 0 // 8-bit greyscale
+  // One filter byte per row, then w bytes of pixel.
+  const raw = Buffer.alloc(h * (w + 1))
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('tEXt', Buffer.from(`Comment\0${token}`, 'latin1')),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
+}
 
 /**
  * A real, decodable WAV that carries the run's token in a RIFF LIST/INFO chunk.
@@ -130,6 +172,41 @@ const CASES: Case[] = [
   // recently — grep src/tools for a file input, do not rely on memory.
   { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
+
+  // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
+  // 65 tools take a file and 17 were proved; these are the next 14. Chosen
+  // because their fixtures are shapes this file already builds — the image,
+  // PDF, audio and archive families — rather than because they were the tools
+  // most recently written, which is how the list got short in the first place.
+  { id: 'color-palette', testid: 'cp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'colour-blind', testid: 'cb-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN),
+    reveal: (page) => page.getByTestId('cb-mode-image').click() },
+  { id: 'screenshot-frame', testid: 'sf-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'social-resize', testid: 'sr-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'passport-photo', testid: 'pp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'carousel-split', testid: 'cs-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'batch-watermark', testid: 'bw-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'pdf-booklet', testid: 'pb-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-redact', testid: 'pr-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-stamp', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'audio-trim', testid: 'at-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
+  { id: 'remove-silence', testid: 'rs-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
+  { id: 'epub-text', testid: 'ep-file', name: 'book.epub', mime: 'application/epub+zip', make: () => xmlZip('OEBPS/ch1.xhtml', `<html><body><p>${TOKEN}</p></body></html>`) },
+  {
+    id: 'ics-builder', testid: 'ics-file', name: 'cal.ics', mime: 'text/calendar',
+    make: () => Buffer.from(['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `SUMMARY:${TOKEN}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n')),
+    // Retried, because the click can land before React attaches and then does
+    // nothing at all. The tab works perfectly in isolation and timed out here,
+    // which is the signature of a hydration race rather than a wrong selector —
+    // Playwright waits for the element to be actionable, not for a handler to
+    // have been attached to it.
+    reveal: async (page) => {
+      await expect(async () => {
+        await page.getByTestId('ics-tab-read').click()
+        await expect(page.getByTestId('ics-file')).toBeAttached({ timeout: 1000 })
+      }).toPass({ timeout: 15000 })
+    },
+  },
   {
     id: 'vcard-to-csv', testid: 'vc-file', name: 'contacts.vcf', mime: 'text/vcard',
     make: () => Buffer.from(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${TOKEN}\r\nN:;${TOKEN};;;\r\nEND:VCARD\r\n`),
@@ -175,6 +252,7 @@ for (const c of CASES) {
     })
 
     await page.goto(`/en/apps/${c.id}`)
+    if (c.reveal) await c.reveal(page)
     await page.getByTestId(c.testid).setInputFiles({ name: c.name, mimeType: c.mime, buffer: await c.make() })
     // Give the tool time to do its work — and to make a request if it were going to.
     await page.waitForTimeout(1500)

@@ -35,18 +35,17 @@ const SENDS_DATA = new Set([
  *
  * Measured 8 August 2026: of 65 tools that take a file, 17 were proved and 46
  * were not — so the claim on those 46 pages rested on nobody having made a
- * mistake. Work the list down; do not add to it without a reason.
+ * mistake. The first batch of 14 took it to 31 proved. Work it down; do not
+ * add to it without a reason.
  */
 const UNVERIFIED = new Set([
-  'audio-trim', 'batch-watermark', 'carousel-split', 'cert-decoder', 'color-palette',
-  'colour-blind', 'epub-text', 'favicon-generator', 'file-encrypt', 'hash-generator',
-  'ics-builder', 'image-compressor', 'image-cropper', 'image-format-converter',
-  'image-rearrange', 'image-redact', 'images-to-pdf', 'image-to-ascii', 'image-to-text',
-  'meme-generator', 'metadata-remove', 'passport-photo', 'pdf-booklet', 'pdf-compress',
-  'pdf-edit', 'pdf-fill', 'pdf-merge', 'pdf-redact', 'pdf-sign', 'pdf-split', 'pdf-stamp',
-  'pdf-to-images', 'qr-code', 'qr-reader', 'remove-background', 'remove-silence',
-  'screenshot-frame', 'sheet-diff', 'social-resize', 'steganography', 'svg-editor',
-  'video-audio', 'video-gif', 'video-trim', 'xlsx-convert', 'zatca-qr',
+  'cert-decoder', 'favicon-generator', 'file-encrypt', 'hash-generator',
+  'image-compressor', 'image-cropper', 'image-format-converter', 'image-rearrange',
+  'image-redact', 'images-to-pdf', 'image-to-ascii', 'image-to-text', 'meme-generator',
+  'metadata-remove', 'pdf-compress', 'pdf-edit', 'pdf-fill', 'pdf-merge', 'pdf-sign',
+  'pdf-split', 'pdf-to-images', 'qr-code', 'qr-reader', 'remove-background', 'sheet-diff',
+  'steganography', 'svg-editor', 'video-audio', 'video-gif', 'video-trim', 'xlsx-convert',
+  'zatca-qr',
 ])
 
 const root = process.cwd()

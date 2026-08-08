@@ -722,6 +722,25 @@ file input and demands each be classified: proved in `CASES`, listed in
 NOT be asserted), or listed in `UNVERIFIED` — believed client-side, nobody has
 proved it. Measured 8 August 2026: **65 tools take a file, 17 were proved, 46
 were not.** A new tool with a file input now fails the build until classified.
+The first batch took it to **31 proved, 32 unproved** — the image, PDF, audio
+and archive families, chosen because their fixtures are shapes the spec already
+builds rather than because they were the tools most recently written, which is
+how the list got short in the first place.
+
+Two things that batch taught:
+
+- **A fixture must be a REAL file of its type.** `pngWithToken` and
+  `wavWithToken` build a valid PNG (token in a `tEXt` chunk) and a valid WAV
+  (token in `LIST/INFO`), because the image and audio tools decode before they
+  do anything else — hand them junk and the tool never reaches the code that
+  could upload, and the case passes having tested nothing. That is the same
+  vacuous-green failure this whole spec exists to prevent.
+- **A `reveal` step, for a file input behind a tab or mode** — and it has to
+  RETRY. `ics-builder`'s read tab worked perfectly in isolation and timed out
+  inside the guard: the click was landing before React attached and doing
+  nothing. Playwright waits for an element to be actionable, not for a handler
+  to exist on it, so a plain click is a hydration race. `expect(...).toPass()`
+  around click-then-assert fixes it.
 
 Two things about that measurement are worth keeping:
 
