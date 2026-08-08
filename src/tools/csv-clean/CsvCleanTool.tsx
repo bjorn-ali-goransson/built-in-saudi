@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Textarea, Stack, Check, Select, Panel } from '../../components/ui'
+import { Button, Textarea, Stack, Check, Select, Panel, FileError } from '../../components/ui'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
 import { parseCsv, toCsv, sniffDelimiter, clean, type Delimiter, type CleanOptions } from '../../lib/csv'
+import { readTableFile, isSpreadsheetName } from '../../lib/tableFile'
 
 const DELIMS: { id: Delimiter; label: string }[] = [
   { id: ',', label: 'Comma ,' }, { id: ';', label: 'Semicolon ;' },
@@ -11,7 +12,13 @@ const DELIMS: { id: Delimiter; label: string }[] = [
 
 const STR = {
   en: {
-    pick: 'Choose a CSV', paste: 'or paste it here…',
+    pick: 'Choose a CSV or Excel file', paste: 'or paste it here…',
+    errors: {
+      'old-format': 'The old .xls format and Apple Numbers files cannot be read — re-save as .xlsx or CSV.',
+      'not-xlsx': 'That file could not be opened as a spreadsheet.',
+      generic: 'That file could not be read.',
+    } as Record<string, string>,
+
     hint: 'Paste a messy CSV and get a clean one — stray spaces gone, blank rows and columns dropped, duplicates removed. Nothing is uploaded.',
     delimiter: 'Separator', detected: 'detected',
     header: 'First row is a header',
@@ -33,7 +40,13 @@ const STR = {
     preview: 'Preview',
   },
   ar: {
-    pick: 'اختر ملف CSV', paste: 'أو الصقه هنا…',
+    pick: 'اختر ملف CSV أو إكسل', paste: 'أو الصقه هنا…',
+    errors: {
+      'old-format': 'لا يمكن قراءة صيغة ‎.xls‎ القديمة ولا ملفات Numbers — احفظ الملف بصيغة ‎.xlsx‎ أو CSV.',
+      'not-xlsx': 'تعذّر فتح هذا الملف بوصفه جدولًا.',
+      generic: 'تعذّرت قراءة هذا الملف.',
+    } as Record<string, string>,
+
     hint: 'الصق ملف CSV فوضويًا لتحصل على نظيف — بلا مسافات زائدة، وبلا صفوف وأعمدة فارغة، وبلا تكرار. لا يُرفع شيء.',
     delimiter: 'الفاصل', detected: 'مكتشف',
     header: 'الصف الأول عناوين',
@@ -60,6 +73,7 @@ export default function CsvCleanTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [text, setText] = useState('')
+  const [fileError, setFileError] = useState('')
   const [manualDelim, setManualDelim] = useState<Delimiter | ''>('')
   const [o, setO] = useState<CleanOptions>({
     trim: true, collapseSpaces: false, dropEmptyRows: true,
@@ -76,9 +90,20 @@ export default function CsvCleanTool() {
 
   const changed = result.duplicates + result.removedRows + result.removedCols + result.trimmed
 
+  // A spreadsheet is read through the shared reader and written into the box as
+  // CSV, so everything downstream is unchanged and you can SEE what was read.
+  // A text file is passed through byte for byte rather than round-tripped
+  // through the parser — a paste box should show you what you gave it, and
+  // re-serialising would quietly renormalise the user's quoting.
   async function pick(f: File | undefined) {
     if (!f) return
-    setText(await f.text())
+    setFileError('')
+    try {
+      if (isSpreadsheetName(f.name)) setText(toCsv((await readTableFile(f)).rows, delimiter))
+      else setText(await f.text())
+    } catch (e) {
+      setFileError(s.errors[e instanceof Error ? e.message : ''] ?? s.errors.generic)
+    }
   }
   async function copy() {
     try { await navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* ignore */ }
@@ -98,6 +123,7 @@ export default function CsvCleanTool() {
 
   return (
     <Stack data-testid="csv-clean">
+      {fileError && <FileError message={fileError} />}
       <div className="flex flex-wrap items-center gap-2">
         <input ref={fileRef} type="file" className="hidden" data-testid="cc-file" onChange={(e) => pick(e.target.files?.[0])} />
         <Button onClick={() => fileRef.current?.click()} data-testid="cc-pick"><UploadIcon /> {s.pick}</Button>

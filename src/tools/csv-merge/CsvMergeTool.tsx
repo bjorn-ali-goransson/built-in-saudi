@@ -1,15 +1,22 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon } from '../../components/icons'
-import { Button, Select, Textarea, Stack, Seg, SegButton, Panel, Check } from '../../components/ui'
+import { Button, Select, Textarea, Stack, Seg, SegButton, Panel, Check, FileError } from '../../components/ui'
 import { parseCsv, toCsv, sniffDelimiter, type Delimiter } from '../../lib/csv'
+import { readTableFile, isSpreadsheetName } from '../../lib/tableFile'
 
 type Mode = 'join' | 'append'
 
 const STR = {
   en: {
     left: 'First file', right: 'Second file',
-    pick: 'Choose a CSV', paste: 'or paste it here…',
+    pick: 'Choose a CSV or Excel file', paste: 'or paste it here…',
+    errors: {
+      'old-format': 'The old .xls format and Apple Numbers files cannot be read — re-save as .xlsx or CSV.',
+      'not-xlsx': 'That file could not be opened as a spreadsheet.',
+      generic: 'That file could not be read.',
+    } as Record<string, string>,
+
     mode: 'What to do', join: 'Match rows on a column', append: 'Stack one under the other',
     joinKeyLeft: 'Match this column', joinKeyRight: 'against this one',
     keepUnmatched: 'Keep rows that found no match',
@@ -27,7 +34,13 @@ const STR = {
   },
   ar: {
     left: 'الملف الأول', right: 'الملف الثاني',
-    pick: 'اختر ملف CSV', paste: 'أو الصقه هنا…',
+    pick: 'اختر ملف CSV أو إكسل', paste: 'أو الصقه هنا…',
+    errors: {
+      'old-format': 'لا يمكن قراءة صيغة ‎.xls‎ القديمة ولا ملفات Numbers — احفظ الملف بصيغة ‎.xlsx‎ أو CSV.',
+      'not-xlsx': 'تعذّر فتح هذا الملف بوصفه جدولًا.',
+      generic: 'تعذّرت قراءة هذا الملف.',
+    } as Record<string, string>,
+
     mode: 'ما المطلوب', join: 'اربط الصفوف بعمود مشترك', append: 'ضع أحدهما تحت الآخر',
     joinKeyLeft: 'اربط هذا العمود', joinKeyRight: 'بهذا العمود',
     keepUnmatched: 'أبقِ الصفوف التي لم تجد مطابقًا',
@@ -117,12 +130,24 @@ export default function CsvMergeTool() {
     return { rows: [cols, ...body], matched, unmatchedLeft, unmatchedRight: index.size - used.size, dupCols }
   }, [ready, mode, a.rows, b.rows, headA, headB, keyA, keyB, keepUnmatched, dedupe])
 
+  const [fileError, setFileError] = useState('')
   const output = useMemo(() => (merged.rows.length ? toCsv(merged.rows, ',' as Delimiter) : ''), [merged])
   const headerMismatch = mode === 'append' && ready && headA.join('|') !== headB.join('|')
 
+  // A spreadsheet is read through the shared reader and written into the box as
+  // CSV, so everything downstream is unchanged and you can SEE what was read.
+  // A text file is passed through byte for byte rather than round-tripped
+  // through the parser — a paste box should show you what you gave it, and
+  // re-serialising would quietly renormalise the user's quoting.
   async function pick(f: File | undefined, set: (v: string) => void) {
     if (!f) return
-    set(await f.text())
+    setFileError('')
+    try {
+      if (isSpreadsheetName(f.name)) set(toCsv((await readTableFile(f)).rows, ',' as Delimiter))
+      else set(await f.text())
+    } catch (e) {
+      setFileError(s.errors[e instanceof Error ? e.message : ''] ?? s.errors.generic)
+    }
   }
   async function copy() {
     try { await navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* ignore */ }
@@ -138,6 +163,7 @@ export default function CsvMergeTool() {
 
   return (
     <Stack data-testid="csv-merge">
+      {fileError && <FileError message={fileError} />}
       <div className="grid gap-3 grid-cols-1 min-[760px]:grid-cols-2">
         {[{ side: a, label: s.left, ref: refA, id: 'a' }, { side: b, label: s.right, ref: refB, id: 'b' }].map((x) => (
           <div key={x.id} className="flex flex-col gap-2">

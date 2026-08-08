@@ -77,6 +77,11 @@ const CASES: Case[] = [
   { id: 'csv-split', testid: 'cs-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n2,x\n`) },
   { id: 'csv-clean', testid: 'cc-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'csv-vcard', testid: 'cv-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,phone\n${TOKEN},0501234567\n`) },
+  // Found missing by the code sweep that wired this tool to the shared table
+  // reader: it has always taken a file and was never in this list. Which is the
+  // documented failure mode of a guard scoped to whatever was written most
+  // recently — grep src/tools for a file input, do not rely on memory.
+  { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   {
     id: 'vcard-to-csv', testid: 'vc-file', name: 'contacts.vcf', mime: 'text/vcard',
     make: () => Buffer.from(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${TOKEN}\r\nN:;${TOKEN};;;\r\nEND:VCARD\r\n`),

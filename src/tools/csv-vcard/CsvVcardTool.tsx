@@ -3,8 +3,7 @@ import { useLocale } from '../../i18n'
 import { Button, Select, Check, Stack, Panel, FileError, Spinner } from '../../components/ui'
 import { CopyIcon, DownloadIcon, UploadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
-import { parseCsv, sniffDelimiter } from '../../lib/csv'
-import { readWorkbook } from '../xlsx-convert/xlsx'
+import { readTableFile } from '../../lib/tableFile'
 import { FIELDS, buildAll, guessMapping, isUsable, rowToContact, type Field } from './vcard'
 
 const WIP = 'csv-vcard'
@@ -30,7 +29,8 @@ const STR = {
     again: 'Choose another file',
     errors: {
       empty: 'That file had no rows in it.',
-      generic: 'That file could not be read. A CSV or an .xlsx works; .xls and Numbers files do not.',
+      'old-format': 'The old .xls format and Apple Numbers files cannot be read — re-save as .xlsx or CSV.',
+      generic: 'That file could not be read. A CSV or an .xlsx works.',
     } as Record<string, string>,
     phoneNote: 'Numbers that look Saudi become +966…; anything already international is kept as it is, and anything else is passed through untouched rather than guessed at.',
     nameNote: 'Each card carries both FN (what you see) and N (family and given name separately). Address books sort and merge on N, so a file with only FN imports as a heap of contacts with no surnames.',
@@ -55,7 +55,8 @@ const STR = {
     again: 'اختر ملفًا آخر',
     errors: {
       empty: 'لا صفوف في هذا الملف.',
-      generic: 'تعذّرت قراءة هذا الملف. ملفات CSV و‎.xlsx‎ تعمل، أما ‎.xls‎ وNumbers فلا.',
+      'old-format': 'لا يمكن قراءة صيغة ‎.xls‎ القديمة ولا ملفات Numbers — احفظ الملف بصيغة ‎.xlsx‎ أو CSV.',
+      generic: 'تعذّرت قراءة هذا الملف. ملفات CSV و‎.xlsx‎ تعمل.',
     } as Record<string, string>,
     phoneNote: 'الأرقام التي تبدو سعودية تصير ‎+966…‎؛ وما كان دوليًا يبقى كما هو، وما عدا ذلك يمرّ كما كُتب دون تخمين.',
     nameNote: 'تحمل كل بطاقة الحقلين FN (ما تراه) وN (اسم العائلة والاسم الأول منفصلين). ودفاتر العناوين ترتّب وتدمج على N، فالملف الذي لا يحمل إلا FN يُستورد كومةً من جهات بلا ألقاب.',
@@ -81,22 +82,20 @@ export default function CsvVcardTool() {
     setError('')
     setBusy(true)
     try {
-      let table: string[][]
-      if (/\.xlsx$/i.test(file.name)) {
-        const wb = await readWorkbook(await file.arrayBuffer())
-        table = wb.sheets[0]?.rows ?? []
-      } else {
-        const text = await file.text()
-        table = parseCsv(text, sniffDelimiter(text))
-      }
-      table = table.filter((r) => r.some((c) => c.trim()))
+      // The shared reader, not a copy of it. The copy that used to be here fell
+      // through to file.text() for anything not ending .xlsx — so a legacy .xls
+      // (an OLE compound file) was decoded as text and parsed as a table, and
+      // the tool showed a grid of mojibake with no error at all. Its own copy
+      // already SAID .xls does not work; nothing implemented that.
+      const t = await readTableFile(file)
+      const table = t.rows
       if (!table.length) { setError(s.errors.empty); setRows([]); return }
       setRows(table)
       setMapping(guessMapping(table[0]))
       setName(file.name.replace(/\.[^.]+$/, ''))
       setWorkInProgress(WIP, true)
-    } catch {
-      setError(s.errors.generic)
+    } catch (e) {
+      setError(s.errors[e instanceof Error ? e.message : ''] ?? s.errors.generic)
       setRows([])
     } finally { setBusy(false) }
   }

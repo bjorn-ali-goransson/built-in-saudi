@@ -453,6 +453,37 @@ export in the wild, each covered in `e2e/vcard-to-csv.spec.ts`:
 `PHOTO`/`LOGO` are dropped on purpose: base64 blobs make the spreadsheet
 unopenable and say nothing in a cell.
 
+## Reading whatever table the user has (`lib/tableFile.ts`)
+
+One reader — CSV by sniffed delimiter, `.xlsx` through the zip-and-XML reader,
+and an explicit **refusal** for `.xls` and Apple Numbers, which are entirely
+different formats. The refusal is the reason the module exists, and the tool
+that kept its own copy is the one that proved it:
+
+- **`csv-vcard` had an inline copy** that handled `.xlsx` and then fell through
+  to `file.text()` for everything else. A legacy `.xls` is an OLE compound file,
+  so it was decoded as text and parsed as a table: a grid of mojibake, **no
+  error**, and the tool's own error copy already claimed `.xls` did not work.
+  Demonstrated with a failing e2e before the fix, not reasoned about.
+- **`csv-clean` and `csv-merge` could not open a spreadsheet at all**, on a site
+  that also ships "Excel to CSV" — so the implied advice was to round-trip
+  through another tool. Both now read one.
+
+`isSpreadsheetName` is exported so the paste-box tools can route by name without
+keeping the regex a fourth time. A spreadsheet is written into the box as CSV so
+you can see what was read; **a text file is passed through byte for byte** and
+never round-tripped through the parser, because a paste box should show you what
+you gave it rather than renormalising your quoting.
+
+Still outstanding: **`csv-json` carries its own private `parseCsv`** rather than
+`lib/csv`, so quoting and embedded-newline handling can drift from every other
+CSV tool on the site. `csv-to-xlsx` correctly takes CSV only — its whole job is
+the CSV→xlsx direction.
+
+**The privacy guard had a hole in the same place.** `csv-merge` takes a file and
+had never been in `e2e/privacy.spec.ts` `CASES` — the documented failure mode of
+a guard scoped to whatever was written most recently. Added.
+
 ## Writing an .xlsx (`lib/writeXlsx.ts`)
 
 `buildXlsx` is used by `csv-to-xlsx` and by `vcard-to-csv`'s Excel export.

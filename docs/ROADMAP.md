@@ -616,10 +616,10 @@ Next, in order, when a working key exists:
   clearly labelled; the lossless version needs `qpdf-wasm`. **Verify the pdf-lib
   `ignoreEncryption` route before assuming** — it parses the structure but does
   not decrypt streams, so it is expected to produce a broken file.
-- **Flatten a PDF** (make filled form fields and annotations uneditable).
-  `pdf-lib` has `form.flatten()`, so this is small and complete — and it is a gap
-  between our OWN tools: `pdf-fill` fills a form and nothing makes it final
-  before you send it.
+- ~~**Flatten a PDF.**~~ **Refuted by the code sweep:** `pdf-fill` already has a
+  "Lock fields (flatten)" checkbox, so this is not a gap between our own tools.
+  A standalone version would only serve someone who filled the form elsewhere —
+  a much weaker case than the web sweep recorded.
 - **Compare two PDFs.** We have `text-diff`, `json-diff` and `sheet-diff`, plus
   `pdf-to-text` — and no PDF diff. Assembling the three is most of the work.
 - **Declined: the 2026 skill-based work permit classification.** It sorts expats
@@ -629,4 +629,16 @@ Next, in order, when a working key exists:
   depending on nationality and agency — a range we would have to invent a point
   inside. The domestic-worker LEVY (first four exempt, then SAR 800/month) is a
   clean rule but applies to very few households.
+
+### Code sweep, 8 August 2026
+
+- ~~**Table tools read their input three different ways.**~~ Fixed. See the
+  `lib/tableFile.ts` section of CLAUDE.md.
+- **`csv-json` has its own private `parseCsv`.** It is the only CSV tool not
+  using `lib/csv`, so quoting and embedded-newline handling can drift from every
+  other one. Converting it is not a one-liner — it is a ⇄ tool with its own text
+  pipeline and no file input — but it is the last inconsistency in this family.
+- **Sweep the privacy `CASES` list against a grep, not against memory.**
+  `csv-merge` had always taken a file and was never listed. That is the second
+  time this list has been found short.
 

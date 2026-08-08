@@ -16,6 +16,18 @@ export interface Table {
   sheets: string[]
 }
 
+/**
+ * Does this look like a spreadsheet rather than a text file?
+ *
+ * Exported so the paste-box tools can tell the two apart WITHOUT keeping their
+ * own copy of the regex — which is exactly how csv-vcard ended up decoding a
+ * legacy .xls as text and parsing the mojibake as a table. `.xls` and
+ * `.numbers` are included on purpose: they are unreadable here, and the point
+ * is to route them to a refusal rather than let them fall through to
+ * `file.text()` and look like they worked.
+ */
+export const isSpreadsheetName = (name: string) => /\.(xlsx|xls|numbers)$/i.test(name)
+
 export async function readTableFile(file: File, sheetIndex = 0): Promise<Table> {
   if (/\.xlsx$/i.test(file.name)) {
     const wb = await readWorkbook(await file.arrayBuffer())
