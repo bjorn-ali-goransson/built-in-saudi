@@ -65,6 +65,16 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
    across lines; a naïve single-line regex silently leaves the *default*
    description on every page. Each tool page's crawlable block also links to all
    other tools (kills orphan pages) under a "More free tools" H2.
+**Steps 2–5 are enforced, not remembered.** `npm run build` runs
+`scripts/check-tool-registry.mjs`, which fails on a live tool that has no
+`seo.ts` entry, is missing either locale from `sitemap.xml`, is listed there
+*without a trailing slash*, or is referenced by no e2e spec. Every one of those
+fails silently otherwise: no `seo.ts` entry means the prerendered page keeps the
+DEFAULT description forever; a missing sitemap URL means a page that exists and
+is never crawled; a missing slash means a 301 on every visit; and no e2e is
+exactly how `file-metadata` sat unprotected while hiding a real bug. Verified by
+injecting each omission and watching it be named.
+
 5. Add a Playwright case to `e2e/app.spec.ts` (drive the `data-testid`s you
    expose). For a **substantial** tool, also work from a spec in
    `docs/tools/<id>.md`; the many small single-purpose utilities are built

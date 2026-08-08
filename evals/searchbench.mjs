@@ -149,6 +149,9 @@ const BENCH = [
   ['overtime pay', 'leave-overtime'],
   ['notice period', 'leave-overtime'],
   ['الإجازة السنوية', 'leave-overtime'],
+  ['exit reentry', 'exit-reentry'],
+  ['visa fee', 'exit-reentry'],
+  ['خروج وعودة', 'exit-reentry'],
 ]
 
 function rank(query, wanted) {
