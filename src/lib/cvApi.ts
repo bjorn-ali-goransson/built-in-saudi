@@ -147,6 +147,19 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
 
 /** Apply one instruction to the generated CV.
  *  `context` is the previous change summary so the user can correct it ("no, like this"). */
+/**
+ * UNREACHABLE FROM THE PRODUCT as of 9 Aug 2026, and kept deliberately.
+ *
+ * `cv-refine` still serves `polish`, `elaborate` and `shorten` — with their own
+ * per-kind quotas in Firestore — and nothing in the UI calls any of them; the
+ * only live caller of that endpoint is `improveCv` below, with `kind:
+ * 'improve'`. Found by sweeping for exports nothing references.
+ *
+ * Not deleted, because the server half is deployed and a client that cannot
+ * reach it is one file away from being fixed, while a deleted one loses the
+ * contract. If it is ever ruled out for good, the counters in `functions/cv.js`
+ * should go with it.
+ */
 export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'polish' | 'elaborate' | 'shorten', context = '', sourceText = ''): Promise<CvResult> {
   const r = await fetch(`${FN}/cv-refine`, {
     method: 'POST',

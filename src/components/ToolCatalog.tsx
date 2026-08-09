@@ -5,6 +5,7 @@ import type { ToolSection } from '../lib/toolSections'
 import { ToolCard } from './ToolCard'
 import { useLocale, localePath, localizeTool } from '../i18n'
 import { categorySlug } from '../lib/categorySlug'
+import { clearRecent } from '../lib/recentTools'
 
 export const TOOL_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem] max-[560px]:grid-cols-4 max-[560px]:gap-[0.9rem_0.5rem]'
 // Denser grid for non-recommended sections: small row tiles on desktop (capped
@@ -121,6 +122,19 @@ export function CategorySections({ sections, indexOf, onNavigate }: { sections: 
                 className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint whitespace-nowrap rtl:tracking-normal">{sec.title}</div>
             )}
             <span className="flex-1 h-px bg-[color:var(--line-soft)]" aria-hidden="true" />
+            {/* The one section built from something the visitor did, so it is
+                the one that needs a way out. `clearRecent` existed from the
+                start and nothing ever called it: the catalogue showed what you
+                had opened, on a shared device, with no way to clear it — on a
+                site whose whole stance is that your data is yours. */}
+            {sec.key === '__recent' && (
+              <button
+                type="button"
+                data-testid="clear-recent"
+                onClick={() => clearRecent()}
+                className="flex-none text-[0.75rem] text-ink-faint hover:text-ink border border-[color:var(--line-soft)] rounded-sm px-2 py-[0.1rem] bg-transparent rtl:font-ar"
+              >{locale === 'ar' ? 'مسح' : 'Clear'}</button>
+            )}
           </div>
           {sec.key === '__rec'
             ? <ToolGrid tools={sec.tools} indexOf={indexOf} onNavigate={onNavigate} />

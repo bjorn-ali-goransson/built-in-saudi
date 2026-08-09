@@ -875,6 +875,31 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Code sweep, 9 August 2026 — exports nothing references
+
+A sweep for exported symbols with no caller. **The first version of the sweep
+was wrong and would have reported a dozen false positives**: it excluded the
+defining file, so every function a module's own hook calls looked dead.
+Comparing total references instead gives seven, and three of them are real:
+
+- **`recentTools.clearRecent`** — written the day recents shipped and never
+  called. **FIXED**: the Recently used row can be cleared.
+- **`cvApi.refineCv`** — `cv-refine` still serves `polish`, `elaborate` and
+  `shorten`, each with its own quota counter in Firestore, and **no UI reaches
+  any of them**; the only live caller of that endpoint is `improveCv`. Kept
+  rather than deleted, with the situation written at the function: the server
+  half is deployed, so a client that cannot reach it is one file from being
+  fixed while a deleted one loses the contract. If it is ruled out for good, the
+  counters in `functions/cv.js` should go too.
+- **`decodeImage.disposeImageDecoder`** — its own comment says "call when a tool
+  unmounts" and nothing does, so the HEIC wasm worker (~1.4MB) outlives the tool
+  that created it. Not fixed here: terminating on unmount means re-instantiating
+  the wasm on the next HEIC, and which trade is right needs measuring rather
+  than guessing.
+
+The rest are redundant helpers (`contacts.hasContact` duplicates a check that is
+inlined at its one would-be call site) and are left alone.
+
 ### Web sweep #8, 9 August 2026 — the health calculators
 
 The most crowded category swept so far: 124 calculators on one site, 71 on

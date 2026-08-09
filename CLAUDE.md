@@ -314,6 +314,13 @@ three or four you came back for were reachable only by scrolling thirteen
 sections or typing the name again — the "personalisation over preferences"
 principle going unapplied where it pays most. Two decisions worth keeping:
 
+- **It can be cleared, which it could not be for its whole life.** `clearRecent`
+  was written the day recents shipped and **nothing ever called it** — the
+  catalogue showed what you had opened, on a shared device, with no way out, on
+  a site whose whole stance is that your data is yours. Found by sweeping for
+  exports nothing references. The control sits in the section heading and only
+  on that section, because it is the only one built from something the visitor
+  did.
 - **A recent tool is NOT consumed**, unlike `RECOMMENDED` and `DUA` which are
   removed from their categories. Recents change as you use the site, and a
   catalogue that reshuffles because of what you opened yesterday is worse than
