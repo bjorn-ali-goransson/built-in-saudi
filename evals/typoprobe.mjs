@@ -56,15 +56,16 @@ function once(query) {
   return aboveFloor(scored)
 }
 
+// Mirrors `rankToolsWithCorrection`: the correction wins when it is decisively
+// better, not merely different.
+const RATIO = 1.5
+
 function rank(query, want) {
   let shown = once(query)
-  let corrected = null
-  if (!shown.length) {
-    corrected = correctQuery(query, VOCAB)
-    if (corrected) {
-      const second = once(corrected)
-      if (second.length) shown = second
-    }
+  const corrected = correctQuery(query, VOCAB)
+  if (corrected) {
+    const second = once(corrected)
+    if (second.length && (!shown.length || second[0].score >= shown[0].score * RATIO)) shown = second
   }
   const at = shown.findIndex((x) => x.id === want)
   return { at: at < 0 ? Infinity : at + 1, shown: shown.slice(0, 3).map((x) => x.id), n: shown.length, corrected }

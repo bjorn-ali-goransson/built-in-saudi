@@ -354,13 +354,21 @@ export function vocabulary(tools: Searchable[]): Set<string> {
  * short and dense, so a single edit reaches a great many of them. At five, that
  * false correction is gone and every true correction in `typoprobe` survives,
  * because a real typo is nearly always in a longer word.
+ *
+ * **And exactly ONE edit, never two.** Measured across every correction the
+ * probes exercise: `mrege`→`merge`, `passowrd`→`password`, `calender`→
+ * `calendar`, `tiemsheet`→`timesheet` and a dozen more are all distance 1. The
+ * only distance-2 correction found anywhere was «الهمزات» (hamzas) → «العملات»
+ * (currencies), which sent an Arabic-normalisation query to the currency
+ * converter — a real word we do not index, bent into one we do. Two edits is
+ * not a typo, it is a different word.
  */
 export function correctQuery(query: string, vocab: Set<string>): string | null {
   const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
   let changed = false
   const out = words.map((w) => {
     if (w.length < 5 || vocab.has(w)) return w
-    const max = w.length >= 7 ? 2 : 1
+    const max = 1
     let best: string | null = null
     let bestD = max + 1
     for (const v of vocab) {

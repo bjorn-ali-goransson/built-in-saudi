@@ -2347,15 +2347,42 @@ Levenshtein, and transposition is the commonest typo there is.
 
 Three properties that make it safe, all of them deliberate:
 
-- **It is a FALLBACK, not a scoring change.** It runs only when the normal path
-  found nothing worth showing, so no query that works today can be re-ranked by
-  it. That is why the benches are unchanged *by construction* rather than by
-  luck.
+- **It never touches a query whose every word the catalogue knows.** That is the
+  load-bearing property, and it is stronger than "only when nothing was found":
+  a correctly spelled query has nothing to correct, so `correctQuery` returns
+  null and the path stops. It began as a nothing-found fallback and was extended
+  to the case that mattered more — a typo that found the WRONG tool. `pdf mrege`
+  ranked `pdf-merge` **seventh** behind `pdf-edit`, because the query did return
+  something.
+- **The correction has to be decisively better — 1.5× — to win.** Measured:
+  where a typo genuinely misled, the corrected query scores about twice as well
+  (224 → 444 for `pdf mrege`, 190 → 450 for `passowrd generator`). A small edge
+  means nothing, so it is ignored. **Mistyped top-1 went 78% → 87%.**
+- **And when the top tool is the same either way, the typed results are left
+  entirely alone** — not merely the notice suppressed. `summarise` already finds
+  the summarizer, because the site indexes both -ise and -ize spellings on
+  purpose; re-ranking everything below a result that was already right is a
+  change with no upside.
 - **A word already in the vocabulary is never touched.** Correcting a word
   somebody spelled right is how a search box starts arguing with people.
 - **A correction that also finds nothing is discarded**, and the notice is only
   shown when results were actually produced. "Showing results for ⟨something
   else⟩" above an empty page is worse than the empty page.
+
+**Exactly ONE edit, never two — measured across every correction the probes
+exercise.** `mrege`→`merge`, `passowrd`→`password`, `calender`→`calendar`,
+`tiemsheet`→`timesheet` and a dozen more are all distance 1. The only distance-2
+correction found anywhere was **«الهمزات» (hamzas) → «العملات» (currencies)**,
+which sent the Arabic normaliser's own held-out query to the currency converter.
+Two edits is not a typo, it is a different word.
+
+**`evals/correctioncheck.mjs` is how that was caught**, and it exists because
+`searchbench` structurally cannot see this: the bench measures the SCORER and
+the correction is a layer above it. It applies the UI's exact rule to all 287
+benched queries plus the NOMATCH set, and reports every one whose top result
+changes. At two edits it found the Arabic regression; at one it reports a single
+change, onto the same tool, which the code then makes inert. **A guard that
+cannot see the layer you changed is not evidence about it.**
 
 **The five-character minimum was measured, not picked.** At four, the Arabic
 «قهوة» (coffee) — a query this site genuinely cannot serve — is one deletion

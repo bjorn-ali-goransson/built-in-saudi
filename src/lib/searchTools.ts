@@ -32,15 +32,47 @@ export interface Ranked {
  * worth showing, so no query that works today can be re-ranked by it. Measured
  * before it existed, 2 of 23 realistic mistypings returned an empty page.
  */
+/**
+ * How much better the corrected query must score before it is preferred over
+ * results the typed query DID find.
+ *
+ * Measured: where a typo genuinely misled, the corrected query scores about
+ * twice as well — `pdf mrege` finds `pdf-edit` at 224 and `pdf merge` finds
+ * `pdf-merge` at 444; `passowrd generator` finds `meme-generator` at 190 and
+ * the corrected query finds the right tool at 450. Where the typed query was
+ * fine, there is no correction to compare against at all, because every term is
+ * in the vocabulary. 1.5 sits well below both gaps and well above noise.
+ */
+const CORRECTION_RATIO = 1.5
+
 export function rankToolsWithCorrection(query: string, list: Tool[], locale: Locale): Ranked {
-  const tools = rankTools(query, list, locale)
-  if (tools.length || !query.trim()) return { tools }
+  if (!query.trim()) return { tools: [] }
+  const asTyped = scoreList(query, list, locale)
   const corrected = correctQuery(query, vocabFor(list, locale))
-  if (!corrected) return { tools }
-  const second = rankTools(corrected, list, locale)
+  // A query whose every word the catalogue knows has nothing to correct, which
+  // is why a correctly spelled query can never be re-ranked by this.
+  if (!corrected) return { tools: asTyped.map((r) => r.tool) }
+
+  const second = scoreList(corrected, list, locale)
   // Silence beats a correction that also finds nothing — showing "results for
   // <something else>" above an empty page is worse than the empty page.
-  return second.length ? { tools: second, correctedTo: corrected } : { tools }
+  if (!second.length) return { tools: asTyped.map((r) => r.tool) }
+  if (!asTyped.length) return { tools: second.map((r) => r.tool), correctedTo: corrected }
+
+  // Both found something. Prefer the correction only when it is decisively
+  // better — a typo that still matched something plausible is the case where a
+  // small edge means nothing.
+  if (second[0].score < asTyped[0].score * CORRECTION_RATIO) {
+    return { tools: asTyped.map((r) => r.tool) }
+  }
+  // Same tool at the top either way — the site indexes both -ise and -ize
+  // spellings on purpose, so "summarise" already finds the summarizer. Leave
+  // the typed query's results ALONE rather than merely hiding the notice:
+  // re-ranking everything below a result that was already right is a change
+  // with no upside, and the whole point of this path is that it cannot touch a
+  // query that worked.
+  if (second[0].tool.id === asTyped[0].tool.id) return { tools: asTyped.map((r) => r.tool) }
+  return { tools: second.map((r) => r.tool), correctedTo: corrected }
 }
 
 /**
@@ -55,8 +87,7 @@ export function rankToolsWithCorrection(query: string, list: Tool[], locale: Loc
  * coming-soon ones it renders as dimmed cards, while the launcher and the 404
  * suggestions rank only what you can actually open.
  */
-export function rankTools(query: string, list: Tool[], locale: Locale): Tool[] {
-  if (!query.trim()) return []
+function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; score: number }[] {
   const scored = list
     .map((tool) => {
       const l = localizeTool(tool, locale)
@@ -79,7 +110,12 @@ export function rankTools(query: string, list: Tool[], locale: Locale): Tool[] {
     .sort((a, b) => b.score - a.score)
   // Nothing capped the list before this: a query rendered every tool that
   // matched at all — 31 cards on average, three of them worth looking at.
-  return aboveFloor(scored).map((r) => r.tool)
+  return aboveFloor(scored)
+}
+
+export function rankTools(query: string, list: Tool[], locale: Locale): Tool[] {
+  if (!query.trim()) return []
+  return scoreList(query, list, locale).map((r) => r.tool)
 }
 
 /**

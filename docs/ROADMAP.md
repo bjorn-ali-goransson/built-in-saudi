@@ -1031,11 +1031,16 @@ correctly silent.
 9 Aug 2026 as a fallback (`correctQuery`), measured: mistyped queries returning
 an empty page 2 -> 0, top-1 74% -> 78%, all four benches unchanged.
 
-**Still open:** the fallback fixes the empty page, not the mis-RANKED typo.
-`pdf mrege` still ranks `pdf-merge` seventh, because the query does return
-something and the fallback therefore never runs. Blending edit distance into
-scoring would reach those and risks every query that works today — it would need
-the same before/after treatment the description-field experiment got.
+~~**Still open:** the fallback fixes the empty page, not the mis-RANKED typo.~~
+Done 9 Aug 2026, and it did get the before/after treatment: mistyped top-1
+78% → 87%, all four benches unchanged, and `evals/correctioncheck.mjs` added
+because the benches structurally cannot see a layer above the scorer.
+
+**Still open, and small:** three typo cases remain, none of them a scorer
+problem. `calender` reaches the ICS builder before the Hijri calendar (a genuine
+ambiguity — the bench row may be the wrong half); `excel to csv converter` is a
+direction ambiguity, not a typo; and «ضغط صوره» is a four-character Arabic word,
+below the correction threshold that exists to stop «قهوة» becoming «قوة».
 
 **Second unreproduced load flake (9 Aug 2026):** `not-found.spec.ts`'s bad
 category slug case failed once inside a loaded batch and passed alone and on a

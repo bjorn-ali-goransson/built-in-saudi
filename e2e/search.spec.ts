@@ -508,3 +508,35 @@ test('the launcher corrects a typo the same way', async ({ page }) => {
   await expect(page.getByTestId('tool-timesheet')).toBeVisible()
   await expect(page.getByTestId('search-corrected')).toBeVisible()
 })
+
+// --- The correction now also wins when the typed query found something WRONG,
+// but only when it scores decisively better (1.5x). Measured: mistyped top-1
+// 78% -> 87%, benches unchanged, and across 287 benched queries exactly one
+// correction fires — onto the same tool, where it is made inert.
+
+test('a typo that found the wrong tool is corrected, not just an empty one', async ({ page }) => {
+  // "pdf mrege" used to rank pdf-merge SEVENTH behind pdf-edit, because the
+  // query did return something and the fallback therefore never ran.
+  await search(page, 'pdf mrege')
+  await expect(top(page)).toContainText(/Merge/i)
+  await expect(page.getByTestId('search-corrected')).toContainText('pdf merge')
+})
+
+test('a British spelling the site indexes on purpose is left alone', async ({ page }) => {
+  // "summarise" already finds the summarizer — both spellings are indexed
+  // deliberately. Correcting it to "summarize" would re-rank a query that was
+  // already right and announce a mistake nobody made.
+  await search(page, 'summarise')
+  await expect(page.getByTestId('tool-summarize')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
+})
+
+test('two edits is a different word, not a typo', async ({ page }) => {
+  // «توحيد الهمزات» (unifying hamzas) is two edits from «توحيد العملات»
+  // (unifying currencies), and at a two-edit limit the Arabic normaliser's own
+  // query went to the currency converter. Every genuine typo measured is one
+  // edit; this is the case that set the limit.
+  await search(page, 'توحيد الهمزات', 'ar')
+  await expect(page.getByTestId('tool-arabic-normalize')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
+})
