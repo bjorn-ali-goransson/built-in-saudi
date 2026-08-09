@@ -319,6 +319,13 @@ ${TOKEN}
 `),
   },
   {
+    // A contract or a draft is exactly what people will not upload.
+    id: 'docx-markdown', testid: 'dm-file', name: 'draft.docx',
+    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    make: () => xmlZip('word/document.xml',
+      `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${TOKEN}</w:t></w:r></w:p></w:body></w:document>`),
+  },
+  {
     // Plain text in, .docx out — the input is the sensitive half here, since
     // the thing people convert is a contract or notes about a client.
     id: 'markdown-docx', testid: 'md-file', name: 'notes.md', mime: 'text/markdown',

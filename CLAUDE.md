@@ -608,11 +608,19 @@ carrying a fourth CRC32. Things Word actually needs, and one it does not:
 - **List markers are literal text**, not a `numbering.xml` part: that part needs
   a relationship too, and a document with plain markers reads and prints
   correctly.
-- **No `word/_rels/document.xml.rels`**, for the reason `docxguard` already
-  established — it is required only when `document.xml` carries relationship
-  references, and this writer emits none. A link therefore keeps its label AND
-  writes its URL beside it, since dropping the address would lose something the
-  document had.
+- **A heading is a `pStyle`, not large bold text** — and it was not, at first.
+  The writer emitted bold, bigger paragraphs, which LOOK like headings and are
+  paragraphs: Word's navigation pane was empty, an automatic table of contents
+  found nothing, and a screen reader announced body text. It needs a real
+  `word/styles.xml` defining Heading 1–6, and the **`w:name` is the load-bearing
+  part** — Word resolves a built-in heading from the styleId, but every
+  converter maps on the NAME. A style with an id and no name is a style nothing
+  downstream can recognise.
+- **`word/_rels/document.xml.rels` IS needed now.** `docxguard` reasoned
+  correctly that it is required only when `document.xml` carries relationship
+  references; the styles part is exactly such a reference. A link still keeps
+  its label and writes its URL beside it, since a real `w:hyperlink` would need
+  a second relationship and dropping the address would lose something.
 - **The header row is bold through the run options, not by rewriting the
   generated XML.** The first version did string surgery on its own output, which
   is how a second `<w:rPr>` ends up inside the first and Word calls the file
@@ -631,6 +639,42 @@ that `<w:b/>` is present and that `**bold**` is NOT; and only then is the file
 round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
+
+## Word to Markdown, and what building the inverse found (`docx-markdown`)
+
+A code sweep found `mammoth` already installed and used by exactly one tool (the
+CV optimizer, for raw text), while `lib/htmlToMd.ts` already existed —
+so `convertToHtml` + `elementToMd` is **two existing capabilities and no new
+algorithm**, the same shape as the `epub-text` Markdown fix. It is also the
+symmetric inverse of `markdown-docx`, and the two link to each other, because a
+converter and its inverse that do not are two tools somebody has to find twice.
+
+**Building it found a real defect in the writer shipped two days earlier.**
+Round-tripping Markdown → .docx → Markdown reported every heading as a
+paragraph, and mammoth refused a document containing a table outright, because
+`w:tblStyle` named a style that did not exist. Both were the missing
+`word/styles.xml`. **The inverse tool is the strongest test the forward tool
+ever had** — nothing in the writer's own spec could tell "looks like a heading"
+from "is a heading", because both produce the same bytes for the eye.
+
+Two smaller things worth keeping:
+
+- **A `.doc` is named, not called unreadable.** It is an OLE compound file
+  starting `D0CF11E0`, a completely different format — the same check
+  `lib/docx.ts` makes. "Could not be read" sends people back to try the same
+  file again.
+- **MEASURED LIMIT, pinned by a test:** a list produced by OUR writer comes back
+  as literal bullet characters, because `writeDocx` writes markers as text
+  rather than emitting a numbering part. A list made in Word itself has real
+  numbering and converts properly, so this is a property of the pair and not of
+  the reader. The test asserts the limit rather than hiding it, so the day
+  `writeDocx` grows a numbering part it fails and somebody notices the pair now
+  round-trips.
+
+**One assertion in that spec was wrong and looked like a bug.** The table's
+header cells come back **bold**, because the writer bolds them and mammoth
+preserves it; the first version expected plain text and reported a failure that
+was the test's mistake, not the code's.
 
 ## Reading a ZIP, and the formats made of one (`lib/unzip.ts`)
 

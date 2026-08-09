@@ -12,16 +12,24 @@ import type { Block, Inline } from './markdown'
 // employer, to save a duplicate ZIP header, is a bad trade. The duplication is
 // recorded rather than removed.
 //
-// Everything Word actually requires is here and nothing else:
-//   [Content_Types].xml   — or Word calls the file corrupt
-//   _rels/.rels           — points at the main document part
-//   word/document.xml     — the body
+// The parts, and why each one is here:
+//   [Content_Types].xml         — or Word calls the file corrupt
+//   _rels/.rels                 — points at the main document part
+//   word/document.xml           — the body
+//   word/styles.xml             — defines Heading 1-6 and the table style
+//   word/_rels/document.xml.rels — relates the document to those styles
 //
-// There is deliberately NO `word/_rels/document.xml.rels`. That part is
-// required only when document.xml carries relationship references (images,
-// hyperlinks as real relationships, an external style part), and this writer
-// emits none — the same conclusion `docxguard` reached when its first version
-// asserted the part existed and failed on a perfectly valid file.
+// **The styles part was missing at first, and the headings were a lie.** They
+// were written as bold, larger paragraphs: they LOOKED like headings and were
+// paragraphs, so Word's navigation pane was empty, an automatic table of
+// contents found nothing, and a screen reader announced body text. Caught by
+// building the inverse tool (`docx-markdown`) and round-tripping through
+// mammoth, which reported every heading as a paragraph — and refused the table
+// outright, because `w:tblStyle` named a style that did not exist.
+//
+// `docxguard` reasoned correctly that `document.xml.rels` is required only when
+// document.xml carries relationship references. It does now: the styles part is
+// exactly such a reference.
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -61,6 +69,8 @@ function inlineRuns(inline: Inline[], base: RunOpts = {}): string {
 
 interface ParaOpts { size?: number; bold?: boolean; before?: number; after?: number; indent?: number; style?: string }
 
+const HEADING_STYLE = (level: number) => `Heading${Math.min(6, Math.max(1, level))}`
+
 const para = (runs: string, o: ParaOpts = {}): string => {
   const props = [
     o.style ? `<w:pStyle w:val="${o.style}"/>` : '',
@@ -95,7 +105,17 @@ export function blocksToDocxXml(blocks: Block[]): string {
   const parts = blocks.map((b) => {
     switch (b.t) {
       case 'heading':
-        return para(inlineRuns(b.inline), { size: HEADING_PT[b.level], bold: true, before: b.level === 1 ? 0 : 240, after: 120 })
+        // `pStyle` is what makes this a HEADING rather than large bold text —
+        // the navigation pane, an automatic contents page, and every converter
+        // read the style, not the font size. The size stays as a fallback for a
+        // reader that does not resolve styles.
+        return para(inlineRuns(b.inline), {
+          style: HEADING_STYLE(b.level),
+          size: HEADING_PT[b.level],
+          bold: true,
+          before: b.level === 1 ? 0 : 240,
+          after: 120,
+        })
       case 'para':
         return para(inlineRuns(b.inline))
       case 'quote':
@@ -125,7 +145,30 @@ export function blocksToDocxXml(blocks: Block[]): string {
     + `<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`
 }
 
-const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`
+const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`
+
+const DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`
+
+// `w:name` is the load-bearing part: Word resolves a built-in heading from the
+// styleId, but every converter maps on the NAME ("Heading 1" -> <h1>). A style
+// with an id and no name is a style nothing downstream can recognise.
+const headingStyle = (n: number) =>
+  `<w:style w:type="paragraph" w:styleId="Heading${n}"><w:name w:val="Heading ${n}"/>`
+  + `<w:basedOn w:val="Normal"/><w:qFormat/>`
+  + `<w:pPr><w:outlineLvl w:val="${n - 1}"/></w:pPr>`
+  + `<w:rPr><w:b/><w:sz w:val="${HEADING_PT[n] * 2}"/></w:rPr></w:style>`
+
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+  + `<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">`
+  + `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>`
+  + [1, 2, 3, 4, 5, 6].map(headingStyle).join('')
+  // The table style is referenced by every table this writer emits; naming a
+  // style that does not exist is what made mammoth refuse the document.
+  + `<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/>`
+  + `<w:tblPr><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
+    .map((side) => `<w:${side} w:val="single" w:sz="4" w:color="C8CCD4"/>`).join('')}</w:tblBorders></w:tblPr></w:style>`
+  + `<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/></w:style>`
+  + `</w:styles>`
 
 const RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`
 
@@ -135,5 +178,7 @@ export function blocksToDocx(blocks: Block[]): Blob {
     { name: '[Content_Types].xml', bytes: enc.encode(CONTENT_TYPES) },
     { name: '_rels/.rels', bytes: enc.encode(RELS) },
     { name: 'word/document.xml', bytes: enc.encode(blocksToDocxXml(blocks)) },
+    { name: 'word/_rels/document.xml.rels', bytes: enc.encode(DOC_RELS) },
+    { name: 'word/styles.xml', bytes: enc.encode(STYLES) },
   ])
 }

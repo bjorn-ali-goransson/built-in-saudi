@@ -3221,4 +3221,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/timesheet/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/timesheet/"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/docx-markdown/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/docx-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/docx-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/docx-markdown/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/docx-markdown/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/docx-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/docx-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/docx-markdown/"/>
+  </url>
 </urlset>

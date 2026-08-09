@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'docx-markdown',
+    en: { name: 'Word to Markdown', description: 'Turn a Word document into Markdown — headings, bold and italic, bulleted and numbered lists, tables, blockquotes and links all survive as Markdown rather than being flattened into prose. Read in your browser and never uploaded.' },
+    ar: { name: 'وورد إلى ماركداون', description: 'حوّل مستند وورد إلى ماركداون — فتبقى العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات والروابط ماركداون، بدل أن تُسطّح إلى نصٍّ عادي. تجري القراءة في متصفحك ولا يُرفع المستند أبدًا.' },
+  },
+  {
     id: 'timesheet',
     en: { name: 'Time Card Calculator', description: 'Total a week of shifts with breaks, overnight shifts and overtime, and read it both as hours and minutes and as the decimal hours a payroll system asks for. It knows the Saudi 8-hour day, the 6-hour Ramadan day and overtime at 150%, all as defaults you can change. Nothing is uploaded.' },
     ar: { name: 'حاسبة ساعات العمل', description: 'اجمع أسبوعًا من الورديات مع الاستراحات والورديات الليلية والعمل الإضافي، واقرأه بالساعات والدقائق وبالساعات العشرية التي يطلبها نظام الرواتب. وتعرف اليوم السعودي بثماني ساعات، ويوم رمضان بست، والإضافي ب١٥٠٪، وكلها قيم افتراضية يمكنك تغييرها. ولا يُرفع شيء.' },
