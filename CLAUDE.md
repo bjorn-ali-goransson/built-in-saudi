@@ -963,6 +963,52 @@ initial or medial form at all; those cells are left out rather than filled with
 the isolated shape, which would teach something false. This is the thing generic
 worksheet sites get wrong, and it is the whole reason the tool is worth having.
 
+## Looking at a file's frequencies (`audio-spectrum`)
+
+`lib/audio.ts` already decoded anything the browser can play, and three tools
+used it without any of them ever looking at the FREQUENCY content —
+`AnalyserNode` is the platform's own FFT but works only on live playback, so
+there was no way to ask about a file without playing it through in real time.
+Hence a hand-written radix-2 FFT, in a worker (#154: a three-minute track is
+~7,700 frames of a 2048-point transform).
+
+**The tool exists for one checkable insight: a lossy encoder throws away
+everything above a cutoff, and that cutoff is visible.** A 128 kbps MP3 stops
+dead around 16 kHz; 320 and lossless run to 20 or to Nyquist. So a file
+"converted to 320" from a 128 source has a 16 kHz wall and is not what it says —
+a thing you cannot hear and can see in two seconds.
+
+Details that are load-bearing rather than decorative:
+
+- **A Hann window, not a raw slice.** Without it every frame's edges are a
+  discontinuity and the leakage fills the band above the cutoff — the wall the
+  tool exists to show disappears into a haze.
+- **The cutoff is measured relative to the loudest bin (−60 dB), scanning DOWN
+  from the top.** Relative, because the file's volume is irrelevant to where its
+  content stops; downward, because that makes it a cutoff rather than a peak.
+- **One frame per rendered COLUMN**, not a fixed hop: the picture is the output,
+  so computing thousands of frames to average them into 900 pixels is work
+  thrown away. The UI says the file is sampled rather than exhausted.
+- **dB, not linear magnitude.** A spectrogram in linear magnitude is a black
+  rectangle, because hearing is logarithmic and so is everything interesting.
+
+**The decode rate is not the file's rate, and the label had to say so.**
+`decodeAudioData` resamples to the AudioContext's rate, so a 22.05 kHz file
+comes back at 44.1. Calling that "Sample rate" stated a property the file does
+not have; it reads "Decoded at" with a note. The cutoff is unaffected — a 22 kHz
+source has nothing above 11 kHz to find, and the picture shows exactly that.
+
+**Two bugs its own spec caught, both invisible to a weaker assertion:**
+
+- **The picture never rendered.** `draw()` ran in the worker callback, before
+  `setInfo` put the canvas in the DOM, so `canvasRef.current` was null and it
+  returned. The numbers appeared and the spectrogram did not. It draws from an
+  effect now. A test that checked the canvas *existed* would have passed; the
+  one that asked whether it had any RANGE in it did not.
+- **The FFT is verified against tones of known frequency** — 5 kHz reads 5.0,
+  15 kHz reads 15.0, white noise runs past 19. Two frequencies, not one: a
+  single case would pass against anything that happened to print 5.
+
 ## Audio conversion (`audio-convert`)
 
 Everything it needs already existed: `lib/audio.ts` decodes with

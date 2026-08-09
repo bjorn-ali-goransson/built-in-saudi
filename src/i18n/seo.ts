@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'audio-spectrum',
+    en: { name: 'Audio Spectrum Analyser', description: 'Draw the frequency content of an audio or video file and read off where it stops. A lossy encoder throws away everything above a cutoff, and that cutoff is visible — so a file converted to 320 kbps from a 128 kbps source shows a wall at 16 kHz. Analysed in your browser; nothing is uploaded.' },
+    ar: { name: 'محلّل الطيف الصوتي', description: 'ارسم المحتوى الترددي لملف صوتي أو مرئي واقرأ أين ينتهي. فالترميز الضائع يتخلّص من كل شيء فوق حدّ معيّن، وهذا الحدّ مرئي — فالملف المحوّل إلى ٣٢٠ كيلوبت من مصدر ١٢٨ يُظهر جدارًا عند ١٦ كيلوهرتز. يجري التحليل في متصفحك؛ ولا يُرفع شيء.' },
+  },
+  {
     id: 'fuel-cost',
     en: { name: 'Fuel Cost Calculator', description: 'Work out the fuel for a trip in whatever unit your car shows — km per litre off the dashboard, litres per 100 km off the spec sheet, or miles per gallon in either of the two gallons that differ by a fifth. Pick a route or type a distance, split it between passengers, and see whether 95 is worth its extra over 91.' },
     ar: { name: 'حاسبة تكلفة الوقود', description: 'احسب وقود رحلتك بالوحدة التي تعرضها سيارتك — كم لكل لتر من لوحة العدادات، أو لتر لكل ١٠٠ كم من النشرة الفنية. اختر رحلة أو اكتب المسافة، وقسّمها على الركاب، واعرف هل يستحق ٩٥ زيادته على ٩١.' },

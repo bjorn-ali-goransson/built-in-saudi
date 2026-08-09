@@ -875,6 +875,27 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Code sweep, 9 August 2026 — auditing the network mocks, and the last audio gap
+
+Last iteration found that `page.route` cannot intercept a fetch the service
+worker handles. The obvious follow-up was: **is any other spec mocking
+vacuously?** Audited all four files that mock, and no:
+
+- `public/sw.js` returns early for `url.origin !== self.location.origin`, so
+  every CROSS-origin mock (open-meteo, the currency CDN, the Cloud Functions
+  backend) bypasses the SW entirely and `page.route` works.
+- `/version.json` is explicitly excluded from the SW for deploy detection.
+- `calls.spec.ts` already uses `context.route`.
+- And the third-party mocks assert mocked VALUES (3.75, 41.2, a fixed date), so
+  a mock that failed to serve would fail the test rather than pass it.
+
+Only the same-origin `/__hibp/` path was ever at risk, which is exactly the one
+that broke. Recorded so the next person mocking a same-origin URL does not lose
+the afternoon.
+
+Then took the last unexploited capability in `lib/audio.ts`: **SHIPPED**
+`audio-spectrum`.
+
 ### Web sweep #7, 9 August 2026 — the privacy tools
 
 Our own territory, and mostly already ours: metadata stripping, EXIF scrubbing,
