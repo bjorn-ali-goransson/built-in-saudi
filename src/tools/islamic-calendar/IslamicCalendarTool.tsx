@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Pill, Seg, SegButton } from '../../components/ui'
 import {
-  gregorianToHijri, hijriToGregorian, daysInHijriMonth, HIJRI_MONTHS, type IslamicEventKey,
+  gregorianToHijri, hijriToGregorian, daysInHijriMonth, HIJRI_MONTHS, HOLIDAY_BY_HIJRI, ISLAMIC_EVENTS, type IslamicEventKey,
 } from '../prayer-times/islamic'
 
 type Mode = 'hijri' | 'greg'
@@ -20,14 +20,8 @@ const STR = {
   },
 }
 
-const HOLIDAYS: Record<string, IslamicEventKey> = {
-  '1-1': 'newYear', '1-10': 'ashura', '9-1': 'ramadan', '10-1': 'eidFitr', '12-9': 'arafah', '12-10': 'eidAdha',
-}
+
 // Ordered through the Hijri year for the list below the grid.
-const HOLIDAY_LIST: { key: IslamicEventKey; m: number; d: number }[] = [
-  { key: 'newYear', m: 1, d: 1 }, { key: 'ashura', m: 1, d: 10 }, { key: 'ramadan', m: 9, d: 1 },
-  { key: 'eidFitr', m: 10, d: 1 }, { key: 'arafah', m: 12, d: 9 }, { key: 'eidAdha', m: 12, d: 10 },
-]
 
 interface Cell { hy: number; hm: number; hd: number; greg: Date }
 
@@ -124,7 +118,7 @@ export default function IslamicCalendarTool() {
         {weekdayLabels.map((w, i) => <span key={`w${i}`} className="text-center text-[0.68rem] font-bold text-ink-faint uppercase pb-[0.2rem]">{w}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} className="cal2__cell is-blank aspect-square" />)}
         {cells.map((c) => {
-          const holiday = HOLIDAYS[`${c.hm}-${c.hd}`]
+          const holiday = HOLIDAY_BY_HIJRI[`${c.hm}-${c.hd}`]
           const white = c.hd >= 13 && c.hd <= 15
           const today = isToday(c.greg)
           const isSel = sel && sel.greg.toDateString() === c.greg.toDateString()
@@ -145,7 +139,7 @@ export default function IslamicCalendarTool() {
         <div className="flex flex-col gap-[0.35rem] px-4 py-[0.9rem] border border-[color:var(--line-soft)] rounded-md bg-[var(--surface)] [&_strong]:text-[1.05rem] [&_strong]:text-green-700" data-testid="cal-detail">
           <strong>{HIJRI_MONTHS[locale][sel.hm - 1]} {sel.hd}, {sel.hy} {locale === 'ar' ? 'هـ' : 'AH'}</strong>
           <span className="inline-flex items-center gap-1.5">{dateFmt.format(sel.greg)}{sel.hd >= 13 && sel.hd <= 15 && <span className="inline-block w-[9px] h-[9px] rounded-full border-[1.5px] border-[color:var(--ink-faint)]" aria-hidden="true" />}</span>
-          {HOLIDAYS[`${sel.hm}-${sel.hd}`] && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--gold-400)_25%,transparent)] text-gold-500">{s.events[HOLIDAYS[`${sel.hm}-${sel.hd}`]]}</span>}
+          {HOLIDAY_BY_HIJRI[`${sel.hm}-${sel.hd}`] && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--gold-400)_25%,transparent)] text-gold-500">{s.events[HOLIDAY_BY_HIJRI[`${sel.hm}-${sel.hd}`]]}</span>}
           {sel.hd >= 13 && sel.hd <= 15 && <span className="self-start px-[0.6rem] py-[0.2rem] rounded-full text-[0.78rem] font-semibold bg-[color-mix(in_srgb,var(--green-400)_15%,transparent)] text-green-700">{s.whiteDays}</span>}
         </div>
       )}
@@ -158,7 +152,7 @@ export default function IslamicCalendarTool() {
 
       <section className="flex flex-col gap-[0.4rem] mt-[0.4rem]" data-testid="cal-holidays">
         <h2 className="text-[0.95rem] font-semibold text-green-700 mb-[0.2rem]">{s.holidaysTitle}</h2>
-        {HOLIDAY_LIST.map((h) => (
+        {ISLAMIC_EVENTS.map((h) => (
           <button key={h.key} className="flex items-center justify-between gap-4 px-[0.85rem] py-[0.6rem] border border-[color:var(--line-soft)] rounded-[5px] bg-[var(--surface)] cursor-pointer text-start transition-[border-color,background] duration-[120ms] hover:border-green-500 hover:bg-[color-mix(in_srgb,var(--green-400)_6%,transparent)]" data-testid={`cal-hol-${h.key}`} onClick={() => goToHoliday(h)}>
             <span className="font-semibold text-ink">{s.events[h.key]}</span>
             <span className="text-[0.82rem] text-ink-faint">

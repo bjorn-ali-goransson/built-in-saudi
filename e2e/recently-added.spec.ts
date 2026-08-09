@@ -23,15 +23,31 @@ test('the newest tools are surfaced in their own row', async ({ page }) => {
   expect(n).toBeLessThanOrEqual(6)
 })
 
-test('it holds tools from the newest date, not arbitrary ones', async ({ page }) => {
+test('it holds the newest tools, not arbitrary ones', async ({ page }) => {
   // The dates are derived, so the expectation can be derived too rather than
   // hard-coded — this cannot go stale the way a pinned tool id would.
-  const expected = dates.filter(([, d]) => d === newest).map(([id]) => id)
+  //
+  // The contract is **the N NEWEST, not everything sharing the newest date**;
+  // additions here are bursty, so a date window shows sixty tools or none
+  // depending on when you look. This assertion originally demanded that every
+  // tool in the row carry the newest date, which held only for as long as
+  // every shipping day shipped a batch — and broke the first time a single
+  // tool landed on its own. The tool was right and the test was wrong, the
+  // same way the `id-expiry` and `medicine-schedule` cases were.
+  //
+  // So: nothing OUTSIDE the row may be newer than something inside it.
+  const by = new Map(dates)
   await page.goto('/en')
   const shown = await page.getByTestId('section-__new').locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
   expect(shown.length).toBeGreaterThan(0)
-  for (const id of shown) expect(expected, `${id} is not from the newest batch`).toContain(id)
+  for (const id of shown) expect(by.has(id), `${id} has no recorded date`).toBe(true)
+
+  const oldestShown = shown.map((id) => by.get(id)!).sort()[0]
+  const newestOmitted = dates.filter(([id]) => !shown.includes(id)).map(([, d]) => d).sort().at(-1)!
+  expect(newestOmitted <= oldestShown, `${newestOmitted} was omitted while ${oldestShown} was shown`).toBe(true)
+  // And the row really does start at the top of the list.
+  expect(shown.map((id) => by.get(id)!)).toContain(newest)
 })
 
 test('a recently added tool is NOT consumed from its category', async ({ page }) => {

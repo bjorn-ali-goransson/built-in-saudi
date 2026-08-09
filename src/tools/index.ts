@@ -20,6 +20,7 @@ import { qrCodeTool } from './qr-code/meta'
 import { prayerTimesTool } from './prayer-times/meta'
 import { hijriCalendarTool } from './hijri-calendar/meta'
 import { islamicCalendarTool } from './islamic-calendar/meta'
+import { saudiHolidaysTool } from './saudi-holidays/meta'
 import { istikharaTool } from './istikhara/meta'
 import { adhkarTool } from './adhkar/meta'
 import { hajjUmrahTool } from './hajj-umrah/meta'
@@ -401,6 +402,7 @@ export const tools: Tool[] = [
   certificateTool,
   prayerTimesTool,
   islamicCalendarTool,
+  saudiHolidaysTool,
   adhkarTool,
   hajjUmrahTool,
   hisnAlMuslimTool,

@@ -34,7 +34,18 @@ for (const line of log.split('\n')) {
 // round before.
 const rows = []
 const uncommitted = []
-const today = () => new Date().toISOString().slice(0, 10)
+// LOCAL midnight, never `toISOString().slice(0, 10)` — east of Greenwich those
+// disagree between local midnight and UTC midnight, so on a machine in Riyadh
+// (UTC+3) a tool added in the small hours was stamped YESTERDAY. Every date git
+// hands back is already local; only this fallback was not, so the one tool with
+// no commit behind it sorted below tools added before it. Same bug this repo
+// already records for two `id-expiry` test cases, in a script rather than a
+// spec.
+const today = () => {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 for (const dir of readdirSync('src/tools')) {
   const meta = `src/tools/${dir}/meta.ts`
   if (!existsSync(meta)) continue

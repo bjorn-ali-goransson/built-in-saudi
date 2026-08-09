@@ -76,7 +76,8 @@ export const HIJRI_MONTHS = {
 export type IslamicEventKey =
   | 'ramadan' | 'eidFitr' | 'eidAdha' | 'arafah' | 'newYear' | 'ashura'
 
-const EVENTS: { key: IslamicEventKey; m: number; d: number }[] = [
+/** The six Islamic dates the site marks. ONE list, for all three callers. */
+export const ISLAMIC_EVENTS: { key: IslamicEventKey; m: number; d: number }[] = [
   { key: 'newYear', m: 1, d: 1 },
   { key: 'ashura', m: 1, d: 10 },
   { key: 'ramadan', m: 9, d: 1 },
@@ -85,25 +86,13 @@ const EVENTS: { key: IslamicEventKey; m: number; d: number }[] = [
   { key: 'eidAdha', m: 12, d: 10 },
 ]
 
-export interface UpcomingEvent { key: IslamicEventKey; date: Date }
+/**
+ * Hijri month-day (`"9-1"`) to the event that falls on it.
+ *
+ * Derived from EVENTS rather than written out a second time: `islamic-calendar`
+ * kept its own identical six-entry copy, which is two places for one fact and
+ * exactly how a seventh event ends up in one of them. Found by a code sweep.
+ */
+export const HOLIDAY_BY_HIJRI: Record<string, IslamicEventKey> =
+  Object.fromEntries(ISLAMIC_EVENTS.map((ev) => [`${ev.m}-${ev.d}`, ev.key]))
 
-/** All Islamic events for a specific Hijri year, sorted by Gregorian date. */
-export function eventsForHijriYear(hy: number): UpcomingEvent[] {
-  return EVENTS
-    .map((ev) => ({ key: ev.key, date: hijriToGregorian(hy, ev.m, ev.d) }))
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
-}
-
-/** The next occurrence (>= today) of each Islamic event, sorted by date. */
-export function upcomingEvents(from: Date): UpcomingEvent[] {
-  const today = new Date(from.getFullYear(), from.getMonth(), from.getDate())
-  const hy = gregorianToHijri(today).y
-  const out: UpcomingEvent[] = []
-  for (const ev of EVENTS) {
-    for (const year of [hy, hy + 1]) {
-      const date = hijriToGregorian(year, ev.m, ev.d)
-      if (date >= today) { out.push({ key: ev.key, date }); break }
-    }
-  }
-  return out.sort((a, b) => a.date.getTime() - b.date.getTime())
-}

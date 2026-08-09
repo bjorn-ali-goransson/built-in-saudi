@@ -7,6 +7,8 @@
 //
 // Newest first, which is also the order the catalogue reads it in.
 export const ADDED: Record<string, string> = {
+  'saudi-holidays': '2026-08-10',
+  'speech-time': '2026-08-10',
   'ac-size': '2026-08-09',
   'audio-spectrum': '2026-08-09',
   'docx-markdown': '2026-08-09',
@@ -17,7 +19,6 @@ export const ADDED: Record<string, string> = {
   'markdown-docx': '2026-08-09',
   'markdown-epub': '2026-08-09',
   'ovulation': '2026-08-09',
-  'speech-time': '2026-08-09',
   'timesheet': '2026-08-09',
   'word-search': '2026-08-09',
   'a11y-check': '2026-08-08',

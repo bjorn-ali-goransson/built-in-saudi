@@ -1428,3 +1428,30 @@ trap, which has now been caught three times one at a time.
   Ramadan and the Monday/Thursday sunnah fasts are the same arithmetic against
   a Hijri calendar and prayer times we already compute. `medicine-schedule`
   already spreads doses across the fasting window, so half the machinery exists.
+
+### Code sweep, 10 August 2026 (nineteenth pass)
+
+Swept for exports nothing references, for facts written down more than once, and
+for capability with no page in front of it.
+
+- ~~**The official holidays.**~~ **Shipped** as `saudi-holidays`. Umm al-Qura
+  conversion, an events table and a dead `upcomingEvents()` were all in place
+  while «الإجازات الرسمية» returned NOTHING and «كم باقي على العيد» returned the
+  vehicle-registration tool.
+- **Fixed on the way past:** the six Islamic events existed in three copies;
+  `gen-tool-dates.mjs` stamped an uncommitted tool with the UTC date, i.e.
+  yesterday in Riyadh; and `recently-added.spec.ts` asserted the row holds
+  everything sharing the newest date, which is a date window — the opposite of
+  the documented contract, and it broke the first time one tool shipped alone.
+- **Still open, recorded rather than built:**
+  - `zip.ts` writes STORE-only while `unzip.ts` already uses
+    `DecompressionStream('deflate-raw')`. Its mirror, `CompressionStream`, would
+    make a real compressed-ZIP writer free of any dependency — which is what a
+    "create a ZIP" tool would need to be worth having.
+  - `buildIcs` is single-event and EventInput-shaped, so the holidays tool has
+    no "add to calendar". Extracting a `buildIcsCalendar(events[])` that
+    `buildIcs` delegates to is the second-caller move this repo prefers.
+  - `disposeImageDecoder`, `cvApi.refineCv`, `dms.threadWith`/`countsByContact`,
+    `contacts.hasContact`, `voiceNotes.delVoiceBlob` and
+    `book-with-me/lib.enumerateDaySlots` are all still unreferenced.
+  - Six pdf-lib tools still bypass `PdfOps`.

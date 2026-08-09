@@ -1253,6 +1253,68 @@ so it can be corrected in one place when the rates move again:
 Carries a `financial` Disclaimer naming GOSI, and is in
 `e2e/disclaimers.spec.ts`.
 
+## The official holidays, found by sweeping our own code (`saudi-holidays`)
+
+A CODE SWEEP found the machinery built and no page exposing it: Umm al-Qura
+conversion, an Islamic events table, and an **`upcomingEvents()` nothing
+called** — while the search returned **NOTHING** for «الإجازات الرسمية» and the
+**vehicle-registration tool** for «كم باقي على العيد». Measured before and
+after: those two, plus `public holidays saudi` and `national day`, now all lead
+with this tool, and all four search benches are unchanged.
+
+Rules in `src/tools/saudi-holidays/holidays.ts`, from Labour Law **Article 112**
+and corroborated across two independent summaries before being encoded. Four
+things carry it, each a thing the published lists get wrong:
+
+- **Half the list is fixed and half of it moves.** National Day (23 September)
+  and Founding Day (22 February) are Gregorian dates set by decree; the two
+  Eids follow the Hijri year and arrive about eleven days earlier each year.
+  That is why a hand-typed list is half-stale within a year — and the reason to
+  compute rather than tabulate.
+- **The Eid al-Fitr holiday can START BEFORE EID.** The rule anchors it to "the
+  day after 29 Ramadan", so in a 30-day Ramadan the first day off is 30
+  Ramadan — still a fasting day — and Eid is the holiday's second day. The
+  panel states which case the year on screen is, rather than asserting one.
+- **The entitlement is CALENDAR-defined and the festival is SIGHTING-defined.**
+  Article 112 names Umm al-Qura; the actual Eid is announced on the moon
+  sighting and can land a day either side. A countdown that does not say so
+  claims a certainty nobody has.
+- **The interaction rules are where the money is:** landing on the weekend is
+  compensated, National Day landing INSIDE an Eid holiday is not, and a holiday
+  inside annual leave extends the leave.
+
+**Two rare branches were swept for rather than assumed reachable.** A branch no
+test can reach is not a passing branch — the `vehicle-renewal` lesson. Running
+the compiled module over 1990–2070 found the National-Day-swallowed case in
+**2009 and 2015** (it really happened) and a Gregorian year holding **two** Eid
+al-Fitr holidays in **2000, 2033 and 2065**. Both are now pinned cases; the
+second is why `holidaysIn` tries three candidate Hijri years instead of
+assuming one of each.
+
+**The sweep also killed a fact written down three times.** `EVENTS` in
+`islamic.ts`, `HOLIDAYS` in `IslamicCalendarTool` and `HOLIDAY_LIST` in the same
+file were the same six entries; they are now one exported `ISLAMIC_EVENTS` plus
+a derived `HOLIDAY_BY_HIJRI`, with a spec asserting the calendar still marks
+them. `upcomingEvents` was deleted rather than given an invented caller — the
+official holidays are a different set with different spans, and wiring it in to
+justify keeping it would have been worse than the dead code.
+
+**And `scripts/gen-tool-dates.mjs` carried the `toISOString().slice(0, 10)` bug
+this file already documents**, in the one place a date is not taken from git: a
+tool added in the small hours in Riyadh (UTC+3) was stamped **yesterday**, so it
+sorted below tools added before it in the Recently added row. Local terms now.
+
+**A metadata fix was tried, measured NET-NEGATIVE, and reverted.** «متى رمضان»
+is a four-way tie at 240 between the tools that merely *adjust for* Ramadan
+(water intake, medicine schedule, timesheet) — which looks like the documented
+"a keyword must say what the tool DOES, not what it tolerates" case. Removing
+the keyword fixed nothing (after stop-word removal the query is a bare
+«رمضان», and the remaining tie still falls to catalogue order) and **broke**
+«جدول الدواء في رمضان», which dropped from the medicine scheduler to the
+timesheet. Reverted. The limit is real and worth knowing: a single-term Arabic
+query matching an exact keyword scores the same for every tool that has it, and
+those tools legitimately need the word for their own compound queries.
+
 ## Which e-invoicing wave (`zatca-wave`)
 
 `vat-registration` answers whether you must register; this answers when you must

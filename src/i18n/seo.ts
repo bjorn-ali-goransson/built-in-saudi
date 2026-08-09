@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'saudi-holidays',
+    en: { name: 'Saudi Public Holidays', description: 'Every official paid holiday under Article 112 — Eid al-Fitr, Eid al-Adha, National Day and Founding Day — for any year, in both calendars, with the weekend-compensation and annual-leave rules. Free, in your browser.' },
+    ar: { name: 'الإجازات الرسمية في السعودية', description: 'كل إجازة رسمية مدفوعة بموجب المادة ١١٢ — عيد الفطر وعيد الأضحى واليوم الوطني ويوم التأسيس — لأي سنة بالتقويمين، مع أحكام التعويض والإجازة السنوية. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'speech-time',
     en: { name: 'Words to Speaking Time', description: 'How long a script takes to read silently and to say out loud — with the correct rate for Arabic, which reads far slower per word than English. Free, in your browser.' },
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
