@@ -6,6 +6,7 @@ import { ToolPage } from './pages/ToolPage'
 import { BookingPage } from './pages/BookingPage'
 import { ShortLinkPage } from './pages/ShortLinkPage'
 import { CallLinkPage } from './pages/CallLinkPage'
+import { CategoryPage } from './pages/CategoryPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -52,6 +53,9 @@ export const router = createBrowserRouter([
       { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
       // Retired: an interest-based calculator does not belong in this catalogue.
       { path: 'apps/loan-calculator', element: <RetiredToolRedirect /> },
+      // Before apps/:toolId in the file, though React Router ranks a static
+      // segment above a dynamic one regardless of order.
+      { path: 'c/:slug', element: <CategoryPage />, errorElement: <ErrorPage /> },
       { path: 'apps/:toolId', element: <ToolPage />, errorElement: <ErrorPage /> },
       // In-call / invite URL for the Calls app: /apps/calls/join?code=… renders the
       // same tool (it reads the code from the query).

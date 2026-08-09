@@ -874,11 +874,14 @@ offsets out of a real render:
 the launcher. After: one tap from the very bottom, heading lands at y=124/102
 (clear of both sticky bars), 0px horizontal page overflow at either size.
 
-**Still open on discoverability:** the catalogue has no per-category PAGE, so a
-section cannot be linked to, shared, or landed on from a search engine — the
-chips are an in-page jump, not a URL. `/{locale}/apps/c/<category>` would be
-16 more prerendered pages with real internal links, and is the obvious next
-move if organic traffic to the catalogue matters.
+~~**Still open on discoverability:** the catalogue has no per-category PAGE.~~
+Done 9 Aug 2026 at `/{locale}/c/<slug>/` — 15 categories x 2 locales, each with
+its own written description, prerendered, in the sitemap, linked from the
+catalogue's section headings and from each other.
+
+**Still open after that:** nothing links a tool page to its own category. A
+visitor on `pdf-merge` sees the related row and the full crawlable list, and no
+"more PDF tools" — the one link most likely to be useful from there.
 
 ### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
 

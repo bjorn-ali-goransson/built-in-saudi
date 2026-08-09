@@ -2941,4 +2941,214 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/admission-score"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/admission-score"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/pdf/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/pdf/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/pdf/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/pdf/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/pdf/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/pdf/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/pdf/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/pdf/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/images/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/images/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/images/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/images/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/images/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/images/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/images/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/images/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/saudi/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/saudi/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/saudi/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/saudi/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/saudi/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/saudi/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/saudi/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/saudi/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/islamic/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/islamic/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/islamic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/islamic/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/islamic/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/islamic/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/islamic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/islamic/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/arabic/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/arabic/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/arabic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/arabic/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/arabic/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/arabic/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/arabic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/arabic/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/calculators/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/calculators/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/calculators/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/calculators/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/calculators/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/calculators/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/calculators/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/calculators/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/text/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/text/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/text/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/text/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/text/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/text/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/text/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/text/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/converters/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/converters/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/converters/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/converters/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/converters/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/converters/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/converters/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/converters/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/developer/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/developer/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/developer/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/developer/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/developer/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/developer/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/developer/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/developer/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/files/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/files/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/files/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/files/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/files/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/files/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/files/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/files/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/generators/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/generators/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/generators/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/generators/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/generators/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/generators/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/generators/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/generators/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/design/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/design/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/design/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/design/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/design/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/design/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/design/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/design/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/web/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/web/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/web/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/web/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/web/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/web/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/web/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/web/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/business/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/business/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/business/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/business/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/business/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/business/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/business/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/business/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/communication/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/communication/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/communication/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/communication/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/communication/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/communication/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/communication/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/communication/"/>
+  </url>
 </urlset>

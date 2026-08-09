@@ -1,12 +1,12 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { en } from './src/i18n/en'
 import { ar } from './src/i18n/ar'
-import { siteMeta, liveToolSeo, staticPageSeo, type ToolSeo } from './src/i18n/seo'
+import { siteMeta, liveToolSeo, staticPageSeo, categorySeo, type ToolSeo, type CategorySeo } from './src/i18n/seo'
 
 const ORIGIN = 'https://built-in-saudi.com'
 const LOCALES = ['en', 'ar'] as const
@@ -92,6 +92,61 @@ function toolContent(locale: Loc, tool: ToolSeo): string {
 }
 
 /**
+ * Which tools are in which category, read straight from the `meta.ts` files.
+ *
+ * `liveTools` cannot be imported here: it pulls in every React component
+ * through `lazyTool`, and this plugin runs in the config, in Node. So the
+ * categories are swept out of the sources the way `scripts/check-*.mjs` do it.
+ *
+ * A regex over source is a guess, so it is CHECKED rather than trusted: every
+ * id that `seo.ts` says is live must be found by the sweep, and the build fails
+ * naming the ones that were not. Without that, a meta.ts written in a shape the
+ * regex does not match would silently drop its tool from its category page —
+ * quietly wrong, which is the failure this repo keeps paying for.
+ */
+function toolCategories(): Map<string, string> {
+  const out = new Map<string, string>()
+  const dir = 'src/tools'
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const metaPath = join(dir, entry.name, 'meta.ts')
+    if (!existsSync(metaPath)) continue
+    const src = readFileSync(metaPath, 'utf8')
+    const id = /\bid: '([^']+)'/.exec(src)?.[1]
+    const cat = /\bcategory: '([^']+)'/.exec(src)?.[1]
+    if (id && cat) out.set(id, cat)
+  }
+  const missing = liveToolSeo.filter((t) => !out.has(t.id)).map((t) => t.id)
+  if (missing.length) {
+    throw new Error(`bis-prerender: no category found in meta.ts for ${missing.join(', ')} — the sweep in toolCategories() needs updating`)
+  }
+  return out
+}
+
+// A category page's crawlable block: H1 + its own description, the tools that
+// are IN it, and links to every other category. Without the last part fifteen
+// pages each link only back to home, which makes them leaves rather than a set
+// a crawler can walk from any member.
+function categoryContent(locale: Loc, cat: CategorySeo, ids: string[]): string {
+  const t = dicts[locale]
+  const cs = cat[locale]
+  const byId = new Map(liveToolSeo.map((x) => [x.id, x]))
+  const items = ids
+    .map((id) => byId.get(id))
+    .filter((x): x is ToolSeo => !!x)
+    .map((x) => `<li><a href="/${locale}/apps/${x.id}/">${esc(x[locale].name)}</a> — ${esc(x[locale].description)}</li>`)
+    .join('')
+  const others = categorySeo
+    .filter((c) => c.slug !== cat.slug)
+    .map((c) => `<li><a href="/${locale}/c/${c.slug}/">${esc(c[locale].name)}</a></li>`)
+    .join('')
+  return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a> / ${esc(cs.name)}</nav>`
+    + `<h1>${esc(cs.name)}</h1><p>${esc(cs.description)}</p>`
+    + `<ul>${items}</ul>`
+    + `<h2>${esc(locale === 'ar' ? 'فئات أخرى' : 'Other categories')}</h2><ul>${others}</ul></main>`
+}
+
+/**
  * Build-time prerender: writes a localized static HTML shell for each route with
  * correct <head> (title/description/canonical/hreflang/og) + a crawlable content
  * block. No SSR framework, no hydration — createRoot replaces the block on mount.
@@ -141,6 +196,8 @@ function prerenderPlugin(): Plugin {
         writeFileSync(join(dir, 'index.html'), html)
       }
 
+      const catOf = toolCategories()
+
       for (const locale of LOCALES) {
         const dir = dicts[locale].dir
         const site = siteMeta[locale]
@@ -155,6 +212,19 @@ function prerenderPlugin(): Plugin {
           let page = applyHead(shell, { locale, dir, title: `${ts.name}${suffix[locale]}`, desc: ts.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
           page = injectContent(page, toolContent(locale, tool))
           write(`${locale}${sub}`, page)
+        }
+
+        // Category landing pages. A tool with no `seo.ts` entry is simply not
+        // listed, the same rule the tool pages follow — a prerendered link to a
+        // page that does not exist is worse than a missing link.
+        for (const cat of categorySeo) {
+          const ids = liveToolSeo.filter((t) => catOf.get(t.id) === cat.category).map((t) => t.id)
+          if (!ids.length) continue
+          const cs = cat[locale]
+          const sub = `/c/${cat.slug}`
+          let html = applyHead(shell, { locale, dir, title: `${cs.name}${suffix[locale]}`, desc: cs.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
+          html = injectContent(html, categoryContent(locale, cat, ids))
+          write(`${locale}${sub}`, html)
         }
 
         // Standalone pages (privacy, terms) — real 200 HTML with head + a
@@ -192,7 +262,7 @@ function prerenderPlugin(): Plugin {
       root = injectContent(root, `<main><h1>${esc(siteMeta.en.title)}</h1><p><a href="/en">English</a> · <a href="/ar">العربية</a></p></main>`)
       writeFileSync(join(dist, 'index.html'), root)
 
-      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + staticPageSeo.length + 1} pages`)
+      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + staticPageSeo.length + categorySeo.length + 1} pages`)
     },
   }
 }

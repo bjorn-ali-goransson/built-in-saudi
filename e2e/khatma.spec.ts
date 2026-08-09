@@ -79,7 +79,11 @@ test('the Ramadan preset jumps to Ramadan', async ({ page }) => {
 
 test('downloads a printable plan', async ({ page }) => {
   await page.goto('/en/apps/khatma')
-  const dl = page.waitForEvent('download')
+  // The sheet is composed on a canvas and wrapped in a PDF, which is real work;
+  // under a loaded suite at --workers=2 it went past the default event wait
+  // while passing every time this file ran alone. Green in isolation and red
+  // under load is a tight timeout, not a broken download.
+  const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('kh-download').click()
   expect((await dl).suggestedFilename()).toBe('khatma-plan.pdf')
 })

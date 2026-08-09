@@ -4,6 +4,7 @@ import type { Tool } from '../tools/types'
 import type { ToolSection } from '../lib/toolSections'
 import { ToolCard } from './ToolCard'
 import { useLocale, localePath, localizeTool } from '../i18n'
+import { categorySlug } from '../lib/categorySlug'
 
 export const TOOL_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-[1.1rem] max-[560px]:grid-cols-4 max-[560px]:gap-[0.9rem_0.5rem]'
 // Denser grid for non-recommended sections: small row tiles on desktop (capped
@@ -92,6 +93,7 @@ function CompactToolGrid({ tools, onNavigate }: { tools: Tool[]; onNavigate?: ()
 /** The default catalog view: the Recommended section keeps full cards; every
  *  other section renders as a denser grid of compact tiles. */
 export function CategorySections({ sections, indexOf, onNavigate }: { sections: ToolSection[]; indexOf: (id: string) => number; onNavigate?: () => void }) {
+  const { locale } = useLocale()
   return (
     <>
       {/* `data-section` rather than reusing the testid prefix: the jump bar is
@@ -103,8 +105,21 @@ export function CategorySections({ sections, indexOf, onNavigate }: { sections: 
             {/* A div (not <h2>) so the unlayered base h1–h4 rule in theme.css
                 doesn't override these utility classes — cascade layers mean
                 unlayered element styles beat @layer utilities. */}
-            <div role="heading" aria-level={2}
-              className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint whitespace-nowrap rtl:tracking-normal">{sec.title}</div>
+            {/* A category section heading links to that category's own page.
+                The curated sections (Recommended, Duʿāʾ, Recently used) have
+                no page, and inventing one for a hand-picked list would be a
+                URL nobody could keep meaningful. */}
+            {categorySlug(sec.key) ? (
+              <Link
+                to={localePath(locale, `/c/${categorySlug(sec.key)}`)}
+                data-testid={`section-head-${sec.key}`}
+                onClick={onNavigate}
+                className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint whitespace-nowrap rtl:tracking-normal no-underline hover:text-green-700 hover:underline"
+              >{sec.title}</Link>
+            ) : (
+              <div role="heading" aria-level={2}
+                className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint whitespace-nowrap rtl:tracking-normal">{sec.title}</div>
+            )}
             <span className="flex-1 h-px bg-[color:var(--line-soft)]" aria-hidden="true" />
           </div>
           {sec.key === '__rec'

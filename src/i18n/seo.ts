@@ -1114,3 +1114,102 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'النسبة الموزونة للقبول', description: 'نسبتك الموزونة للقبول من الثانوية والقدرات والتحصيلي — بأي ترجيح تستخدمه الجامعة فعلًا. فالمعادلة ثابتة ولا يختلف إلا الترجيح بين الجامعات والبرامج، والأشهر منه جاهز للاختيار. وتعرض الأداة الدرجات نفسها بكل ترجيح شائع، وتبيّن أين نقاطك المتبقية: فعند 30/30/40 تساوي نقطة التحصيلي ثلث زيادة على نقطة الثانوية.' },
   },
 ]
+
+/**
+ * Category landing pages, prerendered at /<locale>/c/<slug>/.
+ *
+ * The catalogue's sections were an in-page jump and nothing more: a category
+ * could not be linked, shared, or landed on from a search engine, so "free PDF
+ * tools" — the shape of query people actually type — had no page on this site
+ * to answer it. The home page lists all 207 tools and is therefore about
+ * nothing in particular.
+ *
+ * The description is written per category rather than generated from a
+ * template, for the same reason a tool's is: a page whose description is
+ * "Free <X> tools" for fifteen values of X is fifteen pages carrying one
+ * description, and a search engine treats that as one page.
+ */
+export interface CategorySeo {
+  slug: string
+  category: string
+  en: { name: string; description: string }
+  ar: { name: string; description: string }
+}
+
+export const categorySeo: CategorySeo[] = [
+  {
+    slug: 'pdf', category: 'PDF',
+    en: { name: 'Free PDF tools', description: 'Merge, split, compress, sign, fill, redact and rearrange PDFs — and read the text out of one, even a password-protected one. Every tool runs in your browser: the file is never uploaded.' },
+    ar: { name: 'أدوات PDF مجانية', description: 'ادمج ملفات PDF وقسّمها واضغطها ووقّعها واملأ نماذجها واطمس منها وأعد ترتيب صفحاتها — واستخرج نصّها، حتى المحمي بكلمة مرور. كل أداة تعمل في متصفحك: ولا يُرفع الملف أبدًا.' },
+  },
+  {
+    slug: 'images', category: 'Images',
+    en: { name: 'Free image tools', description: 'Compress, crop, convert, resize and redact images, remove a background, read the text out of a picture, and strip the metadata a photo carries. Nothing is uploaded — including HEIC photos from an iPhone.' },
+    ar: { name: 'أدوات الصور المجانية', description: 'اضغط الصور وقصّها وحوّلها وغيّر مقاسها واطمس منها، وأزل الخلفية، واستخرج النص من صورة، وامسح البيانات التي يحملها كل تصوير. ولا يُرفع شيء — بما في ذلك صور HEIC من الآيفون.' },
+  },
+  {
+    slug: 'saudi', category: 'Saudi / Local',
+    en: { name: 'Saudi tools and calculators', description: 'GOSI and net salary, end of service, iqama renewal cost, exit and re-entry, VAT and ZATCA e-invoicing, vehicle inspection and registration, rent rules, IBAN and the national short address. Each one names the authority to check it against.' },
+    ar: { name: 'أدوات وحاسبات سعودية', description: 'التأمينات والراتب الصافي، ومكافأة نهاية الخدمة، وتكلفة تجديد الإقامة، والخروج والعودة، وضريبة القيمة المضافة والفوترة الإلكترونية، والفحص الدوري والاستمارة، وأحكام الإيجار، والآيبان والعنوان الوطني المختصر. وكل أداة تسمّي الجهة التي تُراجَع عندها.' },
+  },
+  {
+    slug: 'islamic', category: 'Islamic',
+    en: { name: 'Islamic tools', description: 'Prayer times and a printable timetable, qibla direction, the Hijri calendar and Hijri age, zakat, adhkār and Ḥiṣn al-Muslim, istikhāra, a khatma planner, and a Hajj and Umrah guide.' },
+    ar: { name: 'أدوات إسلامية', description: 'مواقيت الصلاة وجدول للطباعة، واتجاه القبلة، والتقويم الهجري والعمر بالهجري، والزكاة، والأذكار وحصن المسلم، والاستخارة، ومخطط الختمة، ودليل الحج والعمرة.' },
+  },
+  {
+    slug: 'arabic', category: 'Arabic',
+    en: { name: 'Arabic language tools', description: 'Normalise hamzas and alef forms, convert between Arabic-Indic and Western digits, write numbers out in words (tafqīt), conjugate a verb, add diacritics, transliterate a name, and read Franco-Arabic.' },
+    ar: { name: 'أدوات اللغة العربية', description: 'وحّد الهمزات وصور الألف، وحوّل بين الأرقام الهندية والعربية، واكتب الأرقام تفقيطًا، وصرّف فعلًا، وأضف التشكيل، واكتب الاسم بالإنجليزية، واقرأ العربيزي.' },
+  },
+  {
+    slug: 'calculators', category: 'Calculators',
+    en: { name: 'Free online calculators', description: 'Percentages, VAT, zakat, dates and working days, unit and currency conversion, early loan settlement, admission score, calorie and water needs, and a bill split. No sign-up and no adverts.' },
+    ar: { name: 'حاسبات مجانية على الإنترنت', description: 'النِّسب، وضريبة القيمة المضافة، والزكاة، والتواريخ وأيام العمل، وتحويل الوحدات والعملات، والسداد المبكر، والنسبة الموزونة، والسعرات والماء، وتقسيم الفاتورة. بلا تسجيل وبلا إعلانات.' },
+  },
+  {
+    slug: 'text', category: 'Text',
+    en: { name: 'Free text tools', description: 'Count, compare, clean, change case, slugify, find invisible characters, fix mojibake, pull the text out of a document, and build a markdown table. Your text stays in the browser.' },
+    ar: { name: 'أدوات النصوص المجانية', description: 'العدّ والمقارنة والتنظيف وتغيير حالة الأحرف والـslug، وكشف المحارف الخفية، وإصلاح النص المشوّه، واستخراج النص من مستند، وبناء جدول ماركداون. ويبقى نصّك في المتصفح.' },
+  },
+  {
+    slug: 'converters', category: 'Converters',
+    en: { name: 'Free file converters', description: 'Turn a document or data file into another format — CSV, Excel, JSON, vCard, EPUB, Word, PowerPoint, audio and video. Converted on your device, so nothing is uploaded to anybody.' },
+    ar: { name: 'محوّلات ملفات مجانية', description: 'حوّل مستندًا أو ملف بيانات إلى صيغة أخرى — CSV وإكسل وJSON وvCard وEPUB ووورد وباوربوينت والصوت والفيديو. ويجري التحويل على جهازك، فلا يُرفع شيء إلى أحد.' },
+  },
+  {
+    slug: 'developer', category: 'Developer',
+    en: { name: 'Free developer tools', description: 'JSON, base64, hashes and HMAC, JWT and certificate decoding, regex, cron, UUIDs, subnets, timestamps, curl conversion and fake data. All client-side, so a secret you paste stays on your machine.' },
+    ar: { name: 'أدوات المطوّرين المجانية', description: 'JSON وbase64 والبصمات وHMAC، وفكّ JWT والشهادات، والتعابير النمطية، وcron، والمعرّفات، والشبكات الفرعية، والطوابع الزمنية، وتحويل curl، وبيانات وهمية. كلها في المتصفح، فما تلصقه من أسرار يبقى على جهازك.' },
+  },
+  {
+    slug: 'files', category: 'Files',
+    en: { name: 'Free file tools', description: 'Inspect and extract a zip, read a file’s metadata, encrypt a file with a password, verify a hash, view the raw bytes, and hide a message in a picture. Files are read on your device.' },
+    ar: { name: 'أدوات الملفات المجانية', description: 'افحص أرشيف zip واستخرج منه، واقرأ بيانات الملف، وشفّر ملفًا بكلمة مرور، وتحقّق من البصمة، واستعرض البايتات، وأخفِ رسالة في صورة. وتُقرأ الملفات على جهازك.' },
+  },
+  {
+    slug: 'generators', category: 'Generators',
+    en: { name: 'Free generators', description: 'QR codes and barcodes, passwords and passphrases, invoices and quotations, certificates, labels, worksheets, quizzes, bingo cards and lorem ipsum — generated in the browser and ready to print.' },
+    ar: { name: 'مولّدات مجانية', description: 'الباركود ورموز QR، وكلمات المرور والعبارات، والفواتير وعروض الأسعار، والشهادات، والملصقات، وأوراق العمل، والاختبارات، وبطاقات البينغو، والنص البديل — تُولَّد في المتصفح وجاهزة للطباعة.' },
+  },
+  {
+    slug: 'design', category: 'Design',
+    en: { name: 'Free design tools', description: 'Colour palettes and contrast, gradients, box shadows, cubic-bezier curves, favicons, aspect ratios, social image sizes and a colour-blindness check. Copy the CSS straight out.' },
+    ar: { name: 'أدوات تصميم مجانية', description: 'لوحات الألوان والتباين، والتدرّجات، والظلال، ومنحنيات cubic-bezier، والأيقونات المفضّلة، ونِسب الأبعاد، ومقاسات صور التواصل، وفحص عمى الألوان. وانسخ الـCSS مباشرة.' },
+  },
+  {
+    slug: 'web', category: 'Web',
+    en: { name: 'Free tools for a website', description: 'Meta tags and a link preview, robots.txt, URL encoding and parsing, a user-agent reader, an accessibility check on pasted markup, and a link shortener.' },
+    ar: { name: 'أدوات مجانية لموقعك', description: 'وسوم الميتا ومعاينة الرابط، وrobots.txt، وترميز الروابط وتحليلها، وقارئ وكيل المستخدم، وفحص الوصولية لشيفرة ملصوقة، ومختصر روابط.' },
+  },
+  {
+    slug: 'business', category: 'Business',
+    en: { name: 'Free business tools', description: 'Invoices and quotations that print properly, and a scheduling page people can book you on. Free, and with no sign-up for the tools that need none.' },
+    ar: { name: 'أدوات أعمال مجانية', description: 'فواتير وعروض أسعار تُطبع كما ينبغي، وصفحة حجز يحجز عليها الناس موعدًا معك. مجانًا، وبلا تسجيل فيما لا يحتاج إليه.' },
+  },
+  {
+    slug: 'communication', category: 'Communication',
+    en: { name: 'Free communication tools', description: 'Browser-to-browser calls with no app and no account, and a personal link people can call you on. The audio and video go straight between the two devices.' },
+    ar: { name: 'أدوات تواصل مجانية', description: 'مكالمات من متصفح إلى متصفح بلا تطبيق وبلا حساب، ورابط شخصي يتصل بك الناس عليه. ويمرّ الصوت والصورة مباشرة بين الجهازين.' },
+  },
+]

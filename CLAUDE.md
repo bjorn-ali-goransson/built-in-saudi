@@ -146,6 +146,47 @@ leaving it is a bad trade. The combo is shown on the launcher button's title and
 as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
 not a feature.
 
+**A category is now a PAGE, not just an in-page jump** (`/{locale}/c/<slug>/`,
+`pages/CategoryPage.tsx`, slugs in `lib/categorySlug.ts`, copy in
+`i18n/seo.ts` `categorySeo`). The jump bar made a section reachable; it did not
+make one **addressable**. A category could not be linked, shared or landed on
+from a search engine, so "free PDF tools" — the shape of query people actually
+type — had no page on this site to answer it, only the home page, which lists
+all 207 tools and is therefore about nothing in particular. **15 categories × 2
+locales = 30 prerendered pages**, in the sitemap with the trailing slash, and
+the catalogue's section headings became links into them.
+
+Five decisions worth keeping:
+
+- **The slug table is written out, not derived.** `Saudi / Local` contains a
+  slash, which is a path separator; slugifying it gives `saudi-local`, from
+  which the original cannot be recovered by any rule. A table can be read.
+- **Each description is written per category.** Fifteen pages whose description
+  is "Free <X> tools" is fifteen pages carrying one description, and a search
+  engine treats that as one page. The spec asserts they are all distinct AND
+  that none is the site default — the failure the tool-registry check exists
+  for, in a new place.
+- **The prerender cannot import `liveTools`** (it pulls every React component
+  in through `lazyTool`), so categories are swept out of `src/tools/*/meta.ts`
+  the way `scripts/check-*.mjs` do it. A regex over source is a guess, so it is
+  **checked**: every id `seo.ts` calls live must be found by the sweep, and the
+  build fails naming the ones that were not. It fired on its first run, which is
+  how the `` in `id:` turned out to have been eaten (see below).
+- **Curated sections get no page.** Recommended, Duʿāʾ and Recently used cut
+  across the categories and are hand-picked, so a URL for one is a URL nobody
+  can keep meaningful. Their headings stay plain text, and there is a spec
+  asserting the link is absent.
+- **Every category links to every other one.** Fifteen pages that each link only
+  back to home are fifteen leaves; this makes the set a graph a crawler can walk
+  from any member.
+
+**The `` heredoc trap bit again, and the guard is what caught it.** Writing
+`/id: '…'/` through a bash heredoc puts a literal **0x08 backspace** in the
+file, so the regex matched nothing and the sweep found no categories at all.
+Because the derivation is checked rather than trusted, the build stopped and
+named 200 tools instead of quietly shipping 15 empty category pages. Write
+regexes with Write/Edit, not a heredoc.
+
 **Related tools** (`lib/relatedTools.ts`) is a short row at the foot of each
 tool page. The crawlable "More free tools" block already links to EVERY tool,
 which is right for a crawler and useless for a person — a list of 197 is the
