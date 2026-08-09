@@ -1,6 +1,47 @@
 import type { Tool } from '../tools/types'
-import { scoreTool, aboveFloor } from './fuzzy'
+import { scoreTool, aboveFloor, correctQuery, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
+
+/** Built once per tool list + locale; the vocabulary is a few thousand words. */
+const vocabCache = new WeakMap<Tool[], Map<Locale, Set<string>>>()
+
+function vocabFor(list: Tool[], locale: Locale): Set<string> {
+  let byLocale = vocabCache.get(list)
+  if (!byLocale) { byLocale = new Map(); vocabCache.set(list, byLocale) }
+  let v = byLocale.get(locale)
+  if (!v) {
+    v = vocabulary(list.map((tool) => {
+      const l = localizeTool(tool, locale)
+      return { name: tool.name, nameAr: l.name, tagline: `${l.tagline} ${tool.tagline}`, category: `${l.category} ${tool.category}`, keywords: tool.keywords }
+    }))
+    byLocale.set(locale, v)
+  }
+  return v
+}
+
+export interface Ranked {
+  tools: Tool[]
+  /** Set when nothing matched what was typed and a corrected spelling did. */
+  correctedTo?: string
+}
+
+/**
+ * As `rankTools`, but reporting a spelling correction when one was needed.
+ *
+ * The correction is a FALLBACK: it only runs when the normal path found nothing
+ * worth showing, so no query that works today can be re-ranked by it. Measured
+ * before it existed, 2 of 23 realistic mistypings returned an empty page.
+ */
+export function rankToolsWithCorrection(query: string, list: Tool[], locale: Locale): Ranked {
+  const tools = rankTools(query, list, locale)
+  if (tools.length || !query.trim()) return { tools }
+  const corrected = correctQuery(query, vocabFor(list, locale))
+  if (!corrected) return { tools }
+  const second = rankTools(corrected, list, locale)
+  // Silence beats a correction that also finds nothing — showing "results for
+  // <something else>" above an empty page is worse than the empty page.
+  return second.length ? { tools: second, correctedTo: corrected } : { tools }
+}
 
 /**
  * Rank a list of tools against a query, the way the UI does.

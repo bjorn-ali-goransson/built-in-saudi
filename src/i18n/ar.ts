@@ -50,6 +50,10 @@ export const ar: Dict = {
     dismiss: 'إغلاق الإشعار',
   },
 
+  search: {
+    correctedTo: (q: string) => `تُعرض نتائج «${q}»`,
+  },
+
   notFound: {
     code: '404',
     title: 'لا شيء هنا',

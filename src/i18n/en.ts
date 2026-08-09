@@ -50,6 +50,10 @@ export const en = {
     dismiss: 'Dismiss announcement',
   },
 
+  search: {
+    correctedTo: (q: string) => `Showing results for “${q}”`,
+  },
+
   notFound: {
     code: '404',
     title: 'Nothing here',

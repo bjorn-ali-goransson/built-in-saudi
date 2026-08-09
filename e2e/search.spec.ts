@@ -460,3 +460,51 @@ test('a converter and its inverse each win their own direction', async ({ page }
   await search(page, 'word to text')
   await expect(top(page)).toContainText(/Word to Text/i)
 })
+
+// --- Typos. Measured before this existed (`node evals/typoprobe.mjs`, 23
+// realistic mistypings of queries the benches already agree on): 74% still
+// found the right tool first and 2 returned NOTHING AT ALL. After: 78%, and 0
+// empty. The correction is a FALLBACK — it only runs when what was typed found
+// nothing — which is why all four benches are unchanged by construction.
+
+test('a one-letter slip finds the tool instead of an empty page', async ({ page }) => {
+  await search(page, 'tiemsheet')
+  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toContainText('timesheet')
+})
+
+test('a correctly spelled query is never second-guessed', async ({ page }) => {
+  // Correcting a word somebody spelled right is how a search box starts
+  // arguing with people, and it would also mean the fallback was not a fallback.
+  await search(page, 'timesheet')
+  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
+})
+
+test('gibberish still returns nothing rather than a nearest guess', async ({ page }) => {
+  // The correction is only shown when it FOUND something. "Showing results for
+  // <something else>" above an empty page is worse than the empty page.
+  await search(page, 'zzzzqqqq')
+  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
+  await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+})
+
+test('a short word is not "corrected" into a tool we happen to have', async ({ page }) => {
+  // Measured: at a four-character threshold the Arabic «قهوة» (coffee) — a query
+  // this site genuinely cannot serve — is one deletion from «قوة» (strength) and
+  // was answered with the password strength checker. Arabic words are short and
+  // dense, so one edit reaches a great many of them. Five characters removes
+  // that and costs no true correction.
+  await search(page, 'قهوة', 'ar')
+  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
+  await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+})
+
+test('the launcher corrects a typo the same way', async ({ page }) => {
+  // The two surfaces share one ranker precisely so they cannot drift.
+  await page.goto('/en/apps/qr-code')
+  await page.getByTestId('app-launcher').click()
+  await page.getByTestId('launcher-search').fill('tiemsheet')
+  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toBeVisible()
+})

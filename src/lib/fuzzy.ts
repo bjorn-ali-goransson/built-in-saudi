@@ -271,3 +271,104 @@ export function scoreTool(query: string, tool: Searchable): number {
   const coverage = matched / list.length
   return Math.max(whole * coverage, (sum / matched) * coverage * (0.75 + 0.25 * coverage))
 }
+
+/* ------------------------------------------------------------------------- *
+ * Typos
+ *
+ * The scorer is substring, subsequence and prefix work: it has no notion of a
+ * transposed pair or a dropped letter, and a search box sees those constantly.
+ *
+ * Measured before this existed (`node evals/typoprobe.mjs`, 23 realistic
+ * mistypings of queries the benches already agree on): **74% still found the
+ * right tool first, and 2 returned NOTHING AT ALL** — `calender` and
+ * `tiemsheet`, each one letter away from a tool we have. A search box that
+ * answers a one-letter slip with an empty page is a dead end.
+ *
+ * The correction is deliberately a FALLBACK, not a scoring change. It runs only
+ * when the normal path found nothing worth showing, so it is strictly additive:
+ * no query that works today can be re-ranked by it, which is why all four
+ * benches are unchanged by construction rather than by luck.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Damerau-Levenshtein, capped.
+ *
+ * Bounded at `max` and bailing out early: the vocabulary is a few thousand
+ * tokens and this runs per term, so an uncapped full-matrix distance would be
+ * the slowest thing in the search path for no benefit — anything further than
+ * two edits away is not a typo, it is a different word.
+ */
+export function editDistance(a: string, b: string, max = 2): number {
+  if (a === b) return 0
+  if (Math.abs(a.length - b.length) > max) return max + 1
+  let prev2: number[] = []
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i]
+    let best = i
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      let v = Math.min(row[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+      // The transposition case — `mrege` for `merge` is ONE mistake to a person
+      // and two to plain Levenshtein, and transposition is the commonest typo
+      // there is.
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        v = Math.min(v, prev2[j - 2] + cost)
+      }
+      row.push(v)
+      if (v < best) best = v
+    }
+    if (best > max) return max + 1
+    prev2 = prev
+    prev = row
+  }
+  return prev[b.length]
+}
+
+/** Every distinct word in a tool's searchable fields, for the correction pass. */
+export function vocabulary(tools: Searchable[]): Set<string> {
+  const out = new Set<string>()
+  const add = (s: string | undefined) => {
+    if (!s) return
+    for (const w of s.toLowerCase().split(/[^\p{L}\p{N}]+/u)) if (w.length > 2) out.add(w)
+  }
+  for (const t of tools) {
+    add(t.name); add(t.nameAr); add(t.tagline); add(t.category)
+    for (const k of t.keywords ?? []) add(k)
+  }
+  return out
+}
+
+/**
+ * Rewrite a query's unknown words to the nearest word the catalogue knows.
+ *
+ * A term already in the vocabulary is never touched — correcting a word
+ * somebody spelled right is how a search box starts arguing with people. One
+ * edit for a short word, two for a long one, because two edits on a five-letter
+ * word reaches half the dictionary.
+ *
+ * **Nothing shorter than five characters is corrected**, and that number was
+ * measured rather than picked. At four, the Arabic «قهوة» (coffee) — a query
+ * this site genuinely cannot serve — is one deletion from «قوة» (strength) and
+ * was answered with the password strength checker at 450. Arabic words are
+ * short and dense, so a single edit reaches a great many of them. At five, that
+ * false correction is gone and every true correction in `typoprobe` survives,
+ * because a real typo is nearly always in a longer word.
+ */
+export function correctQuery(query: string, vocab: Set<string>): string | null {
+  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+  let changed = false
+  const out = words.map((w) => {
+    if (w.length < 5 || vocab.has(w)) return w
+    const max = w.length >= 7 ? 2 : 1
+    let best: string | null = null
+    let bestD = max + 1
+    for (const v of vocab) {
+      const d = editDistance(w, v, max)
+      if (d < bestD) { bestD = d; best = v; if (d === 1) break }
+    }
+    if (best && bestD <= max) { changed = true; return best }
+    return w
+  })
+  return changed ? out.join(' ') : null
+}

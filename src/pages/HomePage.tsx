@@ -6,7 +6,7 @@ import { CategorySections, ToolGrid } from '../components/ToolCatalog'
 import { SectionNav } from '../components/SectionNav'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
-import { rankTools } from '../lib/searchTools'
+import { rankToolsWithCorrection } from '../lib/searchTools'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localePath } from '../i18n'
 
@@ -40,7 +40,8 @@ export function HomePage() {
   // The ranking itself lives in `lib/searchTools.ts`, shared with the launcher
   // and the 404 suggestions — the two catalogue surfaces are documented as
   // having to stay identical, and a copy is how they stop being.
-  const results = useMemo(() => rankTools(query, tools, locale), [query, locale])
+  const ranked = useMemo(() => rankToolsWithCorrection(query, tools, locale), [query, locale])
+  const results = ranked.tools
 
   const recent = useRecentTools()
   const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
@@ -84,7 +85,16 @@ export function HomePage() {
 
       {query.trim() ? (
         results.length > 0 ? (
-          <ToolGrid tools={results} indexOf={idx} />
+          <>
+            {/* Only ever shown when what was typed found nothing and a spelling
+                correction did — never over results for the literal query. */}
+            {ranked.correctedTo && (
+              <p className="mb-4 text-[0.9rem] text-ink-soft rtl:font-ar" data-testid="search-corrected">
+                {t.search.correctedTo(ranked.correctedTo)}
+              </p>
+            )}
+            <ToolGrid tools={results} indexOf={idx} />
+          </>
         ) : (
           <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
         )

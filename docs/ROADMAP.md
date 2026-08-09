@@ -1011,10 +1011,20 @@ Measured with `node evals/slugprobe.mjs` BEFORE building it — 92% correct top
 hit over 42 realistic slugs, 95% within three, 4 of 5 unanswerable slugs
 correctly silent.
 
-**Still open on discoverability:** the scorer has no edit distance, so a
-transposition (`pdf-mrege`) misses. Worth it only if the 404 suggestions turn
-out to matter; a bigram or trigram overlap on the tool id would cover it
-without touching the query scorer.
+~~**Still open on discoverability:** the scorer has no edit distance.~~ Added
+9 Aug 2026 as a fallback (`correctQuery`), measured: mistyped queries returning
+an empty page 2 -> 0, top-1 74% -> 78%, all four benches unchanged.
+
+**Still open:** the fallback fixes the empty page, not the mis-RANKED typo.
+`pdf mrege` still ranks `pdf-merge` seventh, because the query does return
+something and the fallback therefore never runs. Blending edit distance into
+scoring would reach those and risks every query that works today — it would need
+the same before/after treatment the description-field experiment got.
+
+**Second unreproduced load flake (9 Aug 2026):** `not-found.spec.ts`'s bad
+category slug case failed once inside a loaded batch and passed alone and on a
+full re-run of the same batch, so the message was never captured. Not diagnosed,
+and not attributed to the typo work — that path does not touch the 404 page.
 
 ### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
 

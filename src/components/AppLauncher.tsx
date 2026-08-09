@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
 import { useLocale, localePath } from '../i18n'
-import { rankTools } from '../lib/searchTools'
+import { rankToolsWithCorrection } from '../lib/searchTools'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
 import { SectionNav } from './SectionNav'
@@ -57,7 +57,8 @@ export function AppLauncher() {
   const recent = useRecentTools()
   const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
 
-  const results = useMemo(() => rankTools(query, liveTools, locale), [query, locale])
+  const ranked = useMemo(() => rankToolsWithCorrection(query, liveTools, locale), [query, locale])
+  const results = ranked.tools
 
   const navigate = useNavigate()
   const close = () => setOpen(false)
@@ -107,7 +108,14 @@ export function AppLauncher() {
           <div className="flex-1 overflow-y-auto wrap py-5" ref={scrollRef}>
             {query.trim() ? (
               results.length > 0 ? (
-                <ToolGrid tools={results} indexOf={idx} onNavigate={close} />
+                <>
+                  {ranked.correctedTo && (
+                    <p className="mb-4 text-[0.9rem] text-ink-soft rtl:font-ar" data-testid="search-corrected">
+                      {t.search.correctedTo(ranked.correctedTo)}
+                    </p>
+                  )}
+                  <ToolGrid tools={results} indexOf={idx} onNavigate={close} />
+                </>
               ) : (
                 <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
               )

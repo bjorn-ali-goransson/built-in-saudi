@@ -2281,6 +2281,44 @@ query is a semantic problem, and nothing the scorer computes separates it.** The
 probe found the spelling gap on its way past, which is the only reason it
 earned its place.
 
+**A one-letter slip used to return an empty page** (`node
+evals/typoprobe.mjs`). The scorer is substring, subsequence and prefix work — it
+has no notion of a transposed pair or a dropped letter, and a search box sees
+those constantly. Measured over 23 realistic mistypings of queries the benches
+already agree on:
+
+| | before | after |
+|---|---|---|
+| mistyped, right tool first | 74% | **78%** |
+| mistyped, **NOTHING returned** | **2** | **0** |
+| all four benches | 131/131, 49/50, 45/50, 41/41 | **unchanged** |
+
+`correctQuery` in `fuzzy.ts` rewrites a query's unknown words to the nearest
+word the catalogue knows, using a capped Damerau-Levenshtein — **Damerau
+matters**: `mrege` for `merge` is one mistake to a person and two to plain
+Levenshtein, and transposition is the commonest typo there is.
+
+Three properties that make it safe, all of them deliberate:
+
+- **It is a FALLBACK, not a scoring change.** It runs only when the normal path
+  found nothing worth showing, so no query that works today can be re-ranked by
+  it. That is why the benches are unchanged *by construction* rather than by
+  luck.
+- **A word already in the vocabulary is never touched.** Correcting a word
+  somebody spelled right is how a search box starts arguing with people.
+- **A correction that also finds nothing is discarded**, and the notice is only
+  shown when results were actually produced. "Showing results for ⟨something
+  else⟩" above an empty page is worse than the empty page.
+
+**The five-character minimum was measured, not picked.** At four, the Arabic
+«قهوة» (coffee) — a query this site genuinely cannot serve — is one deletion
+from «قوة» (strength), and the search answered it with the password strength
+checker at 450. Arabic words are short and dense, so a single edit reaches a
+great many of them. At five that is gone and every true correction survives,
+because a real typo is nearly always in a longer word. **Its own e2e caught it**
+— the documented property that an unanswerable query returns nothing had a
+frozen case, and the fallback broke it immediately.
+
 **Every tool must still win a search for its OWN NAME** (`node
 evals/ownname.mjs`, and `searchbench.mjs` prints it at the end so it is seen
 exactly when somebody is touching search). This is the general form of a defect
