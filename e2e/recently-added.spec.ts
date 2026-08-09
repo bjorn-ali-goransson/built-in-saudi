@@ -37,10 +37,16 @@ test('it holds tools from the newest date, not arbitrary ones', async ({ page })
 test('a recently added tool is NOT consumed from its category', async ({ page }) => {
   // Same rule as Recently used: both change on their own, and a catalogue that
   // reshuffles because of the calendar is worse than a repeated tile.
-  const one = (await page.goto('/en')) && dates.filter(([, d]) => d === newest)[0][0]
-  await expect(page.getByTestId('section-__new').getByTestId(`tool-${one}`)).toBeVisible()
+  await page.goto('/en')
+  // Read a tool the row is ACTUALLY showing rather than picking one from the
+  // date file: the row caps at six and keeps registry order within a date, so
+  // "the first of the newest batch" is not necessarily on screen. The first
+  // version of this assumed it was and broke the day a batch exceeded six.
+  const one = await page.getByTestId('section-__new').locator('[data-testid^="tool-"]').first()
+    .getAttribute('data-testid')
+  expect(one).toBeTruthy()
   // The same tool appears again further down, under its own category.
-  await expect(page.getByTestId(`tool-${one}`)).toHaveCount(2)
+  await expect(page.getByTestId(one!.replace('tool-', 'tool-'))).toHaveCount(2)
 })
 
 test('the row is reachable from the jump bar like any other section', async ({ page }) => {

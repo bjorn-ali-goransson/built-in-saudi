@@ -213,6 +213,7 @@ import { timesheetTool } from './timesheet/meta'
 import { exitReentryTool } from './exit-reentry/meta'
 import { iqamaFeesTool } from './iqama-fees/meta'
 import { electricityBillTool } from './electricity-bill/meta'
+import { acSizeTool } from './ac-size/meta'
 import { stopwatchTool } from './stopwatch/meta'
 import { admissionScoreTool } from './admission-score/meta'
 import { gpaCalculatorTool } from './gpa-calculator/meta'
@@ -394,6 +395,7 @@ export const tools: Tool[] = [
   pdfStampTool,
   invoiceGeneratorTool,
   electricityBillTool,
+  acSizeTool,
   quotationTool,
   certificateTool,
   prayerTimesTool,

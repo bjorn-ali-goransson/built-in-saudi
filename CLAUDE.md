@@ -1655,6 +1655,39 @@ Routes people actually drive (Riyadh→Makkah, Jeddah→Madinah…) are offered,
 because a trip calculator whose first act is to ask for a number nobody knows is
 a calculator nobody finishes.
 
+## Sizing an air conditioner for a 45°C summer (`ac-size`)
+
+Found by a web sweep of the home-improvement calculator market — 464 on one
+site — where AC sizing is a staple and **every one of them assumes a temperate
+climate**. The American rule of thumb is 20 BTU/h per square foot, about
+215 per m². The Saudi and Gulf sources all publish the same ladder — 12–16 m² →
+12,000 BTU/h, 16–22 → 18,000, 22–30 → 24,000, 30–40 → 30,000 — which works out
+at roughly **750 BTU/h per m², three times the temperate figure**. Corroborated
+across five sources (YORK KSA, Tamkeen, elecs.sa, TCL Gulf, LG Saudi) before
+being encoded, per the two-source rule.
+
+Three things beyond the arithmetic:
+
+- **It rounds UP to a size on sale**, because an undersized unit runs flat out
+  and never reaches the set point, which is the worse of the two failures.
+- **And then warns when rounding up went too far.** Oversizing is the mistake
+  people actually make, because bigger sounds safer: an oversized unit reaches
+  the set point fast and stops, so it never runs long enough to pull moisture
+  out of the air. The room ends up cold and clammy rather than comfortable and
+  the compressor wears from short-cycling — on the coast, where the humidity is,
+  that is the whole difference. There is a case for the warning NOT firing on a
+  close fit, without which the panel would be decoration.
+- **Tons and BTU are the same thing here**, sold under both names, and one ton
+  is 12,000 BTU/h — a unit of cooling with nothing to do with weight.
+
+**It renders no `<Disclaimer>`, deliberately.** It estimates neither money,
+health, an entitlement nor an official deadline, and the five kinds mean
+something precisely because they are not stretched to cover everything. The
+honest caveat — that a real answer is a load calculation an engineer does, and
+this is the arithmetic that tells you whether a quote is in the right range —
+is stated in its own words instead. It carries a SOURCES block and is badged
+**beta**, because the sizing bands are published guidance that can move.
+
 ## Electricity bill (`electricity-bill`)
 
 Residential tariff: **18 halalas/kWh up to 6,000 a month, 30 above**, plus a

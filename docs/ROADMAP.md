@@ -875,6 +875,19 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Web sweep #9, 9 August 2026 — home and property
+
+464 calculators on one site, and almost all of them commodity arithmetic. One
+had a real local angle:
+
+- **AC sizing** — SHIPPED as `ac-size`. Every incumbent assumes a temperate
+  climate and undersizes a Gulf room by about a factor of three.
+- **Paint, tile, flooring quantity** — pure geometry with no local variation, so
+  we would be the 465th. Skipped.
+- **Mortgage** — needs a rate, and the local interest is the REDF subsidy and
+  SAMA's rules rather than the amortisation formula. Would need the
+  corroboration treatment; a real candidate, but a bigger one than it looks.
+
 ### Re-measuring the browse depth (9 Aug 2026)
 
 The 7.4/9.6-screen figure that justified the jump bar was taken at 207 tools and

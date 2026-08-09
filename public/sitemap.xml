@@ -3291,4 +3291,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ovulation/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ovulation/"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/ac-size/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ac-size/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ac-size/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ac-size/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/ac-size/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/ac-size/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ac-size/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ac-size/"/>
+  </url>
 </urlset>

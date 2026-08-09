@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'ac-size',
+    en: { name: 'Air Conditioner Size Calculator', description: 'Work out the cooling a room needs here rather than in a temperate country — the rule of thumb the American calculators use is about a third of what a Gulf summer asks for. Adjusts for sun, top floor, ceiling height and occupants, converts tons to BTU, rounds to a size you can buy, and warns when that size will short-cycle instead of dehumidifying.' },
+    ar: { name: 'حاسبة مقاس المكيف', description: 'احسب التبريد الذي تحتاجه الغرفة هنا لا في بلد معتدل — فالقاعدة التي تستخدمها الحاسبات الأمريكية نحو ثلث ما يتطلبه صيف الخليج. تراعي الشمس والدور العلوي وارتفاع السقف وعدد الأشخاص، وتحوّل بين الطن ووحدات BTU، وتنبّه حين يزيد المقاس عن الحاجة.' },
+  },
+  {
     id: 'ovulation',
     en: { name: 'Ovulation Calculator', description: 'Find the fertile window from your last period and cycle length — and see why it is not what most calculators say. Ovulation is about fourteen days before the NEXT period, not fourteen after the last, and the days that matter are the five BEFORE it. Every date in the Hijri calendar as well as the Gregorian.' },
     ar: { name: 'حاسبة الإباضة', description: 'اعرفي نافذة الخصوبة من آخر دورة وطول دورتك — واعرفي لماذا تختلف عمّا تقوله معظم الحاسبات. فالإباضة قبل الدورة القادمة بنحو أربعة عشر يومًا لا بعد السابقة، والأيام التي تهمّ هي الخمسة السابقة لها. وكل تاريخ بالهجري كما بالميلادي.' },
