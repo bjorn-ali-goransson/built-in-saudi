@@ -882,9 +882,9 @@ the writer but **a Markdown parser**, which is now `src/lib/markdown.ts` and
 unlocks three tools rather than one:
 
 - **Markdown to Word** — SHIPPED as `markdown-docx`.
-- **Markdown to EPUB** — now only needs an EPUB writer over `lib/zip.ts`, whose
-  store-only entries are exactly what an EPUB `mimetype` entry requires. The
-  RTL Arabic EPUB remains the differentiator no incumbent offers.
+- ~~**Markdown to EPUB**~~ — SHIPPED as `markdown-epub` (9 Aug 2026), including
+  the RTL Arabic no incumbent offers: page-progression-direction as well as
+  `dir`, so the pages turn the right way and not only the text.
 - **Markdown to PDF** — `lib/printPdf.ts` already composes a page on a canvas
   and wraps it in a PDF, which is how the worksheet and label tools print
   Arabic. The blocks are the missing input.

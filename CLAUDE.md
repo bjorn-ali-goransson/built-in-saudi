@@ -516,6 +516,57 @@ off the spec. Re-verify rather than trusting this list if the behaviour changes:
 a real one would fetch hundreds of megabytes), including the streaming-throws and
 create-fails-once quirks, and asserts the typed text never appears in a request.
 
+## Writing an EPUB (`lib/writeEpub.ts`, `markdown-epub`)
+
+The site could READ an EPUB (`epub-text`) and not write one, and writing one
+turned out to need nothing new: **`lib/zip.ts` writes store-only archives, which
+is exactly what an EPUB's `mimetype` entry requires**, and `lib/markdown.ts`
+supplies the structure. The same pairing that made `writeDocx.ts` cheap — the
+recorded payoff of building the parser rather than a one-off converter.
+
+Four things the format demands, each of which otherwise produces a file a reader
+silently refuses rather than explaining:
+
+- **`mimetype` must be the FIRST entry and stored**, uncompressed — that is how
+  a reader identifies the file without inflating anything. `zipStore` stores
+  everything, so only the ordering is on us, and the spec asserts it by reading
+  the first local header off the bytes.
+- **`META-INF/container.xml` is the one path the spec fixes**; it names where
+  the package document actually is.
+- **Every spine item must be in the manifest**, with matching ids. A chapter in
+  one and not the other is a chapter that does not exist.
+- **EPUB 3 wants a nav document** with `epub:type="toc"`, or the book opens with
+  no table of contents at all — which on a phone is the navigation gone.
+
+Two product decisions:
+
+- **Chapters split at the SHALLOWEST heading the document uses**, not at a fixed
+  `#`. A manuscript written entirely in `##` still becomes a book with chapters,
+  where a `#`-only rule gives one enormous chapter and an empty contents. Text
+  before the first heading is kept as its own chapter rather than dropped —
+  losing content silently is the failure that matters in a converter.
+- **RTL is set on the package AND on every page.** `page-progression-direction`
+  is what turns the pages the right way; `dir` is what runs the text the right
+  way. Setting only one gives a book that reads correctly and turns backwards,
+  which is the half-done Arabic support the generators ship. There is a spec for
+  each, and one asserting an ENGLISH book does NOT claim RTL — without it, both
+  pass against a writer that hard-codes it.
+
+Verified the same three ways as the Word writer: structure off the **raw
+bytes**, formatting grepped in the stored XML (asserting `<strong>` present and
+`**bold**` absent), and only then a round trip through **`epub-text`**, a
+separate hand-written reader, which recovers the title, the author and the
+chapters in spine order.
+
+**A throwaway probe reported a defect the site did not have.** Checking whether
+the new tool stole `epub` from `epub-text`, a quick script iterated the tools in
+IMPORT order while the UI iterates the exported ARRAY — and ties fall through to
+catalogue order by design. It reported `ebook` going to the reader; faithfully
+ordered, it goes to the maker, exactly as the documented rule says. The mirror
+of the `relatedcheck` lesson: **an unfaithful measurement invents defects as
+readily as it hides them, and `evals/searchbench.mjs` already gets this right —
+use it rather than writing a second loader.**
+
 ## Writing a Word document (`lib/markdown.ts` + `lib/writeDocx.ts`, `markdown-docx`)
 
 A code sweep found that **the site could already write a real `.docx` and

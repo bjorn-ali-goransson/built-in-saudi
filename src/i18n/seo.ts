@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'markdown-epub',
+    en: { name: 'Markdown to EPUB', description: 'Turn Markdown into a real EPUB you can read on a Kindle, a phone or any e-reader — chapters split at your headings, a working table of contents, and your formatting carried across. Arabic books are written right-to-left properly: the text direction and the page-turn direction both. Built in your browser, so an unpublished manuscript is never uploaded.' },
+    ar: { name: 'ماركداون إلى كتاب EPUB', description: 'حوّل ماركداون إلى كتاب EPUB حقيقي تقرؤه على الكيندل أو الجوال أو أي قارئ — تُقسّم الفصول عند عناوينك، مع فهرس يعمل، وينتقل تنسيقك كما هو. وتُكتب الكتب العربية من اليمين إلى اليسار كما ينبغي: اتجاه النص واتجاه تقليب الصفحات معًا. يُبنى في متصفحك، فلا تُرفع مخطوطة غير منشورة.' },
+  },
+  {
     id: 'word-search',
     en: { name: 'Word Search Maker', description: 'Make a printable word search from your own list, in English or Arabic, with an answer key on a second page. Arabic works properly: alef in all its forms counts as one letter and words run right to left. Every sheet carries a seed, so reprinting gives you the same puzzle. Drawn in your browser — the word list is never uploaded.' },
     ar: { name: 'صانع البحث عن الكلمات', description: 'اصنع لعبة البحث عن الكلمات للطباعة من قائمتك، بالعربية أو الإنجليزية، مع ورقة حلّ في صفحة ثانية. والعربية تعمل كما ينبغي: فالألف بكل صورها حرف واحد، وتُقرأ الكلمات من اليمين إلى اليسار. وتحمل كل ورقة رمزًا، فإعادة الطباعة تعطيك اللغز نفسه. يُرسم في متصفحك — ولا تُرفع قائمة الكلمات أبدًا.' },
