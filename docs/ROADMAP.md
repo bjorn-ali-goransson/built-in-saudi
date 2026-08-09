@@ -875,6 +875,21 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Web sweep #6, 9 August 2026 — the automotive calculators
+
+A whole cottage industry (CalculatorCove, CarCalculator, Numeraty, WiserWork,
+AutoCalcHub, Calculover) plus several Arabic ones. Against our catalogue:
+
+- **Fuel / trip cost** — SHIPPED as `fuel-cost`, with the unit conversion and
+  the 95-vs-91 answer the incumbents leave out.
+- **Car loan / lease vs buy** — needs a rate the user must supply anyway, and
+  `early-settlement` already owns the SAMA rule that makes the local version
+  interesting. Low value.
+- **Depreciation, EV charging cost** — both need market data we would have to
+  invent or fetch. Out.
+- **Tyre size comparison** — pure arithmetic on a sidewall code, genuinely
+  unbuilt, and small. A reasonable candidate next time.
+
 ### Web sweep #5, 9 August 2026 — university students
 
 Every student-tools site publishes the same handful. Against our catalogue:

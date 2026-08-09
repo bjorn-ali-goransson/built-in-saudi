@@ -1468,6 +1468,42 @@ who owes it; do not average them into a number that is nobody's.**
 Carries an `official` Disclaimer which names the levy as the thing it will not
 compute, and is in `e2e/disclaimers.spec.ts`.
 
+## Fuel for a trip, and whether 95 is worth it (`fuel-cost`)
+
+Found by a web sweep of the automotive-calculator market — fuel cost is one of
+its staples and several Arabic sites already publish one — so the question was
+what ours does that theirs does not. Two things:
+
+- **Nobody agrees what "consumption" means.** A dashboard here shows **km/L**, a
+  spec sheet shows **L/100 km**, and an imported car shows **MPG** — in two
+  gallons that differ by a fifth. The incumbents take L/100 km and leave the
+  conversion to the driver, which is where the arithmetic goes wrong before it
+  starts. All four are accepted, and the L/100 km the sum actually used is shown
+  rather than merely applied.
+- **"Is 95 worth it?" is the question people have at the pump**, and no
+  calculator answers it. It is decidable: 95 costs **6.9%** more per litre, so
+  it pays for itself only if the car goes at least 6.9% further on a litre.
+  Most engines built for 91 gain nothing from a higher octane — they do not
+  advance the timing to use it — and a car whose manual REQUIRES 95 is not
+  choosing. The tool says all three things instead of implying an answer.
+
+**The Imperial gallon caught me out, and the test was wrong, not the code.** The
+first assertion had it that the same MPG figure on the bigger gallon is *better*
+economy. It is worse: 30 miles out of a larger gallon is less distance per litre,
+so it is **more** litres per 100 km, by about a fifth. Third time now that a
+failing assertion turned out to be my arithmetic rather than the product's.
+
+Prices are the published regulated retail figures — **91 at SAR 2.18/L, 95 at
+2.33** — corroborated across two independent sources before being encoded, and
+they are **editable defaults, not answers**. Diesel is deliberately absent: no
+figure for it was corroborated, and printing one nobody verified is the mistake
+`iqama-fees` records. SOURCES block naming Aramco, a `financial` Disclaimer, and
+badged **beta**, because the prices are reviewed periodically.
+
+Routes people actually drive (Riyadh→Makkah, Jeddah→Madinah…) are offered,
+because a trip calculator whose first act is to ask for a number nobody knows is
+a calculator nobody finishes.
+
 ## Electricity bill (`electricity-bill`)
 
 Residential tariff: **18 halalas/kWh up to 6,000 a month, 30 above**, plus a

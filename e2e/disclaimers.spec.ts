@@ -28,6 +28,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'leave-overtime', kind: 'legal' },
   { id: 'timesheet', kind: 'legal' },
   { id: 'gpa-calculator', kind: 'official' },
+  { id: 'fuel-cost', kind: 'financial' },
   { id: 'exit-reentry', kind: 'official' },
   { id: 'iqama-fees', kind: 'official' },
   { id: 'electricity-bill', kind: 'financial' },

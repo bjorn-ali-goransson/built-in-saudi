@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'fuel-cost',
+    en: { name: 'Fuel Cost Calculator', description: 'Work out the fuel for a trip in whatever unit your car shows — km per litre off the dashboard, litres per 100 km off the spec sheet, or miles per gallon in either of the two gallons that differ by a fifth. Pick a route or type a distance, split it between passengers, and see whether 95 is worth its extra over 91.' },
+    ar: { name: 'حاسبة تكلفة الوقود', description: 'احسب وقود رحلتك بالوحدة التي تعرضها سيارتك — كم لكل لتر من لوحة العدادات، أو لتر لكل ١٠٠ كم من النشرة الفنية. اختر رحلة أو اكتب المسافة، وقسّمها على الركاب، واعرف هل يستحق ٩٥ زيادته على ٩١.' },
+  },
+  {
     id: 'gpa-calculator',
     en: { name: 'GPA Calculator', description: 'Work out a GPA course by course on the Saudi 5.00 scale or on 4.00, with the overall classification and your cumulative average — and convert between the scales grade by grade rather than with the shortcut every other site uses. Your marks stay in your browser.' },
     ar: { name: 'حاسبة المعدل التراكمي', description: 'احسب معدلك مقررًا مقررًا على مقياس ٥٫٠٠ السعودي أو على ٤٫٠٠، مع التقدير العام والمعدل التراكمي — وحوّل بين المقياسين تقديرًا بتقدير لا بالمعادلة التي تستخدمها بقية المواقع. وتبقى درجاتك في متصفحك.' },
