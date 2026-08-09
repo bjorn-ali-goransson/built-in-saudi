@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Stack, Button, Spinner } from '../../components/ui'
+import { Stack, Button, Spinner, PdfFailureNote } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import SignaturePad from './SignaturePad'
 import type { SignRequest, SignResponse } from './sign.worker'
@@ -49,7 +50,7 @@ export default function PdfSignTool() {
   const [placements, setPlacements] = useState<Placement[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState<PdfFailure | ''>('')
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
 
   const pageBoxRef = useRef<HTMLDivElement>(null)
@@ -86,14 +87,20 @@ export default function PdfSignTool() {
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
   async function onFile(f: File | null | undefined) {
-    if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
+    if (!f) return
+    // NOT gated on the MIME type or the extension. A bare `return` on a wrong
+    // pick is the dead-UI failure this repo already documents for image intake
+    // (#225): nothing happens and nothing says why. And the gate is wrong on
+    // its own terms — Android hands over files with an empty MIME, so a real
+    // PDF was silently discarded. Let the library decide and report what it
+    // said.
     setBusy(true); setErr(''); setOut(null); setPlacements([]); setSel(null); setPi(0)
     try {
       const { renderPdf } = await import('../../lib/pdfRender')
       const rendered = await renderPdf(await f.arrayBuffer())
       setFile(f); setPages(rendered)
-    } catch {
-      setErr(s.locked); setFile(null); setPages(null)
+    } catch (e) {
+      setErr(pdfFailure(e)); setFile(null); setPages(null)
     } finally { setBusy(false) }
   }
 
@@ -207,7 +214,9 @@ export default function PdfSignTool() {
       if (e.data.id !== reqRef.current) return
       worker.removeEventListener('message', onMessage)
       setBusy(false)
-      if (!e.data.blob) { setErr(s.locked); return }
+      // 'unreadable' rather than the sniff: the file already loaded once to
+      // get here, so encryption cannot be the reason this write failed.
+      if (!e.data.blob) { setErr('unreadable'); return }
       const blob = e.data.blob
       setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
     }
@@ -258,7 +267,7 @@ export default function PdfSignTool() {
             <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
           </button>
         )}
-        {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="sign-err">{err}</p>}
+        {err && <div data-testid="sign-err"><PdfFailureNote why={err} locale={locale} /></div>}
 
         {pages && (
           <div className="flex flex-col gap-3">

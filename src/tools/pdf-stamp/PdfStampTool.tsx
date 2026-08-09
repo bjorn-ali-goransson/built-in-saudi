@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Button, Input, Select, Stack, Spinner, FileError, Check, Panel } from '../../components/ui'
+import { Button, Input, Select, Stack, Spinner, Check, Panel, PdfFailureNote } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { DEFAULTS, formatNumber, type Corner, type NumberFormat, type StampOptions } from './stamp'
 
@@ -11,7 +12,6 @@ const STR = {
   en: {
     pick: 'Choose a PDF', another: 'Choose another', working: 'Stamping…',
     hint: 'Add page numbers, a header or footer, or a watermark — without flattening the document, so the text underneath stays searchable and selectable.',
-    failed: 'That file could not be read as a PDF.',
     numbers: 'Add page numbers', format: 'Format', position: 'Position',
     startAt: 'Start numbering on page', firstNumber: 'and call that page',
     startHint: 'A title page usually is not page 1 — set both so the printed number matches the contents.',
@@ -33,7 +33,6 @@ const STR = {
   ar: {
     pick: 'اختر ملف PDF', another: 'اختر ملفًا آخر', working: 'جارٍ الختم…',
     hint: 'أضف أرقام صفحات أو ترويسة أو تذييلًا أو علامة مائية — دون تسطيح المستند، فيبقى النص تحتها قابلًا للبحث والتحديد.',
-    failed: 'تعذّرت قراءة هذا الملف كـPDF.',
     numbers: 'أضف أرقام الصفحات', format: 'الصيغة', position: 'الموضع',
     startAt: 'ابدأ الترقيم من الصفحة', firstNumber: 'واعتبرها الصفحة',
     startHint: 'صفحة الغلاف ليست عادةً الصفحة ١ — اضبط الاثنين ليطابق الرقم المطبوع المحتوى.',
@@ -60,7 +59,7 @@ export default function PdfStampTool() {
   const [file, setFile] = useState<File | null>(null)
   const [o, setO] = useState<StampOptions>(DEFAULTS)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<PdfFailure | ''>('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => () => setWorkInProgress('pdf-stamp', false), [])
@@ -82,8 +81,8 @@ export default function PdfStampTool() {
       const a = document.createElement('a')
       a.href = url; a.download = `${file.name.replace(/\.pdf$/i, '')}-stamped.pdf`; a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch {
-      setError(s.failed)
+    } catch (e) {
+      setError(pdfFailure(e))
     } finally { setBusy(false) }
   }
 
@@ -99,7 +98,7 @@ export default function PdfStampTool() {
         {busy && <Spinner className="size-5" />}
       </div>
 
-      {error && <FileError message={error} />}
+      {error && <div><PdfFailureNote why={error} locale={locale} /></div>}
       {!file && !error && <p className="text-ink-faint text-[0.95rem] rtl:font-ar">{s.hint}</p>}
 
       <Check>

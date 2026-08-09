@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon, InfoIcon, TrashIcon } from '../../components/icons'
-import { Stack, Button, Spinner } from '../../components/ui'
+import { Stack, Button, Spinner, PdfFailureNote } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import type { PageContent, EditObject, ImgXf } from './contentStream'
 import type { EditResponse } from './edit.worker'
@@ -48,7 +49,7 @@ export default function PdfEditTool() {
   const [sel, setSel] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState<PdfFailure | ''>('')
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
   const lastSize = useRef(14)
   const pageBoxRef = useRef<HTMLDivElement>(null)
@@ -90,7 +91,13 @@ export default function PdfEditTool() {
   useEffect(() => () => { workerRef.current?.terminate() }, [])
 
   async function onFile(f: File | null | undefined) {
-    if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
+    if (!f) return
+    // NOT gated on the MIME type or the extension. A bare `return` on a wrong
+    // pick is the dead-UI failure this repo already documents for image intake
+    // (#225): nothing happens and nothing says why. And the gate is wrong on
+    // its own terms — Android hands over files with an empty MIME, so a real
+    // PDF was silently discarded. Let the library decide and report what it
+    // said.
     setBusy(true); setErr(''); setOut(null); setDeleted(new Set()); setXf(new Map()); setTexts([]); setSel(null); setPi(0); clips.current = new Map()
     try {
       const { renderPdf } = await import('../../lib/pdfRender')
@@ -101,8 +108,8 @@ export default function PdfEditTool() {
       const pcPages = loaded.op === 'load' ? loaded.pages : null
       if (!pcPages) throw new Error('unreadable')
       setFile(f); setPages(rendered); setPc(pcPages); covers.current = new Map()
-    } catch {
-      setErr(s.locked); setFile(null); setPages(null); setPc(null)
+    } catch (e) {
+      setErr(pdfFailure(e)); setFile(null); setPages(null); setPc(null)
     } finally { setBusy(false) }
   }
 
@@ -315,7 +322,9 @@ export default function PdfEditTool() {
     try {
       const res = await workerCall({ op: 'save', file, pc, deleted, xf, texts })
       const blob = res.op === 'save' ? res.blob : null
-      if (!blob) { setErr(s.locked); return }
+      // 'unreadable' rather than the sniff: the file already loaded once to
+      // get here, so encryption cannot be the reason this write failed.
+      if (!blob) { setErr('unreadable'); return }
       const url = URL.createObjectURL(blob)
       setOut((p) => { if (p) URL.revokeObjectURL(p.url); return { url, size: blob.size } })
       saveBlob(url) // download in the same click
@@ -334,7 +343,7 @@ export default function PdfEditTool() {
           <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
         </button>
       )}
-      {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="edit-err">{err}</p>}
+      {err && <div data-testid="edit-err"><PdfFailureNote why={err} locale={locale} /></div>}
 
       {pages && pc && (
         <div className="flex flex-col gap-3">

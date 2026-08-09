@@ -1708,6 +1708,39 @@ The e2e drives the locked fixture AND a PNG through `pdf-organise`, since a
 guard that only ever sees a locked file cannot tell "names the lock" from "calls
 everything locked", which is the bug it exists to prevent.
 
+**All seven remaining pdf-lib tools now say the same thing, from one place**
+(`src/lib/pdfFailure.ts` + `components/ui/PdfFailureNote.tsx`). They had drifted
+into two opposite wrong answers: `pdf-fill`, `pdf-compress` and `pdf-edit`
+reported EVERY failure as "This PDF is locked / encrypted", so a damaged file
+was blamed on a password it does not have; `pdf-stamp`, `pdf-booklet` and
+`pdf-redact` reported every failure as "could not be read as a PDF", so a
+genuinely locked file got no reason and nowhere to go. Both halves are the same
+bug — a guess where an answer was available — and both are now one component,
+because the wording IS the substance here, exactly as with `PdfPassword.tsx`.
+
+Three things that only came out because the spec fed the real fixture to all
+seven rather than to the one it was written against:
+
+- **`pdfFailure` was itself the bug it exists to prevent.** It tested pdf-lib's
+  message for "encrypted" — and several of these tools read with **pdf.js**
+  first (thumbnails, form fields, page images), which throws a
+  `PasswordException` whose message is "No password given". No such word, so a
+  locked file came back `unreadable`. It now checks `e.name` too. **Two
+  libraries answer this question; a sniff that knows one of them is a guess.**
+- **Four tools returned silently on a wrong pick** —
+  `if (!f || !(f.type === 'application/pdf' || …endsWith('.pdf'))) return`.
+  Nothing happened and nothing said why, which is the dead-UI failure this file
+  already documents for image intake (#225); and the gate is wrong on its own
+  terms, since Android hands over files with an empty MIME. Gone: the library
+  decides and the reason is reported.
+- **A tool that validates at the ACTION, not at the pick, needs driving to it.**
+  `pdf-stamp` accepts any file and only opens it when stamping, so the spec
+  clicks apply. Worth knowing before assuming a file input is where a PDF tool
+  finds out.
+
+Verified both ways for every tool: a locked PDF yields `data-why="encrypted"`
+plus the route, and a PNG yields `unreadable` and NO route.
+
 ## OCR (`image-to-text`, `pdf-ocr`)
 
 The one tool with a genuinely heavy dependency — `tesseract.js`, because there is

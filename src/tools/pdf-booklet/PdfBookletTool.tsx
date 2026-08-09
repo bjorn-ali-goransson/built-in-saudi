@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Button, Select, Stack, Spinner, FileError, Panel, Check } from '../../components/ui'
+import { Button, Select, Stack, Spinner, Panel, Check, PdfFailureNote } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { bookletOrder, type Mode } from './impose'
 
@@ -9,7 +10,6 @@ const STR = {
   en: {
     pick: 'Choose a PDF', another: 'Choose another', reading: 'Reading…', working: 'Imposing…',
     hint: 'Rearrange the pages so a printed stack folds into a readable booklet — or fit two or four pages on a sheet to save paper.',
-    failed: 'That file could not be read as a PDF.',
     mode: 'Layout', booklet: 'Booklet (fold and staple)', nup2: '2 pages per sheet', nup4: '4 pages per sheet',
     rtl: 'Right-to-left binding (Arabic)',
     marks: 'Show the fold or cut line',
@@ -25,7 +25,6 @@ const STR = {
   ar: {
     pick: 'اختر ملف PDF', another: 'اختر ملفًا آخر', reading: 'جارٍ القراءة…', working: 'جارٍ الترتيب…',
     hint: 'أعد ترتيب الصفحات لتُطوى المطبوعات إلى كتيّب مقروء — أو ضع صفحتين أو أربعًا في الورقة لتوفير الورق.',
-    failed: 'تعذّرت قراءة هذا الملف كـPDF.',
     mode: 'التخطيط', booklet: 'كتيّب (طيّ وتدبيس)', nup2: 'صفحتان في الورقة', nup4: 'أربع صفحات في الورقة',
     rtl: 'تجليد من اليمين (عربي)',
     marks: 'أظهر خط الطي أو القص',
@@ -50,7 +49,7 @@ export default function PdfBookletTool() {
   const [marks, setMarks] = useState(true)
   const [gutter, setGutter] = useState(0)
   const [busy, setBusy] = useState<'' | 'reading' | 'working'>('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState<PdfFailure | ''>('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => () => setWorkInProgress('pdf-booklet', false), [])
@@ -63,8 +62,8 @@ export default function PdfBookletTool() {
       setCount(await pageCount(f))
       setFile(f)
       setWorkInProgress('pdf-booklet', true)
-    } catch {
-      setError(s.failed); setFile(null); setCount(0)
+    } catch (e) {
+      setError(pdfFailure(e)); setFile(null); setCount(0)
     } finally { setBusy('') }
   }
 
@@ -78,8 +77,8 @@ export default function PdfBookletTool() {
       const a = document.createElement('a')
       a.href = url; a.download = `${file.name.replace(/\.pdf$/i, '')}-${mode}.pdf`; a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch {
-      setError(s.failed)
+    } catch (e) {
+      setError(pdfFailure(e))
     } finally { setBusy('') }
   }
 
@@ -101,7 +100,7 @@ export default function PdfBookletTool() {
         {busy && <span className="text-[0.9rem] text-ink-faint rtl:font-ar">{busy === 'reading' ? s.reading : s.working}</span>}
       </div>
 
-      {error && <FileError message={error} />}
+      {error && <div><PdfFailureNote why={error} locale={locale} /></div>}
       {!file && !busy && !error && <p className="text-ink-faint text-[0.95rem] rtl:font-ar">{s.hint}</p>}
 
       <div className="flex flex-wrap items-end gap-3">

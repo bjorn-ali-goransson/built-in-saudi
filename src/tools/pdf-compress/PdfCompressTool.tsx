@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Stack, Button, Spinner, Seg, SegButton } from '../../components/ui'
+import { Stack, Button, Spinner, Seg, SegButton, PdfFailureNote } from '../../components/ui'
 import { LEVELS, IMG_LEVELS, type LevelKey } from './compress'
 
 type Mode = 'images' | 'pages'
 
 const STR = {
   en: {
+    privacy: 'Compressed on your device — your PDF is never uploaded.',
     drop: 'Drop a PDF, or tap to choose', reading: 'Reading…', pages: 'pages', original: 'Original',
     modeImages: 'Keep text', modePages: 'Smallest', level: 'Compression',
     strong: 'Smaller file', balanced: 'Balanced', light: 'Better quality',
@@ -16,9 +18,9 @@ const STR = {
     compress: 'Compress PDF', working: 'Compressing', download: 'Download compressed PDF', again: 'Compress another',
     saved: 'saved', bigger: 'Already efficient — the compressed copy isn’t smaller. Try another level, or keep the original.',
     noImages: 'No recompressible JPEG images found. Switch to “Smallest” to re-render the pages instead.',
-    locked: 'This PDF is locked / encrypted.', privacy: 'Compressed on your device — your PDF is never uploaded.',
   },
   ar: {
+    privacy: 'يُضغط على جهازك — لا يُرفع ملفك أبدًا.',
     drop: 'أفلت ملف PDF أو اضغط للاختيار', reading: 'جارٍ القراءة…', pages: 'صفحة', original: 'الأصلي',
     modeImages: 'إبقاء النص', modePages: 'الأصغر', level: 'الضغط',
     strong: 'ملف أصغر', balanced: 'متوازن', light: 'جودة أعلى',
@@ -27,7 +29,6 @@ const STR = {
     compress: 'ضغط PDF', working: 'جارٍ الضغط', download: 'تنزيل الملف المضغوط', again: 'ضغط ملف آخر',
     saved: 'توفير', bigger: 'الملف فعّال أصلًا — النسخة المضغوطة ليست أصغر. جرّب مستوى آخر أو احتفظ بالأصل.',
     noImages: 'لا توجد صور JPEG قابلة لإعادة الضغط. بدّل إلى «الأصغر» لإعادة رسم الصفحات.',
-    locked: 'هذا الملف مقفل / مشفّر.', privacy: 'يُضغط على جهازك — لا يُرفع ملفك أبدًا.',
   },
 }
 
@@ -42,21 +43,27 @@ export default function PdfCompressTool() {
   const [level, setLevel] = useState<LevelKey>('balanced')
   const [busy, setBusy] = useState(false)
   const [prog, setProg] = useState<{ done: number; total: number } | null>(null)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState<PdfFailure | ''>('')
   const [hint, setHint] = useState('')
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
 
   const reset = (keepFile: boolean) => { setOut(null); setErr(''); setHint(''); if (!keepFile) { setFile(null); setPageCount(null) } }
 
   async function onFile(f: File | null | undefined) {
-    if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
+    if (!f) return
+    // NOT gated on the MIME type or the extension. A bare `return` on a wrong
+    // pick is the dead-UI failure this repo already documents for image intake
+    // (#225): nothing happens and nothing says why. And the gate is wrong on
+    // its own terms — Android hands over files with an empty MIME, so a real
+    // PDF was silently discarded. Let the library decide and report what it
+    // said.
     setBusy(true); reset(false)
     try {
       const { PDFDocument } = await import('pdf-lib')
       const doc = await PDFDocument.load(await f.arrayBuffer(), { updateMetadata: false })
       setFile(f); setPageCount(doc.getPageCount())
-    } catch {
-      setErr(s.locked); setFile(null)
+    } catch (e) {
+      setErr(pdfFailure(e)); setFile(null)
     } finally { setBusy(false) }
   }
 
@@ -71,8 +78,8 @@ export default function PdfCompressTool() {
         : await compressPdf(file, LEVELS[level], onP)
       if (!blob) { setHint(s.noImages); return }
       setOut((p) => { if (p) URL.revokeObjectURL(p.url); return { url: URL.createObjectURL(blob), size: blob.size } })
-    } catch {
-      setErr(s.locked)
+    } catch (e) {
+      setErr(pdfFailure(e))
     } finally { setBusy(false); setProg(null) }
   }
 
@@ -88,7 +95,7 @@ export default function PdfCompressTool() {
           <input id="cmp-file" type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
         </button>
       )}
-      {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="cmp-err">{err}</p>}
+      {err && <div data-testid="cmp-err"><PdfFailureNote why={err} locale={locale} /></div>}
 
       {file && (
         <div className="flex flex-col gap-4">

@@ -822,10 +822,12 @@ Still open, and still needing a key, in this order:
   because it renders thumbnails before pdf-lib is involved — and it deliberately
   does not offer to take the password, since pdf-lib still could not write the
   result and the offer would fail at save.
-- **Still open:** `pdf-stamp`, `pdf-booklet`, `pdf-redact`, `pdf-fill`,
-  `pdf-sign` and `pdf-compress` load pdf-lib directly rather than through
-  `PdfOps`, so they never see `why` at all. Six tools, one shared fix: route the
-  load through `PdfOps` or lift the message-sniff into a helper both can call.
+- ~~**Six tools load pdf-lib directly and never see `why`.**~~ Done (9 Aug
+  2026), and it was seven with `pdf-edit`. The sniff lifted to
+  `src/lib/pdfFailure.ts` and the wording to `components/ui/PdfFailureNote.tsx`;
+  the worker imports the same helper, so the two cannot disagree. Writing the
+  spec found that the helper knew about pdf-lib and not pdf.js, and that four
+  tools discarded a wrongly-picked file in silence.
 - ~~**`csv-json` carries its own private `parseCsv`.**~~ Fixed — it was
   mishandling a BOM and assuming a comma.
 

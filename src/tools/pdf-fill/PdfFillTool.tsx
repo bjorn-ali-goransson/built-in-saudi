@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon } from '../../components/icons'
-import { Stack, Button, Spinner, Input, Textarea, Select, Check, Seg, SegButton } from '../../components/ui'
+import { Stack, Button, Spinner, Input, Textarea, Select, Check, Seg, SegButton, PdfFailureNote } from '../../components/ui'
 import type { RenderedPage } from '../../lib/pdfRender'
 import { fieldLabel, type FormField, type FormScan } from './fields'
 
@@ -10,21 +11,21 @@ type TextBox = { id: string; page: number; x: number; y: number; text: string; s
 
 const STR = {
   en: {
+    typeHere: 'Type here', choose: 'Choose…',
     drop: 'Drop a PDF form, or tap to choose', reading: 'Reading form…',
     viewForm: 'As a form', viewPage: 'On the page', page: 'Page', of: 'of', flatten: 'Lock fields (flatten)',
     noFields: 'No fillable fields found — tap anywhere on the page to add a text box.', addNote: 'Tap the page to add text · drag to move',
     fieldsFound: (n: number) => `${n} field${n === 1 ? '' : 's'} found`, required: 'required',
     del: 'Remove', size: 'Size', done: 'Download filled PDF', working: 'Preparing…', another: 'Fill another',
-    locked: 'This PDF is locked / encrypted.', typeHere: 'Type here', choose: 'Choose…',
     privacy: 'Filled on your device — your PDF is never uploaded.',
   },
   ar: {
+    typeHere: 'اكتب هنا', choose: 'اختر…',
     drop: 'أفلت نموذج PDF أو اضغط للاختيار', reading: 'جارٍ قراءة النموذج…',
     viewForm: 'كنموذج', viewPage: 'على الصفحة', page: 'صفحة', of: 'من', flatten: 'تثبيت الحقول (تسطيح)',
     noFields: 'لم يُعثر على حقول قابلة للتعبئة — اضغط في أي مكان على الصفحة لإضافة مربع نص.', addNote: 'اضغط الصفحة لإضافة نص · اسحب للتحريك',
     fieldsFound: (n: number) => `عُثر على ${n} حقل`, required: 'مطلوب',
     del: 'إزالة', size: 'الحجم', done: 'تنزيل PDF المعبّأ', working: 'جارٍ التحضير…', another: 'عبّئ آخر',
-    locked: 'هذا الملف مقفل / مشفّر.', typeHere: 'اكتب هنا', choose: 'اختر…',
     privacy: 'يُعبّأ على جهازك — لا يُرفع ملفك أبدًا.',
   },
 }
@@ -46,7 +47,7 @@ export default function PdfFillTool() {
   const [focus, setFocus] = useState<string | null>(null)
   const [flatten, setFlatten] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState<PdfFailure | ''>('')
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
 
   const pageBoxRef = useRef<HTMLDivElement>(null)
@@ -62,7 +63,13 @@ export default function PdfFillTool() {
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
   async function onFile(f: File | null | undefined) {
-    if (!f || !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) return
+    if (!f) return
+    // NOT gated on the MIME type or the extension. A bare `return` on a wrong
+    // pick is the dead-UI failure this repo already documents for image intake
+    // (#225): nothing happens and nothing says why. And the gate is wrong on
+    // its own terms — Android hands over files with an empty MIME, so a real
+    // PDF was silently discarded. Let the library decide and report what it
+    // said.
     setBusy(true); setErr(''); setOut(null); setTexts([]); setPi(0); setFocus(null)
     try {
       const [{ renderPdf }, { scanFields }] = await Promise.all([import('../../lib/pdfRender'), import('./fields')])
@@ -75,8 +82,8 @@ export default function PdfFillTool() {
       }
       setFile(f); setPages(rendered); setScan(sc); setValues(init)
       setView(sc.htmlMode ? 'form' : 'page')
-    } catch {
-      setErr(s.locked); setFile(null); setPages(null); setScan(null)
+    } catch (e) {
+      setErr(pdfFailure(e)); setFile(null); setPages(null); setScan(null)
     } finally { setBusy(false) }
   }
 
@@ -149,8 +156,8 @@ export default function PdfFillTool() {
       const bytes = await pdf.save()
       const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
       setOut((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url: URL.createObjectURL(blob), size: blob.size } })
-    } catch {
-      setErr(s.locked)
+    } catch (e) {
+      setErr(pdfFailure(e))
     } finally { setBusy(false) }
   }
 
@@ -202,7 +209,7 @@ export default function PdfFillTool() {
           <input ref={fileRef} type="file" accept="application/pdf" className="absolute w-px h-px opacity-0" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
         </button>
       )}
-      {err && <p className="text-[color:var(--danger)] text-[0.9rem]" data-testid="fill-err">{err}</p>}
+      {err && <div data-testid="fill-err"><PdfFailureNote why={err} locale={locale} /></div>}
 
       {pages && (
         <div className="flex flex-col gap-3">

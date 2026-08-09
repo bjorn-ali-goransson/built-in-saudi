@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import { pdfFailure, type PdfFailure } from '../../lib/pdfFailure'
 import { UploadIcon, DownloadIcon, TrashIcon, RedactIcon } from '../../components/icons'
-import { Button, Select, Stack, Spinner, FileError, Panel, Check } from '../../components/ui'
+import { Button, Select, Stack, Spinner, Panel, Check, PdfFailureNote } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import type { Box, Rendered } from './redact'
 
@@ -9,7 +10,6 @@ const STR = {
   en: {
     pick: 'Choose a PDF', another: 'Choose another', reading: 'Rendering the pages…', building: 'Rebuilding…',
     hint: 'Drag over anything you need gone. Unlike drawing a black box in a PDF viewer, this removes the text itself — the page is rebuilt as an image, so there is nothing left underneath to select or copy.',
-    failed: 'That file could not be read as a PDF.',
     quality: 'Output quality', stripMeta: 'Also clear the document metadata',
     boxes: (n: number) => `${n} area${n === 1 ? '' : 's'} marked`,
     clear: 'Clear marks', apply: 'Redact and download',
@@ -23,7 +23,6 @@ const STR = {
   ar: {
     pick: 'اختر ملف PDF', another: 'اختر ملفًا آخر', reading: 'جارٍ عرض الصفحات…', building: 'جارٍ إعادة البناء…',
     hint: 'اسحب فوق كل ما تريد إزالته. وخلافًا لرسم مربع أسود في قارئ PDF، تحذف هذه الأداة النص نفسه — إذ يُعاد بناء الصفحة صورةً، فلا يبقى تحتها ما يمكن تحديده أو نسخه.',
-    failed: 'تعذّرت قراءة هذا الملف كـPDF.',
     quality: 'جودة الناتج', stripMeta: 'امسح أيضًا بيانات المستند الوصفية',
     boxes: (n: number) => `${n.toLocaleString('ar')} منطقة محدّدة`,
     clear: 'امسح التحديد', apply: 'احجب ونزّل',
@@ -44,7 +43,7 @@ export default function PdfRedactTool() {
   const [dpi, setDpi] = useState(150)
   const [stripMeta, setStripMeta] = useState(true)
   const [busy, setBusy] = useState<'' | 'reading' | 'building'>('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState<PdfFailure | ''>('')
   const [name, setName] = useState('document')
   const [verified, setVerified] = useState<boolean | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -60,8 +59,8 @@ export default function PdfRedactTool() {
       const { renderPages } = await import('./redact')
       setPages(await renderPages(f, dpi))
       setWorkInProgress('pdf-redact', true)
-    } catch {
-      setError(s.failed)
+    } catch (e) {
+      setError(pdfFailure(e))
     } finally { setBusy('') }
   }
 
@@ -79,8 +78,8 @@ export default function PdfRedactTool() {
       const a = document.createElement('a')
       a.href = url; a.download = `${name}-redacted.pdf`; a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch {
-      setError(s.failed)
+    } catch (e) {
+      setError(pdfFailure(e))
     } finally { setBusy('') }
   }
 
@@ -107,7 +106,7 @@ export default function PdfRedactTool() {
         {busy && <span className="text-[0.9rem] text-ink-faint rtl:font-ar">{busy === 'reading' ? s.reading : s.building}</span>}
       </div>
 
-      {error && <FileError message={error} />}
+      {error && <div><PdfFailureNote why={error} locale={locale} /></div>}
       {!pages.length && !busy && !error && <p className="text-ink-faint text-[0.95rem] rtl:font-ar">{s.hint}</p>}
 
       {pages.length > 0 && (
