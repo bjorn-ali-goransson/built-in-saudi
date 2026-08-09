@@ -28,7 +28,10 @@ const EXTRA = {
 }
 
 /** Not badged, deliberately: a naming standard is not a rule that can move. */
-const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling'])
+// A naming standard is not a rule that can move. Neither is Naegele's rule,
+// which is obstetrics from 1812: `due-date` is medical rather than
+// regulatory, so nobody republishes it and the badge would be noise.
+const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling', 'due-date'])
 
 const root = process.cwd()
 const reg = readFileSync('src/tools/index.ts', 'utf8')

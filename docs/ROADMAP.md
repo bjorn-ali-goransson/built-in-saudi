@@ -858,6 +858,33 @@ Deliberately NOT taken from the sweep:
   advertising a download are server-side. Shipping playback only, under a name
   people search expecting a download, would be the adware move.
 
+### Web sweep #2, 9 August 2026 — the Arabic tool sites
+
+The English "free online tools" directories are a dead end: they list the
+converters we already ship. Sweeping the **Arabic** tool sites we actually
+compete with was worth far more, because they serve a different everyday need:
+
+- **حاسبة الحمل (pregnancy due date)** is on 3arabhub, hesaby AND alarabictools
+  and was on none of our 207. **SHIPPED** as `due-date`.
+- **أسعار الذهب (daily gold prices)** is on most of them and needs a live feed,
+  so it is a backend question — parked in `docs/BACKEND.md` territory rather
+  than built.
+- Everything else they list (age, date difference, zakat, currency, prayer
+  times, VAT) we already have, several of them better.
+
+Also swept and NOT taken:
+
+- **HAR file viewer.** Well validated (every incumbent already claims
+  client-side) and therefore crowded, and a waterfall UI is a large build for no
+  differentiator. The interesting inverse — a HAR *sanitiser* that strips
+  cookies and auth headers before you send one to support — is the better idea
+  and is closer to `data-anonymize`.
+- **GeoJSON viewer.** Drawing the geometry with no basemap is honest and
+  client-side; fetching tiles is a third-party request in a privacy-first tool.
+  Worth building only if the no-basemap version is genuinely useful.
+- **EXIF GPS on a map** — already done. `file-metadata` decodes GPS and links
+  out to OpenStreetMap rather than embedding tiles.
+
 ### Browsing was 7.4 screens with no jump — measured and fixed (9 Aug 2026)
 
 Search has been benched to saturation (tuned 100%, held-out #1 98%, #2 90%,

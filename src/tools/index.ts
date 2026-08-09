@@ -144,6 +144,7 @@ import { charFinderTool } from './char-finder/meta'
 import { glucoseUnitsTool } from './glucose-units/meta'
 import { sleepCycleTool } from './sleep-cycle/meta'
 import { waterIntakeTool } from './water-intake/meta'
+import { dueDateTool } from './due-date/meta'
 import { hijriAgeTool } from './hijri-age/meta'
 import { medicineScheduleTool } from './medicine-schedule/meta'
 import { pdfRedactTool } from './pdf-redact/meta'
@@ -282,6 +283,7 @@ export const tools: Tool[] = [
   calorieNeedsTool,
   glucoseUnitsTool,
   waterIntakeTool,
+  dueDateTool,
   sleepCycleTool,
   medicineScheduleTool,
   cubicBezierTool,

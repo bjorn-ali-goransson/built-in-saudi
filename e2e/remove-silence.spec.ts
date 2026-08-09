@@ -22,21 +22,34 @@ const secs = (t: string) => {
   return m * 60 + s
 }
 
+/**
+ * Read a duration once it has settled.
+ *
+ * `innerText()` takes one snapshot and does not retry, unlike `toHaveText`. The
+ * analysis runs after the waveform appears, so a plain read can catch the value
+ * mid-computation — which passed every time this file ran alone and failed
+ * under the full suite. Wait for the thing under test, not for time to pass.
+ */
+async function settled(page: import('@playwright/test').Page, testId: string) {
+  await expect.poll(async () => secs(await page.getByTestId(testId).innerText())).toBeGreaterThan(0)
+  return secs(await page.getByTestId(testId).innerText())
+}
+
 test('finds the silence and reports what it will remove', async ({ page }) => {
   await load(page)
   await expect(page.getByTestId('rs-before')).toHaveText(/0:04/)
   await expect(page.getByTestId('rs-found')).toContainText('1 silence')
   // 2s of silence, minus 0.12s of padding at each end.
-  const saved = secs(await page.getByTestId('rs-saved').innerText())
+  const saved = await settled(page, 'rs-saved')
   expect(saved).toBeGreaterThan(1.5)
   expect(saved).toBeLessThan(2)
 })
 
 test('keeps a margin at each edge rather than cutting flush', async ({ page }) => {
   await load(page)
-  const withPad = secs(await page.getByTestId('rs-saved').innerText())
+  const withPad = await settled(page, 'rs-saved')
   await page.getByTestId('rs-padding').fill('0')
-  const noPad = secs(await page.getByTestId('rs-saved').innerText())
+  const noPad = await settled(page, 'rs-saved')
   // Without padding the whole 2 seconds goes; with it, less does. A cut made
   // flush against the silence clips the breath before the next word.
   expect(noPad).toBeGreaterThan(withPad)

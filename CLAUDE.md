@@ -1193,6 +1193,44 @@ Also shown, because a total with no working is indistinguishable from a guess:
 the units at each rate, what the **next** kWh costs at this level of use, and how
 far the higher band is.
 
+## Pregnancy due date (`due-date`)
+
+Found by sweeping the Arabic tool sites this site competes with: **حاسبة الحمل
+is on essentially every one of them** (3arabhub, hesaby, alarabictools) and was
+on none of ours, next to a calorie calculator, a water-intake calculator, a
+sleep-cycle calculator and a glucose converter. The arithmetic is one addition;
+three decisions carry it.
+
+- **The cycle length is what the simple calculators get wrong.** Naegele's rule
+  is LMP + 280 days and assumes ovulation on day 14 of a 28-day cycle. On a
+  35-day cycle ovulation is around day 21, so the due date is a **week later** —
+  and a woman with a long cycle given the wrong date is the one offered an
+  induction she does not need. The shift is applied AND stated in words, because
+  a silently different answer is indistinguishable from a wrong one.
+- **The exact bases do not ask for a cycle at all.** An IVF transfer date is
+  known to the day (day-3 embryo = LMP+17, day-5 blastocyst = LMP+19), and a
+  first-trimester scan dates a pregnancy better than any period date, so a scan's
+  EDD is taken as given. Offering a cycle slider beside those would imply a guess
+  at ovulation that is not being made — so the control is only rendered for the
+  LMP basis, and there is a spec asserting its absence.
+- **It refuses to let the date read as an appointment.** About 1 baby in 25
+  arrives on the due date and 37–42 weeks is all full term, which the page says
+  in words next to the number. Carries a `medical` Disclaimer and is in
+  `e2e/disclaimers.spec.ts`.
+
+Every date is given in **both calendars**, which no incumbent does and which
+this site had the machinery for already (`prayer-times/islamic.ts`).
+
+**It is NOT badged beta, and the guard made that a decision rather than an
+oversight.** `check-saudi-beta.mjs` fired on the module — because the comment
+explaining why it carries no sources block *contained the marker string*, which
+is a fair substring match and an unfair conclusion. Both halves were fixed: the
+comment no longer writes a marker it does not carry, and `due-date` is declared
+in `NOT_A_RULE` with its reason. The reason is the point — **beta means the
+figure can go stale without anyone touching the code**, and Naegele's rule is
+obstetrics from 1812. Nobody republishes it every July the way GOSI republishes
+a pension rate.
+
 ## Stopwatch & timer (`stopwatch`)
 
 Found by measurement, not by asking what was missing: `stopwatch` was one of the
