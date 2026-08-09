@@ -33,20 +33,24 @@ for (const line of log.split('\n')) {
 // (`zip-inspector` holds `archive-inspector`), and that has cost a debugging
 // round before.
 const rows = []
-const missing = []
+const uncommitted = []
+const today = () => new Date().toISOString().slice(0, 10)
 for (const dir of readdirSync('src/tools')) {
   const meta = `src/tools/${dir}/meta.ts`
   if (!existsSync(meta)) continue
   const id = /\bid: '([^']+)'/.exec(readFileSync(meta, 'utf8'))?.[1]
   if (!id) continue
-  const when = byDir.get(dir)
-  if (!when) { missing.push(dir); continue }
+  // A folder git has never seen is being added RIGHT NOW, so today is the
+  // correct answer rather than an error. Without this the generator refuses on
+  // every new tool until a second commit exists, which would make the build
+  // guard fire on exactly the case it was written to serve.
+  const when = byDir.get(dir) ?? today()
+  if (!byDir.has(dir)) uncommitted.push(dir)
   rows.push([id, when])
 }
 
-if (missing.length) {
-  console.error(`no git date for: ${missing.join(', ')}`)
-  process.exit(1)
+if (uncommitted.length) {
+  console.log(`not yet in git, dated today: ${uncommitted.join(', ')}`)
 }
 
 rows.sort((a, b) => (a[1] === b[1] ? a[0].localeCompare(b[0]) : b[1].localeCompare(a[1])))

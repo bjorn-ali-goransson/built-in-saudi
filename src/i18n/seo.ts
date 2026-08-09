@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'ovulation',
+    en: { name: 'Ovulation Calculator', description: 'Find the fertile window from your last period and cycle length — and see why it is not what most calculators say. Ovulation is about fourteen days before the NEXT period, not fourteen after the last, and the days that matter are the five BEFORE it. Every date in the Hijri calendar as well as the Gregorian.' },
+    ar: { name: 'حاسبة الإباضة', description: 'اعرفي نافذة الخصوبة من آخر دورة وطول دورتك — واعرفي لماذا تختلف عمّا تقوله معظم الحاسبات. فالإباضة قبل الدورة القادمة بنحو أربعة عشر يومًا لا بعد السابقة، والأيام التي تهمّ هي الخمسة السابقة لها. وكل تاريخ بالهجري كما بالميلادي.' },
+  },
+  {
     id: 'audio-spectrum',
     en: { name: 'Audio Spectrum Analyser', description: 'Draw the frequency content of an audio or video file and read off where it stops. A lossy encoder throws away everything above a cutoff, and that cutoff is visible — so a file converted to 320 kbps from a 128 kbps source shows a wall at 16 kHz. Analysed in your browser; nothing is uploaded.' },
     ar: { name: 'محلّل الطيف الصوتي', description: 'ارسم المحتوى الترددي لملف صوتي أو مرئي واقرأ أين ينتهي. فالترميز الضائع يتخلّص من كل شيء فوق حدّ معيّن، وهذا الحدّ مرئي — فالملف المحوّل إلى ٣٢٠ كيلوبت من مصدر ١٢٨ يُظهر جدارًا عند ١٦ كيلوهرتز. يجري التحليل في متصفحك؛ ولا يُرفع شيء.' },

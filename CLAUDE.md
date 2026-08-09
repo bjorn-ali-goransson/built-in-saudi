@@ -1652,6 +1652,45 @@ Also shown, because a total with no working is indistinguishable from a guess:
 the units at each rate, what the **next** kWh costs at this level of use, and how
 far the higher band is.
 
+## The fertile window, and two corrections (`ovulation`)
+
+Found by a web sweep of the health-calculator market — 124 on one site, 71 on
+another — where this is a staple and we had none, having just shipped its
+sibling `due-date`. The two are the same arithmetic read in opposite directions
+and they link to each other. Both corrections are the reason it is worth
+building rather than copying:
+
+- **The LUTEAL phase is the fixed part, not the first half.** Ovulation to the
+  next period is about fourteen days whatever the cycle length; the follicular
+  phase varies. So ovulation is on cycle day `length − 14` — day 14 on a 28-day
+  cycle, **day 21 on a 35-day one**, day 7 on a 21-day one. A calculator that
+  adds a fixed 14 to the last period has told a woman with a long cycle to try a
+  week early, and that is the commonest error in the category. On a 28-day cycle
+  the two rules coincide, which is exactly why the wrong one spread — the tool
+  says so rather than staying silent.
+- **The fertile window ENDS at ovulation.** Sperm survive up to five days and an
+  egg about one, so the days that matter are the five before ovulation plus the
+  day itself. Waiting for the ovulation date is how people miss the window they
+  were aiming at.
+
+**The off-by-one was real and was wrong first.** Subtracting the luteal length
+straight from the next period gives day 15 on a 28-day cycle and contradicts
+every published table: day 1 is the first day of bleeding, so a 14-day luteal
+phase occupies days 15–28 and ovulation is FIFTEEN days before the next
+period's first day. Its own spec caught it — and a companion case on a
+21-day cycle caught the opposite direction, where **my expectation was wrong and
+the tool was right**.
+
+**And the Arabic copy was printing Western digits.** Every interpolated number
+now goes through an `ar-SA` formatter. This is the failure this file already
+records — an Arabic test that only asserts prose tests nothing about the Arabic
+rendering of anything computed — and it was caught only because the Arabic case
+asserted a NUMBER.
+
+Carries a `medical` Disclaimer whose point is what a calendar cannot know: it
+cannot tell you whether you ovulated, only when it would be expected. Not badged
+beta, and declared in `NOT_A_RULE` for the same reason as `due-date`.
+
 ## Pregnancy due date (`due-date`)
 
 Found by sweeping the Arabic tool sites this site competes with: **حاسبة الحمل

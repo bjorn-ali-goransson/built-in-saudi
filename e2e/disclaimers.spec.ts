@@ -9,6 +9,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'glucose-units', kind: 'medical' },
   { id: 'water-intake', kind: 'medical' },
   { id: 'due-date', kind: 'medical' },
+  { id: 'ovulation', kind: 'medical' },
   { id: 'sleep-cycle', kind: 'medical' },
   { id: 'medicine-schedule', kind: 'medical' },
   { id: 'end-of-service', kind: 'legal' },

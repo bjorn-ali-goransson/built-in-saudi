@@ -875,6 +875,24 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Web sweep #8, 9 August 2026 — the health calculators
+
+The most crowded category swept so far: 124 calculators on one site, 71 on
+another, all with the same list. Against ours (calorie needs, water intake,
+sleep cycle, glucose units, medicine schedule, due date):
+
+- **Ovulation / fertile window** — SHIPPED as `ovulation`, with the two
+  corrections the category gets wrong.
+- **BMI** — deliberately not built yet. It is the single most commoditised
+  calculator on the web and a famously poor individual measure. The only version
+  worth shipping reports **waist-to-height** alongside it and says which is more
+  informative, which is a different tool from the 124 out there.
+- **TDEE / macros** — `calorie-needs` already answers the calorie half; macros
+  would be an addition to it rather than a tool.
+- **Body fat from tape measurements, blood-pressure category** — both are
+  clinical thresholds that move with guidance, so both would need the
+  corroboration rule and a beta badge before they could ship.
+
 ### The catalogue had no notion of "new" (9 Aug 2026)
 
 216 tools, ten of them shipped in a single day, and no way for a returning
