@@ -1514,6 +1514,40 @@ never painted at all. The frame loop only repaints; it never counts.
 
 No `Disclaimer` — it measures time, not money, health or an entitlement.
 
+## University GPA, and the conversion everybody gets wrong (`gpa-calculator`)
+
+Found by a web sweep of the student-tools market: every one of those sites
+publishes a GPA calculator and we had none — only `admission-score`, which
+weights Qudurat and Tahsili for ADMISSION and is a different question entirely.
+
+**The tool exists for one number: a fail is worth 1.00 on the Saudi 5-point
+scale, not 0.** So the 5.00 and 4.00 scales are not the same ruler stretched,
+and the `(GPA ÷ 5) × 4` formula that every GPA site on the web publishes is
+wrong in the direction that flatters a weak record — straight Ds are 2.00/5,
+which the shortcut reports as **1.60/4** where the grade-by-grade mapping gives
+**1.00/4**. Converting grade by grade is exact and needs nothing but the letters
+already typed, so the tool shows both and says which is which. Whether a
+university or a credential evaluator uses one or the other is theirs to decide;
+pretending there is one answer would be the lie.
+
+Three other things it gets right:
+
+- **A GPA is weighted by credit hours**, so an A+ over one credit and an F over
+  nine is 1.40, not the 3.00 an average of the two grades would give.
+- **A cumulative GPA adds the previous POINTS back in**, not the average of two
+  averages: 4.00 over 100 credits with 3.00 over 3 credits is 3.97, not 3.50.
+- **The carried-over prior GPA can only convert linearly**, because it has no
+  letters behind it — which is stated in the UI rather than quietly applied, so
+  the exact half and the approximate half are distinguishable.
+
+Points, percentage bands and the classification (`ممتاز` 4.50+, `جيد جدًا`
+3.75+, `جيد` 2.75+, `مقبول` 2.00+) follow the MoE Unified Regulations. **The
+classification bands were only encoded after corroboration** — the same rule
+`end-of-service` follows — against three registrars that publish them (King
+Saud, Prince Sattam, Umm Al-Qura). Carries an `official` Disclaimer naming the
+reader's own registrar, since some institutions use 4.00 or their own honours
+thresholds, and is badged **beta**.
+
 ## Weighted admission score (`admission-score`)
 
 GPA, Qudurat and Tahsili, each times a weight. The formula is exact; **only the

@@ -27,6 +27,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },
   { id: 'timesheet', kind: 'legal' },
+  { id: 'gpa-calculator', kind: 'official' },
   { id: 'exit-reentry', kind: 'official' },
   { id: 'iqama-fees', kind: 'official' },
   { id: 'electricity-bill', kind: 'financial' },

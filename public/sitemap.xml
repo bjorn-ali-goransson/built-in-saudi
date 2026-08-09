@@ -3235,4 +3235,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/docx-markdown/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/docx-markdown/"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/gpa-calculator/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gpa-calculator/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gpa-calculator/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gpa-calculator/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/gpa-calculator/</loc>
+    <lastmod>2026-08-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/gpa-calculator/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/gpa-calculator/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/gpa-calculator/"/>
+  </url>
 </urlset>

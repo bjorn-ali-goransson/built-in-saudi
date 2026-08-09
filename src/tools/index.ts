@@ -212,6 +212,7 @@ import { iqamaFeesTool } from './iqama-fees/meta'
 import { electricityBillTool } from './electricity-bill/meta'
 import { stopwatchTool } from './stopwatch/meta'
 import { admissionScoreTool } from './admission-score/meta'
+import { gpaCalculatorTool } from './gpa-calculator/meta'
 
 /**
  * The tool catalog. Stable/beta tools render inside the app at /tools/:id.
@@ -372,6 +373,7 @@ export const tools: Tool[] = [
   iqamaFeesTool,
   stopwatchTool,
   admissionScoreTool,
+  gpaCalculatorTool,
   pdfToImagesTool,
   pdfToTextTool,
   imageToTextTool,

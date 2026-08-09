@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'gpa-calculator',
+    en: { name: 'GPA Calculator', description: 'Work out a GPA course by course on the Saudi 5.00 scale or on 4.00, with the overall classification and your cumulative average — and convert between the scales grade by grade rather than with the shortcut every other site uses. Your marks stay in your browser.' },
+    ar: { name: 'حاسبة المعدل التراكمي', description: 'احسب معدلك مقررًا مقررًا على مقياس ٥٫٠٠ السعودي أو على ٤٫٠٠، مع التقدير العام والمعدل التراكمي — وحوّل بين المقياسين تقديرًا بتقدير لا بالمعادلة التي تستخدمها بقية المواقع. وتبقى درجاتك في متصفحك.' },
+  },
+  {
     id: 'docx-markdown',
     en: { name: 'Word to Markdown', description: 'Turn a Word document into Markdown — headings, bold and italic, bulleted and numbered lists, tables, blockquotes and links all survive as Markdown rather than being flattened into prose. Read in your browser and never uploaded.' },
     ar: { name: 'وورد إلى ماركداون', description: 'حوّل مستند وورد إلى ماركداون — فتبقى العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات والروابط ماركداون، بدل أن تُسطّح إلى نصٍّ عادي. تجري القراءة في متصفحك ولا يُرفع المستند أبدًا.' },

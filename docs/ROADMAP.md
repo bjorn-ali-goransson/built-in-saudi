@@ -873,6 +873,21 @@ uploaded anything. Worth replacing with a wait on the tool's own output, which
 would make the guard both stabler and stronger. Not done here because changing
 the site's most important spec on a hunch is worse than leaving it and saying so.
 
+### Web sweep #5, 9 August 2026 — university students
+
+Every student-tools site publishes the same handful. Against our catalogue:
+
+- **GPA calculator** — SHIPPED as `gpa-calculator`, with the Saudi 5.00 scale
+  and an honest conversion to 4.00 that no incumbent does.
+- **Citation generator (APA/MLA/Chicago)** — repeatedly named and genuinely
+  unbuilt. Large surface (source types × styles) where the whole value is
+  correctness, and Arabic sources raise a transliteration question nobody has
+  answered well. Worth doing properly or not at all.
+- **Reading level checker** — we have `readability`.
+- **Flashcards, Pomodoro, study timer** — we have all three.
+- **Final-grade / weighted-grade calculator** ("what do I need in the final?")
+  — small, and a natural companion to `gpa-calculator`.
+
 ### Web sweep #4, 9 August 2026 — freelancers and small business
 
 The freelancer tooling market is almost all SaaS with accounts (Wave, Zoho,
