@@ -17,6 +17,7 @@ export const ADDED: Record<string, string> = {
   'markdown-docx': '2026-08-09',
   'markdown-epub': '2026-08-09',
   'ovulation': '2026-08-09',
+  'speech-time': '2026-08-09',
   'timesheet': '2026-08-09',
   'word-search': '2026-08-09',
   'a11y-check': '2026-08-08',

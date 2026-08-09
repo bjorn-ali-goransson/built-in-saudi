@@ -30,6 +30,7 @@ import { qiblaTool } from './qibla/meta'
 import { passwordGeneratorTool } from './password-generator/meta'
 import { uuidGeneratorTool } from './uuid-generator/meta'
 import { wordCounterTool } from './word-counter/meta'
+import { speechTimeTool } from './speech-time/meta'
 import { caseConverterTool } from './case-converter/meta'
 import { poetryTool } from './poetry/meta'
 import { languageDetectTool } from './language-detect/meta'
@@ -418,6 +419,7 @@ export const tools: Tool[] = [
   passphraseTool,
   uuidGeneratorTool,
   wordCounterTool,
+  speechTimeTool,
   caseConverterTool,
   lineBreaksTool,
   pasteToMarkdownTool,

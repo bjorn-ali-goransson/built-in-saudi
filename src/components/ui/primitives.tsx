@@ -55,7 +55,10 @@ export function Seg({ className = '', children, ...props }: HTMLAttributes<HTMLD
 export function SegButton({ active = false, className = '', children, ...props }: { active?: boolean } & HTMLAttributes<HTMLButtonElement>) {
   const state = active ? 'bg-green-600 text-sand-100' : 'bg-[var(--surface)] text-ink-soft'
   return (
-    <button className={`px-[0.85rem] py-[0.4rem] font-body font-semibold text-[0.85rem] border-r border-[color:var(--line)] last:border-r-0 ${state}${className ? ` ${className}` : ''}`} {...props}>
+    // `aria-pressed` because colour was the ONLY thing saying which segment is
+    // selected: a screen reader could not tell, on every segmented control on
+    // the site. Before the spread, so a caller can still override it.
+    <button aria-pressed={active} className={`px-[0.85rem] py-[0.4rem] font-body font-semibold text-[0.85rem] border-r border-[color:var(--line)] last:border-r-0 ${state}${className ? ` ${className}` : ''}`} {...props}>
       {children}
     </button>
   )

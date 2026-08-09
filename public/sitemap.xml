@@ -3305,4 +3305,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/ac-size/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/ac-size/"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/speech-time/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/speech-time"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/speech-time"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/speech-time"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/speech-time/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/speech-time"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/speech-time"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/speech-time"/>
+  </url>
 </urlset>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Stack, Field, Textarea } from '../../components/ui'
+import { RATES, detectScript } from '../../lib/readingRate'
 
 const STR = {
   en: {
@@ -45,7 +46,15 @@ export default function WordCounterTool() {
     const charactersNoSpaces = Array.from(text.replace(/\s/g, '')).length
     const sentences = (text.match(/[^.!?۔؟]+[.!?۔؟]+/g) || []).length || (text.trim() ? 1 : 0)
     const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).length
-    const readingMin = Math.max(text.trim() ? 1 : 0, Math.round(words / 200))
+    // The rate is a property of the SCRIPT, not a universal. This was a
+    // hardcoded 200 wpm in both locales, which understated an Arabic reading
+    // time by about 45%: on the standardized international test, English reads
+    // at 228 words a minute and Arabic at 138. Detected from the text rather
+    // than from the UI locale — somebody on the Arabic side pasting an English
+    // article wants the English rate. See `src/lib/readingRate.ts`.
+    const { silent } = RATES[detectScript(text)]
+    const wpm = silent.mid ?? silent.slow
+    const readingMin = Math.max(text.trim() ? 1 : 0, Math.round(words / wpm))
     return { words, characters, charactersNoSpaces, sentences, paragraphs, readingMin }
   }, [text, locale])
 

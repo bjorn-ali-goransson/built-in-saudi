@@ -1404,3 +1404,27 @@ measured several ambiguous queries («باركود», `ebook`, `calendar`).
 
 Still open from the pass before: sweep every tool's Arabic name for the plural
 trap, which has now been caught three times one at a time.
+
+### Web sweep, 10 August 2026 (nineteenth pass)
+
+- ~~**Words to speaking time.**~~ **Shipped** as `speech-time`. The category is
+  large — at least eight sites whose entire domain is that one calculator — and
+  every one applies an English words-per-minute rate to any script. Arabic
+  reads at 138 wpm against English's 228 on the standardized international
+  test (IReST, 436 readers, 17 languages), a 73% difference. **It found the
+  same bug in our own `text-counter`**, which had used a hardcoded 200 wpm in
+  both locales since it was written.
+- **DECLINED for now: an AI token / API cost calculator.** It appears in the
+  trending lists, and the arithmetic is trivial, but the whole value is the
+  per-model price table — which changes without notice, is published in half a
+  dozen incompatible shapes, and would be wrong within weeks with nobody
+  maintaining it. That is the `iqama-fees` situation without even the
+  consolation of naming who owes the money. Revisit only with a maintained
+  source.
+- **Still unbuilt from earlier sweeps:** BMI + waist-to-height, citation
+  generator, rubric maker, tyre size comparison, HAR sanitiser, GeoJSON viewer.
+- **Worth a look next:** the "intermittent fasting" calculator that shows up in
+  the trending lists is interesting HERE for a reason it is not elsewhere —
+  Ramadan and the Monday/Thursday sunnah fasts are the same arithmetic against
+  a Hijri calendar and prayer times we already compute. `medicine-schedule`
+  already spreads doses across the fasting window, so half the machinery exists.

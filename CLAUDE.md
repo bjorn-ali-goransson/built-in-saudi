@@ -997,6 +997,50 @@ significant digits stays text. Two Excel quirks are load-bearing in the styles
 part: the fills list must have `none` at 0 and `gray125` at 1 or Excel calls the
 workbook corrupt, and two sheets sharing a name make a file it refuses to open.
 
+## Reading rates are a property of the SCRIPT (`lib/readingRate.ts`, `speech-time`)
+
+Found by a web sweep: "words to minutes" is a category with at least **eight
+sites whose entire domain is that one tool**, and every one of them applies an
+**English** rate to whatever you paste. On the standardized international
+reading test — one text translated into 17 languages, 436 readers, same font
+size and viewing distance — English reads at **228 wpm and Arabic at 138**, a
+**73% difference**, because an Arabic word packs more in and the short vowels
+are not written.
+
+**Our own `text-counter` had the same bug**, and that is the part worth
+recording: a hardcoded **200 wpm in both locales**, understating an Arabic
+reading time by about 45% on a site whose whole pitch is that it gets Arabic
+right. It had shipped that way since it was written. The rate now comes from
+the shared module and is chosen by **detecting the script of the text, not the
+UI locale** — somebody on the Arabic side pasting an English article wants the
+English rate, and applying one because of a URL prefix would be the same
+mistake one level up.
+
+Two decisions about honesty with numbers:
+
+- **The Arabic speaking figures are NOT averaged.** Two peer-reviewed normative
+  studies give 140 w/m (adult Jordanian) and 104 (adult Syrian) for reading
+  aloud — a 35% spread — and they do not even agree on the DIRECTION, one
+  having Arabic read aloud faster than spoken spontaneously and the other
+  slower. Per the `iqama-fees` rule, that disagreement is reported as a RANGE
+  whose endpoints are the two studies, and the tool names them. A range is also
+  the honest answer to something that genuinely varies by speaker.
+- **`Rate.mid` is deliberately ABSENT for Arabic spoken aloud.** It is an
+  optional field precisely so the one combination with no defensible central
+  figure has none, rather than a midpoint that is nobody's. Silent reading in
+  Arabic is the mirror case: one published figure and no published spread, so
+  the tool prints ONE number and says why it is not a range instead of padding
+  an invented band around it. There is a spec for each.
+
+The spec asserts the two scripts get **different** answers for the same word
+count, and by roughly the measured 73% — a test that only checked "a time
+appeared" would pass against the bug. The `text-counter` case is **verified to
+fail** by restoring the 200.
+
+**`SegButton` gained `aria-pressed`** on the way past: colour was the only
+thing saying which segment was selected, on every segmented control on the
+site.
+
 ## Word search, and the Arabic nobody else attempts (`word-search`)
 
 Found by sweeping the teacher-tools market, where a word search is one of the
