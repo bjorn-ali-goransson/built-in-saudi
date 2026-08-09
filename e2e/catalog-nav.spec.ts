@@ -56,6 +56,34 @@ test.describe('catalogue section nav', () => {
     await expect(page.getByTestId('section-Design')).toBeInViewport()
   })
 
+
+  test('the chip row says which way it continues', async ({ page }) => {
+    // Measured at 217 tools: the bar is 1417px of chips in a 355px window on a
+    // phone — three quarters of the sections off-screen, in a row with nothing
+    // to say it scrolls. A jump bar that hides most of its own destinations is
+    // the problem it was built to solve, one level down.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/en')
+    const nav = page.getByTestId('section-nav')
+    await expect(nav).toHaveAttribute('data-scroll', 'end')
+
+    await nav.evaluate((el) => { el.scrollLeft = el.scrollWidth })
+    await expect(nav).toHaveAttribute('data-scroll', 'start')
+
+    await nav.evaluate((el) => { el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2) })
+    await expect(nav).toHaveAttribute('data-scroll', 'both')
+  })
+
+  test('and says nothing when there is nothing off-screen', async ({ page }) => {
+    // Without this the attribute could be hard-coded and every case above would
+    // still pass on a wide screen where the row fits.
+    await page.setViewportSize({ width: 1900, height: 1000 })
+    await page.goto('/en')
+    const nav = page.getByTestId('section-nav')
+    const fits = await nav.evaluate((el) => el.scrollWidth - el.clientWidth <= 4)
+    await expect(nav).toHaveAttribute('data-scroll', fits ? 'none' : 'end')
+  })
+
   test('the page never scrolls sideways because of it', async ({ page }) => {
     // The bar scrolls horizontally; the page must not. That is the trade a
     // full-bleed bar out of a padded container gets wrong.

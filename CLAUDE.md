@@ -109,6 +109,19 @@ of horizontal page overflow at either size. Four things it has to get right:
   section was written first and is subtly wrong: sections here are several
   screens tall, so the one ABOVE what you are reading is usually still
   intersecting and still topmost, and the chip lags a whole section behind.
+- **The bar has to say which way it continues.** Re-measured at 217 tools:
+  it is **1417px of chips in a 355px window on a phone** — three quarters of the
+  sections off-screen, in a row with nothing to indicate it scrolls. A jump bar
+  that hides most of its own destinations is the problem it was built to solve,
+  one level down. It carries `data-scroll` (`none` | `end` | `both` | `start`)
+  and fades the edge the chips continue past. The attribute is the testable
+  contract — asserting a `mask-image` string would be testing Tailwind — and
+  there is a case for the `none` state, without which a hard-coded attribute
+  would pass every other one on a wide screen.
+- **It is a MASK, not a background gradient.** The design rule against gradients
+  is about decoration; this is the only thing telling a phone user that most of
+  the menu is off to one side. It is written with logical directions so it flips
+  under RTL.
 - **The bar scrolls sideways; the page must not.** A full-bleed bar out of a
   padded container is how a page starts scrolling horizontally on a phone, so it
   stays inside the content column and the spec asserts `scrollWidth` at 390px.

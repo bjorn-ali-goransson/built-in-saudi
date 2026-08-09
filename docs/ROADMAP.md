@@ -875,6 +875,25 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Re-measuring the browse depth (9 Aug 2026)
+
+The 7.4/9.6-screen figure that justified the jump bar was taken at 207 tools and
+three curated rows. Retaken at 217 tools and four:
+
+| | then | now |
+|---|---|---|
+| desktop (1280x900) | 7.4 screens | **7.9** |
+| mobile (390x844) | 9.6 screens | **10.3** |
+| sections | 16 | 17 |
+| jump bar visible / total width (mobile) | — | **355 / 1417px** |
+
+The depth growth is expected and the bar absorbs it. The new finding is the last
+row: the bar itself now hides three quarters of its chips on a phone, with no
+affordance. **FIXED** — see the `SectionNav` notes in CLAUDE.md.
+
+**A measurement taken once is a measurement about the past.** This one had been
+quoted for a week as though it were current.
+
 ### Code sweep, 9 August 2026 — exports nothing references
 
 A sweep for exported symbols with no caller. **The first version of the sweep
