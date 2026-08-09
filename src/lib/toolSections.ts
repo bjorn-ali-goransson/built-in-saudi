@@ -1,4 +1,5 @@
 import { liveTools } from '../tools'
+import { ADDED } from '../tools/added'
 import type { Tool } from '../tools/types'
 import { categoryLabel, type Locale } from '../i18n'
 
@@ -25,17 +26,55 @@ export interface ToolSection {
  * catalogue whose sections reshuffle because of what you opened yesterday is
  * worse than a slightly repeated tile.
  */
+/** How many to show, and how stale the newest may be before the row goes away. */
+const NEW_COUNT = 6
+const NEW_MAX_DAYS = 14
+
+/**
+ * The most recently added tools — by COUNT, not by a date window.
+ *
+ * Measured before choosing: additions are bursty. 63 tools landed on one day
+ * and 47 on another, with single-tool days in between, so "everything from the
+ * last 30 days" would show 63 tools or none depending on when you looked. The
+ * newest six is stable whatever the shipping rhythm.
+ *
+ * **But the row disappears when the newest is more than a fortnight old.** A
+ * "recently added" row over tools from last month is a lie of the cheap kind,
+ * and a site that stops shipping should stop claiming to have news. That is
+ * also what keeps this honest without anyone maintaining it.
+ *
+ * Dates come from `tools/added.ts`, generated from git — see
+ * `scripts/gen-tool-dates.mjs`. A hand-typed date is a thing 216 files can
+ * disagree about and nobody can check.
+ */
+function newlyAdded(): Tool[] {
+  const dated = liveTools
+    .map((t) => ({ t, when: ADDED[t.id] }))
+    .filter((x): x is { t: Tool; when: string } => !!x.when)
+    .sort((a, b) => b.when.localeCompare(a.when))
+  if (!dated.length) return []
+  const newest = Date.parse(dated[0].when)
+  if (!Number.isFinite(newest)) return []
+  if (Date.now() - newest > NEW_MAX_DAYS * 86400000) return []
+  return dated.slice(0, NEW_COUNT).map((x) => x.t)
+}
+
 export function buildToolSections(locale: Locale, recentIds: string[] = []): ToolSection[] {
   const used = new Set<string>()
   const pick = (ids: string[]) => ids.map((id) => liveTools.find((tl) => tl.id === id)).filter((tl): tl is Tool => !!tl)
   const out: ToolSection[] = []
   const rec = pick(RECOMMENDED); rec.forEach((tl) => used.add(tl.id))
+  // Neither Recently used nor Recently added is CONSUMED: both change on their
+  // own, and a catalogue whose sections reshuffle because of the calendar is
+  // worse than a slightly repeated tile.
   const dua = pick(DUA); dua.forEach((tl) => used.add(tl.id))
   const recent = recentIds
     .map((id) => liveTools.find((tl) => tl.id === id))
     .filter((tl): tl is Tool => !!tl)
   if (recent.length) out.push({ key: '__recent', title: locale === 'ar' ? 'استخدمتها مؤخرًا' : 'Recently used', tools: recent })
   out.push({ key: '__rec', title: locale === 'ar' ? 'موصى به' : 'Recommended', tools: rec })
+  const added = newlyAdded()
+  if (added.length) out.push({ key: '__new', title: locale === 'ar' ? 'أُضيفت حديثًا' : 'Recently added', tools: added })
   out.push({ key: '__dua', title: locale === 'ar' ? 'دعاء وذكر' : 'Duʿāʾ & Dhikr', tools: dua })
   const cats = [...CATEGORY_ORDER, ...liveTools.map((tl) => tl.category).filter((c) => !CATEGORY_ORDER.includes(c))]
   const catSections: ToolSection[] = []

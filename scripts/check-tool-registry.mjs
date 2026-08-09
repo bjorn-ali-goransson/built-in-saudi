@@ -23,6 +23,7 @@ import path from 'node:path'
 const root = path.resolve(import.meta.dirname, '..')
 const toolsDir = path.join(root, 'src', 'tools')
 const seo = readFileSync(path.join(root, 'src', 'i18n', 'seo.ts'), 'utf8')
+const added = readFileSync('src/tools/added.ts', 'utf8')
 const sitemap = readFileSync(path.join(root, 'public', 'sitemap.xml'), 'utf8')
 
 const e2e = readdirSync(path.join(root, 'e2e'))
@@ -54,6 +55,9 @@ for (const dir of readdirSync(toolsDir)) {
         ? `${id} is in the sitemap for /${loc} WITHOUT a trailing slash — that URL 301-redirects`
         : `${id} is missing from public/sitemap.xml for /${loc}`,
     )
+  }
+  if (!added.includes(`'${id}':`)) {
+    problems.push(`${id} is missing from src/tools/added.ts — run \`node scripts/gen-tool-dates.mjs\`. Without it the tool can never appear in "Recently added", which is the one place a returning visitor looks for it.`)
   }
   if (!e2e.includes(id)) {
     problems.push(`${id} is referenced by no e2e spec`)

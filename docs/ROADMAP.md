@@ -875,6 +875,22 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### The catalogue had no notion of "new" (9 Aug 2026)
+
+216 tools, ten of them shipped in a single day, and no way for a returning
+visitor to see what changed — the registry carried no added-date at all, so
+"new" was not merely unsurfaced but underivable.
+
+It turned out to be derivable exactly: `git log --diff-filter=A` on each
+`meta.ts` is the commit that shipped the tool. `scripts/gen-tool-dates.mjs`
+writes `src/tools/added.ts` from one traversal, and the build fails if a live
+tool is missing from it.
+
+**Still open on this:** the tool PAGE says nothing about age either. A "new"
+badge on a tool card is the obvious companion and was left out deliberately —
+the catalogue row answers "what changed", and a badge on 63 tiles from one day
+would answer nothing.
+
 ### Code sweep, 9 August 2026 — auditing the network mocks, and the last audio gap
 
 Last iteration found that `page.route` cannot intercept a fetch the service
