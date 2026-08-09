@@ -187,6 +187,34 @@ Because the derivation is checked rather than trusted, the build stopped and
 named 200 tools instead of quietly shipping 15 empty category pages. Write
 regexes with Write/Edit, not a heredoc.
 
+**And every tool page links to its category now.** Measured after the category
+pages shipped: **0 of 418 prerendered tool pages** linked to one, so the 30
+category pages were reachable only from each other — the 418 pages that actually
+rank pointed at every tool and at no grouping at all. A tool page could send you
+to four siblings or to all 209 tools and to nothing in between, which is
+precisely the gap the categories exist to fill.
+
+Two places, because they are two different readers:
+
+- **`ToolPage`** puts a `More in <Category>` link in the related row's heading
+  line. It is NOT conditional on the related list having anything in it.
+- **The prerendered breadcrumb** carries the category as a real link
+  (`Apps / Free PDF tools / Merge PDF`), which is the half a crawler sees before
+  any JavaScript runs. The home block lists the categories too — a flat list of
+  209 links says nothing about how the site is organised.
+
+Measured: pages linking to a category page **30 → 450**, tool pages **0/418 →
+418/418**, checked per page rather than by spot check — and the check asserts it
+examined more than 300 pages first, since a directory read that returns nothing
+makes the whole test pass having looked at nothing.
+
+**The change broke two related-tools specs, and they were right to break.**
+They located "every link inside the related nav" and treated the result as the
+list of related tools; the category link is also a link inside that nav. The
+grid has its own `data-testid` now and the specs use it. Same lesson as the
+`section-` prefix collision: **a container is not an identifier for what you
+happen to have put in it.**
+
 **Related tools** (`lib/relatedTools.ts`) is a short row at the foot of each
 tool page. The crawlable "More free tools" block already links to EVERY tool,
 which is right for a crawler and useless for a person — a list of 197 is the
@@ -511,7 +539,8 @@ guessed. Traps it handles, each a real document:
 - **A table needs its separator row**, or any prose containing a pipe becomes a
   one-row table.
 - **CRLF is normalised first.** A `.md` written on Windows turns the closing
-  ``` ``` ``` into ```` ``` ````, which no fence test matches, so the rest of
+  ``` ``` ``` into ```` ```
+ ````, which no fence test matches, so the rest of
   the document is swallowed into a code block.
 - **Setext headings are tested after the thematic-break rule**, since `---` is
   both, and before the paragraph rule so the underline never becomes its own

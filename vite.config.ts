@@ -70,15 +70,22 @@ function homeContent(locale: Loc): string {
       return `<li><a href="/${locale}/apps/${tool.id}/">${esc(ts.name)}</a> — ${esc(ts.description)}</li>`
     })
     .join('')
+  // The categories come FIRST, because a flat list of 209 links tells a crawler
+  // nothing about how the site is organised — and until this was added the only
+  // crawlable route into the category pages was from one another.
+  const cats = categorySeo
+    .map((c) => `<li><a href="/${locale}/c/${c.slug}/">${esc(c[locale].name)}</a></li>`)
+    .join('')
   // Home is app-list-only (the hero copy was removed); keep a single H1 for SEO.
-  return `<main><h1>${esc(t.hero.title1)} ${esc(t.hero.title2)}</h1><ul>${items}</ul></main>`
+  return `<main><h1>${esc(t.hero.title1)} ${esc(t.hero.title2)}</h1>`
+    + `<ul>${cats}</ul><ul>${items}</ul></main>`
 }
 
 // A tool page's crawlable block: H1 + description, an H2, and a full cross-link
 // list of the other tools. The cross-links mean no tool page is reachable from
 // the homepage alone (kills the "orphan / 1 internal link" problem) and lifts
 // the on-page word count / internal-link density that thin utility pages lack.
-function toolContent(locale: Loc, tool: ToolSeo): string {
+function toolContent(locale: Loc, tool: ToolSeo, catOf: Map<string, string>): string {
   const t = dicts[locale]
   const ts = tool[locale]
   const more = t.toolPage.moreTools
@@ -86,7 +93,13 @@ function toolContent(locale: Loc, tool: ToolSeo): string {
     .filter((x) => x.id !== tool.id)
     .map((x) => `<li><a href="/${locale}/apps/${x.id}/">${esc(x[locale].name)}</a></li>`)
     .join('')
-  return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a> / ${esc(ts.name)}</nav>`
+  // The breadcrumb carries the CATEGORY as a link. Without it the 30 category
+  // pages were reachable only from the home page's section headings and from
+  // each other, while the 208 tool pages — the ones that actually rank — linked
+  // to every tool and to no grouping at all.
+  const cat = categorySeo.find((c) => c.category === catOf.get(tool.id))
+  const crumb = cat ? ` / <a href="/${locale}/c/${cat.slug}/">${esc(cat[locale].name)}</a>` : ''
+  return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a>${crumb} / ${esc(ts.name)}</nav>`
     + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p>`
     + `<h2>${esc(more)}</h2><ul>${others}</ul></main>`
 }
@@ -210,7 +223,7 @@ function prerenderPlugin(): Plugin {
           const ts = tool[locale]
           const sub = `/apps/${tool.id}`
           let page = applyHead(shell, { locale, dir, title: `${ts.name}${suffix[locale]}`, desc: ts.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
-          page = injectContent(page, toolContent(locale, tool))
+          page = injectContent(page, toolContent(locale, tool, catOf))
           write(`${locale}${sub}`, page)
         }
 

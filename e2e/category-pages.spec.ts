@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 // Category landing pages, at /<locale>/c/<slug>/.
 //
@@ -95,4 +95,53 @@ test('Arabic gets its own page, in Arabic', async ({ page }) => {
   await expect(page.getByTestId('tool-qibla')).toBeVisible()
   await page.getByTestId('category-link-pdf').click()
   await expect(page).toHaveURL(/\/ar\/c\/pdf$/)
+})
+
+test('every tool page links to its own category — rendered and prerendered', async ({ page }) => {
+  // Measured before: 0 of 418 prerendered tool pages linked to a category, so
+  // the 30 category pages were reachable only from one another. A tool page
+  // could send you to four siblings or to all 209 tools, and to nothing in
+  // between — the one grouping this site curates by hand was the one place you
+  // could not go from it.
+  await page.goto('/en/apps/pdf-merge')
+  const link = page.getByTestId('tool-category-link')
+  await expect(link).toHaveText('More in PDF')
+  await link.click()
+  await expect(page).toHaveURL(/\/en\/c\/pdf$/)
+  await expect(page.getByTestId('category-page')).toHaveAttribute('data-category', 'PDF')
+})
+
+test('the prerendered breadcrumb carries the category, in both locales', async () => {
+  // This is the half that matters for a crawler: it is in the HTML before any
+  // JavaScript runs.
+  const en = readFileSync('dist/en/apps/pdf-merge/index.html', 'utf8')
+  expect(en).toContain('<a href="/en/c/pdf/">')
+  const ar = readFileSync('dist/ar/apps/due-date/index.html', 'utf8')
+  expect(ar).toContain('<a href="/ar/c/calculators/">')
+})
+
+test('no prerendered tool page is missing its category link', async () => {
+  // A per-tool check rather than a spot check: a tool whose category has no
+  // categorySeo entry would silently lose the link, and one page is exactly
+  // how this kind of gap goes unnoticed.
+  const missing: string[] = []
+  let checked = 0
+  for (const locale of ['en', 'ar']) {
+    for (const dir of readdirSync(`dist/${locale}/apps`, { withFileTypes: true })) {
+      if (!dir.isDirectory()) continue
+      checked++
+      const html = readFileSync(`dist/${locale}/apps/${dir.name}/index.html`, 'utf8')
+      if (!new RegExp(`<a href="/${locale}/c/[a-z-]+/">`).test(html)) missing.push(`${locale}/${dir.name}`)
+    }
+  }
+  // Without this the whole test passes on an empty directory read, having
+  // examined nothing — a green that means "I found no pages", not "every page
+  // is fine".
+  expect(checked).toBeGreaterThan(300)
+  expect(missing, `tool pages with no category link: ${missing.join(', ')}`).toEqual([])
+})
+
+test('the home crawlable block lists the categories, not only 209 tools', async () => {
+  const html = readFileSync('dist/en/index.html', 'utf8')
+  for (const slug of SLUGS) expect(html).toContain(`/en/c/${slug}/`)
 })

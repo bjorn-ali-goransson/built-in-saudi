@@ -925,9 +925,15 @@ Done 9 Aug 2026 at `/{locale}/c/<slug>/` — 15 categories x 2 locales, each wit
 its own written description, prerendered, in the sitemap, linked from the
 catalogue's section headings and from each other.
 
-**Still open after that:** nothing links a tool page to its own category. A
-visitor on `pdf-merge` sees the related row and the full crawlable list, and no
-"more PDF tools" — the one link most likely to be useful from there.
+~~**Still open after that:** nothing links a tool page to its own category.~~
+Done 9 Aug 2026. Measured before: **0 of 418 prerendered tool pages** linked to
+a category, so the 30 category pages were reachable only from one another.
+After: 418/418, plus the home crawlable block; pages linking a category page
+went **30 → 450**.
+
+**Still open on discoverability:** the category pages are flat grids in registry
+order. For a big one (Developer at 25, Images at 22) an ordering — most used
+first, or the RECOMMENDED tools first — would do more than another link.
 
 ### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
 

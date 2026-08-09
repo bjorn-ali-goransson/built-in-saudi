@@ -4,7 +4,12 @@ import { test, expect } from '@playwright/test'
 // crawler, useless for a person. This is the short list, and the interesting
 // part is what it refuses to show.
 
-const row = (page: import('@playwright/test').Page) => page.getByTestId('related-tools')
+// The CARDS, not every link in the nav. The nav also carries the
+// "More in <category>" link now, and a locator meaning "all links here"
+// was only ever an approximation of "all related tools".
+const row = (page: import('@playwright/test').Page) => page.getByTestId('related-grid')
+// The surrounding nav, for the heading and the category link.
+const nav = (page: import('@playwright/test').Page) => page.getByTestId('related-tools')
 
 test('a format family suggests its own family', async ({ page }) => {
   // Derived from the scorer: these share vocabulary, so relatedness is visible
@@ -49,7 +54,7 @@ test('it shows at most four, so it stays a short list', async ({ page }) => {
 
 test('the row is localized, not an English fallback', async ({ page }) => {
   await page.goto('/ar/apps/prayer-times')
-  await expect(row(page)).toContainText('أدوات ذات صلة')
+  await expect(nav(page)).toContainText('أدوات ذات صلة')
   await expect(page.getByTestId('related-qibla')).toBeVisible()
 })
 
