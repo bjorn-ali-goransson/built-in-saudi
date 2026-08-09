@@ -1199,6 +1199,55 @@ Two rules and the date that separates them, in `src/tools/rent-rules/rent.ts`:
 The `legal` Disclaimer says outright that the tool cannot know whether an
 address falls inside the urban boundary, which is what the freeze turns on.
 
+## The one network call on a privacy-first page (`password-strength`)
+
+A web sweep of the privacy-tool market found metadata stripping and redaction
+crowded — we ship both — and one thing on every list we could not answer:
+**has this password already leaked?** Entropy cannot tell you. A password can
+look strong and be in every wordlist there is.
+
+It is answerable without sending the password, and that is a property of the
+**protocol** rather than a promise. Have I Been Pwned's range API is
+k-anonymous: SHA-1 the password locally, send the first **five** hex characters
+of the hash, receive every suffix under that prefix — about a thousand — and
+compare here. The service sees a 20-bit prefix shared by roughly a thousand
+hashes and cannot tell which was asked about, or whether there was a real
+password at all.
+
+Three rules follow, enforced rather than intended:
+
+- **It is never automatic.** A network call about a password is something the
+  reader asks for, not something that happens because they typed — the same rule
+  the on-device AI tools follow for model downloads.
+- **`Add-Padding` is sent**, so the reply carries a random number of decoys and
+  its SIZE says nothing either. A decoy comes back with a count of 0 and must
+  not be read as a hit.
+- **A failed check says so.** "Safe" is the one wrong answer this can give, so
+  offline or rate-limited is reported as neither.
+
+**The tool used to say "this page has no network code at all", and that stopped
+being true.** Changing that sentence was part of the work, not an afterthought —
+there is a spec asserting the claim is gone. A privacy page whose copy is one
+release out of date is worse than one that never made the claim.
+
+### The mock was never serving, and three cases passed anyway
+
+Worth recording in full, because two separate traps stacked:
+
+1. **A glob route did not match, and the request fell through to the dev
+   server** — where the SPA fallback answers **200 with index.html**, not 404.
+   The body then contains no matching suffix, so the page said "not in the
+   corpus" and the cases passed having tested the fallback. Same trap this file
+   already records for `public/` assets, in a new place.
+2. **`page.route` cannot intercept a fetch the service worker handles.** This
+   site registers a network-first SW, so the request appeared in
+   `page.on('request')` — which is why the listener-based assertions looked
+   fine — while the route never fired. `context.route` sees it.
+
+The fix that makes it not happen again is not the regex: it is that **`mock()`
+returns a hit counter and every case asserts the mock was actually used**. That
+is what turned four silent passes into four honest failures.
+
 ## The privacy claim is now tested, not just written (`e2e/privacy.spec.ts`)
 
 "Files are never uploaded" is product principle #1 and the reason this site

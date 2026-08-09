@@ -875,6 +875,19 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Web sweep #7, 9 August 2026 — the privacy tools
+
+Our own territory, and mostly already ours: metadata stripping, EXIF scrubbing,
+PDF redaction and file encryption are all crowded categories we already ship.
+The sweep's honest answer was that the one real gap was **not a new tool** but a
+missing capability in an existing one:
+
+- **"Has this password leaked?"** — added to `password-strength` via HIBP's
+  k-anonymous range API. Not a separate tool: "is this password good?" is one
+  question, and answering half of it in two places would be worse.
+- **Disk/file cleaners, breach-monitoring services** — need OS access or an
+  account. Out of scope by construction.
+
 ### Web sweep #6, 9 August 2026 — the automotive calculators
 
 A whole cottage industry (CalculatorCove, CarCalculator, Numeraty, WiserWork,

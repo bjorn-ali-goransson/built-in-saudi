@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n'
 import { Button, Input, Stack, Panel, Check } from '../../components/ui'
 import { LockIcon } from '../../components/icons'
 import { analyze, humanTime } from './strength'
+import { checkBreached, type BreachResult } from './breach'
 
 const STR = {
   en: {
@@ -13,7 +14,13 @@ const STR = {
     bits: 'Effective entropy', bitsRaw: 'Before penalties',
     weaknesses: 'What makes it guessable',
     nothingWrong: 'No common weakness spotted. Length is still what matters most.',
-    hint: 'Nothing you type is sent anywhere — this page has no network code at all. Still, prefer typing a variation rather than your real password.',
+    hint: 'Nothing you type is sent anywhere. The optional breach check below sends five characters of a hash — never the password, and only when you press the button. Still, prefer typing a variation rather than your real password.',
+    breachTitle: 'Has it appeared in a breach?',
+    breachHow: 'Entropy cannot tell you this: a password can look strong and still be in every wordlist there is. Pressing the button hashes it here on your device and sends the FIRST FIVE characters of that hash — about a thousand hashes share those five, so the service cannot tell which one you asked about. Your password is never sent.',
+    breachRun: 'Check it', breachRunning: 'Checking…',
+    breachSafe: 'Not in the breach corpus. That is not proof it is strong — only that it has not leaked yet.',
+    breachFound: (n: number) => `Found in known breaches ${n.toLocaleString('en')} time${n === 1 ? '' : 's'}. However strong it looks, it is on a list attackers already have. Change it wherever you have used it.`,
+    breachError: 'The check could not be completed — you may be offline, or the service may be busy. That is not a clean bill of health; try again later.',
     advice: 'The single biggest win is length. Four or five unrelated words beat a short password with symbols bolted on.',
     assumption: 'Assumes an attacker with the stolen database and commodity GPUs against a fast hash — the pessimistic case, because you cannot know how the site stored it.',
     findings: {
@@ -37,7 +44,13 @@ const STR = {
     bits: 'العشوائية الفعلية', bitsRaw: 'قبل الخصومات',
     weaknesses: 'ما يجعلها قابلة للتخمين',
     nothingWrong: 'لم يُرصد ضعف شائع. ويبقى الطول هو الأهم.',
-    hint: 'لا يُرسل ما تكتبه إلى أي مكان — لا تحتوي هذه الصفحة على أي كود شبكة إطلاقًا. ومع ذلك، يُفضَّل كتابة صيغة مشابهة بدل كلمة مرورك الحقيقية.',
+    hint: 'لا يُرسل ما تكتبه إلى أي مكان. أما فحص التسريبات الاختياري أدناه فيرسل خمسة أحرف من بصمة — لا كلمة المرور — وعند ضغطك الزر فقط. ومع ذلك، اكتب صيغة مشابهة بدل كلمة مرورك الحقيقية.',
+    breachTitle: 'هل ظهرت في تسريب؟',
+    breachHow: 'لا تستطيع العشوائية إخبارك بهذا: فقد تبدو كلمة المرور قوية وهي في كل قوائم الكلمات. وعند ضغط الزر تُحسب البصمة على جهازك ويُرسل أول خمسة أحرف منها — ويشترك في هذه الخمسة نحو ألف بصمة، فلا تستطيع الخدمة معرفة أيّها سألت عنه. ولا تُرسل كلمة مرورك أبدًا.',
+    breachRun: 'افحصها', breachRunning: 'جارٍ الفحص…',
+    breachSafe: 'ليست في سجل التسريبات. وهذا ليس دليلًا على قوتها — بل على أنها لم تُسرَّب بعد.',
+    breachFound: (n: number) => `وُجدت في تسريبات معروفة ${n.toLocaleString('ar')} مرة. ومهما بدت قوية فهي في قائمة لدى المهاجمين أصلًا. غيّرها في كل مكان استخدمتها فيه.`,
+    breachError: 'تعذّر إتمام الفحص — قد تكون غير متصل، أو الخدمة مشغولة. وهذا ليس شهادة سلامة؛ أعد المحاولة لاحقًا.',
     advice: 'أكبر مكسب هو الطول. أربع أو خمس كلمات غير مترابطة تتفوّق على كلمة قصيرة أُضيفت إليها رموز.',
     assumption: 'يفترض مهاجمًا يملك قاعدة البيانات المسروقة وبطاقات رسوميات عادية ضد تجزئة سريعة — وهو الافتراض المتشائم، لأنك لا تعرف كيف خزّنها الموقع.',
     findings: {
@@ -63,6 +76,8 @@ export default function PasswordStrengthTool() {
   const s = STR[locale]
   const [pw, setPw] = useState('')
   const [show, setShow] = useState(false)
+  const [breach, setBreach] = useState<BreachResult | null>(null)
+  const [checking, setChecking] = useState(false)
 
   const r = useMemo(() => analyze(pw), [pw])
 
@@ -72,7 +87,8 @@ export default function PasswordStrengthTool() {
         {s.label}
         <Input dir="ltr" type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false}
           className="font-mono text-[1.05rem]" data-testid="pw-input"
-          placeholder={s.placeholder} value={pw} onChange={(e) => setPw(e.target.value)} />
+          placeholder={s.placeholder} value={pw}
+          onChange={(e) => { setPw(e.target.value); setBreach(null) }} />
       </label>
       <Check>
         <input type="checkbox" checked={show} data-testid="pw-show" onChange={(e) => setShow(e.target.checked)} /> {s.show}
@@ -124,6 +140,26 @@ export default function PasswordStrengthTool() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section className="flex flex-col gap-2" data-testid="pw-breach">
+            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint rtl:font-ar">{s.breachTitle}</h2>
+            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="pw-breach-how">{s.breachHow}</p>
+            {/* Never automatic. A network call about a password is a thing the
+                reader asks for, not something that happens because they typed —
+                the same rule the on-device AI tools follow for model downloads. */}
+            <Button
+              className="self-start"
+              data-testid="pw-breach-run"
+              disabled={checking}
+              onClick={async () => {
+                setChecking(true)
+                try { setBreach(await checkBreached(pw)) } finally { setChecking(false) }
+              }}
+            >{checking ? s.breachRunning : s.breachRun}</Button>
+            {breach?.state === 'safe' && <p className="text-[0.95rem] text-green-700 rtl:font-ar" data-testid="pw-breach-safe">{s.breachSafe}</p>}
+            {breach?.state === 'found' && <p className="text-[0.95rem] text-[color:var(--danger)] rtl:font-ar" data-testid="pw-breach-found">{s.breachFound(breach.count)}</p>}
+            {breach?.state === 'error' && <p className="text-[0.95rem] text-gold-500 rtl:font-ar" data-testid="pw-breach-error">{s.breachError}</p>}
           </section>
 
           <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.advice}</p>
