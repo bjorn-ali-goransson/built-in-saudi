@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
 import { useLocale, localePath } from '../i18n'
 import { rankToolsWithCorrection } from '../lib/searchTools'
+import { useResultKeys } from '../lib/useResultKeys'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
 import { SectionNav } from './SectionNav'
@@ -63,16 +64,13 @@ export function AppLauncher() {
   const navigate = useNavigate()
   const close = () => setOpen(false)
 
-  /** Enter goes to the top result — the other half of Ctrl+K. */
-  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter' || !results.length) return
-    e.preventDefault()
-    const top = results[0]
+  /** Arrows move, Enter opens — the other half of Ctrl+K. */
+  const { active, onKeyDown: onSearchKey } = useResultKeys(results, (tool) => {
     close()
     // An external/showcase tool has an href instead of a route.
-    if (top.href) window.open(top.href, '_blank', 'noreferrer noopener')
-    else navigate(localePath(locale, `/apps/${top.id}`))
-  }
+    if (tool.href) window.open(tool.href, '_blank', 'noreferrer noopener')
+    else navigate(localePath(locale, `/apps/${tool.id}`))
+  })
 
   return (
     <>
@@ -114,7 +112,7 @@ export function AppLauncher() {
                       {t.search.correctedTo(ranked.correctedTo)}
                     </p>
                   )}
-                  <ToolGrid tools={results} indexOf={idx} onNavigate={close} />
+                  <ToolGrid tools={results} indexOf={idx} onNavigate={close} active={active} />
                 </>
               ) : (
                 <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>

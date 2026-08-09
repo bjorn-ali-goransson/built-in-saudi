@@ -148,6 +148,26 @@ hint in the UI, unlike Ctrl+K: every search box on earth already behaves this
 way, so it needs no advertising. An external/showcase tool has an `href`
 rather than a route, so Enter opens it in a new tab instead of navigating.
 
+**The arrows are the other half** (`lib/useResultKeys.ts`, shared by both
+surfaces). Enter-opens-the-top-result meant choosing the SECOND result still
+required the mouse — and the second result is exactly what an ambiguous query
+needs. This repo has measured several: «باركود» means both a QR code and a
+barcode in Saudi usage, `ebook` means the reader or the writer, `calendar` means
+the ICS builder or the Hijri one. Two decisions worth keeping:
+
+- **A new result list resets the highlight to the top.** Without it, one more
+  letter leaves the highlight on row 5 of a list that now has two, and Enter
+  opens something the reader never looked at. It is the same shape of bug as a
+  stale index anywhere else, and it is invisible until it fires.
+- **The ring is on a WRAPPER, not on `ToolCard`.** A border or outline on the
+  card itself shifts the grid; the wrapper also carries the
+  `data-testid="result-active"` the spec reads and the `scrollIntoView({block:
+  'nearest'})` that keeps a highlight below the fold reachable.
+
+Extracted at TWO callers rather than the usual three, because the two surfaces
+are documented above as having to behave identically and a copy is precisely how
+they stop — the same argument that moved the ranking into `searchTools.ts`.
+
 **Ctrl/Cmd+K** opens the launcher from anywhere — except on **home, where the
 launcher is deliberately not rendered** (`Header.tsx`: `{!isHome && <AppLauncher />}`),
 because home IS the catalogue. The shortcut was therefore dead on the most

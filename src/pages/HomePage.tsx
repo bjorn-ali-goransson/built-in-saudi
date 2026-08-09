@@ -7,6 +7,7 @@ import { SectionNav } from '../components/SectionNav'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
 import { rankToolsWithCorrection } from '../lib/searchTools'
+import { useResultKeys } from '../lib/useResultKeys'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localePath } from '../i18n'
 
@@ -43,6 +44,13 @@ export function HomePage() {
   const ranked = useMemo(() => rankToolsWithCorrection(query, tools, locale), [query, locale])
   const results = ranked.tools
 
+  // Type, arrow, Enter — the whole of a command palette. Neither half needs
+  // advertising: every search box on earth behaves this way.
+  const { active, onKeyDown } = useResultKeys(results, (tool) => {
+    if (tool.href) window.open(tool.href, '_blank', 'noreferrer noopener')
+    else navigate(localePath(locale, `/apps/${tool.id}`))
+  })
+
   const recent = useRecentTools()
   const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
 
@@ -61,15 +69,7 @@ export function HomePage() {
           onChange={(e) => setQuery(e.target.value)}
           aria-label={t.catalog.searchAria}
           autoComplete="off"
-          onKeyDown={(e) => {
-            // Same as the launcher: type, press Enter, you are there. Unlike
-            // Ctrl+K this needs no advertising — every search box does it.
-            if (e.key !== "Enter" || !results.length) return
-            e.preventDefault()
-            const top = results[0]
-            if (top.href) window.open(top.href, "_blank", "noreferrer noopener")
-            else navigate(localePath(locale, `/apps/${top.id}`))
-          }}
+          onKeyDown={onKeyDown}
         />
         {query && (
           <button
@@ -93,7 +93,7 @@ export function HomePage() {
                 {t.search.correctedTo(ranked.correctedTo)}
               </p>
             )}
-            <ToolGrid tools={results} indexOf={idx} />
+            <ToolGrid tools={results} indexOf={idx} active={active} />
           </>
         ) : (
           <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>

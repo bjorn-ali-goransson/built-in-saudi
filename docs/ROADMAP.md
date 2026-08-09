@@ -1386,3 +1386,21 @@ as English.
   does not get encoded. What is uncontested (24 points, 3/6/12-month escalation)
   is too thin to be a tool. Revisit only with an official MOI/Absher source.
 
+
+### Discoverability, 10 August 2026 — the other half of the palette
+
+`useResultKeys` gives both search surfaces arrow-key navigation. Enter already
+opened the top result; **choosing the second one still meant reaching for the
+mouse**, which is exactly what an ambiguous query needs — and this repo has
+measured several ambiguous queries («باركود», `ebook`, `calendar`).
+
+- Extracted to a hook at **two** callers rather than the usual three, because
+  home and the launcher are documented as having to behave identically.
+- The highlight resets on every new result list, so a further keystroke can
+  never leave Enter aimed at a row that has scrolled out of the list.
+- Covered by `e2e/result-keys.spec.ts`, which asserts the OLD contract
+  (bare Enter opens the top result) still holds — the behaviour being added must
+  not quietly replace the one that was already there.
+
+Still open from the pass before: sweep every tool's Arabic name for the plural
+trap, which has now been caught three times one at a time.

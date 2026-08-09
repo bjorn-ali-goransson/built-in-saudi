@@ -20,10 +20,25 @@ function linkClick(onNavigate?: () => void) {
 }
 
 /** A flat grid of tool cards — used for search results on both surfaces. */
-export function ToolGrid({ tools, indexOf, onNavigate }: { tools: Tool[]; indexOf: (id: string) => number; onNavigate?: () => void }) {
+export function ToolGrid({ tools, indexOf, onNavigate, active }: { tools: Tool[]; indexOf: (id: string) => number; onNavigate?: () => void; active?: number }) {
   return (
     <div className={TOOL_GRID} onClick={linkClick(onNavigate)}>
-      {tools.map((tool) => <ToolCard key={tool.id} tool={tool} index={indexOf(tool.id)} />)}
+      {tools.map((tool, i) => (
+        // The ring is on a WRAPPER rather than the card, so highlighting a
+        // keyboard selection cannot disturb the card's own layout or its hover
+        // treatment. `scroll-mt` keeps a selection clear of the two sticky bars
+        // when the arrows walk it off the bottom of the screen.
+        <div
+          key={tool.id}
+          data-testid={active === i ? 'result-active' : undefined}
+          ref={active === i ? (el) => el?.scrollIntoView({ block: 'nearest' }) : undefined}
+          className={`scroll-mt-[8rem] rounded-[var(--r-md)] ${
+            active === i ? 'ring-2 ring-green-600 ring-offset-2 ring-offset-[var(--bg)]' : ''
+          }`}
+        >
+          <ToolCard tool={tool} index={indexOf(tool.id)} />
+        </div>
+      ))}
     </div>
   )
 }
