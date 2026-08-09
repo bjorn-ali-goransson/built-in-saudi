@@ -858,6 +858,19 @@ Deliberately NOT taken from the sweep:
   advertising a download are server-side. Shipping playback only, under a name
   people search expecting a download, would be the adware move.
 
+### Web sweep #4, 9 August 2026 — freelancers and small business
+
+The freelancer tooling market is almost all SaaS with accounts (Wave, Zoho,
+Ramp) and therefore not our shape. One thing in it is:
+
+- **Time card calculator** — a whole cottage industry of free single-purpose
+  sites, and we had nothing. **SHIPPED** as `timesheet`, with the overnight
+  shift, the decimal conversion and the Ramadan six-hour day that the generic
+  ones miss.
+- **Receipt scanner** — needs OCR (which we have) plus field extraction, which
+  is a model, not a regex. Out of scope client-side for now.
+- **Expense tracker / bookkeeping** — needs storage and an account. Backend.
+
 ### Web sweep #3, 9 August 2026 — the teacher-tools market
 
 We are half in this market already (worksheets, bingo cards, quizzes,

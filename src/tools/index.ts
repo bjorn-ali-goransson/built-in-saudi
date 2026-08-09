@@ -205,6 +205,7 @@ import { vehicleRenewalTool } from './vehicle-renewal/meta'
 import { rentRulesTool } from './rent-rules/meta'
 import { earlySettlementTool } from './early-settlement/meta'
 import { leaveOvertimeTool } from './leave-overtime/meta'
+import { timesheetTool } from './timesheet/meta'
 import { exitReentryTool } from './exit-reentry/meta'
 import { iqamaFeesTool } from './iqama-fees/meta'
 import { electricityBillTool } from './electricity-bill/meta'
@@ -364,6 +365,7 @@ export const tools: Tool[] = [
   rentRulesTool,
   earlySettlementTool,
   leaveOvertimeTool,
+  timesheetTool,
   exitReentryTool,
   iqamaFeesTool,
   stopwatchTool,

@@ -1288,6 +1288,42 @@ the three grounds written out beside it, rather than four buttons: they are
 mutually exclusive legal grounds with the same consequence, and a form offering
 a choice between them would pretend the distinction changed the answer.
 
+## Adding up a week of hours (`timesheet`)
+
+Found by a web sweep: the time-card calculator is one of the **highest-traffic
+free-tool categories on the web** — timecardcalculator.net, redcort, My Hours,
+Clockshark and CalculatorSoup all publish one — and this site had none, next to
+a working-days calculator and a date-difference calculator. The arithmetic is
+addition; four things carry it, and the generic calculators get two of them
+wrong:
+
+- **A shift can cross midnight.** An end time earlier than the start means the
+  next day, not a negative shift. Most of them refuse it or report minus sixteen
+  hours — and a night shift is exactly the week somebody reaches for a
+  calculator to total. It is computed AND labelled, so the reader can see it was
+  understood rather than guessed at.
+- **Payroll wants decimal hours, and 7:20 is 7.33, not 7.20.** That conversion
+  is where hand-totalled sheets go wrong, so both columns are always shown
+  rather than one.
+- **The overtime threshold is weekly as well as daily.** Five nine-hour days is
+  5 hours of overtime by the daily rule and none against a 48-hour week. Which
+  applies is the employer's basis, not ours, so it is asked rather than assumed.
+- **Ramadan is a six-hour day, not eight** (Labour Law art. 98) — a statutory
+  reduction no generic calculator knows, changing what counts as overtime for a
+  whole month.
+
+**It does not own the labour rules; `leave-overtime` does**, and the tool links
+there rather than restating them. Two tools asserting the same statute is how
+they drift apart. What it keeps is the arithmetic plus three defaults — 8-hour
+day, 6-hour Ramadan day, overtime at 150% — every one of them editable, because
+a contract may give more and cannot give less.
+
+Carries a SOURCES block naming HRSD, a `legal` Disclaimer, and is badged
+**beta**: it prints statutory defaults, so its answer can go stale without the
+code changing. The week starts on **Sunday**, since Friday and Saturday are the
+weekend here — starting on Monday, as the American calculators do, puts the
+weekend in the middle of the sheet.
+
 ## Leave, overtime and notice (`leave-overtime`)
 
 `end-of-service` covers leaving; this covers being employed. Constants live in

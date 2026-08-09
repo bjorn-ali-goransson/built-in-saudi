@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'timesheet',
+    en: { name: 'Time Card Calculator', description: 'Total a week of shifts with breaks, overnight shifts and overtime, and read it both as hours and minutes and as the decimal hours a payroll system asks for. It knows the Saudi 8-hour day, the 6-hour Ramadan day and overtime at 150%, all as defaults you can change. Nothing is uploaded.' },
+    ar: { name: 'حاسبة ساعات العمل', description: 'اجمع أسبوعًا من الورديات مع الاستراحات والورديات الليلية والعمل الإضافي، واقرأه بالساعات والدقائق وبالساعات العشرية التي يطلبها نظام الرواتب. وتعرف اليوم السعودي بثماني ساعات، ويوم رمضان بست، والإضافي ب١٥٠٪، وكلها قيم افتراضية يمكنك تغييرها. ولا يُرفع شيء.' },
+  },
+  {
     id: 'markdown-epub',
     en: { name: 'Markdown to EPUB', description: 'Turn Markdown into a real EPUB you can read on a Kindle, a phone or any e-reader — chapters split at your headings, a working table of contents, and your formatting carried across. Arabic books are written right-to-left properly: the text direction and the page-turn direction both. Built in your browser, so an unpublished manuscript is never uploaded.' },
     ar: { name: 'ماركداون إلى كتاب EPUB', description: 'حوّل ماركداون إلى كتاب EPUB حقيقي تقرؤه على الكيندل أو الجوال أو أي قارئ — تُقسّم الفصول عند عناوينك، مع فهرس يعمل، وينتقل تنسيقك كما هو. وتُكتب الكتب العربية من اليمين إلى اليسار كما ينبغي: اتجاه النص واتجاه تقليب الصفحات معًا. يُبنى في متصفحك، فلا تُرفع مخطوطة غير منشورة.' },

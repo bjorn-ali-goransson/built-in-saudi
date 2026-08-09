@@ -26,6 +26,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },
+  { id: 'timesheet', kind: 'legal' },
   { id: 'exit-reentry', kind: 'official' },
   { id: 'iqama-fees', kind: 'official' },
   { id: 'electricity-bill', kind: 'financial' },
