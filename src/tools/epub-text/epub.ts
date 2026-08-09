@@ -1,4 +1,5 @@
 import { readEntry, zipEntries } from '../../lib/unzip'
+import { parseClean, elementToMd } from '../../lib/htmlToMd'
 
 // Getting the text out of an EPUB.
 //
@@ -16,6 +17,13 @@ import { readEntry, zipEntries } from '../../lib/unzip'
 // 4. **Stripping tags with a regex glues words together.** A block element is a
 //    line break; without that, "end of paragraph" runs into "Start of the next"
 //    and the text is subtly wrong everywhere.
+// 5. **Markdown is not text with hashes in front of it.** This tool has offered
+//    a Markdown export since it shipped, and produced `xhtmlToText` output with
+//    `## <chapter title>` bolted on — so every heading, list, link, blockquote
+//    and bold run in the book was flattened to prose BEFORE the "Markdown" was
+//    made. Its own spec asserted only that the headings were there, which is the
+//    one thing the flattened output still had. Chapters now carry a real `md`,
+//    converted from the chapter's own XHTML by `lib/htmlToMd.ts`.
 
 export interface Meta {
   title: string
@@ -26,7 +34,7 @@ export interface Meta {
   date: string
 }
 
-export interface Chapter { href: string; title: string; text: string; words: number }
+export interface Chapter { href: string; title: string; text: string; md: string; words: number }
 
 export interface Book {
   meta: Meta
@@ -75,6 +83,28 @@ export function xhtmlToText(source: string): string {
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/**
+ * XHTML to Markdown, keeping the structure the text extractor throws away.
+ *
+ * Parsed as `text/html` rather than `application/xhtml+xml` on purpose: the
+ * strict parser rejects a whole chapter over one unescaped ampersand, and real
+ * books in the wild have them. A book that renders in a reader must convert.
+ *
+ * `imgBase` rewrites a picture's src to its path INSIDE the archive, so the
+ * reference names a real file in the book rather than a path relative to a
+ * chapter folder that no longer exists once the Markdown is somewhere else. The
+ * image files themselves are not extracted — this tool returns text — and the
+ * UI says so rather than leaving a reader to discover the broken picture.
+ */
+export function xhtmlToMarkdown(source: string, chapterPath = ''): string {
+  const body = parseClean(source)
+  for (const img of Array.from(body.querySelectorAll('img'))) {
+    const src = img.getAttribute('src')
+    if (src && !/^(https?:|data:)/i.test(src)) img.setAttribute('src', resolveHref(chapterPath, src))
+  }
+  return elementToMd(body)
 }
 
 const countWords = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0)
@@ -146,6 +176,7 @@ export async function readEpub(buf: ArrayBuffer): Promise<Book> {
       href: path,
       title: heading || path.split('/').pop() || path,
       text: body,
+      md: xhtmlToMarkdown(source, path),
       words: countWords(body),
     })
   }
@@ -157,5 +188,19 @@ export async function readEpub(buf: ArrayBuffer): Promise<Book> {
 export const bookToText = (book: Book, withTitles: boolean) =>
   book.chapters.map((c) => (withTitles ? `${c.title}\n\n${c.text}` : c.text)).join('\n\n')
 
+/**
+ * A chapter usually opens with its own <h1>, so prepending the title as well
+ * printed every chapter heading twice — once as our `##`, again as the book's
+ * own `#`. The chapter's own heading wins where it has one, since that is the
+ * author's markup; ours is the fallback for a chapter with none.
+ */
+export const chapterToMarkdown = (c: Chapter) =>
+  /^#{1,6} /.test(c.md) ? c.md : `## ${c.title}\n\n${c.md}`
+
 export const bookToMarkdown = (book: Book) =>
-  [`# ${book.meta.title || 'Untitled'}`, book.meta.authors.join(', '), '', ...book.chapters.map((c) => `## ${c.title}\n\n${c.text}`)].join('\n\n')
+  [
+    `# ${book.meta.title || 'Untitled'}`,
+    book.meta.authors.join(', '),
+    '',
+    ...book.chapters.map(chapterToMarkdown),
+  ].join('\n\n')

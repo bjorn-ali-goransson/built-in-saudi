@@ -1,7 +1,13 @@
-// A compact, dependency-free HTML → Markdown converter. It walks the DOM of pasted
-// rich text (Google Docs, Word, web pages, Notion…) and emits GitHub-flavoured
-// Markdown. Deliberately lean — handles the elements that actually show up on a
-// clipboard, and passes unknown wrappers through to their children.
+// A compact, dependency-free HTML → Markdown converter. It walks the DOM and
+// emits GitHub-flavoured Markdown. Deliberately lean — it handles the elements
+// that actually show up on a clipboard, and passes unknown wrappers through to
+// their children.
+//
+// It lives in `lib/` rather than in `paste-to-markdown/` because it has a SECOND
+// caller: an EPUB chapter is XHTML, so "EPUB to Markdown" is this converter and
+// nothing else. That claim was on the epub tool's tagline for a long time while
+// it shipped `xhtmlToText` output with `##` bolted on top — which flattens every
+// heading, list, link and bold run in the book before the "Markdown" is made.
 
 type Ctx = { indent: string }
 

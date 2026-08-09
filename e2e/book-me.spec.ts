@@ -136,7 +136,13 @@ test('publish runs the full OAuth round-trip and signs the host in', async ({ pa
 
   // Lands back on the dashboard, signed in: the connected-only control appears,
   // the pre-sign-in CTA is gone, and the hash was cleaned up.
-  await expect(page.getByTestId('open-page')).toBeVisible()
+  //
+  // The default 5s is not enough for this one: it is a four-hop redirect chain
+  // (start -> the static /oauth/callback/ forwarder -> the callback -> the app),
+  // and under a loaded suite at --workers=2 it went over. It passed every time
+  // the file was run alone, which is the signature of a timeout that is too
+  // tight rather than a broken flow.
+  await expect(page.getByTestId('open-page')).toBeVisible({ timeout: 20_000 })
 
   // #233: the nav must swap to Log out straight away. It used to read localStorage
   // once during render, which isn't reactive, so "Log in" survived until a reload.

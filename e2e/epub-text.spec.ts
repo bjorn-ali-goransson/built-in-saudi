@@ -76,13 +76,52 @@ test('counts the words and offers the whole book', async ({ page }) => {
   expect(whole).toContain('The last well was dry.')
 })
 
-test('exports Markdown with headings', async ({ page }) => {
+// This case used to assert the headings and nothing else — which is precisely
+// what the flattened output still had, so it passed for years over a "Markdown"
+// export that was plain text with `##` bolted on. Markdown is the STRUCTURE.
+test('exports real Markdown, not text with hashes in front of it', async ({ page }) => {
   await load(page)
   await page.getByTestId('ep-format-markdown').click()
   await page.getByTestId('ep-copy').click()
   const md = await page.evaluate(() => navigator.clipboard.readText())
   expect(md).toContain('# The Sands of Najd')
-  expect(md).toContain('## Chapter One')
+
+  // Every one of these is destroyed by extracting the text first.
+  expect(md).toContain('**Nine**')
+  expect(md).toContain('*dry*')
+  expect(md).toContain('`unnamed`')
+  expect(md).toContain('- The first well')
+  expect(md).toContain('> Water is the only wealth.')
+  expect(md).toContain('[the survey](https://example.com/wells)')
+
+  // A picture's src is rewritten to its path INSIDE the book, so the reference
+  // names a real entry rather than a path relative to a folder that is gone.
+  expect(md).toContain('![A stone well](book/images/well.png)')
+  await expect(page.getByTestId('ep-md-note')).toBeVisible()
+})
+
+test('the book’s own heading is not printed twice', async ({ page }) => {
+  // Each chapter opens with its own <h1>, so prepending our `## <title>` as
+  // well gave every chapter two headings that said the same thing.
+  await load(page)
+  await page.getByTestId('ep-format-markdown').click()
+  await page.getByTestId('ep-copy').click()
+  const md = await page.evaluate(() => navigator.clipboard.readText())
+  // Split on /\r?\n/: Chromium writes CRLF when it puts text on the Windows
+  // clipboard, so splitting on \n alone leaves a \r on the end of every line
+  // and the comparison fails on a character the product never produced.
+  const heads = md.split(/\r?\n/).filter((l) => /Chapter One\s*$/.test(l) && l.startsWith('#'))
+  expect(heads).toHaveLength(1)
+  expect(heads[0]).toBe('# Chapter One')
+})
+
+test('plain text is still plain — the markdown work did not leak into it', async ({ page }) => {
+  await load(page)
+  await page.getByTestId('ep-copy').click()
+  const txt = await page.evaluate(() => navigator.clipboard.readText())
+  expect(txt).toContain('Nine of them were dry')
+  expect(txt).not.toContain('**')
+  expect(txt).not.toContain('](')
 })
 
 test('a file that is not an EPUB is refused with a reason', async ({ page }) => {

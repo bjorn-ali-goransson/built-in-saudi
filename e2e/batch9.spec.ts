@@ -167,11 +167,31 @@ test.describe('medicine timing', () => {
     expect(gap).toBeLessThan(6)
   })
 
-  test('four doses in a fasting night is flagged as too tight', async ({ page }) => {
+  // The fasting window is Maghrib -> Fajr, so its LENGTH is seasonal: about 8.5
+  // hours at midsummer in Riyadh and about 11.5 in midwinter. Four doses at a
+  // 3-hour minimum therefore genuinely fit in a winter night and genuinely do
+  // not in a summer one — so a test that just asks "is it flagged today" is
+  // asserting the season, and it duly failed the first time a run happened to
+  // land in August. The tool was right; the test was wrong. Same family as the
+  // id-expiry cases built in UTC. Both ends of the rule are pinned instead.
+  test('four doses are flagged in a short summer night', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-06-21T10:00:00+03:00') })
     await page.goto('/en/apps/medicine-schedule')
     await page.getByTestId('ms-fasting').check()
     await page.getByTestId('ms-doses').selectOption('4')
     await expect(page.getByTestId('ms-tootight')).toBeVisible()
+  })
+
+  test('and are not flagged in a long winter one', async ({ page }) => {
+    // Without this half the warning could fire on every night of the year and
+    // the case above would still pass, which would make it a warning nobody
+    // could act on.
+    await page.clock.install({ time: new Date('2026-12-21T10:00:00+03:00') })
+    await page.goto('/en/apps/medicine-schedule')
+    await page.getByTestId('ms-fasting').check()
+    await page.getByTestId('ms-doses').selectOption('4')
+    await expect(page.getByTestId('ms-doses')).toHaveValue('4')
+    await expect(page.getByTestId('ms-tootight')).toHaveCount(0)
   })
 
   test('fasting adds the ruling note alongside the medical one', async ({ page }) => {

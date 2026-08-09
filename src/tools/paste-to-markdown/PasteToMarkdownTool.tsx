@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { CopyIcon, ShareIcon } from '../../components/icons'
 import { Button, Textarea, Stack } from '../../components/ui'
-import { htmlToMd, elementToMd } from './htmlToMd'
+import { htmlToMd, elementToMd } from '../../lib/htmlToMd'
 
 const STR = {
   en: {

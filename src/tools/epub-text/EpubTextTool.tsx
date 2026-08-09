@@ -3,19 +3,20 @@ import { useLocale } from '../../i18n'
 import { Button, Check, Stack, Panel, Seg, SegButton, FileError, Spinner } from '../../components/ui'
 import { CopyIcon, DownloadIcon, UploadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
-import { bookToMarkdown, bookToText, readEpub, type Book } from './epub'
+import { bookToMarkdown, bookToText, chapterToMarkdown, readEpub, type Book } from './epub'
 
 const WIP = 'epub-text'
 
 const STR = {
   en: {
     pick: 'Choose an EPUB',
-    intro: 'Open an ebook you own and take the text out of it — the whole book, or one chapter at a time — as plain text or Markdown. Read in your browser; the file is never uploaded.',
+    intro: 'Open an ebook you own and take the text out of it — the whole book, or one chapter at a time — as plain text or real Markdown that keeps its headings, lists, quotes and links. Read in your browser; the file is never uploaded.',
     reading: 'Reading the book…',
     title: 'Title', authors: 'By', publisher: 'Publisher', language: 'Language', identifier: 'Identifier', date: 'Published',
     chapters: 'Chapters', words: (n: number) => `${n.toLocaleString('en')} words`,
     total: (c: number, w: number) => `${c} chapter${c === 1 ? '' : 's'} · ${w.toLocaleString('en')} words`,
     format: 'As', plain: 'Plain text', markdown: 'Markdown',
+    mdNote: 'Markdown keeps the book’s headings, lists, quotes, links and bold. Pictures are referenced by their path inside the book but are not extracted — this tool returns text.',
     titles: 'Include chapter titles',
     copy: 'Copy', copied: 'Copied!', download: 'Download',
     preview: 'Preview', whole: 'Whole book',
@@ -31,12 +32,13 @@ const STR = {
   },
   ar: {
     pick: 'اختر كتاب EPUB',
-    intro: 'افتح كتابًا تملكه واستخرج نصّه — الكتاب كله أو فصلًا فصلًا — نصًّا عاديًا أو ماركداون. تجري القراءة في متصفحك؛ ولا يُرفع الملف أبدًا.',
+    intro: 'افتح كتابًا تملكه واستخرج نصّه — الكتاب كله أو فصلًا فصلًا — نصًّا عاديًا أو ماركداون حقيقية تحفظ العناوين والقوائم والاقتباسات والروابط. تجري القراءة في متصفحك؛ ولا يُرفع الملف أبدًا.',
     reading: 'جارٍ قراءة الكتاب…',
     title: 'العنوان', authors: 'تأليف', publisher: 'الناشر', language: 'اللغة', identifier: 'المعرّف', date: 'النشر',
     chapters: 'الفصول', words: (n: number) => `${n.toLocaleString('ar')} كلمة`,
     total: (c: number, w: number) => `${c} فصلًا · ${w.toLocaleString('ar')} كلمة`,
     format: 'الصيغة', plain: 'نص عادي', markdown: 'ماركداون',
+    mdNote: 'تحفظ صيغة ماركداون عناوين الكتاب وقوائمه واقتباساته وروابطه والخط العريض. أما الصور فيُشار إليها بمسارها داخل الكتاب ولا تُستخرج — فهذه أداة نصّ.',
     titles: 'أضف عناوين الفصول',
     copy: 'نسخ', copied: 'تم النسخ!', download: 'نزّل',
     preview: 'معاينة', whole: 'الكتاب كاملًا',
@@ -86,7 +88,7 @@ export default function EpubTextTool() {
     if (selected >= 0) {
       const c = book.chapters[selected]
       if (!c) return ''
-      return format === 'markdown' ? `## ${c.title}\n\n${c.text}` : (withTitles ? `${c.title}\n\n${c.text}` : c.text)
+      return format === 'markdown' ? chapterToMarkdown(c) : (withTitles ? `${c.title}\n\n${c.text}` : c.text)
     }
     return format === 'markdown' ? bookToMarkdown(book) : bookToText(book, withTitles)
   }, [book, selected, format, withTitles])
@@ -167,6 +169,9 @@ export default function EpubTextTool() {
             <Button variant="primary" onClick={download} disabled={!output} data-testid="ep-download"><DownloadIcon /> {s.download}</Button>
             <Button onClick={copy} disabled={!output} data-testid="ep-copy"><CopyIcon /> {copied ? s.copied : s.copy}</Button>
           </div>
+          {format === 'markdown' && (
+            <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="ep-md-note">{s.mdNote}</p>
+          )}
 
           <section className="flex flex-col gap-2">
             <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.preview}</h2>

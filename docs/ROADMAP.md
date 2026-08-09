@@ -829,6 +829,33 @@ Still open, and still needing a key, in this order:
 - ~~**`csv-json` carries its own private `parseCsv`.**~~ Fixed — it was
   mishandling a BOM and assuming a comma.
 
+### Web sweep, 9 August 2026 — and the gap was already inside the site
+
+Swept the open web for tool ideas we do not have. The generic directories
+("221+ free browser tools", "no-signup roundups") are noise — they list the same
+converters we already ship. Three specific gaps came out of it:
+
+1. **EPUB ↔ Markdown.** A live searched category with dedicated browser tools
+   (`ePub2Markdown`, `file2markdown`, several "best EPUB to Markdown" listicles).
+   We had the answer already and it was **wrong** — see the `epub-text` section
+   in CLAUDE.md. Fixed this iteration, at the cost of no new code.
+2. **Markdown → EPUB.** The inverse, and genuinely unbuilt. `zip.ts` writes
+   store-only archives and an EPUB's `mimetype` entry MUST be stored and first,
+   so the writer we have is exactly the writer this needs; `buildXlsx` is the
+   precedent for hand-writing an XML-in-a-zip format. It needs a Markdown→HTML
+   converter, which the repo does not have in that direction. **Genuine
+   differentiator: an RTL Arabic EPUB**, which the incumbents do not produce.
+3. **Spectrogram / waveform view of an audio file.** `lib/audio.ts` already
+   decodes, and `AnalyserNode` is the platform's own FFT. `sound-meter` and
+   `tuner` do this live; nothing does it for a file.
+
+Deliberately NOT taken from the sweep:
+
+- **Text to speech with an MP3 download.** `speechSynthesis` is on-device and
+  free, but its output cannot be captured to a file in any browser — the tools
+  advertising a download are server-side. Shipping playback only, under a name
+  people search expecting a download, would be the adware move.
+
 ### Browsing was 7.4 screens with no jump — measured and fixed (9 Aug 2026)
 
 Search has been benched to saturation (tuned 100%, held-out #1 98%, #2 90%,

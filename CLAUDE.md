@@ -539,6 +539,53 @@ is and putting them in order. Three traps, all covered in
   default. PowerPoint also writes the **slide number itself** into that part as
   its own paragraph; emit it and every note reads "[Notes] 7".
 
+## "Markdown" that was really text with hashes in front of it (`epub-text`)
+
+A web sweep found EPUB-to-Markdown to be a live searched category, and our
+answer to it was wrong. `epub-text` has advertised a Markdown export in its
+tagline, its description and its UI since it shipped, and produced
+`xhtmlToText` output with `## <chapter title>` bolted on — so every heading,
+list, blockquote, link, bold run and image in the book was flattened to prose
+**before** the "Markdown" was made.
+
+**Its own spec asserted the headings and nothing else**, which is precisely
+what the flattened output still had. A guard that checks the one property the
+bug preserves is the vacuous-green failure in its purest form.
+
+The fix cost no new code: `htmlToMd.ts` already existed in `paste-to-markdown`,
+and an EPUB chapter is XHTML, so "EPUB to Markdown" *is* that converter. It
+moved to **`src/lib/htmlToMd.ts`** on its second caller — the repo's standing
+preference for extracting the pure part rather than keeping a copy. Three
+decisions worth keeping:
+
+- **The chapter is parsed as `text/html`, not `application/xhtml+xml`.** The
+  strict parser rejects a whole chapter over one unescaped ampersand, and real
+  books have them. A book that renders in a reader must convert here.
+- **An image's `src` is rewritten to its path INSIDE the archive**, so the
+  reference names a real entry rather than a path relative to a chapter folder
+  that no longer exists once the Markdown is somewhere else. The image files
+  are not extracted — this is a text tool — and the UI says so rather than
+  leaving a reader to find a broken picture.
+- **The chapter's own heading wins over ours.** Chapters open with their own
+  `<h1>`, so prepending `## <title>` as well printed every chapter heading
+  twice. `chapterToMarkdown` prepends only when the chapter has no heading of
+  its own.
+
+The fixture gained bold, italic, inline code, a list, a blockquote, a link and
+an image, because none of those could be asserted against the old one — and a
+markdown converter tested on a document with no markup in it is testing
+nothing.
+
+**A test-environment trap found on the way:** Chromium writes **CRLF** when it
+puts text on the Windows clipboard, so a spec that reads back through
+`navigator.clipboard` and splits on `
+` leaves a `
+` on the end of every line.
+The comparison then fails on a character the product never produced. Split on
+`/
+?
+/`.
+
 ## Reading a .vcf (`lib/vcardRead.ts`, `vcard-to-csv`)
 
 The inverse of `tools/csv-vcard/vcard.ts`, and much the harder direction —
@@ -2107,6 +2154,25 @@ expose. `npm run test:e2e` builds nothing itself — it starts `vite preview` on
 stale build). Container path: `docker compose -f docker-compose.e2e.yml run --rm
 e2e` (Playwright's official image, tag must match the `@playwright/test`
 version). **Keep tests green and add a spec when you add a tool.**
+
+**A test that reads today's date is asserting the season.** `medicine-schedule`
+spreads doses across the fasting window, which is Maghrib → Fajr and therefore
+about **8.5 hours at midsummer in Riyadh and 11.5 in midwinter**. Four doses at
+a 3-hour minimum genuinely do not fit in a summer night and genuinely do fit in
+a winter one — so "four doses are flagged as too tight" was true when it was
+written and false the first time a run landed in August. The tool was right; the
+test was wrong, the same way the `id-expiry` cases were. Both ends of the rule
+are now pinned with `page.clock.install()`, and the second half matters as much
+as the first: without it the warning could fire on every night of the year and
+the original case would still pass, which would make it a warning nobody could
+act on.
+
+**A five-second default is not enough for a redirect chain.** `book-me`'s OAuth
+round-trip is four hops (start → the static `/oauth/callback/` forwarder → the
+callback → the app) and went over the default under a loaded suite at
+`--workers=2`, while passing every time the file ran alone. That signature —
+green in isolation, red under load — is a timeout that is too tight, not a
+broken flow, and the fix is to say so at the assertion rather than to retry it.
 
 **Build a test date in LOCAL terms, never `toISOString().slice(0, 10)`.** East
 of Greenwich those disagree between local midnight and UTC midnight, so a date
