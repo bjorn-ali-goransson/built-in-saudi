@@ -865,13 +865,15 @@ batch and passed in three subsequent runs, including two full re-runs of the
 same batch — so the message was never captured and the cause is NOT diagnosed.
 Recorded rather than guessed at.
 
-The one suspicious thing in that spec is `await page.waitForTimeout(1500)`,
-which is the fixed-sleep anti-pattern this repo documents against: it waits for
-time to pass rather than for the thing under test. Under load it may also make
-the guard **vacuously green** — a tool that has not started work yet cannot have
-uploaded anything. Worth replacing with a wait on the tool's own output, which
-would make the guard both stabler and stronger. Not done here because changing
-the site's most important spec on a hunch is worse than leaving it and saying so.
+~~The one suspicious thing in that spec is `await page.waitForTimeout(1500)`.~~
+Replaced (9 Aug 2026) with a wait on the tool actually READING the file, plus a
+short settle window — and the read is now asserted, so a vacuous case fails.
+Measured before changing it: 2 of 68 cases had never opened the file at all
+(`pdf-stamp`, which reads only when stamping, and `file-encrypt`, which needs a
+password first). Both now carry an `act`.
+
+The original flake was never reproduced, so this is not claimed as its fix — it
+is a fix for the property that made the flake plausible.
 
 ### Web sweep #5, 9 August 2026 — university students
 

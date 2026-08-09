@@ -58,7 +58,7 @@ async function tokenPdf(): Promise<Buffer> {
   return Buffer.from(await doc.save())
 }
 
-interface Case {
+export interface Case {
   id: string
   /**
    * The file input's own testid, OR — when it has none — the testid of the
@@ -73,6 +73,13 @@ interface Case {
   within?: boolean
   name: string; mime: string
   make: () => Promise<Buffer> | Buffer
+  /**
+   * A tool that does not open the file until a SECOND action — `pdf-stamp`
+   * only reads it when stamping, `file-encrypt` needs a password first — must
+   * be driven to that action, or the case asserts nothing at all. Measured:
+   * before this existed, 2 of 68 cases were exactly that.
+   */
+  act?: (page: Page) => Promise<void>
   /**
    * Some tools keep the file input behind a mode or tab, so it is not on the
    * page at load. Reveal it here. Both of the tools that needed this were
@@ -184,7 +191,9 @@ function mp4WithToken(token: string): Buffer {
   return Buffer.concat([readFileSync('e2e/fixtures/sample.mp4'), box])
 }
 
-const CASES: Case[] = [
+// Exported so a measurement can drive the same list without copying it —
+// a second list is how a guard and its audit stop agreeing.
+export const CASES: Case[] = [
   // A spread across every family that takes a file, because the promise is
   // made on all of them and a guard that only covers the tools I happened to
   // write last is a guard over my own memory.
@@ -227,7 +236,16 @@ const CASES: Case[] = [
   { id: 'pdf-sign', testid: 'sign-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-split', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-images', testid: 'p2i-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'file-encrypt', testid: 'fe-drop', within: true, name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN) },
+  {
+    // Needs a password before it touches the file, so picking one alone tested
+    // nothing at all until this act was added.
+    id: 'file-encrypt', testid: 'fe-drop', within: true, name: 'blob.bin', mime: 'application/octet-stream',
+    make: () => Buffer.from(TOKEN),
+    act: async (page) => {
+      await page.getByTestId('fe-password').fill('correct horse battery staple')
+      await page.getByTestId('fe-run').click()
+    },
+  },
   {
     id: 'hash-generator', testid: 'hash-drop', within: true,
     name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN),
@@ -283,7 +301,11 @@ ${TOKEN}
   { id: 'batch-watermark', testid: 'bw-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'pdf-booklet', testid: 'pb-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-redact', testid: 'pr-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'pdf-stamp', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  {
+    // Does not open the file at pick time — it only reads it when stamping.
+    id: 'pdf-stamp', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf,
+    act: async (page) => { await page.getByTestId('ps-apply').click() },
+  },
   { id: 'audio-trim', testid: 'at-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'remove-silence', testid: 'rs-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'epub-text', testid: 'ep-file', name: 'book.epub', mime: 'application/epub+zip', make: () => xmlZip('OEBPS/ch1.xhtml', `<html><body><p>${TOKEN}</p></body></html>`) },
@@ -356,10 +378,45 @@ ${TOKEN}
   },
 ]
 
+/**
+ * Counts the ways a page can actually READ a picked file.
+ *
+ * A guard that asserts "nothing was uploaded" against a tool that never opened
+ * the file has proved nothing, and nothing checked that until it was measured.
+ * The first version of this probe watched `Blob`/`FileReader` only and reported
+ * 18 of 68 cases as vacuous — 16 of which were image tools using
+ * `createImageBitmap` or worker tools handed the `File` itself, both invisible
+ * to it. **An unfaithful measurement invents defects as readily as it hides
+ * them**; the real number is 2.
+ */
+const READ_PROBE = `
+  window.__reads = 0
+  const bump = () => { window.__reads++ }
+  for (const m of ['arrayBuffer', 'text', 'slice', 'stream']) {
+    const orig = Blob.prototype[m]
+    if (orig) Blob.prototype[m] = function (...a) { bump(); return orig.apply(this, a) }
+  }
+  for (const m of ['readAsArrayBuffer', 'readAsText', 'readAsDataURL', 'readAsBinaryString']) {
+    const orig = FileReader.prototype[m]
+    if (orig) FileReader.prototype[m] = function (...a) { bump(); return orig.apply(this, a) }
+  }
+  const cou = URL.createObjectURL
+  URL.createObjectURL = function (...a) { bump(); return cou.apply(this, a) }
+  const cib = window.createImageBitmap
+  if (cib) window.createImageBitmap = function (...a) { bump(); return cib.apply(this, a) }
+  // A worker is handed the File itself and reads it off the main thread, which
+  // no prototype patch here can see — count the handover instead.
+  const W = window.Worker
+  window.Worker = class extends W {
+    postMessage(...a) { bump(); return super.postMessage(...a) }
+  }
+`
+
 for (const c of CASES) {
   test(`${c.id}: the file never leaves the browser`, async ({ page }) => {
     const leaked: string[] = []
     const withBody: string[] = []
+    await page.addInitScript(READ_PROBE)
 
     page.on('request', (r) => {
       const url = r.url()
@@ -376,8 +433,18 @@ for (const c of CASES) {
       ? page.getByTestId(c.testid).locator('input[type="file"]')
       : page.getByTestId(c.testid)
     await input.setInputFiles({ name: c.name, mimeType: c.mime, buffer: await c.make() })
-    // Give the tool time to do its work — and to make a request if it were going to.
-    await page.waitForTimeout(1500)
+    if (c.act) await c.act(page)
+
+    // Wait for the tool to READ the file rather than for a fixed 1500ms. The
+    // old sleep was the anti-pattern this repo documents — waiting for time to
+    // pass instead of for the thing under test — and under a loaded suite it
+    // could expire before a heavy tool had started, which is a green that means
+    // "I watched nothing happen".
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __reads: number }).__reads), { timeout: 20_000 })
+      .toBeGreaterThan(0)
+    // Then a settle window, so a request made just after the read is still seen.
+    await page.waitForTimeout(1200)
 
     expect(leaked, 'the file contents appeared in a request').toEqual([])
     expect(withBody, 'a request carried a body').toEqual([])

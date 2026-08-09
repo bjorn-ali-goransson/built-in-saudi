@@ -1215,6 +1215,33 @@ Two deliberate choices worth keeping:
   uploading tool would make and asserts the same listeners catch it — so a green
   run means the tools are clean rather than the detector being asleep.
 
+**The guard now has to prove it tested something.** Every case asserted "no
+request carried the file" — against a tool that, in two cases, had never opened
+the file at all. `pdf-stamp` does not read a PDF until you click stamp, and
+`file-encrypt` needs a password first, so picking a file and waiting was a
+green that meant *nothing happened*, not *nothing was uploaded*.
+
+Two changes, and both matter more than the two tools:
+
+- **The wait is for the tool to READ the file, not for 1500ms to pass.** The old
+  fixed sleep is the anti-pattern this file documents elsewhere, and under a
+  loaded suite it could expire before a heavy tool had started — which is how
+  the guard would go quietly vacuous for anything slow, not just for these two.
+  A `Case` may now carry an `act` for a tool that defers its work.
+- **A case that observes no read FAILS.** Verified by removing `pdf-stamp`'s
+  act and watching it go red. So a future tool that only works on a second click
+  cannot join the guard vacuously; it has to be driven or it is caught.
+
+**The measurement that found this was wrong first, and catching that is the
+transferable part.** The probe watched `Blob` and `FileReader` only, and
+reported **18 of 68** cases as vacuous. Sixteen of those were image tools using
+`createImageBitmap` and worker tools handed the `File` itself — both invisible
+to it, because `imageEncode.worker.ts` and friends read the file off the main
+thread by design. The real number is **2**. Same lesson as the search probe that
+iterated imports instead of the exported array: **an unfaithful measurement
+invents defects as readily as it hides them**, and the moment to notice is
+before reporting, not after.
+
 **Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
 is the only thing standing behind the sentence on 109 tool pages.
 
