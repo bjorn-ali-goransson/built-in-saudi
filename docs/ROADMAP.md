@@ -875,6 +875,23 @@ password first). Both now carry an `act`.
 The original flake was never reproduced, so this is not claimed as its fix — it
 is a fix for the property that made the flake plausible.
 
+### Code sweep, 10 August 2026 — who bypasses the image decoder
+
+`decodeImage` is the documented single entry point for reading an image,
+because it is the only thing that handles HEIC. Grepping for direct
+`createImageBitmap` calls found five, and **two were real bugs**: `images-to-pdf`
+and `steganography` both used the decoder to ACCEPT a file and something else to
+USE it, so an iPhone photo got in and then failed. Fixed, with a spec that drives
+the real HEIC fixture to the download and is verified to fail without either fix.
+
+The other three are legitimate — `qr-reader` on a video frame, `pdf-compress` on
+a rendered PDF page, `heicDecode`/`imageEncode.worker` inside the decoder itself.
+
+**Worth a guard rather than a sweep?** Probably not: the legitimate uses
+outnumber the illegitimate ones and no regex separates "the user's file" from "a
+frame we just drew". The rule is now written down in sharper terms instead —
+every path that touches the user's bytes, not just the one that greets them.
+
 ### Web sweep #9, 9 August 2026 — home and property
 
 464 calculators on one site, and almost all of them commodity arithmetic. One

@@ -420,6 +420,27 @@ Android every one used to be a dead end. `libheif-js` (wasm) fills the gap:
 - **Lazy, always.** The bundle is ~1.4MB in its own chunk and is fetched only when a
   HEIC is actually picked. There's an e2e test asserting it is NOT requested for an
   ordinary PNG — keep it passing.
+- **HEIC has to survive the WHOLE tool, not just the front door.** A code sweep
+  for direct `createImageBitmap` calls found two tools that probed the picked
+  file with `decodeImage` — the documented rule — and then handed the raw `File`
+  to a path that could not decode it:
+  - **`images-to-pdf`** validated every pick with the decoder and then called
+    `createImageBitmap` in `toPngBytes` at EXPORT. So an iPhone photo was
+    accepted, listed and thumbnailed, and the PDF failed — on the single most
+    likely use of that tool.
+  - **`steganography`** probed at pick time and posted the `File` to a worker
+    whose own `createImageBitmap` threw. **The pick-time check satisfied its
+    letter and not its purpose**: it exists so the failure surfaces near the
+    cause, and for HEIC the failure moved to the worker anyway. A worker cannot
+    call `decodeImage` without nesting another worker, so it falls back to
+    `decodeHeic` in place — the pattern `imageEncode.worker.ts` already used.
+
+  The rule to carry forward is sharper than "use `decodeImage`": **every path
+  that touches the user's bytes must, not just the one that greets them.**
+  `e2e/heic-paths.spec.ts` drives the real HEIC fixture all the way to the
+  download, and is verified to fail by reverting either fix. It also asserts a
+  PNG still never fetches the wasm, so the fixes could not have been "always
+  take the heavy path".
 - **Off the main thread** (`heic.worker.ts`): a 12MP photo is an HEVC intra-frame
   decode and would visibly freeze the page. `imageEncode.worker.ts` is already in a
   worker so it imports `decodeHeic` directly instead of nesting one.

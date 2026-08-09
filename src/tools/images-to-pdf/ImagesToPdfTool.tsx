@@ -71,7 +71,12 @@ export default function ImagesToPdfTool() {
   function remove(id: string) { setItems((cur) => cur.filter((x) => x.id !== id)); setPdf(null) }
 
   async function toPngBytes(file: File): Promise<Uint8Array> {
-    const bmp = await createImageBitmap(file)
+    // `decodeImage`, not `createImageBitmap`. The PICK path already used the
+    // decoder, so a HEIC was accepted, listed and thumbnailed — and then this
+    // threw at export. Making a PDF of photos off a phone is the single most
+    // likely use of this tool, and iPhone photos are HEIC (#226).
+    const bmp = await decodeImage(file)
+    if (!bmp) throw new Error('undecodable')
     const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height
     c.getContext('2d')!.drawImage(bmp, 0, 0)
     const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'))

@@ -1,6 +1,8 @@
 // LSB embed/reveal loops touch every pixel, so they run here off the main
 // thread (#154). The File decodes here too (createImageBitmap + OffscreenCanvas
-// both exist in workers) — the image never blocks the UI.
+// both exist in workers) — the image never blocks the UI — with the same HEIC
+// fallback `imageEncode.worker.ts` uses, because a worker cannot call
+// `decodeImage` without nesting another worker inside itself.
 const MAGIC = 0x42495342 // "BISB" marker so reveal can tell a real payload apart
 
 export type StegoRequest =
@@ -11,7 +13,21 @@ export type StegoResponse =
   | { id: number; op: 'reveal'; message: string | null }
 
 async function imageData(file: File): Promise<ImageData> {
-  const bmp = await createImageBitmap(file)
+  let bmp: ImageBitmap
+  try {
+    bmp = await createImageBitmap(file)
+  } catch (e) {
+    // The tool probes with `decodeImage` at pick time, so a HEIC was accepted —
+    // and then died here, which is the pick-time check satisfying its letter
+    // and not its purpose. Only HEIC gets the multi-megabyte fallback; anything
+    // else is genuinely bad. Already in a worker, so decode here rather than
+    // spawning another (#226).
+    const head = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+    const { isHeicBuffer } = await import('../../lib/heicDecode')
+    if (!isHeicBuffer(head)) throw e
+    const { decodeHeic } = await import('../../lib/heicDecode')
+    bmp = await decodeHeic(file)
+  }
   const c = new OffscreenCanvas(bmp.width, bmp.height)
   const ctx = c.getContext('2d', { willReadFrequently: true })!
   ctx.drawImage(bmp, 0, 0)
