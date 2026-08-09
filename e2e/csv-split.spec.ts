@@ -30,9 +30,16 @@ test('splits by row count, and every part keeps the header', async ({ page }) =>
 
 test('the last part holds the remainder, and no row is lost', async ({ page }) => {
   await load(page)
-  await page.getByTestId('cs-rows').fill('4')
-  // 10 rows over 4 per file: 4 + 4 + 2.
-  await expect(page.getByTestId('cs-part-0')).toContainText('4')
+  // fill-then-assert is a hydration race: Playwright waits for an element to be
+  // actionable, not for a handler to exist on it, so under a loaded suite the
+  // value can land before React is listening and the split never recomputes.
+  // Retrying the whole act-and-check is the documented fix (see ics-builder in
+  // the privacy guard). It passed alone every time and failed in a batch.
+  await expect(async () => {
+    await page.getByTestId('cs-rows').fill('4')
+    // 10 rows over 4 per file: 4 + 4 + 2.
+    await expect(page.getByTestId('cs-part-0')).toContainText('4', { timeout: 2000 })
+  }).toPass({ timeout: 15_000 })
   await expect(page.getByTestId('cs-part-2')).toContainText('2')
   await page.getByTestId('cs-part-2').click()
   await expect(page.getByTestId('cs-preview')).toContainText('Person 10')

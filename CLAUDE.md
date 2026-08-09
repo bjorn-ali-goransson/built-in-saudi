@@ -805,6 +805,47 @@ significant digits stays text. Two Excel quirks are load-bearing in the styles
 part: the fills list must have `none` at 0 and `gray125` at 1 or Excel calls the
 workbook corrupt, and two sheets sharing a name make a file it refuses to open.
 
+## Word search, and the Arabic nobody else attempts (`word-search`)
+
+Found by sweeping the teacher-tools market, where a word search is one of the
+handful of utilities every free classroom site ships. We had worksheets, bingo
+cards, quizzes, flashcards, seating charts, attendance sheets and a random
+picker, and no word search. The reason it is worth building rather than copying
+is Arabic, which the incumbents get wrong or do not attempt.
+
+- **A grid cell holds an ISOLATED letter**, which is what a canvas draws for a
+  lone Arabic character anyway — and it is correct here, since a puzzle grid is
+  exactly the context where letters do not join. The opposite problem to
+  `arabic-handwriting`, which needs ZWJ to force the joined forms.
+- **The letters a solver matches are the NORMALISED ones.** أ إ آ ا are one
+  letter to a reader hunting for a word, and ة/ه and ى/ي are the same trap: a
+  child looking for «استقلال» never finds «إستقلال» in the grid even though it
+  is there. `normaliseLetter` folds only same-letter-different-shape
+  substitutions — deliberately NOT the full `arabic-normalize` treatment, which
+  can also strip tatweel and unify lam-alef and would change the letter COUNT,
+  making the grid disagree with its own clue. **Harakat are dropped**: a
+  combining mark in a cell is a cell the solver cannot see.
+- **The filler comes from the alphabet the words are in.** Arabic filler in an
+  English grid makes every real word findable at a glance, which is the whole
+  puzzle gone.
+
+Two things about the placement:
+
+- **Longest word first.** A long word has few legal positions, and placing the
+  short ones first fills the grid until the long one has none — so the tool
+  reports "no room" for exactly the word the teacher cared most about.
+- **Every legal position is enumerated and then chosen from**, rather than
+  guessed at N times. A random-retry loop reports failure for a word that has
+  exactly one home, which is the common case on a tight grid.
+
+**Its own spec found a real gap.** The sheet prints the seed and the copy
+promises that reprinting with it gives the same puzzle — and the seed was a
+LABEL, with nowhere to type it back in. The test could therefore only compare
+grid *lengths*. Making the field an input let the assertion become a real
+equality, and made the printed promise keepable. **When a test can only assert
+something weaker than the product claims, the product is usually the thing that
+is wrong.**
+
 ## Arabic handwriting sheets (`arabic-handwriting`)
 
 The four positional forms are **not four characters**. They are produced with

@@ -858,6 +858,23 @@ Deliberately NOT taken from the sweep:
   advertising a download are server-side. Shipping playback only, under a name
   people search expecting a download, would be the adware move.
 
+### Web sweep #3, 9 August 2026 — the teacher-tools market
+
+We are half in this market already (worksheets, bingo cards, quizzes,
+flashcards, seating charts, attendance sheets, certificates, labels, random
+picker, team maker, timers). What every free classroom site ships and we did
+not:
+
+- **Word search** — SHIPPED as `word-search`, with the Arabic handling no
+  incumbent offers.
+- **Rubric maker** — repeatedly named across the market ("Top 12 free rubric
+  creators"). A criteria x levels grid with descriptors and points, printable
+  through `lib/printPdf.ts`. The obvious next one from this sweep.
+- **Exit ticket** — a small printable slip; probably a variant of the worksheet
+  machinery rather than its own tool.
+- **Grade calculator** — weighted marks. Close to `admission-score` and
+  `percentage-calculator`; only worth it if the weighting UI is the point.
+
 ### Code sweep, 9 August 2026 — a writer with one caller, and a missing parser
 
 The site could write a real `.docx` and exactly one tool did. The gap was not

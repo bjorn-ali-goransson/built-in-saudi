@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'word-search',
+    en: { name: 'Word Search Maker', description: 'Make a printable word search from your own list, in English or Arabic, with an answer key on a second page. Arabic works properly: alef in all its forms counts as one letter and words run right to left. Every sheet carries a seed, so reprinting gives you the same puzzle. Drawn in your browser — the word list is never uploaded.' },
+    ar: { name: 'صانع البحث عن الكلمات', description: 'اصنع لعبة البحث عن الكلمات للطباعة من قائمتك، بالعربية أو الإنجليزية، مع ورقة حلّ في صفحة ثانية. والعربية تعمل كما ينبغي: فالألف بكل صورها حرف واحد، وتُقرأ الكلمات من اليمين إلى اليسار. وتحمل كل ورقة رمزًا، فإعادة الطباعة تعطيك اللغز نفسه. يُرسم في متصفحك — ولا تُرفع قائمة الكلمات أبدًا.' },
+  },
+  {
     id: 'markdown-docx',
     en: { name: 'Markdown to Word', description: 'Turn Markdown into a real Word document — headings, bold and italic, bulleted and numbered lists, tables, blockquotes, code blocks and dividers all arrive as Word formatting rather than as asterisks and pipes. Built in your browser and never uploaded.' },
     ar: { name: 'ماركداون إلى وورد', description: 'حوّل ماركداون إلى مستند وورد حقيقي — فتصل العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات وكتل الشيفرة والفواصل تنسيقًا في وورد، لا نجومًا في النص. يُبنى في متصفحك ولا يُرفع أبدًا.' },

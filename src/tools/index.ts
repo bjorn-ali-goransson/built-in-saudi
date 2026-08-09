@@ -168,6 +168,7 @@ import { saudiPlateTool } from './saudi-plate/meta'
 import { shortAddressTool } from './short-address/meta'
 import { worksheetsTool } from './worksheets/meta'
 import { bingoCardsTool } from './bingo-cards/meta'
+import { wordSearchTool } from './word-search/meta'
 import { quizMakerTool } from './quiz-maker/meta'
 import { translateTool } from './translate/meta'
 import { summarizeTool } from './summarize/meta'
@@ -327,6 +328,7 @@ export const tools: Tool[] = [
   arabicHandwritingTool,
   worksheetsTool,
   bingoCardsTool,
+  wordSearchTool,
   quizMakerTool,
   steganographyTool,
   imageRedactTool,
