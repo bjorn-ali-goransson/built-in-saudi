@@ -6,9 +6,9 @@ import { CategorySections, ToolGrid } from '../components/ToolCatalog'
 import { SectionNav } from '../components/SectionNav'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
-import { scoreTool, aboveFloor } from '../lib/fuzzy'
+import { rankTools } from '../lib/searchTools'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
-import { useLocale, localePath, localizeTool } from '../i18n'
+import { useLocale, localePath } from '../i18n'
 
 export function HomePage() {
   const { locale, t } = useLocale()
@@ -37,32 +37,10 @@ export function HomePage() {
   const idx = (id: string) => indexOf.get(id) ?? 0
 
   // Search matches both the localized and English fields so either language works.
-  const results = useMemo(() => {
-    if (!query.trim()) return []
-    const scored = tools
-      .map((tool) => {
-        const l = localizeTool(tool, locale)
-        // Fields stay separate rather than being concatenated: joining them let a
-        // subsequence run off the end of one and into the start of the next, which
-        // is a match nobody meant, and it destroyed the "starts at the beginning"
-        // bonus that makes an exact name win.
-        return {
-          tool,
-          score: scoreTool(query, {
-            name: tool.name,
-            nameAr: l.name,
-            tagline: `${l.tagline} ${tool.tagline}`,
-            category: `${l.category} ${tool.category}`,
-            keywords: tool.keywords,
-          }),
-        }
-      })
-      .filter((r) => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-    // Nothing capped this list, so a query rendered every tool that matched at
-    // all — 31 cards on average, three of them worth looking at.
-    return aboveFloor(scored)
-  }, [query, locale])
+  // The ranking itself lives in `lib/searchTools.ts`, shared with the launcher
+  // and the 404 suggestions — the two catalogue surfaces are documented as
+  // having to stay identical, and a copy is how they stop being.
+  const results = useMemo(() => rankTools(query, tools, locale), [query, locale])
 
   const recent = useRecentTools()
   const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
@@ -87,7 +65,7 @@ export function HomePage() {
             // Ctrl+K this needs no advertising — every search box does it.
             if (e.key !== "Enter" || !results.length) return
             e.preventDefault()
-            const top = results[0].tool
+            const top = results[0]
             if (top.href) window.open(top.href, "_blank", "noreferrer noopener")
             else navigate(localePath(locale, `/apps/${top.id}`))
           }}
@@ -106,7 +84,7 @@ export function HomePage() {
 
       {query.trim() ? (
         results.length > 0 ? (
-          <ToolGrid tools={results.map((r) => r.tool)} indexOf={idx} />
+          <ToolGrid tools={results} indexOf={idx} />
         ) : (
           <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
         )

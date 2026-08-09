@@ -2039,6 +2039,59 @@ stays literally true:
   perfect copy would replace it with a guess. A file that is text throughout
   says so and links to `pdf-to-text` instead of pretending to help.
 
+## A wrong URL is a question, not a dead end (`NotFoundPage`)
+
+At 211 tools a mistyped or guessed `/apps/<id>` gave "not found" and a button
+back to the catalogue — while the site carried a search scorer that answers
+exactly that question. The last path segment now goes through it.
+
+**Measured before it was built**, not after: `node evals/slugprobe.mjs` puts 42
+slugs a person or a stale link would really produce — synonyms (`pdf-combine`,
+`background-remover`), bare nouns (`zakat`, `gosi`, `regex`), old-style names,
+and typos — through the real scorer.
+
+| | |
+|---|---|
+| correct top hit | **34 / 37 (92%)** |
+| within the top three | 35 / 37 (95%) |
+| unanswerable slugs correctly silent | **4 / 5** |
+
+Three are shown rather than one. It buys 3pp, and more importantly **a row of
+three reads as a guess, which it is** — a single confident answer would not.
+The withholding is the same relevance floor the search box uses, so a slug that
+means nothing here suggests nothing rather than the best of a bad list.
+
+The honest misses, all recorded in the probe: `pdf-splitter` goes to
+`pdf-to-images` (the `-er` suffix), `iqama` to `id-expiry` (genuinely
+ambiguous — both are iqama tools, and the right one is in the top three), and a
+transposition typo (`pdf-mrege`) misses because the scorer has no edit distance.
+`order-pizza` still suggests something, which is the documented
+unanswerable-query problem no threshold fixes.
+
+**`slugToQuery` is why any of it works:** `pdf-merge` has to become `pdf merge`
+before scoring, or the whole slug is one token that matches nothing. Digits are
+split out too, so `base64` and `base-64` land in the same place.
+
+**The ranking moved to `lib/searchTools.ts` on its THIRD caller.** The home
+catalogue and the AppLauncher each carried an identical copy — and this file
+already records that those two surfaces must stay identical, which a copy is
+precisely how they stop doing. The list is an argument, because the difference
+between the callers is real: home ranks every tool including the coming-soon
+ones it renders dimmed, while the launcher and these suggestions rank only what
+you can open.
+
+**`evals/lib/tools.mjs` was extracted for the same reason** — `slugprobe` needed
+the index `searchbench` builds, and a second loader is how `relatedcheck` spent
+weeks reporting a fixed defect. The bench's numbers are byte-identical after the
+move. One gotcha: the relative `ROOT` had to become `'../..'`, which is exactly
+the thing an extraction breaks silently.
+
+**And there is deliberately NO test for the coming-soon case.** The suggestions
+are suppressed there — that page already names the tool and says it is being
+built, so alternatives would contradict it — but the registry holds no
+coming-soon tools today, so a test would pass without exercising anything. A
+comment says so where the test would have been.
+
 ## Search ranking (`src/lib/fuzzy.ts`)
 
 At 184 tools the catalogue is only as good as its search, and the matcher was

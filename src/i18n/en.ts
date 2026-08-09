@@ -59,6 +59,7 @@ export const en = {
     soonBody:
       'This tool is on the roadmap and being built. Check back soon — or explore the ones that are ready today.',
     back: 'Back to the toolbox',
+    didYouMean: 'Did you mean one of these?',
   },
 
   // Shown to a user whose browser prefers THIS language but who landed on the other.

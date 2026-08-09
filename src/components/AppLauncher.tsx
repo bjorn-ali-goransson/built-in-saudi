@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { tools, liveTools } from '../tools'
-import { useLocale, localePath, localizeTool } from '../i18n'
-import { scoreTool, aboveFloor } from '../lib/fuzzy'
+import { useLocale, localePath } from '../i18n'
+import { rankTools } from '../lib/searchTools'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
 import { SectionNav } from './SectionNav'
@@ -57,30 +57,7 @@ export function AppLauncher() {
   const recent = useRecentTools()
   const sections = useMemo(() => buildToolSections(locale, recent), [locale, recent])
 
-  const results = useMemo(() => {
-    if (!query.trim()) return []
-    const scored = liveTools
-      .map((tool) => {
-        const l = localizeTool(tool, locale)
-        // Fields stay separate rather than being concatenated: joining them let a
-        // subsequence run off the end of one and into the start of the next, which
-        // is a match nobody meant, and it destroyed the "starts at the beginning"
-        // bonus that makes an exact name win.
-        return {
-          tool,
-          score: scoreTool(query, {
-            name: tool.name,
-            nameAr: l.name,
-            tagline: `${l.tagline} ${tool.tagline}`,
-            category: `${l.category} ${tool.category}`,
-            keywords: tool.keywords,
-          }),
-        }
-      })
-      .filter((r) => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-    return aboveFloor(scored).map((r) => r.tool)
-  }, [query, locale])
+  const results = useMemo(() => rankTools(query, liveTools, locale), [query, locale])
 
   const navigate = useNavigate()
   const close = () => setOpen(false)

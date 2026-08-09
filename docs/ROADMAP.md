@@ -948,9 +948,20 @@ a category, so the 30 category pages were reachable only from one another.
 After: 418/418, plus the home crawlable block; pages linking a category page
 went **30 → 450**.
 
-**Still open on discoverability:** the category pages are flat grids in registry
-order. For a big one (Developer at 25, Images at 22) an ordering — most used
-first, or the RECOMMENDED tools first — would do more than another link.
+**Category page ordering was examined and left alone.** Registry order is not
+arbitrary — this file records it as the editorial judgement about which tool is
+primary, and it is what breaks search ties by design. Re-sorting a category page
+alphabetically would throw that away for no measured gain.
+
+**Done instead (9 Aug 2026):** a wrong URL now suggests the tool it meant.
+Measured with `node evals/slugprobe.mjs` BEFORE building it — 92% correct top
+hit over 42 realistic slugs, 95% within three, 4 of 5 unanswerable slugs
+correctly silent.
+
+**Still open on discoverability:** the scorer has no edit distance, so a
+transposition (`pdf-mrege`) misses. Worth it only if the 404 suggestions turn
+out to matter; a bigram or trigram overlap on the tool id would cover it
+without touching the query scorer.
 
 ### Rejected: a mechanical sweep for the Arabic plural trap (9 Aug 2026)
 
