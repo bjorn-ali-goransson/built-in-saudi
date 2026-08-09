@@ -605,9 +605,14 @@ carrying a fourth CRC32. Things Word actually needs, and one it does not:
   export.
 - **A code block is one paragraph per LINE.** Word breaks on `<w:br/>`, not on
   the character, so a single run containing newlines renders as one long line.
-- **List markers are literal text**, not a `numbering.xml` part: that part needs
-  a relationship too, and a document with plain markers reads and prints
-  correctly.
+- **A list goes through a real `numbering.xml`.** It was literal bullet
+  characters at first — valid, and it prints correctly — but a list whose
+  markers are characters is not a list to anything downstream: Word will not
+  continue it, a converter reads paragraphs, and a screen reader does not
+  announce "list of three items". **Each list gets its own `numId` with a
+  `startOverride`**, or the second ordered list in a document continues the
+  first — 1, 2, 3 then 4, 5, 6, which is the classic way hand-written OOXML
+  numbering goes wrong.
 - **A heading is a `pStyle`, not large bold text** — and it was not, at first.
   The writer emitted bold, bigger paragraphs, which LOOK like headings and are
   paragraphs: Word's navigation pane was empty, an automatic table of contents
@@ -663,13 +668,19 @@ Two smaller things worth keeping:
   starting `D0CF11E0`, a completely different format — the same check
   `lib/docx.ts` makes. "Could not be read" sends people back to try the same
   file again.
-- **MEASURED LIMIT, pinned by a test:** a list produced by OUR writer comes back
-  as literal bullet characters, because `writeDocx` writes markers as text
-  rather than emitting a numbering part. A list made in Word itself has real
-  numbering and converts properly, so this is a property of the pair and not of
-  the reader. The test asserts the limit rather than hiding it, so the day
-  `writeDocx` grows a numbering part it fails and somebody notices the pair now
-  round-trips.
+- **The pinned limit did its job.** The spec asserted that a list from our own
+  writer came back as literal bullet characters — deliberately, so that the day
+  `writeDocx` grew a numbering part the test would FAIL and somebody would
+  notice. It did, one iteration later, and the assertion is now the positive
+  one. **A limit worth living with is worth pinning; that is what makes fixing
+  it an event rather than a silent change.**
+- **A smaller limit replaces it, and the attribution is asserted rather than
+  assumed:** two ADJACENT ordered lists come back merged, reading 1, 2, 3, 4
+  where the document says 1, 2 then 1, 2. That is mammoth's reader, which merges
+  adjacent `<ol>`s regardless of `numId` — so the test checks the raw bytes for
+  two distinct ids and a `startOverride` FIRST, and only then records the merged
+  reading. Without that, the same failure would be indistinguishable from our
+  writer getting the numbering wrong.
 
 **One assertion in that spec was wrong and looked like a bug.** The table's
 header cells come back **bold**, because the writer bolds them and mammoth

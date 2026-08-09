@@ -952,10 +952,11 @@ unlocks three tools rather than one:
   protect on the CV. pdf-lib gives selectable text and cannot shape Arabic. So a
   naive tool would silently hand Arabic users a raster and English users a text
   PDF. Worth doing only with that fork stated in the UI, or with a shaper.
-- **`writeDocx` could emit a real numbering part.** Today its list markers are
-  literal text, which is valid and prints correctly but means Markdown → .docx →
-  Markdown does not round-trip a list. Pinned by a test in
-  `e2e/docx-markdown.spec.ts`.
+- ~~**`writeDocx` could emit a real numbering part.**~~ Done 9 Aug 2026, and the
+  pinned test flipped exactly as designed. Lists now round-trip. What remains is
+  smaller and belongs to the READER: mammoth merges two adjacent ordered lists,
+  which the spec now records with the byte-level evidence that our writer gives
+  each list its own `numId` and a `startOverride`.
 
 Recorded, not fixed: `src/tools/cv-generator/docx.ts` keeps a private CRC32 and
 stored-ZIP writer that duplicates `lib/zip.ts`. Left alone on purpose — it is

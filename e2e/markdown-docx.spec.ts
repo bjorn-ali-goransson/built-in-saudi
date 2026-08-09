@@ -129,6 +129,25 @@ test('the formatting survives as Word formatting, not as asterisks', async ({ pa
   expect(raw).not.toContain('| --- |')
 })
 
+test('a list is a real Word list, not a paragraph starting with a bullet', async ({ page }) => {
+  // A list whose markers are characters is not a list to anything downstream:
+  // Word will not continue it, a converter reads paragraphs, and a screen
+  // reader does not announce "list of three items".
+  await load(page, '- alpha\n- beta\n\n1. one\n2. two')
+  const dl = page.waitForEvent('download', { timeout: 30_000 })
+  await page.getByTestId('md-download').click()
+  const raw = readFileSync(await (await dl).path()).toString('latin1')
+  expect(raw).toContain('word/numbering.xml')
+  expect(raw).toContain('<w:numPr>')
+  // Each list gets its OWN numId, or the second ordered list continues the
+  // first — 1, 2, 3 then 4, 5, 6.
+  const ids = new Set([...raw.matchAll(/w:numId w:val="(\d+)"/g)].map((m) => m[1]))
+  expect(ids.size).toBe(2)
+  expect(raw).toContain('startOverride')
+  // And the markers are no longer literal text.
+  expect(raw).not.toContain('<w:t xml:space="preserve">1. </w:t>')
+})
+
 test('XML-special characters are escaped rather than breaking the file', async ({ page }) => {
   await load(page, 'a < b & c > d "quoted"')
   const dl = page.waitForEvent('download', { timeout: 30_000 })

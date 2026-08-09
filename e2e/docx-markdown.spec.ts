@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 
 // Word to Markdown — the inverse of markdown-docx, shipped this week.
 //
@@ -52,18 +53,34 @@ test('a blockquote survives as a blockquote', async ({ page }) => {
   expect(md).toContain('Water is the only wealth.')
 })
 
-test('MEASURED LIMIT: a list from our own .docx writer comes back as literal bullets', async ({ page }) => {
-  // Not a defect in this reader. `lib/writeDocx.ts` writes list markers as
-  // literal text rather than emitting a numbering.xml part, so Word sees
-  // paragraphs beginning with a bullet character and mammoth reports exactly
-  // that. A list made in Word itself has real numbering and converts properly.
-  //
-  // Pinned rather than hidden: if writeDocx ever grows a numbering part this
-  // test fails, which is the moment to notice the pair now round-trips.
-  const path = await docxFrom(page, '- alpha\n- beta')
+test('a list comes back as a list', async ({ page }) => {
+  // It came back as literal bullet characters until `writeDocx` grew a real
+  // numbering part — a limit this spec pinned deliberately so that the day it
+  // was fixed, this test would fail and somebody would notice. It did.
+  const path = await docxFrom(page, '- alpha\n- beta\n\n1. one\n2. two')
   const md = await toMarkdown(page, path)
-  expect(md).toContain('alpha')
-  expect(md).not.toContain('- alpha')
+  expect(md).toContain('- alpha')
+  expect(md).toContain('- beta')
+  expect(md).toContain('1. one')
+  expect(md).toContain('2. two')
+})
+
+test('MEASURED LIMIT: two adjacent ordered lists come back merged', async ({ page }) => {
+  // And this one is the READER, not the writer — the attribution is asserted
+  // rather than assumed. The .docx gives each list its own numId with a
+  // startOverride, which is what makes Word restart the numbering; mammoth
+  // merges adjacent <ol>s regardless of numId, so the round trip reads
+  // 1, 2, 3, 4 where the document says 1, 2 then 1, 2.
+  const path = await docxFrom(page, '1. one\n2. two\n\n1. again\n2. more')
+  const raw = readFileSync(path).toString('latin1')
+  const ids = [...raw.matchAll(/w:numId w:val="(\d+)"/g)].map((m) => m[1])
+  // The writer is right: two lists, two ids.
+  expect(new Set(ids).size).toBe(2)
+  expect(raw).toContain('startOverride')
+
+  const md = await toMarkdown(page, path)
+  expect(md).toContain('1. one')
+  expect(md).toContain('4. more')
 })
 
 test('an old .doc is named as a different format, not called unreadable', async ({ page }) => {
