@@ -311,6 +311,15 @@ ${TOKEN}
     make: () => zip([{ name: 'secret.txt', data: Buffer.from(TOKEN) }]),
   },
   {
+    // Plain text in, .docx out — the input is the sensitive half here, since
+    // the thing people convert is a contract or notes about a client.
+    id: 'markdown-docx', testid: 'md-file', name: 'notes.md', mime: 'text/markdown',
+    make: () => Buffer.from(`# Notes
+
+${TOKEN}
+`),
+  },
+  {
     id: 'docx-to-text', testid: 'dx-file', name: 'letter.docx',
     mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     make: () => xmlZip('word/document.xml',

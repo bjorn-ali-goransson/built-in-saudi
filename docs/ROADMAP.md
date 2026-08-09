@@ -858,6 +858,25 @@ Deliberately NOT taken from the sweep:
   advertising a download are server-side. Shipping playback only, under a name
   people search expecting a download, would be the adware move.
 
+### Code sweep, 9 August 2026 — a writer with one caller, and a missing parser
+
+The site could write a real `.docx` and exactly one tool did. The gap was not
+the writer but **a Markdown parser**, which is now `src/lib/markdown.ts` and
+unlocks three tools rather than one:
+
+- **Markdown to Word** — SHIPPED as `markdown-docx`.
+- **Markdown to EPUB** — now only needs an EPUB writer over `lib/zip.ts`, whose
+  store-only entries are exactly what an EPUB `mimetype` entry requires. The
+  RTL Arabic EPUB remains the differentiator no incumbent offers.
+- **Markdown to PDF** — `lib/printPdf.ts` already composes a page on a canvas
+  and wraps it in a PDF, which is how the worksheet and label tools print
+  Arabic. The blocks are the missing input.
+
+Recorded, not fixed: `src/tools/cv-generator/docx.ts` keeps a private CRC32 and
+stored-ZIP writer that duplicates `lib/zip.ts`. Left alone on purpose — it is
+guarded by `evals/docxguard.mjs` and sits behind the document a candidate sends
+to an employer, so the duplication is cheaper than the risk.
+
 ### Web sweep #2, 9 August 2026 — the Arabic tool sites
 
 The English "free online tools" directories are a dead end: they list the

@@ -39,6 +39,11 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
+    id: 'markdown-docx',
+    en: { name: 'Markdown to Word', description: 'Turn Markdown into a real Word document — headings, bold and italic, bulleted and numbered lists, tables, blockquotes, code blocks and dividers all arrive as Word formatting rather than as asterisks and pipes. Built in your browser and never uploaded.' },
+    ar: { name: 'ماركداون إلى وورد', description: 'حوّل ماركداون إلى مستند وورد حقيقي — فتصل العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات وكتل الشيفرة والفواصل تنسيقًا في وورد، لا نجومًا في النص. يُبنى في متصفحك ولا يُرفع أبدًا.' },
+  },
+  {
     id: 'due-date',
     en: { name: 'Pregnancy Due Date Calculator', description: 'Work out an estimated due date from your last period, the date of conception, or an IVF transfer — and see how many weeks and days along you are, which trimester that is, and every date in between. It adjusts for a cycle that is not 28 days, and gives every date in the Hijri calendar as well as the Gregorian one. Nothing is sent anywhere.' },
     ar: { name: 'حاسبة الحمل وموعد الولادة', description: 'احسبي موعد الولادة المتوقع من آخر دورة، أو من تاريخ حدوث الحمل، أو من تاريخ الإرجاع في أطفال الأنابيب — واعرفي كم أسبوعًا ويومًا مضى، وفي أي ثلثٍ أنتِ، وكل تاريخ بينهما. تراعي الأداة الدورة التي لا تساوي ٢٨ يومًا، وتعطي كل تاريخ بالهجري كما بالميلادي. ولا يُرسل شيء إلى أي مكان.' },

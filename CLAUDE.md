@@ -488,6 +488,70 @@ off the spec. Re-verify rather than trusting this list if the behaviour changes:
 a real one would fetch hundreds of megabytes), including the streaming-throws and
 create-fails-once quirks, and asserts the typed text never appears in a request.
 
+## Writing a Word document (`lib/markdown.ts` + `lib/writeDocx.ts`, `markdown-docx`)
+
+A code sweep found that **the site could already write a real `.docx` and
+exactly one tool did** — the CV optimizer, through its own
+`src/tools/cv-generator/docx.ts`. What was missing was not the writer, it was
+the other half: **a Markdown parser**. `htmlToMd.ts` had existed for a long time
+and nothing went the other way, which is why three obvious tools were
+unbuildable at once — Markdown to Word, Markdown to EPUB and Markdown to PDF all
+need the same thing.
+
+**`lib/markdown.ts` returns BLOCKS, not HTML**, and that is the decision that
+makes it a keystone rather than a shortcut. Emitting HTML and re-parsing it is
+the usual move and means every downstream writer inherits whatever the HTML step
+guessed. Traps it handles, each a real document:
+
+- **A paragraph must stop at the start of another block**, not only at a blank
+  line. `text
+## Heading` is where most naive parsers lose the heading.
+- **A list ends at a change of KIND**, so a numbered list after a bulleted one
+  is two lists rather than one with mixed markers.
+- **A table needs its separator row**, or any prose containing a pipe becomes a
+  one-row table.
+- **CRLF is normalised first.** A `.md` written on Windows turns the closing
+  ``` ``` ``` into ```` ``` ````, which no fence test matches, so the rest of
+  the document is swallowed into a code block.
+- **Setext headings are tested after the thematic-break rule**, since `---` is
+  both, and before the paragraph rule so the underline never becomes its own
+  paragraph.
+
+**`lib/writeDocx.ts` renders blocks to OOXML** and uses `lib/zip.ts` rather than
+carrying a fourth CRC32. Things Word actually needs, and one it does not:
+
+- `xml:space="preserve"` on every run, or Word eats the space between two runs —
+  the same mechanism that turned `using **Python**` into `usingPython` in the CV
+  export.
+- **A code block is one paragraph per LINE.** Word breaks on `<w:br/>`, not on
+  the character, so a single run containing newlines renders as one long line.
+- **List markers are literal text**, not a `numbering.xml` part: that part needs
+  a relationship too, and a document with plain markers reads and prints
+  correctly.
+- **No `word/_rels/document.xml.rels`**, for the reason `docxguard` already
+  established — it is required only when `document.xml` carries relationship
+  references, and this writer emits none. A link therefore keeps its label AND
+  writes its URL beside it, since dropping the address would lose something the
+  document had.
+- **The header row is bold through the run options, not by rewriting the
+  generated XML.** The first version did string surgery on its own output, which
+  is how a second `<w:rPr>` ends up inside the first and Word calls the file
+  corrupt.
+
+**The CV's writer is deliberately NOT refactored into this.** It is CV-shaped
+(right-aligned date tabs, a fixed palette, `buildBody(cv)`), it is guarded by
+`evals/docxguard.mjs`, and it predates `lib/zip.ts`. Rewriting the writer behind
+the document a candidate sends to an employer, to save a duplicate ZIP header,
+is a bad trade — so the duplication is recorded rather than removed.
+
+**How the output is verified, in three layers of decreasing independence:** the
+ZIP parts and the compression method are read off the **raw bytes**; the
+formatting is grepped in the stored (therefore verbatim) XML, asserting both
+that `<w:b/>` is present and that `**bold**` is NOT; and only then is the file
+round-tripped through `docx-to-text`, a **separate hand-written reader**. That
+order matters — two hand-written implementations agreeing is weaker evidence
+than one being right, because a shared misconception satisfies both.
+
 ## Reading a ZIP, and the formats made of one (`lib/unzip.ts`)
 
 `zip.ts` writes store-only archives; **`unzip.ts` reads real ones** — central

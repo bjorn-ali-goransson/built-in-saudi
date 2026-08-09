@@ -192,6 +192,7 @@ import { zatcaQrTool } from './zatca-qr/meta'
 import { pdfOrganiseTool } from './pdf-organise/meta'
 import { pdfOcrTool } from './pdf-ocr/meta'
 import { docxToTextTool } from './docx-to-text/meta'
+import { markdownDocxTool } from './markdown-docx/meta'
 import { csvToXlsxTool } from './csv-to-xlsx/meta'
 import { vcardToCsvTool } from './vcard-to-csv/meta'
 import { pptxToTextTool } from './pptx-to-text/meta'
@@ -348,6 +349,7 @@ export const tools: Tool[] = [
   pdfOrganiseTool,
   pdfOcrTool,
   docxToTextTool,
+  markdownDocxTool,
   csvToXlsxTool,
   vcardToCsvTool,
   pptxToTextTool,
