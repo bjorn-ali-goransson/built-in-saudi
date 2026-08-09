@@ -2220,6 +2220,32 @@ query is a semantic problem, and nothing the scorer computes separates it.** The
 probe found the spelling gap on its way past, which is the only reason it
 earned its place.
 
+**Every tool must still win a search for its OWN NAME** (`node
+evals/ownname.mjs`, and `searchbench.mjs` prints it at the end so it is seen
+exactly when somebody is touching search). This is the general form of a defect
+that has now been caught **four times**, one query at a time, and only ever
+because that query happened to be in a bench: `image-diff` took a query off
+`text-diff`, `pdf-ocr` off `image-to-text`, `xlsx-convert` off `csv-to-xlsx`,
+and `timesheet` off `leave-overtime`.
+
+The check needs no hand-written expectations, so it cannot go stale, and it
+grows with the catalogue. Measured at 213 tools: **425 of 426 names (100%)**,
+the single exception being `barcode`'s Arabic name losing to `qr-code` — which
+this file already records as expected, since Saudi usage calls a QR code
+«باركود».
+
+**What it does NOT cover, stated plainly:** a contested phrase that is nobody's
+name. `overtime pay` is exactly that — `timesheet` shipped with `payroll` in its
+keywords and took the query off the tool that owns the 150% rule and the
+720-hour cap. Only the tuned bench caught it, and the fix was the documented one:
+**the established tool gets the exact phrase.** Verified to cost nothing
+elsewhere — tuned 131/131 restored, and all three held-out sets unchanged at
+49/50, 45/50 and 41/41.
+
+It is a MEASUREMENT rather than a gate, because a near-miss between a converter
+and its inverse can be legitimately ambiguous: "Markdown to Word" and "Word to
+Markdown" share every word.
+
 **Vocabulary is part of the fix, not just the algorithm.** "photo", "picture",
   "smaller" are what people type; a meta that only says "image" is unfindable by
   half its users. When adding a tool, list the words a person would use, not the

@@ -11,8 +11,11 @@ export const leaveOvertimeTool: Tool = {
     'Your annual leave, what overtime is worth, and how much notice either side has to give — the entitlements that apply while you are still working, where the gratuity calculator covers leaving. Three of them are routinely got wrong: leave steps from 21 days to 30 after five continuous years with the same employer, and the tool tells you the date; notice is 30 days if you resign but 60 if your employer ends it, which people assume is one number; and overtime is capped at 720 hours a year, a cap that exists to protect you rather than to limit what you can be paid for.',
   category: 'Saudi / Local',
   keywords: [
-    'annual leave', 'leave days', 'overtime', 'notice period', 'probation', 'labour law', 'labor law', 'resign', 'termination', 'working hours', 'entitlement', '21 days', '30 days', 'employee rights',
-    'الإجازة السنوية', 'إجازة', 'العمل الإضافي', 'ساعات إضافية', 'مدة الإشعار', 'فترة التجربة', 'نظام العمل', 'استقالة', 'حقوق الموظف', 'أجر الساعة',
+    // 'overtime pay' as an exact phrase: `timesheet` computes an overtime
+    // figure too and carries 'payroll', which took this query off the tool
+    // that owns the RULE. The established tool gets the exact phrase.
+    'annual leave', 'leave days', 'overtime', 'overtime pay', 'notice period', 'probation', 'labour law', 'labor law', 'resign', 'termination', 'working hours', 'entitlement', '21 days', '30 days', 'employee rights',
+    'الإجازة السنوية', 'إجازة', 'العمل الإضافي', 'أجر العمل الإضافي', 'ساعات إضافية', 'مدة الإشعار', 'فترة التجربة', 'نظام العمل', 'استقالة', 'حقوق الموظف', 'أجر الساعة',
   ],
   status: 'beta',
   Icon: BriefcaseIcon,

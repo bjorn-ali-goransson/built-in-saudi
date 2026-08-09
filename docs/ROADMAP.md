@@ -858,6 +858,21 @@ Deliberately NOT taken from the sweep:
   advertising a download are server-side. Shipping playback only, under a name
   people search expecting a download, would be the adware move.
 
+### An unreproduced flake in the privacy guard (9 Aug 2026)
+
+`pdf-to-text: the file never leaves the browser` failed once inside a loaded
+batch and passed in three subsequent runs, including two full re-runs of the
+same batch — so the message was never captured and the cause is NOT diagnosed.
+Recorded rather than guessed at.
+
+The one suspicious thing in that spec is `await page.waitForTimeout(1500)`,
+which is the fixed-sleep anti-pattern this repo documents against: it waits for
+time to pass rather than for the thing under test. Under load it may also make
+the guard **vacuously green** — a tool that has not started work yet cannot have
+uploaded anything. Worth replacing with a wait on the tool's own output, which
+would make the guard both stabler and stronger. Not done here because changing
+the site's most important spec on a hunch is worse than leaving it and saying so.
+
 ### Web sweep #4, 9 August 2026 — freelancers and small business
 
 The freelancer tooling market is almost all SaaS with accounts (Wave, Zoho,

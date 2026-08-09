@@ -120,3 +120,10 @@ for (const q of NOMATCH) {
 console.log(`\nUNANSWERABLE (${NOMATCH.length} queries the site cannot serve)`)
 console.log(`  return something anyway: ${noisy}/${NOMATCH.length}  <- the floor does NOT fix this, and cannot`)
 console.log(`  junk rows: ${noiseRows} raw -> ${shownRows} shown`)
+
+// Every tool still wins a search for its own name — the general form of the
+// defect the benches keep catching one query at a time. Printed here because
+// anyone touching search runs this file, and a check nobody runs is not a check.
+import { ownNameReport } from './ownname.mjs'
+console.log('\nOWN NAMES')
+ownNameReport()
