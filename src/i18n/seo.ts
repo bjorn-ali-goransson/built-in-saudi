@@ -609,6 +609,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'traffic-fine',
+    en: { name: 'Traffic Fine Discount & Deadlines', description: 'What a Saudi traffic fine costs at the 25% Article 75 reduction, and the exact day it lapses — 30 days to object plus 15 to pay, running one after the other. Free, in your browser.' },
+    ar: { name: 'خصم المخالفة المرورية ومهلها', description: 'كم تكلّف المخالفة المرورية بتخفيض ٢٥٪ وفق المادة ٧٥، ومتى يسقط بالضبط — ٣٠ يومًا للاعتراض و١٥ للسداد تجريان تباعًا. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'token-counter',
     en: { name: 'AI Token Counter', description: 'Count the exact tokens in a prompt with the real tokenizer, for GPT-4o-era and GPT-4-era models — see how wrong "characters divided by 4" is, and how much more Arabic costs. Free, in your browser.' },
     ar: { name: 'عدّاد توكنز الذكاء الاصطناعي', description: 'اعرف عدد التوكنز الدقيق في تعليمتك بالمُجزّئ الحقيقي، لنماذج جيل GPT-4o وجيل GPT-4 — وكم تخطئ قاعدة «الحروف ÷ ٤»، وكم تكلّف العربية أكثر. مجانًا داخل متصفحك.' },

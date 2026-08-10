@@ -2063,6 +2063,40 @@ Exif and GPS sub-IFDs; a PNG `tEXt` chunk with a valid CRC; a RIFF `LIST/INFO`
 block), because a mocked fixture would have proved nothing about a hand-written
 binary parser.
 
+## The traffic-fine discount is a chain of windows (`traffic-fine`)
+
+Found by sweeping what CHANGED in Saudi rules. The arithmetic is one
+multiplication; the **deadline** is the tool, and it is misread in two
+different ways. Rules in `src/tools/traffic-fine/fine.ts`, corroborated against
+the General Department of Traffic's own published FAQ — reported by Sabq,
+Al-Riyadh, Al-Yaum and Al-Mowaten — plus independent English summaries, before
+anything was encoded.
+
+- **The 45 days are 30 + 15, running in SERIES.** There is a 30-day window to
+  object, and the 15-day window to pay **begins when that one ends**. Read as
+  concurrent they come to 30, and a fortnight of the reduction goes for
+  nothing. This is the reason the tool exists.
+- **The 90-day extension does NOT extend the discount by 90 days.** Absher can
+  grant a further 90 days to pay and the reduction carries only **30** of them
+  — so the discount is gone on day 75 whatever you do, and somebody who
+  requested the extension believing they had until day 135 pays in full. The
+  extension is still worth asking for; it buys time, not money.
+- **The excluded list is written out, not summarised.** It is not intuitive —
+  a periodic-inspection violation is on it and running a red light is not — so
+  "serious violations" would be a worse description than the list.
+- **It refuses to pretend it can see your fines.** Only Absher knows what is
+  recorded against a person and only Absher takes the payment; the tool prices
+  a fine you already know about and says when the reduction lapses. Same shape
+  as `iqama-fees` naming the levy it will not compute.
+
+The three deadlines export to a calendar through `lib/ics.ts` — the fifth
+caller of that writer, and the case it was generalised for: a dated fact
+nobody has a reminder for.
+
+Carries an `official` Disclaimer, is in `e2e/disclaimers.spec.ts`, and is
+badged **beta**, because the windows and the excluded categories can be revised
+without anyone touching this code.
+
 ## Vehicle inspection and registration (`vehicle-renewal`)
 
 The dates are trivial; the **relationship** between them is the tool. A valid

@@ -2044,3 +2044,22 @@ sentence, symptom, file extension. **Write set #6 on a fresh axis before
 believing any future search number** — untried: the query that names a
 competitor's product, and the query typed by somebody with the wrong mental
 model of the format ("convert word to excel").
+
+## Web sweep, 10 August 2026 (third)
+
+Axes tried: what people pay a subscription for that could run offline (thin —
+one nugget, a meeting-cost calculator, not built), and what CHANGED in Saudi
+rules for individuals, which is the axis that produced `sponsorship-transfer`
+and `import-duty` and produced again here.
+
+**Shipped: `traffic-fine`.** Article 75's 25% reduction is a chain of windows
+rather than a deadline — 30 days to object then 15 to pay, in series, and a
+90-day Absher extension that carries the discount only 30 days further. Both
+misreadings cost real money and neither is stated plainly anywhere we found.
+
+**Seen and not taken:** a meeting-cost calculator (thin, and closer to the
+"irrelevant noise" exclusion than to anything this site does well); traffic
+fine LOOKUP, which needs Absher and is `docs/BACKEND.md` territory; and the
+black-points system, which is a real rule but whose thresholds we could not
+corroborate to the standard `iqama-fees` sets — worth revisiting if a
+citable source turns up.

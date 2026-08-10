@@ -214,6 +214,7 @@ import { gosiSalaryTool } from './gosi-salary/meta'
 import { vatRegistrationTool } from './vat-registration/meta'
 import { zatcaWaveTool } from './zatca-wave/meta'
 import { vehicleRenewalTool } from './vehicle-renewal/meta'
+import { trafficFineTool } from './traffic-fine/meta'
 import { fuelCostTool } from './fuel-cost/meta'
 import { rentRulesTool } from './rent-rules/meta'
 import { earlySettlementTool } from './early-settlement/meta'
@@ -383,6 +384,7 @@ export const tools: Tool[] = [
   vatRegistrationTool,
   zatcaWaveTool,
   vehicleRenewalTool,
+  trafficFineTool,
   fuelCostTool,
   rentRulesTool,
   earlySettlementTool,

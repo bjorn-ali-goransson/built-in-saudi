@@ -16,6 +16,7 @@ export const ADDED: Record<string, string> = {
   'speech-time': '2026-08-10',
   'sponsorship-transfer': '2026-08-10',
   'token-counter': '2026-08-10',
+  'traffic-fine': '2026-08-10',
   'zip-create': '2026-08-10',
   'ac-size': '2026-08-09',
   'audio-spectrum': '2026-08-09',
