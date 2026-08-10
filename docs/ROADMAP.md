@@ -1625,3 +1625,21 @@ and produces candidates rather than adjectives.
   CSS grid generator; text-to-speech and speech-to-text via the Web Speech API,
   where the honest question is which Arabic voices actually exist on a device;
   a document scanner; audio/video speed changer; GIF → frames.
+
+### Code sweep, 10 August 2026 (twenty-fifth pass)
+
+- ~~**`lib/markdown.ts` had no HTML renderer.**~~ **Shipped** as `markdown-html`
+  on `lib/blocksToHtml.ts`. The parser could reach .docx and .epub and not the
+  one format everybody wants, while `htmlToMd.ts` had gone the other way for
+  months.
+- **Measured and recorded rather than forced:** `html to markdown` reaches the
+  new tool before its inverse, because the gap is name weight and the phrase is
+  already indexed on both. Keywords moved it 0.0 points. Mitigated with a
+  reciprocal link rather than by renaming a shipped tool.
+- **Still open, unchanged:** a "create a ZIP" tool; `medicine-schedule`,
+  `due-date`, `ovulation` and `exit-reentry` could export ICS now the writer is
+  general, but each needs its own judgement about what the reminder should SAY;
+  six pdf-lib tools bypass `PdfOps`; six unreferenced exports.
+- **`blocksToHtml` also unlocks a Markdown preview inside `markdown-docx` and
+  `markdown-epub`**, which currently show only an outline. Not done here —
+  worth its own pass so the preview is judged on its own.

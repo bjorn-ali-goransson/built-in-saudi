@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useLocale } from '../../i18n'
+import { useLocale, localePath } from '../../i18n'
 import { CopyIcon, ShareIcon } from '../../components/icons'
 import { Button, Textarea, Stack } from '../../components/ui'
 import { htmlToMd, elementToMd } from '../../lib/htmlToMd'
@@ -12,6 +12,7 @@ const STR = {
     outLabel: 'Markdown',
     copy: 'Copy', copied: 'Copied!', share: 'Share', clear: 'Clear',
     done: (n: number) => `Converted to Markdown — ${n.toLocaleString()} characters.`,
+    inverse: 'The other direction: Markdown to HTML',
   },
   ar: {
     editLabel: 'الصق النص المنسّق هنا',
@@ -20,6 +21,7 @@ const STR = {
     outLabel: 'ماركداون',
     copy: 'نسخ', copied: 'تم النسخ!', share: 'مشاركة', clear: 'مسح',
     done: (n: number) => `حُوِّل إلى ماركداون — ${n.toLocaleString('ar')} حرفًا.`,
+    inverse: 'الاتجاه الآخر: ماركداون إلى HTML',
   },
 }
 
@@ -88,6 +90,10 @@ export default function PasteToMarkdownTool() {
       ) : (
         <p className="text-ink-faint text-[0.95rem]">{s.hint}</p>
       )}
+      {/* A converter and its inverse that do not link are two tools somebody
+          has to find twice — and the scorer discards word order, so "html to
+          markdown" reaches the wrong one first. The link is the mitigation. */}
+      <Button className="self-start px-3 py-1" to={localePath(locale, '/apps/markdown-html')} data-testid="md-inverse">{s.inverse}</Button>
     </Stack>
   )
 }

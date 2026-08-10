@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'markdown-html',
+    en: { name: 'Markdown to HTML', description: 'Turn Markdown into HTML — a fragment for a CMS or a standalone file with its own stylesheet, heading anchors, and both dir and lang set for Arabic. Raw HTML is escaped rather than passed through. Free, in your browser.' },
+    ar: { name: 'ماركداون إلى HTML', description: 'حوّل ماركداون إلى HTML — مقطعًا لنظام إدارة محتوى أو ملفًا مستقلًا بتنسيقه، مع معرّفات للعناوين وضبط dir وlang معًا للعربية. وتُهرَّب الوسوم الخام بدل تمريرها. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'image-base64',
     en: { name: 'Image to Base64', description: 'Turn an image into a data URI for CSS, HTML or Markdown, and back again — with the smaller encoding for SVG, HEIC transcoded so it actually displays, and the true cost of embedding shown. Free, in your browser.' },
     ar: { name: 'صورة إلى Base64', description: 'حوّل صورة إلى data URI لـCSS أو HTML أو ماركداون وبالعكس — بالترميز الأصغر لـSVG، وتحويل HEIC ليُعرض فعلًا، مع بيان كلفة التضمين الحقيقية. مجانًا داخل متصفحك.' },

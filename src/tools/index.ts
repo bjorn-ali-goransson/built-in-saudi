@@ -200,6 +200,7 @@ import { pdfOrganiseTool } from './pdf-organise/meta'
 import { pdfOcrTool } from './pdf-ocr/meta'
 import { docxToTextTool } from './docx-to-text/meta'
 import { markdownDocxTool } from './markdown-docx/meta'
+import { markdownHtmlTool } from './markdown-html/meta'
 import { docxMarkdownTool } from './docx-markdown/meta'
 import { markdownEpubTool } from './markdown-epub/meta'
 import { csvToXlsxTool } from './csv-to-xlsx/meta'
@@ -366,6 +367,7 @@ export const tools: Tool[] = [
   pdfOcrTool,
   docxToTextTool,
   markdownDocxTool,
+  markdownHtmlTool,
   docxMarkdownTool,
   markdownEpubTool,
   csvToXlsxTool,

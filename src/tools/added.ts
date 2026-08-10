@@ -8,6 +8,7 @@
 // Newest first, which is also the order the catalogue reads it in.
 export const ADDED: Record<string, string> = {
   'image-base64': '2026-08-10',
+  'markdown-html': '2026-08-10',
   'pdf-to-word': '2026-08-10',
   'saudi-holidays': '2026-08-10',
   'speech-time': '2026-08-10',

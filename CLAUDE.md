@@ -738,6 +738,52 @@ off the spec. Re-verify rather than trusting this list if the behaviour changes:
 a real one would fetch hundreds of megabytes), including the streaming-throws and
 create-fails-once quirks, and asserts the typed text never appears in a request.
 
+## Markdown to HTML, and the escaping that is the whole point (`markdown-html`)
+
+A code sweep found the parser's most obvious output missing: `lib/markdown.ts`
+renders to **.docx and .epub and not to HTML**, while `htmlToMd.ts` has gone the
+other way since long before either. `lib/blocksToHtml.ts` closes it, and
+`paste-to-markdown` finally has an inverse to be tested against.
+
+**Raw HTML does not pass through, and that is stated rather than discovered.**
+`parseMarkdown` has no HTML node, so `<script>alert(1)</script>` is TEXT and text
+is escaped — it appears on the page instead of running. Most converters pass raw
+HTML straight through, which is fine in your own editor and an injection vector
+the moment the Markdown came from somebody else. **It is a limitation as much as
+a safeguard**, and the UI says so: a tool that needs passthrough is a different
+tool.
+
+**Escaping the text and not the href would have escaped nothing.** `javascript:`
+and `data:text/html` in a link are the other half of the same problem, so
+`safeHref` drops anything that is not plainly http(s)/mailto/tel/relative — and
+**keeps the label**, since losing that as well loses content the document had.
+There is a case for an ordinary link surviving untouched, without which the
+first case passes against a renderer that drops every href.
+
+**The preview asks the BROWSER, not a string.** A `toContain` cannot tell
+escaped from unescaped once it is in the DOM; the spec counts `<script>`
+elements inside the rendered preview and checks the global the payload would
+have set. Both guards are **verified to fail** — removing the scheme check
+reddens the link case, removing the escaper reddens "a script element reached
+the DOM".
+
+Two smaller decisions: a heading's id is derived from its **text** (a counted id
+silently breaks every link into the document the moment a section is added
+above), with a `-2` suffix for a genuine duplicate; and the standalone document
+sets **`dir` AND `lang` together**, the same half-done-RTL trap `writeEpub`
+records.
+
+**And the new tool immediately stole a query from its own inverse** — the
+documented converter-pair risk, measured: `html to markdown` went to
+`markdown-html` (432) over `paste-to-markdown` (362). The documented fix does
+not work here and that is worth knowing: `paste-to-markdown` **already** indexes
+the exact phrase, and adding more keywords moved it **0.0 points**, because the
+gap is NAME weight (×3) and "Markdown to HTML" contains both words while "Paste
+to Markdown" contains one. Word order carries direction and the scorer discards
+it on purpose. Renaming a shipped tool to win one probe query is the worse
+trade — the right answer is still second and visibly named — so the mitigation
+is the **reciprocal link**, which both tools now carry.
+
 ## Writing an EPUB (`lib/writeEpub.ts`, `markdown-epub`)
 
 The site could READ an EPUB (`epub-text`) and not write one, and writing one
