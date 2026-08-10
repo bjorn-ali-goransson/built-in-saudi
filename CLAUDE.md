@@ -65,6 +65,18 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
    across lines; a naïve single-line regex silently leaves the *default*
    description on every page. Each tool page's crawlable block also links to all
    other tools (kills orphan pages) under a "More free tools" H2.
+**BEFORE step 1, read `docs/ROADMAP.md` "Out of scope".** Some tools are
+excluded on purpose — interest/EMI calculators for Shariah reasons, anything
+needing a scraped source or a key we will not run — and the exclusion says WHY.
+This is not a formality: in August 2026 a web sweep re-proposed the loan
+calculator that had been withdrawn in July for exactly that reason, and it was
+rebuilt in full — module, UI, meta, seo, sitemap, disclaimer, spec — before
+anything objected. What finally objected was the `RetiredToolRedirect` in the
+router making its own page render the catalogue. `scripts/check-retired.mjs` now
+fails the build when a withdrawn id comes back, because a decision that lives
+only in prose and in one router line is a decision nobody consults while adding
+a tool. **A disclaimer does not fix a tool that should not exist.**
+
 **Steps 2–5 are enforced, not remembered.** `npm run build` runs
 `scripts/check-tool-registry.mjs`, which fails on a live tool that has no
 `seo.ts` entry, is missing either locale from `sitemap.xml`, is listed there

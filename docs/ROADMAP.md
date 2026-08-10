@@ -42,7 +42,11 @@ diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the Privacy page.
   the July 2026 sweep in contradiction of this rule and was removed in August
   2026; `/apps/loan-calculator` redirects to the catalogue.* If instalment
   finance is ever wanted here it should be modelled as Murabaha or Ijara, not as
-  interest.
+  interest. **It was re-proposed by a web sweep on 10 August 2026 and rebuilt in
+  full before anything objected** — the only thing that stopped it was the
+  redirect making its own page render the catalogue. `scripts/check-retired.mjs`
+  now fails the build on a withdrawn id, so the next sweep is caught at the
+  first build rather than at the last test.
 - **Irrelevant noise** — construction-cost estimators, CGPA, arcade games, and
   the filler seen on competitor "all-in-one" sites.
 - **Anything needing a scraped source or an API key we don't want to run**
@@ -1533,3 +1537,29 @@ Still uncovered, and now listed rather than suspected:
   (copy / version), `مشاركة` (share / participation), `تحليل` (analysis). The
   scorer cannot separate these and neither can a collection; recorded so nobody
   re-measures them expecting a fix.
+
+### Web sweep, 10 August 2026 (twenty-second pass)
+
+Two negative findings and one guard; no tool shipped, deliberately.
+
+- **The sweep re-proposed an EXCLUDED tool and I built it.** A personal-finance
+  calculator: high search volume, a genuine local insight (a quoted flat rate is
+  close to half the APR SAMA defines), primary sources with article numbers.
+  All true, and all irrelevant — loan/EMI/interest calculators are out of scope
+  for Shariah reasons and one had already been withdrawn for it in July.
+  Withdrawn again; `scripts/check-retired.mjs` added and verified to fail.
+- **WebCodecs is NOT universally available, whatever the blogs say.** A 2026
+  post claims it "ships in every major browser", which would make three of our
+  documented limits stale — `video-trim`'s fragmented output, `video-frames`
+  saying frame-exact needs `VideoDecoder` "which Safari does not have", and
+  `audio-convert` shipping WAV because MP3 would need a real encoder. MDN says
+  `VideoDecoder` is **"not Baseline — does not work in some of the most
+  widely-used browsers."** Sources disagree, so nothing was changed. Re-check
+  against MDN's compatibility table, not a blog, before revisiting any of them.
+- **Worth keeping from the research anyway:** SAMA's Consumer Financing
+  Regulations Article 11(3) independently corroborates the three-month cap that
+  `early-settlement` already encodes, read from the primary source rather than a
+  summary. Also confirmed there: Article 14(5) caps a consumer finance at five
+  years, and Article 14(1) at 33.33% of gross salary (25% of a pension) — figures
+  a future Murabaha/Ijara tool would need, recorded so the research is not lost
+  with the tool that should not have used it.
