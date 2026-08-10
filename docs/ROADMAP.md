@@ -1706,3 +1706,22 @@ the shape that found `lib/ics.ts` and `lib/markdown.ts` before.
 - **Still open:** `blocksToHtml` would give `markdown-docx` and `markdown-epub`
   a live preview instead of an outline; four dated tools could export ICS; six
   pdf-lib tools bypass `PdfOps`.
+
+### Discoverability, 10 August 2026 (fifth pass) — converters and their directions
+
+`evals/directions.mjs` is the new instrument, built because the same defect had
+been found four times one query at a time. **24/24 own direction, 12/12
+opposite** after the one fix it found.
+
+- **The pairing has to be DECLARED.** Pairing by name reported a clean 6/6 while
+  missing the only broken pair, because "Paste Markdown" does not say what it
+  converts from. `Tool.inverse` closes that; `scripts/check-inverses.mjs` keeps
+  it reciprocal.
+- **`Paste Markdown` is now `HTML to Markdown`** — the rename declined last pass,
+  taken once it was measured rather than probed.
+- **Still open:** «تشكيل النص» remains a 3.7-point loss to `arabic-normalize`,
+  whose «إزالة التشكيل» keyword contains «التشكيل». Both tools genuinely concern
+  tashkeel in opposite directions and the scorer cannot see direction; recorded
+  in `twinprobe`'s default cases so it stays visible.
+- **`evals/twinprobe.mjs` rewritten** on the shared loader — it had carried a
+  full second copy, stale for the two newest categories.

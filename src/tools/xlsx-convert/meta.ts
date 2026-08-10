@@ -14,6 +14,7 @@ export const xlsxConvertTool: Tool = {
     'xlsx', 'excel', 'csv', 'json', 'spreadsheet', 'convert', 'export', 'tsv', 'sheet', 'data', 'offline',
     'إكسل', 'جدول', 'تحويل', 'بيانات', 'تصدير', 'ورقة', 'دون رفع',
   ],
+  inverse: 'csv-to-xlsx',
   status: 'stable',
   Icon: TableIcon,
   component: lazyTool(() => import('./XlsxConvertTool')),

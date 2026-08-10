@@ -14,6 +14,7 @@ export const qrCodeTool: Tool = {
     'qr', 'qr code', 'generator', 'wifi qr', 'url', 'barcode',
     'vcard', 'svg', 'png', 'free', 'no watermark',
   ],
+  inverse: 'qr-reader',
   status: 'stable',
   Icon: QrIcon,
   component: lazyTool(() => import('./QrCodeTool')),

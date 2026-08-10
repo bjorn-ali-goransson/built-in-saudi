@@ -14,6 +14,7 @@ export const zipCreateTool: Tool = {
     'bundle files', 'compress folder', 'zip folder', 'combine files',
     'ضغط ملفات', 'إنشاء zip', 'أرشيف', 'ضغط مجلد', 'دمج ملفات في ملف واحد',
   ],
+  inverse: 'archive-inspector',
   status: 'stable',
   Icon: ArchiveIcon,
   component: lazyTool(() => import('./ZipCreateTool')),

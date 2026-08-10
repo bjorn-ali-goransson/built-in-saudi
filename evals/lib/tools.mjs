@@ -89,6 +89,8 @@ for (const d of dirs) {
     tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
     category: `${arCategory(category)} ${category}`.trim(),
     keywords,
+    // Read from the COMMENT-STRIPPED source, like everything else here.
+    inverse: /\binverse: '([a-z0-9-]+)'/.exec(src)?.[1],
   })
 }
 

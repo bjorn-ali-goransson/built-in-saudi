@@ -606,3 +606,45 @@ test.describe('held-out set #3 fixes', () => {
     await wins(page, 'كم دقيقة يحتاج النص', 'speech-time', 'ar')
   })
 })
+
+// --- converter direction, 10 August 2026 --------------------------------------
+//
+// The scorer discards word order BY DESIGN, so "markdown to html" and "html to
+// markdown" are the same query to it and whichever NAME contains both nouns
+// wins at triple weight — which has nothing to do with which tool is right.
+// That failure was found FOUR times one query at a time before
+// `evals/directions.mjs` made it measurable: 24/24 own direction, 12/12
+// opposite. `Tool.inverse` declares the pairs the naming cannot carry, and
+// `scripts/check-inverses.mjs` refuses a one-sided declaration.
+test.describe('a converter wins its own direction', () => {
+  const opens = async (page: import('@playwright/test').Page, q: string, id: string) => {
+    await page.goto('/en')
+    await page.getByRole('searchbox').fill(q)
+    await page.getByRole('searchbox').press('Enter')
+    await expect(page, `"${q}" should open ${id}`).toHaveURL(new RegExp(`/en/apps/${id}$`))
+  }
+
+  test('markdown to html, and html to markdown, are different answers', async ({ page }) => {
+    // This is the pair that was wrong: the name-derived pairing could not even
+    // see it, because "Paste Markdown" does not say what it converts FROM.
+    await opens(page, 'markdown to html', 'markdown-html')
+    await opens(page, 'html to markdown', 'paste-to-markdown')
+  })
+
+  test('word and markdown, both ways', async ({ page }) => {
+    await opens(page, 'markdown to word', 'markdown-docx')
+    await opens(page, 'word to markdown', 'docx-markdown')
+  })
+
+  test('images and pdf, both ways', async ({ page }) => {
+    await opens(page, 'images to pdf', 'images-to-pdf')
+    await opens(page, 'pdf to images', 'pdf-to-images')
+  })
+
+  test('the renamed tool still answers what it is known for', async ({ page }) => {
+    // It was "Paste Markdown"; the name now says the conversion, like every
+    // other converter here, so "paste" moved into the keywords rather than
+    // being lost.
+    await opens(page, 'paste', 'paste-to-markdown')
+  })
+})

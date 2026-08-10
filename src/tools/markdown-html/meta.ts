@@ -14,6 +14,7 @@ export const markdownHtmlTool: Tool = {
     'render markdown', 'html', 'markdown', 'md', 'readme to html', 'convert markdown',
     'ماركداون إلى html', 'تحويل ماركداون', 'معاينة ماركداون', 'ماركداون',
   ],
+  inverse: 'paste-to-markdown',
   status: 'stable',
   Icon: CodeIcon,
   component: lazyTool(() => import('./MarkdownHtmlTool')),

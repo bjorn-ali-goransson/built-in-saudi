@@ -34,6 +34,22 @@ export interface Tool {
   component?: LazyExoticComponent<ComponentType>
   /** External tool: link out instead of routing in. */
   href?: string
+  /**
+   * The id of the tool that does the OPPOSITE conversion.
+   *
+   * Declared rather than derived, because the naming does not carry it: this
+   * site names converters "X to Y", but `paste-to-markdown` is the inverse of
+   * `markdown-html` and neither name says so. It exists so
+   * `evals/directions.mjs` can check that each half of a pair wins its own
+   * direction — the scorer discards word order by design, so whichever NAME
+   * happens to contain both nouns wins at triple weight, and that has nothing
+   * to do with which tool is right. Found four times one query at a time
+   * before it became measurable.
+   *
+   * `scripts/check-inverses.mjs` refuses a one-sided declaration: if A says its
+   * inverse is B, B must say A.
+   */
+  inverse?: string
   /** Arabic translations of the display fields (category is translated centrally). */
   ar?: { name: string; tagline: string; description: string }
 }

@@ -3230,6 +3230,50 @@ because a real typo is nearly always in a longer word. **Its own e2e caught it**
 — the documented property that an unanswerable query returns nothing had a
 frozen case, and the fallback broke it immediately.
 
+**A converter must win its OWN direction** (`node evals/directions.mjs`). The
+scorer discards word order **by design**, so "markdown to html" and "html to
+markdown" are the same query to it — and whichever NAME contains both nouns
+wins at triple weight, which has nothing to do with which tool is right.
+
+That failure had been found **four times, one query at a time**, and only ever
+because somebody happened to probe it: `vcard-to-csv` lost "contacts to
+spreadsheet"; `markdown-html` took "html to markdown"; `zip-create` took "open a
+zip"; `print-size` took «تصغير حجم الصورة». **A defect found four times by
+accident wants an instrument.** This one derives its pairs, so it cannot go
+stale and it grows with the catalogue — the same arrangement as `ownname.mjs`.
+
+Measured: **24/24 own direction, 12/12 opposite.**
+
+- **The pairing is DECLARED, not derived, and that is what made it work.** The
+  first version paired tools by name, found 6/6, and reported clean — while
+  missing the one pair that was actually broken, because "Paste Markdown" does
+  not say what it converts FROM. `Tool.inverse` names it; with that, 11 pairs
+  became checkable and the instrument immediately found the defect.
+- **`scripts/check-inverses.mjs` refuses a ONE-SIDED declaration.** If A says B
+  and B says nothing, the instrument checks one direction, reports a clean
+  number, and never looks at the other — a vacuous green with extra steps.
+  Verified to fail.
+- **The fix was the rename declined last time, and measuring changed the
+  answer.** `Paste Markdown` → **`HTML to Markdown`**, which is what it does and
+  matches the site's X-to-Y convention. Both directions now land correctly in
+  both languages, with every bench unchanged. What "paste" and «لصق» carried in
+  the NAME moved into the keywords — and «لصق» had to be added back explicitly,
+  because removing it from the name sent the query to `label-sheet`, where
+  «لصق» also legitimately means "stick".
+
+**`evals/twinprobe.mjs` was disobeying its own lesson.** It carried a complete
+second copy of the tool loader, hand-written Arabic category map included — the
+exact drift removed from `evals/lib/tools.mjs` two passes ago, and already stale
+for Health and Time & Date. It is thirty lines on the shared loader now. **Use
+the shared loader; do not write a second one.**
+
+**And the `` trap bit again, in Python this time.** Writing
+`/inverse: …/` through a Python heredoc put a literal 0x08 backspace in the
+file, so the regex matched nothing and the harness reported every `inverse` as
+undefined — which looked exactly like "the declarations did not help". It is not
+a bash-heredoc problem, it is an ESCAPE-IN-A-STRING problem, and it applies to
+any generator. Write regexes with Write/Edit.
+
 **Every tool must still win a search for its OWN NAME** (`node
 evals/ownname.mjs`, and `searchbench.mjs` prints it at the end so it is seen
 exactly when somebody is touching search). This is the general form of a defect

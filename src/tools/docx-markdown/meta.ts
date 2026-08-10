@@ -15,6 +15,7 @@ export const docxMarkdownTool: Tool = {
     'md', 'convert', 'export', 'document', 'office',
     'وورد إلى ماركداون', 'ماركداون', 'وورد', 'مستند', 'تحويل', 'تصدير',
   ],
+  inverse: 'markdown-docx',
   status: 'stable',
   Icon: FileIcon,
   component: lazyTool(() => import('./DocxMarkdownTool')),

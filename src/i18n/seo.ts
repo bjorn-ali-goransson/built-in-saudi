@@ -640,8 +640,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'paste-to-markdown',
-    en: { name: 'Paste Markdown', description: 'Paste from Word, a web page or WordPad and get clean Markdown — line breaks, bold, italics, links, headings, lists, quotes, code and tables. Copy or share; nothing uploaded.' },
-    ar: { name: 'لصق ماركداون', description: 'الصق من وورد أو صفحة ويب أو WordPad واحصل على ماركداون نظيف — فواصل أسطر وخط عريض ومائل وروابط وعناوين وقوائم واقتباسات وشيفرة وجداول. انسخ أو شارك؛ لا يُرفع شيء.' },
+    en: { name: 'HTML to Markdown', description: 'Paste from Word, a web page or WordPad and get clean Markdown — line breaks, bold, italics, links, headings, lists, quotes, code and tables. Copy or share; nothing uploaded.' },
+    ar: { name: 'HTML إلى ماركداون', description: 'الصق من وورد أو صفحة ويب أو WordPad واحصل على ماركداون نظيف — فواصل أسطر وخط عريض ومائل وروابط وعناوين وقوائم واقتباسات وشيفرة وجداول. انسخ أو شارك؛ لا يُرفع شيء.' },
   },
   {
     id: 'hash-generator',

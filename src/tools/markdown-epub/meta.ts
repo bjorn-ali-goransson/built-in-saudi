@@ -15,6 +15,7 @@ export const markdownEpubTool: Tool = {
     'e-reader', 'publish', 'manuscript', 'markdown to epub', 'md to epub',
     'كتاب إلكتروني', 'ماركداون', 'تحويل', 'نشر', 'مخطوطة', 'قارئ', 'كتاب',
   ],
+  inverse: 'epub-text',
   status: 'stable',
   Icon: BookmarkIcon,
   component: lazyTool(() => import('./MarkdownEpubTool')),

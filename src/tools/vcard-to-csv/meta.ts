@@ -16,6 +16,7 @@ export const vcardToCsvTool: Tool = {
     'vcf', 'vcard', 'csv', 'contacts', 'spreadsheet', 'export', 'phone contacts', 'address book', 'excel', 'convert', 'android', 'iphone', 'backup',
     'جهات الاتصال', 'تصدير', 'دفتر عناوين', 'تحويل', 'إكسل', 'نسخة احتياطية', 'أندرويد', 'آيفون',
   ],
+  inverse: 'csv-vcard',
   status: 'stable',
   Icon: UsersIcon,
   component: lazyTool(() => import('./VcardToCsvTool')),

@@ -1,66 +1,51 @@
 // Why does a tool lose to its twin?
 //
-// Six of the eight remaining bench misses are the same shape: the query names a
-// family ("password", "hijri", "cron", "contacts") and the tool that wins is
-// the OTHER member of that family. This dumps what each of the pair actually
-// indexes, so the cause is visible rather than guessed at.
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+// A diagnostic dump, not a gate: give it a query and two tool ids and it prints
+// what each one actually indexes, so the cause is visible rather than guessed
+// at. `evals/directions.mjs` is the systematic version for converter pairs;
+// this is for the hand-picked cases that are not X-to-Y.
+//
+// **It used to carry its own copy of the whole tool loader**, including a
+// hand-written Arabic category map — the exact drift removed from
+// `evals/lib/tools.mjs` two passes ago, and by then already stale for Health
+// and Time & Date. This file is the reason CLAUDE.md says to use the shared
+// loader rather than write a second one; it was quietly disobeying its own
+// lesson.
+//
+// Run: node evals/twinprobe.mjs ["query" toolA toolB]
+
+import { tools } from './lib/tools.mjs'
 import { scoreTool } from './gen/fuzzy.js'
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
-const reg = readFileSync(`${ROOT}/src/tools/index.ts`, 'utf8')
-const dirs = readdirSync(`${ROOT}/src/tools`).filter(
-  (d) => existsSync(`${ROOT}/src/tools/${d}/meta.ts`) && reg.includes(`'./${d}/meta'`),
-)
+const byId = new Map(tools.map((t) => [t.id, t]))
 
-const AR_CATEGORY = {
-  Generators: 'مولّدات', Images: 'صور', Design: 'تصميم', Converters: 'محوّلات',
-  Developer: 'أدوات المطوّرين', Web: 'الويب', Text: 'نصوص', Calculators: 'حاسبات',
-  PDF: 'PDF', Business: 'أعمال', Communication: 'تواصل', Files: 'ملفات',
-  Utilities: 'أدوات', 'Saudi / Local': 'أدوات سعودية', Islamic: 'إسلاميات', Arabic: 'العربية',
-}
+/** Default cases: the pairs this repo has actually had to reason about. */
+const PAIRS = [
+  ['html to markdown', 'paste-to-markdown', 'markdown-html'],
+  ['تشكيل النص', 'diacritize', 'arabic-normalize'],
+  ['طمس وجه في صورة', 'image-redact', 'steganography'],
+  ['open a zip', 'archive-inspector', 'zip-create'],
+  ['ضغط ملفات', 'zip-create', 'svg-optimise'],
+]
 
-const byId = new Map()
-for (const d of dirs) {
-  const raw = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
-  // Strip whole-line // comments BEFORE pulling quoted strings out. Without
-  // this the harness reads a comment as data: a note saying why a keyword was
-  // removed mentions the word in quotes, and the bench dutifully re-indexed it
-  // — reporting the removal as having had no effect. A parser that reads the
-  // explanation as the thing being explained is worse than no parser.
-  const src = raw.split(String.fromCharCode(10)).filter((l) => !/^\s*\/\//.test(l)).join(String.fromCharCode(10))
-  if (/status: 'coming-soon'/.test(src)) continue
-  const pick = (k) => (new RegExp(`${k}: '((?:[^'\\\\]|\\\\.)*)'`).exec(src)?.[1] ?? '')
-  const kwBlock = /keywords: \[([\s\S]*?)\]/.exec(src)?.[1] ?? ''
-  const keywords = [...kwBlock.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1])
-  const arBlock = /ar:\s*\{([\s\S]*?)\n  \}/.exec(src)?.[1] ?? ''
-  const arPick = (k) => (new RegExp(`${k}:\\s*'((?:[^'\\\\]|\\\\.)*)'`).exec(arBlock)?.[1] ?? '')
-  const category = pick('category')
-  const t = {
-    id: pick('id'),
-    name: pick('name'),
-    // The UI passes localizeTool(tool, locale).name -- the ar BLOCK'"'"'s name --
-    // not the top-level nameAr field, which most metas do not even define. The
-    // bench read the field, so for every such tool the Arabic name was simply
-    // absent from the index: حاسبة النسبة ranked its own calculator SEVENTH.
-    nameAr: arPick('name') || pick('nameAr'),
-    tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
-    category: `${AR_CATEGORY[category] ?? category} ${category}`.trim(),
-    keywords,
-  }
-  byId.set(t.id, t)
-}
+const cases = process.argv.length >= 5
+  ? [[process.argv[2], process.argv[3], process.argv[4]]]
+  : PAIRS
 
-const PAIRS = [['طمس وجه في صورة','image-redact','steganography'],['إخفاء أجزاء من صورة','image-redact','steganography']]
-
-for (const [q, want, beat] of PAIRS) {
-  const a = byId.get(want), b = byId.get(beat)
-  if (!a || !b) { console.log(`?? missing meta for ${want} / ${beat}`); continue }
-  console.log(`\n=== "${q}"`)
-  for (const [label, t] of [['WANT ' + want, a], ['GOT  ' + beat, b]]) {
-    console.log(`  ${label}  score ${scoreTool(q, t).toFixed(2)}`)
-    console.log(`     name     ${t.name}  /  ${t.nameAr}`)
-    console.log(`     tagline  ${t.tagline}`)
-    console.log(`     keywords ${t.keywords.join(', ')}`)
+for (const [q, want, beat] of cases) {
+  const a = byId.get(want)
+  const b = byId.get(beat)
+  if (!a || !b) { console.log(`? unknown tool in [${want}, ${beat}]`); continue }
+  const sa = scoreTool(q, a)
+  const sb = scoreTool(q, b)
+  const ok = sa > sb
+  console.log(`\n${ok ? 'OK  ' : 'LOSS'}  "${q}"  ${want} ${sa.toFixed(1)}  vs  ${beat} ${sb.toFixed(1)}`)
+  if (ok) continue
+  for (const t of [a, b]) {
+    console.log(`   ${t.id}`)
+    console.log(`     name    ${t.name}`)
+    console.log(`     nameAr  ${t.nameAr}`)
+    console.log(`     cat     ${t.category}`)
+    console.log(`     kw      ${(t.keywords || []).join(', ').slice(0, 160)}`)
   }
 }

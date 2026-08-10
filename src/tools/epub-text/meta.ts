@@ -14,6 +14,7 @@ export const epubTextTool: Tool = {
     'epub', 'ebook', 'book', 'text', 'extract', 'convert', 'markdown', 'chapters', 'metadata', 'isbn', 'reader',
     'كتاب', 'إلكتروني', 'نص', 'استخراج', 'تحويل', 'فصول', 'ماركداون',
   ],
+  inverse: 'markdown-epub',
   status: 'stable',
   Icon: BookmarkIcon,
   component: lazyTool(() => import('./EpubTextTool')),

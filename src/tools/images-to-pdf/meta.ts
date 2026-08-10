@@ -11,6 +11,7 @@ export const imagesToPdfTool: Tool = {
     'Combine several JPG/PNG images into a single PDF, one image per page — reorder the pages, fit to the image or use A4/Letter with a margin. Built entirely in your browser with pdf-lib, so sensitive documents (IDs, contracts) are never uploaded.',
   category: 'PDF',
   keywords: ['jpg to pdf', 'png to pdf', 'images to pdf', 'combine', 'merge images', 'pdf', 'صور إلى pdf', 'تحويل صور', 'دمج'],
+  inverse: 'pdf-to-images',
   status: 'stable',
   Icon: PhotoDocIcon,
   component: lazyTool(() => import('./ImagesToPdfTool')),

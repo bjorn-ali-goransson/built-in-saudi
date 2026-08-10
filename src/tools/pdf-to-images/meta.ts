@@ -15,6 +15,7 @@ export const pdfToImagesTool: Tool = {
     // a keyword list, written by a developer, tends to the American form —
     // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
     'rasterise','pdf to jpg', 'pdf to png', 'pdf to image', 'convert pdf', 'extract pages', 'rasterize', 'webp', 'pdf إلى صور', 'تحويل pdf', 'استخراج صفحات'],
+  inverse: 'images-to-pdf',
   status: 'stable',
   Icon: DocPhotoIcon,
   component: lazyTool(() => import('./PdfToImagesTool')),

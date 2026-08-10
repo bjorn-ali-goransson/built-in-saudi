@@ -14,6 +14,7 @@ export const csvToXlsxTool: Tool = {
     'csv', 'xlsx', 'excel', 'convert', 'spreadsheet', 'leading zeros', 'scientific notation', 'iban', 'phone numbers', 'arabic csv', 'encoding', 'utf-8',
     'إكسل', 'تحويل', 'جدول', 'أصفار', 'آيبان', 'ترميز', 'عربي',
   ],
+  inverse: 'xlsx-convert',
   status: 'stable',
   Icon: TableIcon,
   component: lazyTool(() => import('./CsvToXlsxTool')),

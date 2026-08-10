@@ -11,6 +11,7 @@ export const qrReaderTool: Tool = {
     'Point your camera at a QR code, or drop in a screenshot or photo of one, and read what it actually says — before you visit it. Shows the raw contents, warns about look-alike links, and decodes Wi-Fi, contact and payment codes into something readable. Runs entirely in your browser; the picture and the camera feed never leave your device.',
   category: 'Images',
   keywords: ['qr reader', 'qr scanner', 'scan qr', 'read qr', 'decode qr', 'barcode reader', 'qr from image', 'قارئ باركود', 'مسح باركود', 'قراءة باركود', 'فك باركود'],
+  inverse: 'qr-code',
   status: 'stable',
   Icon: ScanQrIcon,
   component: lazyTool(() => import('./QrReaderTool')),
