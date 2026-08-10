@@ -10,7 +10,7 @@ export const pdfBookletTool: Tool = {
   description:
     'Impose a PDF for printing: booklet order so a folded, stapled stack reads correctly, or two and four pages to a sheet to save paper. A booklet is not pages 1,2,3,4 on sheets — the outermost sheet carries the last page beside the first and the sequence walks inwards, which is why printing 2-up and folding gives you a scrambled mess. Right-to-left binding for Arabic documents.',
   category: 'PDF',
-  keywords: ['booklet', 'imposition', 'n-up', '2-up', 'print', 'fold', 'saddle stitch', 'pdf', 'كتيب', 'طباعة', 'ترتيب الصفحات', 'توفير ورق', 'طي'],
+  keywords: ['بي دي اف', 'booklet', 'imposition', 'n-up', '2-up', 'print', 'fold', 'saddle stitch', 'pdf', 'كتيب', 'طباعة', 'ترتيب الصفحات', 'توفير ورق', 'طي'],
   status: 'stable',
   Icon: MergeIcon,
   component: lazyTool(() => import('./PdfBookletTool')),

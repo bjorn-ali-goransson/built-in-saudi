@@ -10,7 +10,7 @@ export const pdfMergeTool: Tool = {
   description:
     'Merge multiple PDF files into a single document in the order you choose — reorder or remove files and see the page count before you merge. Runs entirely in your browser with pdf-lib, so your documents are never uploaded.',
   category: 'PDF',
-  keywords: ['pdf', 'merge', 'combine', 'join pdf', 'merge pdf', 'دمج pdf', 'دمج ملفات', 'جمع'],
+  keywords: ['بي دي اف', 'pdf', 'merge', 'combine', 'join pdf', 'merge pdf', 'دمج pdf', 'دمج ملفات', 'جمع'],
   status: 'stable',
   Icon: MergeIcon,
   component: lazyTool(() => import('./PdfMergeTool')),

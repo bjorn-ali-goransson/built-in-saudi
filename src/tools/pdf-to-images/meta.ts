@@ -10,7 +10,7 @@ export const pdfToImagesTool: Tool = {
   description:
     'Convert a PDF into images — one file per page, at the resolution you choose (screen, print or high-DPI), as PNG, JPG or WebP. Pick the pages you want, download them individually or all at once as a ZIP. Rendered entirely in your browser, so contracts, IDs and statements are never uploaded.',
   category: 'PDF',
-  keywords: [
+  keywords: ['بي دي اف', 
     // Both spellings. This site writes British English in its own copy while
     // a keyword list, written by a developer, tends to the American form —
     // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.

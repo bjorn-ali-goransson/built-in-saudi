@@ -10,7 +10,7 @@ export const pdfRedactTool: Tool = {
   description:
     'Drag over anything that has to go. A black rectangle drawn in a PDF viewer hides nothing — the text stays in the file and can be selected, copied or extracted with one command, which has published witness names, salaries and medical records more than once. This rebuilds each page as an image, so the words genuinely cease to exist, then re-reads the export to prove none are left.',
   category: 'PDF',
-  keywords: ['redact', 'pdf', 'black out', 'remove text', 'privacy', 'confidential', 'حجب', 'إخفاء', 'طمس', 'سري', 'خصوصية', 'مستند'],
+  keywords: ['بي دي اف', 'redact', 'pdf', 'black out', 'remove text', 'privacy', 'confidential', 'حجب', 'إخفاء', 'طمس', 'سري', 'خصوصية', 'مستند'],
   status: 'stable',
   Icon: RedactIcon,
   component: lazyTool(() => import('./PdfRedactTool')),

@@ -13,7 +13,7 @@ export const hashGeneratorTool: Tool = {
   // sha256 leads: HMAC also does SHA-256 and was winning a bare "sha256" on
   // keyword position alone, which is not an editorial judgement about which
   // tool is primary -- it is an accident of list order.
-  keywords: ['sha256', 'sha-256', 'hash', 'sha', 'sha512', 'checksum', 'digest', 'بصمة', 'تجزئة', 'هاش'],
+  keywords: ['sha256', 'verify a file', 'file integrity', 'has this file changed', 'sha-256', 'hash', 'sha', 'sha512', 'checksum', 'digest', 'بصمة', 'تجزئة', 'هاش'],
   status: 'stable',
   Icon: HashIcon,
   component: lazyTool(() => import('./HashGeneratorTool')),

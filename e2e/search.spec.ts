@@ -718,3 +718,44 @@ test.describe('the query survives its shape', () => {
     await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
   })
 })
+
+// --- The SYMPTOM, not the tool ------------------------------------------------
+//
+// Held-out set #4 (`evals/untuned4.mjs`) asks 50 queries describing the
+// PROBLEM rather than naming the utility — "my pdf is too big to email" names
+// no tool, no format and no verb the catalogue uses. It read 62% top-1 against
+// 88/90/73% for the three sets that describe the tool, and the reason was one
+// mechanism rather than fifty: the catalogue is written in the vocabulary of
+// the SOLUTION and people type the vocabulary of the PROBLEM.
+//
+// Seven tools scored BELOW the relevance floor for their own defining symptom —
+// invisible, not merely outranked. These freeze the worst of them.
+
+test('the tool that fixes garbled text is findable by what garbled text looks like', async ({ page }) => {
+  // It indexed «رموز غريبة» and no English equivalent, so it scored 0.9 —
+  // nowhere — for the commonest way anybody describes the symptom.
+  await search(page, 'my arabic shows as question marks')
+  await expect(page.getByTestId('tool-fix-encoding')).toBeVisible()
+})
+
+test('the end-of-service calculator is findable by the word resign', async ({ page }) => {
+  // It scored 0.8. It indexed «استقالة» and, in English, only the names of the
+  // benefit — while Article 85's whole subject is what resigning costs you.
+  await search(page, 'am i owed anything if i resign')
+  await expect(page.getByTestId('tool-end-of-service')).toBeVisible()
+})
+
+test('the image redactor is findable by covering something up', async ({ page }) => {
+  await search(page, 'cover up a name in a screenshot')
+  await expect(page.getByTestId('tool-image-redact')).toBeVisible()
+})
+
+test('PDF written phonetically in Arabic finds the PDF tools', async ({ page }) => {
+  // «بي دي اف» is how PDF is written in Arabic, and exactly ONE of the fifteen
+  // PDF tools indexed it — so an Arabic speaker who spells it out got one
+  // arbitrary member of the family. Adding it to every member cannot reorder
+  // them against each other; it only lifts them above the tools that are not
+  // about PDFs at all.
+  await search(page, 'ملف بي دي اف كبير جدا', 'ar')
+  await expect(page.getByTestId('tool-pdf-compress')).toBeVisible()
+})

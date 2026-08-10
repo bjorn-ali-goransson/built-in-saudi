@@ -3625,6 +3625,56 @@ Every fix was a documented failure class, none touched the scorer:
 **Set #3 is now SPENT.** Quote 73% as its held-out number and write a fourth
 before believing anything about the next scorer or metadata change.
 
+**The catalogue is written in the vocabulary of the SOLUTION; people type the
+vocabulary of the PROBLEM** (`evals/untuned4.mjs`, 50 queries, written in one
+sitting before any was run). Sets #1–#3 all describe the TOOL — they differ in
+phrasing, not in kind. Set #4 describes the SYMPTOM: *"my pdf is too big to
+email"*, *"text came out as weird symbols"*, *"am i owed anything if i
+resign"* — naming no tool, no format and no verb the catalogue uses.
+
+| | first reading | after fixing |
+|---|---|---|
+| top-1 | **62%** (31/50) | **74%** (37/50) |
+| top-3 | 66% | **80%** |
+| returned nothing | 0 | 0 |
+
+**62% against 88 / 90 / 73% for the three tool-shaped sets** — the widest gap
+any held-out set has reported, and it is the half of search that matters most,
+because somebody who already knows what the tool is called mostly knows where
+to find it.
+
+**The 19 misses were ONE mechanism, not nineteen.** Splitting them by whether
+the wanted tool cleared the relevance floor separates an ordering debate from a
+capability nobody can name:
+
+- **7 were INVISIBLE** — below the floor, so never rendered at all.
+  `end-of-service` scored **0.8** for "am i owed anything if i resign";
+  `fix-encoding` **0.9** for "my arabic shows as question marks";
+  `image-redact` **1.3** for "cover up a name in a screenshot". Each indexed the
+  Arabic symptom or the name of the remedy, and no English word for the
+  problem.
+- **12 were NEAR** — shown, just not first. Those are left alone deliberately,
+  so the set keeps some signal after this pass.
+
+**This is not the rejected "index the description".** That failed because a
+description explains a tool in prose; these are the words a person types, which
+is what `keywords` is for. The rule stated: **a tool whose whole purpose is to
+fix a symptom must index the symptom.**
+
+**«بي دي اف» is the general case and was the most valuable find.** That is how
+PDF is written phonetically in Arabic, and **exactly one of the fifteen PDF
+tools indexed it** — so an Arabic speaker who spells it out got one arbitrary
+member of the family. Adding it to every member **cannot reorder them against
+each other**, which is what makes it safe as well as correct; it only lifts them
+above the tools that are not about PDFs at all.
+
+Evidence it generalises rather than fitting its own set: **held-out #2 went
+45/50 → 46/50** without being tuned against, and every other instrument is
+unchanged — tuned 131/131, held-out #1 49/50, Arabic 41/41, own names 453/454,
+directions 24/24 and 12/12.
+
+**Set #4 is now SPENT.** Quote **62%** as its held-out number.
+
 **Indexing the `description` was tried and rejected on measurement**, and the
 protocol was followed properly this time: `evals/untuned.mjs` was burned, so a
 SECOND held-out set was written FIRST (`evals/untuned2.mjs`, 50 fresh queries,

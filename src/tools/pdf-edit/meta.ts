@@ -10,7 +10,7 @@ export const pdfEditTool: Tool = {
   description:
     'A rudimentary PDF editor that runs entirely in your browser: select and move or delete images, and drop in new text with resize handles and line breaks. It edits the PDF’s content streams with pdf-lib and never uploads your file. Existing text can’t be edited or removed yet — the tool says so up front.',
   category: 'PDF',
-  keywords: ['pdf', 'edit', 'editor', 'edit pdf', 'delete image', 'remove text', 'add text', 'تحرير', 'تعديل pdf', 'حذف صورة', 'إضافة نص'],
+  keywords: ['بي دي اف', 'pdf', 'edit', 'editor', 'edit pdf', 'delete image', 'remove text', 'add text', 'تحرير', 'تعديل pdf', 'حذف صورة', 'إضافة نص'],
   status: 'beta',
   Icon: EditIcon,
   component: lazyTool(() => import('./PdfEditTool')),

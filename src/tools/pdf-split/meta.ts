@@ -10,7 +10,7 @@ export const pdfSplitTool: Tool = {
   description:
     'Split a PDF in your browser — extract a page range like “1-3, 5, 8-10” into a new file, or burst the whole document into single-page PDFs (download all as a ZIP or one by one). Runs entirely on your device with pdf-lib, so the file is never uploaded.',
   category: 'PDF',
-  keywords: ['pdf', 'split', 'extract pages', 'page range', 'burst', 'separate pdf', 'تقسيم pdf', 'استخراج صفحات', 'فصل'],
+  keywords: ['بي دي اف', 'pdf', 'split', 'extract pages', 'page range', 'burst', 'separate pdf', 'تقسيم pdf', 'استخراج صفحات', 'فصل'],
   status: 'stable',
   Icon: ScissorsIcon,
   component: lazyTool(() => import('./PdfSplitTool')),

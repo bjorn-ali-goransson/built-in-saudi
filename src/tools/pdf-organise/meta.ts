@@ -10,7 +10,7 @@ export const pdfOrganiseTool: Tool = {
   description:
     'Turn sideways pages the right way up, drag them into the right order, and drop the ones you do not want — all on one screen, then save. Pages are copied rather than re-drawn, so text stays text and a scan stays exactly the scan it was. The file never leaves your device.',
   category: 'PDF',
-  keywords: [
+  keywords: ['بي دي اف', 
     // No 'scan' / 'مسح ضوئي' here. This tool PRESERVES a scan; it does not make
     // one and cannot read one. Listing the word stole "مسح ضوئي" from pdf-ocr,
     // which is the tool that actually answers it.

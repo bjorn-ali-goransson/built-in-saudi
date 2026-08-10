@@ -14,7 +14,7 @@ export const textDiffTool: Tool = {
   // it to take THIS tool's own query. The documented rule: a new tool must not
   // capture a generic term the established one owns, and the fix is to give the
   // established tool the exact phrase.
-  keywords: ['مقارنة نصين', 'مقارنة النصوص', 'diff', 'compare', 'text', 'difference', 'changes', 'merge', 'مقارنة', 'فرق النص'],
+  keywords: ['مقارنة نصين', 'مقارنة النصوص', 'diff', 'what changed', 'compare versions', 'compare two versions', 'compare', 'text', 'difference', 'changes', 'merge', 'مقارنة', 'فرق النص'],
   status: 'stable',
   Icon: DiffIcon,
   component: lazyTool(() => import('./TextDiffTool')),

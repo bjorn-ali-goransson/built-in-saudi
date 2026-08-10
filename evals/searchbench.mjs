@@ -2,6 +2,7 @@ import { tools } from './lib/tools.mjs'
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
+import { UNTUNED4 } from './untuned4.mjs'
 import { UNTUNED_AR } from './untunedar.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
@@ -86,6 +87,23 @@ console.log(`  top-1: ${v1}/${UNTUNED2.length} (${Math.round((v1 / UNTUNED2.leng
 console.log(`  top-3: ${v3}/${UNTUNED2.length} (${Math.round((v3 / UNTUNED2.length) * 100)}%)`)
 console.log(`  not found at all: ${vMiss}`)
 if (vBad.length) { console.log('  --- not first ---'); for (const l of vBad) console.log('  ' + l) }
+
+// --- the FOURTH held-out set: the PROBLEM, not the tool ---
+let w1 = 0, w3 = 0, wMiss = 0
+const wBad = []
+for (const [q, want] of UNTUNED4) {
+  const r = rank(q, want)
+  if (r.at === 1) w1++
+  if (r.at <= 3) w3++
+  if (r.at === Infinity) wMiss++
+  if (r.at > 1) wBad.push(`${q.padEnd(46)} want ${String(want).padEnd(22)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT #4 (symptom-shaped, never tuned against): ${UNTUNED4.length} queries`)
+console.log(`  top-1: ${w1}/${UNTUNED4.length} (${Math.round((w1 / UNTUNED4.length) * 100)}%)`)
+console.log(`  top-3: ${w3}/${UNTUNED4.length} (${Math.round((w3 / UNTUNED4.length) * 100)}%)`)
+console.log(`  not found at all: ${wMiss}`)
+if (wBad.length) { console.log('  --- not first ---'); for (const l of wBad) console.log('  ' + l) }
 
 // --- the ARABIC held-out set ---
 let a1 = 0, a3 = 0, aMiss = 0

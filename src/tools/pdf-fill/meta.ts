@@ -10,7 +10,7 @@ export const pdfFillTool: Tool = {
   description:
     'Fill in PDF forms in your browser. Interactive fields are detected automatically — descriptive forms become a clean web form, others get editable boxes right on the page — and PDFs with no fields let you drop text anywhere. Export a filled (optionally flattened) PDF with pdf-lib, never uploaded.',
   category: 'PDF',
-  keywords: ['pdf', 'form', 'fill', 'fillable', 'acroform', 'fill pdf', 'تعبئة', 'نموذج pdf', 'ملء نموذج', 'استمارة'],
+  keywords: ['بي دي اف', 'pdf', 'form', 'fill', 'fillable', 'acroform', 'fill pdf', 'تعبئة', 'نموذج pdf', 'ملء نموذج', 'استمارة'],
   status: 'stable',
   Icon: FormIcon,
   component: lazyTool(() => import('./PdfFillTool')),

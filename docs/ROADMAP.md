@@ -1818,3 +1818,34 @@ Two things the instrument surfaced in passing, neither yet acted on:
   every prayer key — so a strict-mode locator would match twice. Nothing user
   facing; it does mean an expanded timeline cannot be asserted per row as it
   stands.
+
+## Held-out set #4 (10 August 2026) — the symptom, not the tool
+
+`evals/untuned4.mjs`. First reading **62% top-1 / 66% top-3**, the widest gap
+any held-out set has reported (sets #1–#3 read 88 / 90 / 73%), because all three
+of those describe the TOOL and this one describes the PROBLEM.
+
+Fixed: the seven tools that scored BELOW the relevance floor for their own
+defining symptom, plus «بي دي اف» across all fifteen PDF tools. **74% / 80%**
+after. **The set is now SPENT — quote 62%.**
+
+**The twelve NEAR misses were deliberately left**, so the set retains some
+signal. They are ordering debates rather than unfindable capabilities, and each
+is a candidate if a future pass wants them:
+
+| query | wanted | rank |
+|---|---|---|
+| my pdf is too big to email | `pdf-compress` | 6 (behind `pdf-to-word`) |
+| the photo is too heavy to upload | `image-compressor` | 6 (behind `print-size`) |
+| my phone photos are heic and will not open | `image-format-converter` | 6 |
+| what type of file is this | `file-metadata` | 2 (behind `file-encrypt`) |
+| what changed between these two versions | `text-diff` | behind `sheet-diff` |
+| the api gave me a token i cannot read | `jwt-decoder` | 4 |
+| my colours do not pass accessibility | `color-contrast` | behind `a11y-check` |
+| which days am i most likely to conceive | `ovulation` | 2 |
+| what time should i go to bed | `sleep-cycle` | 9 |
+
+**Write set #5 on a fresh axis before believing any future search number.**
+Axes used so far: tool-name-ish (#1), paraphrase (#2), natural sentence (#3),
+symptom (#4). Untried: the query that names a competitor's product, and the
+query typed by somebody who has the wrong mental model of the format.

@@ -15,7 +15,7 @@ export const imageRedactTool: Tool = {
   // on «إخفاء». Three keywords and a phrase, measured before and after.
   keywords: [
     'طمس', 'طمس الوجه', 'إخفاء أجزاء من صورة', 'تمويه', 'حجب', 'خصوصية', 'إخفاء بيانات',
-    'redact', 'blur', 'censor', 'hide', 'privacy', 'pixelate', 'black out',
+    'redact', 'cover up', 'cover a name', 'hide a name', 'blur', 'censor', 'hide', 'privacy', 'pixelate', 'black out',
   ],
   status: 'stable',
   Icon: RedactIcon,
