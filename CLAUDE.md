@@ -947,7 +947,7 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
-## react-pdf carries a real Arabic text layer (`evals/rtlpdf.mjs`)
+## react-pdf does NOT carry a usable Arabic text layer (`evals/rtlpdf.mjs`)
 
 Measured because a web sweep found the largest remaining hole in the
 converter catalogue: **we ship `pdf-to-word` — recorded here as the
@@ -960,19 +960,50 @@ document**, because a rastered page has no selectable, searchable or
 machine-readable text. And `CvPdf.tsx` is the only react-pdf document here and
 registers a **Latin font only**, so react-pdf plus Arabic was unproven.
 
-**It works.** Rendering one Arabic and one English line and extracting them
-back with pdf.js — the engine `pdf-to-text` uses — both survive verbatim, and
-the Arabic returns as **U+645 U+631 U+62D …, the original codepoints, not the
-deprecated presentation forms**. So a document converter should be built on
-react-pdf rather than on the canvas route.
+**It does NOT work, and the first version of this section said it did.** That
+claim was made on a test sentence containing **no lam-alef**, and it is
+corrected here rather than quietly edited away, because the mistake is the
+lesson.
 
-**Stated limit, because the check cannot see it:** extraction round-tripping
-proves the TEXT layer, not the VISUAL one. An engine that drew every letter in
-its isolated form, or ran the line the wrong way, would emit these same
-codepoints. The eval asserts the presentation-forms block is absent, which
-catches shaping baked into the characters, and it says outright that confirming
-the joining needs an eye on a rendered page. **It also SKIPS loudly rather than
-passing when no Arabic-capable font is present** — the vacuous-green rule.
+**ل followed by ا is a mandatory ligature, and its two codepoints come back
+REVERSED.** Measured on `الإيرادات والأرباح لا تزال مرتفعة`:
+
+| written | extracted |
+|---|---|
+| `الإيرادات` | `اإليرادات` |
+| `والأرباح` | `واألرباح` |
+| `لا` | `ال` |
+
+The ligature is drawn as ONE glyph and its ToUnicode entry lists the components
+in visual order, so every `ال` before an alef-initial word — **the definite
+article, the commonest sequence in written Arabic** — extracts scrambled. A
+second artefact rides along: pdf.js reads the glyph gaps inside a word as
+spaces, so `تقرير` came back as `تق رير`.
+
+**So a Word-to-PDF tool was built on this and then WITHDRAWN before shipping.**
+The English path was clean and every English case passed on exact substrings;
+Arabic was silently corrupted. **A stated limit is a missing feature; this is
+wrong output**, and the site's whole pitch is that it gets Arabic right. `A
+disclaimer does not fix a tool that should not exist` applies to a claim as
+well as to a subject.
+
+**The first check was right for the wrong reason, which is the transferable
+part.** `مرحبا بالعالم من الرياض` has no ل followed by ا anywhere in it, so it
+round-tripped perfectly and reported a capability the engine does not have. The
+eval now uses a sentence full of lam-alef and **reports NOT usable**. When
+testing a script, the fixture has to contain the script's hard cases —
+otherwise it measures the easy ones and says the word "Arabic".
+
+It still asserts the presentation-forms block is absent (which catches shaping
+baked into the characters — a different failure), and it **SKIPS loudly rather
+than passing when no Arabic-capable font is present**.
+
+**What a future attempt has to solve**, in order: the lam-alef ToUnicode
+ordering, which is fontkit's subsetting and not something the caller controls;
+and pdf.js's intra-word spacing. Neither is worked around by choosing a
+different font. The canvas route in `printPdf.ts` renders Arabic correctly and
+produces no text layer at all, so it is not a fallback for a document — it is a
+different product.
 
 ## Arabic costs four times as much per token (`token-counter`)
 

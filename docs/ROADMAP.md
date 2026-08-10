@@ -1993,3 +1993,32 @@ faithful reproduction.
 **Nothing shipped this iteration**, deliberately: a half-built document
 converter is worse than none, and the feasibility answer is what the next build
 needs.
+
+## Word → PDF: built, measured, WITHDRAWN before shipping (10 August 2026)
+
+The previous sweep recorded this as the largest hole in the converter catalogue
+and reported react-pdf as able to carry an Arabic text layer. **That reading was
+wrong** — the test sentence contained no lam-alef — and the tool built on it has
+been withdrawn rather than shipped. See CLAUDE.md for the measurements.
+
+What was built and removed: `src/tools/docx-pdf/` (mammoth → `htmlToMd` →
+`parseMarkdown` → a react-pdf document), a 43KB-per-weight IBM Plex Sans Arabic
+subset in `public/fonts/`, an 8-case spec that read every assertion back out of
+the produced PDF with pdf.js, and a privacy-guard entry. **Six of seven content
+cases passed; the Arabic one failed and that was the whole point of the tool.**
+
+**Do not rebuild this without first making `node evals/rtlpdf.mjs` report
+usable.** It is the gate, it needs no API key, and it now fails for the right
+reason.
+
+Three things worth keeping from the attempt:
+
+- **The pipeline itself is correct and cost nothing new.** docx → `Block[]` is
+  two existing tools composed, and every document writer here already speaks
+  `Block[]`. Whoever solves the text layer inherits a working converter.
+- **English alone is not enough to ship on.** It was tempting — the English
+  path is clean — but a converter that silently scrambles Arabic is wrong
+  output on a bilingual site, not a stated limit.
+- **`pdf-to-word` still has no declared `inverse`**, because its counterpart
+  does not exist. `check-inverses.mjs` refuses a one-sided declaration, so both
+  sides land together when it does.

@@ -30,7 +30,11 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import React from 'react'
 import { Document, Page, Text, View, Font, renderToBuffer } from '@react-pdf/renderer'
 
-const AR = 'مرحبا بالعالم من الرياض'
+// The first version of this used a sentence with NO lam-alef in it and
+// reported a clean pass — a check right for the wrong reason. ل followed by ا
+// forms a mandatory ligature, and it is the single most common sequence in
+// written Arabic (every definite article before an alef-initial word).
+const AR = 'الإيرادات والأرباح لا تزال مرتفعة'
 const EN = 'Hello world from Riyadh'
 
 const CANDIDATES = [
