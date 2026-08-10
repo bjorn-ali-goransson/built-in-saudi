@@ -1725,3 +1725,20 @@ opposite** after the one fix it found.
   in `twinprobe`'s default cases so it stays visible.
 - **`evals/twinprobe.mjs` rewritten** on the shared loader — it had carried a
   full second copy, stale for the two newest categories.
+
+### Web sweep, 10 August 2026 (twenty-eighth pass)
+
+New axis: instead of diffing a tool catalogue, sweep what CHANGED in Saudi rules
+for individuals in 2026. That produces rules rather than utilities, which is the
+half of this site the catalogue diffs cannot reach.
+
+- ~~**Sponsorship transfer.**~~ **Shipped** as `sponsorship-transfer`.
+- **Also surfaced, not built:** the five-year physical iqama (a card change, no
+  arithmetic); skill-based work-permit classes (the employer's concern, and the
+  bands are not published in a form to encode); the emergency visa extension
+  window that closed in April 2026 (dated, so a tool would be stale on arrival);
+  24-hour trading licences at up to SAR 100,000 a year (a business licence, not
+  an individual's calculation).
+- **Worth re-checking later:** amended labour fines were announced but the
+  schedule is not published in a form that could be encoded without guessing,
+  and a fines table that goes stale is worse than none.

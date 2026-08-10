@@ -3487,4 +3487,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/zip-create"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/zip-create"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/sponsorship-transfer/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sponsorship-transfer"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sponsorship-transfer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sponsorship-transfer"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/sponsorship-transfer/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/sponsorship-transfer"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/sponsorship-transfer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sponsorship-transfer"/>
+  </url>
 </urlset>

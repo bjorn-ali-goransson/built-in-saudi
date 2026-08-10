@@ -219,6 +219,7 @@ import { leaveOvertimeTool } from './leave-overtime/meta'
 import { timesheetTool } from './timesheet/meta'
 import { exitReentryTool } from './exit-reentry/meta'
 import { iqamaFeesTool } from './iqama-fees/meta'
+import { sponsorshipTransferTool } from './sponsorship-transfer/meta'
 import { electricityBillTool } from './electricity-bill/meta'
 import { acSizeTool } from './ac-size/meta'
 import { stopwatchTool } from './stopwatch/meta'
@@ -387,6 +388,7 @@ export const tools: Tool[] = [
   timesheetTool,
   exitReentryTool,
   iqamaFeesTool,
+  sponsorshipTransferTool,
   stopwatchTool,
   admissionScoreTool,
   gpaCalculatorTool,

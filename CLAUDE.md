@@ -2213,6 +2213,40 @@ figure**. Two traps carry the tool:
   registration, so it is stated **before** the fee and names the longest trip
   the current iqama does allow — "no" with a number beside it.
 
+## Sponsorship transfer (`sponsorship-transfer`)
+
+Found by sweeping what CHANGED in Saudi rules for individuals in 2026 — a
+different sweep axis from the catalogue diffs, and it produced a rule rather
+than a utility. Constants in `src/tools/sponsorship-transfer/transfer.ts`, each
+corroborated across independent legal summaries before being encoded.
+
+- **The fee is TIERED and everybody quotes the first tier.** SAR **2,000** for a
+  worker who has never transferred, **4,000** for the second, **6,000** for the
+  third and every one after. **The count follows the WORKER, not the
+  employer** — so somebody who has already moved twice costs 6,000 to hire,
+  whatever their new employer has done before.
+- **Article 40 puts it on the NEW EMPLOYER**, and it may not be charged to the
+  worker or deducted from wages. That is the same article `iqama-fees` cites for
+  the work-permit levy, and the same shape of answer: **the most useful thing on
+  the page is not a number.** If it has come out of somebody's pay, the amount
+  is not the problem.
+- **You may not need consent at all.** Four grounds are consistently reported —
+  the contract has ended, wages unpaid three consecutive months, the iqama not
+  renewed within a month of expiry, the employer refusing what the contract
+  says. They are **independent grounds with the same consequence**, so they are
+  four yes/no checks rather than a choice between them (the `end-of-service`
+  Article 87 shape).
+- **Sixty days after a contract ends** the residency status is irregular, which
+  is a worse problem than a fee and has no reminder attached to it — so the
+  deadline exports to a calendar, with the alarm a fortnight ahead.
+
+**A cap on the number of transfers is deliberately NOT computed.** One source
+reports a maximum of four per worker and the others do not mention it. That is
+the `iqama-fees` situation exactly: an uncorroborated figure does not go in, and
+a tool that invented a cap would tell somebody their case is impossible when it
+may not be. It is named in the UI instead, and there is a case asserting the
+refusal.
+
 ## Iqama renewal cost (`iqama-fees`)
 
 Constants in `src/tools/iqama-fees/iqama.ts`. The arithmetic is two

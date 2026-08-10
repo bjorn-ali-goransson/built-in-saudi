@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'sponsorship-transfer',
+    en: { name: 'Sponsorship Transfer', description: 'What a sponsorship transfer costs — 2,000, 4,000 or 6,000 by the worker’s transfer count — who owes it under Article 40, when you do not need the employer’s consent, and the 60-day window after a contract ends. Free, in your browser.' },
+    ar: { name: 'نقل الكفالة', description: 'كم يكلّف نقل الكفالة — ٢٬٠٠٠ أو ٤٬٠٠٠ أو ٦٬٠٠٠ بحسب عدد مرات النقل — ومن يتحمّلها بموجب المادة ٤٠، ومتى لا تحتاج موافقة صاحب العمل، ومهلة الستين يومًا بعد انتهاء العقد. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'zip-create',
     en: { name: 'Create a ZIP', description: 'Bundle files into one .zip on your device — properly compressed, Arabic filenames intact, and an honest answer about why there is no password option. Free, and nothing is uploaded.' },
     ar: { name: 'ضغط الملفات في ZIP', description: 'اجمع الملفات في ملف ‎.zip‎ واحد على جهازك — مضغوطة فعلًا وبأسماء عربية سليمة، مع جواب صريح عن غياب خيار كلمة المرور. مجانًا، ولا يُرفع شيء.' },
