@@ -3309,6 +3309,50 @@ because a real typo is nearly always in a longer word. **Its own e2e caught it**
 — the documented property that an unanswerable query returns nothing had a
 frozen case, and the fallback broke it immediately.
 
+**The query does not arrive in the shape a bench feeds it**
+(`lib/normaliseQuery.ts`, `node evals/inputshapes.mjs`). Every bench in this
+repo hands the scorer a clean lower-case phrase and nobody types like that. The
+instrument re-asks the **215 queries the benches already get right** in the
+shapes people actually produce — so it needs no hand-written expectations and
+grows with the benches. What it found was much worse than anyone had assumed:
+
+| shape | still first (before) | returned NOTHING | after |
+|---|---|---|---|
+| unchanged | 100% | 0 | 100% |
+| UPPER CASE | 100% | 0 | 100% |
+| trailing `?` | **51%** | 63 | 100% |
+| trailing `.` | **54%** | 57 | 100% |
+| double quoted | **10%** | **168** | 100% |
+| «Arabic quotes» | **10%** | **168** | 100% |
+| hyphenated | **31%** | 149 | 100% |
+| extra spaces | 99% | 0 | 100% |
+| as a URL | **0%** | **215** | 100% |
+
+**A question mark halved it. Quotes destroyed it** — and guillemets are the
+ordinary way Arabic quotes a term, used throughout this file's own writing. **A
+pasted link never worked at all**, which is exactly what somebody does with a
+URL a friend sent them.
+
+- **It normalises the QUERY, never the index**, which is why it cannot move a
+  bench — and none moved: all four benches, own-names, directions, the category
+  offer and the slug suggestions are unchanged.
+- **It lives in `searchTools.ts`'s entry points**, so home, the launcher and the
+  404 suggestions cannot drift apart on it — the same reason the ranking itself
+  lives there.
+- **Only TRAILING punctuation is stripped, never internal**, and `+` and `#` are
+  left alone entirely: `example.com`, `3.5`, `C#` and `+966` are things people
+  type and the characters are load-bearing in them. There is a case asserting
+  `+966` still finds something.
+- **A bare origin returns nothing**, because "built-in-saudi.com" is not a query
+  anybody meant — without that, pasting the home page would search for the
+  hostname.
+- **`url.pathname` is PERCENT-ENCODED**, so an Arabic segment arrives as
+  `%D8%B6%D8%BA%D8%B7…` and matches nothing. That single `decodeURIComponent`
+  is the difference between the URL shape reading 69% and 100%.
+
+Verified to fail: with the normaliser reduced to `raw.trim()`, five of the eight
+new cases go red.
+
 **A converter must win its OWN direction** (`node evals/directions.mjs`). The
 scorer discards word order **by design**, so "markdown to html" and "html to
 markdown" are the same query to it — and whichever NAME contains both nouns

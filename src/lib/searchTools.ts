@@ -1,4 +1,5 @@
 import type { Tool } from '../tools/types'
+import { normaliseQuery } from './normaliseQuery'
 import { scoreTool, aboveFloor, correctQuery, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
 
@@ -45,7 +46,11 @@ export interface Ranked {
  */
 const CORRECTION_RATIO = 1.5
 
-export function rankToolsWithCorrection(query: string, list: Tool[], locale: Locale): Ranked {
+export function rankToolsWithCorrection(raw: string, list: Tool[], locale: Locale): Ranked {
+  // Normalised HERE rather than in each caller, so home, the launcher and the
+  // 404 suggestions cannot drift apart on it — the same reason the ranking
+  // itself lives in this file.
+  const query = normaliseQuery(raw)
   if (!query.trim()) return { tools: [] }
   const asTyped = scoreList(query, list, locale)
   const corrected = correctQuery(query, vocabFor(list, locale))
@@ -113,7 +118,8 @@ function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; s
   return aboveFloor(scored)
 }
 
-export function rankTools(query: string, list: Tool[], locale: Locale): Tool[] {
+export function rankTools(raw: string, list: Tool[], locale: Locale): Tool[] {
+  const query = normaliseQuery(raw)
   if (!query.trim()) return []
   return scoreList(query, list, locale).map((r) => r.tool)
 }

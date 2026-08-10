@@ -1761,3 +1761,19 @@ point.
 - **Still open:** `blocksToHtml` would give `markdown-docx` and `markdown-epub`
   a live preview; four dated tools could export ICS; six pdf-lib tools bypass
   `PdfOps`.
+
+### Discoverability, 10 August 2026 (sixth pass) — the shape of the query
+
+`evals/inputshapes.mjs` re-asks the 215 queries the benches already get right,
+in the shapes people actually type. Nine shapes; five of them were badly broken
+and none had ever been measured.
+
+- **Worst first:** a pasted URL never worked (0%, all 215 returned nothing);
+  quotes — including the guillemets Arabic normally uses — left 168 of 215
+  returning nothing; a trailing question mark halved accuracy.
+- **All nine now read 100%**, with every other instrument unchanged, because the
+  normaliser touches the query and never the index.
+- **Still open:** the category offer takes the raw query rather than the
+  normalised one. Its own normaliser strips punctuation so quotes are handled,
+  but a pasted category URL will not match. Small, and worth doing when
+  `CategoryOffer` is next touched.

@@ -648,3 +648,73 @@ test.describe('a converter wins its own direction', () => {
     await opens(page, 'paste', 'paste-to-markdown')
   })
 })
+
+// --- the shape the query arrives in, 10 August 2026 ---------------------------
+//
+// Every bench feeds the scorer a clean lower-case phrase and nobody types like
+// that. `node evals/inputshapes.mjs` re-asks the 215 queries the benches
+// already get right, in the shapes people actually produce. Before the fix:
+//
+//   trailing ?     51%      trailing .     54%
+//   double quoted  10%      «Arabic quotes» 10%   (168 of 215 returned NOTHING)
+//   hyphenated     31%      as a URL        0%    (215 of 215 returned NOTHING)
+//
+// After: 100% on all nine shapes, with every other instrument unchanged —
+// `lib/normaliseQuery.ts` touches the QUERY, never the index, which is why it
+// cannot move a bench.
+test.describe('the query survives its shape', () => {
+  const opens = async (page: import('@playwright/test').Page, q: string, id: string, locale = 'en') => {
+    await page.goto(`/${locale}`)
+    await page.getByRole('searchbox').fill(q)
+    await page.getByRole('searchbox').press('Enter')
+    await expect(page, `"${q}" should open ${id}`).toHaveURL(new RegExp(`/${locale}/apps/${id}$`))
+  }
+
+  test('a question mark does not halve the answer', async ({ page }) => {
+    await opens(page, 'merge pdf?', 'pdf-merge')
+  })
+
+  test('a full stop does not either', async ({ page }) => {
+    await opens(page, 'compress image.', 'image-compressor')
+  })
+
+  test('quotes of every family are decoration, not part of the word', async ({ page }) => {
+    await opens(page, '"merge pdf"', 'pdf-merge')
+    // Guillemets are how Arabic quotes a term — including in this repo's own
+    // writing — and they used to return nothing at all.
+    await opens(page, '«ضغط الصور»', 'image-compressor', 'ar')
+  })
+
+  test('a tool id is a query, because somebody saw it in a URL', async ({ page }) => {
+    await opens(page, 'pdf-merge', 'pdf-merge')
+    await opens(page, 'saudi_holidays', 'saudi-holidays')
+  })
+
+  test('a pasted link finds the tool it points at', async ({ page }) => {
+    await opens(page, 'https://built-in-saudi.com/en/apps/pdf-merge', 'pdf-merge')
+    await opens(page, '/ar/apps/zakat-calculator', 'zakat-calculator')
+  })
+
+  test('a pasted ARABIC link works, which needed the path decoding', async ({ page }) => {
+    // `url.pathname` is percent-encoded, so an Arabic segment arrives as
+    // %D8%B6%D8%BA%D8%B7… and matches nothing.
+    await page.goto('/ar')
+    await page.getByRole('searchbox').fill(`https://built-in-saudi.com/ar/apps/${encodeURIComponent('ضغط الصور')}`)
+    await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
+  })
+
+  test('a bare origin is not treated as a query for its own hostname', async ({ page }) => {
+    // "built-in-saudi.com" is not something anybody meant to search for.
+    await page.goto('/en')
+    await page.getByRole('searchbox').fill('https://built-in-saudi.com/')
+    await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+  })
+
+  test('characters that are load-bearing in a term survive', async ({ page }) => {
+    // `+966`, `C#` and `3.5` are things people type, so `+`, `#` and an
+    // INTERNAL dot are left alone — only trailing punctuation is stripped.
+    await page.goto('/en')
+    await page.getByRole('searchbox').fill('+966')
+    await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
+  })
+})
