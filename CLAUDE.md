@@ -1147,6 +1147,56 @@ repeats, a location and an organizer, none of which a list of dated facts has,
 and bending one function into both would give every caller the other's
 parameters.
 
+## Two capabilities built and unreachable (`zip-create`, the QR email fields)
+
+A code sweep for exports nothing calls, and for lib modules with one caller,
+found the same shape twice.
+
+**`archive-inspector` read and extracted, and nothing CREATED an archive** —
+while `lib/zip.ts` had just learned to compress properly and to flag UTF-8
+names. `zip-create` is the missing half. Three things it has to get right:
+
+- **Two entries of the same name extract to ONE file**, silently, and which
+  survives is up to the extractor. Repeats are numbered, and both payloads are
+  asserted present so the rename cannot quietly drop one. There is a companion
+  case that a *unique* name is NOT numbered, without which a tool that numbered
+  everything would pass.
+- **Per entry, keeping whichever came out smaller** — a PNG already carries a
+  deflate stream, so it is stored. The spec asserts text is method 8 and the
+  PNG is method 0 in the same archive.
+- **There is no password option, and the reason is given.** ZIP's built-in
+  password is ZipCrypto, broken for decades by a known-plaintext attack, and
+  the AES variant is not read by every extractor. Offering it would look like
+  protection and not be any; the tool points at `file-encrypt` instead.
+
+**`buildEmail` in `qr-code` had been written with a subject and a body — and
+NOTHING called it.** The auto field produced a bare `mailto:`, so a QR on a
+poster opened a blank message rather than a filled-in one, which is the whole
+point of an email QR. The i18n strings for the fields existed too: the feature
+was built, translated, and never wired. The canvas now carries the encoded
+string as `data-value`, because a canvas cannot be asserted on and the encoded
+string is what the code MEANS — the same testable-contract move as `data-why`
+and `data-scroll`.
+
+**The name-weight asymmetry bit twice more, and both were caught by probing
+rather than by a bench:**
+
+- «ضغط ملفات» went to the **SVG optimiser**, whose Arabic name contains «ملفات»
+  at triple weight. Renaming the new tool «ضغط الملفات في ZIP» fixed it.
+- `open a zip` went to the CREATOR over the inspector, because "Archive
+  Inspector" contains no "zip" and "Create a ZIP" does. Indexing the phrase on
+  the inspector fixed it.
+
+Both left every bench unchanged, which is the check that matters — and both are
+the same lesson: **when two tools are inverses, the one whose NAME contains the
+shared noun wins by default, and that has nothing to do with which is right.**
+
+**The privacy guard refused to pass vacuously, exactly as designed.**
+`zip-create` does not read the bytes until you click build, so the read probe
+saw zero and the case FAILED rather than reporting a clean archive nobody had
+opened. It needed an `act`, which is the `pdf-stamp` lesson working a second
+time.
+
 ## The ZIP writer learned to compress (`lib/zip.ts`)
 
 Found by a CODE SWEEP: `unzip.ts` already read DEFLATE with

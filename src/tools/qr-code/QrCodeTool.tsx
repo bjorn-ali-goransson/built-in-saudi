@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { LinkIcon, TextIcon, WifiIcon, MailIcon, PhoneIcon, DownloadIcon, ShareIcon } from '../../components/icons'
 import { useLocale } from '../../i18n'
 import { whyUnreadable } from '../../lib/imageInput'
-import { type WifiFields, normalizeUrl, buildWifi, buildPhone } from './build'
+import { type WifiFields, type EmailFields, normalizeUrl, buildWifi, buildEmail, buildPhone } from './build'
 import { renderQR, type DotStyle, type Frame, type BorderStyle, DOT_STYLES } from './qrRender'
-import { Input, Select, Field, FieldLabel, Check, Seg, SegButton , FileError } from '../../components/ui'
+import { Input, Textarea, Select, Field, FieldLabel, Check, Seg, SegButton , FileError } from '../../components/ui'
 
 // What a raw string looks like once we sniff it. Wi-Fi is a structured mode the
 // user opts into (it can't be inferred from one field); everything else is
@@ -104,9 +104,14 @@ export default function QrCodeTool() {
 
   // 'auto' = a single smart field that sniffs link/text/email/phone; 'wifi' is the
   // one structured mode (it needs SSID + password + security).
-  const [mode, setMode] = useState<'auto' | 'wifi'>('auto')
+  const [mode, setMode] = useState<'auto' | 'wifi' | 'email'>('auto')
   const [content, setContent] = useState('https://built-in-saudi.com')
   const [wifi, setWifi] = useState<WifiFields>({ ssid: '', password: '', encryption: 'WPA', hidden: false })
+  // `buildEmail` was written with subject and body and NOTHING called it: the
+  // auto field produced a bare `mailto:`, so a QR on a poster could open a
+  // blank message and not a filled-in one — which is the whole point of an
+  // email QR. Found by a sweep for exports with no callers.
+  const [emailFields, setEmailFields] = useState<EmailFields>({ to: '', subject: '', body: '' })
   const [logoErr, setLogoErr] = useState('')
 
   const [dot, setDot] = useState<DotStyle>('square')
@@ -130,6 +135,7 @@ export default function QrCodeTool() {
   const detected = useMemo(() => detectType(content), [content])
   const value = useMemo(() => {
     if (mode === 'wifi') return buildWifi(wifi)
+    if (mode === 'email') return buildEmail(emailFields)
     const v = content.trim()
     if (!v) return ''
     switch (detected) {
@@ -138,7 +144,7 @@ export default function QrCodeTool() {
       case 'link': return normalizeUrl(v)
       case 'text': return v
     }
-  }, [mode, content, wifi, detected])
+  }, [mode, content, wifi, emailFields, detected])
 
   const hasCode = !!value
   // The label only means anything inside a frame — that's the only renderer that draws it.
@@ -206,8 +212,15 @@ export default function QrCodeTool() {
           <Seg role="group">
             <SegButton active={mode === 'auto'} onClick={() => setMode('auto')}>{L.auto}</SegButton>
             <SegButton active={mode === 'wifi'} className="inline-flex items-center gap-1 [&_svg]:size-[15px]" onClick={() => setMode('wifi')}><WifiIcon /> {q.types.wifi}</SegButton>
+            <SegButton active={mode === 'email'} data-testid="qr-mode-email" className="inline-flex items-center gap-1 [&_svg]:size-[15px]" onClick={() => setMode('email')}><MailIcon /> {q.types.email}</SegButton>
           </Seg>
-          {mode === 'auto' ? (
+          {mode === 'email' ? (
+            <div className="grid gap-3">
+              <Field label={q.fieldTo}><Input type="email" value={emailFields.to} data-testid="qr-email-to" placeholder="support@example.com" onChange={(e) => setEmailFields({ ...emailFields, to: e.target.value })} /></Field>
+              <Field label={q.fieldSubject}><Input value={emailFields.subject} data-testid="qr-email-subject" onChange={(e) => setEmailFields({ ...emailFields, subject: e.target.value })} /></Field>
+              <Field label={q.fieldMessage}><Textarea rows={3} value={emailFields.body} data-testid="qr-email-body" onChange={(e) => setEmailFields({ ...emailFields, body: e.target.value })} /></Field>
+            </div>
+          ) : mode === 'auto' ? (
             <>
               <Input type="text" inputMode="text" data-testid="qr-url" placeholder={q.placeholderUrl} value={content} autoComplete="off" onChange={(e) => setContent(e.target.value)} />
               {content.trim() && (
@@ -233,7 +246,7 @@ export default function QrCodeTool() {
         {/* The QR itself + its actions */}
         <div className="flex flex-col items-center gap-3">
           {hasCode
-            ? <canvas ref={canvasRef} data-testid="qr-canvas" className="w-full max-w-[220px] h-auto rounded-md" />
+            ? <canvas ref={canvasRef} data-testid="qr-canvas" data-value={value} className="w-full max-w-[220px] h-auto rounded-md" />
             : <div className="grid place-items-center w-[200px] h-[200px] rounded-md border border-[color:var(--line-soft)] bg-sand-100 text-center px-4 text-[0.9rem] text-ink-faint">{q.empty}</div>}
           <div className="flex flex-row items-center gap-2">
             <button type="button" className={actionIcon} data-testid="qr-share" onClick={share} disabled={!hasCode} aria-label={copied ? q.copied : q.share} title={copied ? q.copied : q.share}>

@@ -45,6 +45,7 @@ import { imageBase64Tool } from './image-base64/meta'
 import { vatCalculatorTool } from './vat-calculator/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
+import { zipCreateTool } from './zip-create/meta'
 import { metadataTool } from './metadata/meta'
 import { bookWithMeTool } from './book-with-me/meta'
 import { cvGeneratorTool } from './cv-generator/meta'
@@ -451,6 +452,7 @@ export const tools: Tool[] = [
   imageDiffTool,
   epubTextTool,
   zipInspectorTool,
+  zipCreateTool,
   hexViewerTool,
   metadataTool,
   colorPaletteTool,

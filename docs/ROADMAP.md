@@ -1686,3 +1686,23 @@ Second catalogue diffed (a ~1000-tool directory), same method as last pass.
   Punycode/IDN — interesting here because Arabic domain names are real;
   clothing and shoe size converters; recipe scaler and oven-temperature
   converter; a citation formatter; PDF page resize.
+
+### Code sweep, 10 August 2026 (twenty-seventh pass)
+
+Swept for exports with no callers and for lib modules with exactly one caller —
+the shape that found `lib/ics.ts` and `lib/markdown.ts` before.
+
+- ~~**Nothing creates a ZIP.**~~ **Shipped** as `zip-create`, the other half of
+  `archive-inspector`, on the compression that landed two passes ago.
+- ~~**`buildEmail` has no caller.**~~ **Wired.** A QR could open a blank email
+  and not a filled-in one; the fields and their translations already existed.
+- **Still unreferenced, and now listed for the fourth time:**
+  `disposeImageDecoder`, `cvApi.refineCv`, `dms.threadWith`/`countsByContact`,
+  `contacts.hasContact`, `voiceNotes.delVoiceBlob`,
+  `book-with-me/lib.enumerateDaySlots`, `prayer-timetable.hijriMonthOf`,
+  `pdf-to-text.joinPages`, `qr-code.buildEmail`'s neighbours are now gone.
+  Most are call-feature leftovers; a pass that either wires or deletes them is
+  overdue.
+- **Still open:** `blocksToHtml` would give `markdown-docx` and `markdown-epub`
+  a live preview instead of an outline; four dated tools could export ICS; six
+  pdf-lib tools bypass `PdfOps`.

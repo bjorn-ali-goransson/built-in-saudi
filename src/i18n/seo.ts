@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'zip-create',
+    en: { name: 'Create a ZIP', description: 'Bundle files into one .zip on your device — properly compressed, Arabic filenames intact, and an honest answer about why there is no password option. Free, and nothing is uploaded.' },
+    ar: { name: 'ضغط الملفات في ZIP', description: 'اجمع الملفات في ملف ‎.zip‎ واحد على جهازك — مضغوطة فعلًا وبأسماء عربية سليمة، مع جواب صريح عن غياب خيار كلمة المرور. مجانًا، ولا يُرفع شيء.' },
+  },
+  {
     id: 'print-size',
     en: { name: 'Photo Print Size', description: 'How large a photo can be printed at A4, A3 or any size before the pixel grid shows — read from the picture itself and worked out for your real viewing distance. Free, and nothing is uploaded.' },
     ar: { name: 'مقاس الطباعة', description: 'إلى أي مقاس تُطبع الصورة على A4 أو A3 أو غيره قبل أن تظهر شبكة البكسلات — محسوبًا من الصورة نفسها وللمسافة التي تنظر منها فعلًا. مجانًا، ولا يُرفع شيء.' },

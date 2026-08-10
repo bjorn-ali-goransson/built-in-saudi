@@ -10,7 +10,7 @@ export const zipInspectorTool: Tool = {
   description:
     'Inspect a compressed archive right in your browser: detect the format (ZIP, GZIP, 7-Zip, RAR, TAR and more) and, for ZIP files, list every entry with sizes, dates and compression — without extracting or uploading anything.',
   category: 'Files',
-  keywords: ['zip', 'archive', 'compressed', 'inspector', 'unzip', 'contents', 'gzip', 'rar', 'tar', 'أرشيف', 'مضغوط', 'zip'],
+  keywords: ['zip', 'open zip', 'open a zip', 'read zip', 'archive', 'compressed', 'inspector', 'unzip', 'contents', 'gzip', 'rar', 'tar', 'أرشيف', 'مضغوط', 'zip'],
   status: 'stable',
   Icon: ArchiveIcon,
   component: lazyTool(() => import('./ZipInspectorTool')),

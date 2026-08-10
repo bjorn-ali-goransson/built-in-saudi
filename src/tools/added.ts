@@ -13,6 +13,7 @@ export const ADDED: Record<string, string> = {
   'print-size': '2026-08-10',
   'saudi-holidays': '2026-08-10',
   'speech-time': '2026-08-10',
+  'zip-create': '2026-08-10',
   'ac-size': '2026-08-09',
   'audio-spectrum': '2026-08-09',
   'docx-markdown': '2026-08-09',

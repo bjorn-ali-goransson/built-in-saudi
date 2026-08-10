@@ -1855,3 +1855,33 @@ test.describe('retired tools', () => {
     await expect(page.locator('[data-testid="tool-loan-calculator"]')).toHaveCount(0)
   })
 })
+
+test.describe('qr email fields (#sweep)', () => {
+  // `buildEmail` was written with subject and body and NOTHING called it — the
+  // auto field produced a bare `mailto:`, so a QR on a poster opened a blank
+  // message rather than a filled-in one, which is the whole point of an email
+  // QR. The i18n strings for the fields existed too. Found by a sweep for
+  // exports with no callers.
+  test('an email QR carries the subject and body, not just the address', async ({ page }) => {
+    await page.goto('/en/apps/qr-code')
+    await page.getByTestId('qr-mode-email').click()
+    await page.getByTestId('qr-email-to').fill('support@example.com')
+    await page.getByTestId('qr-email-subject').fill('Broken light')
+    await page.getByTestId('qr-email-body').fill('Gate 3, second lamp')
+    await expect(page.getByTestId('qr-canvas')).toBeVisible()
+
+    // The encoded string is what the code MEANS; a canvas cannot be asserted
+    // on, so it carries the value as a data attribute.
+    const value = await page.getByTestId('qr-canvas').getAttribute('data-value')
+    expect(value).toContain('mailto:support@example.com')
+    expect(value).toContain('subject=Broken+light')
+    expect(value).toContain('body=Gate+3')
+  })
+
+  test('the address alone still works, so the fields are optional', async ({ page }) => {
+    await page.goto('/en/apps/qr-code')
+    await page.getByTestId('qr-mode-email').click()
+    await page.getByTestId('qr-email-to').fill('a@b.com')
+    expect(await page.getByTestId('qr-canvas').getAttribute('data-value')).toBe('mailto:a@b.com')
+  })
+})

@@ -201,6 +201,17 @@ export const CASES: Case[] = [
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'print-size', testid: 'ps-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
+  {
+    id: 'zip-create',
+    testid: 'zc-file',
+    name: 'notes.txt',
+    mime: 'text/plain',
+    make: () => Buffer.from(TOKEN),
+    // It does not read the bytes until you build — so without this the guard
+    // sees no read and fails rather than passing vacuously, which is exactly
+    // what it was rewritten to do after `pdf-stamp`.
+    act: async (page) => { await page.getByTestId('zc-build').click() },
+  },
   { id: 'markdown-html', testid: 'mh-file', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Title
 
 ${TOKEN}
