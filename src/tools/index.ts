@@ -120,6 +120,7 @@ import { videoAudioTool } from './video-audio/meta'
 import { audioConvertTool } from './audio-convert/meta'
 import { audioSpectrumTool } from './audio-spectrum/meta'
 import { pdfToTextTool } from './pdf-to-text/meta'
+import { pdfToWordTool } from './pdf-to-word/meta'
 import { screenshotFrameTool } from './screenshot-frame/meta'
 import { socialResizeTool } from './social-resize/meta'
 import { spinWheelTool } from './spin-wheel/meta'
@@ -385,6 +386,7 @@ export const tools: Tool[] = [
   gpaCalculatorTool,
   pdfToImagesTool,
   pdfToTextTool,
+  pdfToWordTool,
   imageToTextTool,
   qrReaderTool,
   metadataRemoveTool,

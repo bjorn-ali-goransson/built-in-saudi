@@ -777,6 +777,65 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
+## PDF to Word, the biggest gap the site had (`pdf-to-word`)
+
+A web sweep put a number on it: **PDF to Word is the most-requested PDF task on
+the web** — around two million conversions a day — and **fewer than 15% of them
+happen without the file being uploaded to somebody's server.** That is this
+site's whole thesis, stated by the market, about the document people are least
+willing to hand over: a contract, a payslip, a medical letter.
+
+It needed **no new dependency**. `pdf-to-text` already extracts with pdf.js and
+`lib/writeDocx.ts` already writes real OOXML from `Block[]`; the missing piece
+was the middle — turning positioned glyph runs back into headings, paragraphs
+and lists (`pdf-to-word/pdfBlocks.ts`).
+
+**`getOperatorList()` before `getTextContent()` is the whole reason bold
+works**, and it is the finding worth carrying to any future pdf.js work. **Text
+extraction does not load fonts**, so `page.commonObjs` is empty during it and
+every lookup misses — which reads as "no font is bold" rather than as a
+failure. The document converts and every bold heading in it comes out plain.
+Building the operator list is what loads the faces; only then does the font
+object exist to be asked.
+
+**And the obvious diagnosis was wrong, which cost a detour worth recording.**
+pdf.js logs `Ensure that the standardFontDataUrl API parameter is provided` —
+true, and irrelevant. A whole build step was written to copy pdf.js's 800KB of
+substitute fonts to our own origin, in the `copy-ocr-core.mjs` pattern, and it
+changed **nothing**; the one `getOperatorList()` call fixed it with those fonts
+absent, so the copy was reverted. **A warning that is true is not therefore the
+cause.**
+
+Four inferences carry the conversion, each measurable against the fixture:
+
+- **Body size is the median over CHARACTERS, not over lines.** A heading is one
+  line of forty characters and a paragraph is one line of four hundred, so a
+  title page full of large short lines otherwise redefines "normal" and turns
+  the actual body into small print.
+- **A heading is a line meaningfully larger than the body AND short.** Size
+  alone promotes the opening line of a pull quote; length alone promotes every
+  one-line paragraph. The LEVEL comes from how much larger, so a document's own
+  hierarchy survives instead of everything becoming H1 — and **a wholly bold
+  short line at body size is the fourth-level heading every report uses**, which
+  no size test can see.
+- **A line ending mid-sentence continues the paragraph.** PDF lines are
+  typographic, not semantic, so joining only on a blank gap gives one paragraph
+  per LINE — the single most obvious way a converted document is unusable.
+- **A bullet or number starts a real Word list**, marker stripped, because Word
+  supplies its own and leaving it in gives every item two bullets.
+
+**What it does NOT do is stated in the UI, not implied away**: no images, no
+exact layout, no table as a table. A PDF has no paragraphs, headings or lists —
+it has characters at coordinates in fonts, and everything above is inference.
+The upload sites promise a faithful reproduction and need a server to
+half-manage it.
+
+`e2e/fixtures/structured.pdf` (built by `scripts/make-structured-pdf.mjs`) has a
+title, a section head, a bold body-size line, a sentence wrapping across three
+PDF lines, two lists and a bold run mid-line — because **a fixture of uniform
+paragraphs would let the tool pass while inferring nothing**. The bold case is
+**verified to fail** by removing the `getOperatorList()` call.
+
 ## Word to Markdown, and what building the inverse found (`docx-markdown`)
 
 A code sweep found `mammoth` already installed and used by exactly one tool (the

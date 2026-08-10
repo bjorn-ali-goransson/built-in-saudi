@@ -1477,3 +1477,21 @@ Still open, and now quantified rather than suspected:
   a category it cannot be a page, for the reason recorded above.
 - The one own-name miss is still `barcode`'s Arabic name losing to `qr-code`,
   which is expected and documented.
+
+### Web sweep, 10 August 2026 (twentieth pass)
+
+- ~~**PDF to Word.**~~ **Shipped** as `pdf-to-word`, and it was the biggest gap
+  on the site: the most-requested PDF task on the web, ~2M conversions a day,
+  with under 15% of them avoiding a server upload. Both halves already existed —
+  pdf.js extraction and `lib/writeDocx.ts` — so what was missing was the
+  structure inference between them.
+- **Reverted on measurement:** a build step copying pdf.js's 800KB of substitute
+  fonts to our own origin. The pdf.js warning naming `standardFontDataUrl` was
+  true and not the cause; `getOperatorList()` was.
+- **Worth measuring separately:** whether the tools that RENDER pages
+  (`pdf-to-images`, and the thumbnails in `pdf-organise`/`pdf-edit`/`pdf-fill`/
+  `pdf-sign`) substitute a wrong face for standard-14 PDFs today. That is the
+  case the font copy would genuinely serve, and no defect has been measured
+  there — so it stays unbuilt rather than shipped on a hunch.
+- **Recorded flake:** one `calls.spec.ts` case failed once under full-suite load
+  and passed on an immediate clean re-run. Not reproduced, not "fixed".

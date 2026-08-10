@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'pdf-to-word',
+    en: { name: 'PDF to Word', description: 'Turn a PDF into an editable .docx with the headings, bold and lists recovered — and a locked PDF opens with your password. Free, and the file never leaves your browser.' },
+    ar: { name: 'PDF إلى وورد', description: 'حوّل ملف PDF إلى مستند ‎.docx‎ قابل للتحرير مع استعادة العناوين والخط العريض والقوائم — ويُفتح الملف المحمي بكلمة مرورك. مجانًا، ولا يغادر الملف متصفحك.' },
+  },
+  {
     id: 'saudi-holidays',
     en: { name: 'Saudi Public Holidays', description: 'Every official paid holiday under Article 112 — Eid al-Fitr, Eid al-Adha, National Day and Founding Day — for any year, in both calendars, with the weekend-compensation and annual-leave rules. Free, in your browser.' },
     ar: { name: 'الإجازات الرسمية في السعودية', description: 'كل إجازة رسمية مدفوعة بموجب المادة ١١٢ — عيد الفطر وعيد الأضحى واليوم الوطني ويوم التأسيس — لأي سنة بالتقويمين، مع أحكام التعويض والإجازة السنوية. مجانًا داخل متصفحك.' },
