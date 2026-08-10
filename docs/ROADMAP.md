@@ -1849,3 +1849,37 @@ is a candidate if a future pass wants them:
 Axes used so far: tool-name-ish (#1), paraphrase (#2), natural sentence (#3),
 symptom (#4). Untried: the query that names a competitor's product, and the
 query typed by somebody who has the wrong mental model of the format.
+
+## Web sweep, 10 August 2026
+
+Axes tried: "is there a tool that…" phrasing, the most-searched calculator
+categories of 2026, and what people upload private documents to do.
+
+**Shipped: `token-counter` (AI Token Counter).** The AI-token-cost category is
+live and growing and we had nothing in it. Every incumbent ESTIMATES with
+"characters ÷ 4", which is an English rule: measured, it overstates English
+prose by 45% and understates source code by 31%, and Arabic ran at 1.41
+chars/token on cl100k against English's 5.67 — roughly four times the cost for
+the same meaning. o200k took Arabic to 3.80, a 2.7x improvement.
+
+**Confirmed already covered**, so not built: Words-to-Minutes (`speech-time`),
+GPA conversion (`gpa-calculator`), road-trip fuel cost (`fuel-cost`).
+
+**Seen and NOT taken, with reasons:**
+
+- **Intermittent-fasting window planner.** Plausible and client-side, but it is
+  a health regimen rather than a calculation, and `medicine-schedule` already
+  owns "spread doses across a fasting window" for the case that matters here.
+  Revisit only with a real wedge.
+- **Organic CTR calculator.** SEO filler; the "irrelevant noise" exclusion.
+- **A general file converter in the Vert mould** (image/audio/video/document in
+  one box). We already ship the individual converters; the missing piece is
+  video transcoding, which needs ffmpeg-wasm at ~30MB. That is a separate
+  decision about weight, not a tool idea — parked.
+- **Secure document sharing / data rooms.** Needs a backend and an account;
+  `docs/BACKEND.md` territory.
+
+**Recorded ambiguity:** a bare `token` leads with `token-counter` and puts
+`jwt-decoder` second. Both readings are real ("how many tokens is my prompt" and
+"decode this JWT"), the qualified queries each go to the right tool, and no
+bench moved — so it is left alone rather than tuned.

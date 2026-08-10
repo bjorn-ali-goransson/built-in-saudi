@@ -609,6 +609,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'token-counter',
+    en: { name: 'AI Token Counter', description: 'Count the exact tokens in a prompt with the real tokenizer, for GPT-4o-era and GPT-4-era models — see how wrong "characters divided by 4" is, and how much more Arabic costs. Free, in your browser.' },
+    ar: { name: 'عدّاد توكنز الذكاء الاصطناعي', description: 'اعرف عدد التوكنز الدقيق في تعليمتك بالمُجزّئ الحقيقي، لنماذج جيل GPT-4o وجيل GPT-4 — وكم تخطئ قاعدة «الحروف ÷ ٤»، وكم تكلّف العربية أكثر. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'detect-language',
     en: { name: 'Language Detector', description: 'Detect the language of any text in your browser — script detection plus common-word matching across major languages, with a confidence score. Nothing uploaded.' },
     ar: { name: 'كاشف اللغة', description: 'اكتشف لغة أي نصٍّ داخل متصفحك — كشف النظام الكتابي ومطابقة الكلمات الشائعة لكبرى اللغات، مع درجة ثقة. دون رفع أي شيء.' },

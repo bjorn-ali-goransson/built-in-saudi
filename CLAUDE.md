@@ -913,6 +913,62 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
+## Arabic costs four times as much per token (`token-counter`)
+
+Found by a web sweep: the AI-token-cost calculator is a live and growing
+category we had nothing in. It is worth building rather than copying because
+**every one of them estimates, and the estimate is an English rule wearing a
+universal hat.**
+
+Measured with the real tokenizers before a line was written — one paragraph on
+the same subject in each language, plus a snippet of JavaScript:
+
+| | chars/token, o200k | chars/token, cl100k |
+|---|---|---|
+| English | 5.80 | 5.67 |
+| **Arabic** | **3.80** | **1.41** |
+| code | 2.71 | 2.71 |
+
+Three findings, each checkable by running it:
+
+- **"Characters ÷ 4" is wrong in BOTH directions**, which is the worst property
+  an estimate can have: it **overstates ordinary English by 45%** and
+  **understates source code by 31%**. So a budget built on it is optimistic or
+  pessimistic depending on what happens to be in the box.
+- **Arabic used to cost about four times what English did per character.** At
+  1.41 chars/token on cl100k the same meaning billed roughly 4x and filled a
+  context window four times faster — a tax on writing in Arabic that no
+  "chars ÷ 4" widget could ever have surfaced.
+- **The newer tokenizer largely fixed it: 1.41 → 3.80, a 2.7x improvement**,
+  while English barely moved. So for Arabic, and only for Arabic, **which model
+  you pick changes the bill far more than how you word the prompt.**
+
+Four decisions:
+
+- **There is NO built-in price table, and the tool says why.** Model prices
+  change every few months and differ by provider, tier and direction. A table
+  would put a number on the page nobody can stand behind — the `iqama-fees`
+  rule. The price is an input; the arithmetic is one multiplication. There is a
+  case asserting no cost is shown until one is supplied.
+- **The heavy half is the point, so it is lazy and in a worker.** The BPE ranks
+  are a 2.2MB JS module (o200k) and 1.1MB (cl100k) — importing one janks the
+  page, so `tokenize.worker.ts` does it (#154), one encoding at a time, cached.
+  The second encoding is fetched only when the comparison is asked for.
+- **The privacy claim is sharper here than usual.** A token counter is a box
+  you paste a prompt into, and a prompt is often the most confidential thing a
+  team writes. Most counters on the web post it to a server to count it.
+- **It renders no `<Disclaimer>`**, on the `ac-size` reasoning: the only money
+  it touches is a price the reader typed, so there is no figure of ours to
+  caveat. No SOURCES block and no beta badge either — a tokenizer is a fixed
+  artefact, not a published rate that steps every July.
+
+**The name is `AI Token Counter`, not `Token Counter`.** `jwt-decoder`
+legitimately owns "token" for the thing an API hands you and `text-counter`
+owns "counter". Measured after: `jwt token` and `decode a token` still go to
+`jwt-decoder`, `how many tokens` and «عدد التوكنز» to the new tool, every bench
+unchanged, own names 455/456. A bare `token` leads with the counter and puts
+the decoder second — genuinely ambiguous, recorded rather than tuned.
+
 ## "300 DPI" is arm's length, not a law (`print-size`)
 
 Found by diffing a second large catalogue against ours. The gap is not the
