@@ -26,6 +26,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'vehicle-renewal', kind: 'official' },
   { id: 'saudi-holidays', kind: 'official' },
   { id: 'sponsorship-transfer', kind: 'official' },
+  { id: 'import-duty', kind: 'official' },
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },

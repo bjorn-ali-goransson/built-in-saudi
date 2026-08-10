@@ -2258,6 +2258,40 @@ figure**. Two traps carry the tool:
   registration, so it is stated **before** the fee and names the longest trip
   the current iqama does allow — "no" with a number beside it.
 
+## Duty-free is not tax-free (`import-duty`)
+
+Found by sweeping an untried vertical — what people calculate when buying from
+abroad. The category exists elsewhere; what the incumbents do not say is the
+whole tool. Constants in `src/tools/import-duty/duty.ts`, corroborated across
+two independent customs guides before being encoded.
+
+**Three misconceptions, and the first is nearly universal:**
+
+- **"Under SAR 1,000 is duty-free" is true, and "nothing to pay" is not.** The
+  exemption is on the DUTY; the **15% VAT applies to every import at any
+  value**. A SAR 300 parcel still owes 45. That is the surprise at the door,
+  and it is the reason the tool exists.
+- **Postage counts.** Customs values a parcel at **CIF** — goods plus freight
+  plus insurance — so a SAR 950 item with SAR 100 postage is a SAR 1,050
+  shipment, and the duty falls on the **whole 1,050**, not on the 50 above the
+  line. The limit is a cliff, not a taper: crossing it at 5% costs about
+  **SAR 57.56** immediately.
+- **The two rates do not add.** VAT is charged on the landed value INCLUDING the
+  duty, so 5% and 15% are not 20% — they are **20.75%** of the customs value.
+  Verified by running it: 5,200 CIF → 260 duty → 819 VAT → 20.75%.
+
+**Bands, not a tariff book.** Duty runs by HS code, there are thousands of
+them, and they were revised in late 2025 — so the tool carries the four
+published headline rates (0% books/medicines/basic food/GCC, 5% most goods,
+~20% protected, 100% tobacco) and names ZATCA's Integrated Tariff as the
+authority. A half-copied tariff that is wrong for one line is worse than
+sending somebody to the body that publishes it.
+
+**And the carrier's own clearance fee is deliberately not computed** — it
+differs by company and by shipment, so guessing would put a number on the page
+nobody could check. Named instead, with a case asserting the refusal. The
+`iqama-fees` rule, for the fourth tool now.
+
 ## Sponsorship transfer (`sponsorship-transfer`)
 
 Found by sweeping what CHANGED in Saudi rules for individuals in 2026 — a

@@ -43,6 +43,7 @@ import { unitConverterTool } from './unit-converter/meta'
 import { base64Tool } from './base64/meta'
 import { imageBase64Tool } from './image-base64/meta'
 import { vatCalculatorTool } from './vat-calculator/meta'
+import { importDutyTool } from './import-duty/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
 import { zipCreateTool } from './zip-create/meta'
@@ -447,6 +448,7 @@ export const tools: Tool[] = [
   base64Tool,
   imageBase64Tool,
   vatCalculatorTool,
+  importDutyTool,
   dateDiffTool,
   xlsxConvertTool,
   csvVcardTool,

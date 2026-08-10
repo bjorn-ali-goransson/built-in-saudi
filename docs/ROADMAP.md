@@ -1777,3 +1777,18 @@ and none had ever been measured.
   normalised one. Its own normaliser strips punctuation so quotes are handled,
   but a pasted category URL will not match. Small, and worth doing when
   `CategoryOffer` is next touched.
+
+### Web sweep, 10 August 2026 (thirtieth pass)
+
+Untried vertical: what people calculate when buying online from abroad.
+
+- ~~**Customs duty and import VAT.**~~ **Shipped** as `import-duty`. The
+  category exists elsewhere; the misconceptions are the tool — "duty-free" being
+  read as "tax-free", postage counting toward the threshold, and the two rates
+  not adding to 20%.
+- **Deliberately not built into it:** an HS-code tariff table. Thousands of
+  lines, revised in late 2025, and wrong-for-one-line is worse than a pointer to
+  ZATCA's Integrated Tariff.
+- **Worth a later look, same vertical:** a shipping-forwarder comparison would
+  need live rates (an API we will not run); a duty-drawback/return-refund
+  explainer needs a rule that could not be corroborated in this pass.

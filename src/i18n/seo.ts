@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'import-duty',
+    en: { name: 'Import Duty & VAT', description: 'What a parcel from abroad really costs — duty on the CIF value, the 15% VAT that applies at any value even under the SAR 1,000 exemption, and why the rates do not add to 20%. Free, in your browser.' },
+    ar: { name: 'الرسوم الجمركية والضريبة', description: 'كم يكلّف الطرد من الخارج فعلًا — الرسوم على القيمة CIF، وضريبة ١٥٪ التي تُطبَّق على أي قيمة حتى دون إعفاء الألف ريال، ولماذا لا تُجمع النسبتان. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'sponsorship-transfer',
     en: { name: 'Sponsorship Transfer', description: 'What a sponsorship transfer costs — 2,000, 4,000 or 6,000 by the worker’s transfer count — who owes it under Article 40, when you do not need the employer’s consent, and the 60-day window after a contract ends. Free, in your browser.' },
     ar: { name: 'نقل الكفالة', description: 'كم يكلّف نقل الكفالة — ٢٬٠٠٠ أو ٤٬٠٠٠ أو ٦٬٠٠٠ بحسب عدد مرات النقل — ومن يتحمّلها بموجب المادة ٤٠، ومتى لا تحتاج موافقة صاحب العمل، ومهلة الستين يومًا بعد انتهاء العقد. مجانًا داخل متصفحك.' },
