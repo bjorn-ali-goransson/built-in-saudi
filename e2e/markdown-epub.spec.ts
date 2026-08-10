@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { zipPart, zipNames } from './helpers'
 
 // Markdown to EPUB.
 //
@@ -63,15 +64,20 @@ test('the file is a real EPUB, checked off the raw bytes', async ({ page }) => {
   expect(buf.subarray(30, 30 + nameLen).toString('latin1')).toBe('mimetype')
   expect(buf.subarray(30 + nameLen, 30 + nameLen + 20).toString('latin1')).toBe('application/epub+zip')
 
-  const raw = buf.toString('latin1')
+  // Everything after `mimetype` is DEFLATED now (the writer compresses; only
+  // this first entry is forced stored), so the parts are inflated rather than
+  // grepped out of the whole file as latin1. Node's zlib is somebody else's
+  // implementation, so this is still not our own reader.
+  const names = zipNames(buf)
   // META-INF/container.xml is the one path the spec fixes.
-  expect(raw).toContain('META-INF/container.xml')
-  expect(raw).toContain('OEBPS/content.opf')
+  expect(names).toContain('META-INF/container.xml')
+  expect(names).toContain('OEBPS/content.opf')
   // EPUB 3 wants a nav document, or the book opens with no contents at all.
-  expect(raw).toContain('epub:type="toc"')
+  expect(zipPart(buf, 'OEBPS/nav.xhtml')).toContain('epub:type="toc"')
   // Every spine item must be in the manifest too.
-  expect(raw).toContain('<itemref idref="ch1"/>')
-  expect(raw).toContain('href="ch1.xhtml"')
+  const opf = zipPart(buf, 'OEBPS/content.opf')
+  expect(opf).toContain('<itemref idref="ch1"/>')
+  expect(opf).toContain('href="ch1.xhtml"')
 })
 
 test('an Arabic book turns its pages the right way, not only its text', async ({ page }) => {
@@ -82,10 +88,14 @@ test('an Arabic book turns its pages the right way, not only its text', async ({
   await expect(page.getByTestId('me-rtl-note')).toBeVisible()
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('me-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('utf8')
-  expect(raw).toContain('page-progression-direction="rtl"')
-  expect(raw).toContain('dir="rtl"')
-  expect(raw).toContain('<dc:language>ar</dc:language>')
+  const buf = readFileSync(await (await dl).path())
+  const opf = zipPart(buf, 'OEBPS/content.opf')
+  // `page-progression-direction` is what turns the pages; `dir` is what runs
+  // the text. They live in different parts, and setting only one gives a book
+  // that reads correctly and turns backwards.
+  expect(opf).toContain('page-progression-direction="rtl"')
+  expect(opf).toContain('<dc:language>ar</dc:language>')
+  expect(zipPart(buf, 'OEBPS/ch1.xhtml')).toContain('dir="rtl"')
 })
 
 test('an English book does NOT claim to be right-to-left', async ({ page }) => {
@@ -93,9 +103,9 @@ test('an English book does NOT claim to be right-to-left', async ({ page }) => {
   await load(page)
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('me-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('utf8')
-  expect(raw).not.toContain('page-progression-direction="rtl"')
-  expect(raw).toContain('dir="ltr"')
+  const buf = readFileSync(await (await dl).path())
+  expect(zipPart(buf, 'OEBPS/content.opf')).not.toContain('page-progression-direction="rtl"')
+  expect(zipPart(buf, 'OEBPS/ch1.xhtml')).toContain('dir="ltr"')
   await expect(page.getByTestId('me-rtl-note')).toHaveCount(0)
 })
 
@@ -103,7 +113,12 @@ test('the formatting survives as markup, not as asterisks', async ({ page }) => 
   await load(page)
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('me-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('utf8')
+  // Every chapter, joined. The old version grepped the whole archive, so it
+  // never had to say WHERE it expected each thing — and the blockquote is in
+  // chapter two, which only showed up once the check became precise.
+  const buf = readFileSync(await (await dl).path())
+  const raw = zipNames(buf).filter((n) => /^OEBPS\/ch\d+\.xhtml$/.test(n))
+    .map((n) => zipPart(buf, n)).join('\n')
   expect(raw).toContain('<strong>bold</strong>')
   expect(raw).toContain('<li>alpha</li>')
   expect(raw).toContain('<blockquote>')

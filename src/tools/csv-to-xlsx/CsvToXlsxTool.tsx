@@ -90,8 +90,8 @@ export default function CsvToXlsxTool() {
     [body],
   )
 
-  function save() {
-    const blob = buildXlsx([{
+  async function save() {
+    const blob = await buildXlsx([{
       name: safeSheetName(name.replace(/\.(csv|tsv|txt)$/i, '')),
       rows,
       header,

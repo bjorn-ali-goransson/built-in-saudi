@@ -1,4 +1,4 @@
-import { zipStore } from './zip'
+import { zipFile } from './zip'
 import { inlineText, type Block, type Inline } from './markdown'
 
 // Writing an EPUB.
@@ -12,8 +12,10 @@ import { inlineText, type Block, type Inline } from './markdown'
 // silently refuses rather than explaining:
 //
 // 1. **`mimetype` must be the FIRST entry and STORED, uncompressed.** That is
-//    how a reader identifies the file without inflating anything. `zipStore`
-//    stores every entry, so the only requirement here is the ordering.
+//    how a reader identifies the file without inflating anything. It used to be
+//    free, because the writer stored everything; now that entries are deflated
+//    it is an explicit `store: true`, and getting it wrong gives a book readers
+//    silently refuse rather than explaining.
 // 2. **`META-INF/container.xml` is the one path the spec fixes**, and it names
 //    where the package document really is. Everything else is convention.
 // 3. **Every file in the spine must also be in the manifest**, with an id that
@@ -118,7 +120,7 @@ const xhtml = (title: string, lang: string, dir: string, body: string) =>
   + `<link rel="stylesheet" type="text/css" href="style.css"/></head>`
   + `<body>${body}</body></html>`
 
-export function buildEpub(meta: EpubMeta, chapters: Chapter[]): Blob {
+export async function buildEpub(meta: EpubMeta, chapters: Chapter[]): Promise<Blob> {
   const enc = new TextEncoder()
   const lang = meta.language || 'en'
   // RTL is set on the package AND on every page. Setting only one of them gives
@@ -162,9 +164,9 @@ ${meta.author ? `<dc:creator>${esc(meta.author)}</dc:creator>` : ''}
 <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
 </container>`
 
-  return zipStore([
+  return zipFile([
     // FIRST, and stored. Both are load-bearing.
-    { name: 'mimetype', bytes: enc.encode('application/epub+zip') },
+    { name: 'mimetype', bytes: enc.encode('application/epub+zip'), store: true },
     { name: 'META-INF/container.xml', bytes: enc.encode(container) },
     { name: 'OEBPS/content.opf', bytes: enc.encode(opf) },
     { name: 'OEBPS/nav.xhtml', bytes: enc.encode(nav) },

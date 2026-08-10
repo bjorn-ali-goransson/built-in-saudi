@@ -99,8 +99,8 @@ export default function MarkdownDocxTool() {
     } catch { setError(s.notText) }
   }
 
-  function download() {
-    const blob = blocksToDocx(blocks)
+  async function download() {
+    const blob = await blocksToDocx(blocks)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

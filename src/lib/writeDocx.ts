@@ -1,4 +1,4 @@
-import { zipStore } from './zip'
+import { zipFile } from './zip'
 import type { Block, Inline } from './markdown'
 
 // A .docx from a block tree — a real Office Open XML document, no dependency.
@@ -242,12 +242,14 @@ function numberingXml(refs: { id: number; ordered: boolean }[]): string {
     + `</w:numbering>`
 }
 
-export function blocksToDocx(blocks: Block[]): Blob {
+export async function blocksToDocx(blocks: Block[]): Promise<Blob> {
   const enc = new TextEncoder()
   // The body FIRST: writing it is what discovers how many lists the document
   // has, and `numbering.xml` has to declare one `<w:num>` for each.
   const body = blocksToDocxXml(blocks)
-  return zipStore([
+  // Compressed: measured at 97.9% on OOXML, which is nearly all angle
+  // brackets. See `node evals/zipsize.mjs`.
+  return zipFile([
     { name: '[Content_Types].xml', bytes: enc.encode(CONTENT_TYPES) },
     { name: '_rels/.rels', bytes: enc.encode(RELS) },
     { name: 'word/document.xml', bytes: enc.encode(body) },

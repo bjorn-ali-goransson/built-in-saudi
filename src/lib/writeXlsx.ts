@@ -19,7 +19,7 @@
 // `sharedStrings.xml`: it costs some size on repetitive data and saves an
 // entire part, an index and a class of off-by-one bugs.
 
-import { zipStore } from './zip'
+import { zipFile } from './zip'
 
 export interface SheetInput {
   name: string
@@ -100,7 +100,7 @@ export function safeSheetName(name: string, fallback = 'Sheet1'): string {
   return clean || fallback
 }
 
-export function buildXlsx(sheets: SheetInput[]): Blob {
+export async function buildXlsx(sheets: SheetInput[]): Promise<Blob> {
   const used = new Set<string>()
   const named = sheets.map((s, i) => {
     let name = safeSheetName(s.name, `Sheet${i + 1}`)
@@ -143,7 +143,8 @@ export function buildXlsx(sheets: SheetInput[]): Blob {
     ...named.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, bytes: bytes(sheetXml(s)) })),
   ]
 
-  return new Blob([zipStore(files)], {
+  const zip = await zipFile(files)
+  return new Blob([zip], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
 }

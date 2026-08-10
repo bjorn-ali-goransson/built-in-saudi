@@ -1495,3 +1495,22 @@ Still open, and now quantified rather than suspected:
   there — so it stays unbuilt rather than shipped on a hunch.
 - **Recorded flake:** one `calls.spec.ts` case failed once under full-suite load
   and passed on an immediate clean re-run. Not reproduced, not "fixed".
+
+### Code sweep, 10 August 2026 (twenty-first pass)
+
+- ~~**`zip.ts` cannot compress.**~~ **Done.** `CompressionStream('deflate-raw')`
+  is the exact mirror of what `unzip.ts` already reads with, so it cost no
+  dependency. Measured first (`evals/zipsize.mjs`): OOXML 97.9%, SVG 85.8%, CSV
+  83.0%, and already-compressed payloads ~5% — so it is per entry, keeping
+  whichever is smaller. A real 300-heading `.docx` download went 137,994 → 4,641
+  bytes.
+- **Found on the way:** the writer never set general-purpose bit 11, so an
+  Arabic entry name was liable to be read as CP437 — mojibake, on a bilingual
+  site, in tools that name entries after the user's own file.
+- **Deliberately NOT migrated:** the image and PDF bundlers (`batch-watermark`,
+  `carousel-split`, `pdf-split`, `pdf-to-images`, `social-resize`,
+  `video-frames`) stay on `zipStore`. Measured at ~5%, so switching them is
+  churn plus a wasted deflate pass over megabytes.
+- **Still open:** a "create a ZIP" tool is now cheap and would complete the pair
+  with `archive-inspector`, which reads and extracts and has no counterpart.
+  `buildIcs` is still single-event, so `saudi-holidays` has no "add to calendar".

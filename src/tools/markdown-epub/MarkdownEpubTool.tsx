@@ -88,8 +88,8 @@ export default function MarkdownEpubTool() {
     } catch { setError(s.notText) }
   }
 
-  function download() {
-    const blob = buildEpub({ title: title || 'Untitled', author, language: lang }, chapters)
+  async function download() {
+    const blob = await buildEpub({ title: title || 'Untitled', author, language: lang }, chapters)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

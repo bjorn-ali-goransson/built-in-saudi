@@ -110,9 +110,9 @@ export default function PdfToWordTool() {
     void run(file)
   }
 
-  const save = () => {
+  const save = async () => {
     if (!blocks?.length) return
-    const blob = blocksToDocx(blocks)
+    const blob = await blocksToDocx(blocks)
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `${name.replace(/\.pdf$/i, '') || 'document'}.docx`

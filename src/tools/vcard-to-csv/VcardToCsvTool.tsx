@@ -64,12 +64,12 @@ export default function VcardToCsvTool() {
 
   const base = useMemo(() => name.replace(/\.vcf$/i, '') || 'contacts', [name])
 
-  function save(kind: 'csv' | 'xlsx') {
+  async function save(kind: 'csv' | 'xlsx') {
     const blob = kind === 'csv'
       // A BOM, because the most likely next step is opening it in Excel and
       // without one every Arabic name arrives as mojibake.
       ? new Blob(['﻿' + toCsv(rows, ',')], { type: 'text/csv;charset=utf-8' })
-      : buildXlsx([{
+      : await buildXlsx([{
         name: safeSheetName(base, 'Contacts'),
         rows,
         header: true,

@@ -878,6 +878,60 @@ header cells come back **bold**, because the writer bolds them and mammoth
 preserves it; the first version expected plain text and reported a failure that
 was the test's mistake, not the code's.
 
+## The ZIP writer learned to compress (`lib/zip.ts`)
+
+Found by a CODE SWEEP: `unzip.ts` already read DEFLATE with
+`DecompressionStream('deflate-raw')`, so its mirror `CompressionStream` makes
+WRITING it free of any dependency — and the site already requires the API.
+
+**Whether it was worth doing is a question about the PAYLOADS, so it was
+measured** (`node evals/zipsize.mjs`) rather than assumed:
+
+| payload | saved |
+|---|---|
+| OOXML `document.xml` (.docx/.xlsx/.epub) | **97.9%** |
+| SVG paths | 85.8% |
+| CSV rows (`csv-split`) | 83.0% |
+| PDF · PNG · an existing .xlsx | ~5% |
+
+So the answer is not "always compress" — it is **per entry, keeping whichever
+came out smaller**, with an extension skip-list so a PDF or a PNG is not
+deflated and then discarded. Measured end to end on a real download: a 300-heading
+`.docx` went **137,994 → 4,641 bytes, 96.6% smaller.**
+
+Three things it has to get right:
+
+- **The EPUB `mimetype` is now an explicit `store: true`.** It used to be free,
+  because the writer stored everything; a compressed one gives a book readers
+  silently refuse rather than explaining.
+- **The CRC and the uncompressed size are always of the ORIGINAL bytes**,
+  whichever form is stored. Getting that wrong produces an archive every
+  extractor opens and then calls corrupt.
+- **General-purpose bit 11 was missing, and that was a real bug on a bilingual
+  site.** It says "this name is UTF-8"; without it an extractor may read the
+  name as CP437, so an Arabic filename comes out as mojibake — and these tools
+  name entries after the user's own file or after a column value, both routinely
+  Arabic here. **Verified to fail**, and there is a case asserting an ASCII name
+  is NOT flagged, without which a writer that flagged everything would pass.
+
+**Six specs broke, and they were right to break.** They grepped the whole
+archive as latin1, which worked only because every entry was stored — a
+technique this file explicitly recommended. `zipPart`/`zipNames` in
+`e2e/helpers.ts` inflate the part instead, so **the discipline is preserved
+rather than abandoned**: the point was never that the archive was uncompressed,
+it was that the XML is read WITHOUT going through our own reader, and Node's
+`inflateRawSync` is somebody else's implementation.
+
+Precision found a loose assertion on the way: the EPUB formatting test grepped
+the whole file, so it never had to say WHICH chapter it expected each thing in —
+and the blockquote turned out to be in chapter two.
+
+**A verification attempt was itself wrong, which is the transferable part.**
+Disabling compression with `if (false && …)` and rebuilding reported all five
+cases still passing — because the build FAILED and `vite preview` went on
+serving the previous `dist/`. A guard verified against a stale build is not
+verified. Check the build succeeded before believing a red-or-green result.
+
 ## Reading a ZIP, and the formats made of one (`lib/unzip.ts`)
 
 `zip.ts` writes store-only archives; **`unzip.ts` reads real ones** — central

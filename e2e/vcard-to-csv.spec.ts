@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { zipPart } from './helpers'
 
 const CRLF = (lines: string[]) => lines.join('\r\n') + '\r\n'
 
@@ -123,7 +124,10 @@ test.describe('vcard to csv', () => {
     const d = await dl
     expect(d.suggestedFilename()).toBe('phone-backup.xlsx')
     // The number must be text in the workbook, or Excel eats the leading zero.
+    // The sheet is DEFLATED now, so it is inflated rather than grepped out of
+    // the raw archive. Strings are written inline, so the number is in the
+    // sheet part itself.
     const buf = readFileSync((await d.path())!)
-    expect(buf.toString('latin1')).toContain('0501234567')
+    expect(zipPart(buf, 'xl/worksheets/sheet1.xml')).toContain('0501234567')
   })
 })

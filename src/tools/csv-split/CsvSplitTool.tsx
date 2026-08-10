@@ -3,7 +3,7 @@ import { useLocale } from '../../i18n'
 import { Button, Input, Select, Field, Check, Stack, Panel, Seg, SegButton, FileError, Spinner } from '../../components/ui'
 import { DownloadIcon, UploadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
-import { zipStore } from '../../lib/zip'
+import { zipFile } from '../../lib/zip'
 import { readTableFile } from '../../lib/tableFile'
 import { DEFAULTS, csvText, splitTable, type Mode, type SplitOptions } from './split'
 
@@ -87,9 +87,9 @@ export default function CsvSplitTool() {
   const dataRows = Math.max(0, rows.length - (o.headerRow ? 1 : 0))
   const tooMany = parts.length > 500
 
-  function download() {
+  async function download() {
     const files = parts.map((p) => ({ name: p.name, bytes: new TextEncoder().encode(csvText(p, o)) }))
-    const blob = zipStore(files)
+    const blob = await zipFile(files)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

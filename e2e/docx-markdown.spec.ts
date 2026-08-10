@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { zipPart } from './helpers'
 
 // Word to Markdown — the inverse of markdown-docx, shipped this week.
 //
@@ -72,11 +73,14 @@ test('MEASURED LIMIT: two adjacent ordered lists come back merged', async ({ pag
   // merges adjacent <ol>s regardless of numId, so the round trip reads
   // 1, 2, 3, 4 where the document says 1, 2 then 1, 2.
   const path = await docxFrom(page, '1. one\n2. two\n\n1. again\n2. more')
-  const raw = readFileSync(path).toString('latin1')
-  const ids = [...raw.matchAll(/w:numId w:val="(\d+)"/g)].map((m) => m[1])
+  // Inflated rather than grepped raw: the writer deflates now. Node's zlib
+  // is somebody else's implementation, so this is still not our own reader.
+  const raw = zipPart(readFileSync(path), 'word/numbering.xml')
+  const doc = zipPart(readFileSync(path), 'word/document.xml')
+  const ids = [...doc.matchAll(/w:numId w:val="(\d+)"/g)].map((m) => m[1])
   // The writer is right: two lists, two ids.
   expect(new Set(ids).size).toBe(2)
-  expect(raw).toContain('startOverride')
+  expect(raw).toContain('startOverride')  // numbering.xml
 
   const md = await toMarkdown(page, path)
   expect(md).toContain('1. one')

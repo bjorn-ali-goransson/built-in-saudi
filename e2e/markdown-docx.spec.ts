@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { zipPart, zipNames } from './helpers'
 
 // Markdown to Word.
 //
@@ -104,20 +105,21 @@ test('the .docx is a real Word file, checked off the raw bytes', async ({ page }
   // implementations agreeing is weaker evidence than one being right, because
   // a shared misconception would satisfy both.
   expect(buf.subarray(0, 2).toString('latin1')).toBe('PK')
-  const raw = buf.toString('latin1')
+  const names = zipNames(buf)
   for (const part of ['[Content_Types].xml', '_rels/.rels', 'word/document.xml']) {
-    expect(raw, `missing part ${part}`).toContain(part)
+    expect(names, `missing part ${part}`).toContain(part)
   }
-  // Stored entries: compression method 0 in every local header.
-  const method = buf.readUInt16LE(8)
-  expect(method).toBe(0)
+  // Entries are DEFLATED now (measured at 97.9% on OOXML), so the local header
+  // says method 8. It used to say 0, and several specs grepped the whole file
+  // as latin1 because of it — see `zipPart` in helpers.
+  expect(buf.readUInt16LE(8)).toBe(8)
 })
 
 test('the formatting survives as Word formatting, not as asterisks', async ({ page }) => {
   await load(page)
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('md-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('latin1')
+  const raw = zipPart(readFileSync(await (await dl).path()), 'word/document.xml')
   // Stored entries, so the XML is in the file verbatim and greppable.
   expect(raw).toContain('<w:b/>')       // bold
   expect(raw).toContain('<w:i/>')       // italic
@@ -136,14 +138,16 @@ test('a list is a real Word list, not a paragraph starting with a bullet', async
   await load(page, '- alpha\n- beta\n\n1. one\n2. two')
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('md-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('latin1')
-  expect(raw).toContain('word/numbering.xml')
+  const buf = readFileSync(await (await dl).path())
+  const raw = zipPart(buf, 'word/document.xml')
+  expect(zipNames(buf)).toContain('word/numbering.xml')
   expect(raw).toContain('<w:numPr>')
   // Each list gets its OWN numId, or the second ordered list continues the
-  // first — 1, 2, 3 then 4, 5, 6.
+  // first — 1, 2, 3 then 4, 5, 6. The ids live in document.xml; the
+  // startOverride that restarts them lives in numbering.xml.
   const ids = new Set([...raw.matchAll(/w:numId w:val="(\d+)"/g)].map((m) => m[1]))
   expect(ids.size).toBe(2)
-  expect(raw).toContain('startOverride')
+  expect(zipPart(buf, 'word/numbering.xml')).toContain('startOverride')
   // And the markers are no longer literal text.
   expect(raw).not.toContain('<w:t xml:space="preserve">1. </w:t>')
 })
@@ -152,7 +156,7 @@ test('XML-special characters are escaped rather than breaking the file', async (
   await load(page, 'a < b & c > d "quoted"')
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('md-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('latin1')
+  const raw = zipPart(readFileSync(await (await dl).path()), 'word/document.xml')
   expect(raw).toContain('a &lt; b &amp; c &gt; d')
 })
 
@@ -160,7 +164,7 @@ test('a link keeps its address instead of losing it', async ({ page }) => {
   await load(page, 'See [the survey](https://example.com/wells).')
   const dl = page.waitForEvent('download', { timeout: 30_000 })
   await page.getByTestId('md-download').click()
-  const raw = readFileSync(await (await dl).path()).toString('latin1')
+  const raw = zipPart(readFileSync(await (await dl).path()), 'word/document.xml')
   expect(raw).toContain('the survey')
   expect(raw).toContain('https://example.com/wells')
   await expect(page.getByTestId('md-link-note')).toBeVisible()
