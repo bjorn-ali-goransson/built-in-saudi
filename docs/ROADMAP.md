@@ -1883,3 +1883,35 @@ GPA conversion (`gpa-calculator`), road-trip fuel cost (`fuel-cost`).
 `jwt-decoder` second. Both readings are real ("how many tokens is my prompt" and
 "decode this JWT"), the qualified queries each go to the right tool, and no
 bench moved — so it is left alone rather than tuned.
+
+## Code sweep, 10 August 2026 (second)
+
+**Fixed: the category offer did not recognise a pasted category URL.**
+`normaliseQuery` had been wired into `searchTools` and not into
+`CategoryOffer`, so results and offer could disagree about one query.
+`evals/offershapes.mjs` measured it and mostly refuted the worry — `matchGroup`
+folds case and punctuation itself, so seven of eight shapes fired either way at
+23/23. The pasted URL was 0/23, and it is the link the category pages exist to
+be shared at. Now 23/23 with precision unchanged.
+
+**A dead-export sweep was attempted and its output must NOT be acted on.** It
+reported 114 unreferenced exports; both spot-checks were false positives
+(`removeCall`/`clearHistory` are called by the hook in their own file;
+`fuzzyScore` by a bench through the compiled copy). Cross-file string matching
+measures **over-exported**, not **dead**. To be worth anything it needs a real
+reference analysis — the TypeScript language service, or at minimum a check of
+whether the identifier is used anywhere other than its own definition and
+export. Until then the 114 is noise.
+
+**Still open from earlier sweeps, unchanged:**
+
+- **Six pdf-lib tools run on the main thread** (`pdf-compress`, `pdf-fill`,
+  `pdf-sign`, `pdf-stamp`, `pdf-booklet`, `pdf-redact`) while only
+  `pdf-merge`/`pdf-organise`/`pdf-split` use the `PdfOps` worker (#154).
+- **`blocksToHtml` could give `markdown-docx`/`markdown-epub` a live preview**
+  rather than an outline — the renderer exists and neither tool calls it.
+- **Four dated tools could export ICS** (`medicine-schedule`, `due-date`,
+  `ovulation`, `exit-reentry`); each needs its own judgement about what the
+  reminder should actually say.
+- **Thin e2e coverage**, next in order: `hajj-umrah` (567 lines, 1 case),
+  `pdf-sign` (511), `adhkar` (485), `pdf-fill` (455).

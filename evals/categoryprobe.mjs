@@ -8,10 +8,18 @@
 //   · every benched query, all of which name a specific tool — it must NOT
 //
 // Run: node evals/categoryprobe.mjs
-//   (needs: npx tsc src/lib/categoryMatch.ts --outDir evals/gen --module esnext
+//   (needs: npx tsc src/lib/categoryMatch.ts src/lib/normaliseQuery.ts --outDir evals/gen --module esnext
 //    --target es2022 --moduleResolution bundler)
 
-import { matchGroup as matchCategory } from './gen/categoryMatch.js'
+import { matchGroup } from './gen/categoryMatch.js'
+import { normaliseQuery } from './gen/normaliseQuery.js'
+
+// FAITHFUL: `CategoryOffer` normalises before matching, so a probe calling
+// `matchGroup` bare measures a function the UI no longer calls directly. That
+// is the drift that made `relatedcheck` report a fixed defect for weeks and
+// made `twinprobe` index the wrong Arabic labels. Compile BOTH and compose them
+// the way the component does.
+const matchCategory = (q) => matchGroup(normaliseQuery(q))
 import { tools } from './lib/tools.mjs'
 import { BENCH_QUERIES } from './benchqueries.mjs'
 import { UNTUNED, NOMATCH } from './untuned.mjs'

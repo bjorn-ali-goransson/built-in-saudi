@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useLocale, localePath, categoryLabel } from '../i18n'
 import { matchGroup } from '../lib/categoryMatch'
+import { normaliseQuery } from '../lib/normaliseQuery'
 import { categorySlug } from '../lib/categorySlug'
 import { collectionBySlug } from '../lib/collections'
 import { collectionSeo } from '../i18n/seo'
@@ -15,6 +16,15 @@ import { liveTools } from '../tools'
  * of twenty. The results are left exactly as they were — this is an offer, not
  * a re-ranking, which is why it cannot regress a bench.
  *
+ * The query is normalised HERE rather than by the callers, so home and the
+ * launcher cannot drift apart on it — the same argument that put
+ * `normaliseQuery` inside `searchTools`'s entry points rather than at its two
+ * call sites. `matchGroup` already folds case and punctuation itself, so this
+ * buys exactly one shape, measured in `evals/offershapes.mjs`: a PASTED URL.
+ * `built-in-saudi.com/en/c/pdf/` is the link a category page exists to be
+ * shared at, and it was the one query naming a category that the offer did not
+ * recognise.
+ *
  * Deliberately NOT part of the arrow-key result list. Those keys walk the
  * tools, and slipping a differently-shaped row into that sequence would make
  * Enter mean two things depending on where you were. It is a link, so Tab
@@ -22,7 +32,7 @@ import { liveTools } from '../tools'
  */
 export function CategoryOffer({ query, onNavigate }: { query: string; onNavigate?: () => void }) {
   const { locale, t } = useLocale()
-  const hit = matchGroup(query)
+  const hit = matchGroup(normaliseQuery(query))
   if (!hit) return null
 
   // A category is derived from the registry; a collection is curated, so its

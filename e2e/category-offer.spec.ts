@@ -91,3 +91,31 @@ test('it is not in the arrow-key sequence', async ({ page }) => {
   await page.getByRole('searchbox').press('Enter')
   await expect(page).toHaveURL(/\/en\/apps\//)
 })
+
+// --- The link the category page exists to be SHARED at -------------------------
+//
+// `evals/offershapes.mjs` re-asked every category query in the shapes people
+// actually produce. The hypothesis — that passing the RAW query to
+// <CategoryOffer> while the results got the normalised one would cost a lot —
+// was mostly WRONG: `matchGroup` folds case and punctuation itself, so quotes,
+// question marks, hyphens and capitals all fired either way, 23/23 each.
+//
+// One shape did not, and it is the one that matters: a PASTED URL, 0/23. The
+// category pages were built to be linkable and shareable, so pasting one back
+// into the search box is a real flow — and it was the single query naming a
+// category that the offer refused to recognise.
+
+test('pasting a category page URL offers that category', async ({ page }) => {
+  await search(page, 'https://built-in-saudi.com/en/c/pdf/')
+  const offer = page.getByTestId('category-offer')
+  await expect(offer).toBeVisible()
+  await expect(offer).toHaveAttribute('data-category', 'pdf')
+})
+
+test('but a pasted TOOL url still offers no category', async ({ page }) => {
+  // Without this the fix could have been "fire on anything with a slash in it".
+  // A tool URL names one tool, and the offer's whole value is that it appears
+  // only when somebody asked for a family.
+  await search(page, 'https://built-in-saudi.com/en/apps/pdf-merge')
+  await expect(page.getByTestId('category-offer')).toHaveCount(0)
+})

@@ -269,6 +269,40 @@ Four decisions:
   renamed tool would otherwise make a collection quietly shorter with nothing to
   notice it. Verified to fail by mistyping an id.
 
+**The offer missed the one link a category page exists to be shared at**
+(`evals/offershapes.mjs`). `normaliseQuery` was wired into `searchTools` and
+NOT into `CategoryOffer`, so the two halves of one screen could disagree about
+what was typed. **The hypothesis was mostly WRONG, which is the useful part:**
+`matchGroup` already folds case and punctuation itself, so quotes, question
+marks, guillemets, hyphens, capitals and stray spaces all fired either way —
+**23/23 on every one of those shapes**.
+
+**One shape did not: a pasted URL, 0/23.** The category pages were built to be
+addressable and shareable, so pasting one back into the search box is a real
+flow — and it was the single query naming a category that the offer refused to
+recognise. Normalising inside the component takes it to **23/23**, leaves every
+other shape untouched, and keeps precision exactly where it was: **0 of 322
+benched queries, 0 of 456 tool names, 0 of 15 unanswerable**. There is a case
+asserting a pasted TOOL url still offers nothing, without which the fix could
+have been "fire on anything with a slash in it".
+
+**It is normalised in the COMPONENT, not at the two call sites**, for the same
+reason `searchTools` owns it — home and the launcher must not drift. And
+`evals/categoryprobe.mjs` was itself calling `matchGroup` bare, so it was
+measuring a function the UI no longer calls directly; it composes the two the
+way the component does now. **Same drift that made `relatedcheck` report a
+fixed defect for weeks.**
+
+**A dead-export sweep was attempted in the same pass and is NOT to be trusted
+as written.** It reported 114 unreferenced exports; two spot-checks
+(`callHistory`'s `removeCall`/`clearHistory`, and `fuzzy`'s `fuzzyScore`) were
+both FALSE POSITIVES — used inside their own file by the hook that wraps them,
+or by a bench through the compiled copy. String matching across files measures
+**over-exported**, not **dead**, and the difference is the whole point: the
+`clearRecent` and `disposeImageDecoder` findings were real because nothing
+anywhere called them. A real reference analysis is needed before anyone acts on
+that list.
+
 **A generic query gets the FAMILY, not one arbitrary member of it**
 (`lib/categoryMatch.ts`, `components/CategoryOffer.tsx`). Ties falling through
 to catalogue order is documented above as deliberate, and `node
