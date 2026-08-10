@@ -3277,6 +3277,52 @@ After all six fixes both sets read 100% — so **`untuned.mjs` is burned and say
 so at the top**. The 88% is the number to quote. Anyone tuning the scorer again
 must write a fresh held-out set before believing anything.
 
+**A THIRD held-out set, and the honest generalisation number is 73%**
+(`evals/untuned3.mjs`, 51 queries, written in one sitting before any was run).
+Set #1 was burned by fixing what it found; set #2 has been run as a regression
+check on every pass since. Neither could answer the question that mattered: did
+the category offer, the collections, the Health / Time & Date split and six new
+tools help a query nobody had seen?
+
+| | first reading | after fixing |
+|---|---|---|
+| top-1 | **73%** (37/51) | **86%** (44/51) |
+| top-3 | 86% | **96%** |
+| returned nothing | 0 | 0 |
+
+**73% is well below the 88–90% sets #1 and #2 first read, and the difference is
+the SET, not a regression.** This one is deliberately weighted towards natural
+sentences — "stick two spreadsheets together", "how many days off do i get a
+year", «وقّع على عقد» — where the earlier sets lean on tool-name-ish phrasings.
+That is the number to quote for conversational search.
+
+Every fix was a documented failure class, none touched the scorer:
+
+- **A date converter did not index the word «تاريخ».** «حوّل التاريخ للهجري»
+  ranked `hijri-calendar` **seventeenth**.
+- **The Arabic VERB is not a substring of the verbal noun.** «وقّع» is not in
+  «توقيع», so «وقّع على عقد» found NOTHING on a site with a PDF signer. Third
+  time this trap has been caught (فاتورة, ترجمة, كلمات المرور — now وقّع).
+- **`pdf-ocr` carried the keyword `photocopy`**, which BEGINS with "photo" and
+  therefore scores as a word-boundary substring, so the scanned-PDF tool won
+  every query about a photo.
+- **`arabic-normalize` indexed «تشكيل» and `harakat`** — words for what it
+  REMOVES — and took them off the tool that adds them.
+
+**Two attempted fixes that bought nothing, both reverted:**
+
+- **Wrapping a word in a phrase does NOT remove it.** `'strip harakat'` still
+  contains `harakat`, and the scorer matches substrings, so the query still hit.
+  The documented precedent (pdf-organise losing `scan`) actually DELETED the
+  word, and so must this.
+- **A registry reorder for a tie that was not a tie.** «تشكيل النص» reads 333.7
+  against 330.0 — a real gap, so catalogue order never applies and the reorder
+  changed nothing. Reverted. **Check the scores are actually equal before
+  reaching for the tie-break.**
+
+**Set #3 is now SPENT.** Quote 73% as its held-out number and write a fourth
+before believing anything about the next scorer or metadata change.
+
 **Indexing the `description` was tried and rejected on measurement**, and the
 protocol was followed properly this time: `evals/untuned.mjs` was burned, so a
 SECOND held-out set was written FIRST (`evals/untuned2.mjs`, 50 fresh queries,

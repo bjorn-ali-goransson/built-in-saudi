@@ -1643,3 +1643,25 @@ and produces candidates rather than adjectives.
 - **`blocksToHtml` also unlocks a Markdown preview inside `markdown-docx` and
   `markdown-epub`**, which currently show only an outline. Not done here —
   worth its own pass so the preview is judged on its own.
+
+### Discoverability, 10 August 2026 (fourth pass) — a third held-out set
+
+Written because the first two were spent. **73% top-1 / 86% top-3 on its first
+reading**, over 51 conversational queries — the honest generalisation number for
+natural-sentence search, and well below what the earlier, more tool-name-ish
+sets first read. Fixing what it found took it to 86% / 96% with every other
+bench unchanged.
+
+- **Set #3 is now burned.** Write `untuned4.mjs` before believing any future
+  number.
+- **Recorded, not fixed** (fixing these is what burns a set, and each is a
+  genuine ambiguity rather than a defect): `turn a pdf into a document i can
+  edit` → `pdf-edit` first, which is a fair reading; «حوّل ماركداون إلى صفحة»
+  ties three markdown converters; `stick two spreadsheets together` is idiomatic
+  English no vocabulary list would carry; «جدول مواقيت الصلاة للطباعة» and
+  `how many days off` put the primary tool first and the right one second;
+  «كم باقي على موعد» is genuinely ambiguous («موعد» = appointment or due date);
+  «تشكيل النص» is a direction ambiguity the order-blind scorer cannot see, the
+  same shape as `html to markdown`.
+- **Related tools re-measured at 223 tools:** 0 dead ends, 222 full rows of
+  four. No drift since the fill shipped.

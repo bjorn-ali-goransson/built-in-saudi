@@ -15,7 +15,7 @@ export const arabicNormalizeTool: Tool = {
     // a keyword list, written by a developer, tends to the American form —
     // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
     'normalise', 'normaliser',
-    'arabic', 'normalize', 'tashkeel', 'diacritics', 'harakat', 'تشكيل', 'تطويل', 'توحيد', 'ألف', 'همزة', 'نص عربي', 'search'],
+    'arabic', 'normalize', 'remove vowel marks', 'unify letters', 'إزالة التشكيل', 'تجريد النص', 'تطويل', 'توحيد', 'ألف', 'همزة', 'نص عربي', 'search'],
   status: 'stable',
   Icon: EraseIcon,
   component: lazyTool(() => import('./ArabicNormalizeTool')),

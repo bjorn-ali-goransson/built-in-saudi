@@ -10,7 +10,7 @@ export const pdfSignTool: Tool = {
   description:
     'Sign a PDF by hand: draw your signature with a finger or mouse, then drag, pinch and place it exactly where it belongs — with a magnifier for pixel-perfect positioning. Everything runs in your browser with pdf-lib, so your document is never uploaded.',
   category: 'PDF',
-  keywords: ['pdf', 'sign', 'signature', 'e-sign', 'sign pdf', 'توقيع', 'توقيع pdf', 'إمضاء', 'التوقيع الإلكتروني'],
+  keywords: ['pdf', 'sign', 'signature', 'e-sign', 'sign pdf', 'توقيع', 'وقع', 'وقّع', 'عقد', 'توقيع عقد', 'توقيع pdf', 'إمضاء', 'التوقيع الإلكتروني'],
   status: 'stable',
   Icon: SignatureIcon,
   component: lazyTool(() => import('./PdfSignTool')),

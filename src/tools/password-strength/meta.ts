@@ -19,7 +19,7 @@ export const passwordStrengthTool: Tool = {
     // not collide with a twin are the ones worth having.
     'password', 'strength', 'good', 'safe', 'weak', 'check password', 'test password',
     'entropy', 'crack time', 'security',
-    'كلمة المرور', 'قوة', 'قوية', 'ضعيفة', 'آمنة', 'فحص', 'أمان', 'اختراق', 'تخمين',
+    'كلمة المرور', 'قوة', 'قوية', 'ضعيفة', 'آمنة', 'فحص', 'أمان', 'اختراق', 'تخمين', 'مسربة', 'تسريب', 'مسرب',
   ],
   status: 'stable',
   Icon: LockIcon,

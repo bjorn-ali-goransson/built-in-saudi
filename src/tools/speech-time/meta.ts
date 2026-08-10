@@ -13,7 +13,7 @@ export const speechTimeTool: Tool = {
     'speech', 'speaking time', 'words to minutes', 'words to time', 'reading time',
     'presentation', 'talk', 'script', 'podcast', 'audiobook', 'narration',
     'wpm', 'words per minute', 'how long', 'duration', 'khutbah',
-    'وقت القراءة', 'وقت الإلقاء', 'مدة الخطبة', 'خطبة', 'عرض تقديمي', 'كلمة',
+    'وقت القراءة', 'وقت الإلقاء', 'دقيقة', 'دقائق', 'كم دقيقة', 'مدة النص', 'مدة الخطبة', 'خطبة', 'عرض تقديمي', 'كلمة',
   ],
   status: 'stable',
   Icon: TimerIcon,

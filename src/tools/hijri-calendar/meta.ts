@@ -11,8 +11,8 @@ export const hijriCalendarTool: Tool = {
     'Convert between Hijri and Gregorian dates (Umm al-Qura), see today’s Hijri date, and upcoming Islamic dates including Ramadan and the two Eids. Everything is computed in your browser.',
   category: 'Islamic',
   keywords: [
-    'hijri', 'gregorian', 'converter', 'islamic calendar', 'ramadan', 'eid',
-    'umm al-qura', 'هجري', 'ميلادي', 'تقويم', 'رمضان', 'عيد',
+    'hijri', 'gregorian', 'converter', 'islamic calendar', 'date converter', 'convert date', 'ramadan', 'eid',
+    'umm al-qura', 'هجري', 'ميلادي', 'تقويم', 'تاريخ', 'تحويل التاريخ', 'التقويم الهجري', 'رمضان', 'عيد',
   ],
   status: 'stable',
   Icon: CalendarIcon,

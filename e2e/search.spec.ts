@@ -540,3 +540,69 @@ test('two edits is a different word, not a typo', async ({ page }) => {
   await expect(page.getByTestId('tool-arabic-normalize')).toBeVisible()
   await expect(page.getByTestId('search-corrected')).toHaveCount(0)
 })
+
+// --- held-out set #3, 10 August 2026 -----------------------------------------
+//
+// A third fresh set was written because the first two were spent: #1 was BURNED
+// by fixing what it found, and #2 has been run as a regression check on every
+// pass since. Neither could answer whether the category offer, the collections,
+// the Health / Time & Date split and six new tools helped a query nobody had
+// seen.
+//
+// First reading: **73% top-1, 86% top-3, 0 unfindable** over 51 conversational
+// queries — well below the 88–90% the earlier sets first read, because this one
+// is deliberately weighted towards natural sentences rather than tool-name-ish
+// phrasings. Fixing what it found took it to **86% / 96%**, and the cases below
+// freeze those fixes. Every one was a documented failure class, not a scorer
+// change.
+test.describe('held-out set #3 fixes', () => {
+  const wins = async (page: import('@playwright/test').Page, q: string, id: string, locale = 'en') => {
+    await page.goto(`/${locale}`)
+    await page.getByRole('searchbox').fill(q)
+    await page.getByRole('searchbox').press('Enter')
+    await expect(page, `"${q}" should open ${id}`).toHaveURL(new RegExp(`/${locale}/apps/${id}$`))
+  }
+
+  test('a date converter indexes the word «تاريخ»', async ({ page }) => {
+    // It did not, and «حوّل التاريخ للهجري» ranked it SEVENTEENTH.
+    await wins(page, 'حوّل التاريخ للهجري', 'hijri-calendar', 'ar')
+  })
+
+  test('the Arabic VERB reaches the tool named with the verbal noun', async ({ page }) => {
+    // «وقّع» is not a substring of «توقيع» — the documented morphology trap,
+    // on the tool whose whole subject it is. It returned NOTHING.
+    await wins(page, 'وقّع على عقد', 'pdf-sign', 'ar')
+  })
+
+  test('«بالحروف» reaches the tool that writes numbers in letters', async ({ page }) => {
+    await wins(page, 'اكتب الرقم بالحروف', 'tafqeet', 'ar')
+  })
+
+  test('«تشكيل» goes to the tool that ADDS the marks, not the one that strips them', async ({ page }) => {
+    // "A keyword must say what the tool DOES, not what it tolerates."
+    // `arabic-normalize` removes harakat and was taking the query off
+    // `diacritize`. Asserted at top-3 rather than top-1: the two are 4 points
+    // apart and both genuinely concern tashkeel in opposite directions, which
+    // the scorer cannot see — the same order-blindness recorded for
+    // "html to markdown".
+    await page.goto('/en')
+    await page.getByRole('searchbox').fill('add harakat to arabic text')
+    const ids = await page.locator('[data-testid^="tool-"]').evaluateAll(
+      (els) => els.slice(0, 3).map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
+    expect(ids).toContain('diacritize')
+  })
+
+  test('a query about a PHOTO does not go to the scanned-PDF tool', async ({ page }) => {
+    // `pdf-ocr` carried the keyword `photocopy`, which begins with "photo" and
+    // therefore scored as a word-boundary substring on every photo query.
+    await wins(page, 'read the text in a photo', 'image-to-text')
+  })
+
+  test('«مسربة» reaches the tool that checks for a leak', async ({ page }) => {
+    await wins(page, 'هل كلمة مروري مسربة', 'password-strength', 'ar')
+  })
+
+  test('«كم دقيقة» reaches the tool that answers in minutes', async ({ page }) => {
+    await wins(page, 'كم دقيقة يحتاج النص', 'speech-time', 'ar')
+  })
+})

@@ -14,7 +14,7 @@ export const leaveOvertimeTool: Tool = {
     // 'overtime pay' as an exact phrase: `timesheet` computes an overtime
     // figure too and carries 'payroll', which took this query off the tool
     // that owns the RULE. The established tool gets the exact phrase.
-    'annual leave', 'leave days', 'overtime', 'overtime pay', 'notice period', 'probation', 'labour law', 'labor law', 'resign', 'termination', 'working hours', 'entitlement', '21 days', '30 days', 'employee rights',
+    'annual leave', 'leave days', 'days off', 'time off', 'overtime', 'overtime pay', 'notice period', 'probation', 'labour law', 'labor law', 'resign', 'termination', 'working hours', 'entitlement', '21 days', '30 days', 'employee rights',
     'الإجازة السنوية', 'إجازة', 'العمل الإضافي', 'أجر العمل الإضافي', 'ساعات إضافية', 'مدة الإشعار', 'فترة التجربة', 'نظام العمل', 'استقالة', 'حقوق الموظف', 'أجر الساعة',
   ],
   status: 'beta',
