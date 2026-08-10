@@ -1,6 +1,7 @@
 import { tools } from './lib/tools.mjs'
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
 import { normaliseQuery } from './gen/normaliseQuery.js'
+import { preferDirection } from './gen/searchDirection.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
 import { UNTUNED4 } from './untuned4.mjs'
@@ -23,10 +24,13 @@ function rank(rawQuery, wanted) {
   // shapes `inputshapes` and held-out #5 were written to expose.
   const query = normaliseQuery(rawQuery)
   const want = Array.isArray(wanted) ? wanted : [wanted]
-  const scored = tools
-    .map((t) => ({ id: t.id, score: scoreTool(query, t) }))
+  const raw = tools
+    .map((t) => ({ id: t.id, score: scoreTool(query, t), names: [t.name, t.nameAr].filter(Boolean), inverse: t.inverse }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
+  // The direction tie-break runs in every search surface, so the bench applies
+  // it too — a bench that skips a layer is not evidence about that layer.
+  const scored = preferDirection(query, raw)
   const at = scored.findIndex((x) => want.includes(x.id))
   return { at: at < 0 ? Infinity : at + 1, top: scored.slice(0, 3).map((x) => x.id) }
 }

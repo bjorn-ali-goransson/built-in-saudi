@@ -3859,6 +3859,39 @@ it moved no existing number**: tuned 131/131, held-out #1 49/50, #2 46/50, #4
 37/50, Arabic 41/41 — all identical, because the benches are clean phrases,
 which is exactly why they could never have exposed this.
 
+**The direction tie-break is BUILT** (`lib/searchDirection.ts`). `Tool.inverse`
+had been declared on twelve pairs since the direction instrument was written
+and **the scorer never read it** — it fed only `evals/directions.mjs`. Word
+order carries the direction and `fuzzy.ts` discards it on purpose, which is
+right for almost every query and wrong for exactly one shape: `jpg to pdf` went
+to `pdf-to-images` by **1.3%** and `xlsx to csv` to `csv-to-xlsx` by **2.7%** —
+margins that mean nothing.
+
+Three conditions, all load-bearing, and any one failing leaves the order
+untouched:
+
+1. **the two must declare each OTHER** — `check-inverses.mjs` refuses a
+   one-sided declaration, so the symmetry is guaranteed rather than hoped for;
+2. **their scores must be within 15%** — beyond that the scorer had a real
+   opinion and it is not ours to overrule;
+3. **exactly one must name the destination asked for.** If both do, or neither,
+   there is nothing to decide with.
+
+**Precision measured rather than argued: it fires on 2 of 387 benched queries —
+the two known-wrong ones — and on 0 of 456 tool names.** Every bench is
+unchanged (tuned 131/131, held-out #1 49/50, #2 46/50, #4 37/50, Arabic 41/41)
+and set #5 went **80% → 84%**. **Verified to fail**: removing the reorder turns
+exactly the two intended cases red and no others.
+
+Two details worth keeping. It runs **after `aboveFloor`**, so it can never
+resurrect a tool the floor cut. And the separator list includes **«إلى» and the
+hamza-less «الى»**, because that is how people type it — the Arabic case
+«تحويل pdf إلى صور» is covered.
+
+**And the bench applies it**, as it now applies `normaliseQuery`: a bench that
+skips a layer is not evidence about that layer, which is the whole reason set
+#5's first reading was of the wrong thing.
+
 **Set #5 is now SPENT.** Quote **54%**. The ten near misses are left as
 retained signal, and three of them are the same thing: **`jpg to pdf` leads
 with `pdf-to-images`, `xlsx to csv` with `csv-to-xlsx`** — the wrong direction,

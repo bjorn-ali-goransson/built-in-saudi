@@ -808,3 +808,46 @@ test('a format this site does not handle still finds nothing', async ({ page }) 
   await search(page, 'avif')
   await expect(page.getByTestId('tool-image-format-converter')).toHaveCount(0)
 })
+
+// --- A converter must win its OWN direction ------------------------------------
+//
+// Word order carries the direction and `fuzzy.ts` discards it on purpose, so
+// `jpg to pdf` and `pdf to jpg` are the same query to the scorer and the winner
+// was decided by a margin that means nothing — 1.3% and 2.7% in the two cases
+// held-out set #5 caught.
+//
+// `Tool.inverse` had been declared on twelve pairs since the direction
+// instrument was written and the SCORER never read it; it fed only the harness.
+// `lib/searchDirection.ts` is that declaration finally doing something for the
+// reader. It is a TIE-BREAK: the two tools must declare each other, be within
+// 15% of one another, and exactly one of them must name the destination asked
+// for. Measured: it fires on 2 of 387 benched queries and 0 of 456 tool names.
+
+test('a converter wins its own direction, and so does its inverse', async ({ page }) => {
+  await search(page, 'jpg to pdf')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-images-to-pdf')
+
+  // The other half matters as much: without it, a tool that simply always
+  // flipped the top two would pass the first assertion.
+  await search(page, 'pdf to jpg')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-to-images')
+})
+
+test('and the spreadsheet pair, which was the second measured case', async ({ page }) => {
+  await search(page, 'xlsx to csv')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-xlsx-convert')
+  await search(page, 'csv to xlsx')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-csv-to-xlsx')
+})
+
+test('the Arabic word for "to" counts as a direction', async ({ page }) => {
+  await search(page, 'تحويل pdf إلى صور', 'ar')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-to-images')
+})
+
+test('a query naming no direction is left exactly as it was', async ({ page }) => {
+  // The tie-break must not touch anything else, which is what keeps it from
+  // regressing a bench. `pdf` names a family, not a direction.
+  await search(page, 'merge pdf')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
+})

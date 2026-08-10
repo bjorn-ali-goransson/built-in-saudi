@@ -1,5 +1,6 @@
 import type { Tool } from '../tools/types'
 import { normaliseQuery } from './normaliseQuery'
+import { preferDirection } from './searchDirection'
 import { scoreTool, aboveFloor, correctQuery, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
 
@@ -115,7 +116,23 @@ function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; s
     .sort((a, b) => b.score - a.score)
   // Nothing capped the list before this: a query rendered every tool that
   // matched at all — 31 cards on average, three of them worth looking at.
-  return aboveFloor(scored)
+  // A converter and its inverse are the same query to the scorer, because word
+  // order is discarded on purpose. This is the ONLY place that word order is
+  // allowed to matter, and only to break a tie between two tools that declare
+  // each other. Applied after the floor, so it can never resurrect a tool the
+  // floor cut.
+  const shown = aboveFloor(scored)
+  const reordered = preferDirection(
+    query,
+    shown.map((r) => ({
+      id: r.tool.id,
+      names: [r.tool.name, localizeTool(r.tool, locale).name],
+      inverse: r.tool.inverse,
+      score: r.score,
+      r,
+    })),
+  )
+  return reordered.map((x) => x.r)
 }
 
 export function rankTools(raw: string, list: Tool[], locale: Locale): Tool[] {

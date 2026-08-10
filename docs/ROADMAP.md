@@ -2022,3 +2022,25 @@ Three things worth keeping from the attempt:
 - **`pdf-to-word` still has no declared `inverse`**, because its counterpart
   does not exist. `check-inverses.mjs` refuses a one-sided declaration, so both
   sides land together when it does.
+
+## Direction tie-break shipped (10 August 2026)
+
+`lib/searchDirection.ts`. The item recorded as "the strongest unbuilt idea in
+search" is built: `Tool.inverse` was declared on twelve pairs and read only by
+the harness, so a converter and its inverse were decided by a 1–3% margin that
+means nothing.
+
+Fires on **2 of 387** benched queries and **0 of 456** tool names. Set #5
+80% → 84%; every other bench unchanged. Verified to fail.
+
+**Still open on the same theme:** `image-format-converter` declares no inverse,
+because it has none — it converts among image formats rather than in one
+direction. So `jpg to png` (rank 2, behind `images-to-pdf`) cannot be helped by
+this mechanism and needs a different one, if it needs one at all.
+
+**Held-out sets #1, #3, #4 and #5 are all spent.** #2 remains usable as a
+regression check at 46/50. Axes used: tool-name-ish, paraphrase, natural
+sentence, symptom, file extension. **Write set #6 on a fresh axis before
+believing any future search number** — untried: the query that names a
+competitor's product, and the query typed by somebody with the wrong mental
+model of the format ("convert word to excel").
