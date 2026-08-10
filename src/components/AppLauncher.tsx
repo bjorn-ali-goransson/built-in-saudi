@@ -7,6 +7,7 @@ import { rankToolsWithCorrection } from '../lib/searchTools'
 import { useResultKeys } from '../lib/useResultKeys'
 import { buildToolSections } from '../lib/toolSections'
 import { CategorySections, ToolGrid } from './ToolCatalog'
+import { CategoryOffer } from './CategoryOffer'
 import { SectionNav } from './SectionNav'
 import { GridIcon, SearchIcon } from './icons'
 import { useRecentTools } from '../lib/recentTools'
@@ -112,6 +113,7 @@ export function AppLauncher() {
                       {t.search.correctedTo(ranked.correctedTo)}
                     </p>
                   )}
+                  <CategoryOffer query={query} onNavigate={close} />
                   <ToolGrid tools={results} indexOf={idx} onNavigate={close} active={active} />
                 </>
               ) : (

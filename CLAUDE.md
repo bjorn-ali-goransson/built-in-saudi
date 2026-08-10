@@ -179,6 +179,52 @@ leaving it is a bad trade. The combo is shown on the launcher button's title and
 as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
 not a feature.
 
+**A generic query gets the FAMILY, not one arbitrary member of it**
+(`lib/categoryMatch.ts`, `components/CategoryOffer.tsx`). Ties falling through
+to catalogue order is documented above as deliberate, and `node
+evals/tieprobe.mjs` finally measured how often it decides: on the 272 benched
+queries, **12 (4.4%), none three-way, and only 2 harmful** — `qr`, `password`,
+`hijri`, `cron` are the editorial cases the rule exists for.
+
+It collapses on a **generic** word. Over the catalogue's 1,522 single-word
+keywords, **161 tie and 45 are three-way or wider**:
+
+| query | ties |
+|---|---|
+| **حاسبة** (calculator) | **18-way** |
+| `image` | 7-way |
+| `arabic` · `رمضان` · `معلم` · `تصدير` | 6-way |
+| `word` | 5-way |
+| `generator` | 4-way |
+
+Eighteen tools scoring identically is not an editorial judgement about which is
+primary; it is eighteen tools containing one word, and the order between them
+means nothing — so «حاسبة» was answered with one arbitrary calculator out of
+twenty. **The fix is a product answer, not a scoring one**: a coverage/name-length
+tie-break was already tried and rejected, and could not have helped here anyway,
+because those tools really are equally good matches. What that person wants is
+the CATEGORY, and the pages below already existed.
+
+Four decisions worth keeping:
+
+- **It is an OFFER, not a re-ranking.** The results are untouched, which is why
+  it cannot regress a bench — and all four are unchanged (131/131, 49/50,
+  45/50, 41/41).
+- **A deterministic normalise-and-compare, NOT a fuzzy threshold.** The card
+  sits above the real results, so precision beats recall: anything "close to a
+  category name" is exactly the query that meant one specific tool. Measured
+  (`node evals/categoryprobe.mjs`): fires on **35/35** category queries and on
+  **0 of 272** benched queries, **0 of 440** tool names, **0** unanswerable
+  ones. **Verified to fail** — loosening it to match any word in the query
+  fires on 56 benched queries and 206 tool names, and the spec goes red.
+- **The terms are written out, not derived from the label** — the Arabic plural
+  trap for the fourth time. «حاسبة» is neither a substring nor a subsequence of
+  the label «حاسبات»; the ة is simply not in it, so matching the label fires on
+  none of the queries this exists for.
+- **It is deliberately NOT in the arrow-key sequence.** Those keys walk tools,
+  and slipping a differently-shaped row in would make Enter mean two things
+  depending on where you were. It is a link, so Tab reaches it.
+
 **A category is now a PAGE, not just an in-page jump** (`/{locale}/c/<slug>/`,
 `pages/CategoryPage.tsx`, slugs in `lib/categorySlug.ts`, copy in
 `i18n/seo.ts` `categorySeo`). The jump bar made a section reachable; it did not

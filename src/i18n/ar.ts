@@ -52,6 +52,8 @@ export const ar: Dict = {
 
   search: {
     correctedTo: (q: string) => `تُعرض نتائج «${q}»`,
+    allIn: (category: string) => `اعرض كل ${category}`,
+    toolCount: (n: number) => `${n.toLocaleString('ar-SA')} ${n === 1 ? 'أداة' : 'أداة'} في هذا القسم`,
   },
 
   notFound: {

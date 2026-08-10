@@ -52,6 +52,8 @@ export const en = {
 
   search: {
     correctedTo: (q: string) => `Showing results for “${q}”`,
+    allIn: (category: string) => `See all ${category}`,
+    toolCount: (n: number) => `${n} tool${n === 1 ? '' : 's'} in this category`,
   },
 
   notFound: {

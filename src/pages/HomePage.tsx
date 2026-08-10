@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { tools } from '../tools'
 import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
+import { CategoryOffer } from '../components/CategoryOffer'
 import { SectionNav } from '../components/SectionNav'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
@@ -93,6 +94,7 @@ export function HomePage() {
                 {t.search.correctedTo(ranked.correctedTo)}
               </p>
             )}
+            <CategoryOffer query={query} />
             <ToolGrid tools={results} indexOf={idx} active={active} />
           </>
         ) : (

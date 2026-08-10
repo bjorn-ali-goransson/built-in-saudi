@@ -1455,3 +1455,25 @@ for capability with no page in front of it.
     `contacts.hasContact`, `voiceNotes.delVoiceBlob` and
     `book-with-me/lib.enumerateDaySlots` are all still unreferenced.
   - Six pdf-lib tools still bypass `PdfOps`.
+
+### Discoverability, 10 August 2026 — how often is the top result a coin toss?
+
+`evals/tieprobe.mjs` is the new instrument, and it answers a question the repo
+had assumed rather than measured. Ties are rare and mostly right on real
+queries (12/272, none wider than two) and catastrophic on generic ones: 161 of
+1,522 single-word keywords tie, 45 three-way or wider, «حاسبة» eighteen ways.
+
+Answered with a category offer rather than a tie-break, measured by
+`evals/categoryprobe.mjs` at 35/35 fired and 0 false positives across benched
+queries, tool names and the unanswerable set.
+
+Still open, and now quantified rather than suspected:
+
+- **`رمضان` and `معلم` are 6-way ties with NO category to offer.** Ramadan
+  cross-cuts Islamic, health and work tools; «معلم» (teacher) cross-cuts six
+  teaching tools filed under Generators, Files and Text. Those are real
+  families the category tree does not name — a curated cross-cutting collection
+  (the way `RECOMMENDED` and `DUA` already work) would answer them, and unlike
+  a category it cannot be a page, for the reason recorded above.
+- The one own-name miss is still `barcode`'s Arabic name losing to `qr-code`,
+  which is expected and documented.
