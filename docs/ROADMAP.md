@@ -1955,3 +1955,41 @@ so the third row above needs a declaration before it can be helped.
 `svg to png` (rank 7), `.exe what is inside` (16), `فتح ملف xlsx` (4),
 `.wav` (2, behind `zatca-wave`). And `avif` correctly finds nothing — the site
 does not handle it.
+
+## Web sweep, 10 August 2026 (second)
+
+Axis: what the PLATFORM can now do that nobody has built a tool around — chosen
+because this site prefers platform APIs to libraries, and because no earlier
+sweep used it.
+
+**Parked with a trigger: Writer, Rewriter and Proofreader.** Chrome's on-device
+AI family has grown past Translator / Language Detector / Summarizer, and a
+proofreader that never uploads your text is squarely this site's pitch —
+`builtinAi.ts` and `ModelGate` would carry it with no new infrastructure. But
+**Writer and Rewriter are in ORIGIN TRIAL and Proofreader is early-preview
+only**, so for essentially every visitor the constructor does not exist. We
+already record that "the constructors existing proves nothing" and that a tool
+must decide from what `availability()` answers — a tool that answers "this
+browser cannot run it" for ~100% of visitors is not a tool.
+**Trigger: build when Writer/Rewriter reach stable, as Summarizer did in 138.**
+
+**The biggest remaining hole in the converter catalogue: Word → PDF.** We ship
+`pdf-to-word`, recorded here as the most-requested PDF task on the web, and not
+its equally-requested inverse. Everything needed exists — `mammoth` for
+docx→HTML, `lib/markdown.ts`'s `Block[]` shape, react-pdf already a dependency.
+
+**The blocker was how to draw the page, and it is now measured**
+(`node evals/rtlpdf.mjs`): react-pdf carries a **real Arabic text layer**, so
+the converter should be built on it rather than on `printPdf.ts`'s canvas
+route, which would emit a document with no selectable text. What is still
+unverified is the VISUAL shaping — the eval says so rather than concluding it.
+
+Before building, decide two things: **which Arabic font to bundle** (the site's
+IBM Plex Sans Arabic is a web font; react-pdf needs a TTF, and `public/fonts/`
+carries Latin subsets only), and **how much of a .docx to honour** — the
+`pdf-to-word` precedent is to state the limits in the UI rather than imply a
+faithful reproduction.
+
+**Nothing shipped this iteration**, deliberately: a half-built document
+converter is worse than none, and the feasibility answer is what the next build
+needs.

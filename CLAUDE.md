@@ -947,6 +947,33 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
+## react-pdf carries a real Arabic text layer (`evals/rtlpdf.mjs`)
+
+Measured because a web sweep found the largest remaining hole in the
+converter catalogue: **we ship `pdf-to-word` — recorded here as the
+most-requested PDF task on the web — and NOT its equally-requested inverse.**
+
+The blocker was never demand, it was how to draw the page. `lib/printPdf.ts`
+composes on a CANVAS and wraps the raster, precisely because "pdf-lib cannot
+shape Arabic or reorder bidi text" — right for a worksheet, **wrong for a
+document**, because a rastered page has no selectable, searchable or
+machine-readable text. And `CvPdf.tsx` is the only react-pdf document here and
+registers a **Latin font only**, so react-pdf plus Arabic was unproven.
+
+**It works.** Rendering one Arabic and one English line and extracting them
+back with pdf.js — the engine `pdf-to-text` uses — both survive verbatim, and
+the Arabic returns as **U+645 U+631 U+62D …, the original codepoints, not the
+deprecated presentation forms**. So a document converter should be built on
+react-pdf rather than on the canvas route.
+
+**Stated limit, because the check cannot see it:** extraction round-tripping
+proves the TEXT layer, not the VISUAL one. An engine that drew every letter in
+its isolated form, or ran the line the wrong way, would emit these same
+codepoints. The eval asserts the presentation-forms block is absent, which
+catches shaping baked into the characters, and it says outright that confirming
+the joining needs an eye on a rendered page. **It also SKIPS loudly rather than
+passing when no Arabic-capable font is present** — the vacuous-green rule.
+
 ## Arabic costs four times as much per token (`token-counter`)
 
 Found by a web sweep: the AI-token-cost calculator is a live and growing
