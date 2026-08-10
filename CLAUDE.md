@@ -3859,6 +3859,54 @@ npm run preview    # preview the production build
 npm run test:e2e   # Playwright e2e (serves the build, runs e2e/*.spec.ts)
 ```
 
+## Which tools are big and barely tested (`evals/coverageshape.mjs`)
+
+`check-tool-registry.mjs` fails the build when a live tool is referenced by NO
+spec, so the `file-metadata` case — the only tool of 193 with no coverage at
+all, where writing the coverage found a real bug — cannot recur. **One case is
+not zero, and it is not coverage either.** This ranks live tools by lines of
+tool code per assertion-bearing case, so the thin end is visible rather than
+being found by accident a second time. A MEASUREMENT, not a gate: a big tool
+can be legitimately simple.
+
+**Its first run was wrong, and that is the part worth keeping.** It counted
+`/apps/<id>` only and reported **21 tools with no case at all** — on a site
+whose build fails for exactly that. Those tools are driven through the legacy
+`/tools/<id>` path, which 301-redirects and which four of the older specs still
+use. Reported faithfully: **0 untested, median 61 lines per case.** An
+unfaithful measurement invents defects as readily as it hides them, and the
+moment to notice is before reporting.
+
+**`prayer-times` was the thin end by a distance: 929 lines against ONE case**
+asserting the hero was visible and there were at least five rows — the site's
+most prominent tool, where a few minutes is the entire point. `e2e/prayer-times.spec.ts`
+now pins the Umm al-Qura times for Makkah, the across-midnight case, the iqama
+window, the morning markers, location persistence and the Arabic digits.
+
+Unlike `file-metadata`, **it found no product bug — the 929 lines were right,
+they were simply unguarded.** That is a real result and worth stating plainly
+rather than hunting for something to have found. What it did find was three
+things about testing this kind of tool:
+
+- **Every expected time was computed independently with `adhan` in node before
+  the spec was written.** A test whose expectations were read off the running
+  tool asserts only that it has not changed, which is not the same as asserting
+  it is right. **Verified to fail:** swapping `UmmAlQura` for
+  `MuslimWorldLeague` turns two cases red.
+- **`clock.setFixedTime`, NOT `clock.install`.** The tool re-reads the clock
+  every 30 seconds, so under a fake clock that advances, a countdown assertion
+  silently measures how long the page took to load. The first run expected
+  `in 8h 13m` — the correct arithmetic — and got `8h 12m`. **My arithmetic was
+  right and the instrument was wrong**, which is the opposite of the usual
+  finding in this file and just as easy to misread.
+- **An `addInitScript` runs on EVERY navigation, including `reload()`.**
+  Seeding the saved city unconditionally re-wrote it on reload, so the
+  persistence case failed against a tool that persists perfectly — the harness
+  overwriting the very thing it was checking. Seed only when absent.
+
+Next thinnest after the fix: `hajj-umrah` (567 lines, 1 case), `pdf-sign` (511),
+`adhkar` (485), `pdf-fill` (455).
+
 ## Testing (e2e)
 
 Playwright specs live in `e2e/`, driven by the `data-testid`s tools already

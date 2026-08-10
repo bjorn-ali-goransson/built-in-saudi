@@ -1792,3 +1792,29 @@ Untried vertical: what people calculate when buying online from abroad.
 - **Worth a later look, same vertical:** a shipping-forwarder comparison would
   need live rates (an API we will not run); a duty-drawback/return-refund
   explainer needs a rule that could not be corroborated in this pass.
+
+## Code sweep, 10 August 2026 — coverage shape
+
+`node evals/coverageshape.mjs` ranks live tools by lines of tool code per
+assertion-bearing e2e case. `prayer-times` was the thin end (929 lines, 1 case)
+and now has a real spec; it found no product bug, which is an honest result.
+
+**Next thinnest, in order** — each is a candidate for the same treatment, and
+the `file-metadata` precedent says one of them is probably hiding something:
+
+- `hajj-umrah` — 567 lines, 1 case
+- `pdf-sign` — 511 lines, 1 case
+- `adhkar` — 485 lines, 1 case
+- `pdf-fill` — 455 lines, 1 case
+- `ats-cv-optimizer` — 2202 lines, 5 cases
+
+Two things the instrument surfaced in passing, neither yet acted on:
+
+- **Four specs still drive the legacy `/tools/<id>` path**, which 301-redirects
+  on every navigation (`app.spec.ts`, `pdf-compress`, `pdf-edit`, `pdf-sign`).
+  Harmless, but it is a redirect paid on every run.
+- **`prow-<key>` is not unique when the timeline is expanded.** The circular
+  window renders ten rows with "show more", which spans two days and repeats
+  every prayer key — so a strict-mode locator would match twice. Nothing user
+  facing; it does mean an expanded timeline cannot be asserted per row as it
+  stands.
