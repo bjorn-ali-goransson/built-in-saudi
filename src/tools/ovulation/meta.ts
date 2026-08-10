@@ -9,7 +9,7 @@ export const ovulationTool: Tool = {
   tagline: 'The six days that matter, in both calendars.',
   description:
     'Find the fertile window from your last period and your cycle length — and see why it is not what most calculators say. Ovulation is about fourteen days before the NEXT period rather than fourteen days after the last, so on a long cycle it is not “day 14”; and the days that matter are the five BEFORE ovulation plus the day itself, because sperm outlive an egg by several days. Every date in the Hijri calendar as well as the Gregorian. Nothing is sent anywhere.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: [
     'ovulation', 'fertile', 'fertility', 'fertile window', 'cycle', 'period',
     'conceive', 'trying to conceive', 'ttc', 'luteal', 'menstrual', 'calendar',

@@ -9,7 +9,7 @@ export const timesheetTool: Tool = {
   tagline: 'Add up a week of shifts, breaks and overtime.',
   description:
     'Total a week of shifts with breaks, overnight shifts and overtime, and read it both as hours and minutes and as the decimal hours a payroll system asks for — 7:20 is 7.33, not 7.20, which is where hand-totalled sheets go wrong. It knows the Saudi standard day of 8 hours, the 6-hour Ramadan day, and overtime at 150%, all as defaults you can change. Nothing is uploaded.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: [
     'timesheet', 'time card', 'timecard', 'hours', 'work hours', 'shift', 'shifts',
     'overtime', 'break', 'payroll', 'clock in', 'clock out', 'night shift', 'ramadan',

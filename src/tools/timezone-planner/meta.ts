@@ -9,7 +9,7 @@ export const timezonePlannerTool: Tool = {
   tagline: 'Find an hour that is not the middle of someone’s night.',
   description:
     'Add the places your people are in and see the whole day at once, colour-coded by whether each hour lands in working hours, at the edges, or in the middle of the night. It ranks the best few slots for everyone. Offsets come from your browser’s own timezone data, so daylight saving on the chosen date is already handled — including places that change on a different weekend to yours.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['timezone', 'time zone', 'meeting', 'planner', 'world clock', 'utc', 'converter', 'مناطق زمنية', 'توقيت', 'اجتماع', 'فارق التوقيت'],
   status: 'stable',
   Icon: GlobeIcon,

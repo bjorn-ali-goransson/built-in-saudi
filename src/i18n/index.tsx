@@ -87,6 +87,13 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   // Malaysia wants the Hijri calendar and an Egyptian writer wants the
   // diacritizer, and filing both under a country was a categorisation error
   // as much as a discoverability one.
+  // Split out of Calculators when it reached 27 tools, 1.8x the median — the
+  // same outlier shape that split Saudi / Local at 31 and Developer at 32, and
+  // measurably the reason «حاسبة» was an 18-way tie: a BMI calculator and a VAT
+  // calculator share the word "calculator" and nothing else. Health is a
+  // subject and so is time; "calculator" is a shape.
+  Health: { en: 'Health', ar: 'صحة' },
+  'Time & Date': { en: 'Time & Date', ar: 'الوقت والتاريخ' },
   Islamic: { en: 'Islamic', ar: 'إسلاميات' },
   Arabic: { en: 'Arabic', ar: 'العربية' },
   'Saudi / Local': { en: 'Saudi / Local', ar: 'أدوات سعودية' },

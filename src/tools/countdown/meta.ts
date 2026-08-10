@@ -8,7 +8,7 @@ export const countdownTool: Tool = {
   tagline: 'Live countdown to any date and time.',
   description:
     'Set a target date and time — a deadline, launch, trip or celebration — and watch a live countdown of days, hours, minutes and seconds tick down. Your event is remembered on this device. Runs entirely in your browser.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['countdown', 'timer', 'deadline', 'event', 'date', 'days until', 'عد تنازلي', 'موعد', 'مناسبة'],
   status: 'stable',
   Icon: TimerIcon,

@@ -8,7 +8,7 @@ export const workingDaysTool: Tool = {
   tagline: 'Count business days between two dates.',
   description:
     'Count the working days between two dates, excluding the weekend — Friday–Saturday for Saudi Arabia or Saturday–Sunday elsewhere — with totals for calendar days and weekend days. Runs entirely in your browser.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['working days', 'business days', 'weekday', 'weekend', 'date range', 'أيام العمل', 'أيام الدوام', 'عطلة'],
   status: 'stable',
   Icon: CalendarCheckIcon,

@@ -191,6 +191,49 @@ leaving it is a bad trade. The combo is shown on the launcher button's title and
 as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
 not a feature.
 
+**`Calculators` reached 27, 1.8x the median, and was three subjects.**
+`node evals/catalogshape.mjs` found it — the same outlier shape that split
+`Saudi / Local` at 31 and `Developer` at 32 — and it is measurably why «حاسبة»
+is an 18-way tie: **a BMI calculator and a VAT calculator share the word
+"calculator" and nothing else.** Health is a subject and time is a subject;
+"calculator" is a shape. Split into **Health (7)** and **Time & Date (9)**,
+leaving Calculators at **11**, with all four benches unchanged.
+
+**Security went the other way on purpose, and that is the reusable judgement.**
+It is a real cross-cutting subject — 15 tools across Developer, Generators,
+Text, Files, Images and PDF — and a CATEGORY would have been wrong twice:
+moving `password-generator` out of Generators breaks the measured "a bare noun
+goes to the tool that MAKES the thing" tie ordering, and the redaction tools
+have a stronger format family, since nobody hunts for the PDF redactor anywhere
+but PDF. **A collection says "these are all privacy tools" without moving any of
+them.** So: split a category when it is several SUBJECTS; make a collection when
+the subject cuts across and each tool is already filed where people look.
+
+`Developer` is now the largest at 25, 2.1x the median, and stays that way. The
+same test was applied and gives the same answer it always has: encoding,
+data, security, scheduling, scaffolding and networking is six groups of one to
+eight, and no single principle settles it. Recorded rather than forced.
+
+**The offer was in the wrong branch, and only measuring found it.** Of 51
+queries that name a family, the scorer returns NOTHING for three — `teaching`,
+«مطور», «مطورين» — because no single tool contains the word. `CategoryOffer`
+rendered only where there were results, so **the query that most needs the
+family was the one guaranteed not to get it**: an empty page on a site with
+fourteen tools for teachers. It renders in the empty branch too now, in both
+surfaces, with a case asserting a query that matches nothing AND names nothing
+still shows nothing — without which the fix could have been "always show
+something", which is the adware move.
+
+**And the instrument was lying, which is the part worth carrying.** The first
+run of that measurement reported FOUR dead queries including «صحة» — on a site
+with seven health tools. `evals/lib/tools.mjs` kept a **hand-copied** Arabic
+category map with `AR_CATEGORY[category] ?? category`, so a new category fell
+back to the ENGLISH label and the harness indexed "Health" where the site
+indexes «صحة». It sweeps the labels out of `i18n/index.tsx` now and **throws
+rather than falling back**, because a silent fallback is what made a correct
+site look broken. Same lesson as `relatedcheck`: an unfaithful measurement
+invents defects as readily as it hides them.
+
 **And a COLLECTION is a group the category tree cannot name**
 (`lib/collections.ts`). Re-measured after the category offer shipped: **46
 single-word queries still tie three ways or wider and only NINE name a

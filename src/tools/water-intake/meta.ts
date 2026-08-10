@@ -9,7 +9,7 @@ export const waterIntakeTool: Tool = {
   tagline: 'How much water a 45°C day actually needs.',
   description:
     'Work out a day’s water from your body weight, then add what the heat, your activity and time in the sun genuinely cost you — because “eight glasses a day” describes a mild climate and says nothing useful about a Riyadh summer. It shows how the total is made up, warns when the figure gets too high to drink safely, and lays out how to fit it between iftar and suhoor while fasting.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: ['water', 'hydration', 'intake', 'daily water', 'heat', 'summer', 'ramadan', 'ماء', 'شرب الماء', 'ترطيب', 'حر', 'صيف', 'رمضان', 'صيام'],
   status: 'stable',
   Icon: CloudIcon,

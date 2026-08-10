@@ -3389,4 +3389,46 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/compare/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/compare/"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/health/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/health/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/health/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/health/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/health/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/health/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/health/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/health/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/time/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/time/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/time/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/time/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/time/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/time/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/time/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/time/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/security/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/security/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/security/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/security/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/security/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/security/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/security/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/security/"/>
+  </url>
 </urlset>

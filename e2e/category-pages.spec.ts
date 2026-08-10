@@ -114,10 +114,16 @@ test('every tool page links to its own category — rendered and prerendered', a
 test('the prerendered breadcrumb carries the category, in both locales', async () => {
   // This is the half that matters for a crawler: it is in the HTML before any
   // JavaScript runs.
+  //
+  // Both locales use a tool whose CATEGORY is not a moving target. This used to
+  // pin `due-date` to `calculators`, and broke — correctly — when Calculators
+  // was split at 27 tools and the due-date calculator went to Health. The next
+  // test checks every page generically, so this one only needs to prove the
+  // shape exists in the prerendered HTML.
   const en = readFileSync('dist/en/apps/pdf-merge/index.html', 'utf8')
   expect(en).toContain('<a href="/en/c/pdf/">')
-  const ar = readFileSync('dist/ar/apps/due-date/index.html', 'utf8')
-  expect(ar).toContain('<a href="/ar/c/calculators/">')
+  const ar = readFileSync('dist/ar/apps/pdf-merge/index.html', 'utf8')
+  expect(ar).toContain('<a href="/ar/c/pdf/">')
 })
 
 test('no prerendered tool page is missing its category link', async () => {

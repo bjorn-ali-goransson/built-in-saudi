@@ -9,7 +9,7 @@ export const dueDateTool: Tool = {
   tagline: 'When the baby is due, in both calendars.',
   description:
     'Work out an estimated due date from your last period, the date of conception, or an IVF transfer — and see how many weeks and days along you are, which trimester that is, and every date in between. It adjusts for a cycle that is not 28 days, which is the thing most due-date calculators quietly get wrong, and gives every date in the Hijri calendar as well as the Gregorian one. Nothing is sent anywhere.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: [
     'pregnancy', 'due date', 'edd', 'gestation', 'weeks pregnant', 'trimester', 'conception',
     'ivf', 'lmp', 'last period', 'baby', 'birth', 'naegele', 'hijri',

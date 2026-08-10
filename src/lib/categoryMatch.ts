@@ -47,6 +47,8 @@
  */
 const CATEGORY_TERMS: Record<string, string[]> = {
   Calculators: ['calculator', 'calc', 'maths', 'math', 'حاسبة', 'حاسبات', 'حساب', 'حاسبه'],
+  Health: ['health', 'medical', 'fitness', 'صحة', 'صحي', 'طبي', 'لياقة'],
+  'Time & Date': ['time', 'date', 'clock', 'وقت', 'زمن', 'تاريخ', 'ساعة'],
   Images: ['image', 'photo', 'picture', 'pic', 'صورة', 'صور', 'صوره'],
   PDF: ['pdf'],
   Text: ['text', 'نص', 'نصوص', 'كتابة'],
@@ -77,6 +79,7 @@ const COLLECTION_TERMS: Record<string, string[]> = {
   ramadan: ['ramadan', 'ramadhan', 'رمضان', 'رمضانية', 'صيام', 'صوم'],
   teaching: ['teacher', 'teaching', 'school', 'classroom', 'معلم', 'معلمة', 'مدرس', 'مدرسة', 'تعليم', 'فصل دراسي'],
   compare: ['compare', 'comparison', 'diff', 'difference', 'مقارنة', 'قارن', 'الفرق', 'فرق'],
+  security: ['security', 'privacy', 'secure', 'encryption', 'أمان', 'خصوصية', 'تشفير', 'حماية'],
 }
 
 /** Words that decorate a category query without changing which one it is. */

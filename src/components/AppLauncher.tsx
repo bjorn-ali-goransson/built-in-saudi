@@ -117,7 +117,13 @@ export function AppLauncher() {
                   <ToolGrid tools={results} indexOf={idx} onNavigate={close} active={active} />
                 </>
               ) : (
-                <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
+                // Also here, for the reason recorded in HomePage: a query that
+                // names a family and matches no single tool is exactly the one
+                // that needs the family offered.
+                <>
+                  <CategoryOffer query={query} onNavigate={close} />
+                  <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
+                </>
               )
             ) : (
               <>

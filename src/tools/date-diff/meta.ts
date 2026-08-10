@@ -8,7 +8,7 @@ export const dateDiffTool: Tool = {
   tagline: 'How long between two dates — years, months, days.',
   description:
     'Find the exact duration between two dates: years, months and days, plus total days and weeks. Great for ages, deadlines and durations. Runs entirely in your browser.',
-  category: 'Calculators',
+  category: 'Time & Date',
   // The whole phrase, so the query has something to match as one string. Term
   // scoring alone let "two" match noise elsewhere and the working-days
   // calculator took the query.

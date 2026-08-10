@@ -9,7 +9,7 @@ export const medicineScheduleTool: Tool = {
   tagline: 'Space your doses — including inside a fasting day.',
   description:
     'Spread doses evenly across your waking day, or — the part no other planner does — across the window between iftar and suhoor, which is about ten hours rather than twenty-four. Each dose is anchored to the nearest prayer, which is easier to remember than a clock time, and it warns when four doses simply will not fit comfortably in a fasting night.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: ['medicine', 'medication', 'dose', 'reminder', 'schedule', 'ramadan', 'fasting', 'دواء', 'جرعات', 'مواعيد', 'رمضان', 'صيام', 'تذكير'],
   status: 'stable',
   Icon: ClockIcon,

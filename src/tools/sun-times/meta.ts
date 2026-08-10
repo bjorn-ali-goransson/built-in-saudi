@@ -9,7 +9,7 @@ export const sunTimesTool: Tool = {
   tagline: 'Every light of the day, worked out properly.',
   description:
     'Sunrise, sunset, solar noon, the three twilights, and the golden and blue hours for any place and date — computed from the sun’s actual altitude rather than a rule of thumb like “an hour after sunrise”, which is wrong nearly everywhere. Shows the Hijri date and the prayer times for the same spot, and leaves a row blank rather than inventing a time the sun never reaches.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['sunrise', 'sunset', 'golden hour', 'blue hour', 'twilight', 'photography', 'solar noon', 'شروق', 'غروب', 'الساعة الذهبية', 'الشفق', 'تصوير', 'الظهيرة'],
   status: 'stable',
   Icon: SunHorizonIcon,

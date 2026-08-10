@@ -8,7 +8,7 @@ export const pomodoroTool: Tool = {
   tagline: 'Focus in 25-minute sprints with breaks.',
   description:
     'A distraction-free Pomodoro timer: work in focused sprints, take short and long breaks, and let it cycle automatically with a gentle chime and a round counter. Your custom lengths are remembered on this device. Runs entirely in your browser.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['pomodoro', 'timer', 'focus', 'productivity', 'break', 'study', 'work', 'مؤقت', 'تركيز', 'إنتاجية'],
   status: 'stable',
   Icon: TimerIcon,

@@ -1227,6 +1227,11 @@ export const collectionSeo: CategorySeo[] = [
     ar: { name: 'أدوات المعلّمين', description: 'أوراق عمل وكلمات متقاطعة واختبارات وبطاقات بينغو وبطاقات مراجعة للطباعة؛ وتدريب على الخط العربي بالأشكال المتصلة الصحيحة؛ مع مخططات الجلوس وكشوف الحضور والشهادات وأوراق الملصقات ومنتقٍ عشوائي. مجانًا، دون تسجيل، ولا يُرفع شيء.' },
   },
   {
+    slug: 'security', category: '',
+    en: { name: 'Security and privacy tools', description: 'Generate a strong password or passphrase, check whether one has leaked without sending it, hash and sign, read a JWT or an SSL certificate, encrypt a file, strip the metadata a photo carries, and black out what should not be in a document. Everything runs in your browser.' },
+    ar: { name: 'أدوات الأمان والخصوصية', description: 'أنشئ كلمة مرور أو عبارة قوية، وتحقّق من تسرّبها دون إرسالها، واحسب البصمات ووقّع الرسائل، واقرأ رمز JWT أو شهادة SSL، وشفّر ملفًا، وامسح البيانات التي تحملها الصورة، واطمس ما لا ينبغي أن يبقى في مستند. كل ذلك داخل متصفحك.' },
+  },
+  {
     slug: 'compare', category: '',
     en: { name: 'Compare two things', description: 'See what changed between two pieces of text, two JSON documents, two spreadsheets, two images or two dates — each comparison runs in your browser, so neither version is ever uploaded.' },
     ar: { name: 'قارن بين شيئين', description: 'اعرف ما تغيّر بين نصّين، أو مستندَي JSON، أو جدولَي بيانات، أو صورتين، أو تاريخين — كل مقارنة تجري داخل متصفحك، فلا تُرفع أي نسخة.' },
@@ -1258,6 +1263,16 @@ export const categorySeo: CategorySeo[] = [
     slug: 'arabic', category: 'Arabic',
     en: { name: 'Arabic language tools', description: 'Normalise hamzas and alef forms, convert between Arabic-Indic and Western digits, write numbers out in words (tafqīt), conjugate a verb, add diacritics, transliterate a name, and read Franco-Arabic.' },
     ar: { name: 'أدوات اللغة العربية', description: 'وحّد الهمزات وصور الألف، وحوّل بين الأرقام الهندية والعربية، واكتب الأرقام تفقيطًا، وصرّف فعلًا، وأضف التشكيل، واكتب الاسم بالإنجليزية، واقرأ العربيزي.' },
+  },
+  {
+    slug: 'health', category: 'Health',
+    en: { name: 'Free health calculators', description: 'Calorie and BMI needs, water intake for a 45°C summer, a blood-sugar unit converter, sleep cycles, a pregnancy due date, the fertile window, and medicine timings that fit a fasting day. Every one runs in your browser and none of it is stored.' },
+    ar: { name: 'حاسبات صحية مجانية', description: 'السعرات ومؤشر كتلة الجسم، وكمية الماء في صيفٍ بـ٤٥ درجة، ومحوّل وحدات سكر الدم، ودورات النوم، وموعد الولادة، ونافذة الخصوبة، ومواعيد الدواء التي تناسب يوم الصيام. كلها تعمل في متصفحك ولا يُحفظ منها شيء.' },
+  },
+  {
+    slug: 'time', category: 'Time & Date',
+    en: { name: 'Free time and date tools', description: 'Work out an age, the days between two dates, working days around the Saudi weekend and holidays, a timesheet with overtime, sunrise and golden hour, a time-zone planner, plus a stopwatch, timer and Pomodoro. Free, no sign-up, all in your browser.' },
+    ar: { name: 'أدوات الوقت والتاريخ مجانًا', description: 'احسب العمر، والمدة بين تاريخين، وأيام العمل حول نهاية الأسبوع والإجازات السعودية، وجدول ساعات العمل مع الإضافي، والشروق والساعة الذهبية، ومخطط المناطق الزمنية، مع ساعة إيقاف ومؤقّت وبومودورو. مجانًا دون تسجيل وداخل متصفحك.' },
   },
   {
     slug: 'calculators', category: 'Calculators',

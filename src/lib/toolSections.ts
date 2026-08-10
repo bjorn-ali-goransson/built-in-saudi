@@ -8,7 +8,7 @@ import { categoryLabel, type Locale } from '../i18n'
 // across the tools' own `category`; the rest fall back to their category order.
 const RECOMMENDED = ['ats-cv-optimizer', 'book-me', 'calls', 'qr-code', 'prayer-times', 'islamic-calendar', 'qibla']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
-const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Text', 'Converters', 'Calculators',
+const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Text', 'Converters', 'Calculators', 'Health', 'Time & Date',
   'Images', 'PDF', 'Files', 'Developer', 'Web', 'Generators', 'Design', 'Business', 'Communication']
 
 export interface ToolSection {

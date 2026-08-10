@@ -9,7 +9,7 @@ export const sleepCycleTool: Tool = {
   tagline: 'When to sleep so you wake between cycles — not mid-dream.',
   description:
     'Work backwards from when you need to be up, or forwards from now, to the times that land at the end of a ~90-minute sleep cycle rather than in the middle of deep sleep. It allows for the quarter-hour it takes to fall asleep, shows Fajr so you can see which options are before it, and marks the last third of the night for anyone praying qiyām.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: ['sleep', 'cycle', 'bedtime', 'wake up', 'alarm', '90 minutes', 'qiyam', 'نوم', 'دورات النوم', 'موعد النوم', 'استيقاظ', 'قيام الليل', 'الفجر'],
   status: 'stable',
   Icon: MoonIcon,

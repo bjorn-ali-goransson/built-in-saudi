@@ -9,7 +9,7 @@ export const calorieNeedsTool: Tool = {
   tagline: 'Your daily burn, target and a sane macro split.',
   description:
     'Work out how much you actually burn in a day and what to eat for your goal — resting burn, total daily burn, a calorie target for losing, holding or gaining, and a reasonable protein/carb/fat split. It also gives your BMI and the healthy weight range for your height. Uses the Mifflin-St Jeor equation, which measures closest to reality; older calculators still use Harris-Benedict and read high.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: ['calorie', 'tdee', 'bmr', 'bmi', 'macros', 'deficit', 'weight', 'diet', 'سعرات', 'حرق', 'وزن', 'مؤشر كتلة', 'حمية', 'بروتين'],
   status: 'stable',
   Icon: CalcIcon,

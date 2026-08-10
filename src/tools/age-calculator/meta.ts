@@ -8,7 +8,7 @@ export const ageCalculatorTool: Tool = {
   tagline: 'Your exact age, and the countdown to your next birthday.',
   description:
     'Enter a birth date to see the exact age in years, months and days, the totals in months, weeks and days, the weekday you were born on, and a countdown to the next birthday. Runs entirely in your browser.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: ['age', 'birthday', 'date', 'how old', 'years', 'countdown', 'عمر', 'ميلاد', 'حساب العمر'],
   status: 'stable',
   Icon: CakeIcon,

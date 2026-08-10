@@ -9,7 +9,7 @@ export const glucoseUnitsTool: Tool = {
   tagline: 'mg/dL ↔ mmol/L, and HbA1c both ways.',
   description:
     'Convert a blood glucose reading between mg/dL and mmol/L, and HbA1c between % and mmol/mol, with the estimated average glucose that goes with it. Saudi labs and meters report mg/dL while most research and European results use mmol/L, and the factor between them is 18 — worth getting right. It also says where a reading falls, and flags one low or high enough to need acting on now.',
-  category: 'Calculators',
+  category: 'Health',
   keywords: ['blood sugar', 'glucose', 'mg/dl', 'mmol/l', 'hba1c', 'a1c', 'diabetes', 'convert', 'سكر الدم', 'تحويل', 'السكر التراكمي', 'سكري', 'قراءة'],
   status: 'stable',
   Icon: ExchangeIcon,

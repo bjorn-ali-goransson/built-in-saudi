@@ -24,11 +24,38 @@ const dirs = readdirSync(`${ROOT}/src/tools`).filter(
 )
 // Mirrors CATEGORY_LABELS in src/i18n/index.tsx — the UI scores against the
 // localized label as well as the English one.
-const AR_CATEGORY = {
-  Generators: 'مولّدات', Images: 'صور', Design: 'تصميم', Converters: 'محوّلات',
-  Developer: 'أدوات المطوّرين', Web: 'الويب', Text: 'نصوص', Calculators: 'حاسبات',
-  PDF: 'PDF', Business: 'أعمال', Communication: 'تواصل', Files: 'ملفات',
-  Utilities: 'أدوات', 'Saudi / Local': 'أدوات سعودية', Islamic: 'إسلاميات', Arabic: 'العربية',
+// SWEPT out of `src/i18n/index.tsx`, not copied.
+//
+// It WAS a hand-written copy, and it drifted the moment two categories were
+// added: `AR_CATEGORY[category] ?? category` falls back to the ENGLISH label, so
+// the harness indexed "Health" where the site indexes «صحة» — and duly reported
+// «صحة» as a query returning nothing on a site with seven health tools. That is
+// the `relatedcheck` lesson in a new place: an unfaithful measurement invents
+// defects as readily as it hides them.
+//
+// `index.tsx` imports React, so it cannot be imported here; the labels are read
+// out of its source instead. A regex over source is a guess, so the guess is
+// CHECKED below rather than trusted.
+const LABELS_SRC = readFileSync(`${ROOT}/src/i18n/index.tsx`, 'utf8')
+const AR_CATEGORY = Object.fromEntries(
+  [...LABELS_SRC.matchAll(/^\s*'?([A-Za-z][\w &/]*?)'?: \{ en: '[^']*', ar: '([^']*)' \},$/gm)]
+    .map((m) => [m[1].trim(), m[2]]),
+)
+if (Object.keys(AR_CATEGORY).length < 10) {
+  throw new Error('evals/lib/tools.mjs: swept no category labels out of i18n/index.tsx')
+}
+
+/** The Arabic label, or a loud failure — never a silent English fallback. */
+function arCategory(category) {
+  const ar = AR_CATEGORY[category]
+  if (!ar) {
+    throw new Error(
+      `evals/lib/tools.mjs: no Arabic label for category '${category}'. `
+      + 'Add it to CATEGORY_LABELS in src/i18n/index.tsx — until then every '
+      + 'Arabic measurement over these tools is wrong.',
+    )
+  }
+  return ar
 }
 
 const tools = []
@@ -60,7 +87,7 @@ for (const d of dirs) {
     // absent from the index: حاسبة النسبة ranked its own calculator SEVENTH.
     nameAr: arPick('name') || pick('nameAr'),
     tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
-    category: `${AR_CATEGORY[category] ?? category} ${category}`.trim(),
+    category: `${arCategory(category)} ${category}`.trim(),
     keywords,
   })
 }

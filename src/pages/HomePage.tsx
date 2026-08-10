@@ -98,7 +98,22 @@ export function HomePage() {
             <ToolGrid tools={results} indexOf={idx} active={active} />
           </>
         ) : (
-          <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
+          // The offer belongs HERE most of all, and for a while it was only in
+          // the branch above. Measured over 51 queries that name a family, the
+          // scorer returns NOTHING for three — `teaching`, «مطور», «مطورين» —
+          // because no single tool contains the word. So the query that most
+          // needs the family was the one guaranteed not to get it: an empty
+          // page on a site with fourteen tools for teachers.
+          //
+          // The first version of this note said «صحة» was among them. It was
+          // not — the EVAL HARNESS had a hand-copied Arabic category map that
+          // fell back to English for a new category, so it indexed "Health"
+          // where the site indexes «صحة». The map is swept out of the source
+          // now and throws rather than falling back.
+          <>
+            <CategoryOffer query={query} />
+            <p className="py-10 text-ink-soft text-[1.05rem]">{t.catalog.empty(query)}</p>
+          </>
         )
       ) : (
         <>

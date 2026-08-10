@@ -51,6 +51,22 @@ export const COLLECTIONS: Collection[] = [
     ],
   },
   {
+    // Cuts across Developer, Generators, Text, Files, Images and PDF. A
+    // CATEGORY was the obvious move and would have been wrong twice over:
+    // moving `password-generator` out of Generators breaks the measured
+    // "a bare noun goes to the tool that MAKES the thing" tie ordering, and
+    // the redaction tools have a stronger format family — nobody hunts for
+    // the PDF redactor anywhere but PDF. A collection says "these are all
+    // privacy tools" without moving any of them.
+    slug: 'security',
+    toolIds: [
+      'password-generator', 'password-strength', 'passphrase', 'totp',
+      'file-encrypt', 'hash-generator', 'hmac', 'jwt-decoder', 'cert-decoder',
+      'email-headers', 'data-anonymize', 'metadata-remove', 'image-redact',
+      'pdf-redact', 'steganography',
+    ],
+  },
+  {
     slug: 'compare',
     toolIds: ['text-diff', 'json-diff', 'sheet-diff', 'image-diff', 'date-diff'],
   },

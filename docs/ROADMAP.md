@@ -1583,3 +1583,24 @@ Two negative findings and one guard; no tool shipped, deliberately.
   - Unreferenced exports remain: `disposeImageDecoder`, `cvApi.refineCv`,
     `dms.threadWith`/`countsByContact`, `contacts.hasContact`,
     `voiceNotes.delVoiceBlob`, `book-with-me/lib.enumerateDaySlots`.
+
+### Discoverability, 10 August 2026 (third pass) — the catalogue's shape again
+
+`evals/catalogshape.mjs` had not been run in a while and found Calculators at
+27, 1.8x the median. Split into Health (7) and Time & Date (9); Calculators 11.
+A security COLLECTION rather than a category, because each of its 15 tools is
+already filed where people hunt for it.
+
+- **Developer stays at 25 (2.1x the median), deliberately.** Encoding, data,
+  security, scheduling, scaffolding and networking is six groups of one to
+  eight; no single principle settles it, and six thin sections are worse than
+  one thick one. Re-tested this pass and the answer has not changed.
+- **Business is the smallest at 3** and is coherent; left alone.
+- **Fixed on the way:** `evals/lib/tools.mjs` kept a hand-copied Arabic category
+  map that fell back to the English label, so every Arabic measurement over a
+  newly added category was wrong. It sweeps the labels out of the source now and
+  throws rather than falling back.
+- **Still open:** 30 of 46 wide ties have no group to offer. The remaining
+  families (`تصدير`, `مستند`, `مسح`, `remove`, `audio`, `video`, `meeting`) are
+  real but thin; four words (`حر`, `نسخ`, `مشاركة`, `تحليل`) are genuinely
+  ambiguous and no grouping fixes them.

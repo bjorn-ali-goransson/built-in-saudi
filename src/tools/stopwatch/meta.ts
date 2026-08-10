@@ -9,7 +9,7 @@ export const stopwatchTool: Tool = {
   tagline: 'Counts up, counts down, keeps time.',
   description:
     'A stopwatch with laps and a countdown timer with an alarm, in one place. Both take their time from the clock rather than by counting ticks, so switching tabs, locking the phone or leaving it in the background does not lose the minutes in between — which is what usually goes wrong with a timer in a browser. The countdown tool here is for a date months away and the pomodoro for fixed sprints; this is the everyday one.',
-  category: 'Calculators',
+  category: 'Time & Date',
   keywords: [
     'stopwatch', 'timer', 'countdown timer', 'lap', 'splits', 'egg timer', 'minutes', 'seconds', 'chronometer', 'time something', 'alarm',
     'ساعة إيقاف', 'مؤقت', 'مؤقّت', 'عد تنازلي', 'لفة', 'توقيت', 'دقائق', 'ثواني', 'منبه',
