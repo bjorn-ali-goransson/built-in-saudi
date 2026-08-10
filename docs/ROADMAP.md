@@ -1563,3 +1563,23 @@ Two negative findings and one guard; no tool shipped, deliberately.
   years, and Article 14(1) at 33.33% of gross salary (25% of a pension) — figures
   a future Murabaha/Ijara tool would need, recorded so the research is not lost
   with the tool that should not have used it.
+
+### Code sweep, 10 August 2026 (twenty-third pass)
+
+- ~~**`buildIcs` is single-event, so the dated tools cannot export.**~~ **Done.**
+  It had one caller against six tools that compute a date worth a reminder.
+  Moved to `src/lib/ics.ts`, gained `buildIcsCalendar`, and wired into
+  `id-expiry`, `vehicle-renewal` and `saudi-holidays`.
+- **Still open, in rough order of value:**
+  - `medicine-schedule`, `due-date`, `ovulation` and `exit-reentry` also compute
+    dates and could export now that the writer is general. Not done here because
+    each needs its own judgement about what the reminder should SAY, and a
+    calendar entry that says the wrong thing about medication is worse than none.
+  - A "create a ZIP" tool, now that `zip.ts` compresses. It completes the pair
+    with `archive-inspector`, which reads and extracts and has no counterpart,
+    and there is an honest angle: a ZIP password is not encryption, and
+    `file-encrypt` is the tool that actually is.
+  - Six pdf-lib tools still bypass `PdfOps`.
+  - Unreferenced exports remain: `disposeImageDecoder`, `cvApi.refineCv`,
+    `dms.threadWith`/`countsByContact`, `contacts.hasContact`,
+    `voiceNotes.delVoiceBlob`, `book-with-me/lib.enumerateDaySlots`.

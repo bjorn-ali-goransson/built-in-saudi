@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Stack, Panel, Seg, SegButton, Disclaimer } from '../../components/ui'
+import { DownloadIcon } from '../../components/icons'
+import { buildIcsCalendar, downloadIcs } from '../../lib/ics'
 import { formatHijri, gregorianToHijri } from '../prayer-times/islamic'
 import {
   holidaysIn, nextHoliday, totalDays, daysBetween, ramadanLength, startOfDay,
@@ -46,6 +48,9 @@ const STR = {
     sectorTitle: 'This is the private-sector minimum',
     sectorBody: 'Article 112 sets the floor a contract cannot go below. The public sector is usually given longer Eid breaks by a separate announcement, and an employer may always give more.',
     caveat: 'These are the statutory holidays computed from the Umm al-Qura calendar. The exact dates of each Eid break are announced by the authorities each year and can differ by a day from the calculated date; a longer break may be granted. Check with the Ministry of Human Resources and Social Development, and with your employer, before making travel plans on this.',
+    ics: 'Add this year to your calendar',
+    icsNote: 'One all-day entry per holiday, with the Eid breaks spanning their four days. Built here and downloaded — nothing is sent, and no calendar is connected. Re-exporting updates the same entries rather than duplicating them.',
+    icsDesc: 'Statutory holiday under Article 112. The exact Eid dates are announced each year and can differ by a day.',
     workingDays: 'Counting working days around them: Working Days calculator',
     calendar: 'The full Hijri calendar: Islamic Calendar',
     year: 'Year',
@@ -73,6 +78,9 @@ const STR = {
     sectorTitle: 'هذا هو الحد الأدنى للقطاع الخاص',
     sectorBody: 'تضع المادة ١١٢ الحد الذي لا ينزل العقد دونه. والقطاع الحكومي تُمنح له عادةً إجازات عيد أطول بإعلان منفصل، وللمنشأة أن تزيد دائمًا.',
     caveat: 'هذه الإجازات النظامية محسوبة من تقويم أم القرى. وتواريخ إجازتَي العيد تُعلنها الجهات المختصة كل سنة وقد تختلف بيوم عن التاريخ المحسوب، وقد تُمنح إجازة أطول. راجع وزارة الموارد البشرية والتنمية الاجتماعية وجهة عملك قبل حجز سفر بناءً على هذا.',
+    ics: 'أضف سنة كاملة إلى تقويمك',
+    icsNote: 'موعد ليوم كامل لكل إجازة، وإجازتا العيد تمتدّان أربعة أيام. يُبنى هنا ويُنزَّل — ولا يُرسل شيء، ولا يُربط أي تقويم. وإعادة التصدير تحدّث المواعيد نفسها بدل تكرارها.',
+    icsDesc: 'إجازة نظامية بموجب المادة ١١٢. وتواريخ العيد الدقيقة تُعلن كل سنة وقد تختلف بيوم.',
     workingDays: 'لحساب أيام العمل حولها: حاسبة أيام العمل',
     calendar: 'التقويم الهجري كاملًا: التقويم الهجري',
     year: 'السنة',
@@ -100,6 +108,21 @@ export default function SaudiHolidaysTool() {
 
   const away = next ? daysBetween(today, next.start) : 0
   const left = next ? next.days - daysBetween(next.start, today) : 0
+
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  function exportIcs() {
+    const text = buildIcsCalendar('saudi-holidays', list.map((h) => ({
+      summary: names[h.key],
+      date: iso(h.start),
+      // The LAST day, inclusive — `buildIcsCalendar` converts to the exclusive
+      // DTEND a DATE value needs, which is where an all-day range usually
+      // comes out a day short.
+      endDate: iso(new Date(h.start.getFullYear(), h.start.getMonth(), h.start.getDate() + h.days - 1)),
+      description: s.icsDesc,
+    })))
+    downloadIcs(`saudi-holidays-${year}`, text)
+  }
 
   const span = (h: Holiday) => {
     const end = new Date(h.start.getFullYear(), h.start.getMonth(), h.start.getDate() + h.days - 1)
@@ -180,9 +203,14 @@ export default function SaudiHolidaysTool() {
       </Panel>
 
       <div className="flex flex-wrap gap-2">
+        <Button variant="primary" className="px-3 py-1" onClick={exportIcs} data-testid="sh-ics">
+          <DownloadIcon /> {s.ics}
+        </Button>
         <Button className="px-3 py-1" to={localePath(locale, '/apps/working-days')} data-testid="sh-working-days">{s.workingDays}</Button>
         <Button className="px-3 py-1" to={localePath(locale, '/apps/islamic-calendar')} data-testid="sh-calendar">{s.calendar}</Button>
       </div>
+
+      <p className="text-[0.82rem] text-ink-faint rtl:font-ar" data-testid="sh-ics-note">{s.icsNote}</p>
 
       <Disclaimer kind="official" locale={locale}>{s.caveat}</Disclaimer>
     </Stack>

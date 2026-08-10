@@ -925,6 +925,43 @@ header cells come back **bold**, because the writer bolds them and mammoth
 preserves it; the first version expected plain text and reported a failure that
 was the test's mistake, not the code's.
 
+## The calendar writer served one tool (`lib/ics.ts`)
+
+A code sweep with a number attached: **`buildIcs` had exactly one caller — the
+calendar builder itself — while at least six tools compute a date somebody
+needs reminding of.** A writer used by the calendar tool and by nothing else is
+the shape of a capability nobody noticed was general. It moved to `src/lib/`
+and gained `buildIcsCalendar`, and three tools now export:
+
+- **`id-expiry`** tracked expiry dates and could not put them anywhere. Each
+  document's alarm uses **the lead time the tool already publishes for that
+  document type** — 60 days for an iqama, 180 for a passport — because a
+  reminder on the day it expires is not a reminder.
+- **`vehicle-renewal`** exports three dates, and the one that earns it is
+  **the day the renewal window opens**: it opens 180 days before expiry and
+  nobody has a reminder for that.
+- **`saudi-holidays`** exports the year, with the Eid breaks spanning their
+  four days.
+
+Three traps, all in the bytes and all covered:
+
+- **DTEND is EXCLUSIVE for a DATE value**, so an all-day range must end the day
+  AFTER the last one. Verified to fail: making it inclusive turns the four-day
+  Eid break into three.
+- **Every VEVENT needs its OWN uid.** One uid across the file makes a calendar
+  treat them as the same event and keep only the last — a twelve-event file
+  imports as one. Verified to fail.
+- **But the uid must be STABLE across exports**, derived from the event's own
+  content. A fresh random uid each time means exporting the holidays, importing
+  them, then exporting again next month gives you every holiday twice. The spec
+  asserts two exports match AND that a different year does not, so a constant
+  would not pass either.
+
+`buildIcs` is deliberately left alone rather than generalised: it carries times,
+repeats, a location and an organizer, none of which a list of dated facts has,
+and bending one function into both would give every caller the other's
+parameters.
+
 ## The ZIP writer learned to compress (`lib/zip.ts`)
 
 Found by a CODE SWEEP: `unzip.ts` already read DEFLATE with

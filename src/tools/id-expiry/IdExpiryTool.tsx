@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Button, Disclaimer, Input, Panel, Select, Stack } from '../../components/ui'
-import { TrashIcon, CalendarIcon } from '../../components/icons'
+import { TrashIcon, CalendarIcon, DownloadIcon } from '../../components/icons'
+import { buildIcsCalendar, downloadIcs } from '../../lib/ics'
 import { HIJRI_MONTHS } from '../prayer-times/islamic'
 import {
   load, save, daysLeft, status, STATUS_TONE, KINDS, KIND_LABEL, LEAD_DAYS,
@@ -22,6 +23,10 @@ const STR = {
     privacy: 'Everything here is stored in this browser only. Nothing is uploaded, and there is no account.',
     notAdvice: 'A late renewal can carry a fine, and the official record is the one that counts — check Absher or Muqeem, not this.',
     heading: 'What you are tracking',
+    ics: 'Add these to your calendar',
+    icsNote: 'A file with one all-day entry per document, each with a reminder set for the lead time above. The file is built here and downloaded — nothing is sent anywhere, and no calendar is connected.',
+    icsSummary: (label: string) => `${label} expires`,
+    icsDesc: (n: number) => `Renew from about ${n} days before. Check Absher or Muqeem for the official record.`,
   },
   ar: {
     add: 'أضف مستندًا', kind: 'النوع', label: 'وسم (اختياري)', labelPh: 'مثال: خاصتي، ابني',
@@ -35,6 +40,10 @@ const STR = {
     privacy: 'كل ما هنا محفوظ في هذا المتصفح فقط. لا يُرفع شيء، ولا يوجد حساب.',
     notAdvice: 'قد يترتّب على التأخير في التجديد غرامة، والسجل الرسمي هو المعتبر — تحقّق من أبشر أو مقيم لا من هذه الأداة.',
     heading: 'ما تتابعه',
+    ics: 'أضفها إلى تقويمك',
+    icsNote: 'ملف فيه موعد ليوم كامل لكل مستند، مع تذكير قبل المدة المذكورة أعلاه. يُبنى الملف هنا ويُنزَّل — ولا يُرسل شيء، ولا يُربط أي تقويم.',
+    icsSummary: (label: string) => `ينتهي ${label}`,
+    icsDesc: (n: number) => `يُستحسن التجديد قبل نحو ${n.toLocaleString('ar')} يومًا. والسجل الرسمي في أبشر أو مقيم.`,
   },
 }
 
@@ -66,6 +75,18 @@ export default function IdExpiryTool() {
     if (!expiry) return
     setDocs((d) => [...d, { id: newId(), kind, label: label.trim(), expiry, calendar }])
     setLabel('')
+  }
+
+  function exportIcs() {
+    const text = buildIcsCalendar('id-expiry', sorted.map((d) => ({
+      summary: s.icsSummary(d.label || KIND_LABEL[d.kind][locale]),
+      date: d.expiry,
+      description: s.icsDesc(LEAD_DAYS[d.kind]),
+      // The lead time this tool already publishes per document type, which is
+      // the whole point: a reminder on the day it expires is not a reminder.
+      alarmDays: LEAD_DAYS[d.kind],
+    })))
+    downloadIcs('document-expiry', text)
   }
 
   return (
@@ -156,6 +177,13 @@ export default function IdExpiryTool() {
               )
             })}
           </div>
+
+          {/* The tool tracked the dates and could not put them anywhere. The
+              lead time it already computes per document IS the reminder. */}
+          <Button className="self-start px-3 py-1 mt-1" onClick={exportIcs} data-testid="exp-ics">
+            <DownloadIcon /> {s.ics}
+          </Button>
+          <p className="text-[0.82rem] text-ink-faint rtl:font-ar" data-testid="exp-ics-note">{s.icsNote}</p>
         </section>
       )}
 

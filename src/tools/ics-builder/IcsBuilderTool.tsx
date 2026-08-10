@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Button, Input, Textarea, Select, Field, Check, Stack, Panel, Seg, SegButton, CodeOut } from '../../components/ui'
 import { CopyIcon, DownloadIcon } from '../../components/icons'
-import { DEFAULTS, buildIcs, parseIcs, type EventInput, type Repeat } from './ics'
+import { DEFAULTS, buildIcs, parseIcs, type EventInput, type Repeat } from '../../lib/ics'
 
 const STR = {
   en: {

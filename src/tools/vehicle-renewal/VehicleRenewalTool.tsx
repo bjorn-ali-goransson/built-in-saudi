@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Field, Input, Stack, Panel, Seg, SegButton, Disclaimer } from '../../components/ui'
+import { Button, Field, Input, Stack, Panel, Seg, SegButton, Disclaimer } from '../../components/ui'
+import { DownloadIcon } from '../../components/icons'
+import { buildIcsCalendar, downloadIcs } from '../../lib/ics'
 import { nextInspection, registrationStatus, blockedByInspection, EXEMPT_YEARS, RENEWAL_WINDOW_DAYS, type VehicleKind } from './vehicle'
 
 const STR = {
@@ -11,6 +13,12 @@ const STR = {
     expiry: 'Registration expires', expiryHint: 'From the istimara. If yours shows a Hijri date, the Hijri equivalent is shown beside each result.',
     last: 'Last inspection', lastHint: 'Leave blank if it has never been inspected — a certificate is valid a year from the day it was passed, so this is what sets the next one.',
     never: 'No inspection on record, and the exemption has ended — so one is due.',
+    ics: 'Add these dates to your calendar',
+    icsNote: 'Three all-day entries — the inspection due date, the day the renewal window opens, and the registration expiry — each with a reminder a fortnight ahead. Built here and downloaded; nothing is sent anywhere.',
+    icsInspection: 'Vehicle inspection (Fahes) due',
+    icsOpens: 'Vehicle registration renewal opens',
+    icsExpires: 'Vehicle registration (istimara) expires',
+    icsDesc: 'A valid inspection is required to renew, so an overdue Fahes blocks the renewal. Check Absher for the official record.',
     inspection: 'Periodic inspection (Fahes)',
     registration: 'Registration (istimara)',
     exemptUntil: 'Exempt until',
@@ -34,6 +42,12 @@ const STR = {
     expiry: 'انتهاء الاستمارة', expiryHint: 'من الاستمارة. وإن كان تاريخك هجريًا فالمقابل الهجري معروض بجانب كل نتيجة.',
     last: 'آخر فحص', lastHint: 'اتركه فارغًا إن لم تُفحص المركبة قط — فشهادة الفحص سارية سنة من يوم اجتيازه، وهي التي تحدد الموعد التالي.',
     never: 'لا فحص مسجّل وقد انتهى الإعفاء — فالفحص مستحق.',
+    ics: 'أضف هذه المواعيد إلى تقويمك',
+    icsNote: 'ثلاثة مواعيد ليوم كامل — موعد الفحص، ويوم فتح نافذة التجديد، وانتهاء الاستمارة — مع تذكير قبل أسبوعين. يُبنى هنا ويُنزَّل، ولا يُرسل شيء.',
+    icsInspection: 'موعد الفحص الدوري (فحص)',
+    icsOpens: 'تفتح نافذة تجديد الاستمارة',
+    icsExpires: 'تنتهي الاستمارة',
+    icsDesc: 'الفحص الساري شرط للتجديد، فالفحص المتأخر يمنع التجديد. والسجل الرسمي في أبشر.',
     inspection: 'الفحص الدوري',
     registration: 'الاستمارة',
     exemptUntil: 'معفاة حتى',
@@ -79,6 +93,19 @@ export default function VehicleRenewalTool() {
   )
   const reg = useMemo(() => (valid ? registrationStatus(expiryDate, today) : null), [expiryDate, today, valid])
   const blocked = insp && reg ? blockedByInspection(insp, reg) : false
+
+  function exportIcs() {
+    if (!insp || !reg) return
+    // A fortnight, because all three of these are things you act on before the
+    // day rather than on it — and the registration one exists precisely because
+    // the window opens 180 days early and nobody has a reminder for that.
+    const LEAD = 14
+    downloadIcs('vehicle-renewal', buildIcsCalendar('vehicle-renewal', [
+      { summary: s.icsInspection, date: iso(insp.due), description: s.icsDesc, alarmDays: LEAD },
+      { summary: s.icsOpens, date: iso(reg.opens), description: s.icsDesc, alarmDays: LEAD },
+      { summary: s.icsExpires, date: iso(reg.expires), description: s.icsDesc, alarmDays: LEAD },
+    ]))
+  }
 
   return (
     <Stack data-testid="vehicle-renewal">
@@ -146,6 +173,15 @@ export default function VehicleRenewalTool() {
             <p className="text-[0.82rem] text-ink-faint rtl:font-ar">{s.windowBody}</p>
           </Panel>
         </div>
+      )}
+
+      {insp && reg && (
+        <>
+          <Button variant="primary" className="self-start px-3 py-1" onClick={exportIcs} data-testid="vh-ics">
+            <DownloadIcon /> {s.ics}
+          </Button>
+          <p className="text-[0.82rem] text-ink-faint rtl:font-ar" data-testid="vh-ics-note">{s.icsNote}</p>
+        </>
       )}
 
       <Panel className="gap-1">

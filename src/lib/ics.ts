@@ -1,5 +1,11 @@
 // Building and reading .ics calendar files (RFC 5545).
 //
+// Moved out of `tools/ics-builder/` by a code sweep that measured the obvious:
+// **`buildIcs` had exactly one caller while at least six tools compute a date
+// somebody needs reminding of** — the two Saudi expiry tools most of all, where
+// missing the date costs money. A calendar writer used by the calendar tool and
+// by nothing else is the shape of a capability nobody noticed was general.
+//
 // We already hand-write ICS on the server for Book Me, and the format is small
 // enough that a dependency would be silly. But it has three rules that naive
 // generators skip, and each one produces a file that looks fine in the browser
@@ -224,4 +230,108 @@ export function parseIcs(text: string): ParsedEvent[] {
     else if (key === 'DTEND') cur.end = parseStamp(value, params).date
   }
   return events
+}
+
+// --- a calendar of several events -------------------------------------------
+
+export interface CalEvent {
+  summary: string
+  /** Local wall-clock "YYYY-MM-DD". All-day, always: these are dated things,
+   *  not appointments, and a time would be an invention. */
+  date: string
+  /** The LAST day, inclusive. Omit for a one-day event. */
+  endDate?: string
+  description?: string
+  /** Whole days before the start to raise a reminder; 0 for none. */
+  alarmDays?: number
+}
+
+/**
+ * A stable id for an event, derived from its own content.
+ *
+ * **A random UID per export is the classic multi-event bug**, and it is silent:
+ * export the holidays, import them, export again next month and import that
+ * too, and every holiday is in the calendar twice. Deriving the id from the
+ * content means the second import UPDATES the first, which is what a person
+ * re-exporting a list actually wants.
+ *
+ * The mirror mistake is worse and just as easy: reusing ONE uid across the
+ * whole file. A calendar then treats every VEVENT as the same event and keeps
+ * only the last, so a twelve-event file imports as one.
+ */
+function stableUid(namespace: string, ev: CalEvent): string {
+  const key = `${namespace}|${ev.date}|${ev.endDate ?? ''}|${ev.summary}`
+  let h1 = 0x811c9dc5
+  let h2 = 0x01000193
+  for (let i = 0; i < key.length; i++) {
+    h1 = Math.imul(h1 ^ key.charCodeAt(i), 0x01000193) >>> 0
+    h2 = Math.imul(h2 + key.charCodeAt(i), 0x85ebca6b) >>> 0
+  }
+  return `${h1.toString(16)}${h2.toString(16)}@built-in-saudi.com`
+}
+
+const ymd = (s: string) => stampDate(s)
+
+/** The day AFTER the last one — DTEND is exclusive for a DATE value. */
+function exclusiveEnd(last: string): string {
+  const d = new Date(`${last}T00:00:00`)
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`
+}
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/**
+ * Several all-day events in one calendar file.
+ *
+ * `buildIcs` writes ONE event from the builder tool's own shape and is left
+ * alone: it carries times, repeats, a location and an organizer, none of which
+ * a list of dated facts has. Two functions, because bending one into both
+ * would give every caller the other's parameters.
+ */
+export function buildIcsCalendar(namespace: string, events: CalEvent[], now = new Date()): string {
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    `PRODID:-//Built in Saudi//${namespace}//EN`,
+    'CALSCALE:GREGORIAN',
+    // Without this, several calendars import an all-day series as busy time.
+    'METHOD:PUBLISH',
+  ]
+  for (const ev of events) {
+    if (!ev.date) continue
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${stableUid(namespace, ev)}`,
+      `DTSTAMP:${stampUtc(now)}`,
+      `DTSTART;VALUE=DATE:${ymd(ev.date)}`,
+      `DTEND;VALUE=DATE:${exclusiveEnd(ev.endDate || ev.date)}`,
+      `SUMMARY:${escapeText(ev.summary)}`,
+    )
+    if (ev.description) lines.push(`DESCRIPTION:${escapeText(ev.description)}`)
+    lines.push('TRANSP:TRANSPARENT', 'STATUS:CONFIRMED')
+    if (ev.alarmDays && ev.alarmDays > 0) {
+      lines.push(
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escapeText(ev.summary)}`,
+        // Days, not minutes: a reminder "10080 minutes before" is the same
+        // instant and unreadable in every calendar's own UI.
+        `TRIGGER:-P${Math.round(ev.alarmDays)}D`,
+        'END:VALARM',
+      )
+    }
+    lines.push('END:VEVENT')
+  }
+  lines.push('END:VCALENDAR')
+  return lines.map(fold).join('\r\n') + '\r\n'
+}
+
+/** Hand the file to the browser as a download. */
+export function downloadIcs(filename: string, text: string): void {
+  const blob = new Blob([text], { type: 'text/calendar;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename.endsWith('.ics') ? filename : `${filename}.ics`
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
