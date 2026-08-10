@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'print-size',
+    en: { name: 'Photo Print Size', description: 'How large a photo can be printed at A4, A3 or any size before the pixel grid shows — read from the picture itself and worked out for your real viewing distance. Free, and nothing is uploaded.' },
+    ar: { name: 'مقاس الطباعة', description: 'إلى أي مقاس تُطبع الصورة على A4 أو A3 أو غيره قبل أن تظهر شبكة البكسلات — محسوبًا من الصورة نفسها وللمسافة التي تنظر منها فعلًا. مجانًا، ولا يُرفع شيء.' },
+  },
+  {
     id: 'markdown-html',
     en: { name: 'Markdown to HTML', description: 'Turn Markdown into HTML — a fragment for a CMS or a standalone file with its own stylesheet, heading anchors, and both dir and lang set for Arabic. Raw HTML is escaped rather than passed through. Free, in your browser.' },
     ar: { name: 'ماركداون إلى HTML', description: 'حوّل ماركداون إلى HTML — مقطعًا لنظام إدارة محتوى أو ملفًا مستقلًا بتنسيقه، مع معرّفات للعناوين وضبط dir وlang معًا للعربية. وتُهرَّب الوسوم الخام بدل تمريرها. مجانًا داخل متصفحك.' },

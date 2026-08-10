@@ -913,6 +913,57 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
+## "300 DPI" is arm's length, not a law (`print-size`)
+
+Found by diffing a second large catalogue against ours. The gap is not the
+arithmetic — every site has a print-size calculator — it is that **all of them
+print 300 DPI as though it were a law of printing, and make you type the pixel
+dimensions yourself.**
+
+**It is one arcminute of human acuity at arm's length**, and the tool derives it
+rather than repeating it: a 20/20 eye resolves ~1 arcminute, there are **3438
+arcminutes in a radian**, so the density that just saturates the eye is
+`3438 / distance-in-inches`. At 11.46 inches — how you hold a photograph — that
+is **300.1**. Corroborated across two sources before being encoded, and checkable
+by running it.
+
+The payoff is what happens when you step back. Measured:
+
+| viewing distance | PPI needed |
+|---|---|
+| 25 cm | 349 |
+| 30 cm | 291 |
+| 1 m | 87 |
+| **2 m** | **44** |
+
+A 12 MP phone photo is "too small" for a 60 cm print at 300 PPI and prints
+**2.3 metres wide** at the density a wall needs. That is the difference between
+"your photo is too small" and "your photo is fine", and no incumbent can say it
+because the 300 is hard-coded.
+
+Two more decisions: **the pixel count is read from the picture** (including
+HEIC), because every incumbent makes you look it up; and the printed size keeps
+the image's own proportions and **reports the leftover margin** rather than
+silently stretching or cropping.
+
+**It is in `NOT_A_RULE`, and that is a decision.** `check-saudi-beta` fired
+because the module carries a SOURCES block — correctly, it is doing its job. But
+beta means a figure can go stale WITHOUT anyone touching the code: a pension rate
+steps every July. Geometry does not, and neither does the resolving power of an
+eye.
+
+**Three of my own assertions were wrong, which is worth recording:** A2 is FOUR
+times the area of A4 (two doublings), so the linear ratio is 2 and not √2; and
+`readNumber` reads `textContent`, which is empty for an `<input>` — twice. Use
+`toHaveValue` there.
+
+**And it stole an Arabic query, twice over.** Measured immediately: «تصغير حجم
+الصورة» went to the new tool over the image compressor, taking the Arabic bench
+41/41 → 40/41. Removing the keyword «حجم الصورة» was not enough — **the Arabic
+NAME «مقاس طباعة الصورة» contained «الصورة», and name weight is triple.** Renaming
+it «مقاس الطباعة» restored 41/41. A keyword must say what the tool DOES, and so
+must a name.
+
 ## An image as a data URI, and the encoding everybody gets wrong (`image-base64`)
 
 Found by **diffing a 661-tool catalogue against ours** rather than by reading

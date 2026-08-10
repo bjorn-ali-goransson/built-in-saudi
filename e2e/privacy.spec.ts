@@ -200,6 +200,7 @@ export const CASES: Case[] = [
   { id: 'pdf-to-text', testid: 'p2t-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
+  { id: 'print-size', testid: 'ps-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'markdown-html', testid: 'mh-file', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Title
 
 ${TOKEN}

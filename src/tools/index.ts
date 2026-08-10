@@ -1,5 +1,6 @@
 import type { Tool } from './types'
 import { imageCompressorTool } from './image-compressor/meta'
+import { printSizeTool } from './print-size/meta'
 import { imageFormatConverterTool } from './image-format-converter/meta'
 import { imageCropperTool } from './image-cropper/meta'
 import { imageRearrangeTool } from './image-rearrange/meta'
@@ -357,6 +358,7 @@ export const tools: Tool[] = [
   qrCodeTool,
   barcodeTool,
   imageCompressorTool,
+  printSizeTool,
   imageFormatConverterTool,
   imageCropperTool,
   imageRearrangeTool,

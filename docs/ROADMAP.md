@@ -1665,3 +1665,24 @@ bench unchanged.
   same shape as `html to markdown`.
 - **Related tools re-measured at 223 tools:** 0 dead ends, 222 full rows of
   four. No drift since the fill shipped.
+
+### Web sweep, 10 August 2026 (twenty-sixth pass)
+
+Second catalogue diffed (a ~1000-tool directory), same method as last pass.
+
+- ~~**Print size / DPI.**~~ **Shipped** as `print-size`. The gap was not the
+  arithmetic but the framing: every incumbent hard-codes 300 DPI and makes you
+  type the pixel dimensions. This derives the 300 from one arcminute of acuity
+  at arm's length and therefore also derives 44 PPI at two metres.
+- **Excluded by the standing rules, and there were a lot:** the entire Finance
+  and Real Estate sections (amortization, compound and simple interest,
+  mortgage, IRR, NPV, ROI, rent-vs-buy, cap rate — riba); every AI tool and the
+  network section (whois, DNS, ping, port checks) which need a server; Games,
+  Mystic and Nostalgia as off-brand; the YouTube thumbnail downloader and the
+  website speed test, both already named in the exclusions.
+- **Genuine gaps still unbuilt, in rough order of appeal:** chmod calculator;
+  HTML entity encoder; IEEE-754 / two's-complement viewer; statistics
+  (mean/median/SD); number-to-words in English, which would pair with `tafqeet`;
+  Punycode/IDN — interesting here because Arabic domain names are real;
+  clothing and shoe size converters; recipe scaler and oven-temperature
+  converter; a citation formatter; PDF page resize.

@@ -3459,4 +3459,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/markdown-html"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/markdown-html"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/print-size/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/print-size"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/print-size"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/print-size"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/print-size/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/print-size"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/print-size"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/print-size"/>
+  </url>
 </urlset>

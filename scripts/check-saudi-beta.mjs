@@ -32,7 +32,11 @@ const EXTRA = {
 // which is obstetrics from 1812: `due-date` is medical rather than
 // regulatory, so nobody republishes it and the badge would be noise. Same for
 // `ovulation`: the luteal phase is physiology, not a published rate.
-const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling', 'due-date', 'ovulation'])
+// `print-size` cites SOURCES for human visual acuity (1 arcminute) and the
+// 3438 arcminutes in a radian. Beta means the figure can go stale WITHOUT
+// anyone touching the code — a pension rate steps every July. Geometry does
+// not, and neither does the resolving power of an eye.
+const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling', 'due-date', 'ovulation', 'print-size'])
 
 const root = process.cwd()
 const reg = readFileSync('src/tools/index.ts', 'utf8')
