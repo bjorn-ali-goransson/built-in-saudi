@@ -79,6 +79,7 @@ import { gradientGeneratorTool } from './gradient-generator/meta'
 import { ipSubnetTool } from './ip-subnet/meta'
 import { userAgentTool } from './user-agent/meta'
 import { readabilityTool } from './readability/meta'
+import { readableTextTool } from './readable-text/meta'
 import { randomPickerTool } from './random-picker/meta'
 import { diceRollerTool } from './dice-roller/meta'
 import { countdownTool } from './countdown/meta'
@@ -325,6 +326,7 @@ export const tools: Tool[] = [
   svgOptimiseTool,
   fakeDataTool,
   readabilityTool,
+  readableTextTool,
   dataAnonymizeTool,
   invisibleCharsTool,
   charFinderTool,

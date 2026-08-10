@@ -2117,3 +2117,22 @@ regression check). Axes used: tool-name-ish, paraphrase, natural sentence,
 symptom, file extension, Arabic morphology. Untried: the query naming a
 competitor's product, and the query typed with the wrong mental model of the
 format.
+
+## Web sweep, 11 August 2026 — assistive reading
+
+Axis: assistive/accessibility, untried before. The market is mostly browser
+EXTENSIONS, which is not our model — but one thread was checkable and the repo
+had already half-discovered it.
+
+**Shipped: `readable-text`.** Every reading guide says to increase letter
+spacing; that is Latin advice, and Arabic is cursive so it breaks the word. The
+codebase already carried `rtl:tracking-normal` in 16 places without the rule
+being written anywhere.
+
+**Seen and not taken:** OpenDyslexic-style font substitution (needs a font we do
+not have a licence to bundle, and there is no Arabic equivalent); text
+simplification (needs an LLM — the on-device Rewriter is still origin-trial, see
+the parked entry); screen masks and page-wide reading modes (extension
+territory, not a page tool); text-to-speech, which is one `speechSynthesis` call
+and worth revisiting only with an honest voice-availability gate like
+`ModelGate`.

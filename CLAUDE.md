@@ -1753,6 +1753,44 @@ equality, and made the printed promise keepable. **When a test can only assert
 something weaker than the product claims, the product is usually the thing that
 is wrong.**
 
+## "Increase letter spacing" is Latin advice (`readable-text`)
+
+Found by sweeping the assistive-reading market, where every guide gives the
+same three instructions — bigger text, more line spacing, **more letter
+spacing** — and presents the third as universal.
+
+**It is wrong for Arabic, and this repo already knew it without writing it
+down.** Arabic is cursive: the letters JOIN, and the join is part of the
+letterform rather than a gap between two shapes, so tracking stretches or
+breaks the connecting stroke and a word stops looking like a word. The evidence
+was already in the codebase — **16 places in `src/` carry
+`rtl:tracking-normal`**, resetting the tracking the Latin design applies. The
+tool clamps it to zero for Arabic and **explains itself instead of silently
+ignoring the control**, with a case asserting the explanation appears ONLY when
+something is actually being overridden.
+
+**What helps Arabic instead is vertical room**, because the marks sit above and
+below the line — which is the only other difference in the per-script defaults.
+
+**And tracking cuts both ways, which no reading guide mentions.** This repo
+measured the other half already: above **0.10em** a PDF text extractor reads the
+glyph gaps as SPACES, so `EXPERIENCE` comes back as `E X P E R I E N C E` — it
+cost 168 of 175 headings across 32 CVs. So the same setting that helps a human
+read can stop a machine reading at all, and anybody formatting a document to
+send is told so.
+
+Three smaller decisions: the script is detected from the **TEXT, not the UI
+locale** (somebody reading an English article on the Arabic side wants the Latin
+treatment — the `readingRate` mistake one level up); the settings persist, since
+the settings ARE the tool; and the contract is **`data-tracking` on the
+output**, because asserting a computed CSS string would be testing the browser's
+serialisation.
+
+**It took a query off its sibling and gave it back.** «سهولة القراءة» — reading
+EASE — is `readability`'s subject, and the new tool won it 330 to 248 on a
+keyword. Removed; the established tool keeps the exact phrase and this one keeps
+«عسر القراءة» and «قراءة مريحة». Fifth time that rule has been applied.
+
 ## Arabic handwriting sheets (`arabic-handwriting`)
 
 The four positional forms are **not four characters**. They are produced with

@@ -614,6 +614,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'خصم المخالفة المرورية ومهلها', description: 'كم تكلّف المخالفة المرورية بتخفيض ٢٥٪ وفق المادة ٧٥، ومتى يسقط بالضبط — ٣٠ يومًا للاعتراض و١٥ للسداد تجريان تباعًا. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'readable-text',
+    en: { name: 'Readable Text', description: 'Set hard-to-read text the way you can read it — size, line spacing, line length, contrast, a focus band. Letter spacing is off for Arabic, because the letters join. Free, in your browser.' },
+    ar: { name: 'نص أسهل للقراءة', description: 'اضبط النص الصعب كما تستطيع قراءته — الحجم وتباعد الأسطر وطول السطر والتباين وإبراز السطر. وتباعد الحروف مُعطَّل للعربية لأن حروفها تتّصل. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'token-counter',
     en: { name: 'AI Token Counter', description: 'Count the exact tokens in a prompt with the real tokenizer, for GPT-4o-era and GPT-4-era models — see how wrong "characters divided by 4" is, and how much more Arabic costs. Free, in your browser.' },
     ar: { name: 'عدّاد توكنز الذكاء الاصطناعي', description: 'اعرف عدد التوكنز الدقيق في تعليمتك بالمُجزّئ الحقيقي، لنماذج جيل GPT-4o وجيل GPT-4 — وكم تخطئ قاعدة «الحروف ÷ ٤»، وكم تكلّف العربية أكثر. مجانًا داخل متصفحك.' },
