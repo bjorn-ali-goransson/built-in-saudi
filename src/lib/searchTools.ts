@@ -1,7 +1,7 @@
 import type { Tool } from '../tools/types'
 import { normaliseQuery } from './normaliseQuery'
 import { preferDirection } from './searchDirection'
-import { scoreTool, aboveFloor, correctQuery, vocabulary } from './fuzzy'
+import { scoreTool, aboveFloor, correctQuery, stripArabicPrefixes, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
 
 /** Built once per tool list + locale; the vocabulary is a few thousand words. */
@@ -51,8 +51,12 @@ export function rankToolsWithCorrection(raw: string, list: Tool[], locale: Local
   // Normalised HERE rather than in each caller, so home, the launcher and the
   // 404 suggestions cannot drift apart on it — the same reason the ranking
   // itself lives in this file.
-  const query = normaliseQuery(raw)
-  if (!query.trim()) return { tools: [] }
+  const normalised = normaliseQuery(raw)
+  if (!normalised.trim()) return { tools: [] }
+  // Arabic particles agglutinate to the front of the word, so the query can
+  // CONTAIN the indexed term rather than equal it. Stripped only onto a word
+  // the catalogue knows, which is what stops it mangling «كتاب».
+  const query = stripArabicPrefixes(normalised, vocabFor(list, locale))
   const asTyped = scoreList(query, list, locale)
   const corrected = correctQuery(query, vocabFor(list, locale))
   // A query whose every word the catalogue knows has nothing to correct, which
@@ -136,8 +140,12 @@ function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; s
 }
 
 export function rankTools(raw: string, list: Tool[], locale: Locale): Tool[] {
-  const query = normaliseQuery(raw)
-  if (!query.trim()) return []
+  const normalised = normaliseQuery(raw)
+  if (!normalised.trim()) return []
+  // Both entry points strip, or the 404 suggestions and the launcher would
+  // disagree with home about what an Arabic query says — the drift this file
+  // exists to prevent.
+  const query = stripArabicPrefixes(normalised, vocabFor(list, locale))
   return scoreList(query, list, locale).map((r) => r.tool)
 }
 

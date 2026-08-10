@@ -3,9 +3,29 @@
 // consecutive runs and word-boundary hits. Returns 0 when the query's characters
 // don't all appear in order.
 
+/**
+ * Arabic diacritics are written in names and typed by nobody.
+ *
+ * Measured over the catalogue: **78 of 229 tools carry a shadda or a haraka in
+ * their ARABIC NAME** — «محوّل العملات», «مولّد كلمة المرور», «محرّر ملفات
+ * الترجمة» — and the name is weighted triple. A person types «محول», «مولد»,
+ * «محرر», so every one of those names was unreachable by the spelling actually
+ * used, and the failure is invisible because the tool is still findable by some
+ * other field.
+ *
+ * Folded on BOTH sides — query and indexed text — so it can only ever make a
+ * match that was intended, never one that was not. The same judgement
+ * `word-search` records for its grid: a combining mark is a mark the reader
+ * cannot see and did not type.
+ *
+ * U+0640 (tatweel) goes too: it is a typographic stretch, not a letter.
+ */
+const ARABIC_MARKS = /[ً-ْٰـ]/g
+export const foldArabic = (s: string): string => s.replace(ARABIC_MARKS, '')
+
 export function fuzzyScore(query: string, text: string): number {
-  const q = query.toLowerCase().trim()
-  const t = (text ?? '').toLowerCase()
+  const q = foldArabic(query.toLowerCase().trim())
+  const t = foldArabic((text ?? '').toLowerCase())
   if (!q) return 1
 
   // Exact substring: strong, earlier + word-boundary weighted.
@@ -211,7 +231,7 @@ function stripAl(term: string): string {
 }
 
 function terms(query: string): string[] {
-  const all = query.toLowerCase().trim().split(/\s+/).filter(Boolean).map(stripAl)
+  const all = foldArabic(query.toLowerCase().trim()).split(/\s+/).filter(Boolean).map(stripAl)
   const kept = all.filter((t) => !STOP.has(t))
   // If someone searched for nothing but stop words, they still meant something
   // by them — fall back rather than matching everything.
@@ -330,7 +350,7 @@ export function vocabulary(tools: Searchable[]): Set<string> {
   const out = new Set<string>()
   const add = (s: string | undefined) => {
     if (!s) return
-    for (const w of s.toLowerCase().split(/[^\p{L}\p{N}]+/u)) if (w.length > 2) out.add(w)
+    for (const w of foldArabic(s.toLowerCase()).split(/[^\p{L}\p{N}]+/u)) if (w.length > 2) out.add(w)
   }
   for (const t of tools) {
     add(t.name); add(t.nameAr); add(t.tagline); add(t.category)
@@ -363,8 +383,46 @@ export function vocabulary(tools: Searchable[]): Set<string> {
  * converter — a real word we do not index, bent into one we do. Two edits is
  * not a typo, it is a different word.
  */
+/**
+ * Arabic attaches its particles to the FRONT of the word.
+ *
+ * `stripAl` handles the definite article and nothing else, but «و» (and), «ب»
+ * (with), «ل» (for), «ك» (as) and «ف» (so) all agglutinate too, and they stack:
+ * «وللإيجار» is و + لل + إيجار. The query then contains the indexed word rather
+ * than equalling it, and the match fails in the direction nobody checks — the
+ * same shape as «الزكاة» reaching for «زكاة», and as `.heic` reaching for
+ * `heic`.
+ *
+ * Held-out set #6 measured it: «وللإيجار» returned NOTHING on a site with a
+ * rent-rules tool, «بالهجري» and «كمستند وورد» both missed.
+ *
+ * **The strip only applies when what is left is a word the catalogue already
+ * knows.** That guard is what makes it safe: Arabic light stemming is
+ * notorious for mangling words that merely begin with a particle letter
+ * («كتاب» is not ك + تاب), and a strip that has to land on an indexed term
+ * cannot invent a match. It also lets the same rule handle the imperative alef
+ * — «اضغط» → «ضغط» — without any special case, and without touching «اسم»,
+ * whose remainder is in no vocabulary.
+ */
+const AR_PREFIX = /^(?:و|ف)?(?:لل|بال|كال|فال|وال|ال|ب|ل|ك)?/
+
+export function stripArabicPrefixes(query: string, vocab: Set<string>): string {
+  return query.split(/\s+/).map((word) => {
+    if (!/[؀-ۿ]/.test(word) || vocab.has(word)) return word
+    // Longest strip first, so «وللإيجار» loses both particles rather than one.
+    const candidates: string[] = []
+    const m = AR_PREFIX.exec(word)
+    if (m && m[0]) candidates.push(word.slice(m[0].length))
+    if (/^ا/.test(word)) candidates.push(word.slice(1))
+    for (const c of candidates) {
+      if (c.length >= 3 && vocab.has(c)) return c
+    }
+    return word
+  }).join(' ')
+}
+
 export function correctQuery(query: string, vocab: Set<string>): string | null {
-  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+  const words = foldArabic(query.toLowerCase().trim()).split(/\s+/).filter(Boolean)
   let changed = false
   const out = words.map((w) => {
     if (w.length < 5 || vocab.has(w)) return w

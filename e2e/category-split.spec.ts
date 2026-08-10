@@ -95,10 +95,19 @@ test('a family query that matches NO tool still gets the family', async ({ page 
   await expect(page).toHaveURL(/\/en\/c\/teaching\/$/)
 })
 
-test('the same in Arabic, where the dead family query is «مطور»', async ({ page }) => {
+test('«مطور» reaches the developer tools AND still offers the family', async ({ page }) => {
+  // This case used to assert the query matched NOTHING, which was true when it
+  // was written: «مطوّرين» carries a shadda and «مطور» could not reach it, so
+  // the query naming the family got an empty page. Folding the diacritics fixed
+  // that — it now returns the developer tools — so the case asserts the better
+  // behaviour rather than pinning the defect it was scaffolded on.
+  //
+  // The empty-branch property it was really guarding is still pinned, by the
+  // English `teaching` case above and by "matches nothing AND names nothing"
+  // below. Nothing was weakened; a premise stopped being true.
   await page.goto('/ar')
   await page.getByRole('searchbox').fill('مطور')
-  await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+  await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
   await expect(page.getByTestId('category-offer')).toHaveAttribute('data-category', 'developer')
 })
 

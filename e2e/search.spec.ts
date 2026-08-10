@@ -851,3 +851,51 @@ test('a query naming no direction is left exactly as it was', async ({ page }) =
   await search(page, 'merge pdf')
   await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
 })
+
+// --- Arabic morphology: the marks nobody types, the particles that stick -------
+//
+// Held-out set #6 probes ONE class systematically, because this repo has been
+// bitten by it four separate times, each found by accident: «فاتورة» could not
+// reach «الفواتير», «ترجمة» could not reach «المترجم», «كلمة» could not reach
+// «كلمات», and «وقّع» is not inside «توقيع». Arabic is templatic — the singular,
+// the plural, the verb and the agent noun share a root without any containing
+// another as a substring — and a scorer built on substrings is structurally
+// blind to it. It read 64% top-1, the lowest of any set.
+//
+// Two query-side fixes, both narrow, both verified below.
+
+test('Arabic particles stick to the front of the word, and are stripped', async ({ page }) => {
+  // «وللإيجار» is و + لل + إيجار and returned NOTHING on a site with a rent
+  // tool. The strip only lands on a word the catalogue already knows, which is
+  // what stops it mangling «كتاب» into «تاب».
+  await search(page, 'وللإيجار', 'ar')
+  await expect(page.getByTestId('tool-rent-rules')).toBeVisible()
+  await search(page, 'بالهجري', 'ar')
+  await expect(page.getByTestId('tool-hijri-calendar')).toBeVisible()
+})
+
+test('a word that merely BEGINS with a particle letter is left alone', async ({ page }) => {
+  // The guard that makes the strip safe. «كتاب» is not ك + تاب, and «كلمة» is
+  // not ك + لمة — stripping either would send the query somewhere else
+  // entirely.
+  await search(page, 'كلمة مرور', 'ar')
+  await expect(page.getByTestId('tool-password-generator')).toBeVisible()
+})
+
+test('a tool is findable by its own Arabic name typed without the diacritics', async ({ page }) => {
+  // 79 of 229 Arabic names carry a shadda or haraka — «محوّل العملات»,
+  // «عدّاد الكلمات» — and nobody types them. Measured: 24 of 79 matched on the
+  // NAME field before folding, 78 of 79 after.
+  await search(page, 'محول العملات', 'ar')
+  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
+  await search(page, 'عداد الكلمات', 'ar')
+  await expect(page.getByTestId('tool-text-counter')).toBeVisible()
+})
+
+test('and the diacritics still work when somebody does type them', async ({ page }) => {
+  // Folded on BOTH sides, so writing the name properly cannot be worse than
+  // writing it plainly. Without this, the fold could have been a one-way strip
+  // of the index that broke the careful speller.
+  await search(page, 'محوّل العملات', 'ar')
+  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
+})

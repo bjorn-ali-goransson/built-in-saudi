@@ -3992,6 +3992,50 @@ three of its own rows wrong, which is worth being equally plain about:
   ambiguous — the first because this file already records that Saudi usage calls
   a QR code «باركود».
 
+**Arabic morphology was probed SYSTEMATICALLY at last** (`evals/untuned6.mjs`,
+44 queries, written before any was run). The trap below had been caught four
+times, each by accident, so the sixth held-out set asks the same tool for the
+same thing in several morphological shapes — verb, verbal noun, singular,
+plural, agent noun, and with the particles attached.
+
+**First reading: 64% top-1, the lowest of any set** (against 100% for the
+general Arabic set, which is exactly why that set could not see this). Two
+query-side fixes took it to **77% / 91% with its one unanswerable query gone**,
+and every other bench is unchanged — tuned 131/131, held-out #1 49/50, #2
+46/50, #4 37/50, #5 42/50, Arabic 41/41.
+
+- **Particles agglutinate to the FRONT and they stack.** `stripAl` handled the
+  definite article and nothing else, but «و» (and), «ب», «ل», «ك», «ف» attach
+  too: «وللإيجار» is و + لل + إيجار and returned NOTHING on a site with a rent
+  tool; «بالهجري» and «كمستند وورد» both missed. `stripArabicPrefixes` handles
+  them — **and only strips onto a word the catalogue already knows.** That
+  guard is the whole design: Arabic light stemming is notorious for mangling a
+  word that merely begins with a particle letter («كتاب» is not ك + تاب), and a
+  strip that must land on an indexed term cannot invent a match. It also gets
+  the imperative alef free — «اضغط» → «ضغط» — without a special case.
+- **Diacritics are written in names and typed by nobody.** **79 of 229 Arabic
+  names carry a shadda or haraka** — «محوّل العملات», «مولّد كلمة المرور»,
+  «عدّاد الكلمات» — and the name is weighted triple. `foldArabic` strips the
+  marks and the tatweel from BOTH sides, so writing the name properly is never
+  worse than writing it plainly, and there is a spec for each direction.
+
+**The honest size of the diacritics fix, because the first version of this note
+overclaimed it.** Those tools still WON a search for their own plain-typed name
+before the fold — the tagline and keywords carried them. What was lost was the
+NAME field: `node evals/undiacritic.mjs` reports **24 of 79 winning ON their
+name before, 78 of 79 after**, with `qr-code` going 237 → 450. Verified by
+disabling the fold and confirming the injection reached the compiled copy
+first, which is the check that was skipped one iteration earlier.
+
+**It improved a case that a spec had pinned as broken, which is worth
+recognising rather than reverting.** «مطور» used to match NOTHING — «مطوّرين»
+carries a shadda — so `category-split.spec.ts` asserted an empty page and used
+that to prove the offer renders in the empty branch. It now returns the 34
+developer tools *and* the offer. The premise stopped being true; the property
+is still pinned by the English `teaching` case and by "matches nothing AND names
+nothing stays empty". **A test whose scaffolding becomes false is not the same
+as a test that broke.**
+
 **Arabic morphology defeats substring matching**, and it cost two tools their
 own query. A name in the plural, or as an agent noun, does not CONTAIN the
 singular or verbal noun a person types — so the merely-related tool won by

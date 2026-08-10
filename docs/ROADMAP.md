@@ -2094,3 +2094,26 @@ reconnect path are all unexercised — and it has a real backend behind it.
 **Still open from earlier sweeps:** six pdf-lib tools on the main thread;
 `blocksToHtml` unused by the two Markdown writers; four dated tools that could
 export ICS; the dead-export sweep needing a real reference analysis.
+
+## Held-out set #6 (11 August 2026) — Arabic morphology
+
+`evals/untuned6.mjs`, 44 queries. First reading **64% top-1**, the lowest of any
+set; **77% / 91% after**, with its one unanswerable query gone. Two query-side
+fixes: `stripArabicPrefixes` (vocabulary-guarded) and `foldArabic`.
+
+New instrument: `node evals/undiacritic.mjs` — every tool must win its own
+Arabic name typed WITHOUT the marks, and win **on** the name rather than in
+spite of it. **24/79 → 78/79.** Derived from the registry, so it cannot go
+stale.
+
+**Set #6 is SPENT — quote 64%.** Remaining misses, left as retained signal, are
+all metadata rather than mechanism: the summarizer does not index the imperative
+«اختصر» (rank 14), `pdf-split` does not index «اقسم» (8), `pdf-sign` is beaten
+on «موقّع pdf» (6) and «وقّع المستند» (5) by the PDF family, and «شهادة تقدير»
+loses to the electricity bill on «شهادة».
+
+**Every held-out set is now spent except #2** (46/50, still usable as a
+regression check). Axes used: tool-name-ish, paraphrase, natural sentence,
+symptom, file extension, Arabic morphology. Untried: the query naming a
+competitor's product, and the query typed with the wrong mental model of the
+format.
