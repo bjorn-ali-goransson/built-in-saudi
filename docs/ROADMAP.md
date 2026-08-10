@@ -2063,3 +2063,34 @@ fine LOOKUP, which needs Absher and is `docs/BACKEND.md` territory; and the
 black-points system, which is a real rule but whose thresholds we could not
 corroborate to the standard `iqama-fees` sets — worth revisiting if a
 citable source turns up.
+
+## Code sweep, 11 August 2026 — undriven UI
+
+New instrument: `node evals/untested-ui.mjs`, the inverse of `coverageshape`.
+A `data-testid` exists to be driven, so one no spec references is UI nobody
+exercises. **988 of 2877 (34%) are undriven.**
+
+Covered this pass: `pdf-to-word`'s scanned-PDF branch. No product bug — but
+proving the spec could fail exposed that `looksScanned` was computed in TWO
+extractors with nothing tying them together; both now call `lib/pdfScan.ts`.
+
+**The queue, largest undriven surface first.** Each is a candidate, and the
+useful filter is "is this a behavioural branch or a styling option?":
+
+| tool | testids | undriven |
+|---|---|---|
+| `calls` | 168 | 77 |
+| `book-me` | 32 | 28 |
+| `prayer-times` | 29 | 22 |
+| `svg-editor` | 31 | 16 |
+| `ats-cv-optimizer` | 36 | 15 |
+| `markdown-html` | 22 | 12 |
+| `video-gif` | 15 | 12 |
+
+`book-me` is the standout by proportion: its spec drives the OAuth round-trip
+and almost nothing else, so the availability grid, meeting types and the
+reconnect path are all unexercised — and it has a real backend behind it.
+
+**Still open from earlier sweeps:** six pdf-lib tools on the main thread;
+`blocksToHtml` unused by the two Markdown writers; four dated tools that could
+export ICS; the dead-export sweep needing a real reference analysis.

@@ -1,4 +1,5 @@
 import * as pdfjs from 'pdfjs-dist'
+import { looksScanned } from '../../lib/pdfScan'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -90,7 +91,7 @@ export async function extractPdf(file: File, password?: string): Promise<Extract
   // A born-digital page carries hundreds of characters; a scan carries none.
   // Below ~10 per page, telling the user to use OCR is more useful than handing
   // them an empty box.
-  return { pages, looksScanned: pages.length > 0 && chars / pages.length < 10, encrypted: false }
+  return { pages, looksScanned: looksScanned(chars, pages.length), encrypted: false }
 }
 
 export function joinPages(pages: Page[], separators: boolean, locale: 'en' | 'ar'): string {

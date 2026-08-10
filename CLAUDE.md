@@ -4216,6 +4216,45 @@ things about testing this kind of tool:
 Next thinnest after the fix: `hajj-umrah` (567 lines, 1 case), `pdf-sign` (511),
 `adhkar` (485), `pdf-fill` (455).
 
+## Which UI does no spec ever drive (`evals/untested-ui.mjs`)
+
+The inverse of `coverageshape.mjs`, and a sharper question: a `data-testid` is
+put there to be DRIVEN, so one nothing references is a control, a state or a
+panel nobody has exercised. It is where a half-wired feature hides — the QR
+tool's email fields were written, translated and never connected to anything,
+and sat exactly like this.
+
+Measured at 229 tools: **991 of 2877 testids (34%) are referenced by no spec.**
+Worst surfaces: `calls` (77 of 168 undriven), `book-me` (28 of 32 — its spec
+drives the OAuth round-trip and almost nothing else), `prayer-times` (22 of 29,
+even after it got a real spec), `svg-editor` (16 of 31).
+
+A MEASUREMENT, not a gate: a testid can legitimately mark a state that is hard
+to reach, and some are CSS hooks. What it is good for is separating a styling
+option from a **behavioural branch**, and the first one picked was
+`pdf-to-word`'s `ptw-scanned` / `ptw-ocr` — the branch that replaces the whole
+output when a PDF turns out to be pictures. That is the likeliest document to
+be handed the tool: a scanned contract is exactly what somebody wants as an
+editable Word file, and the file would be empty.
+
+**No product bug — the branch was right, it was unguarded.** It detects the
+scan, says WHY a conversion would be useless, and routes to OCR.
+
+**Verifying it could fail found the real defect, and not where I was looking.**
+Injecting a regression into `pdf-to-text/extract.ts` left every case green —
+because `pdf-to-word` does not use that extractor. It has its own
+`extractRuns.ts`, and **`looksScanned` was computed in BOTH**, with the same
+threshold and nothing tying them together. They agreed, which is exactly the
+state `joinPages` was in before it drifted. Both now call
+`lib/pdfScan.ts`. **Verified to fail against the right module**: the
+"a PDF WITH text is not called a scan" case goes red.
+
+Two lessons, both cheap to reuse: **a guard that passes under an injected
+regression has either a vacuous test or the wrong target — check which before
+concluding either**, and the two extractors staying separate is right (one
+wants text, the other positioned runs with fonts), while the shared JUDGEMENT
+belongs in one place.
+
 ## Testing (e2e)
 
 Playwright specs live in `e2e/`, driven by the `data-testid`s tools already

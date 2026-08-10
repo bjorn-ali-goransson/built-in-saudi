@@ -11,6 +11,7 @@
 // exactly.
 
 import * as pdfjs from 'pdfjs-dist'
+import { looksScanned } from '../../lib/pdfScan'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type { Run } from './pdfBlocks'
 
@@ -107,7 +108,7 @@ export async function extractRuns(file: File, password?: string): Promise<Extrac
   const chars = pages.reduce((n, p) => n + p.reduce((m, r) => m + r.text.replace(/\s/g, '').length, 0), 0)
   return {
     pages,
-    looksScanned: pages.length > 0 && chars / pages.length < 10,
+    looksScanned: looksScanned(chars, pages.length),
     encrypted: false,
   }
 }
