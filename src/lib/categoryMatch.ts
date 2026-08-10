@@ -64,6 +64,21 @@ const CATEGORY_TERMS: Record<string, string[]> = {
   Utilities: ['utility', 'أداة'],
 }
 
+/**
+ * The same, for the curated COLLECTIONS that cut across the categories
+ * (`lib/collections.ts`).
+ *
+ * Measured: after the category offer shipped, 46 single-word queries still tied
+ * three ways or wider and only 9 named a category. The widest of the rest are
+ * these — a season, an audience and a verb, each picking tools out of four or
+ * five different categories, so no recategorising could ever reach them.
+ */
+const COLLECTION_TERMS: Record<string, string[]> = {
+  ramadan: ['ramadan', 'ramadhan', 'رمضان', 'رمضانية', 'صيام', 'صوم'],
+  teaching: ['teacher', 'teaching', 'school', 'classroom', 'معلم', 'معلمة', 'مدرس', 'مدرسة', 'تعليم', 'فصل دراسي'],
+  compare: ['compare', 'comparison', 'diff', 'difference', 'مقارنة', 'قارن', 'الفرق', 'فرق'],
+}
+
 /** Words that decorate a category query without changing which one it is. */
 const NOISE = new Set([
   'free', 'online', 'tool', 'tools', 'app', 'apps', 'best',
@@ -99,23 +114,34 @@ function normalise(s: string): string {
   return words.join(' ')
 }
 
-const INDEX = new Map<string, string>()
-for (const [category, terms] of Object.entries(CATEGORY_TERMS)) {
-  for (const t of terms) {
-    const k = normalise(t)
-    // First writer wins, so a term shared by two categories keeps the one that
-    // declared it — and a collision is visible in this table rather than
-    // decided at runtime.
-    if (k && !INDEX.has(k)) INDEX.set(k, category)
-  }
+export interface GroupHit {
+  /** A category NAME (`'PDF'`) or a collection SLUG. */
+  key: string
+  kind: 'category' | 'collection'
 }
 
+const INDEX = new Map<string, GroupHit>()
+const index = (terms: Record<string, string[]>, kind: GroupHit['kind']) => {
+  for (const [key, list] of Object.entries(terms)) {
+    for (const t of list) {
+      const k = normalise(t)
+      // First writer wins, so a term shared by two groups keeps the one that
+      // declared it — and a collision is visible in these tables rather than
+      // decided at runtime.
+      if (k && !INDEX.has(k)) INDEX.set(k, { key, kind })
+    }
+  }
+}
+// Categories first, so a category name always beats a collection term.
+index(CATEGORY_TERMS, 'category')
+index(COLLECTION_TERMS, 'collection')
+
 /**
- * The category the query names, or null.
+ * The group the query names — a category or a curated collection — or null.
  *
- * One, not several: a row of category cards is the catalogue again, and the
- * point is to answer a broad query with the single grouping that fits it.
+ * One, not several: a row of cards is the catalogue again, and the point is to
+ * answer a broad query with the single grouping that fits it.
  */
-export function matchCategory(query: string): string | null {
+export function matchGroup(query: string): GroupHit | null {
   return INDEX.get(normalise(query)) ?? null
 }

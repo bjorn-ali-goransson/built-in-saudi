@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useLocale, localePath, categoryLabel } from '../i18n'
-import { matchCategory } from '../lib/categoryMatch'
+import { matchGroup } from '../lib/categoryMatch'
 import { categorySlug } from '../lib/categorySlug'
+import { collectionBySlug } from '../lib/collections'
+import { collectionSeo } from '../i18n/seo'
 import { liveTools } from '../tools'
 
 /**
@@ -20,12 +22,19 @@ import { liveTools } from '../tools'
  */
 export function CategoryOffer({ query, onNavigate }: { query: string; onNavigate?: () => void }) {
   const { locale, t } = useLocale()
-  const category = matchCategory(query)
-  const slug = category ? categorySlug(category) : undefined
-  if (!category || !slug) return null
+  const hit = matchGroup(query)
+  if (!hit) return null
 
-  const count = liveTools.filter((tool) => tool.category === category).length
-  if (!count) return null
+  // A category is derived from the registry; a collection is curated, so its
+  // count is of the tools that are actually live rather than of the list.
+  const slug = hit.kind === 'category' ? categorySlug(hit.key) : hit.key
+  const label = hit.kind === 'category'
+    ? categoryLabel(hit.key, locale)
+    : collectionSeo.find((c) => c.slug === hit.key)?.[locale].name
+  const count = hit.kind === 'category'
+    ? liveTools.filter((tool) => tool.category === hit.key).length
+    : (collectionBySlug(hit.key)?.toolIds.filter((id) => liveTools.some((t) => t.id === id)).length ?? 0)
+  if (!slug || !label || !count) return null
 
   return (
     <Link
@@ -33,11 +42,12 @@ export function CategoryOffer({ query, onNavigate }: { query: string; onNavigate
       onClick={onNavigate}
       data-testid="category-offer"
       data-category={slug}
+      data-kind={hit.kind}
       className="mb-4 flex items-center justify-between gap-4 rounded-[var(--r-md)] border border-green-500 bg-[color-mix(in_srgb,var(--color-green-400)_8%,transparent)] px-4 py-3 no-underline transition-[background,border-color] duration-[120ms] hover:bg-[color-mix(in_srgb,var(--color-green-400)_14%,transparent)]"
     >
       <span className="flex flex-col gap-[0.15rem]">
         <span className="font-display text-[1.05rem] text-ink rtl:font-ar">
-          {t.search.allIn(categoryLabel(category, locale))}
+          {t.search.allIn(label)}
         </span>
         <span className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="category-offer-count">
           {t.search.toolCount(count)}

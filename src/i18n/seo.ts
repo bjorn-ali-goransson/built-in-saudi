@@ -1206,6 +1206,33 @@ export interface CategorySeo {
   ar: { name: string; description: string }
 }
 
+/**
+ * Curated groups that cut ACROSS the categories — see `lib/collections.ts` for
+ * why these earn a page where Recommended and Recently used do not.
+ *
+ * They share the `/c/` route with the categories, because a category and a
+ * collection are the same thing to a reader: a named group of tools. One URL
+ * space, one page, and `scripts/check-collections.mjs` refuses a slug that
+ * collides with a category's.
+ */
+export const collectionSeo: CategorySeo[] = [
+  {
+    slug: 'ramadan', category: '',
+    en: { name: 'Ramadan tools', description: 'Prayer times and a printable timetable, the Hijri calendar, a khatma plan, the adhkār, zakat, and the everyday things Ramadan changes — when to take medicine, how much water, and the six-hour working day. Free, and everything runs in your browser.' },
+    ar: { name: 'أدوات رمضان', description: 'مواقيت الصلاة وجدول للطباعة، والتقويم الهجري، وخطة ختمة، والأذكار، والزكاة، وما يغيّره رمضان في اليوم — مواعيد الدواء، وكمية الماء، ويوم العمل السداسي. مجانًا، وكل شيء يعمل داخل متصفحك.' },
+  },
+  {
+    slug: 'teaching', category: '',
+    en: { name: 'Tools for teachers', description: 'Worksheets, word searches, quizzes, bingo cards and flashcards to print; Arabic handwriting practice with the correct joined letter forms; plus seating charts, attendance sheets, certificates, label sheets and a random picker. Free, no sign-up, nothing uploaded.' },
+    ar: { name: 'أدوات المعلّمين', description: 'أوراق عمل وكلمات متقاطعة واختبارات وبطاقات بينغو وبطاقات مراجعة للطباعة؛ وتدريب على الخط العربي بالأشكال المتصلة الصحيحة؛ مع مخططات الجلوس وكشوف الحضور والشهادات وأوراق الملصقات ومنتقٍ عشوائي. مجانًا، دون تسجيل، ولا يُرفع شيء.' },
+  },
+  {
+    slug: 'compare', category: '',
+    en: { name: 'Compare two things', description: 'See what changed between two pieces of text, two JSON documents, two spreadsheets, two images or two dates — each comparison runs in your browser, so neither version is ever uploaded.' },
+    ar: { name: 'قارن بين شيئين', description: 'اعرف ما تغيّر بين نصّين، أو مستندَي JSON، أو جدولَي بيانات، أو صورتين، أو تاريخين — كل مقارنة تجري داخل متصفحك، فلا تُرفع أي نسخة.' },
+  },
+]
+
 export const categorySeo: CategorySeo[] = [
   {
     slug: 'pdf', category: 'PDF',

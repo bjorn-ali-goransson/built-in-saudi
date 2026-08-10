@@ -11,7 +11,7 @@
 //   (needs: npx tsc src/lib/categoryMatch.ts --outDir evals/gen --module esnext
 //    --target es2022 --moduleResolution bundler)
 
-import { matchCategory } from './gen/categoryMatch.js'
+import { matchGroup as matchCategory } from './gen/categoryMatch.js'
 import { tools } from './lib/tools.mjs'
 import { BENCH_QUERIES } from './benchqueries.mjs'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
@@ -21,6 +21,9 @@ import { UNTUNED_AR } from './untunedar.mjs'
 // The queries this was built for: the widest ties, plus the natural phrasings
 // the category pages were written to answer ("free pdf tools").
 const SHOULD_FIRE = [
+  // The curated collections, each backed by a measured wide tie.
+  'ramadan', 'رمضان', 'صيام', 'teacher', 'teaching', 'معلم', 'مدرسة',
+  'compare', 'diff', 'مقارنة', 'قارن',
   'حاسبة', 'حاسبات', 'الحاسبة', 'calculator', 'calculators', 'free calculators',
   'image', 'images', 'photo tools', 'صور', 'صورة',
   'pdf', 'free pdf tools', 'arabic', 'عربي', 'islamic', 'إسلاميات',

@@ -179,6 +179,41 @@ leaving it is a bad trade. The combo is shown on the launcher button's title and
 as a `kbd` chip in the search bar above 860px: a shortcut nobody knows about is
 not a feature.
 
+**And a COLLECTION is a group the category tree cannot name**
+(`lib/collections.ts`). Re-measured after the category offer shipped: **46
+single-word queries still tie three ways or wider and only NINE name a
+category**, so 37 still answered with one arbitrary tool. The widest of those
+are not categories and never can be:
+
+| query | ties | answered with |
+|---|---|---|
+| **رمضان** | 6-way | the Hijri calendar, arbitrarily |
+| **معلم** (teacher) | 6-way | a seating chart, arbitrarily |
+| **مقارنة** (compare) | 4-way | the text differ, arbitrarily |
+
+Ramadan is a **season**, teaching an **audience**, comparing a **verb** — each
+picks tools out of four or five different categories, which is exactly what
+makes them collections rather than a filing mistake. Coverage went **9 → 15 of
+46**, with all four benches unchanged.
+
+Four decisions:
+
+- **This does NOT contradict "curated sections get no page."** That rule is
+  about Recommended, Duʿāʾ and Recently used, and its reason is that they are
+  personal or editorial and therefore a URL nobody can keep meaningful. «رمضان»
+  and "teaching" are stable, nameable and shareable, and «أدوات رمضان» is a
+  query shape people type every year — the same argument that earned the
+  categories their pages.
+- **They share the `/c/` route.** A category and a collection are the same thing
+  to a reader — a named group of tools — so a second URL space would be two
+  mental models for one idea. `scripts/check-collections.mjs` refuses a
+  colliding slug, and is **verified to fail** on one.
+- **The order is CURATED, not derived.** A `filter` over the registry would
+  silently reimpose catalogue order on a list written to read in a sequence.
+- **The hand-written id list is checked against the registry**, because a
+  renamed tool would otherwise make a collection quietly shorter with nothing to
+  notice it. Verified to fail by mistyping an id.
+
 **A generic query gets the FAMILY, not one arbitrary member of it**
 (`lib/categoryMatch.ts`, `components/CategoryOffer.tsx`). Ties falling through
 to catalogue order is documented above as deliberate, and `node

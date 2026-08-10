@@ -3347,4 +3347,46 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-to-word"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-to-word"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/ramadan/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/ramadan/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/ramadan/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/ramadan/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/ramadan/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/ramadan/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/ramadan/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/ramadan/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/teaching/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/teaching/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/teaching/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/teaching/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/teaching/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/teaching/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/teaching/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/teaching/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/c/compare/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/compare/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/compare/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/compare/"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/c/compare/</loc>
+    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/compare/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/compare/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/compare/"/>
+  </url>
 </urlset>

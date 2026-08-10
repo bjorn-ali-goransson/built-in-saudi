@@ -6,7 +6,8 @@ import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { en } from './src/i18n/en'
 import { ar } from './src/i18n/ar'
-import { siteMeta, liveToolSeo, staticPageSeo, categorySeo, type ToolSeo, type CategorySeo } from './src/i18n/seo'
+import { siteMeta, liveToolSeo, staticPageSeo, categorySeo, collectionSeo, type ToolSeo, type CategorySeo } from './src/i18n/seo'
+import { COLLECTIONS } from './src/lib/collections'
 
 const ORIGIN = 'https://built-in-saudi.com'
 const LOCALES = ['en', 'ar'] as const
@@ -73,7 +74,7 @@ function homeContent(locale: Loc): string {
   // The categories come FIRST, because a flat list of 209 links tells a crawler
   // nothing about how the site is organised — and until this was added the only
   // crawlable route into the category pages was from one another.
-  const cats = categorySeo
+  const cats = [...categorySeo, ...collectionSeo]
     .map((c) => `<li><a href="/${locale}/c/${c.slug}/">${esc(c[locale].name)}</a></li>`)
     .join('')
   // Home is app-list-only (the hero copy was removed); keep a single H1 for SEO.
@@ -149,7 +150,7 @@ function categoryContent(locale: Loc, cat: CategorySeo, ids: string[]): string {
     .filter((x): x is ToolSeo => !!x)
     .map((x) => `<li><a href="/${locale}/apps/${x.id}/">${esc(x[locale].name)}</a> — ${esc(x[locale].description)}</li>`)
     .join('')
-  const others = categorySeo
+  const others = [...categorySeo, ...collectionSeo]
     .filter((c) => c.slug !== cat.slug)
     .map((c) => `<li><a href="/${locale}/c/${c.slug}/">${esc(c[locale].name)}</a></li>`)
     .join('')
@@ -240,6 +241,22 @@ function prerenderPlugin(): Plugin {
           write(`${locale}${sub}`, html)
         }
 
+        // Curated collections (`src/lib/collections.ts`) — the same page and
+        // the same URL space as the categories, because a category and a
+        // collection are the same thing to a reader. The id list is curated
+        // rather than derived, so it is filtered to what actually has an
+        // `seo.ts` entry, exactly as the category loop is.
+        for (const col of collectionSeo) {
+          const curated = COLLECTIONS.find((c) => c.slug === col.slug)
+          const ids = (curated?.toolIds ?? []).filter((id) => liveToolSeo.some((t) => t.id === id))
+          if (!ids.length) continue
+          const cs = col[locale]
+          const sub = `/c/${col.slug}`
+          let html = applyHead(shell, { locale, dir, title: `${cs.name}${suffix[locale]}`, desc: cs.description, canonical: `${ORIGIN}/${locale}${sub}/`, sub })
+          html = injectContent(html, categoryContent(locale, col, ids))
+          write(`${locale}${sub}`, html)
+        }
+
         // Standalone pages (privacy, terms) — real 200 HTML with head + a
         // crawlable content block; React renders the full page on mount.
         for (const page of staticPageSeo) {
@@ -275,7 +292,7 @@ function prerenderPlugin(): Plugin {
       root = injectContent(root, `<main><h1>${esc(siteMeta.en.title)}</h1><p><a href="/en">English</a> · <a href="/ar">العربية</a></p></main>`)
       writeFileSync(join(dist, 'index.html'), root)
 
-      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + staticPageSeo.length + categorySeo.length + 1} pages`)
+      console.log(`bis-prerender: localized static HTML for ${LOCALES.join(', ')} × ${liveToolSeo.length + staticPageSeo.length + categorySeo.length + collectionSeo.length + 1} pages`)
     },
   }
 }

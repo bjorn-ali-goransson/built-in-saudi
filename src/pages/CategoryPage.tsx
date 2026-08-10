@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { liveTools, tools } from '../tools'
 import { ToolGrid } from '../components/ToolCatalog'
 import { categoryFromSlug } from '../lib/categorySlug'
-import { categorySeo } from '../i18n/seo'
+import { collectionBySlug } from '../lib/collections'
+import { categorySeo, collectionSeo } from '../i18n/seo'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localePath, categoryLabel } from '../i18n'
 import { NotFoundPage } from './NotFoundPage'
@@ -20,12 +21,19 @@ import { NotFoundPage } from './NotFoundPage'
  * Every one of these is prerendered in both locales with its own title and
  * description (`categorySeo`), and each links to all the others, so the set is
  * crawlable from any member as well as from the catalogue's section headings.
+ *
+ * **It also serves the COLLECTIONS**, which are curated groups cutting across
+ * the categories (`lib/collections.ts`). They share this route deliberately: a
+ * category and a collection are the same thing to a reader — a named group of
+ * tools — so giving them a second URL space would be two mental models for one
+ * idea. The lookup falls through, and a build check refuses a colliding slug.
  */
 export function CategoryPage() {
   const { locale } = useLocale()
   const { slug = '' } = useParams()
   const category = categoryFromSlug(slug)
-  const seo = categorySeo.find((c) => c.slug === slug.toLowerCase())
+  const collection = category ? undefined : collectionBySlug(slug)
+  const seo = [...categorySeo, ...collectionSeo].find((c) => c.slug === slug.toLowerCase())
 
   // Hooks must run before any early return, so the meta is computed for a bad
   // slug too and simply never rendered.
@@ -36,26 +44,31 @@ export function CategoryPage() {
     seo?.[locale].description,
   )
 
-  const inCategory = useMemo(
-    () => (category ? liveTools.filter((t) => t.category === category) : []),
-    [category],
-  )
+  const inCategory = useMemo(() => {
+    if (category) return liveTools.filter((t) => t.category === category)
+    if (!collection) return []
+    // Curated ORDER, not registry order: the list was written to read in a
+    // particular sequence, and a `filter` would silently reimpose the catalogue's.
+    return collection.toolIds
+      .map((id) => liveTools.find((t) => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => !!t)
+  }, [category, collection])
   const indexOf = useMemo(() => new Map(tools.map((t, i) => [t.id, i])), [])
 
   // An unknown slug is a 404, not an empty page pretending to be a category.
-  if (!category || !seo || !inCategory.length) return <NotFoundPage />
+  if ((!category && !collection) || !seo || !inCategory.length) return <NotFoundPage />
 
   const s = seo[locale]
-  const others = categorySeo.filter((c) => c.slug !== seo.slug)
+  const others = [...categorySeo, ...collectionSeo].filter((c) => c.slug !== seo.slug)
 
   return (
-    <section className="wrap pt-[clamp(1.2rem,4vw,2rem)] pb-[clamp(3rem,8vw,5.5rem)]" data-testid="category-page" data-category={category}>
+    <section className="wrap pt-[clamp(1.2rem,4vw,2rem)] pb-[clamp(3rem,8vw,5.5rem)]" data-testid="category-page" data-category={category ?? `collection:${slug}`}>
       <nav className="mb-4 text-[0.85rem] text-ink-faint">
         <Link to={localePath(locale)} className="text-ink-soft no-underline hover:underline rtl:font-ar">
           {locale === 'ar' ? 'كل الأدوات' : 'All tools'}
         </Link>
         <span className="mx-2" aria-hidden="true">/</span>
-        <span className="rtl:font-ar">{categoryLabel(category, locale)}</span>
+        <span className="rtl:font-ar">{category ? categoryLabel(category, locale) : s.name}</span>
       </nav>
 
       <h1 className="font-display text-[clamp(1.6rem,4vw,2.3rem)] text-ink mb-2 rtl:font-ar" data-testid="category-title">{s.name}</h1>
@@ -71,7 +84,7 @@ export function CategoryPage() {
           crawler can walk from any member. */}
       <div className="mt-12" data-testid="category-others">
         <div role="heading" aria-level={2} className="font-body text-[0.8rem] font-medium tracking-[0.02em] text-ink-faint mb-3 rtl:font-ar">
-          {locale === 'ar' ? 'فئات أخرى' : 'Other categories'}
+          {locale === 'ar' ? 'مجموعات أخرى' : 'Other groups'}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {others.map((c) => (
@@ -81,7 +94,7 @@ export function CategoryPage() {
               data-testid={`category-link-${c.slug}`}
               className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-[0.7rem] py-[0.3rem] text-[0.82rem] text-ink-soft no-underline hover:border-[color-mix(in_srgb,var(--green-500)_35%,transparent)] hover:text-ink rtl:font-ar"
             >
-              {categoryLabel(c.category, locale)}
+              {c.category ? categoryLabel(c.category, locale) : c[locale].name}
             </Link>
           ))}
         </div>

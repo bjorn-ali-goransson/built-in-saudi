@@ -1514,3 +1514,22 @@ Still open, and now quantified rather than suspected:
 - **Still open:** a "create a ZIP" tool is now cheap and would complete the pair
   with `archive-inspector`, which reads and extracts and has no counterpart.
   `buildIcs` is still single-event, so `saudi-holidays` has no "add to calendar".
+
+### Discoverability, 10 August 2026 (second pass) — the ties a category cannot answer
+
+Re-measured after the category offer: 46 wide ties, 9 covered. The three widest
+uncovered ones were a season, an audience and a verb, so they became curated
+**collections** sharing the `/c/` route. Coverage 9 → 15 of 46, benches
+unchanged, 236 → 242 prerendered pages.
+
+Still uncovered, and now listed rather than suspected:
+
+- **Families that could become collections** — `تصدير`/export (6-way), `مستند`
+  (5-way), `مسح`/scan (4-way), `remove` (3-way), `audio` and `video` (3-way
+  each), `meeting`/`اجتماع` (3-way). Each is a real family; none has been
+  measured as worth a page yet, and shipping a dozen thin collections would
+  dilute the ones that earned theirs.
+- **Genuinely ambiguous words no grouping fixes** — `حر` (free / hot), `نسخ`
+  (copy / version), `مشاركة` (share / participation), `تحليل` (analysis). The
+  scorer cannot separate these and neither can a collection; recorded so nobody
+  re-measures them expecting a fix.

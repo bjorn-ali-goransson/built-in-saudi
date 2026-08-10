@@ -12,6 +12,7 @@
 // Run: node evals/tieprobe.mjs
 
 import { tools } from './lib/tools.mjs'
+import { matchCategory } from './gen/categoryMatch.js'
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
 import { BENCH_QUERIES } from './benchqueries.mjs'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
