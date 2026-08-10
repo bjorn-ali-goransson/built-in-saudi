@@ -1,8 +1,10 @@
 import { tools } from './lib/tools.mjs'
 import { scoreTool, aboveFloor } from './gen/fuzzy.js'
+import { normaliseQuery } from './gen/normaliseQuery.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
 import { UNTUNED4 } from './untuned4.mjs'
+import { UNTUNED5 } from './untuned5.mjs'
 import { UNTUNED_AR } from './untunedar.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
@@ -13,7 +15,13 @@ import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
 // both the reader and the writer of a .vcf are correct readings. Flipping such a
 // row to whichever tool currently wins would be scoring the bench against
 // itself; saying it is ambiguous keeps the number honest and is counted below.
-function rank(query, wanted) {
+function rank(rawQuery, wanted) {
+  // FAITHFUL: every search surface runs the query through `normaliseQuery`
+  // before scoring, so a bench that skips it measures a scorer the site does
+  // not run. Verified on adoption that it moved no existing number — the
+  // benches are clean phrases, which is exactly why they could not see the
+  // shapes `inputshapes` and held-out #5 were written to expose.
+  const query = normaliseQuery(rawQuery)
   const want = Array.isArray(wanted) ? wanted : [wanted]
   const scored = tools
     .map((t) => ({ id: t.id, score: scoreTool(query, t) }))
@@ -104,6 +112,23 @@ console.log(`  top-1: ${w1}/${UNTUNED4.length} (${Math.round((w1 / UNTUNED4.leng
 console.log(`  top-3: ${w3}/${UNTUNED4.length} (${Math.round((w3 / UNTUNED4.length) * 100)}%)`)
 console.log(`  not found at all: ${wMiss}`)
 if (wBad.length) { console.log('  --- not first ---'); for (const l of wBad) console.log('  ' + l) }
+
+// --- the FIFTH held-out set: the FORMAT, by its extension ---
+let x1 = 0, x3 = 0, xMiss = 0
+const xBad = []
+for (const [q, want] of UNTUNED5) {
+  const r = rank(q, want)
+  if (r.at === 1) x1++
+  if (r.at <= 3) x3++
+  if (r.at === Infinity) xMiss++
+  if (r.at > 1) xBad.push(`${q.padEnd(24)} want ${(Array.isArray(want) ? want.join('|') : want).padEnd(38)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT #5 (file extensions, never tuned against): ${UNTUNED5.length} queries`)
+console.log(`  top-1: ${x1}/${UNTUNED5.length} (${Math.round((x1 / UNTUNED5.length) * 100)}%)`)
+console.log(`  top-3: ${x3}/${UNTUNED5.length} (${Math.round((x3 / UNTUNED5.length) * 100)}%)`)
+console.log(`  not found at all: ${xMiss}`)
+if (xBad.length) { console.log('  --- not first ---'); for (const l of xBad) console.log('  ' + l) }
 
 // --- the ARABIC held-out set ---
 let a1 = 0, a3 = 0, aMiss = 0

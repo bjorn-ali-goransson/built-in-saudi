@@ -759,3 +759,52 @@ test('PDF written phonetically in Arabic finds the PDF tools', async ({ page }) 
   await search(page, 'ملف بي دي اف كبير جدا', 'ar')
   await expect(page.getByTestId('tool-pdf-compress')).toBeVisible()
 })
+
+// --- A file extension is how people name a format ------------------------------
+//
+// Held-out set #5 (`evals/untuned5.mjs`) asks for formats the way people type
+// them — `.heic`, `xlsx to csv`, `.vcf`. It read 54% top-1 with EIGHT queries
+// returning nothing at all, the worst of any set, and it was one mechanism: a
+// LEADING DOT makes the query term longer than the indexed word, so it cannot
+// match. Exactly the failure the Arabic definite article causes, where «الزكاة»
+// could not reach the keyword «زكاة».
+//
+// Measured: the eight formats scored 270–450 typed bare and about 15 with the
+// dot. Stripping it took the set to 80% / 92% with one not-found — `avif`,
+// which this site genuinely does not handle, so finding nothing is correct.
+
+test('a format typed as a file extension finds the tool that handles it', async ({ page }) => {
+  await search(page, '.heic')
+  await expect(page.getByTestId('tool-image-format-converter')).toBeVisible()
+})
+
+test('and so do the formats that returned nothing at all', async ({ page }) => {
+  for (const [ext, id] of [['.pptx', 'pptx-to-text'], ['.epub', 'epub-text'], ['.vcf', 'vcard-to-csv']]) {
+    await search(page, ext)
+    await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
+  }
+})
+
+test('but an internal dot is load-bearing and is left alone', async ({ page }) => {
+  // The rule is deliberately narrow — a dot followed by a short alphanumeric
+  // run and nothing else. `example.com` and `3.5` are things people type and
+  // the dot is part of them, so only a LEADING one is dropped.
+  await search(page, 'robots.txt')
+  await expect(page.getByTestId('tool-robots-txt')).toBeVisible()
+})
+
+test('and a dotted name too long to be an extension is left whole', async ({ page }) => {
+  // `.gitignore` is nine characters, past the bound, so it is NOT stripped —
+  // and it finds its tool anyway. Worth pinning: the narrowness of the rule is
+  // the thing that makes it safe, and a later widening would break this first.
+  await search(page, '.gitignore')
+  await expect(page.getByTestId('tool-gitignore')).toBeVisible()
+})
+
+test('a format this site does not handle still finds nothing', async ({ page }) => {
+  // Without this the fix could have been "loosen until everything matches".
+  // AVIF is not a format any tool here reads, and saying so is the honest
+  // answer — the adware move is to always show something.
+  await search(page, 'avif')
+  await expect(page.getByTestId('tool-image-format-converter')).toHaveCount(0)
+})

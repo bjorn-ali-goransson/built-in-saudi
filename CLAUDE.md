@@ -3765,6 +3765,50 @@ directions 24/24 and 12/12.
 
 **Set #4 is now SPENT.** Quote **62%** as its held-out number.
 
+**A leading dot made eight formats unfindable** (`evals/untuned5.mjs`, 50
+queries on a fifth axis: the FORMAT, named by its file extension). First
+reading **54% top-1 with EIGHT queries returning nothing at all** — the worst
+of any held-out set, and one mechanism behind nearly all of it.
+
+**A leading dot makes the query term LONGER than the indexed word**, so it
+cannot match — precisely the failure the Arabic definite article causes, where
+«الزكاة» could not reach the keyword «زكاة». Measured:
+
+| typed | bare | with the dot |
+|---|---|---|
+| `heic` | 300 | 18 |
+| `epub` | 450 | 20 |
+| `pptx` | 300 | 17 |
+| `vcf` · `pem` · `ico` · `srt` · `md` | 270–293 | ~15 |
+
+So `.epub`, `.vcf` and `.pptx` returned NOTHING on a site that reads all three.
+`EXTENSION` in `normaliseQuery.ts` strips it, and is **deliberately narrow — a
+dot followed by at most six alphanumerics and nothing else.** `example.com`,
+`robots.txt` and `3.5` keep theirs because the dot is internal; `.gitignore` is
+nine characters and is left whole, and finds its tool anyway. Both are pinned,
+because the narrowness is what makes the rule safe.
+
+**54% → 80% top-1, 68% → 92% top-3, 8 not-found → 1.** The one remaining is
+`avif`, which this site genuinely does not handle — finding nothing is the
+correct answer, and there is a case asserting it stays that way, without which
+the fix could have been "loosen until everything matches".
+
+**The bench could not see the fix, and now can.** `searchbench` called
+`scoreTool` directly while every search surface runs `normaliseQuery` first —
+so it measured a scorer the site does not run, and the first reading of set #5
+was of the wrong layer. `rank()` composes them now. **Verified on adoption that
+it moved no existing number**: tuned 131/131, held-out #1 49/50, #2 46/50, #4
+37/50, Arabic 41/41 — all identical, because the benches are clean phrases,
+which is exactly why they could never have exposed this.
+
+**Set #5 is now SPENT.** Quote **54%**. The ten near misses are left as
+retained signal, and three of them are the same thing: **`jpg to pdf` leads
+with `pdf-to-images`, `xlsx to csv` with `csv-to-xlsx`** — the wrong direction,
+by margins of 1–4%. **`Tool.inverse` is declared on twelve pairs and the SCORER
+does not use it**; it feeds only `evals/directions.mjs`. Using it to break a
+near-tie in favour of the tool whose name matches the direction is the
+principled fix, and it is the strongest unbuilt idea in search.
+
 **Indexing the `description` was tried and rejected on measurement**, and the
 protocol was followed properly this time: `evals/untuned.mjs` was burned, so a
 SECOND held-out set was written FIRST (`evals/untuned2.mjs`, 50 fresh queries,

@@ -1915,3 +1915,43 @@ export. Until then the 114 is noise.
   reminder should actually say.
 - **Thin e2e coverage**, next in order: `hajj-umrah` (567 lines, 1 case),
   `pdf-sign` (511), `adhkar` (485), `pdf-fill` (455).
+
+## Held-out set #5 (10 August 2026) — the format, by its extension
+
+`evals/untuned5.mjs`. First reading **54% top-1 / 68% top-3 with 8 queries
+returning nothing** — the worst of any held-out set. One mechanism: a leading
+dot makes the query longer than the indexed word, so `.epub`, `.vcf` and
+`.pptx` found nothing on a site that reads all three. **80% / 92% after, 1
+not-found.** The set is now SPENT — quote 54%.
+
+**Catalogue shape re-measured at 228 tools** and no action taken: 16 sections,
+median 13, largest `Developer` at 26 (2.0x). The documented judgement stands —
+encoding, data, security, scheduling, scaffolding and networking is six groups
+of one to eight and no single principle settles it.
+
+### The strongest unbuilt idea in search: use `Tool.inverse` in the scorer
+
+Three of set #5's ten near misses are one thing — the converter that goes the
+WRONG WAY wins, by 1–4%:
+
+| query | wins | should be |
+|---|---|---|
+| `jpg to pdf` | `pdf-to-images` 360.9 | `images-to-pdf` 356.3 |
+| `xlsx to csv` | `csv-to-xlsx` 371.3 | `xlsx-convert` 361.5 |
+| `jpg to png` | `images-to-pdf` 288.8 | `image-format-converter` 277.2 |
+
+Word order is discarded on purpose, so a converter and its inverse are the same
+query to the scorer and the margin between them is noise. **`Tool.inverse` is
+already declared on twelve pairs and the scorer never reads it** — it feeds only
+`evals/directions.mjs`. Breaking a near-tie between two declared inverses in
+favour of the one whose name matches the direction is the principled fix.
+
+Two cautions for whoever builds it: it must be a TIE-BREAK, not a re-ranking, or
+it can regress a bench; and `image-format-converter` declares no inverse at all,
+so the third row above needs a declaration before it can be helped.
+
+### Remaining near misses, left as retained signal
+
+`svg to png` (rank 7), `.exe what is inside` (16), `فتح ملف xlsx` (4),
+`.wav` (2, behind `zatca-wave`). And `avif` correctly finds nothing — the site
+does not handle it.

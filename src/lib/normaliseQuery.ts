@@ -37,6 +37,22 @@ const WRAPPERS = /["'“”‘’«»()[\]{}]/g
 const TRAILING = /[.,;:!?،؛؟…]+$/
 
 /**
+ * A file extension written the way people write one: `.heic`, `.pptx`, `.srt`.
+ *
+ * The leading dot carries no meaning and destroys the match, because the query
+ * term becomes LONGER than the indexed word — the same failure as the Arabic
+ * definite article, where `الزكاة` could not reach the keyword `زكاة`.
+ * Measured over held-out set #5: eight formats this site handles perfectly
+ * scored 270–450 when typed bare and about 15 with the dot, so `.epub`, `.vcf`
+ * and `.pptx` returned NOTHING on a site that reads all three.
+ *
+ * Deliberately narrow — a dot followed by a short alphanumeric run and nothing
+ * else. It cannot touch `example.com` or `3.5`, where the dot is internal and
+ * load-bearing, because those do not START with one.
+ */
+const EXTENSION = /^\.([a-z0-9]{1,6})$/i
+
+/**
  * Reduce a pasted URL to the part that names something.
  *
  * Somebody who was sent a link pastes the link. The last non-empty path
@@ -87,6 +103,7 @@ export function normaliseQuery(raw: string): string {
     .replace(WRAPPERS, ' ')
     .split(/\s+/)
     .map((w) => w.replace(TRAILING, ''))
+    .map((w) => w.replace(EXTENSION, '$1'))
     .join(' ')
     .replace(/[-_/\\]+/g, ' ')
     .replace(/\s+/g, ' ')
