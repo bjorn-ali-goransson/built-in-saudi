@@ -12,7 +12,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
 /** pdf.js version + the worker URL — surfaced in the on-screen error diagnostics. */
 export const pdfVersion = pdfjs.version
-export const pdfWorkerUrl = workerUrl
 
 // We always hand pdf.js the whole buffer, so disable its streaming/range paths —
 // they lean on `for await (… of ReadableStream)`, which some iOS/in-app WebViews

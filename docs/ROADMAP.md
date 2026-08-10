@@ -1742,3 +1742,22 @@ half of this site the catalogue diffs cannot reach.
 - **Worth re-checking later:** amended labour fines were announced but the
   schedule is not published in a form that could be encoded without guessing,
   and a fines table that goes stale is worse than none.
+
+### Code sweep, 10 August 2026 (twenty-ninth pass)
+
+The "wire or delete the unreferenced exports" pass, recorded as overdue on four
+previous sweeps. Eighteen of them; sorting rather than bulk-deleting was the
+point.
+
+- **Two were bugs**: `hashPrefix` existed to close a vacuous assertion nobody
+  wrote, and `disposeImageDecoder` meant the HEIC wasm worker outlived every
+  tool that used it.
+- **One was a duplicate**: `pdf-to-text` reimplemented `joinPages` verbatim.
+- **Fifteen were dead weight**, and deleting them exposed two more dead helpers
+  that the exports had been keeping alive.
+- **`refineCv`'s knowledge is kept as a comment**: the `cv-refine` endpoint is
+  deployed with kinds polish/elaborate/shorten and has never had a UI. If that
+  feature is designed, the client is ten lines.
+- **Still open:** `blocksToHtml` would give `markdown-docx` and `markdown-epub`
+  a live preview; four dated tools could export ICS; six pdf-lib tools bypass
+  `PdfOps`.

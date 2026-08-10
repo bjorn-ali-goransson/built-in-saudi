@@ -50,11 +50,6 @@ export function hourIn(zone: string, date: Date): number {
   return h % 24
 }
 
-export function labelIn(zone: string, date: Date, locale: 'en' | 'ar'): string {
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-GB', {
-    timeZone: zone, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(date)
-}
 
 export type Quality = 'good' | 'edge' | 'bad'
 

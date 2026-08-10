@@ -36,7 +36,6 @@ export function addContact(code: string, name: string): Contact[] {
 export function removeContact(code: string): Contact[] {
   return write(listContacts().filter((c) => c.code !== code))
 }
-export const hasContact = (code: string) => !!code && listContacts().some((c) => c.code === code)
 
 /** Live view of the saved contacts, kept in step across components. */
 export function useContacts() {

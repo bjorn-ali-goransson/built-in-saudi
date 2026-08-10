@@ -46,15 +46,11 @@ async function sha1Hex(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 
-/**
- * The five-character prefix that is the only thing sent.
- *
- * Exported so the spec can assert what it is — a test that merely checks the
- * password is absent from the request would also pass if we sent nothing at
- * all, or the wrong thing.
- */
-export const hashPrefix = async (password: string): Promise<string> =>
-  (await sha1Hex(password)).slice(0, 5)
+// There was a `hashPrefix` export here, added so the spec could assert what is
+// actually sent. The spec never used it and asserted only the SHAPE — five hex
+// characters — which a constant would satisfy. It now derives the expected
+// prefix with Node's own SHA-1, which is stronger than importing ours, so the
+// export has no reason to exist.
 
 export async function checkBreached(password: string): Promise<BreachResult> {
   if (!password) return { state: 'safe' }

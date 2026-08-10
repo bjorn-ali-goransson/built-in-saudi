@@ -18,5 +18,3 @@ export function PalmLogo({ className }: { className?: string }) {
   )
 }
 
-/** The raw path — reused by the favicon/PWA icon build. */
-export const PALM_PATH = PALM

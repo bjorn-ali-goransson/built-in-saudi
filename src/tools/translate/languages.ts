@@ -74,7 +74,6 @@ export const languageName = (code: string, locale: 'en' | 'ar'): string => {
 
 export const nativeName = (code: string): string => BY_CODE.get(code)?.native ?? code
 
-export const isKnown = (code: string) => BY_CODE.has(code)
 
 /** Right-to-left scripts among the offered languages — the output box needs it. */
 const RTL = new Set(['ar', 'ur', 'fa', 'ps', 'he', 'ku'])

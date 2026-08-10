@@ -56,19 +56,7 @@ export function simulateHex(hex: string, kind: Kind): string {
   return '#' + [data[0], data[1], data[2]].map((v) => v.toString(16).padStart(2, '0')).join('')
 }
 
-/** WCAG relative luminance. */
-function luminance(hex: string): number {
-  const n = hex.replace('#', '')
-  const full = n.length === 3 ? n.split('').map((c) => c + c).join('') : n
-  const [r, g, b] = [0, 2, 4].map((i) => LIN[parseInt(full.slice(i, i + 2), 16)])
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
 
-export function contrastRatio(a: string, b: string): number {
-  const la = luminance(a)
-  const lb = luminance(b)
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
-}
 
 // CIE Lab, for measuring "do these look like the same colour".
 function toLab(hex: string): [number, number, number] {

@@ -1147,6 +1147,51 @@ repeats, a location and an organizer, none of which a list of dated facts has,
 and bending one function into both would give every caller the other's
 parameters.
 
+## An export nothing calls is one of three things
+
+Recorded as "overdue" on four separate sweeps before it was done. Eighteen
+unreferenced exports, and sorting them turned out to be the useful part: an
+export nothing calls is a **half-done feature**, a **duplicate**, or **dead
+weight**, and only the third should be deleted.
+
+**Two were bugs.**
+
+- **`hashPrefix` was exported so a spec could assert what is sent to Have I
+  Been Pwned, and the spec never used it.** Its own doc comment says a test
+  that merely checks the password is absent "would also pass if we sent nothing
+  at all, or the wrong thing" — and the spec asserted the SHAPE, `[0-9A-F]{5}`,
+  which a constant satisfies. **A vacuous green on the site's one network call
+  about a password.** The spec now derives the expected prefix with Node's own
+  SHA-1 — stronger than importing ours — and asserts the suffix never appears.
+  The export is gone because the check no longer needs it.
+- **`disposeImageDecoder` was written with the comment "call when a tool
+  unmounts" and nothing called it**, so the HEIC decoder — a ~1.4MB wasm worker
+  — outlived every tool that had ever decoded one, for the rest of the session.
+  Twenty-two tools use `decodeImage`; the release went into `ToolPage`'s
+  unmount, which is one edit rather than twenty-two and is exactly the moment it
+  stops being needed.
+
+**One was a duplicate.** `joinPages` lives in `pdf-to-text/extract.ts` and the
+tool reimplemented it verbatim — a copy, and the two would have drifted the
+moment either changed.
+
+**Fifteen were dead weight and are deleted.** Deleting them immediately exposed
+two more dead helpers (`luminance`, an unused `MM_TO_PT` import) that the
+exports had been keeping alive, which is the argument for deleting rather than
+keeping "just in case".
+
+**`refineCv` is the one worth recording rather than only removing.** It is the
+client for a DEPLOYED `cv-refine` endpoint with kinds polish/elaborate/shorten —
+a different feature from `improveCv`, which the tool actually uses — and it had
+no UI at all. The function is gone; a comment in `cvApi.ts` keeps the contract,
+because the knowledge is worth more than the ten lines.
+
+**And the `` trap bit three times in one session** — a bash heredoc, a Python
+string, then a bash heredoc again — each time writing a throwaway sweep script
+whose regex silently became a backspace byte. The rule in this file is "write
+regexes with Write/Edit, not a heredoc", and it applies to throwaway scripts
+most of all, because nobody reviews those.
+
 ## Two capabilities built and unreachable (`zip-create`, the QR email fields)
 
 A code sweep for exports nothing calls, and for lib modules with one caller,

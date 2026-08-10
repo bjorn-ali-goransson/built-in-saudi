@@ -1,4 +1,4 @@
-import { newPage, pagesToPdf, A4, MM_TO_PT } from '../../lib/printPdf'
+import { newPage, pagesToPdf, A4 } from '../../lib/printPdf'
 import { isArabic, type Grid } from './grid'
 
 // The sheet is composed on a canvas and wrapped in a PDF, for the reason this
@@ -103,4 +103,3 @@ export async function buildPdf(o: Opts): Promise<Blob> {
   return pagesToPdf(pages)
 }
 
-export const PAGE_PT = { w: 210 * MM_TO_PT, h: 297 * MM_TO_PT }

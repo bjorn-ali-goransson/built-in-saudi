@@ -163,16 +163,6 @@ export function HijabiIcon({ className }: P) {
   )
 }
 
-// A man in ghutra + igal — filled silhouette (traced from the Saudi "رجال" sign):
-// the headcloth drapes to points with a centre dip, framing a face with a moustache.
-export function ShemaghIcon({ className }: P) {
-  return (
-    <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path fillRule="evenodd" clipRule="evenodd" d="M12 2.6c-3 0-5.4 2.3-5.4 5.4 0 1.4.4 2.4 1 3.3L5 20.6c-.15.5.3.9.8.7l6.2-2.3 6.2 2.3c.5.2.95-.2.8-.7l-2.6-9.3c.6-.9 1-1.9 1-3.3 0-3.1-2.4-5.4-5.4-5.4Zm0 3c-2 0-3.3 1.5-3.3 3.5 0 2.2 1.3 3.8 3.3 3.8s3.3-1.6 3.3-3.8c0-2-1.3-3.5-3.3-3.5Z" />
-      <path d="M9.8 10.7c.8.7 3.6.7 4.4 0-.5 1.4-3.9 1.4-4.4 0Z" />
-    </svg>
-  )
-}
 
 export function ArrowIcon({ className }: P) {
   return (

@@ -124,43 +124,6 @@ export interface Slot {
   endUtc: number
 }
 
-/**
- * Enumerate bookable slot start times inside a day's availability windows,
- * stepping by (meeting length + gap). `busy` ranges (existing bookings / Google
- * free-busy, epoch-ms) are subtracted. Times are computed in the host tz using
- * the provided day-in-tz midnight epoch as the anchor.
- */
-export function enumerateDaySlots(
-  windows: AvailWindow[],
-  dayMidnightUtc: number,
-  meeting: MeetingConfig,
-  busy: { start: number; end: number }[],
-  now: number,
-): Slot[] {
-  const len = meeting.minutes * 60_000
-  const step = (meeting.minutes + meeting.gapMinutes) * 60_000
-  const earliest = now + meeting.minNoticeHours * 3_600_000
-  const HOUR = 3_600_000
-  const slots: Slot[] = []
-  const add = (s: number) => {
-    const e = s + len
-    if (s < earliest) return
-    if (busy.some((b) => s < b.end && e > b.start)) return
-    slots.push({ startUtc: s, endUtc: e })
-  }
-  for (const w of windows) {
-    const winStart = dayMidnightUtc + hhmmToMinutes(w.start) * 60_000
-    const winEnd = dayMidnightUtc + hhmmToMinutes(w.end) * 60_000
-    if (meeting.minutes > 60) {
-      // Long meetings span hour boundaries — step continuously across the window.
-      for (let s = winStart; s + len <= winEnd + 1; s += step) add(s)
-    } else {
-      // One meeting per painted hour; the rest of the hour is the gap.
-      for (let h = winStart; h < winEnd; h += HOUR) add(h)
-    }
-  }
-  return slots
-}
 
 /**
  * Client-side slot preview from the host's own config, computed in the browser's

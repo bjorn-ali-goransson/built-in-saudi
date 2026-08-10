@@ -91,13 +91,6 @@ export async function sendVoiceNotice(code: string, myName: string, meta: { id: 
   } catch { return { ok: false, delivered: 0 } }
 }
 
-export const threadWith = (code: string) => listDms().filter((m) => m.from === code)
-/** Unread-ish signal: how many messages arrived from each contact. */
-export function countsByContact(): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const m of listDms()) if (!m.mine) out[m.from] = (out[m.from] || 0) + 1
-  return out
-}
 export function clearThread(code: string): Dm[] { return write(listDms().filter((m) => m.from !== code)) }
 
 export async function drainDmQueue(): Promise<Dm[]> {

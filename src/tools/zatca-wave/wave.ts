@@ -42,22 +42,6 @@ export const WAVES: Wave[] = [
   { n: 25, threshold: 187_500, deadline: '2027-02-01' },
 ]
 
-/**
- * Waves 1–22 are deliberately NOT enumerated, and the tool does NOT try to
- * place anyone in them.
- *
- * They ran from SAR 3 billion downwards between 2023 and 2025 and the exact
- * boundaries are not published anywhere this was able to verify. The first
- * version of this file used wave 23's own threshold as the top of the range —
- * so a business at SAR 800,000, which wave 23 plainly covers ("exceeding SAR
- * 750,000"), was told it belonged to an earlier wave and shown no date at all.
- * A boundary invented to make the output tidy is the same mistake as a rate
- * averaged from disagreeing sources.
- *
- * So: above 750,000 is wave 23, and a business large enough to have been caught
- * sooner is told that in words rather than by a number this cannot know.
- */
-export const EARLIER_WAVES_NOTE = true
 
 export const YEARS = [2022, 2023, 2024] as const
 

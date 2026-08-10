@@ -468,4 +468,3 @@ export function getTool(id: string | undefined): Tool | undefined {
 }
 
 export const liveTools = tools.filter((t) => t.status !== 'coming-soon')
-export const comingSoonTools = tools.filter((t) => t.status === 'coming-soon')

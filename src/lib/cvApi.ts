@@ -160,16 +160,17 @@ export async function generateCv(idToken: string, text: string): Promise<CvResul
  * contract. If it is ever ruled out for good, the counters in `functions/cv.js`
  * should go with it.
  */
-export async function refineCv(idToken: string, cv: Cv, instruction: string, kind: 'polish' | 'elaborate' | 'shorten', context = '', sourceText = ''): Promise<CvResult> {
-  const r = await fetch(`${FN}/cv-refine`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, cv, instruction, kind, context, sourceText }),
-  })
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
-  return parseResult(data)
-}
+// There was a `refineCv` here — the client for the deployed `cv-refine`
+// endpoint with kinds 'polish' | 'elaborate' | 'shorten'. It is a DIFFERENT
+// feature from `improveCv`, which posts kind 'improve' and is what the tool
+// actually uses, and it had no UI at all: an instruction-driven tweak nobody
+// had designed a way to ask for.
+//
+// Deleted rather than left, because a client for a feature that does not exist
+// reads as API somebody may rely on and reports as dead on every sweep. The
+// knowledge is kept here instead: the endpoint is live and rate-limited, and
+// re-adding the caller is ten lines the day the feature is designed.
+
 
 /** Second pass: fold the candidate's answers to the follow-up questions into the
  *  CV to raise its ATS score, then re-score. To save output tokens the server

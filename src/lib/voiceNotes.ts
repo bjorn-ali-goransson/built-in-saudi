@@ -47,7 +47,6 @@ export async function getVoiceBlob(id: string): Promise<Blob | null> {
   const rec = await withStore<{ id: string; blob: Blob } | undefined>('readonly', (os) => os.get(id), undefined)
   return rec?.blob || null
 }
-export const delVoiceBlob = (id: string) => withStore('readwrite', (os) => os.delete(id), undefined)
 
 // ---- outbox (pending outgoing notes; the audio is in the blob store above) --------
 export interface OutItem { id: string; contact: string; dur: number; mime: string; at: number }

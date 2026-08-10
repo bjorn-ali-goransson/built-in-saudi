@@ -87,6 +87,16 @@ test('exactly five hex characters are sent, and nothing else', async ({ page }) 
   expect(urls).toHaveLength(1)
   const sent = urls[0].split('/').pop()!
   expect(sent).toMatch(/^[0-9A-F]{5}$/)
+  // ...and it is the RIGHT five. Shape alone would pass a constant, or the
+  // hash of something else entirely — which is exactly what `hashPrefix` was
+  // exported to let this assert, and nobody ever did.
+  //
+  // Derived here with Node's own SHA-1 rather than by importing ours: two
+  // implementations agreeing is weaker evidence than one being right.
+  const expected = createHash('sha1').update(PW).digest('hex').toUpperCase().slice(0, 5)
+  expect(sent).toBe(expected)
+  // And the SUFFIX — the half that identifies the password — is never sent.
+  expect(urls[0]).not.toContain(SUFFIX)
 })
 
 test('nothing is requested until the button is pressed', async ({ page }) => {

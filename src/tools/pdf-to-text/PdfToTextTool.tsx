@@ -3,7 +3,7 @@ import { useLocale } from '../../i18n'
 import { UploadIcon, DownloadIcon, CopyIcon, ScanTextIcon } from '../../components/icons'
 import { Button, Textarea, Stack, Spinner, Check, FileError, Panel, PdfPassword } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
-import type { Extracted } from './extract'
+import { joinPages, type Extracted } from './extract'
 
 const STR = {
   en: {
@@ -79,9 +79,10 @@ export default function PdfToTextTool() {
 
   const text = useMemo(() => {
     if (!result) return ''
-    if (!separators) return result.pages.map((p) => p.text).join('\n\n')
-    const label = locale === 'ar' ? 'صفحة' : 'Page'
-    return result.pages.map((p) => `--- ${label} ${p.n} ---\n${p.text}`).join('\n\n')
+    // `joinPages` lives in extract.ts and this reimplemented it verbatim — a
+    // COPY, not dead code, and the two would have drifted the moment either
+    // changed. Found by a sweep for exports nothing references.
+    return joinPages(result.pages, separators, locale)
   }, [result, separators, locale])
 
   const words = useMemo(() => (text.trim() ? text.trim().split(/\s+/).length : 0), [text])

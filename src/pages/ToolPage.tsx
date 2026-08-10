@@ -6,6 +6,7 @@ import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { useLocale, localizeTool } from '../i18n'
 import { NotFoundPage } from './NotFoundPage'
 import { recordRecent } from '../lib/recentTools'
+import { disposeImageDecoder } from '../lib/decodeImage'
 import { StatusBadge } from '../components/ui'
 import { relatedTools } from '../lib/relatedTools'
 import { Link } from 'react-router-dom'
@@ -33,6 +34,14 @@ function LoadedTool({ tool }: { tool: Tool }) {
   // Recorded here rather than on the card, so opening a tool by URL, from a
   // search result or from a link all count the same.
   useEffect(() => { recordRecent(tool.id) }, [tool.id])
+
+  // `disposeImageDecoder` was written with the comment "call when a tool
+  // unmounts" and NOTHING called it, so the HEIC decoder — a ~1.4MB wasm
+  // worker — outlived every tool that had ever decoded one, for the rest of
+  // the session. Twenty-two tools use `decodeImage`; putting the release here
+  // is one edit rather than twenty-two, and leaving a tool page is exactly the
+  // moment it stops being needed. It is lazily recreated on the next decode.
+  useEffect(() => () => disposeImageDecoder(), [])
 
   const related = useMemo(() => relatedTools(tool), [tool])
   const slug = categorySlug(tool.category)

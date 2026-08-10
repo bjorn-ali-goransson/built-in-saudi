@@ -1,6 +1,6 @@
 import { CalculationMethod, Coordinates, PrayerTimes } from 'adhan'
 import { A4, newPage, pagesToPdf, type Page } from '../../lib/printPdf'
-import { formatHijri, gregorianToHijri } from '../prayer-times/islamic'
+import { formatHijri } from '../prayer-times/islamic'
 
 // A month of prayer times on one sheet of paper — for a fridge, a noticeboard,
 // or a mosque door.
@@ -160,5 +160,3 @@ export async function buildTimetablePdf(
 export function withHijri(rows: Row[], locale: 'en' | 'ar'): Row[] {
   return rows.map((r) => ({ ...r, hijri: formatHijri(r.date, locale) }))
 }
-
-export const hijriMonthOf = (d: Date) => gregorianToHijri(d)
