@@ -1604,3 +1604,24 @@ already filed where people hunt for it.
   families (`تصدير`, `مستند`, `مسح`, `remove`, `audio`, `video`, `meeting`) are
   real but thin; four words (`حر`, `نسخ`, `مشاركة`, `تحليل`) are genuinely
   ambiguous and no grouping fixes them.
+
+### Web sweep, 10 August 2026 (twenty-fourth pass)
+
+Method changed: instead of reading "best free tools 2026" prose, a 661-tool
+catalogue was fetched and **diffed against our inventory**. That is repeatable
+and produces candidates rather than adjectives.
+
+- ~~**Image ↔ Base64 / data URI.**~~ **Shipped** as `image-base64`.
+- **Already covered, checked rather than assumed:** add page numbers to PDF and
+  rotate PDF (`pdf-stamp`, `pdf-organise`), sort/dedupe lines (`list-tools`),
+  XML and CSS formatting (`json-formatter`), tip calculator (`split-bill`).
+- **Excluded by the standing rules:** loan, mortgage, annuity, compound
+  interest, retirement, savings-goal and ROI calculators (riba); AI subtitle and
+  translation tools, live weather/earthquake/wildfire maps and "private AI chat"
+  (need a key or a scraped source).
+- **Genuine remaining gaps, none built yet:** YAML ↔ JSON (needs a parser and
+  YAML is deceptively hard — anchors, multi-line, implicit typing); SQL
+  formatter; Markdown → HTML (we already have the parser, so it is cheap);
+  CSS grid generator; text-to-speech and speech-to-text via the Web Speech API,
+  where the honest question is which Arabic voices actually exist on a device;
+  a document scanner; audio/video speed changer; GIF → frames.

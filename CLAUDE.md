@@ -867,6 +867,51 @@ round-tripped through `docx-to-text`, a **separate hand-written reader**. That
 order matters — two hand-written implementations agreeing is weaker evidence
 than one being right, because a shared misconception satisfies both.
 
+## An image as a data URI, and the encoding everybody gets wrong (`image-base64`)
+
+Found by **diffing a 661-tool catalogue against ours** rather than by reading
+marketing copy — the concrete version of a web sweep. "Image to Base64" and
+"Base64 to Image" are staples everywhere and we had neither, while our own
+`base64` tool listed `data uri` as a keyword and has **no file input**, so it
+took the query and could not serve it.
+
+**Two findings, both measured locally rather than repeated from a source:**
+
+- **Base64 inflates a binary by about a third** — 4 characters per 3 bytes. On a
+  *small* image it is far worse, because `data:image/png;base64,` is a fixed
+  twenty-odd characters: the 100-byte test fixture comes out **58% bigger**. The
+  panel says so, and there is a case for each end of that.
+- **For SVG, base64 is the WRONG encoding, and the obvious alternative is worse
+  than both.** An SVG is already text, so escaping only what is structural wins.
+  Measured on this site's own three icons:
+
+| file | raw | base64 | minimal | `encodeURIComponent` |
+|---|---|---|---|---|
+| icon.svg | 638 | 852 | **654** | 962 |
+| favicon.svg | 645 | 860 | **661** | 977 |
+| og.svg | 1957 | 2636 | **2025** | 3196 |
+
+  **Minimal escaping is 23% smaller than base64 every time; the naive
+  `encodeURIComponent` is 13% BIGGER than base64.** That is the trap worth
+  building around — a tool that "handles SVG" by reaching for the obvious
+  helper has made it worse while appearing to help.
+
+**My first measurement of that claim was wrong**, and catching it before
+building is the point: I used `encodeURIComponent`, got base64 winning on all
+three files, and nearly recorded "base64 is fine for SVG". The technique is
+minimal escaping — `%`, `#`, `<`, `>`, `{`, `}` and quotes only, whitespace
+collapsed rather than stripped, since stripping it joins attribute values inside
+a `<text>` element and changes what the picture says.
+
+Two more decisions:
+
+- **HEIC is transcoded, not embedded.** No engine outside Safari renders it, so
+  a HEIC data URI is a broken image everywhere else. It is decoded on the device
+  and re-encoded as PNG, and the panel says why the output changed format.
+- **The spec asks the BROWSER whether the SVG URI works**, by loading it into an
+  `Image`. Smaller is worthless if the escaping broke it, and a string-shape
+  assertion cannot tell the difference.
+
 ## PDF to Word, the biggest gap the site had (`pdf-to-word`)
 
 A web sweep put a number on it: **PDF to Word is the most-requested PDF task on

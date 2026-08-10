@@ -199,6 +199,7 @@ export const CASES: Case[] = [
   // write last is a guard over my own memory.
   { id: 'pdf-to-text', testid: 'p2t-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'pdf-organise', testid: 'po-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-ocr', testid: 'pk-file', name: 'scan.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'file-metadata', testid: 'meta-file', name: 'notes.txt', mime: 'text/plain', make: () => Buffer.from(TOKEN) },

@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'image-base64',
+    en: { name: 'Image to Base64', description: 'Turn an image into a data URI for CSS, HTML or Markdown, and back again — with the smaller encoding for SVG, HEIC transcoded so it actually displays, and the true cost of embedding shown. Free, in your browser.' },
+    ar: { name: 'صورة إلى Base64', description: 'حوّل صورة إلى data URI لـCSS أو HTML أو ماركداون وبالعكس — بالترميز الأصغر لـSVG، وتحويل HEIC ليُعرض فعلًا، مع بيان كلفة التضمين الحقيقية. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'pdf-to-word',
     en: { name: 'PDF to Word', description: 'Turn a PDF into an editable .docx with the headings, bold and lists recovered — and a locked PDF opens with your password. Free, and the file never leaves your browser.' },
     ar: { name: 'PDF إلى وورد', description: 'حوّل ملف PDF إلى مستند ‎.docx‎ قابل للتحرير مع استعادة العناوين والخط العريض والقوائم — ويُفتح الملف المحمي بكلمة مرورك. مجانًا، ولا يغادر الملف متصفحك.' },

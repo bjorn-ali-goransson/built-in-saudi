@@ -40,6 +40,7 @@ import { loremTool } from './lorem/meta'
 import { jsonFormatterTool } from './json-formatter/meta'
 import { unitConverterTool } from './unit-converter/meta'
 import { base64Tool } from './base64/meta'
+import { imageBase64Tool } from './image-base64/meta'
 import { vatCalculatorTool } from './vat-calculator/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
@@ -437,6 +438,7 @@ export const tools: Tool[] = [
   jsonFormatterTool,
   unitConverterTool,
   base64Tool,
+  imageBase64Tool,
   vatCalculatorTool,
   dateDiffTool,
   xlsxConvertTool,
