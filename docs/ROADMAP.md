@@ -2243,3 +2243,20 @@ eval reported 0 — the shared-loader lesson, now applying to `scripts/` too.
 **Still open:** six pdf-lib tools on the main thread; `blocksToHtml` unused by
 the two Markdown writers; the dead-export sweep needing real reference analysis;
 `book-me` (28 of 32 testids never driven, with a real backend behind it).
+
+## Discoverability, 11 August 2026 — the first screen
+
+The Recommended row represented **4 of 17 categories and none of the six
+largest**. Rebalanced to **8 of 17**, with five of the six largest showing one
+tool each. Developer stays out deliberately — it is the family best served by
+search, and the showcase is for the visitor who does not yet know what to ask
+for.
+
+The relevance floor was re-measured at 232 tools (it was tuned at 202) and did
+NOT need changing: raising the absolute floor from 50 to 80 halves the junk rows
+and costs 37 real ones. A clean negative result, recorded so nobody re-derives
+it.
+
+**Still untried as a held-out axis:** the competitor product name (mostly a
+NOMATCH measurement, since this site refuses to stuff brands into tools) and the
+compound task ("merge these and add page numbers").

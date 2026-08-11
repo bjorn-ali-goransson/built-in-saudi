@@ -6,7 +6,35 @@ import { categoryLabel, type Locale } from '../i18n'
 // Curated home sections, shared by the HomePage catalog and the AppLauncher so
 // the two stay identical. The first two are hand-picked groupings that cut
 // across the tools' own `category`; the rest fall back to their category order.
-const RECOMMENDED = ['ats-cv-optimizer', 'book-me', 'calls', 'qr-code', 'prayer-times', 'islamic-calendar', 'qibla']
+/**
+ * The first thing a visitor sees, and it is a SAMPLE of the catalogue rather
+ * than a list of favourites.
+ *
+ * Measured before it was changed: the old seven — an AI CV tool, a booking
+ * tool, a video call, a QR generator and three Islamic tools — represented
+ * **4 of 17 categories and NONE of the six largest**. Developer (26),
+ * Saudi / Local (24), Text (24), Images (23), PDF (16) and Converters (14)
+ * were all absent, so the opening screen of a 232-tool site taught almost
+ * nothing about what it is strongest at.
+ *
+ * Now eight, chosen so the big families each show one: `pdf-to-word` because
+ * PDF-to-Word is recorded here as the most-requested PDF task on the web,
+ * `image-compressor` because making a photo smaller is the commonest thing
+ * anybody asks of an image, `gosi-salary` for the Saudi wedge, `translate`
+ * because on-device AI is the clearest statement of the privacy stance.
+ *
+ * **Developer stays out on purpose.** It is the largest family and the one
+ * best served by search — `ownname.mjs` measures its tools winning their own
+ * names outright, because the people who want a regex tester know it is called
+ * a regex tester. The showcase is for the visitor who does not yet know what
+ * to ask for.
+ *
+ * Dropping a tool from here does not hide it: Recommended is CONSUMED from the
+ * categories, so `book-me`, `islamic-calendar` and `qibla` simply move back
+ * into their own sections, and the Duʿāʾ row is untouched.
+ */
+const RECOMMENDED = ['ats-cv-optimizer', 'prayer-times', 'pdf-to-word', 'image-compressor',
+  'gosi-salary', 'qr-code', 'translate', 'calls']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
 const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Text', 'Converters', 'Calculators', 'Health', 'Time & Date',
   'Images', 'PDF', 'Files', 'Developer', 'Web', 'Generators', 'Design', 'Business', 'Communication']

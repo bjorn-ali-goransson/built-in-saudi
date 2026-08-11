@@ -102,3 +102,35 @@ test.describe('catalogue section nav', () => {
     await expect(page.getByTestId('section-PDF')).toBeInViewport()
   })
 })
+
+// --- The first screen is a SAMPLE of the catalogue --------------------------
+//
+// Measured before this was changed: the Recommended row represented **4 of 17
+// categories and none of the six largest**. Developer (26), Saudi / Local (24),
+// Text (24), Images (23), PDF (16) and Converters (14) were all absent, so the
+// opening screen of a 232-tool site showed an AI CV tool, a booking tool, a
+// video call, a QR generator and three Islamic tools — and taught almost
+// nothing about what the site is strongest at.
+//
+// This pins the PROPERTY rather than the list, so the row stays editable
+// without being able to shrink back to one corner of the catalogue.
+
+test('the recommended row shows the big families, not one corner of the site', async ({ page }) => {
+  await page.goto('/en')
+  const rec = page.getByTestId('section-__rec')
+  await expect(rec).toBeVisible()
+  // PDF, images and the Saudi rules are the families this site has invested
+  // most in, and a visitor who does not know what to ask for learns them here.
+  await expect(rec.getByTestId('tool-pdf-to-word')).toBeVisible()
+  await expect(rec.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(rec.getByTestId('tool-gosi-salary')).toBeVisible()
+})
+
+test('a tool dropped from Recommended is not hidden, it goes back to its category', async ({ page }) => {
+  // Recommended is CONSUMED from the categories, so removing something from it
+  // must return it rather than lose it — which is the risk in editing the list
+  // at all.
+  await page.goto('/en')
+  await expect(page.getByTestId('tool-qibla')).toBeVisible()
+  await expect(page.getByTestId('tool-islamic-calendar')).toBeVisible()
+})

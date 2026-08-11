@@ -92,6 +92,41 @@ injecting each omission and watching it be named.
    `docs/tools/<id>.md`; the many small single-purpose utilities are built
    straight from the checklist above without their own spec file.
 
+**The first screen was a sample of one corner of the catalogue.** Measured at
+232 tools: the Recommended row — an AI CV tool, a booking tool, a video call, a
+QR generator and three Islamic tools — represented **4 of 17 categories and NONE
+of the six largest.** Developer (26), Saudi / Local (24), Text (24), Images
+(23), PDF (16) and Converters (14) were all absent, so the opening screen of the
+site taught almost nothing about what it is strongest at, on the one surface a
+visitor sees before they know what to ask for.
+
+Now eight, chosen so the big families each show one — **4 of 17 → 8 of 17, and
+five of the six largest.** `pdf-to-word` because PDF-to-Word is recorded here as
+the most-requested PDF task on the web; `image-compressor` because making a
+photo smaller is the commonest thing anybody asks of an image; `gosi-salary`
+for the Saudi wedge; `translate` because on-device AI is the clearest statement
+of the privacy stance.
+
+**Developer stays out on purpose**, and it is the largest family. It is also the
+one best served by search: `ownname.mjs` measures its tools winning their own
+names outright, because somebody who wants a regex tester knows it is called a
+regex tester. The showcase is for the visitor who does not yet know what to ask
+for.
+
+**Dropping a tool from Recommended does not hide it** — the row is CONSUMED from
+the categories, so `book-me`, `islamic-calendar` and `qibla` simply move back
+into their own sections. That is the risk in editing the list at all, so it has
+its own case. The property is pinned rather than the list, so the row stays
+editable without being able to shrink back to one corner again.
+
+**The relevance floor was re-measured at the same time and did NOT need
+changing** (`node evals/floorprobe.mjs`). It was tuned at 202 tools and the
+catalogue is 232; at the shipped 25% + 50, the trade is 30 junk rows against
+**780 real rows with 0 bench losses**, and raising the absolute floor to 80
+halves the junk while costing **37 real rows**. A tuned constant that ages with
+catalogue size is worth re-asking rather than assuming — and the answer here was
+that it holds.
+
 **Catalog rendering:** the home catalog and the 9-dot `AppLauncher` share
 `components/ToolCatalog.tsx`, fed by `lib/toolSections.ts` (the `RECOMMENDED`
 list + category grouping).
