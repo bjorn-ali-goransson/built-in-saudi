@@ -2202,3 +2202,15 @@ invented link.
 the two Markdown writers; the dead-export sweep needing a real reference
 analysis; and the undriven-UI queue, where `book-me` (28 of 32 testids never
 driven, with a real backend behind it) remains the standout.
+
+## Discoverability, 11 August 2026 — the incoming question
+
+New instrument: `node evals/inbound.mjs`. `relatedcheck` measured OUTGOING dead
+ends; nothing measured which tools are pointed AT. **31 of 231 (13%) had no
+inbound edge at all**, including the whole on-device AI trio and most of the
+recent Saudi tools. **Now 0**, via 22 new clusters for families the lexical
+scorer cannot see. Median inbound is 3.
+
+**Worth keeping in mind:** a cluster is symmetric, so adding one to serve tool A
+rewrites tool B's row too. That regression was caught by an existing spec and
+now has its own case.

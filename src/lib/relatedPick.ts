@@ -50,6 +50,64 @@ export const CLUSTERS: string[][] = [
   ['saudi-phone', 'iban-validator', 'short-address'],
   // Communication holds one tool, so nothing else can fill this row.
   ['calls', 'book-me'],
+
+  // --- Added after measuring INBOUND links (`node evals/inbound.mjs`) --------
+  //
+  // `relatedcheck` drove OUTGOING dead ends to zero; nobody had asked the
+  // incoming question, and 31 of 231 tools turned out to be pointed at by
+  // nothing at all — no related row, no collection, no curated list, no
+  // hand-written link. A tool nothing points at is reachable only by searching
+  // for its name, which is the one thing a person who does not know it exists
+  // cannot do.
+  //
+  // Each group below is a real family whose members the lexical scorer cannot
+  // see, which is the documented reason clusters exist at all.
+
+  // The three on-device AI tools. They share an entire subsystem — the same
+  // availability gate, the same download-with-progress, the same honesty about
+  // what the browser can and cannot do — and share almost no vocabulary.
+  ['translate', 'summarize', 'detect-language'],
+
+  // What a person or a business OWES, which is a life-domain and not a format
+  // family: a fine, a customs bill, a register renewal, a transfer fee.
+  ['traffic-fine', 'vehicle-renewal', 'id-expiry'],
+  ['cr-renewal', 'vat-registration', 'zatca-wave'],
+  ['import-duty', 'vat-calculator', 'currency-converter'],
+  ['sponsorship-transfer', 'iqama-fees', 'end-of-service'],
+  ['fuel-cost', 'vehicle-renewal', 'timesheet'],
+  ['gpa-calculator', 'admission-score', 'ats-cv-optimizer'],
+  ['ac-size', 'electricity-bill'],
+
+  // Scaffolding a developer reaches for at the start of a project. They have
+  // nothing lexically in common and are used within minutes of each other.
+  ['gitignore', 'robots-txt', 'readme-generator', 'fake-data'],
+  ['uuid-generator', 'fake-data', 'hash-generator'],
+  ['ip-subnet', 'unix-timestamp', 'user-agent'],
+  ['lorem-ipsum', 'fake-data', 'paper-generator'],
+
+  // Tidying text, which is several verbs and one job.
+  ['case-converter', 'line-breaks', 'slugify', 'char-finder'],
+  ['readable-text', 'readability', 'text-counter'],
+  ['pptx-to-text', 'docx-to-text', 'pdf-to-text'],
+
+  // Things made for a screen or a page.
+  ['meme-generator', 'favicon-generator', 'social-resize'],
+  ['paper-generator', 'label-sheet', 'certificate'],
+  ['typing-test', 'stopwatch', 'dice-roller'],
+  ['sound-meter', 'audio-spectrum', 'metronome'],
+  ['sleep-cycle', 'water-intake', 'calorie-needs'],
+  // NOT clustered with `qr-code`: a cluster is SYMMETRIC, so naming it here to
+  // serve the shortener also rewrote the QR generator's own row and displaced
+  // `qr-reader` from the head of it — which a spec pins. Giving a tool inbound
+  // links must not cost a neighbour its best outgoing one.
+  ['link-shortener', 'link-preview', 'url-parser'],
+
+  // `barcode` was the last tool nothing pointed at. Deliberately NOT clustered
+  // with `qr-code`: a curated partner is taken before a lexical one, so it
+  // would displace `qr-reader` at the head of the QR generator's row — which a
+  // spec pins, because the filler must never take over from a real relation.
+  // Pointing at it from the neighbours costs that nothing.
+  ['barcode', 'qr-reader', 'zatca-qr'],
 ]
 
 /** Curated partners for a tool, in the order they were written. */

@@ -89,3 +89,34 @@ test('the row is still capped rather than listing a whole category', async ({ pa
   expect(n).toBeGreaterThan(0)
   expect(n).toBeLessThanOrEqual(4)
 })
+
+// --- The incoming question --------------------------------------------------
+//
+// `relatedcheck` measured OUTGOING dead ends and drove them from 81 to 0.
+// `node evals/inbound.mjs` asks the opposite and never-asked question: which
+// tools does nothing POINT AT? A tool with no inbound edge is reachable only by
+// searching for its name — the one thing somebody who does not know it exists
+// cannot do.
+//
+// Measured: **31 of 231 (13%)**, including the entire on-device AI trio and
+// most of the recent Saudi rule tools. Now 0, via clusters for the families the
+// lexical scorer cannot see.
+
+test('a tool whose whole family is invisible to the scorer still gets pointed at', async ({ page }) => {
+  // translate / summarize / detect-language share an entire subsystem — the
+  // same availability gate, the same download-with-progress — and almost no
+  // vocabulary, which is exactly why a cluster and not the scorer has to say so.
+  await page.goto('/en/apps/translate')
+  const grid = page.getByTestId('related-grid')
+  await expect(grid).toContainText('Summarizer')
+  await expect(grid).toContainText('Language Detector')
+})
+
+test('giving a tool inbound links did not cost a neighbour its best outgoing one', async ({ page }) => {
+  // A cluster is SYMMETRIC. Naming `qr-code` in a group to serve the link
+  // shortener rewrote the QR generator's own row and displaced `qr-reader` from
+  // the head of it. This pins the direction that mistake ran in.
+  await page.goto('/en/apps/qr-code')
+  const first = page.getByTestId('related-grid').locator('a').first()
+  await expect(first).toContainText('QR Code Reader')
+})
