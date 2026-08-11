@@ -401,6 +401,106 @@ ${TOKEN}
 ]
 
 /**
+ * The other half of the same promise: the tools you PASTE into.
+ *
+ * `scripts/check-privacy-coverage.mjs` counted FILE inputs and drove them to
+ * "78 take a file, 78 classified". Measured 11 August 2026
+ * (`node evals/textprivacy.mjs`): **58 tools take pasted text or a secret and
+ * NOT ONE of them was covered** — including `jwt-decoder`, where the thing you
+ * paste IS a credential, `hmac`, where you paste a signing key, `totp`, where
+ * you paste a shared secret, and `curl-convert`, where a real command routinely
+ * carries an Authorization header.
+ *
+ * That is the same "a guard scoped to whatever someone remembered" failure this
+ * file already records three times about the FILE list — one axis across.
+ *
+ * The anti-vacuity rule is different here and matters as much. A file case
+ * waits for the file to be READ; a text tool has nothing to read, so a case
+ * that fills a box and asserts silence would pass against a tool that never
+ * ran. Each case therefore names an OUTPUT that must become non-empty first.
+ */
+export interface TextCase {
+  id: string
+  /** The field to type into. */
+  testid: string
+  /** Something that must contain text before the assertions are believed. */
+  output: string
+  /** What to type. Defaults to the run token; a tool that needs a shape of its
+   *  own carries the token inside that shape. */
+  text?: string
+  /** For a tool that does its work on a button rather than on change — the
+   *  `pdf-stamp` lesson, which this half of the harness hit on its first run
+   *  with `totp`. */
+  act?: (page: import('@playwright/test').Page) => Promise<void>
+}
+
+export const TEXT_CASES: TextCase[] = [
+  // A JWT is a credential. Pasting one here is handing over a bearer token, so
+  // this is the single most important row in the array.
+  {
+    id: 'jwt-decoder', testid: 'jwt-input', output: 'jwt-payload',
+    text: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify({ sub: TOKEN })).toString('base64url')}.c2ln`,
+  },
+  // A signing key, in the clear.
+  { id: 'hmac', testid: 'hm-key', output: 'hm-hex', text: TOKEN },
+  // A TOTP shared secret — base32, so the token cannot be pasted raw.
+  {
+    id: 'totp', testid: 'totp-secret', output: 'totp-code', text: 'JBSWY3DPEHPK3PXP',
+    act: async (page) => { await page.getByTestId('totp-add').click() },
+  },
+  // A real curl command carries an Authorization header more often than not.
+  {
+    id: 'curl-convert', testid: 'cv-input', output: 'cv-output',
+    text: `curl https://example.com/api -H "Authorization: Bearer ${TOKEN}"`,
+  },
+  // A tool whose entire subject is text containing personal identifiers.
+  { id: 'data-anonymize', testid: 'da-input', output: 'da-output', text: `Contact ${TOKEN}@example.com about it.` },
+  // Full headers: addresses, routing, IPs.
+  {
+    id: 'email-headers', testid: 'eh-input', output: 'eh-summary',
+    text: `From: ${TOKEN}@example.com
+To: b@example.com
+Subject: hello
+Date: Mon, 1 Jan 2026 00:00:00 +0300
+`,
+  },
+  // Its own copy says a prompt is often the most confidential thing a team
+  // writes, and that most counters post it to a server. That claim is now
+  // tested rather than asserted.
+  { id: 'token-counter', testid: 'tc-input', output: 'tc-count' },
+  { id: 'base64', testid: 'b64-input', output: 'b64-output' },
+  { id: 'readability', testid: 'rd-input', output: 'rd-grade', text: `${TOKEN} is a sentence about a thing that happened.` },
+  { id: 'text-diff', testid: 'diff-a', output: 'diff-output', text: TOKEN },
+]
+
+for (const c of TEXT_CASES) {
+  test(`${c.id}: what you paste never leaves the browser`, async ({ page }) => {
+    const leaked: string[] = []
+    const withBody: string[] = []
+
+    page.on('request', (r) => {
+      const url = r.url()
+      const body = r.postData() ?? ''
+      if (url.includes(TOKEN) || body.includes(TOKEN)) leaked.push(`${r.method()} ${url.slice(0, 120)}`)
+      if (body && !ANALYTICS.test(url)) withBody.push(`${r.method()} ${url.slice(0, 120)}`)
+    })
+
+    await page.goto(`/en/apps/${c.id}`)
+    await page.getByTestId(c.testid).fill(c.text ?? TOKEN)
+    if (c.act) await c.act(page)
+
+    // The anti-vacuity guard: the tool must have PRODUCED something from what
+    // was typed. Without it, a case that never ran would pass having watched
+    // nothing happen — the failure this whole spec exists to prevent.
+    await expect(page.getByTestId(c.output)).not.toBeEmpty({ timeout: 20_000 })
+    await page.waitForTimeout(1200)
+
+    expect(leaked, 'what was typed appeared in a request').toEqual([])
+    expect(withBody, 'a request carried a body').toEqual([])
+  })
+}
+
+/**
  * Counts the ways a page can actually READ a picked file.
  *
  * A guard that asserts "nothing was uploaded" against a tool that never opened

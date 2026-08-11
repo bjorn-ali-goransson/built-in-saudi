@@ -2481,3 +2481,37 @@ zatca-qr, barcode, image-compressor, social-resize, carousel-split).
   tool and a reasonable candidate next time.
 - **White land tax (رسوم الأراضي البيضاء)** — still parked from sweep #12,
   still needs two-source corroboration of the 2025 rate and scope.
+
+### Code sweep, 11 August 2026 — the half of the privacy claim nobody had asked
+
+`node evals/textprivacy.mjs`. The file guard was at 78 of 78; the tools you
+PASTE into had never been counted. **58 take pasted text or a secret and none
+was covered** — including `jwt-decoder`, `hmac`, `totp` and `curl-convert`,
+where the pasted thing is a credential.
+
+Ten proved, three declared as proved elsewhere, four as sending data by design,
+and the gate extended so a new text tool must be classified.
+
+**41 remain on `TEXT_UNVERIFIED` and the right number is zero.** Suggested
+batches, by FAMILY rather than recency:
+
+1. **Developer text** — `json-formatter`, `json-diff`, `json-to-types`,
+   `regex-tester`, `url-encoder`, `uuid-generator`, `user-agent`, `robots-txt`,
+   `readme-generator`.
+2. **Arabic text** — `arabic-normalize`, `arabic-numerals`, `franco-arabic`,
+   `fix-encoding`, `arabic-poetry`, `saudi-phone`.
+3. **Writing and counting** — `text-counter`, `speech-time`, `readable-text`,
+   `case-converter`, `line-breaks`, `invisible-chars`, `paste-to-markdown`,
+   `markdown-table`, `a11y-check`.
+4. **Classroom and lists** — `quiz-maker`, `word-search`, `bingo-cards`,
+   `seating-chart`, `attendance-sheet`, `worksheets`, `certificate`,
+   `label-sheet`, `list-tools`, `random-picker`, `spin-wheel`, `team-maker`,
+   `typing-test`.
+5. **Credentials** — `password-generator`, `passphrase` (generated locally, but
+   the page says so and nothing checks it).
+
+Other findings from the same sweep, checked and CLEAN — recorded so nobody
+re-checks them: `password-generator`'s shuffle is rejection-sampled over
+`crypto.getRandomValues`, not `Math.random`; and all nine pdf.js entry points
+set `GlobalWorkerOptions.workerSrc`, the omission that once made a real bug look
+like "this PDF has no metadata".

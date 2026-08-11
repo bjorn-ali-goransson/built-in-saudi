@@ -2785,6 +2785,58 @@ iterated imports instead of the exported array: **an unfaithful measurement
 invents defects as readily as it hides them**, and the moment to notice is
 before reporting, not after.
 
+**The guard counted FILE inputs, and the tools you PASTE into had never been
+asked** (`node evals/textprivacy.mjs`). The file half was driven to "78 take a
+file, 78 classified" over four batches. Measured 11 August 2026 on the other
+axis: **58 tools take pasted text or a secret and NOT ONE was covered.**
+
+It is the same "a guard scoped to whatever someone remembered" failure this file
+records three times about the file list — one axis across — and the list is not
+a tail of harmless tools:
+
+| tool | what you paste into it |
+|---|---|
+| **`jwt-decoder`** | a bearer **token**, i.e. a credential |
+| **`hmac`** | a signing **key** |
+| **`totp`** | a shared **secret** |
+| **`curl-convert`** | in practice, an `Authorization:` header |
+| `data-anonymize` | text containing personal identifiers, by definition |
+| `email-headers` | addresses, routing, IPs |
+| `token-counter` | a prompt — **its own copy says most counters post it to a server** |
+
+Ten are proved now, in `TEXT_CASES`, and `check-privacy-coverage.mjs` gained the
+same three-bucket gate (**verified to fail** on an unclassified tool AND on a
+stale debt entry). Four decisions:
+
+- **The anti-vacuity rule had to be DIFFERENT.** A file case waits for the file
+  to be READ; a text tool has nothing to read, so "fill a box, assert silence"
+  would pass against a tool that never ran. Each case names an **output that
+  must become non-empty** first — and that immediately earned its place:
+  **`totp` failed on the first run** because it does its work on an Add button,
+  which is the `pdf-stamp` lesson arriving in a new harness. A `TextCase` may
+  carry an `act`.
+- **A textarea is a proxy, and it MISSED a credential.** `totp` takes the shared
+  secret in a plain `<Input>`, so the probe also matches an input whose testid
+  names a secret. Found by asking what the proxy could not see, rather than by
+  it going wrong later.
+- **A fourth bucket the file guard did not need: `TEXT_PROVED_ELSEWHERE`**, with
+  the spec NAMED. `translate`, `summarize` and `detect-language` are already
+  proved by `e2e/builtin-ai.spec.ts`, which asserts the typed text never appears
+  in a request. Duplicating that would be a second copy of a proof; asserting
+  nothing would be the debt list lying.
+- **41 are on `TEXT_UNVERIFIED`, and zero is the right number.** Work it by
+  FAMILY, not by recency — which is exactly how the file list came up short
+  three times before anyone noticed the pattern.
+
+**And the `` backspace trap bit for the FOURTH and FIFTH time in one
+session**, both while writing this guard. `/<Textarea/` written through a
+Python heredoc became `/<Textarea<BS>/`, matched nothing, and reported all 41
+declared tools as "no longer such a tool" — a guard that looked broken rather
+than a rule that was wrong. The recorded rule is "write regexes with
+Write/Edit, not a heredoc"; the sharper version is that **`python3 -c` is the
+same trap**, and the repair itself failed twice inside `-c` before it was
+written to a file. If a regex is going into a file, put it there with an editor.
+
 **Add a tool that takes a file, add a row to `CASES`.** It is one line, and it
 is the only thing standing behind the sentence on 109 tool pages.
 
