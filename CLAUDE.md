@@ -5312,6 +5312,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   so "users" inflates and returning-visitor metrics are meaningless; page/event
   counts and traffic sources are unaffected. There is therefore no cookie banner.
   `e2e/app.spec.ts` asserts no `_ga*` cookie is ever set.
+  **A second, privacy-first analytics also runs** (a Plausible-style `defer`
+  script from `analytics.ali-web-services.com`, `data-site` in `index.html`).
+  It is cookieless and its page-view beacon carries no user content — but it
+  POSTs a body to a third-party origin, so **it is allowlisted in the `ANALYTICS`
+  regex in `e2e/privacy.spec.ts`** (which asserts no OTHER origin ever receives a
+  request body, and that this one never carries typed text). Adding any further
+  analytics/beacon host means extending that regex too, or the privacy suite goes
+  red. It is disclosed in `PrivacyPage.tsx` (both locales) alongside GA.
 - **Search:** Google Search Console (domain property, DNS-verified) and Bing
   Webmaster Tools (DNS-verified); both have the sitemap submitted.
 - **Prayer alert backend** (`functions/`, our first backend): Cloud Functions gen2

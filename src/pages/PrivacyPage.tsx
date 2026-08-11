@@ -85,6 +85,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         p: [
           'We use Google Analytics (GA4) to understand aggregate usage — which tools are used and roughly where visitors come from. We do not use it to identify you and we do not sell analytics data.',
           'It runs in cookieless mode: Analytics is configured with client storage switched off, so it sets no cookies and stores no identifier in your browser. Each visit is counted on its own, and there is nothing left behind to recognise you on your next one. We also disable Google Signals and ad personalisation, and IP addresses are anonymised.',
+          'We also use a second, privacy-focused analytics service (analytics.ali-web-services.com) for the same aggregate page-view counts. It runs without cookies too, sends no personal data, and stores no identifier in your browser.',
           'Because of this, the site sets no analytics cookies at all — so there is no cookie banner to click, and nothing to opt out of.',
         ],
       },
@@ -177,6 +178,7 @@ const STR: Record<'en' | 'ar', { title: string; updated: string; intro: string; 
         p: [
           'نستخدم Google Analytics (GA4) لفهم الاستخدام الإجمالي — أي الأدوات تُستخدم ومن أين يأتي الزوار تقريبًا. لا نستخدمه للتعرّف عليك ولا نبيع بيانات التحليلات.',
           'ويعمل بوضع بلا كوكيز: أُوقفنا تخزين البيانات في المتصفح، فلا يضع أي كوكي ولا يحفظ أي معرّف لديك. تُحتسب كل زيارة على حدة، ولا يبقى شيء يتعرّف عليك في زيارتك القادمة. كما عطّلنا Google Signals وتخصيص الإعلانات، وتُخفى عناوين IP.',
+          'كما نستخدم خدمة تحليلات ثانية تُعنى بالخصوصية (analytics.ali-web-services.com) لأغراض احتساب مشاهدات الصفحات الإجمالية نفسها. وهي أيضًا تعمل بلا كوكيز، ولا تُرسل أي بيانات شخصية، ولا تحفظ أي معرّف في متصفحك.',
           'ولهذا لا يضع الموقع أي كوكيز تحليلات إطلاقًا — فلا يوجد إشعار كوكيز تضغط عليه، ولا شيء تنسحب منه.',
         ],
       },
