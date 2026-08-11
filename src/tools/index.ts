@@ -46,6 +46,7 @@ import { base64Tool } from './base64/meta'
 import { imageBase64Tool } from './image-base64/meta'
 import { vatCalculatorTool } from './vat-calculator/meta'
 import { importDutyTool } from './import-duty/meta'
+import { rettTool } from './rett/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { zipInspectorTool } from './zip-inspector/meta'
 import { zipCreateTool } from './zip-create/meta'
@@ -465,6 +466,7 @@ export const tools: Tool[] = [
   imageBase64Tool,
   vatCalculatorTool,
   importDutyTool,
+  rettTool,
   dateDiffTool,
   xlsxConvertTool,
   csvVcardTool,

@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'rett',
+    en: { name: 'Property Transaction Tax (RETT)', description: 'What the 5% property transaction tax comes to on a sale — why the 15% VAT does not also apply, how the first-home relief tapers above SAR 1,000,000, and why the late penalty is 2% a month and not 5%. Free, in your browser.' },
+    ar: { name: 'التصرفات العقارية', description: 'كم تبلغ ضريبة التصرفات العقارية ٥٪ عند البيع — لماذا لا تُضاف ضريبة القيمة المضافة ١٥٪، وكيف يتدرّج إعفاء المسكن الأول فوق مليون ريال، ولماذا الغرامة ٢٪ شهريًا لا ٥٪. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'import-duty',
     en: { name: 'Import Duty & VAT', description: 'What a parcel from abroad really costs — duty on the CIF value, the 15% VAT that applies at any value even under the SAR 1,000 exemption, and why the rates do not add to 20%. Free, in your browser.' },
     ar: { name: 'الرسوم الجمركية والضريبة', description: 'كم يكلّف الطرد من الخارج فعلًا — الرسوم على القيمة CIF، وضريبة ١٥٪ التي تُطبَّق على أي قيمة حتى دون إعفاء الألف ريال، ولماذا لا تُجمع النسبتان. مجانًا داخل متصفحك.' },

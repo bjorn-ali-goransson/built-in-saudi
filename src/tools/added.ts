@@ -12,6 +12,7 @@ export const ADDED: Record<string, string> = {
   'pdf-diff': '2026-08-11',
   'readable-text': '2026-08-11',
   'retirement-age': '2026-08-11',
+  'rett': '2026-08-11',
   'timetable': '2026-08-11',
   'traffic-fine': '2026-08-11',
   'image-base64': '2026-08-10',

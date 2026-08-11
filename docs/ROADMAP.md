@@ -2403,3 +2403,26 @@ all.
 **Still open:** `Developer` at 26 and the four-subject shape of `Saudi / Local`
 are both recorded rather than forced, for the same reason as before — no single
 principle settles either without doing damage elsewhere.
+
+### Web sweep #12, 11 August 2026 — a competitor with our own pitch
+
+The sweep found **منصة حِصّة** (`tools.naqdilive.com`), a Saudi calculator hub
+making our exact claim — 25+ calculators, "runs entirely in your browser, no
+information is sent to or stored on our servers" — plus `ksacalculators.com`.
+Both are SPAs that resist a catalogue diff, so the diff was done by subject.
+
+- **RETT (ضريبة التصرفات العقارية)** — SHIPPED as `rett`. The ZATCA tax neither
+  catalogue had, on the largest transaction most people here ever make. Three
+  misconceptions carry it, and one of them is a **stale figure much of the web
+  is still republishing** (5% a month rather than 2% capped at 50%).
+- **Nitaqat / Saudization band** — the percentage is trivial; the BANDS are set
+  per activity and size and are not published in a form we could verify. The
+  `iqama-fees` situation, so: not built.
+- **White land tax (رسوم الأراضي البيضاء)** — real, and the 2025 regulations
+  changed the rate and scope. Worth a look next sweep; needs the same
+  two-source corroboration RETT got.
+- **Mirath / inheritance (فرائض)** — appears on both competitors and remains
+  the highest-demand Saudi wedge we do not have. Still parked above, for the
+  documented reason: it needs scholarly sourcing and review, not a sweep.
+- **Accounting software, e-invoicing submission** — needs a backend and a
+  cryptographic stamp. Already parked in `BACKEND.md`; unchanged.

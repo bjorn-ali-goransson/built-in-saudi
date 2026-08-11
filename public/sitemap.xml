@@ -3502,6 +3502,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/sponsorship-transfer"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/rett/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/rett"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/rett"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/rett"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/rett/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/rett"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/rett"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/rett"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/import-duty/</loc>
     <lastmod>2026-08-10</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/import-duty"/>

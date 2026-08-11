@@ -2345,6 +2345,76 @@ timesheet. Reverted. The limit is real and worth knowing: a single-term Arabic
 query matching an exact keyword scores the same for every tool that has it, and
 those tools legitimately need the word for their own compound queries.
 
+## Five per cent once, not fifteen on top (`rett`)
+
+Found by a web sweep that turned up **a direct competitor with our exact
+pitch** — a Saudi calculator hub, 25+ tools, "runs entirely in your browser,
+nothing is sent to our servers". Diffing it against us is the technique that
+found `image-base64`, and what it surfaced here is the ZATCA tax **neither of
+us had**: the Real Estate Transaction Tax, on the largest single transaction
+most people here ever make.
+
+Rules in `src/tools/rett/rett.ts`, corroborated across ZATCA's own regulation
+page, EY's alerts on the Law and the Implementing Regulations, and Saudi legal
+and real-estate guides before anything was encoded. Royal Decree **M/84**, in
+force **10 April 2025**.
+
+- **The 15% VAT does NOT also apply.** RETT *replaced* VAT on real estate; it
+  did not join it. Budgeting 5% + 15% overstates a two-million-riyal flat by
+  **SAR 300,000** — and this site publishes a VAT calculator, which is exactly
+  how a reader talks themselves into the mistake.
+- **The late penalty is 2% a month, capped at 50% — and much of the web still
+  prints 5%.** That is the OLD figure, superseded by the 2025 regulations, and
+  it is still being republished by law-firm and news guides today. **A rule that
+  moved in the taxpayer's favour and the copy never caught up** is precisely
+  what the beta badge exists to say.
+- **The first-home relief is a TAPER, not a cliff.** A first home over SAR
+  1,000,000 is not disqualified: the state bears the tax on the first million —
+  a maximum of **SAR 50,000** — and the buyer pays 5% on the rest. On a
+  1,500,000 home that is 50,000 borne and 25,000 owed. **This is the exact
+  opposite of `import-duty`, where one riyal over means the duty falls on the
+  whole value**, so the two thresholds have to be learned separately. There is a
+  case for each side, since the taper case alone would pass against a tool that
+  always charged something.
+- **The seller is the taxable person**, not the buyer, though a contract can
+  move who hands over the money — and cannot move the sequence, since the notary
+  will not document the transfer without a paid reference number.
+
+**It refuses to decide whether a disposal is exempt**, the fifth tool to make
+that call. The Law carries a long schedule — inheritance, gifts within a stated
+degree of kinship, endowments, government transfers, restructuring, listed
+securities — each with conditions this page cannot see. They are named so the
+reader knows to ask; a confident "you are exempt" is not ours to give.
+
+**It took «ضريبة» off `vat-calculator`, and the keyword fix could not have
+worked.** A bare «ضريبة» in Saudi usage means VAT, the tax everybody deals with
+weekly — and the new Arabic name «ضريبة التصرفات العقارية» *begins* with the
+word, so it took the prefix bonus and won 450 to 432. A keyword cannot outvote a
+name, for the sixth time. Renamed **«التصرفات العقارية»**, which is what the
+ZATCA portal itself calls the service, with the full phrase kept as a keyword.
+«ضريبة» is back to `vat-calculator` at 432, the tool still wins its own name and
+every query it should, and all eight benches are unchanged.
+
+**And it made an unanswerable query answerable, which no bench could see.**
+`buy bitcoin` — one of the three queries pinned to return NOTHING since the
+relevance floor was tuned — came back with this tool at 105, because a bare
+`buy` is a word-boundary prefix of the keyword `buying a house`. **The eight
+benches were all unchanged and every probe was clean; only the frozen
+unanswerable case caught it.** Buying a house is what this tool is ADJACENT to,
+not what it does, so the word was deleted rather than wrapped in a phrase — the
+`pdf-organise`/`scan` precedent, since wrapping leaves the substring in place.
+`property purchase tax` and «شراء عقار» keep the buyer's intent.
+
+**Two spec bugs, both the documented traps.** `readNumber` on a figure sitting
+inside prose that also contains "5%" and "15%" read **515300000** — the
+`retirement-age` lesson, and the helper is right for a number standing alone.
+And the Arabic assertion aimed at «تدرّج», which is in the panel's HEADING and
+not in the body it queried.
+
+Carries an `official` Disclaimer naming ZATCA and Sakani, is in
+`e2e/disclaimers.spec.ts`, and is badged **beta**. **Verified to fail:**
+replacing the taper with a cliff turns the first-home case red.
+
 ## Which e-invoicing wave (`zatca-wave`)
 
 `vat-registration` answers whether you must register; this answers when you must
