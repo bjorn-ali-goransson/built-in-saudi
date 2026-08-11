@@ -2444,3 +2444,20 @@ Still open from the same sweep, recorded rather than done:
   worth doing.
 - **249 over-exported symbols.** Not a backlog; the number to watch is the
   *dead* count, which is now 0.
+
+### Discoverability, 11 August 2026 — held-out set #8, the brand as the verb
+
+`evals/untuned8.mjs`, 46 queries written in one sitting on an untried axis: the
+product name used as the verb, plus compound tasks. **46% top-1 with 23 of 46
+returning nothing — the lowest reading of any held-out set.** Fixed to 89% by
+`lib/productAliases.ts`; see CLAUDE.md. Set #8 is SPENT.
+
+**Write a fresh set before believing any future search number.** Untried axes
+that remain: the query typed as a QUESTION to an assistant ("can you make this
+smaller"), and the query that names a JOB TITLE or role rather than a task.
+
+**The instrument was fixed in the same pass and this matters more than the
+number:** `searchbench`'s `rank()` had never applied the relevance floor, so
+every set had been measured against rows the user cannot see. It moved only
+set #8 — the earlier sets are clean phrases — but any future layer that keys
+off "did anything match" would have been measured wrong.

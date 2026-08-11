@@ -4625,6 +4625,66 @@ does not use it**; it feeds only `evals/directions.mjs`. Using it to break a
 near-tie in favour of the tool whose name matches the direction is the
 principled fix, and it is the strongest unbuilt idea in search.
 
+**People name a function by the product that made it famous**
+(`lib/productAliases.ts`, held-out set #8 — 46 queries on an untried axis: the
+BRAND used as the verb, `tinypng`, `docusign`, `bitly`, `lastpass`, `ilovepdf`,
+plus compound tasks). Chosen because «باركود» is already recorded here as a
+brand-shaped word that won, and nobody had asked the general question.
+
+**First reading: 46% top-1 with 23 of 46 returning NOTHING AT ALL — the lowest
+of any held-out set** (against 88 / 90 / 73 / 62 / 54 / 64 / 79%). One
+mechanism, and it is the `heic` finding one level up: **the catalogue is written
+in the vocabulary of the FUNCTION, and not one product name is indexed
+anywhere.**
+
+It has a property no earlier set had: **half of it is expected to return
+nothing.** This site deliberately does not imitate Photoshop or run a
+file-transfer service, so the set measures precision and recall at once.
+
+| | before | after |
+|---|---|---|
+| set #8 top-1 | **46%** (21/46) | **89%** (41/46) |
+| returned nothing | 23 | 3 |
+| products we do NOT imitate, correctly silent | 12/12 | **12/12** |
+| every other bench | — | **unchanged** |
+
+Four decisions:
+
+- **A product is aliased ONLY where this site does the same job.** `tinypng`
+  compresses images and so do we. Photoshop, Canva, Dropbox, Figma and Postman
+  are absent and stay unfindable — answering those with the nearest thing is the
+  adware move already refused for `photoshop` and `stopwatch`. There is a case
+  pinning the silence, **verified to fail** by adding `photoshop` to the table,
+  without which the file could have grown into "match any brand anybody types".
+- **It is a FALLBACK on an empty result**, the `numericIntent`/`correctQuery`
+  arrangement, which is why it cannot regress a bench — and none moved.
+  **Measured before it was built:** all 20 of the then-visible misses showed an
+  EMPTY page, so the arrangement reaches every one of them rather than being a
+  convenient constraint.
+- **It maps to WORDS, not to a tool id.** A brand becomes the phrase somebody
+  would have typed if they knew our vocabulary, and the ordinary scorer answers
+  it — so a renamed tool cannot leave a dangling pointer, and a better tool
+  added later wins on its own merits.
+- **One word of scaffolding either side, never a sentence.** `zoom call` and
+  `like tinypng` are brand queries; "how do i get a zoom recording into a
+  smaller file" is not, and there is a case for it. `meet` was in the table for
+  about a minute and was removed — it is an English word before it is a product.
+
+**And the bench had never applied the relevance floor**, which is the finding
+worth carrying. `rank()` scored, filtered `> 0`, and ranked — so it measured
+rows the user never sees, AND decided "something matched" on them. That is
+exactly what every fallback keys off, so **eight aliased brands appeared to miss
+while production answered them correctly**. Fixing it moved held-out #8 by eight
+rows and **every other bench by nothing**, because the earlier sets are clean
+phrases whose right answer was above the floor anyway. Held-out #5's
+"not found" went 1 → 2 — a row that was being counted as found while sitting
+below the floor. **A number that improves when you make the instrument honest was
+never yours.**
+
+**Set #8 is SPENT. Quote 46%.** The three remaining misses are retained signal:
+`doodle poll` (a real word plus a brand), `adobe acrobat` and `hemingway editor`
+(both lose to a substring on "editor"/"table").
+
 **Indexing the `description` was tried and rejected on measurement**, and the
 protocol was followed properly this time: `evals/untuned.mjs` was burned, so a
 SECOND held-out set was written FIRST (`evals/untuned2.mjs`, 50 fresh queries,

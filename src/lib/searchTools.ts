@@ -2,6 +2,7 @@ import type { Tool } from '../tools/types'
 import { normaliseQuery } from './normaliseQuery'
 import { preferDirection } from './searchDirection'
 import { numericIntent } from './numericIntent'
+import { productAliasAny } from './productAliases'
 import { scoreTool, aboveFloor, correctQuery, stripArabicPrefixes, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
 
@@ -68,6 +69,15 @@ export function rankToolsWithCorrection(raw: string, list: Tool[], locale: Local
     if (shaped) {
       const byShape = scoreList(shaped, list, locale)
       if (byShape.length) return { tools: byShape.map((r) => r.tool) }
+    }
+    // And when the query is the PRODUCT rather than the job — `tinypng`,
+    // `docusign`, `bitly`. Same arrangement and the same reason: a query that
+    // already found something is never touched, so no bench can move. Only
+    // products whose job this site actually does are listed.
+    const asJob = productAliasAny(query)
+    if (asJob) {
+      const byJob = scoreList(asJob, list, locale)
+      if (byJob.length) return { tools: byJob.map((r) => r.tool) }
     }
   }
   const corrected = correctQuery(query, vocabFor(list, locale))
@@ -161,7 +171,12 @@ export function rankTools(raw: string, list: Tool[], locale: Locale): Tool[] {
   const scored = scoreList(query, list, locale)
   if (!scored.length) {
     const shaped = numericIntent(query)
-    if (shaped) return scoreList(shaped, list, locale).map((r) => r.tool)
+    if (shaped) {
+      const byShape = scoreList(shaped, list, locale)
+      if (byShape.length) return byShape.map((r) => r.tool)
+    }
+    const asJob = productAliasAny(query)
+    if (asJob) return scoreList(asJob, list, locale).map((r) => r.tool)
   }
   return scored.map((r) => r.tool)
 }

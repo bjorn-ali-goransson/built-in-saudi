@@ -975,3 +975,47 @@ test('and the diacritic fold still applies after many other searches', async ({ 
   await search(page, 'عداد الكلمات', 'ar')
   await expect(page.getByTestId('tool-text-counter')).toBeVisible()
 })
+
+// --- Held-out set #8: the PRODUCT NAME used as the verb.
+//
+// The catalogue is written in the vocabulary of the FUNCTION and an enormous
+// number of people name a function by the product that made it famous. First
+// reading of `evals/untuned8.mjs`: 46% top-1 with 23 of 46 returning NOTHING —
+// the lowest of any held-out set. `lib/productAliases.ts` maps a brand to the
+// words behind it, as a fallback tried only on an empty result.
+
+test('a product name resolves to the tool that does the same job', async ({ page }) => {
+  await search(page, 'tinypng')
+  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+})
+
+test('and so does one written the Arabic way', async ({ page }) => {
+  await search(page, 'زووم', 'ar')
+  await expect(page.getByTestId('tool-calls')).toBeVisible()
+})
+
+test('a product we deliberately do NOT imitate still returns nothing', async ({ page }) => {
+  // The precision half, and the reason this file cannot grow into "match any
+  // brand anybody types". Photoshop and Canva are not here; answering them with
+  // the nearest image tool is the adware move.
+  for (const q of ['photoshop', 'canva', 'dropbox', 'figma']) {
+    await search(page, q)
+    await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+  }
+})
+
+test('a brand inside a longer sentence does not hijack the query', async ({ page }) => {
+  // One word of scaffolding either side is a brand query; a sentence is not.
+  // Beyond that the scorer has a real opinion and it is not ours to overrule.
+  await search(page, 'how do i get a zoom recording into a smaller file')
+  await expect(page.getByTestId('tool-calls')).toHaveCount(0)
+})
+
+test('a query that already works is untouched by the alias layer', async ({ page }) => {
+  // The whole reason it cannot regress a bench: it runs ONLY on an empty
+  // result. `meet` is an English word before it is a product, and the tools
+  // that own it must keep it.
+  await search(page, 'meeting')
+  const first = page.locator('[data-testid^="tool-"]').first()
+  await expect(first).not.toHaveAttribute('data-testid', 'tool-image-compressor')
+})

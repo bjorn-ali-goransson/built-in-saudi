@@ -3,12 +3,14 @@ import { scoreTool, aboveFloor, stripArabicPrefixes, vocabulary } from './gen/fu
 import { normaliseQuery } from './gen/normaliseQuery.js'
 import { preferDirection } from './gen/searchDirection.js'
 import { numericIntent } from './gen/numericIntent.js'
+import { productAliasAny } from './gen/productAliases.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
 import { UNTUNED4 } from './untuned4.mjs'
 import { UNTUNED5 } from './untuned5.mjs'
 import { UNTUNED6 } from './untuned6.mjs'
 import { UNTUNED7 } from './untuned7.mjs'
+import { UNTUNED8, UNTUNED8_NOMATCH } from './untuned8.mjs'
 import { UNTUNED_AR } from './untunedar.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
@@ -35,17 +37,48 @@ function rank(rawQuery, wanted) {
     .map((t) => ({ id: t.id, score: scoreTool(q, t), names: [t.name, t.nameAr].filter(Boolean), inverse: t.inverse }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-  let raw = score(query)
+  // FAITHFUL: `scoreList` applies the relevance FLOOR before anything else
+  // looks at the list, so a bench that ranks the raw list measures rows the
+  // user never sees — and, worse, decides "something matched" on them. That is
+  // what the fallbacks below key off. Adding the floor here moved held-out #8
+  // by 8 rows and every other bench by nothing.
+  let raw = aboveFloor(score(query))
   // The surfaces fall back to a numeric-shape reading when nothing matched.
   if (!raw.length) {
     const shaped = numericIntent(query)
-    if (shaped) raw = score(shaped)
+    if (shaped) raw = aboveFloor(score(shaped))
+  }
+  // The surfaces also fall back to the JOB behind a product name. A bench that
+  // skips a layer is not evidence about that layer.
+  if (!raw.length) {
+    const asJob = productAliasAny(query)
+    if (asJob) raw = aboveFloor(score(asJob))
   }
   // The direction tie-break runs in every search surface, so the bench applies
   // it too — a bench that skips a layer is not evidence about that layer.
   const scored = preferDirection(query, raw)
   const at = scored.findIndex((x) => want.includes(x.id))
   return { at: at < 0 ? Infinity : at + 1, top: scored.slice(0, 3).map((x) => x.id) }
+}
+
+// What the user actually SEES for a query: the same normalisation `rank` uses,
+// then the relevance floor the UI applies. The original NOMATCH block called
+// `scoreTool` on the RAW string, so the two halves of this file disagreed about
+// what the query was — the drift `relatedcheck` and held-out #5 both record.
+function shownFor(rawQuery) {
+  const query = stripArabicPrefixes(normaliseQuery(rawQuery), VOCAB)
+  const score = (q) => tools.map((t) => ({ id: t.id, score: scoreTool(q, t) }))
+    .filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
+  let hits = score(query)
+  if (!hits.length) {
+    const shaped = numericIntent(query)
+    if (shaped) hits = score(shaped)
+  }
+  if (!hits.length) {
+    const asJob = productAliasAny(query)
+    if (asJob) hits = score(asJob)
+  }
+  return { hits, shown: aboveFloor(hits) }
 }
 
 let top1 = 0, top3 = 0, missing = 0
@@ -198,14 +231,41 @@ console.log(`  top-3: ${a3}/${UNTUNED_AR.length} (${Math.round((a3 / UNTUNED_AR.
 console.log(`  not found at all: ${aMiss}`)
 if (aBad.length) { console.log('  --- not first ---'); for (const l of aBad) console.log('  ' + l) }
 
+// --- the EIGHTH held-out set: the product name used as the verb ---
+let p1 = 0, p3 = 0, pMiss = 0
+const pBad = []
+for (const [q, want] of UNTUNED8) {
+  const r = rank(q, want)
+  if (r.at === 1) p1++
+  if (r.at <= 3) p3++
+  if (r.at === Infinity) pMiss++
+  if (r.at > 1) pBad.push(`${q.padEnd(44)} want ${(Array.isArray(want) ? want.join('|') : want).padEnd(40)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT #8 (product-as-verb + compound tasks, never tuned against): ${UNTUNED8.length} queries`)
+console.log(`  top-1: ${p1}/${UNTUNED8.length} (${Math.round((p1 / UNTUNED8.length) * 100)}%)`)
+console.log(`  top-3: ${p3}/${UNTUNED8.length} (${Math.round((p3 / UNTUNED8.length) * 100)}%)`)
+console.log(`  not found at all: ${pMiss}`)
+if (pBad.length) { console.log('  --- not first ---'); for (const l of pBad) console.log('  ' + l) }
+
+// The other half of set #8, and the half no earlier set had: products whose
+// function this site deliberately does NOT provide. Answering these with the
+// nearest thing is the adware move.
+let pNoisy = 0
+const pNoise = []
+for (const q of UNTUNED8_NOMATCH) {
+  const { shown } = shownFor(q)
+  if (shown.length) { pNoisy++; pNoise.push(`  ${q.padEnd(14)} -> ${shown.slice(0, 3).map((h) => `${h.id}(${h.score.toFixed(0)})`).join(', ')}`) }
+}
+console.log(`  products we deliberately do NOT imitate: ${UNTUNED8_NOMATCH.length - pNoisy}/${UNTUNED8_NOMATCH.length} correctly return nothing`)
+for (const l of pNoise) console.log(l)
+
 // --- and the opposite question: do we admit to having nothing? ---
 let noisy = 0
 let noiseRows = 0
 let shownRows = 0
 for (const q of NOMATCH) {
-  const hits = tools.map((t) => ({ id: t.id, score: scoreTool(q, t) })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
-  // What the USER sees: the relevance floor the UI applies, not the raw list.
-  const shown = aboveFloor(hits)
+  const { hits, shown } = shownFor(q)
   if (shown.length) noisy++
   noiseRows += hits.length
   shownRows += shown.length
