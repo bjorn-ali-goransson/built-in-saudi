@@ -22,7 +22,7 @@ import { PDFDocument, StandardFonts } from 'pdf-lib'
 // token, because "we do not upload your file" and "we count page views" are
 // different claims and only one of them is being tested here.
 
-const ANALYTICS = /googletagmanager\.com|google-analytics\.com|analytics\.google\.com/
+const ANALYTICS = /googletagmanager\.com|google-analytics\.com|analytics\.google\.com|analytics\.ali-web-services\.com/
 
 const TOKEN = `bis-privacy-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
