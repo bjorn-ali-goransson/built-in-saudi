@@ -899,3 +899,44 @@ test('and the diacritics still work when somebody does type them', async ({ page
   await search(page, 'محوّل العملات', 'ar')
   await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
 })
+
+// --- When the query IS the number ----------------------------------------------
+//
+// Held-out set #7 asks for things the way people specify them once they know
+// the answer's shape: nobody types "resize an image", they type `1080x1080`.
+// Six of its 42 queries returned NOTHING AT ALL — `1080x1080`, `20% of 250`,
+// «كم 20% من 250», `utc+3` — because the scorer indexes WORDS and a query made
+// of digits has nothing to match, however obvious its meaning is to a person.
+//
+// The reading runs ONLY on an empty result, the same arrangement `correctQuery`
+// uses: a query that already found something is never touched, so no ranking
+// can move. Measured: it recognises a shape in 0 of 416 benched queries and 0
+// of 15 unanswerable ones. 6 not-found became 1.
+
+test('a bare pair of dimensions finds the tools that deal in sizes', async ({ page }) => {
+  await search(page, '1080x1080')
+  await expect(top(page)).toBeVisible()
+  await expect(page.getByTestId('tool-social-resize')).toBeVisible()
+})
+
+test('a percentage finds the percentage calculator, in both scripts', async ({ page }) => {
+  await search(page, '20% of 250')
+  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
+  // The per-cent sign is script-neutral, which is why the Arabic case needs no
+  // Arabic in the rule.
+  await search(page, 'كم 20% من 250', 'ar')
+  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
+})
+
+test('an offset finds the time-zone planner', async ({ page }) => {
+  await search(page, 'utc+3')
+  await expect(page.getByTestId('tool-timezone-planner')).toBeVisible()
+})
+
+test('a bare number names no shape, and still returns nothing', async ({ page }) => {
+  // «250» could be a year, a page count or a salary. Guessing would be the
+  // adware move of always showing something — and without this case the fix
+  // could have been "answer every query containing a digit".
+  await search(page, '250')
+  await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
+})

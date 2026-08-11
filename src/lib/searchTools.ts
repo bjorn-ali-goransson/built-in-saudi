@@ -1,6 +1,7 @@
 import type { Tool } from '../tools/types'
 import { normaliseQuery } from './normaliseQuery'
 import { preferDirection } from './searchDirection'
+import { numericIntent } from './numericIntent'
 import { scoreTool, aboveFloor, correctQuery, stripArabicPrefixes, vocabulary } from './fuzzy'
 import { localizeTool, type Locale } from '../i18n'
 
@@ -58,6 +59,17 @@ export function rankToolsWithCorrection(raw: string, list: Tool[], locale: Local
   // the catalogue knows, which is what stops it mangling «كتاب».
   const query = stripArabicPrefixes(normalised, vocabFor(list, locale))
   const asTyped = scoreList(query, list, locale)
+  // When the query IS the number — `1080x1080`, `20% of 250`, `utc+3` — the
+  // scorer has no words to match and returns nothing. Tried ONLY on an empty
+  // result, so a query that already found something is never re-ranked and no
+  // bench can move.
+  if (!asTyped.length) {
+    const shaped = numericIntent(query)
+    if (shaped) {
+      const byShape = scoreList(shaped, list, locale)
+      if (byShape.length) return { tools: byShape.map((r) => r.tool) }
+    }
+  }
   const corrected = correctQuery(query, vocabFor(list, locale))
   // A query whose every word the catalogue knows has nothing to correct, which
   // is why a correctly spelled query can never be re-ranked by this.
@@ -146,7 +158,12 @@ export function rankTools(raw: string, list: Tool[], locale: Locale): Tool[] {
   // disagree with home about what an Arabic query says — the drift this file
   // exists to prevent.
   const query = stripArabicPrefixes(normalised, vocabFor(list, locale))
-  return scoreList(query, list, locale).map((r) => r.tool)
+  const scored = scoreList(query, list, locale)
+  if (!scored.length) {
+    const shaped = numericIntent(query)
+    if (shaped) return scoreList(shaped, list, locale).map((r) => r.tool)
+  }
+  return scored.map((r) => r.tool)
 }
 
 /**

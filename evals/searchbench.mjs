@@ -2,11 +2,13 @@ import { tools } from './lib/tools.mjs'
 import { scoreTool, aboveFloor, stripArabicPrefixes, vocabulary } from './gen/fuzzy.js'
 import { normaliseQuery } from './gen/normaliseQuery.js'
 import { preferDirection } from './gen/searchDirection.js'
+import { numericIntent } from './gen/numericIntent.js'
 import { UNTUNED, NOMATCH } from './untuned.mjs'
 import { UNTUNED2 } from './untuned2.mjs'
 import { UNTUNED4 } from './untuned4.mjs'
 import { UNTUNED5 } from './untuned5.mjs'
 import { UNTUNED6 } from './untuned6.mjs'
+import { UNTUNED7 } from './untuned7.mjs'
 import { UNTUNED_AR } from './untunedar.mjs'
 
 import { BENCH_QUERIES as BENCH } from './benchqueries.mjs'
@@ -29,10 +31,16 @@ function rank(rawQuery, wanted) {
   // must too — a bench that skips a layer is not evidence about that layer.
   const query = stripArabicPrefixes(normaliseQuery(rawQuery), VOCAB)
   const want = Array.isArray(wanted) ? wanted : [wanted]
-  const raw = tools
-    .map((t) => ({ id: t.id, score: scoreTool(query, t), names: [t.name, t.nameAr].filter(Boolean), inverse: t.inverse }))
+  const score = (q) => tools
+    .map((t) => ({ id: t.id, score: scoreTool(q, t), names: [t.name, t.nameAr].filter(Boolean), inverse: t.inverse }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
+  let raw = score(query)
+  // The surfaces fall back to a numeric-shape reading when nothing matched.
+  if (!raw.length) {
+    const shaped = numericIntent(query)
+    if (shaped) raw = score(shaped)
+  }
   // The direction tie-break runs in every search surface, so the bench applies
   // it too — a bench that skips a layer is not evidence about that layer.
   const scored = preferDirection(query, raw)
@@ -155,6 +163,23 @@ console.log(`  top-1: ${m1}/${UNTUNED6.length} (${Math.round((m1 / UNTUNED6.leng
 console.log(`  top-3: ${m3}/${UNTUNED6.length} (${Math.round((m3 / UNTUNED6.length) * 100)}%)`)
 console.log(`  not found at all: ${mMiss}`)
 if (mBad.length) { console.log('  --- not first ---'); for (const l of mBad) console.log('  ' + l) }
+
+// --- the SEVENTH held-out set: queries carrying a number ---
+let n1 = 0, n3 = 0, nMiss = 0
+const nBad = []
+for (const [q, want] of UNTUNED7) {
+  const r = rank(q, want)
+  if (r.at === 1) n1++
+  if (r.at <= 3) n3++
+  if (r.at === Infinity) nMiss++
+  if (r.at > 1) nBad.push(`${q.padEnd(28)} want ${(Array.isArray(want) ? want.join('|') : want).padEnd(30)} rank ${r.at === Infinity ? 'NOT FOUND' : r.at}  got ${r.top.join(', ')}`)
+}
+console.log(`
+HELD OUT #7 (numeric queries, never tuned against): ${UNTUNED7.length} queries`)
+console.log(`  top-1: ${n1}/${UNTUNED7.length} (${Math.round((n1 / UNTUNED7.length) * 100)}%)`)
+console.log(`  top-3: ${n3}/${UNTUNED7.length} (${Math.round((n3 / UNTUNED7.length) * 100)}%)`)
+console.log(`  not found at all: ${nMiss}`)
+if (nBad.length) { console.log('  --- not first ---'); for (const l of nBad) console.log('  ' + l) }
 
 // --- the ARABIC held-out set ---
 let a1 = 0, a3 = 0, aMiss = 0

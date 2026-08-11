@@ -2152,3 +2152,21 @@ by `id-expiry`.
 **Still open:** six pdf-lib tools on the main thread; `blocksToHtml` unused by
 the two Markdown writers; the dead-export sweep needing a real reference
 analysis; and the undriven-UI queue (`book-me` 28 of 32 is the standout).
+
+## Held-out set #7 (11 August 2026) — the query that IS a number
+
+`evals/untuned7.mjs`, 42 queries. First reading **79% top-1 with SIX returning
+nothing** — `1080x1080`, `20% of 250`, `utc+3`, `2mb`. **90% / 1 not-found
+after**, via `lib/numericIntent.ts`, which runs only on an empty result.
+
+**Set #7 is SPENT — quote 79%.** Remaining misses, all metadata rather than
+mechanism: `make it under 2mb` still misses `image-compressor` (which indexes
+no byte units, and the query matched enough junk that the shape fallback never
+fired); `base 16` goes to `base64`; `resize to 800px wide` and «مقاس 1080» rank
+2 behind `social-resize` and `print-size`.
+
+**Every held-out set is now spent except #2** (46/50). Axes used: tool-name-ish,
+paraphrase, natural sentence, symptom, file extension, Arabic morphology,
+numeric. Untried: the competitor product name (mostly a NOMATCH measurement,
+since this site deliberately refuses to stuff a brand into a tool), and the
+compound task ("merge these and add page numbers").

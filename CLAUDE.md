@@ -3994,7 +3994,42 @@ hamza-less «الى»**, because that is how people type it — the Arabic case
 skips a layer is not evidence about that layer, which is the whole reason set
 #5's first reading was of the wrong thing.
 
-**Set #5 is now SPENT.** Quote **54%**. The ten near misses are left as
+**Set #5 is now SPENT.** Quote **54%**.
+
+**When the query IS the number, the shape has to carry the meaning**
+(`lib/numericIntent.ts`, held-out set #7 — 42 queries carrying a size, a rate, a
+percentage, a count or a dimension). Chosen as an axis because it is how people
+specify a thing once they know the answer's shape — nobody types "resize an
+image", they type `1080x1080` — and because numbers are where `normaliseQuery`
+has its deliberate carve-outs (`3.5`, `+966`, `C#`), so it is the axis most
+likely to catch a normalisation rule that went one step too far.
+
+**First reading: 79% top-1 with SIX queries returning NOTHING AT ALL** —
+`1080x1080`, `1920x1080`, `20% of 250`, «كم 20% من 250», `utc+3`, `2mb`. The
+scorer indexes WORDS, and a query made of digits and symbols has nothing to
+match however obvious its meaning is to a person. These are not obscure
+queries; they are the most precise form of the question. **90% / 1 not-found
+after.**
+
+Four decisions:
+
+- **It runs ONLY on an empty result** — the arrangement `correctQuery` uses, and
+  the reason it cannot regress a bench: a query that already found something is
+  never touched. It also makes a false positive cheap, because the alternative
+  to a wrong guess here is a blank page.
+- **A bare number is NOT a shape.** «250» could be a year, a page count or a
+  salary, and answering it would be the adware move of always showing
+  something. There is a case asserting `250` still returns nothing, without
+  which the fix could have been "answer anything containing a digit".
+- **The per-cent sign is script-neutral**, so the Arabic row is fixed by a rule
+  with no Arabic in it — «كم 20% من 250» works because `20%` does.
+- **It REPLACES the query rather than adding to it.** The digits matched
+  nothing by definition — that is the only situation it is called in — so
+  keeping them would dilute the coverage multiplier with terms that cannot
+  match.
+
+Measured precision: a shape is recognised in **0 of 416 benched queries and 0
+of 15 unanswerable ones**. **Set #7 is SPENT — quote 79%.** The ten near misses are left as
 retained signal, and three of them are the same thing: **`jpg to pdf` leads
 with `pdf-to-images`, `xlsx to csv` with `csv-to-xlsx`** — the wrong direction,
 by margins of 1–4%. **`Tool.inverse` is declared on twelve pairs and the SCORER
