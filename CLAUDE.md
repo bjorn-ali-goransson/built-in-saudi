@@ -2120,6 +2120,58 @@ not read off a spec:
   index). ffmpeg decodes it clean and Chromium plays it — verified — but a
   hand-written progressive muxer is the right follow-up.
 
+## The retirement age is not 60 any more (`retirement-age`)
+
+Found by sweeping the vertical between employees and companies — the
+self-employed. **The freelance document itself was NOT worth a tool**: issuing
+it is free and procedural, and its optional GOSI rate is described everywhere as
+"higher, because they bear both shares" with no figure anybody publishes. What
+the sweep surfaced instead is much bigger, and almost every source still gets it
+wrong.
+
+Rules in `src/tools/retirement-age/retire.ts`, corroborated across GOSI's own
+statements and independent summaries (Asharq, Okaz, Lockton, DLA Piper, Saudi
+Gazette) before anything was encoded.
+
+- **Sixty is the PRE-2024 rule.** It needed 120 contribution months and age 60,
+  or 300 months at any age. The Social Insurance Law in force from **3 July
+  2024** replaced it, and "60" is still what nearly everybody says.
+- **A new entrant retires at 65**, with early retirement no sooner than **55** —
+  ten years before the standard age and no earlier. **Early retirement is a
+  floor, not a discount**, which is the second thing people assume backwards.
+- **One date decides which system you are in**: whether you had ANY contribution
+  period before 3 July 2024. Not your age, not your employer, not when the
+  current job started — the same shape of self-misclassification `gosi-salary`
+  already records for the two contribution schemes.
+- **The pension is the average wage of the LAST TWO YEARS × months ÷ 480**, so
+  a year buys 2.5% and forty years buys the lot — and because the average is of
+  the last two years rather than the career, a raise near the end lifts the
+  whole pension.
+
+**What it refuses is the point.** For somebody already contributing on 3 July
+2024 the standard age is 58–65, set by their age on that day and rising in
+four-month steps. The band and the step are both published; **the ladder mapping
+one to the other is not**, and inventing it would put a retirement date on the
+page that somebody might plan a life around. The tool gives the band with both
+ends dated and names GOSI's awareness platform. Fourth tool to make that call,
+and there is a case asserting the explanation appears ONLY where it applies —
+without which the new-system answer would look as hedged as the one that has to
+be.
+
+**Three things the specs caught, all worth keeping:**
+
+- **`check-orphans` failed the build that added it** — the gate from the
+  previous sweep doing exactly its job. Adding the cluster at the END did not
+  fix it either: curated partners are taken in the order the clusters are
+  written, and `gosi-salary` already had five ahead of it, so a row of four
+  filled first. **A cluster's POSITION matters, not just its existence.**
+- **The Arabic copy printed Latin digits** — `25.0٪` — because `toFixed` returns
+  Latin digits whatever the locale. Exactly the `ovulation` failure, and only
+  visible because the Arabic case asserted a NUMBER.
+- **`readNumber` returned NaN**, because it keeps `-` as a minus sign and the
+  sentence says "two-year". The helper is right for a number standing alone; a
+  number inside prose needs the prose.
+
 ## GOSI and net salary (`gosi-salary`)
 
 The arithmetic is trivial; the *rules* are the tool, and each one is a thing the

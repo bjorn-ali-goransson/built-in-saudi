@@ -619,6 +619,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'retirement-age',
+    en: { name: 'When Can I Retire? (GOSI)', description: 'When you can draw a Saudi GOSI pension under the law in force from 3 July 2024 — 65 for a new entrant, a 58-to-65 band for everybody else, and why it is not 60 any more. Free, in your browser.' },
+    ar: { name: 'متى أتقاعد؟ (التأمينات)', description: 'متى يمكنك صرف معاش التأمينات وفق النظام النافذ من ٣ يوليو ٢٠٢٤ — ٦٥ للداخل الجديد، ونطاق ٥٨ إلى ٦٥ لمن عداه، ولماذا لم يعد ٦٠. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'cr-renewal',
     en: { name: 'Commercial Registration Renewal', description: 'When a Saudi commercial registration can be renewed and when it must be — 90 days before expiry, 90 days of grace after, and why that grace is not an extension. Free, in your browser.' },
     ar: { name: 'تجديد السجل التجاري', description: 'متى يمكن تجديد السجل التجاري ومتى يجب — تسعون يومًا قبل الانتهاء، وتسعون بعده، ولماذا ليست تمديدًا. مجانًا داخل متصفحك.' },

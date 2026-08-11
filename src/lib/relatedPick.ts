@@ -36,6 +36,13 @@ export const MIN_SCORE = 120
  * scorer can see that.
  */
 export const CLUSTERS: string[][] = [
+  // FIRST on purpose. `check-orphans` failed the build that added
+  // `retirement-age` — the gate doing its job — and adding the cluster at the
+  // end did not fix it, because curated partners are taken in the order the
+  // clusters are written and `gosi-salary` already had five ahead of it, so a
+  // row of four filled before reaching it. Retirement is the closest relative
+  // of a GOSI calculator, so it leads.
+  ['retirement-age', 'gosi-salary', 'end-of-service'],
   ['gosi-salary', 'end-of-service', 'leave-overtime', 'ats-cv-optimizer'],
   ['vat-calculator', 'vat-registration', 'zatca-qr', 'invoice-generator'],
   ['early-settlement', 'gosi-salary', 'zakat-calculator'],

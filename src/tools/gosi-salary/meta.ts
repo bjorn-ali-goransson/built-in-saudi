@@ -12,7 +12,7 @@ export const gosiSalaryTool: Tool = {
   category: 'Saudi / Local',
   keywords: [
     'gosi', 'net salary', 'take home pay', 'salary calculator', 'deduction', 'payroll', 'saned', 'social insurance', 'contribution', 'basic salary', 'housing allowance', 'employer cost',
-    'التأمينات', 'التأمينات الاجتماعية', 'صافي الراتب', 'راتب', 'خصم', 'ساند', 'اشتراك', 'مسير رواتب', 'بدل سكن', 'حاسبة الراتب',
+    'التأمينات', 'التأمينات الاجتماعية', 'صافي الراتب', 'راتبي بعد التأمينات', 'كم راتبي', 'راتب', 'خصم', 'ساند', 'اشتراك', 'مسير رواتب', 'بدل سكن', 'حاسبة الراتب',
   ],
   status: 'beta',
   Icon: CoinsIcon,

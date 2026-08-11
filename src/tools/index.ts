@@ -214,6 +214,7 @@ import { csvToXlsxTool } from './csv-to-xlsx/meta'
 import { vcardToCsvTool } from './vcard-to-csv/meta'
 import { pptxToTextTool } from './pptx-to-text/meta'
 import { gosiSalaryTool } from './gosi-salary/meta'
+import { retirementAgeTool } from './retirement-age/meta'
 import { vatRegistrationTool } from './vat-registration/meta'
 import { zatcaWaveTool } from './zatca-wave/meta'
 import { vehicleRenewalTool } from './vehicle-renewal/meta'
@@ -387,6 +388,7 @@ export const tools: Tool[] = [
   vcardToCsvTool,
   pptxToTextTool,
   gosiSalaryTool,
+  retirementAgeTool,
   vatRegistrationTool,
   zatcaWaveTool,
   vehicleRenewalTool,

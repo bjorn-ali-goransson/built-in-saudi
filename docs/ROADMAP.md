@@ -2309,3 +2309,18 @@ per tool. All eight benches byte-identical.
 evenly across ~3,350 scoring calls per search, so the next real win is fewer
 CALLS — an inverted index over the keywords — which is a much larger change with
 real regression risk, and 4.7ms does not justify it yet.
+
+## Web sweep, 11 August 2026 — the self-employed
+
+Axis: the vertical between employees and companies. **Shipped `retirement-age`**
+— the 2024 Social Insurance Law means the retirement age is no longer 60 for
+anybody, and almost every source still says 60.
+
+**Seen and not taken:** the freelance document (وثيقة العمل الحر) — free to
+issue and procedural, so there is nothing to calculate; and freelancer GOSI,
+whose contribution rate is described everywhere as "higher, because they bear
+both shares" with no figure anybody publishes — the `iqama-fees` refusal.
+
+**Recorded for whoever revisits it:** if GOSI's ladder (age on 3 July 2024 →
+standard retirement age) ever becomes citable, `retire.ts` is written to take it
+— `standardAge` is already nullable for exactly that reason.
