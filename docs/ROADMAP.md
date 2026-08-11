@@ -2461,3 +2461,23 @@ number:** `searchbench`'s `rank()` had never applied the relevance floor, so
 every set had been measured against rows the user cannot see. It moved only
 set #8 — the earlier sets are clean phrases — but any future layer that keys
 off "did anything match" would have been measured wrong.
+
+### Web sweep #13, 11 August 2026 — the small online seller
+
+A vertical never swept, and one we have adjacent tools for (invoice, quotation,
+zatca-qr, barcode, image-compressor, social-resize, carousel-split).
+
+- **Pricing / margin** — SHIPPED as `pricing`. The category is crowded and every
+  incumbent starts from a NET price; here the advertised price must include VAT,
+  which changes the answer by 12 margin points on the worked example.
+- **Shipping-cost comparison** — needs live carrier rates we would have to fetch
+  or invent. Out, same reason as the tariff book.
+- **Store-platform fee comparison (Salla vs Zid)** — the published package
+  prices move and the effective rate is negotiated. It would be a table going
+  stale in public, and it is somebody's commercial decision, not arithmetic.
+- **Barcode/label sheets for stock** — we ship `barcode` and `label-sheet`
+  separately and neither points at the other for this use. A reciprocal link is
+  the cheap version; a combined "print a sheet of product barcodes" is a real
+  tool and a reasonable candidate next time.
+- **White land tax (رسوم الأراضي البيضاء)** — still parked from sweep #12,
+  still needs two-source corroboration of the 2025 rate and scope.

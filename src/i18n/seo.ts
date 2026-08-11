@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'pricing',
+    en: { name: 'Product Pricing & Margin', description: 'What a sale really leaves you where the advertised price already includes the 15% and the payment fee is taken on all of it — plus the price to display to truly hit your margin, and why markup is not margin. Free, in your browser.' },
+    ar: { name: 'تسعير المنتج وهامش الربح', description: 'كم تترك لك عملية البيع فعلًا حيث السعر المعلن شامل للضريبة والرسوم تُقتطع من كامله — والسعر الواجب عرضه لتحقيق هامشك، ولماذا نسبة الإضافة ليست الهامش. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'rett',
     en: { name: 'Property Transaction Tax (RETT)', description: 'What the 5% property transaction tax comes to on a sale — why the 15% VAT does not also apply, how the first-home relief tapers above SAR 1,000,000, and why the late penalty is 2% a month and not 5%. Free, in your browser.' },
     ar: { name: 'التصرفات العقارية', description: 'كم تبلغ ضريبة التصرفات العقارية ٥٪ عند البيع — لماذا لا تُضاف ضريبة القيمة المضافة ١٥٪، وكيف يتدرّج إعفاء المسكن الأول فوق مليون ريال، ولماذا الغرامة ٢٪ شهريًا لا ٥٪. مجانًا داخل متصفحك.' },

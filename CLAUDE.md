@@ -2345,6 +2345,54 @@ timesheet. Reverted. The limit is real and worth knowing: a single-term Arabic
 query matching an exact keyword scores the same for every tool that has it, and
 those tools legitimately need the word for their own compound queries.
 
+## The price you advertise is not the money you keep (`pricing`)
+
+Found by sweeping the small online seller — a vertical never swept, and one this
+site already has adjacent tools for. The category is crowded: a margin
+calculator is a staple everywhere. **What every one of them assumes is a price
+quoted NET of tax**, because that is how the countries they were written in
+quote a price.
+
+**Here you must advertise the tax-inclusive figure.** The Ministry of Commerce
+is explicit — a SAR 100 shelf price means a final invoice of no more than SAR
+100, and "tax added at the till" is a violation consumers are asked to
+report — corroborated across the Ministry's own statement and independent
+reports of it before being encoded. So **the number on the product page is not
+the money the seller receives**, and the error compounds with the second thing
+the incumbents leave out: a payment or platform fee is charged on the **gross**,
+including the tax the seller is only holding.
+
+**Measured, and it is the reason to build rather than link:** a seller with a
+SAR 50 cost aiming at a 40% margin, using a generic calculator, is told to
+charge **83.33**. Displayed here, after VAT and a 2.5% fee, that earns
+**28.1%**. They aimed at forty and got twenty-eight. The honest answer is
+**100.66** — and there is a case feeding that number back in and asserting 40%
+comes out, without which the first case would pass against any confident-looking
+figure.
+
+- **Markup is not margin, and both are shown.** A 50% markup is a **33.3%**
+  margin, because markup is a share of COST and margin a share of REVENUE. It is
+  reported everywhere as one of the commonest pricing errors there is. Showing
+  the flattering number beside the useful one is the whole mitigation.
+- **The target price is SOLVED, not marked up**, because the fee is a share of
+  the answer: `P = cost / ((1-m)/(1+v) - f)`. **Verified to fail** — replacing
+  the denominator with the textbook `(1-m)` reddens two cases.
+- **An unreachable target says so.** A 95% margin against a 12% fee has no
+  solution and the denominator goes negative; returning a vast number would look
+  like an answer.
+- **There is NO built-in fee table**, the sixth tool to make that call. Gateway
+  and platform rates differ by provider, package, card scheme and volume, and
+  are negotiated. The rate is an input, and the copy asks for the EFFECTIVE rate
+  off last month's statement rather than the headline one.
+
+Carries a `financial` Disclaimer naming ZATCA and the Ministry of Commerce, is
+in `e2e/disclaimers.spec.ts`, and is badged **beta** — the rate and the display
+rule are published figures that can move without anyone touching the code.
+
+**It stole nothing**, which was checked rather than assumed: «ضريبة» still goes
+to `vat-calculator`, «فاتورة» to `invoice-generator`, «نسبة» and `percentage` to
+their owners. All nine benches unchanged, own names 473/474.
+
 ## Five per cent once, not fifteen on top (`rett`)
 
 Found by a web sweep that turned up **a direct competitor with our exact

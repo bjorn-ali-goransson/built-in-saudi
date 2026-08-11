@@ -31,6 +31,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'sponsorship-transfer', kind: 'official' },
   { id: 'import-duty', kind: 'official' },
   { id: 'rett', kind: 'official' },
+  { id: 'pricing', kind: 'financial' },
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },
