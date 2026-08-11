@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Input, Select, Stack, Panel, Field, Disclaimer } from '../../components/ui'
+import { buildIcsCalendar } from '../../lib/ics'
+import { Button, Input, Select, Stack, Panel, Field, Disclaimer } from '../../components/ui'
 import { formatHijri } from '../prayer-times/islamic'
-import { calcDue, startOfDay, type Basis } from './due'
+import { FULL_TERM_FROM_DAYS, FULL_TERM_TO_DAYS, calcDue, startOfDay, type Basis } from './due'
 
 const STR = {
   en: {
@@ -32,6 +33,10 @@ const STR = {
       edd: 'Estimated due date (40 weeks)',
       termLate: 'End of week 42',
     } as Record<string, string>,
+    ics: 'Add to my calendar',
+    icsEdd: 'Estimated due date (a midpoint, not an appointment)',
+    icsTerm: 'Full term — any day in here is normal',
+    icsWhy: 'The calendar gets the 37-to-42-week window as well as the date, because a lone dated entry is exactly what makes a due date read as an appointment.',
     notADate: 'A due date is a midpoint, not an appointment: only about 1 baby in 25 arrives on it, and anything from 37 to 42 weeks is full term. A scan in the first trimester dates a pregnancy more accurately than any period date can, so if you have been given a date by one, use it above.',
     caveat: 'This is the standard 280-day estimate and nothing more. It cannot know anything about you or your pregnancy. Your doctor or midwife, and a dating scan, are what the date should come from.',
     future: 'That date is in the future.',
@@ -65,6 +70,10 @@ const STR = {
       edd: 'موعد الولادة المتوقع (٤٠ أسبوعًا)',
       termLate: 'نهاية الأسبوع ٤٢',
     } as Record<string, string>,
+    ics: 'أضف إلى تقويمي',
+    icsEdd: 'موعد الولادة التقديري (نقطة وسط لا موعد محجوز)',
+    icsTerm: 'الحمل التام — أي يوم هنا طبيعي',
+    icsWhy: 'يأخذ التقويم نافذة الأسبوع ٣٧ إلى ٤٢ إلى جانب التاريخ، لأن إدخالًا واحدًا بتاريخ واحد هو بالضبط ما يجعل موعد الولادة يُقرأ موعدًا محجوزًا.',
     notADate: 'موعد الولادة نقطة وسط لا موعدٌ محجوز: فنحو مولود واحد من كل ٢٥ يأتي فيه، وما بين ٣٧ و٤٢ أسبوعًا حملٌ تام. والأشعة في الثلث الأول أدق في تحديد عمر الحمل من أي تاريخ دورة، فإن أعطتك موعدًا فاستخدميه أعلاه.',
     caveat: 'هذا هو التقدير القياسي بـ٢٨٠ يومًا ولا شيء غير ذلك. ولا يمكنه أن يعرف شيئًا عنكِ ولا عن حملك. والطبيب أو القابلة وأشعة تحديد العمر هي ما ينبغي أن يأتي منه الموعد.',
     future: 'هذا التاريخ في المستقبل.',
@@ -90,6 +99,28 @@ export default function DueDateTool() {
   }, [date])
 
   const r = useMemo(() => (parsed ? calcDue(basis, parsed, cycle) : null), [parsed, basis, cycle])
+
+  const isoLocal = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  }
+  function downloadIcs() {
+    if (!r) return
+    const day = (n: number) => new Date(r.lmp.getFullYear(), r.lmp.getMonth(), r.lmp.getDate() + n)
+    const ics = buildIcsCalendar('due-date', [
+      // The WINDOW first and the date second, deliberately. About 1 baby in 25
+      // arrives on the due date; a calendar carrying only the date teaches the
+      // opposite of what the page says three inches below it.
+      { summary: s.icsTerm, date: isoLocal(day(FULL_TERM_FROM_DAYS)), endDate: isoLocal(day(FULL_TERM_TO_DAYS)) },
+      { summary: s.icsEdd, date: isoLocal(r.edd), alarmDays: 7 },
+    ])
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'due-date.ics'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const g = (d: Date) => d.toLocaleDateString(locale === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -168,6 +199,10 @@ export default function DueDateTool() {
           </Panel>
 
           <Panel><p className="text-[0.9rem] text-ink-soft rtl:font-ar" data-testid="dd-not-a-date">{s.notADate}</p></Panel>
+          <Panel className="gap-2">
+            <p className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="dd-ics-why">{s.icsWhy}</p>
+            <Button className="self-start px-3 py-1" onClick={downloadIcs} data-testid="dd-ics">{s.ics}</Button>
+          </Panel>
         </>
       )}
 

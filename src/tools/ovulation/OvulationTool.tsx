@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { buildIcsCalendar } from '../../lib/ics'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Stack, Panel, Field, Input, Disclaimer } from '../../components/ui'
+import { Button, Stack, Panel, Field, Input, Check, Disclaimer } from '../../components/ui'
 import { formatHijri } from '../prayer-times/islamic'
 import { calcOvulation, startOfDay, windowDays, LUTEAL_DAYS, SPERM_DAYS } from './ovulation'
 
@@ -15,6 +16,12 @@ const STR = {
     lmp: 'First day of your last period',
     cycle: 'Cycle length', days: 'days',
     luteal: 'Luteal phase',
+    ics: 'Add to my calendar',
+    icsWindow: 'Fertile window', icsOvulation: 'Ovulation expected',
+    icsTest: 'A test is reliable from today',
+    discreet: 'Use discreet wording', discreetLabel: 'Personal',
+    icsNote: 'What will be written:',
+    discreetWhy: 'A calendar is often the one thing on a screen that other people see — shared with a partner, mirrored onto a work laptop, open in a meeting. The wording is shown here before anything is downloaded, and can be reduced to a single neutral word.',
     lutealWhy: 'Ovulation to period — the near-constant half. Leave it at 14 unless a doctor has told you otherwise.',
     window: 'Fertile window', ovulation: 'Ovulation', nextPeriod: 'Next period', test: 'A test is reliable from',
     open: 'The window is open now.',
@@ -33,6 +40,12 @@ const STR = {
     lmp: 'أول يوم في آخر دورة',
     cycle: 'طول الدورة', days: 'يومًا',
     luteal: 'الطور الأصفري',
+    ics: 'أضف إلى تقويمي',
+    icsWindow: 'أيام الخصوبة', icsOvulation: 'الإباضة المتوقعة',
+    icsTest: 'الاختبار موثوق من اليوم',
+    discreet: 'صيغة محايدة', discreetLabel: 'خاص',
+    icsNote: 'ما سيُكتب:',
+    discreetWhy: 'التقويم غالبًا أكثر ما يراه الآخرون على الشاشة — مشتركًا مع شريك، أو معكوسًا على حاسب العمل، أو مفتوحًا في اجتماع. ولهذا يُعرض النص هنا قبل تنزيل أي شيء، ويمكن اختصاره إلى كلمة محايدة واحدة.',
     lutealWhy: 'من الإباضة إلى الدورة — وهو النصف شبه الثابت. اتركيه ١٤ إلا إن أخبرك الطبيب بغير ذلك.',
     window: 'نافذة الخصوبة', ovulation: 'الإباضة', nextPeriod: 'الدورة القادمة', test: 'يصحّ الاختبار من',
     open: 'النافذة مفتوحة الآن.',
@@ -69,6 +82,30 @@ export default function OvulationTool() {
   }, [date])
 
   const r = useMemo(() => (lmp ? calcOvulation(lmp, cycle, luteal) : null), [lmp, cycle, luteal])
+  const [discreet, setDiscreet] = useState(false)
+  const isoLocal = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  }
+  const label = (text: string) => (discreet ? s.discreetLabel : text)
+  function downloadIcs() {
+    if (!r) return
+    const ics = buildIcsCalendar('ovulation', [
+      // A RANGE, and `buildIcsCalendar` makes DTEND exclusive for us — the
+      // fertile window is six days and a calendar that showed five would be
+      // wrong on the day that matters most.
+      { summary: label(s.icsWindow), date: isoLocal(r.fertileFrom), endDate: isoLocal(r.fertileTo), alarmDays: 1 },
+      { summary: label(s.icsOvulation), date: isoLocal(r.ovulation) },
+      { summary: label(s.icsTest), date: isoLocal(r.testFrom) },
+    ])
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'ovulation.ics'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const g = (d: Date) => d.toLocaleDateString(locale === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   const short = (d: Date) => d.toLocaleDateString(locale === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short' })
 
@@ -157,6 +194,21 @@ export default function OvulationTool() {
 
           <Button className="self-start px-3 py-1" to={localePath(locale, '/apps/due-date')} data-testid="ov-due-date">{s.dueDate}</Button>
         </>
+      )}
+
+      {r && (
+        <Panel className="gap-2">
+          <Check>
+            <input type="checkbox" checked={discreet} data-testid="ov-discreet"
+              onChange={(e) => setDiscreet(e.target.checked)} />
+            {s.discreet}
+          </Check>
+          <p className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="ov-ics-preview">
+            {s.icsNote} {label(s.icsWindow)}
+          </p>
+          <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.discreetWhy}</p>
+          <Button className="self-start px-3 py-1" onClick={downloadIcs} data-testid="ov-ics">{s.ics}</Button>
+        </Panel>
       )}
 
       <Disclaimer kind="medical" locale={locale}>{s.caveat}</Disclaimer>

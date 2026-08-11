@@ -2136,3 +2136,19 @@ the parked entry); screen masks and page-wide reading modes (extension
 territory, not a page tool); text-to-speech, which is one `speechSynthesis` call
 and worth revisiting only with an honest voice-availability gate like
 `ModelGate`.
+
+## Code sweep, 11 August 2026 — the dated tools that could not remind you
+
+`lib/ics.ts` now has SEVEN callers. `ovulation` exports the fertile window as a
+range (the DTEND-exclusive case) with optional discreet wording; `due-date`
+exports the 37–42 week window as well as the date, window first, because a lone
+dated entry is what makes a due date read as an appointment.
+
+Closed from the backlog. Deliberately not wired, with reasons:
+`medicine-schedule` needs TIMED events and `buildIcsCalendar` is all-day by
+design; `exit-reentry`'s useful reminder is the iqama expiry, already exported
+by `id-expiry`.
+
+**Still open:** six pdf-lib tools on the main thread; `blocksToHtml` unused by
+the two Markdown writers; the dead-export sweep needing a real reference
+analysis; and the undriven-UI queue (`book-me` 28 of 32 is the standout).

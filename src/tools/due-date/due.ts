@@ -39,6 +39,18 @@ export interface DueResult {
 const DAY = 86400000
 export const GESTATION_DAYS = 280
 
+/**
+ * Full term, in days from the LMP: 37 weeks to 42 weeks.
+ *
+ * Exported because the calendar export needs the RANGE rather than the due
+ * date. About 1 baby in 25 arrives on the due date, and everything from 37 to
+ * 42 weeks is full term — so a calendar carrying one dated "Due date" and
+ * nothing else reinforces exactly the misconception this tool refuses on
+ * screen.
+ */
+export const FULL_TERM_FROM_DAYS = 37 * 7
+export const FULL_TERM_TO_DAYS = 42 * 7
+
 const add = (d: Date, days: number) => new Date(d.getTime() + days * DAY)
 
 /** Midnight LOCAL, never `toISOString()` — east of Greenwich those disagree. */

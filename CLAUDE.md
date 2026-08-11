@@ -1276,6 +1276,36 @@ and gained `buildIcsCalendar`, and three tools now export:
 - **`saudi-holidays`** exports the year, with the Eid breaks spanning their
   four days.
 
+**Two more callers, and the interesting part is what the reminder SAYS** —
+`ovulation` and `due-date`, both of which computed a date and could not put it
+anywhere:
+
+- **`ovulation` exports the fertile WINDOW as a range**, which is the case
+  `DTEND`-is-exclusive exists for: the window is six days — five before
+  ovulation plus the day itself — and a file ending on the last day silently
+  gives five, losing the day that matters most.
+- **It offers discreet wording, and shows the text before anything
+  downloads.** A calendar is often the one thing on a screen that other people
+  see: shared with a partner, mirrored onto a work laptop, open in a meeting.
+  One checkbox reduces every summary to a neutral word. Default OFF, because a
+  file full of "Personal" is useless to the person who wanted it — the choice
+  belongs to them and the tool just has to make it visible.
+- **`due-date` exports the 37-to-42-week WINDOW as well as the date, and the
+  window first.** About 1 baby in 25 arrives on the due date, and the page says
+  so three inches above the button — a calendar carrying one dated entry called
+  "Due date" teaches the exact opposite. The summary says "a midpoint, not an
+  appointment" in the calendar too, because that is where it will be read.
+- **`medicine-schedule` and `exit-reentry` were deliberately NOT wired.** The
+  first needs TIMED events and `buildIcsCalendar` is all-day by design ("these
+  are dated things, not appointments"); the second's most useful reminder is the
+  iqama expiry, which **`id-expiry` already exports** — a second export of the
+  same date is a duplicate, not a feature.
+
+**My arithmetic was wrong again and the tool was right.** The spec first
+expected the window to open on 10 March; day 1 IS the first day of bleeding, so
+ovulation on a 28-day cycle from 1 March is the 14th and the window opens on the
+9th — the same off-by-one `ovulation.ts` records having made once already.
+
 Three traps, all in the bytes and all covered:
 
 - **DTEND is EXCLUSIVE for a DATE value**, so an all-day range must end the day
