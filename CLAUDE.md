@@ -286,6 +286,28 @@ picks tools out of four or five different categories, which is exactly what
 makes them collections rather than a filing mistake. Coverage went **9 → 15 of
 46**, with all four benches unchanged.
 
+**A fifth collection, and the judgement not to split instead.** Re-measured at
+235 tools, `Saudi / Local` was back to 25 — it had been split at 31 before — and
+it plainly holds several subjects: work and residency, business and tax, vehicle
+and home, and the Saudi formats. The obvious move was to send the tax and
+registration tools to `Business`, the smallest section at 3.
+
+**That would have been wrong by this repo's own rule.** The earlier split turned
+on "neither Islamic practice nor the Arabic language is a Saudi ADMINISTRATIVE
+matter" — and VAT registration and commercial-register renewal plainly ARE, so
+they are filed correctly. What cuts across is the **audience**, not the subject,
+and the documented answer to that is a collection, exactly as `security` is.
+
+Measured before building it: **«بدء مشروع» returned NOTHING AT ALL**, and
+"starting a business" led with `working-days` — the family query answered by the
+tool least likely to be meant. `new-business` gathers the registrations, the tax
+rules, the invoice and quotation writers, the IBAN checker and the address
+checker, across three categories and without moving any of them. Precision is
+unchanged: **46/46 category queries fire, 0 of 272 benched queries, 0 of 235
+tool names**, and «سجل تجاري» still names its tool rather than the family —
+which has its own case, without which the terms could have been "any word a
+business owner might type".
+
 Four decisions:
 
 - **This does NOT contradict "curated sections get no page."** That rule is

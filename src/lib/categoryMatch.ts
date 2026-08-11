@@ -80,6 +80,15 @@ const COLLECTION_TERMS: Record<string, string[]> = {
   teaching: ['teacher', 'teaching', 'school', 'classroom', 'معلم', 'معلمة', 'مدرس', 'مدرسة', 'تعليم', 'فصل دراسي'],
   compare: ['compare', 'comparison', 'diff', 'difference', 'مقارنة', 'قارن', 'الفرق', 'فرق'],
   security: ['security', 'privacy', 'secure', 'encryption', 'أمان', 'خصوصية', 'تشفير', 'حماية'],
+  // Deliberately NOT «سجل تجاري» or «فاتورة»: those name one tool, and the
+  // offer's whole value is that it appears only when somebody asked for a
+  // family. These are the phrasings that name the audience.
+  'new-business': [
+    'starting a business', 'start a business', 'new business', 'small business',
+    'freelance', 'freelancer', 'self employed', 'entrepreneur',
+    'بدء مشروع', 'مشروع تجاري', 'نشاط تجاري', 'منشأة', 'رواد الأعمال',
+    'عمل حر', 'صاحب عمل', 'مشروع صغير',
+  ],
 }
 
 /** Words that decorate a category query without changing which one it is. */

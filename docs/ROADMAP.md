@@ -2387,3 +2387,19 @@ a shape of the whole graph, not of a page.
 **The hand-written clusters added earlier are kept**: they encode real families
 the scorer cannot see (the on-device AI trio, the Saudi rule tools), and are now
 belt-and-braces rather than load-bearing.
+
+## Discoverability, 11 August 2026 — the business owner's family query
+
+Re-measured the catalogue at 235: `Saudi / Local` is back to 25 (it was split at
+31 once) and `Developer` holds at 26, 2.0x the median. **Neither was split.**
+
+Developer's documented judgement stands. Saudi / Local looked like the obvious
+candidate — send the tax and registration tools to `Business`, the smallest
+section — but that contradicts the rule the earlier split turned on: those tools
+ARE Saudi administrative matters. What cuts across is the AUDIENCE, so it is a
+collection: **`new-business`**, measured from «بدء مشروع» returning nothing at
+all.
+
+**Still open:** `Developer` at 26 and the four-subject shape of `Saudi / Local`
+are both recorded rather than forced, for the same reason as before — no single
+principle settles either without doing damage elsewhere.

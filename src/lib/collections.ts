@@ -70,6 +70,25 @@ export const COLLECTIONS: Collection[] = [
     slug: 'compare',
     toolIds: ['text-diff', 'json-diff', 'sheet-diff', 'image-diff', 'date-diff'],
   },
+  {
+    // Starting and running a small business here cuts across Business (the
+    // invoice and quotation writers), Saudi / Local (the registrations and the
+    // tax rules) and Files (the IBAN and the address you must give). Measured
+    // before it was built: «بدء مشروع» returned NOTHING at all, and "starting a
+    // business" led with `working-days` — the family query answered by the tool
+    // least likely to be meant.
+    //
+    // NOT a category split. `vat-registration` and `cr-renewal` ARE Saudi
+    // administrative matters and are filed correctly; what cuts across is the
+    // AUDIENCE, which is what a collection is for — the same judgement recorded
+    // for `security`.
+    slug: 'new-business',
+    toolIds: [
+      'cr-renewal', 'vat-registration', 'zatca-wave', 'zatca-qr',
+      'invoice-generator', 'quotation', 'import-duty', 'iban-validator',
+      'short-address', 'gosi-salary',
+    ],
+  },
 ]
 
 const BY_SLUG = new Map(COLLECTIONS.map((c) => [c.slug, c]))

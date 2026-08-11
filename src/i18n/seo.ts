@@ -1297,6 +1297,11 @@ export const collectionSeo: CategorySeo[] = [
     ar: { name: 'أدوات المعلّمين', description: 'أوراق عمل وكلمات متقاطعة واختبارات وبطاقات بينغو وبطاقات مراجعة للطباعة؛ وتدريب على الخط العربي بالأشكال المتصلة الصحيحة؛ مع مخططات الجلوس وكشوف الحضور والشهادات وأوراق الملصقات ومنتقٍ عشوائي. مجانًا، دون تسجيل، ولا يُرفع شيء.' },
   },
   {
+    slug: 'new-business', category: '',
+    en: { name: 'Starting a business in Saudi Arabia', description: 'The registrations and deadlines a small business here has to meet, and the paperwork it has to produce: commercial registration renewal, whether VAT registration is required, which e-invoicing wave applies, import duty and VAT on a shipment, plus invoices, quotations and an IBAN checker. Free, and everything runs in your browser.' },
+    ar: { name: 'بدء نشاط تجاري في السعودية', description: 'التسجيلات والمواعيد التي على المنشأة الصغيرة الالتزام بها، والأوراق التي عليها إصدارها: تجديد السجل التجاري، وهل يلزم التسجيل في ضريبة القيمة المضافة، وأي موجة فوترة إلكترونية تشملك، والجمارك والضريبة على الشحنة، مع الفواتير وعروض الأسعار ومدقّق الآيبان. مجانًا، وكل شيء يعمل داخل متصفحك.' },
+  },
+  {
     slug: 'security', category: '',
     en: { name: 'Security and privacy tools', description: 'Generate a strong password or passphrase, check whether one has leaked without sending it, hash and sign, read a JWT or an SSL certificate, encrypt a file, strip the metadata a photo carries, and black out what should not be in a document. Everything runs in your browser.' },
     ar: { name: 'أدوات الأمان والخصوصية', description: 'أنشئ كلمة مرور أو عبارة قوية، وتحقّق من تسرّبها دون إرسالها، واحسب البصمات ووقّع الرسائل، واقرأ رمز JWT أو شهادة SSL، وشفّر ملفًا، وامسح البيانات التي تحملها الصورة، واطمس ما لا ينبغي أن يبقى في مستند. كل ذلك داخل متصفحك.' },

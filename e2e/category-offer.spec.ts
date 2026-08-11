@@ -119,3 +119,37 @@ test('but a pasted TOOL url still offers no category', async ({ page }) => {
   await search(page, 'https://built-in-saudi.com/en/apps/pdf-merge')
   await expect(page.getByTestId('category-offer')).toHaveCount(0)
 })
+
+// --- A business owner's family query -------------------------------------------
+//
+// Measured at 235 tools: «بدء مشروع» returned NOTHING AT ALL, and "starting a
+// business" led with `working-days` — the family query answered by the tool
+// least likely to be meant. The subject cuts across Business (the invoice and
+// quotation writers), Saudi / Local (the registrations and tax rules) and Files
+// (the IBAN and the address you must give).
+//
+// A collection, NOT a category split: `vat-registration` and `cr-renewal` ARE
+// Saudi administrative matters and are filed correctly. What cuts across is the
+// AUDIENCE — the same judgement recorded for `security`.
+
+test('a query about starting a business offers the collection', async ({ page }) => {
+  await search(page, 'starting a business')
+  const offer = page.getByTestId('category-offer')
+  await expect(offer).toBeVisible()
+  await offer.click()
+  await expect(page).toHaveURL(/\/en\/c\/new-business\/$/)
+})
+
+test('and it answers the Arabic phrasing that returned nothing at all', async ({ page }) => {
+  await search(page, 'بدء مشروع', 'ar')
+  await expect(page.getByTestId('category-offer')).toBeVisible()
+})
+
+test('but a query naming ONE of its tools still names that tool', async ({ page }) => {
+  // The offer's whole value is that it appears only when somebody asked for a
+  // family. «سجل تجاري» is a tool, not an audience — and without this the terms
+  // could have been "any word a business owner might type".
+  await search(page, 'سجل تجاري', 'ar')
+  await expect(page.getByTestId('tool-cr-renewal')).toBeVisible()
+  await expect(page.getByTestId('category-offer')).toHaveCount(0)
+})
