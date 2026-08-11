@@ -4,14 +4,14 @@ import { CalendarCheckIcon } from '../../components/icons'
 
 export const vehicleRenewalTool: Tool = {
   id: 'vehicle-renewal',
-  name: 'Fahes & Istimara Due Dates',
+  name: 'Car Registration & Fahes Due Dates',
   nameAr: 'مواعيد الفحص والاستمارة',
   tagline: 'Which one has to happen first.',
   description:
     'Work out when your periodic inspection and your vehicle registration are due — and, the part people find out at the counter, which one has to happen first. A valid Fahes is required to renew the istimara, so an overdue inspection blocks the renewal outright. A new private car is exempt from inspection for three years from first registration (two for taxis and public transport), which means the first one falls due on an anniversary nobody has a reminder for. Every date is shown in both Gregorian and Hijri, because the card may be in either.',
   category: 'Saudi / Local',
   keywords: [
-    'fahes', 'fahas', 'mvpi', 'periodic inspection', 'istimara', 'vehicle registration', 'renewal', 'car', 'absher', 'expiry', 'due date', 'exemption',
+    'fahes', 'fahas', 'mvpi', 'periodic inspection', 'istimara', 'vehicle registration', 'car registration', 'renew car registration', 'renew my car', 'renewal', 'car', 'absher', 'expiry', 'due date', 'exemption',
     'الفحص الدوري', 'فحص', 'استمارة', 'تجديد', 'رخصة سير', 'سيارة', 'أبشر', 'انتهاء', 'موعد', 'إعفاء',
   ],
   status: 'beta',

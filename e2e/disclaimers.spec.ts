@@ -24,6 +24,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'vat-registration', kind: 'legal' },
   { id: 'zatca-wave', kind: 'legal' },
   { id: 'traffic-fine', kind: 'official' },
+  { id: 'cr-renewal', kind: 'official' },
   { id: 'vehicle-renewal', kind: 'official' },
   { id: 'saudi-holidays', kind: 'official' },
   { id: 'sponsorship-transfer', kind: 'official' },

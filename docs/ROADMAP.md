@@ -2170,3 +2170,22 @@ paraphrase, natural sentence, symptom, file extension, Arabic morphology,
 numeric. Untried: the competitor product name (mostly a NOMATCH measurement,
 since this site deliberately refuses to stuff a brand into a tool), and the
 compound task ("merge these and add page numbers").
+
+## Web sweep, 11 August 2026 — what a BUSINESS must work out
+
+Every earlier Saudi sweep mined what an individual must do. **Shipped
+`cr-renewal`**: the commercial register has a window on each side of expiry and
+the 90 days after is not an extension — fines run from expiry and the commercial
+identity can be cancelled past it.
+
+**Seen and not taken:** the renewal FEE (published as SAR 200/100 and quoted in
+practice from 200 to 5,000, because the Chamber subscription is banded and the
+municipal licence is per square metre by zone — the `iqama-fees` refusal);
+Nitaqat/Saudization bands, whose thresholds vary by sector and size and could
+not be corroborated to this repo's standard; and municipal (Balady) licence
+fees, for the same reason.
+
+**Follow-up worth doing:** `id-expiry` tracks seven document kinds and **every
+one is personal**. A business owner's commercial registration, municipal licence
+and Chamber subscription are absent from the one tool built for "what runs out
+next". Adding them is small; the lead times are the substance.

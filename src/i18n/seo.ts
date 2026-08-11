@@ -609,6 +609,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'cr-renewal',
+    en: { name: 'Commercial Registration Renewal', description: 'When a Saudi commercial registration can be renewed and when it must be — 90 days before expiry, 90 days of grace after, and why that grace is not an extension. Free, in your browser.' },
+    ar: { name: 'تجديد السجل التجاري', description: 'متى يمكن تجديد السجل التجاري ومتى يجب — تسعون يومًا قبل الانتهاء، وتسعون بعده، ولماذا ليست تمديدًا. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'traffic-fine',
     en: { name: 'Traffic Fine Discount & Deadlines', description: 'What a Saudi traffic fine costs at the 25% Article 75 reduction, and the exact day it lapses — 30 days to object plus 15 to pay, running one after the other. Free, in your browser.' },
     ar: { name: 'خصم المخالفة المرورية ومهلها', description: 'كم تكلّف المخالفة المرورية بتخفيض ٢٥٪ وفق المادة ٧٥، ومتى يسقط بالضبط — ٣٠ يومًا للاعتراض و١٥ للسداد تجريان تباعًا. مجانًا داخل متصفحك.' },
@@ -1160,7 +1165,7 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'vehicle-renewal',
-    en: { name: 'Fahes & Istimara Due Dates', description: 'Work out when your periodic inspection and your vehicle registration are due — and, the part people find out at the counter, which one has to happen first. A valid Fahes is required to renew the istimara, so an overdue inspection blocks the renewal outright. A new private car is exempt from inspection for three years from first registration, which means the first one falls due on an anniversary nobody has a reminder for. Every date is shown in both Gregorian and Hijri.' },
+    en: { name: 'Car Registration & Fahes Due Dates', description: 'Work out when your periodic inspection and your vehicle registration are due — and, the part people find out at the counter, which one has to happen first. A valid Fahes is required to renew the istimara, so an overdue inspection blocks the renewal outright. A new private car is exempt from inspection for three years from first registration, which means the first one falls due on an anniversary nobody has a reminder for. Every date is shown in both Gregorian and Hijri.' },
     ar: { name: 'مواعيد الفحص والاستمارة', description: 'اعرف متى يستحق الفحص الدوري ومتى تنتهي استمارتك — والأهم أيّهما قبل الآخر. فالفحص الساري شرط لتجديد الاستمارة، ومن ثمّ فالفحص المتأخر يمنع التجديد أصلًا. والسيارة الخاصة الجديدة معفاة من الفحص ثلاث سنوات من أول تسجيل، ومعنى ذلك أن أول فحص يستحق في ذكرى سنوية لا تذكير لأحد بها. وكل تاريخ معروض بالميلادي والهجري معًا.' },
   },
   {

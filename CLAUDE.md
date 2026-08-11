@@ -2165,6 +2165,43 @@ Carries an `official` Disclaimer, is in `e2e/disclaimers.spec.ts`, and is
 badged **beta**, because the windows and the excluded categories can be revised
 without anyone touching this code.
 
+## The commercial register's grace period is not an extension (`cr-renewal`)
+
+Found by sweeping what a small BUSINESS here must work out — every earlier
+Saudi sweep had mined what an individual must. Rules in
+`src/tools/cr-renewal/cr.ts`, corroborated across several independent
+Ministry-of-Commerce summaries before being encoded.
+
+- **Two windows, one on each side of expiry.** Renewal opens **90 days before**
+  and can still be done for **90 days after** — which is why the deadline is
+  widely treated as six months. It is not: fines run from the expiry date, the
+  business trades on a lapsed register throughout, and past the grace the
+  commercial identity can be **cancelled**, which is not a fine but starting
+  again. Four phases are distinguished rather than collapsed into "renew soon".
+- **A prerequisite gates it.** An unpaid Chamber of Commerce subscription stops
+  a renewal that otherwise looks available, and stops it on the day you try —
+  the same shape as a lapsed Fahes blocking an istimara renewal.
+- **It refuses to total the fee**, the third tool to make that call. SAR 200 a
+  year for a main register and 100 for a branch are published, and real costs
+  are quoted from 200 to 5,000, because the Chamber subscription is banded by
+  capital and activity and a municipal licence is charged per square metre by
+  zone. Those depend on what the page cannot see.
+
+Carries an `official` Disclaimer, is badged **beta**, and exports its three
+dates through `lib/ics.ts` — the eighth caller.
+
+**It took a query off `vehicle-renewal`, and the keyword fix was not enough.**
+"when can i renew my car registration" went to the new tool, because
+"Commercial Registration Renewal" carries both words at TRIPLE name weight
+while `vehicle-renewal` was named "Fahes & Istimara Due Dates" and carried
+neither. Adding `car registration` to its keywords moved it to 250 against 274
+— still losing. **So the name changed: `Car Registration & Fahes Due Dates`.**
+The local terms survive (Fahes in the name, Istimara in the keywords), the
+Arabic name is untouched because «تجديد الاستمارة» already resolved correctly,
+and held-out #4 went back to 37/50 with every other bench unchanged. Same
+rename that fixed `Contacts to Spreadsheet` and `Scanned PDF to Text`: **a name
+must contain the words somebody types, and a keyword cannot outvote a name.**
+
 ## Vehicle inspection and registration (`vehicle-renewal`)
 
 The dates are trivial; the **relationship** between them is the tool. A valid
