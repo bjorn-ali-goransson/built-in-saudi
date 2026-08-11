@@ -177,11 +177,28 @@ export function pickRelated<T extends RelatableTool>(tool: T, all: T[], limit = 
   // reintroduced the exact noise it was measured to exclude (gosi-salary →
   // ip-subnet at 75). Measured after: dead ends 81 → 1, full rows 38 → 202.
   //
-  // Catalogue order, so the curated primary tools of a category come first.
+  // ROTATED catalogue order, starting just after this tool's own position.
+  //
+  // Straight catalogue order was the cause of a recurring, hand-patched
+  // problem: every tool in a category filled from the top of it, so the first
+  // few siblings collected all the filler links and the tail collected none.
+  // Measured over the related rows alone: **17 of 235 tools had no inbound edge
+  // at all**, and **79 PAIRS showed an identical row** — `carousel-split`,
+  // `image-redact`, `batch-watermark` and `photo-booth` all offered the same
+  // four tools. The collections and hand-written clusters were what rescued the
+  // 17, which is why every new tool reshuffled WHICH 17 and orphaned a
+  // different old one; `check-orphans` caught that twice in three tools.
+  //
+  // Rotating: **0 orphans, 0 identical pairs, and the most-pointed-at tool
+  // drops from 21 inbound to 11.** It costs the stated benefit of catalogue
+  // order — that a category's primary tools come first — and only in the
+  // LAST-RESORT slot, after curated and lexical relations have had their pick.
+  // An even graph is worth more there than a familiar name.
   const mine = all.filter((t) => t.category === tool.category)
-  for (const t of mine) {
+  const start = Math.max(0, mine.findIndex((t) => t.id === tool.id))
+  for (let i = 1; i <= mine.length; i++) {
     if (out.length >= limit) break
-    take(t)
+    take(mine[(start + i) % mine.length])
   }
   return out
 }

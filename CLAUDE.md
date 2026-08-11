@@ -521,6 +521,31 @@ there is a test for that so the filler cannot quietly take over. The one tool
 the category fill could not help was `calls`, alone in `Communication`, so it
 got a cluster with `book-me`: both are "meet someone".
 
+**The cause was removed, not just the symptom.** Two of the three tools shipped
+after the gate went in orphaned an existing tool, each patched with a
+hand-written cluster. Measured over the related rows ALONE — ignoring the
+collections and clusters that were rescuing them — **17 of 235 tools had no
+inbound edge, and 79 PAIRS of tools in one category showed an IDENTICAL row**:
+`carousel-split`, `image-redact`, `batch-watermark` and `photo-booth` all
+offered the same four suggestions.
+
+The reason was one line: the category filler iterated in **catalogue order**, so
+every tool in a category filled from the top of it and the tail was pointed at
+by nothing. Starting instead just after the tool's own position — a rotation —
+gives **0 orphans from the related rows alone, 0 identical pairs, and the
+most-pointed-at tool drops from 21 inbound to 11.** It only touches the
+LAST-RESORT slot, so curated and lexical relations are untouched and `qr-code`
+still leads with `qr-reader`.
+
+**I wrote an e2e for it that could not fail, twice.** The first compared two
+tools whose rows differ for other reasons; the second was checked against a
+build made from a `git checkout` that had silently reverted the very change
+under test. The property is a shape of the WHOLE GRAPH, not of any one page, so
+it now lives in `evals/inbound.mjs`, which reports both numbers and can be run
+against either version — and the consequence is already a build gate. **When a
+property is global, a page-level assertion is the vacuous green waiting to
+happen.**
+
 **It is now a GATE, not a measurement** (`scripts/check-orphans.mjs`, in
 `prebuild`, **verified to fail**). Driving the count to 0 was not enough,
 because it regressed within the same session: shipping `pdf-diff` changed

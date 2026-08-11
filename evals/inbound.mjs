@@ -49,13 +49,33 @@ walk(`${ROOT}/src/components`)
 const srcAll = srcParts.join('\n')
 for (const m of srcAll.matchAll(/\/apps\/([a-z0-9-]+)/g)) bump(m[1])
 
+// Two tools in one category showing the SAME four suggestions is the visible
+// form of the pile-up: under straight catalogue order every tool filled from
+// the top of its category, so 79 pairs were identical and the tail of each
+// category was pointed at by nothing.
+const rowOf = new Map(tools.map((t) => [t.id, pickRelated(t, tools).map((x) => x.id).join(',')]))
+const byCat = new Map()
+for (const t of tools) {
+  if (!byCat.has(t.category)) byCat.set(t.category, [])
+  byCat.get(t.category).push(t)
+}
+let identical = 0
+for (const [, list] of byCat) {
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      if (rowOf.get(list[i].id) === rowOf.get(list[j].id)) identical++
+    }
+  }
+}
+
 const rows = [...inbound.entries()].sort((a, b) => a[1] - b[1])
 const orphans = rows.filter(([, n]) => n === 0)
 
-console.log(`live tools: ${tools.length}`)
+console.log(`tools tools: ${tools.length}`)
 console.log(`pointed at by NO related row, collection, curated list or tool link: ${orphans.length}\n`)
 for (const [id] of orphans) console.log('  ' + id)
 
 const counts = rows.map(([, n]) => n).sort((a, b) => a - b)
 console.log(`\nmedian inbound links: ${counts[Math.floor(counts.length / 2)]}`)
+console.log(`pairs in one category showing an IDENTICAL row: ${identical}`)
 console.log(`most linked-to: ${rows.slice(-5).reverse().map(([id, n]) => `${id}(${n})`).join(', ')}`)

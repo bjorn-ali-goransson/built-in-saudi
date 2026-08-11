@@ -120,3 +120,25 @@ test('giving a tool inbound links did not cost a neighbour its best outgoing one
   const first = page.getByTestId('related-grid').locator('a').first()
   await expect(first).toContainText('QR Code Reader')
 })
+
+// --- The filler spreads, rather than piling onto the same few ------------------
+//
+// Straight catalogue order in the last-resort step meant every tool in a
+// category filled from the same first few siblings, so those collected all the
+// filler links and the tail of each category collected none. Measured over the
+// related rows ALONE: **17 of 235 tools had no inbound edge**, with the
+// distribution running from a median of 3 to a maximum of 21 — and it was the
+// collections and hand-written clusters that rescued the 17, which is why every
+// new tool reshuffled which 17 and orphaned a different old one.
+// `check-orphans` caught that twice in three tools.
+//
+// Rotating the start by the tool's own position: **0 of 235, max 21 → 11.**
+
+// NOTE: there is deliberately NO e2e for the filler ROTATION. One was written
+// and it passed with the rotation removed, so it proved nothing — the rows it
+// compared differ for other reasons. The property is a shape of the whole
+// graph, not of any one page, so it is measured where it can actually fail:
+// `node evals/inbound.mjs` reports orphans AND the number of tool pairs sharing
+// an identical row, and `scripts/check-orphans.mjs` fails the build on the
+// consequence. A page-level assertion here would be the vacuous green this repo
+// keeps paying for.

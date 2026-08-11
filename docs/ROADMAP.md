@@ -2370,3 +2370,20 @@ singular/plural trap again. The prayer sheet now indexes the phrase people type.
 
 **Seen and not taken:** static template galleries (the incumbents), and a
 school-supplies budget calculator (thin, and closer to the noise exclusion).
+
+## Code sweep, 11 August 2026 — the orphan cause, not the symptom
+
+Two of the three tools shipped after `check-orphans` went in orphaned an
+existing tool, each patched by hand. The cause was the category filler running
+in catalogue order, so every tool filled from the top of its category: **17 of
+235 with no inbound edge from the related rows alone, and 79 pairs showing an
+identical row.** Rotating the start by the tool's own position gives **0 and 0**,
+with the most-linked tool dropping from 21 inbound to 11.
+
+`evals/inbound.mjs` now reports the identical-pair count as well, because an
+e2e for this was written twice and could not fail either time — the property is
+a shape of the whole graph, not of a page.
+
+**The hand-written clusters added earlier are kept**: they encode real families
+the scorer cannot see (the on-device AI trio, the Saudi rule tools), and are now
+belt-and-braces rather than load-bearing.
