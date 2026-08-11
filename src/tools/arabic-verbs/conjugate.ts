@@ -16,7 +16,6 @@ const SH = 'ّ' // shadda
 const M = 'م'
 const N = 'ن'
 
-export type Vowel = typeof A | typeof I | typeof U
 export type Mood = 'marfu' | 'mansub' | 'majzum'
 
 export const PRONOUNS = [

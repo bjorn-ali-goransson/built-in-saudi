@@ -16,7 +16,6 @@ export type TextShape = Base & { type: 'text'; x: number; y: number; text: strin
 export type Raw = Base & { type: 'raw'; markup: string; tx: number; ty: number; sx: number; sy: number }
 
 export type Shape = Rect | Ellipse | Line | PathShape | TextShape | Raw
-export type ShapeType = Shape['type']
 export type Box = { x: number; y: number; w: number; h: number }
 
 export const DEFAULT_FILL: Fill = { fill: '#1f7a3f', stroke: '#0f3d20', strokeWidth: 2, opacity: 1 }

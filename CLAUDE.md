@@ -1458,6 +1458,32 @@ parameters.
 
 ## An export nothing calls is one of three things
 
+**The sweep that finds them was rebuilt, because the second attempt at it was
+useless** (`node evals/deadexports.mjs`). It counted an identifier's
+appearances in OTHER files and called anything with none "dead", which
+conflates two entirely different things: **over-exported** — used inside its own
+file, exported for no reason, a tidy-up at most — and **dead**, used nowhere at
+all including where it was written, which is the one that is a bug. It reported
+**114** and both spot-checks were the first kind, so the list said nothing and
+was abandoned.
+
+Separating them gives **3 dead and 245 over-exported**, and the three were real:
+`QrContentType`, `Vowel` and `ShapeType`, all leftover type aliases, now
+deleted. **The number to look at is the first one; 245 is not a backlog.**
+
+**Its first run was still unfaithful, and in the documented way.** It reported
+`staticPageSeo` and `liveToolSeo` dead — both imported by the prerender plugin
+in `vite.config.ts`, which is neither in `src/` nor in any of the directories it
+scanned. **A sweep that cannot see a caller invents a defect**, for the fourth
+time in this file. It reads the root config files now.
+
+It is a MEASUREMENT and not a gate, deliberately: a dead type alias is not worth
+failing a build over, and the two historical finds that mattered
+(`hashPrefix`, `disposeImageDecoder`) were functions. Over-gating is its own
+problem.
+
+
+
 Recorded as "overdue" on four separate sweeps before it was done. Eighteen
 unreferenced exports, and sorting them turned out to be the useful part: an
 export nothing calls is a **half-done feature**, a **duplicate**, or **dead

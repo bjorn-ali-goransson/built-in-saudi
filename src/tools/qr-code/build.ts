@@ -1,5 +1,3 @@
-export type QrContentType = 'link' | 'text' | 'wifi' | 'email' | 'phone'
-
 export interface WifiFields {
   ssid: string
   password: string

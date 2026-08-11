@@ -2274,3 +2274,24 @@ the one thing the tool refuses); a spirit level and protractor via
 DeviceOrientation (real app-store categories, but closer to the "irrelevant
 noise" exclusion than to anything this site does); multi-page capture, which
 `images-to-pdf` already covers and the tool links to.
+
+## WITHDRAWN: a rendered preview for `markdown-docx` / `markdown-epub`
+
+Recorded as "still open" in five places across this file, and it is **not open —
+it contradicts a decision already made and commented in the code**:
+
+> The outline is the honest preview: it shows what the writer UNDERSTOOD, which
+> is the thing that can be wrong — a rendered imitation of Word would look right
+> and prove nothing.
+
+That is the same failure `check-retired.mjs` exists for: a decision that lives
+only in a code comment is a decision the backlog re-proposes. A `blocksToHtml`
+preview would render the Markdown as HTML, which is a preview of the HTML
+CONVERTER, not of the Word writer — the two agree in every case except the ones
+that matter, because what can go wrong in `writeDocx` is a heading that is not a
+real heading or a list that is not a real list, and both look correct rendered.
+
+**If a richer preview is ever wanted, the honest version is to show the OOXML
+the writer produced**, not a rendering of something else.
+
+Ignore the four earlier "still open" lines above; this entry supersedes them.
