@@ -4639,6 +4639,36 @@ the way "a file converter belongs in Converters" settled the last one.
   (ascii's ≤300-char grid, favicon's 8 icons), or GPU-bound `drawImage` work.
   Functional coverage lives in `e2e/workers.spec.ts` — extend it when you add
   a worker.
+- **The pdf-lib tools on the MAIN THREAD were finally measured**, after being
+  recorded as an open #154 violation for weeks. On a desktop, with synthetic
+  text-only PDFs: 20 pages cost 60ms (load 21 + mutate 6 + save 33) and **100
+  pages cost 249ms** (66 + 20 + 164). A phone is three to six times slower, so
+  a hundred-page document froze the page for **three quarters of a second to a
+  second and a half** — nothing scrolls, no spinner turns, and the tool looks
+  broken rather than busy. **Assertion replaced by numbers; the item was
+  justified.**
+
+  `pdf-booklet` moved first because `impose.ts` is pure pdf-lib with no canvas.
+  **The other five draw a watermark, a signature or a re-encoded image through
+  one**, so moving them needs `OffscreenCanvas` in `textImage.ts` — a larger
+  change this one does not block, and the reason to start here rather than with
+  `pdf-stamp`, which looked simpler and is not.
+
+  **The move found a real bug that had been there all along.** pdf-lib refuses
+  to embed a page with no content stream — `Can't embed page with missing
+  Contents` — and `embedPages` defers the work until `save()`, so the failure
+  arrived far from its cause and `pdfFailure` classified it as **"could not be
+  read as a PDF"**. The file was fine: a blank page in a booklet is ordinary,
+  since a chapter opening on a recto leaves one. Giving each source page a
+  zero-sized rectangle costs nothing and makes it embeddable.
+
+  **On the main thread it had been a wrong error message; in the worker it
+  became a promise that never settled**, which is how it was finally noticed —
+  and that exposed a second gap in the move itself: a worker that dies, or whose
+  rejection escapes the handler, posts nothing at all. Both `error` and
+  `unhandledrejection` are handled now, because **a hung UI is worse than an
+  error: there is nothing to report and nothing to retry.**
+
 - **Printable sheets are composed on a canvas, then wrapped in a PDF**
   (`src/lib/printPdf.ts`: `newPage`/`pagesToPdf`, plus a seeded `rng`/`shuffle`
   and `newSeed`). Same reason as `textImage.ts` — pdf-lib cannot shape Arabic or

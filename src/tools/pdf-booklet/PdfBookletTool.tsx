@@ -5,6 +5,7 @@ import { UploadIcon, DownloadIcon } from '../../components/icons'
 import { Button, Select, Stack, Spinner, Panel, Check, PdfFailureNote } from '../../components/ui'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { bookletOrder, type Mode } from './impose'
+import type { ImposeReq, ImposeRes } from './impose.worker'
 
 const STR = {
   en: {
@@ -54,12 +55,52 @@ export default function PdfBookletTool() {
 
   useEffect(() => () => setWorkInProgress('pdf-booklet', false), [])
 
+  // #154: pdf-lib on the main thread froze the page for 249ms on a hundred
+  // pages here and three to six times that on a phone. The worker is created
+  // once and terminated on unmount; requests are matched by id so a stale
+  // answer to a file the reader has already replaced is dropped.
+  const workerRef = useRef<Worker | null>(null)
+  const reqRef = useRef(0)
+  useEffect(() => {
+    const w = new Worker(new URL('./impose.worker.ts', import.meta.url), { type: 'module' })
+    workerRef.current = w
+    return () => { w.terminate() }
+  }, [])
+
+  function ask(req: Omit<ImposeReq, 'id'>): Promise<ImposeRes> {
+    return new Promise((resolve, reject) => {
+      const w = workerRef.current
+      if (!w) { reject(new Error('no worker')); return }
+      const id = ++reqRef.current
+      const done = () => {
+        w.removeEventListener('message', onMsg)
+        w.removeEventListener('error', onErr)
+      }
+      const onMsg = (ev: MessageEvent<ImposeRes>) => {
+        if (ev.data.id !== id) return
+        done()
+        if (ev.data.error) reject(new Error(ev.data.error))
+        else resolve(ev.data)
+      }
+      // A worker that dies never posts anything, so without this the promise
+      // never settles and the tool sits on "working" for ever — a hung UI is
+      // worse than an error, because there is nothing to report or retry.
+      const onErr = (ev: ErrorEvent) => {
+        done()
+        reject(new Error(ev.message || 'worker failed'))
+      }
+      w.addEventListener('message', onMsg)
+      w.addEventListener('error', onErr)
+      w.postMessage({ id, ...req } as ImposeReq)
+    })
+  }
+
   async function pick(f: File | undefined) {
     if (!f) return
     setBusy('reading'); setError('')
     try {
-      const { pageCount } = await import('./impose')
-      setCount(await pageCount(f))
+      const { count: n } = await ask({ file: f })
+      setCount(n ?? 0)
       setFile(f)
       setWorkInProgress('pdf-booklet', true)
     } catch (e) {
@@ -71,9 +112,8 @@ export default function PdfBookletTool() {
     if (!file) return
     setBusy('working')
     try {
-      const { impose } = await import('./impose')
-      const blob = await impose(file, { mode, rtl, gutter, marks })
-      const url = URL.createObjectURL(blob)
+      const { blob } = await ask({ file, options: { mode, rtl, gutter, marks } })
+      const url = URL.createObjectURL(blob!)
       const a = document.createElement('a')
       a.href = url; a.download = `${file.name.replace(/\.pdf$/i, '')}-${mode}.pdf`; a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)

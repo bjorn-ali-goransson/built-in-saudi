@@ -76,8 +76,22 @@ export async function impose(file: File, o: ImposeOptions): Promise<Blob> {
   const sheetW = o.mode === 'nup4' ? pw : ph
   const sheetH = o.mode === 'nup4' ? ph : pw
 
+  // A COMPLETELY BLANK page has no content stream, and pdf-lib refuses to embed
+  // one — "Can't embed page with missing Contents". Worse, `embedPages` defers
+  // the work until `save()`, so the failure arrives far from its cause and this
+  // tool reported it as "could not be read as a PDF", which is false: the file
+  // is fine and a blank page in a booklet is perfectly ordinary — a chapter
+  // opening on a recto leaves one.
+  //
+  // Drawing a zero-sized rectangle gives the page an empty stream, which costs
+  // nothing and makes it embeddable. Found when the imposition moved into a
+  // worker: on the main thread it had been surfacing as a wrong error message,
+  // and in the worker as a promise that never settled.
+  const srcPages = src.getPages()
+  for (const p of srcPages) p.drawRectangle({ x: 0, y: 0, width: 0, height: 0 })
+
   // Embed every source page once, then place the copies.
-  const embedded = await out.embedPages(src.getPages())
+  const embedded = await out.embedPages(srcPages)
 
   for (const sheet of sheets) {
     const page = out.addPage([sheetW, sheetH])

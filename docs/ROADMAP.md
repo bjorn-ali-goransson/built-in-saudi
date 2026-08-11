@@ -2324,3 +2324,19 @@ both shares" with no figure anybody publishes — the `iqama-fees` refusal.
 **Recorded for whoever revisits it:** if GOSI's ladder (age on 3 July 2024 →
 standard retirement age) ever becomes citable, `retire.ts` is written to take it
 — `standardAge` is already nullable for exactly that reason.
+
+## Code sweep, 11 August 2026 — pdf-lib off the main thread, one tool of six
+
+Measured at last: 100 pages cost 249ms of blocked main thread on a desktop, so
+0.75–1.5s on a phone. `pdf-booklet` moved into a worker; it was chosen because
+`impose.ts` is pure pdf-lib.
+
+**The remaining five need `OffscreenCanvas` first.** `pdf-stamp` (watermark),
+`pdf-sign` (signature image), `pdf-redact` (rasterises), `pdf-compress`
+(re-encodes images) and `pdf-fill` all draw through a canvas, and
+`lib/textImage.ts` is shared with `label-sheet`, `certificate` and others — so
+converting it is a change with its own blast radius. That is the next step, and
+it is now a measured one rather than a convention appeal.
+
+The move found a real pre-existing bug: a completely blank page could not be
+imposed and was reported as "could not be read as a PDF". Fixed and pinned.
