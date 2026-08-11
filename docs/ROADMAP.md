@@ -2426,3 +2426,21 @@ Both are SPAs that resist a catalogue diff, so the diff was done by subject.
   documented reason: it needs scholarly sourcing and review, not a sweep.
 - **Accounting software, e-invoicing submission** — needs a backend and a
   cryptographic stamp. Already parked in `BACKEND.md`; unchanged.
+
+### Code sweep, 11 August 2026 — one caller is a smell
+
+Swept `src/lib/*.ts` by caller count. `wordDiff` had one caller while the site
+ships four diff tools — FIXED, see CLAUDE.md: `text-diff` was highlighting whole
+lines and carrying a duplicate LCS.
+
+Still open from the same sweep, recorded rather than done:
+
+- **`blocksToHtml`, `writeEpub`, `vcardRead`, `pptx`, `numericIntent`** each
+  have one caller and each is legitimately single-purpose. Checked, not a queue.
+- **Undriven UI** (`node evals/untested-ui.mjs`): 1013 of 2986 testids (34%)
+  are referenced by no spec. Worst surfaces `calls` (77/168), `book-me` (28/32),
+  `prayer-times` (22/29), `svg-editor` (16/31). Pick a **behavioural branch**,
+  not a styling option — that is what made the `pdf-to-word` scanned branch
+  worth doing.
+- **249 over-exported symbols.** Not a backlog; the number to watch is the
+  *dead* count, which is now 0.

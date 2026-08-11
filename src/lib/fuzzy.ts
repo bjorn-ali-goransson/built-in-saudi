@@ -51,10 +51,6 @@ function foldLower(s: string): string {
   return v
 }
 
-export function fuzzyScore(query: string, text: string): number {
-  return scoreFolded(foldLower(query).trim(), text)
-}
-
 /**
  * The same scorer, given a query that is ALREADY folded.
  *

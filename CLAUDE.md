@@ -3348,6 +3348,76 @@ listed it second and was winning a bare `wcag` on keyword position alone — but
 that tool covers ONE success criterion and this one is the standard as a whole.
 Same editorial judgement as `sha256` leading the hash generator over HMAC.
 
+## A capability built for one tool, missing from its obvious home (`text-diff`)
+
+A code sweep for **lib modules with one caller** — the shape that found
+`lib/ics.ts` — turned up `lib/wordDiff.ts`: written for `pdf-diff`, documented
+there as *the whole point* ("«thirty» became «sixty» is the change somebody is
+looking for, and a line-level answer highlights the whole clause"), and used by
+that one tool. Meanwhile the site's **primary** text comparison tool carried a
+**byte-identical copy of the same LCS** and highlighted whole LINES.
+
+**Whether that matters is a question about the EDITS people make, so it was
+measured before anything was built** (`node evals/diffgrain.mjs`):
+
+| edit | line-level | word-level | over-report |
+|---|---|---|---|
+| one number in a clause | 22 | 2 | **11.0x** |
+| a date and a figure in a paragraph | 74 | 6 | **12.3x** |
+| a name corrected mid-paragraph | 18 | 2 | 9.0x |
+| Arabic: one figure changed | 18 | 2 | 9.0x |
+| a whole sentence inserted | 5 | 5 | 1.0x |
+| a whole paragraph rewritten | 19 | 19 | 1.0x |
+
+**4.4x overall — 77% of what it painted as changed had not changed.** Eleven
+words highlighted to report that one of them moved. And the decisive half is the
+bottom of the table: **on the cases the line answer handles well it reads 1.0x**,
+so the fix has no cost there. That is what made it worth doing rather than a
+trade.
+
+Four decisions:
+
+- **The ROW unit stays a LINE.** `wordDiff.ts`'s own header records why — you
+  pasted the lines, so a line is a thing you recognise — and that judgement is
+  about the row, not about what happens inside it. The two questions were
+  conflated, which is how the gap survived.
+- **A REWRITE is left whole, and the threshold is measured rather than picked.**
+  Word-diffing two unrelated sentences produces confetti: stray matches on "the"
+  and "of" render as islands of unchanged text inside a rewrite that shares
+  nothing. Measured over realistic pairs, **a genuine edit shares at least 79% of
+  its words and a rewrite at most 9%**, so anything in that gap separates them;
+  `WORD_DIFF_FLOOR` is 0.4, sitting 4.4x above the worst rewrite and 2x below
+  the best edit. There is a case for it, and **verified to fail** — dropping the
+  floor to 0 reddens exactly that case.
+- **The duplicated LCS is gone.** `lcs` is exported from `lib/wordDiff.ts` and
+  the tool's own copy deleted. Two implementations of one algorithm is how they
+  drift, and one of them had already grown a second level the other never got.
+- **The contract is `data-changed` on a span**, not a colour. Asserting a
+  computed `background-color` would be testing Tailwind — the same move as
+  `data-why`, `data-scroll` and `data-tracking`.
+
+**The instrument caught a dead export in my own new code, in the same pass.**
+`changedWords` was written "for the eval" and the eval did not call it — it
+re-derived the number from `diffDocuments` instead, which is a **second path**,
+the exact drift `relatedcheck` records spending weeks on. `diffgrain` now calls
+the REAL `diffRows`/`changedWords`; `rows.ts` imports only `lib/wordDiff`, which
+has no runtime imports, so it compiles standalone like `relatedPick.ts`. The
+rewrite case moved 1.1x → **1.0x** on adoption, which is the floor visibly
+working and could not have been seen from the parallel path.
+
+**And `--rootDir` has to be pinned.** Given two files `tsc` infers the common
+ancestor and silently moves the output, so a specifier that resolved for a
+one-file compile stops resolving. Same family as the `./fuzzy` → `./fuzzy.js`
+rewrite, in a new place.
+
+**Three genuinely dead exports deleted** in the same sweep (`node
+evals/deadexports.mjs`, which separates *dead* from merely *over-exported*):
+`fuzzyScore` — **which this file wrongly recorded as a false positive** "used by
+a bench through the compiled copy", and no bench has called it since `rank()`
+was made faithful — plus `IN_FORCE` and `ExemptKind`, both leftovers from the
+tool shipped the day before. The over-exported count is 249 and is not a
+backlog.
+
 ## Comparing two PDFs, and why not as pictures (`pdf-diff`)
 
 Found by sweeping life events and then checked against the market: PDF compare

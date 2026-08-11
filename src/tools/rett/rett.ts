@@ -68,9 +68,6 @@ export const FIRST_HOME_VALUE_CAP = 1_000_000
 /** Which follows arithmetically: the most relief a first home can attract. */
 export const FIRST_HOME_MAX_RELIEF = FIRST_HOME_VALUE_CAP * RETT_RATE
 
-/** The Law came into force on this date; disposals before it were VAT-era. */
-export const IN_FORCE = '2025-04-10'
-
 export interface Disposal {
   /** The agreed value of the disposal, in riyals. */
   value: number
@@ -164,5 +161,3 @@ export const EXEMPT_KINDS = [
   'inKind',
   'repossession',
 ] as const
-
-export type ExemptKind = (typeof EXEMPT_KINDS)[number]

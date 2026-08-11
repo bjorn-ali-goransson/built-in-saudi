@@ -32,8 +32,11 @@ export interface Chunk {
 export interface SourceLine { text: string; page: number }
 
 /** Longest common subsequence over any comparable items, as a pair of index
- *  lists. Plain DP — the callers keep the inputs small enough. */
-function lcs<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean): [number[], number[]] {
+ *  lists. Plain DP — the callers keep the inputs small enough.
+ *
+ *  Exported because `text-diff` needs exactly this for its line pass and kept
+ *  its own byte-identical copy until August 2026. */
+export function lcs<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean): [number[], number[]] {
   const n = a.length
   const m = b.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
@@ -135,6 +138,53 @@ export function diffDocuments(a: SourceLine[], b: SourceLine[]): Chunk[] {
   if (tail.length) out.push({ op: 'same', text: tail.map((l) => l.text).join('\n'), page: tail[0].page })
   return out
 }
+
+/**
+ * Word-level diff of two single strings.
+ *
+ * `diffDocuments` is for two whole documents; this is the one-line case, which
+ * is what a side-by-side view needs to say WHICH words in a changed row
+ * changed. Measured (`node evals/diffgrain.mjs`): highlighting the whole line
+ * instead paints **4.6x** as many words as actually changed, and **9–12x** on
+ * the single most common edit there is — one figure or one name inside a
+ * sentence.
+ */
+export function diffWords(a: string, b: string): Chunk[] {
+  const out: Chunk[] = []
+  diffWordRun(words(a), words(b), 1, out)
+  return out
+}
+
+/**
+ * How much of the longer side survived unchanged, 0–1.
+ *
+ * The gate on whether a pair of lines is worth word-diffing at all. Two
+ * unrelated sentences share "the" and "of", and rendering those as islands of
+ * unchanged text inside a rewrite is confetti — worse than the whole-line
+ * highlight it replaced.
+ */
+export function sharedShare(chunks: Chunk[]): number {
+  let same = 0
+  let total = 0
+  for (const c of chunks) {
+    const n = words(c.text).length
+    if (c.op === 'same') { same += n; total += n } else total += n
+  }
+  // `total` counts a changed word once on each side, so it approximates the
+  // longer side rather than the sum — which is what we want to divide by.
+  return total ? same / total : 1
+}
+
+/**
+ * Below this shared share, two lines are a rewrite rather than an edit and are
+ * left whole.
+ *
+ * Measured rather than picked (`node evals/diffgrain.mjs`): across realistic
+ * pairs a genuine edit shares **at least 79%** and a rewrite **at most 9%**, so
+ * anything in that gap separates them. 0.4 sits 4.4x above the worst rewrite
+ * and 2x below the best edit.
+ */
+export const WORD_DIFF_FLOOR = 0.4
 
 /** Lines with their page number, from a per-page extraction. */
 export function linesFromPages(pages: string[]): SourceLine[] {

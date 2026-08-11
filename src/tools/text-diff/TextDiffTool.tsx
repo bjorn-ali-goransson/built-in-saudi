@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Stack, Textarea, FieldLabel, Check } from '../../components/ui'
+import { diffRows } from './rows'
 
 const STR = {
   en: {
@@ -15,27 +16,6 @@ const STR = {
   },
 }
 
-type Row = { t: 'add' | 'del' | 'eq'; text: string }
-
-// Classic LCS over lines → add/del/eq rows.
-function diffLines(aLines: string[], bLines: string[]): Row[] {
-  const n = aLines.length, m = bLines.length
-  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
-  for (let i = n - 1; i >= 0; i--)
-    for (let j = m - 1; j >= 0; j--)
-      dp[i][j] = aLines[i] === bLines[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
-  const rows: Row[] = []
-  let i = 0, j = 0
-  while (i < n && j < m) {
-    if (aLines[i] === bLines[j]) { rows.push({ t: 'eq', text: aLines[i] }); i++; j++ }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { rows.push({ t: 'del', text: aLines[i] }); i++ }
-    else { rows.push({ t: 'add', text: bLines[j] }); j++ }
-  }
-  while (i < n) rows.push({ t: 'del', text: aLines[i++] })
-  while (j < m) rows.push({ t: 'add', text: bLines[j++] })
-  return rows
-}
-
 export default function TextDiffTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -43,11 +23,7 @@ export default function TextDiffTool() {
   const [b, setB] = useState('')
   const [ignoreWs, setIgnoreWs] = useState(false)
 
-  const rows = useMemo(() => {
-    if (!a && !b) return []
-    const prep = (t: string) => t.split('\n').map((l) => (ignoreWs ? l.trim() : l))
-    return diffLines(prep(a), prep(b))
-  }, [a, b, ignoreWs])
+  const rows = useMemo(() => (!a && !b ? [] : diffRows(a, b, ignoreWs)), [a, b, ignoreWs])
 
   const added = rows.filter((r) => r.t === 'add').length
   const removed = rows.filter((r) => r.t === 'del').length
@@ -73,8 +49,21 @@ export default function TextDiffTool() {
             : (
               <div className="border border-[color:var(--line-soft)] rounded-md overflow-hidden font-mono text-[0.85rem]" dir="ltr" data-testid="diff-output">
                 {rows.map((r, i) => (
-                  <div key={i} className={`px-3 py-[2px] whitespace-pre-wrap break-words ${r.t === 'add' ? 'bg-[color-mix(in_srgb,var(--color-green-400)_16%,transparent)] text-green-800' : r.t === 'del' ? 'bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] text-[color:var(--danger)]' : 'text-ink-soft'}`}>
-                    <span className="select-none text-ink-faint me-2">{r.t === 'add' ? '+' : r.t === 'del' ? '−' : ' '}</span>{r.text || ' '}
+                  <div key={i} data-testid={`diff-row-${i}`} data-kind={r.t}
+                    className={`px-3 py-[2px] whitespace-pre-wrap break-words ${r.t === 'add' ? 'bg-[color-mix(in_srgb,var(--color-green-400)_10%,transparent)] text-green-800' : r.t === 'del' ? 'bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] text-[color:var(--danger)]' : 'text-ink-soft'}`}>
+                    <span className="select-none text-ink-faint me-2">{r.t === 'add' ? '+' : r.t === 'del' ? '−' : ' '}</span>
+                    {/* The row keeps its line identity; the emphasis moves to the
+                        words that actually differ. A row with no partner to compare
+                        against has one part and reads exactly as it always did. */}
+                    {r.parts.map((p, k) => (
+                      <span key={k} data-changed={p.changed && r.t !== 'eq' ? 'yes' : 'no'}
+                        className={p.changed && r.t !== 'eq'
+                          ? `rounded-[3px] px-[2px] font-semibold ${r.t === 'add' ? 'bg-[color-mix(in_srgb,var(--color-green-400)_38%,transparent)]' : 'bg-[color-mix(in_srgb,var(--danger)_26%,transparent)]'}`
+                          : undefined}>
+                        {k > 0 ? ' ' : ''}{p.text}
+                      </span>
+                    ))}
+                    {r.text ? null : ' '}
                   </div>
                 ))}
               </div>
