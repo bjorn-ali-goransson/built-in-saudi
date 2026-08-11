@@ -9,6 +9,8 @@ import { ar } from './src/i18n/ar'
 import { siteMeta, liveToolSeo, staticPageSeo, categorySeo, collectionSeo, type ToolSeo, type CategorySeo } from './src/i18n/seo'
 import { COLLECTIONS } from './src/lib/collections'
 
+type CollectionSeoRow = (typeof collectionSeo)[number]
+
 const ORIGIN = 'https://built-in-saudi.com'
 const LOCALES = ['en', 'ar'] as const
 type Loc = (typeof LOCALES)[number]
@@ -100,8 +102,20 @@ function toolContent(locale: Loc, tool: ToolSeo, catOf: Map<string, string>): st
   // to every tool and to no grouping at all.
   const cat = categorySeo.find((c) => c.category === catOf.get(tool.id))
   const crumb = cat ? ` / <a href="/${locale}/c/${cat.slug}/">${esc(cat[locale].name)}</a>` : ''
+  // And any COLLECTION it belongs to. Measured a week after the collections
+  // shipped: 0 of 237 tool pages linked to one, so the five groups the category
+  // tree cannot name were reachable only from each other and from a search that
+  // happened to name them — which is precisely what somebody who does not know
+  // they exist cannot type. Same defect the categories had, one level over.
+  const cols = COLLECTIONS
+    .filter((c) => c.toolIds.includes(tool.id))
+    .map((c) => collectionSeo.find((x) => x.slug === c.slug))
+    .filter((c): c is CollectionSeoRow => Boolean(c))
+    .map((c) => `<a href="/${locale}/c/${c.slug}/">${esc(c[locale].name)}</a>`)
+    .join(' ')
+  const inGroups = cols ? `<p>${esc(t.toolPage.breadcrumb)}: ${cols}</p>` : ''
   return `<main><nav><a href="/${locale}/">${esc(t.toolPage.breadcrumb)}</a>${crumb} / ${esc(ts.name)}</nav>`
-    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p>`
+    + `<h1>${esc(ts.name)}</h1><p>${esc(ts.description)}</p>${inGroups}`
     + `<h2>${esc(more)}</h2><ul>${others}</ul></main>`
 }
 

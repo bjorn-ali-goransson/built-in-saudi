@@ -2515,3 +2515,20 @@ re-checks them: `password-generator`'s shuffle is rejection-sampled over
 `crypto.getRandomValues`, not `Math.random`; and all nine pdf.js entry points
 set `GlobalWorkerOptions.workerSrc`, the omission that once made a real bug look
 like "this PDF has no metadata".
+
+### Discoverability, 11 August 2026 — the collections were unreachable
+
+Re-measured the two tuned constants first, and **both held at 237 tools**: the
+relevance floor still costs 0 real rows and 0 bench losses at 25% + 50, and the
+catalogue shape is unchanged in kind (Saudi / Local and Developer both 26, 2.0x
+the median, both recorded as deliberate).
+
+What was actually broken was the newest thing on the site. **0 of 237 tool pages
+linked to a collection, and the rendered catalogue mentioned them nowhere** —
+`CategoryOffer` was the only component that knew they existed, and it fires only
+on a query that names one. Fixed; see CLAUDE.md.
+
+**Still open, and worth doing before believing any future search number:** a
+held-out set #9 on an untried axis. The two recorded candidates remain — the
+query typed as a QUESTION to an assistant ("can you make this smaller"), and the
+query that names a JOB TITLE or role rather than a task.

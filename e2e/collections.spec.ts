@@ -112,3 +112,48 @@ test('it works in Arabic', async ({ page }) => {
   await expect(page.getByTestId('category-title')).toContainText('المعلّمين')
   expect(await page.locator('[data-testid^="tool-"]').count()).toBeGreaterThan(3)
 })
+
+// --- Reachability. Measured 11 August 2026, a week after the collections
+// shipped: the rendered catalogue referenced them NOWHERE, and 0 of 237 tool
+// pages linked to one while 56 tools are members. The same defect the category
+// pages already had once ("0 of 418 prerendered tool pages linked to one"), one
+// level over — and worse here, because a collection is the group the category
+// tree cannot name and therefore the one nobody can guess the existence of.
+
+test('a browsing visitor can see the collections exist', async ({ page }) => {
+  await page.goto('/en')
+  await expect(page.getByTestId('collection-row')).toBeVisible()
+  await expect(page.getByTestId('collection-link-security')).toBeVisible()
+  await page.getByTestId('collection-link-new-business').click()
+  await expect(page).toHaveURL(/\/en\/c\/new-business\/?$/)
+})
+
+test('the row is NOT rendered over search results', async ({ page }) => {
+  // Results are one flat grid; a row of groups under them is a second answer
+  // to a question already answered.
+  await page.goto('/en')
+  await page.locator('.tool-search__input').fill('pdf merge')
+  await expect(page.getByTestId('collection-row')).toHaveCount(0)
+})
+
+test('a tool page links to the collections it belongs to', async ({ page }) => {
+  await page.goto('/en/apps/password-generator')
+  await expect(page.getByTestId('tool-collection-security')).toBeVisible()
+  await page.getByTestId('tool-collection-security').click()
+  await expect(page).toHaveURL(/\/en\/c\/security\/?$/)
+})
+
+test('a tool in NO collection shows none, rather than an empty label', async ({ page }) => {
+  // Without this the fix could have been "always show something", which is
+  // exactly the move this site refuses.
+  await page.goto('/en/apps/qr-code')
+  await expect(page.getByTestId('tool-category-link')).toBeVisible()
+  await expect(page.locator('[data-testid^="tool-collection-"]')).toHaveCount(0)
+})
+
+test('the Arabic side names the collection in Arabic', async ({ page }) => {
+  await page.goto('/ar/apps/cr-renewal')
+  const link = page.getByTestId('tool-collection-new-business')
+  await expect(link).toBeVisible()
+  expect(/[\u0600-\u06FF]/.test((await link.innerText()).trim())).toBe(true)
+})

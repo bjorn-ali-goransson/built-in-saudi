@@ -308,6 +308,44 @@ tool names**, and «سجل تجاري» still names its tool rather than the fam
 which has its own case, without which the terms could have been "any word a
 business owner might type".
 
+**A collection nobody can reach is a collection nobody has.** Measured a week
+after they shipped, and it is the same defect the category pages already had
+once, one level over:
+
+| | before | after |
+|---|---|---|
+| tool pages linking to a collection | **0 of 237** | **56 of 237** |
+| places the RENDERED catalogue mentions one | **0** | the foot of the catalogue |
+
+`CategoryOffer` was the only component that knew they existed, and it fires only
+when a query happens to name one — so «رمضان», teaching, security, comparing and
+starting a business were reachable by typing the right word, by a crawler
+reading the prerendered block, or by landing on another group page. **A group
+whose existence can only be learned by naming it is a group nobody learns
+about**, which is the argument that earned the collections their pages in the
+first place, turned on itself.
+
+Fixed in the three places, because they are three different readers:
+`collectionsFor` in `ToolPage`'s related row, beside the category link that
+already answers "more like this"; the same links in the **prerendered** page,
+which is the half a crawler sees; and `components/CollectionRow.tsx` at the foot
+of the home catalogue.
+
+- **It is at the FOOT, not in `SectionNav`.** That bar moves you within this
+  page and a collection is a different page. One control with two meanings is
+  worse than two controls.
+- **It is NOT rendered over search results**, which are one flat grid — a row of
+  groups under them is a second answer to a question already answered.
+- **A tool in no collection shows nothing**, with its own case, without which
+  the fix could have been "always show something" — the move this site refuses.
+- The count beside each name **filters to live tools**, so it cannot outlive a
+  retired one.
+
+**Verified to fail:** removing either half reddens three cases. And the
+measurement was checked against `check-collections`'s own count — 61 quoted ids
+in `collections.ts` minus the 5 slugs is 56, exactly the number of pages that
+gained a link.
+
 Four decisions:
 
 - **This does NOT contradict "curated sections get no page."** That rule is

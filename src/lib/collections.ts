@@ -95,3 +95,22 @@ const BY_SLUG = new Map(COLLECTIONS.map((c) => [c.slug, c]))
 
 export const collectionBySlug = (slug: string): Collection | undefined =>
   BY_SLUG.get(slug.toLowerCase())
+
+/**
+ * The collections a tool belongs to, in the order they are curated.
+ *
+ * Measured 11 August 2026, after the collections had been shipped for a week:
+ * **0 of 237 tool pages linked to one**, while 61 tools are members. That is
+ * exactly the defect the category pages already had once — "0 of 418
+ * prerendered tool pages linked to one, so the 30 category pages were reachable
+ * only from each other" — one level over, and worse here, because a collection
+ * is the group a category tree CANNOT name and therefore the one nobody can
+ * guess the existence of.
+ *
+ * Being on a member is also the strongest possible signal: somebody reading the
+ * password generator plausibly wants the rest of the privacy tools, and
+ * somebody on the commercial-register tool plausibly wants the rest of what
+ * starting a business needs.
+ */
+export const collectionsFor = (toolId: string): Collection[] =>
+  COLLECTIONS.filter((c) => c.toolIds.includes(toolId))

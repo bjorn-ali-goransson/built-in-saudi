@@ -5,6 +5,7 @@ import { SearchIcon } from '../components/icons'
 import { CategorySections, ToolGrid } from '../components/ToolCatalog'
 import { CategoryOffer } from '../components/CategoryOffer'
 import { SectionNav } from '../components/SectionNav'
+import { CollectionRow } from '../components/CollectionRow'
 import { buildToolSections } from '../lib/toolSections'
 import { useRecentTools } from '../lib/recentTools'
 import { rankToolsWithCorrection } from '../lib/searchTools'
@@ -121,6 +122,9 @@ export function HomePage() {
               there is nothing to jump between. */}
           <SectionNav sections={sections} />
           <CategorySections sections={sections} indexOf={idx} />
+          {/* At the foot rather than in the jump bar: that bar moves you within
+              this page and a collection is a different page. */}
+          <CollectionRow />
         </>
       )}
     </section>

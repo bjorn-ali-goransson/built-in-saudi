@@ -12,6 +12,8 @@ import { relatedTools } from '../lib/relatedTools'
 import { Link } from 'react-router-dom'
 import { localePath, categoryLabel } from '../i18n'
 import { categorySlug } from '../lib/categorySlug'
+import { collectionsFor } from '../lib/collections'
+import { collectionSeo } from '../i18n/seo'
 
 export function ToolPage() {
   const { toolId } = useParams()
@@ -45,6 +47,10 @@ function LoadedTool({ tool }: { tool: Tool }) {
 
   const related = useMemo(() => relatedTools(tool), [tool])
   const slug = categorySlug(tool.category)
+  // The groups the category tree cannot name — a season, an audience, a verb —
+  // and therefore the ones nobody can guess the existence of. Measured before
+  // this: 0 of 237 tool pages linked to one, while 61 tools are members.
+  const collections = useMemo(() => collectionsFor(tool.id), [tool])
 
   const ToolComponent = tool.component!
   return (
@@ -74,21 +80,39 @@ function LoadedTool({ tool }: { tool: Tool }) {
           related list: a tool page could link to four siblings and to all 207
           tools, and to nothing in between — so the one grouping this site
           curates by hand was the one place a visitor could not go from here. */}
-      {(related.length > 0 || slug) && (
+      {(related.length > 0 || slug || collections.length > 0) && (
         <nav className="mt-10 pt-6 border-t border-[color:var(--line-soft)]" data-testid="related-tools"
           aria-label={locale === 'ar' ? 'أدوات ذات صلة' : 'Related tools'}>
           <div className="flex items-baseline justify-between gap-3 mb-3">
             <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">
               {locale === 'ar' ? 'أدوات ذات صلة' : 'Related tools'}
             </h2>
-            {slug && (
-              <Link to={localePath(locale, `/c/${slug}`)} data-testid="tool-category-link"
-                className="text-[0.82rem] text-green-700 no-underline hover:underline whitespace-nowrap rtl:font-ar">
-                {locale === 'ar'
-                  ? `المزيد في ${categoryLabel(tool.category, locale)}`
-                  : `More in ${categoryLabel(tool.category, locale)}`}
-              </Link>
-            )}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 justify-end">
+              {slug && (
+                <Link to={localePath(locale, `/c/${slug}`)} data-testid="tool-category-link"
+                  className="text-[0.82rem] text-green-700 no-underline hover:underline whitespace-nowrap rtl:font-ar">
+                  {locale === 'ar'
+                    ? `المزيد في ${categoryLabel(tool.category, locale)}`
+                    : `More in ${categoryLabel(tool.category, locale)}`}
+                </Link>
+              )}
+              {/* A collection is a group the category tree cannot name, so being
+                  on one of its members is the only place its existence can be
+                  learned. The category link is where somebody already looks for
+                  "more like this", so this sits beside it rather than in a
+                  section of its own. */}
+              {collections.map((c) => {
+                const name = collectionSeo.find((x) => x.slug === c.slug)?.[locale].name
+                if (!name) return null
+                return (
+                  <Link key={c.slug} to={localePath(locale, `/c/${c.slug}`)}
+                    data-testid={`tool-collection-${c.slug}`}
+                    className="text-[0.82rem] text-ink-faint no-underline hover:text-green-700 hover:underline whitespace-nowrap rtl:font-ar">
+                    {name}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
           <div className="grid gap-2 grid-cols-1 min-[560px]:grid-cols-2 min-[900px]:grid-cols-4" data-testid="related-grid">
             {related.map((r) => {
