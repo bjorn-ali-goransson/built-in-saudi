@@ -127,6 +127,7 @@ import { audioConvertTool } from './audio-convert/meta'
 import { audioSpectrumTool } from './audio-spectrum/meta'
 import { pdfToTextTool } from './pdf-to-text/meta'
 import { pdfToWordTool } from './pdf-to-word/meta'
+import { pdfDiffTool } from './pdf-diff/meta'
 import { screenshotFrameTool } from './screenshot-frame/meta'
 import { socialResizeTool } from './social-resize/meta'
 import { spinWheelTool } from './spin-wheel/meta'
@@ -403,6 +404,7 @@ export const tools: Tool[] = [
   pdfToImagesTool,
   pdfToTextTool,
   pdfToWordTool,
+  pdfDiffTool,
   imageToTextTool,
   qrReaderTool,
   metadataRemoveTool,

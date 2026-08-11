@@ -609,6 +609,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'pdf-diff',
+    en: { name: 'Compare PDFs', description: 'See exactly which words changed between two versions of a PDF, and on which page — text-aligned, not pixel-compared. Neither file is uploaded. Free, in your browser.' },
+    ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'cr-renewal',
     en: { name: 'Commercial Registration Renewal', description: 'When a Saudi commercial registration can be renewed and when it must be — 90 days before expiry, 90 days of grace after, and why that grace is not an extension. Free, in your browser.' },
     ar: { name: 'تجديد السجل التجاري', description: 'متى يمكن تجديد السجل التجاري ومتى يجب — تسعون يومًا قبل الانتهاء، وتسعون بعده، ولماذا ليست تمديدًا. مجانًا داخل متصفحك.' },

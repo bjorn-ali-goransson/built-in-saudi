@@ -3571,4 +3571,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/cr-renewal"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/cr-renewal"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/pdf-diff/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-diff"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-diff"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-diff"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/pdf-diff/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pdf-diff"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-diff"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-diff"/>
+  </url>
 </urlset>

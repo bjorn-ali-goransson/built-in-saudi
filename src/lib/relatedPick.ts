@@ -108,6 +108,11 @@ export const CLUSTERS: string[][] = [
   // spec pins, because the filler must never take over from a real relation.
   // Pointing at it from the neighbours costs that nothing.
   ['barcode', 'qr-reader', 'zatca-qr'],
+
+  // Orphanhood is NOT stable when a tool is added: shipping `pdf-diff` changed
+  // enough lexical picks to push `json-to-types` out of every row it had been
+  // in. Re-run `node evals/inbound.mjs` after adding a tool.
+  ['json-to-types', 'json-formatter', 'csv-json'],
 ]
 
 /** Curated partners for a tool, in the order they were written. */

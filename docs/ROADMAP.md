@@ -2214,3 +2214,19 @@ scorer cannot see. Median inbound is 3.
 **Worth keeping in mind:** a cluster is symmetric, so adding one to serve tool A
 rewrites tool B's row too. That regression was caught by an existing spec and
 now has its own case.
+
+## Web sweep, 11 August 2026 — comparing two PDFs
+
+Axis: life events. Moving-cost calculators were rejected (they depend on quotes
+and market rates nobody can stand behind — the `iqama-fees` refusal), and
+probation turned out to be covered already by `leave-overtime`. What the sweep
+did surface is that we shipped FIVE diff tools — date, image, json, sheet,
+text — and not the one the market wants most and every incumbent uploads.
+
+**Shipped `pdf-diff`.** Text-aligned rather than pixel-compared, two-level LCS,
+page attribution, scan detection routed to OCR.
+
+**Candidate build guard:** `evals/inbound.mjs` should probably become a
+`scripts/check-*.mjs` so a new tool cannot silently orphan another one — adding
+`pdf-diff` orphaned `json-to-types`. It needs the compiled `relatedPick`, which
+the plain-node guards do not currently do, so it is recorded rather than built.

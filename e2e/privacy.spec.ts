@@ -199,6 +199,8 @@ export const CASES: Case[] = [
   // write last is a guard over my own memory.
   { id: 'pdf-to-text', testid: 'p2t-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  // A contract against its previous draft is the file this whole guard is for.
+  { id: 'pdf-diff', testid: 'pd-file-a', name: 'contract-v1.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'print-size', testid: 'ps-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   {

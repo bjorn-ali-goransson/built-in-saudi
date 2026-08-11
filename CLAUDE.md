@@ -3016,6 +3016,52 @@ listed it second and was winning a bare `wcag` on keyword position alone — but
 that tool covers ONE success criterion and this one is the standard as a whole.
 Same editorial judgement as `sha256` leading the hash generator over HMAC.
 
+## Comparing two PDFs, and why not as pictures (`pdf-diff`)
+
+Found by sweeping life events and then checked against the market: PDF compare
+is a crowded, high-demand category, and **nearly every one of them uploads both
+documents** — while the file people compare is a contract against its previous
+draft, a payslip against last month, a policy against the version they signed.
+That is this site's thesis applied to the document least suited to leaving a
+machine.
+
+**It needed no new dependency.** `extractPdf` already reads with pdf.js and
+knows a scan when it sees one; the missing middle is `lib/wordDiff.ts`.
+
+- **It compares the TEXT, not the pixels, and says so.** A picture comparison
+  lights up on every re-flow: change one word on page 2 and everything after it
+  moves, so a pixel diff reports the whole remainder as different and tells you
+  nothing. There is a case for a paragraph inserted at the TOP producing exactly
+  one added run and nothing removed — which is the property `image-diff`
+  structurally cannot have. The tool points at `image-diff` for the question it
+  is not answering: a stamp, a signature, a logo.
+- **Two levels, which is how the cost is bounded.** LCS over LINES first (a
+  contract has hundreds of lines and thousands of words, and word-level DP over
+  the whole thing is millions of cells), then over WORDS only inside a region
+  the line pass already called changed. A common prefix and suffix are trimmed
+  before either, because two drafts of one document mostly agree.
+- **Word-level is the point.** «thirty» became «sixty» is the change somebody is
+  looking for, and a line-level answer highlights the whole clause. There is a
+  case asserting the unchanged words of the same sentence are NOT marked.
+- **A scan is named and routed to OCR**, because comparing two documents with no
+  text reports them identical — true and useless.
+
+**It took two queries and gave them back.** "what changed between these two
+versions" went to it over `text-diff`, because it had indexed the diff family's
+GENERIC vocabulary (`what changed`, `versions`, `difference`); removed, and it
+keeps `compare pdf` and `pdf diff`. Seventh application of the rule. And
+«ملف بي دي اف كبير جدا» started reaching it rather than `pdf-compress` — the
+cost of «بي دي اف» being on all sixteen PDF tools — fixed by giving the
+compressor the word for the PROBLEM, «كبير». Held-out #4 ended at **38/50,
+better than the 37 it sat at before the tool**, with every other bench
+unchanged.
+
+**And it made another tool an orphan, which is the maintenance lesson.**
+`inbound.mjs` had just been driven to 0; adding this tool changed enough lexical
+picks to push `json-to-types` out of every row it was in. **Orphanhood is not
+stable when a tool is added — re-run `node evals/inbound.mjs` after adding
+one.**
+
 ## Comparing two images (`image-diff`)
 
 The diff family was `text-diff`, `json-diff` and `sheet-diff` — so somebody

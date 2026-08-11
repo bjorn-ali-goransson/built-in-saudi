@@ -14,7 +14,7 @@ export const pdfCompressTool: Tool = {
     // Both spellings. This site writes British English in its own copy while
     // a keyword list, written by a developer, tends to the American form —
     // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.
-    'optimise','pdf', 'compress', 'shrink', 'reduce', 'smaller', 'optimize', 'compress pdf', 'ضغط', 'ضغط pdf', 'تصغير', 'تقليل حجم'],
+    'optimise','pdf', 'compress', 'shrink', 'reduce', 'smaller', 'optimize', 'compress pdf', 'ضغط', 'ضغط pdf', 'تصغير', 'تقليل حجم', 'كبير', 'حجم كبير', 'ملف كبير'],
   status: 'stable',
   Icon: CompressIcon,
   component: lazyTool(() => import('./PdfCompressTool')),
