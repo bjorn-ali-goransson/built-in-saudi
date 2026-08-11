@@ -486,6 +486,26 @@ there is a test for that so the filler cannot quietly take over. The one tool
 the category fill could not help was `calls`, alone in `Communication`, so it
 got a cluster with `book-me`: both are "meet someone".
 
+**It is now a GATE, not a measurement** (`scripts/check-orphans.mjs`, in
+`prebuild`, **verified to fail**). Driving the count to 0 was not enough,
+because it regressed within the same session: shipping `pdf-diff` changed
+enough lexical picks to push `json-to-types` out of every row it had been in.
+**Orphanhood is a property of the whole graph, so ANY new tool can take it away
+from a tool nobody touched** — which makes it precisely the kind of silent
+breakage this repo turns into a build failure rather than a rule somebody is
+supposed to remember. It compiles `relatedPick.ts` itself, the way
+`patchcheck.mjs` does, because `evals/gen` is gitignored and a gate has to run
+on a clean clone.
+
+**Its first version wrote a SECOND tool loader and was wrong because of it.**
+Sweeping the metas with its own regexes gave `pickRelated` slightly different
+keywords, therefore different scores, therefore a different graph — and it
+reported **13 orphans where `evals/inbound.mjs` reported 0**. That is the same
+mistake recorded twice already (`relatedcheck`'s copy of the selection logic,
+`twinprobe`'s copy of the loader). It imports `evals/lib/tools.mjs` now. **Use
+the shared loader; do not write a second one** — including in a `scripts/`
+guard, which is the one place it had not yet been said.
+
 **And the INCOMING question had never been asked** (`node evals/inbound.mjs`).
 `relatedcheck` measured outgoing dead ends and drove them 81 → 0. Nobody asked
 which tools nothing POINTS AT — and that is the one that decides discovery: a

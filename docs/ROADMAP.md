@@ -2230,3 +2230,16 @@ page attribution, scan detection routed to OCR.
 `scripts/check-*.mjs` so a new tool cannot silently orphan another one — adding
 `pdf-diff` orphaned `json-to-types`. It needs the compiled `relatedPick`, which
 the plain-node guards do not currently do, so it is recorded rather than built.
+
+## Code sweep, 11 August 2026 — the orphan check became a gate
+
+`scripts/check-orphans.mjs` is in `prebuild` and verified to fail. The measured
+property regressed twice in one session, which is the test for whether something
+should be enforced rather than remembered.
+
+Its first version wrote its own tool sweep and reported 13 orphans where the
+eval reported 0 — the shared-loader lesson, now applying to `scripts/` too.
+
+**Still open:** six pdf-lib tools on the main thread; `blocksToHtml` unused by
+the two Markdown writers; the dead-export sweep needing real reference analysis;
+`book-me` (28 of 32 testids never driven, with a real backend behind it).
