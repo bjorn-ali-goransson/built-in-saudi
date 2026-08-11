@@ -1978,6 +1978,41 @@ EASE — is `readability`'s subject, and the new tool won it 330 to 248 on a
 keyword. Removed; the established tool keeps the exact phrase and this one keeps
 «عسر القراءة» and «قراءة مريحة». Fifth time that rule has been applied.
 
+## A timetable that reads the right way round (`timetable`)
+
+Found by a seasonal sweep in the week the school year starts here. The category
+is crowded with printable templates and **the Arabic half of it is essentially
+unserved** — the one Arabic result was a fixed image. Two things the generic
+makers get wrong, both of which matter here and nowhere else:
+
+- **The week starts on SUNDAY.** Friday and Saturday are the weekend, so a
+  Monday-first grid puts the weekend in the middle of the sheet and breaks the
+  school week across it. `timesheet` already records this fact for the same
+  reason; this is its second use.
+- **In Arabic the COLUMNS reverse, not just the labels.** A tool that
+  "supports Arabic" by translating the day names and leaving the grid alone
+  prints Sunday on the far LEFT, where an Arabic reader finishes rather than
+  starts. Reversing the column order is the whole of the fix.
+
+**And the printed sheet has to do it itself.** `columnOrder` is computed in
+code rather than left to CSS `direction`, because the PDF is drawn on a canvas
+and **a canvas has no reading direction to inherit** — a grid that looked right
+on screen would still come out backwards. That is the same reason
+`lib/printPdf.ts` exists at all, one level down.
+
+**Two guards caught things, and the second is the more embarrassing.**
+`check-orphans` failed the build again — adding this tool displaced `sun-times`
+from the last row it was in, the second time in three tools that a new arrival
+has orphaned an old one.
+
+**And I nearly accepted a green from a build that had not happened.** The
+command was `npm run build 2>&1 | grep … && npx playwright test`, and the pipe
+means `&&` sees GREP's exit status, not the build's — so a failed prebuild let
+the tests run against a stale `dist`, and nine of them passed. They only proved
+the tool was absent. **Do not put a build behind a pipe in a chain that decides
+whether to test**, and when a spec for a brand-new tool passes, check the tool
+is actually in `dist`.
+
 ## Arabic handwriting sheets (`arabic-handwriting`)
 
 The four positional forms are **not four characters**. They are produced with

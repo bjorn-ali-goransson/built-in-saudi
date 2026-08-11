@@ -12,7 +12,7 @@ export const prayerTimetableTool: Tool = {
   category: 'Islamic',
   keywords: [
     'prayer', 'times', 'timetable', 'calendar', 'month', 'salah', 'fajr', 'maghrib', 'printable', 'mosque', 'hijri', 'imsakiya',
-    'مواقيت', 'الصلاة', 'تقويم', 'شهر', 'إمساكية', 'الفجر', 'المغرب', 'طباعة', 'مسجد', 'هجري',
+    'مواقيت', 'مواعيد الصلاة', 'جدول الصلاة', 'الصلاة', 'تقويم', 'شهر', 'إمساكية', 'الفجر', 'المغرب', 'طباعة', 'مسجد', 'هجري',
   ],
   status: 'stable',
   Icon: MosqueIcon,

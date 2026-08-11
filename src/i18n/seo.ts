@@ -619,6 +619,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'timetable',
+    en: { name: 'Weekly Timetable', description: 'Fill in and print a weekly class or work timetable that starts on Sunday — and in Arabic reverses the columns, not just the day names. Free, in your browser.' },
+    ar: { name: 'الجدول الأسبوعي', description: 'املأ جدولًا أسبوعيًا للحصص أو الدوام واطبعه، يبدأ بالأحد — وفي العربية تنعكس الأعمدة لا أسماء الأيام وحدها. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'retirement-age',
     en: { name: 'When Can I Retire? (GOSI)', description: 'When you can draw a Saudi GOSI pension under the law in force from 3 July 2024 — 65 for a new entrant, a 58-to-65 band for everybody else, and why it is not 60 any more. Free, in your browser.' },
     ar: { name: 'متى أتقاعد؟ (التأمينات)', description: 'متى يمكنك صرف معاش التأمينات وفق النظام النافذ من ٣ يوليو ٢٠٢٤ — ٦٥ للداخل الجديد، ونطاق ٥٨ إلى ٦٥ لمن عداه، ولماذا لم يعد ٦٠. مجانًا داخل متصفحك.' },

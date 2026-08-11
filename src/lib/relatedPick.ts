@@ -103,6 +103,9 @@ export const CLUSTERS: string[][] = [
   ['typing-test', 'stopwatch', 'dice-roller'],
   ['sound-meter', 'audio-spectrum', 'metronome'],
   ['sleep-cycle', 'water-intake', 'calorie-needs'],
+  // Adding `timetable` displaced `sun-times` from the last row it was in —
+  // the same instability `check-orphans` exists to catch, now twice over.
+  ['sun-times', 'prayer-times', 'timezone-planner'],
   // NOT clustered with `qr-code`: a cluster is SYMMETRIC, so naming it here to
   // serve the shortener also rewrote the QR generator's own row and displaced
   // `qr-reader` from the head of it — which a spec pins. Giving a tool inbound

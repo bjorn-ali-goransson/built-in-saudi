@@ -2357,3 +2357,16 @@ calculators, since which one wins is arbitrary and the page shows three.
 **Remaining slug misses, both documented and unchanged:** `pdf-splitter` (the
 `-er` suffix) and `iqama` (genuinely ambiguous between `iqama-fees` and
 `id-expiry`, and the right one is in the top three).
+
+## Web sweep, 11 August 2026 — the week the school year starts
+
+Seasonal axis. **Shipped `timetable`**: Sunday-first, and in Arabic the columns
+reverse rather than only the labels — including in the printed PDF, since a
+canvas has no reading direction to inherit.
+
+**Also fixed in passing:** «جدول مواعيد الصلاة» was going to `vehicle-renewal`,
+whose «موعد» keyword outranked `prayer-timetable`'s «مواقيت» — the
+singular/plural trap again. The prayer sheet now indexes the phrase people type.
+
+**Seen and not taken:** static template galleries (the incumbents), and a
+school-supplies budget calculator (thin, and closer to the noise exclusion).
