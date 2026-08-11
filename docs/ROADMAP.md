@@ -2340,3 +2340,20 @@ it is now a measured one rather than a convention appeal.
 
 The move found a real pre-existing bug: a completely blank page could not be
 imposed and was reported as "could not be read as a PDF". Fixed and pinned.
+
+## Discoverability, 11 August 2026 — the 404 had no typo correction
+
+Re-measured `slugprobe` at 234 tools (tuned at 211): unchanged at 92% / 95% — a
+second tuned surface holding its number, recorded as a negative.
+
+But it exposed that `NotFoundPage` called `rankTools` while home and the
+launcher call `rankToolsWithCorrection`, so the one surface reached BY a wrong
+URL had no typo correction. **92% -> 95% top-1, 95% -> 97% top-3.**
+
+A probe row was wrong too: `calcualtor` expected silence while sitting under
+"Typos" beside `pdf-mrege`, which expects resolution. It now lists the set of
+calculators, since which one wins is arbitrary and the page shows three.
+
+**Remaining slug misses, both documented and unchanged:** `pdf-splitter` (the
+`-er` suffix) and `iqama` (genuinely ambiguous between `iqama-fees` and
+`id-expiry`, and the right one is in the top three).

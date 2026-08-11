@@ -3774,6 +3774,26 @@ transposition typo (`pdf-mrege`) misses because the scorer has no edit distance.
 `order-pizza` still suggests something, which is the documented
 unanswerable-query problem no threshold fixes.
 
+**The 404 was the ONE search surface without typo correction**, and it is the
+surface that needs it most: a wrong URL is most often a MISTYPED one. Home and
+the launcher both called `rankToolsWithCorrection`; this called `rankTools`.
+Measured on the probe: **top-1 92% → 95%, top-3 95% → 97%** — `pdf-mrege` was
+suggesting `pdf-edit`, because the typed string genuinely matches that better,
+and a single transposition is what the Damerau distance exists for.
+
+**Re-measured at 234 tools first, and it had NOT decayed** (92% / 95%, the same
+three documented misses) — the second tuned surface this pass to hold its
+number as the catalogue grew, after the relevance floor. Worth re-asking, worth
+recording as a negative.
+
+**One of the probe's own rows was wrong, and fixing it is the interesting
+part.** `calcualtor` was expected to suggest NOTHING, sitting under "Typos"
+next to `pdf-mrege`, which is expected to resolve — an inconsistency nobody had
+noticed. Somebody who types `/apps/calcualtor` wants a calculator, and this
+page's whole design is that a row of three READS as a guess. Which calculator
+wins is arbitrary, so the row now lists the honest set, the way the bench
+expresses a query with several right answers.
+
 **`slugToQuery` is why any of it works:** `pdf-merge` has to become `pdf merge`
 before scoring, or the whole slug is one token that matches nothing. Digits are
 split out too, so `base64` and `base-64` land in the same place.

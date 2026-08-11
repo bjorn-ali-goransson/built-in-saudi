@@ -63,3 +63,25 @@ test('works in Arabic', async ({ page }) => {
   await expect(page.getByTestId('nf-suggest-pdf-merge')).toBeVisible()
   await expect(page.getByTestId('nf-suggestions')).toContainText('هل تقصد')
 })
+
+test('a MISTYPED url suggests what it meant, not what it literally matched', async ({ page }) => {
+  // This page was the one search surface without typo correction — home and
+  // the launcher both had it, this called the uncorrected ranker. It is the
+  // surface that needs it most, because a wrong URL is most often a mistyped
+  // one: `pdf-mrege` is a single transposition, and it was suggesting
+  // `pdf-edit` because the typed string genuinely matched that better.
+  //
+  // Measured on `evals/slugprobe.mjs`: top-1 92% -> 95%, top-3 95% -> 97%.
+  await page.goto('/en/apps/pdf-mrege')
+  await expect(page.getByTestId('not-found')).toBeVisible()
+  await expect(page.getByTestId('nf-suggest-pdf-merge')).toBeVisible()
+})
+
+test('and a slug that means nothing is still not corrected into an answer', async ({ page }) => {
+  // Correction only fires on a word the catalogue does not know, and only when
+  // the corrected query scores decisively better. Without this the fix could
+  // have been "correct until something matches".
+  await page.goto('/en/apps/xkcd-zzzz')
+  await expect(page.getByTestId('not-found')).toBeVisible()
+  await expect(page.getByTestId('nf-suggestions')).toHaveCount(0)
+})

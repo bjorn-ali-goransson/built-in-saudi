@@ -4,7 +4,7 @@ import type { Tool } from '../tools/types'
 import { liveTools } from '../tools'
 import { Button } from '../components/ui'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
-import { rankTools, slugToQuery } from '../lib/searchTools'
+import { rankToolsWithCorrection, slugToQuery } from '../lib/searchTools'
 import { useLocale, localePath, localizeTool } from '../i18n'
 
 interface Props {
@@ -38,7 +38,12 @@ export function NotFoundPage({ kind = 'not-found', tool }: Props) {
     if (soon) return []
     const slug = pathname.replace(/\/+$/, '').split('/').pop() ?? ''
     if (!slug || slug === locale) return []
-    return rankTools(slugToQuery(slug), liveTools, locale).slice(0, 3)
+    // The CORRECTED ranking, as home and the launcher use. This page was the
+    // one search surface without typo correction, and it is the surface that
+    // needs it most: a wrong URL is most often a MISTYPED url. Measured on the
+    // slug probe — `pdf-mrege` went from suggesting `pdf-edit` to `pdf-merge`,
+    // and top-1 went 92% -> 95%.
+    return rankToolsWithCorrection(slugToQuery(slug), liveTools, locale).tools.slice(0, 3)
   }, [pathname, locale, soon])
 
   return (
