@@ -23,9 +23,49 @@
 const ARABIC_MARKS = /[ً-ْٰـ]/g
 export const foldArabic = (s: string): string => s.replace(ARABIC_MARKS, '')
 
+/**
+ * Lower-cased and folded, remembered.
+ *
+ * Measured before this existed: one full search over 233 tools took **11.4ms on
+ * a desktop**, against a 16.7ms frame — so a mid-range phone, three to six
+ * times slower, dropped frames on every keystroke. Almost all of it was this
+ * line: the same few hundred field strings were lower-cased and run through the
+ * diacritic regex again for every tool, on every query, on every keystroke.
+ *
+ * The strings are stable — a tool's name does not change between keystrokes —
+ * so the work is done once. Keyed by CONTENT rather than by object identity
+ * because `searchTools` builds a fresh `Searchable` per call, so identity would
+ * never hit.
+ */
+const foldCache = new Map<string, string>()
+function foldLower(s: string): string {
+  const hit = foldCache.get(s)
+  if (hit !== undefined) return hit
+  const v = foldArabic(s.toLowerCase())
+  // Bounded: the fields are a few hundred strings, but the QUERY goes through
+  // here too and a query is whatever somebody typed. Clearing wholesale beats
+  // an LRU nobody would maintain — the fields simply repopulate on the next
+  // keystroke.
+  if (foldCache.size > 4000) foldCache.clear()
+  foldCache.set(s, v)
+  return v
+}
+
 export function fuzzyScore(query: string, text: string): number {
-  const q = foldArabic(query.toLowerCase().trim())
-  const t = foldArabic((text ?? '').toLowerCase())
+  return scoreFolded(foldLower(query).trim(), text)
+}
+
+/**
+ * The same scorer, given a query that is ALREADY folded.
+ *
+ * Profiled at 233 tools: keywords are 53% of a search — 14.4 per tool, so
+ * ~3,350 scoring calls per keystroke — and the expense is per-CALL overhead
+ * rather than the algorithm, because the query was folded, trimmed and looked
+ * up again on every one of them. The query does not change between fields, so
+ * it is prepared once and this takes it.
+ */
+function scoreFolded(q: string, text: string): number {
+  const t = foldLower(text ?? '')
   if (!q) return 1
 
   // Exact substring: strong, earlier + word-boundary weighted.
@@ -170,10 +210,14 @@ function fieldsOf(tool: Searchable): Field[] {
 
 /** Best score for one term across a tool's fields, keywords included. */
 function bestField(term: string, tool: Searchable): number {
+  // Folded ONCE for the whole tool rather than inside every field and every
+  // keyword: that is ~15 calls per tool and the fold-and-trim was being redone
+  // on each of them.
+  const q = foldLower(term).trim()
   let best = 0
   for (const f of fieldsOf(tool)) {
     if (!f.text) continue
-    best = Math.max(best, fuzzyScore(term, f.text) * f.weight)
+    best = Math.max(best, scoreFolded(q, f.text) * f.weight)
   }
   // Keywords are scored one at a time rather than as a joined string: a
   // subsequence spanning the end of one keyword and the start of the next is
@@ -184,7 +228,7 @@ function bestField(term: string, tool: Searchable): number {
   // every tool that merely mentions it and the winner is whichever sorted first.
   tool.keywords.forEach((k, i) => {
     const positional = 2 - Math.min(i, 8) * 0.05
-    best = Math.max(best, fuzzyScore(term, k) * positional)
+    best = Math.max(best, scoreFolded(q, k) * positional)
   })
   return best
 }

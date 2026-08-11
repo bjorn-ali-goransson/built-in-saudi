@@ -2295,3 +2295,17 @@ real heading or a list that is not a real list, and both look correct rendered.
 the writer produced**, not a rendering of something else.
 
 Ignore the four earlier "still open" lines above; this entry supersedes them.
+
+## Discoverability, 11 August 2026 — the cost of a keystroke
+
+Never measured before: one search over 233 tools was **11.4ms** against a 16.7ms
+frame, so a mid-range phone dropped frames while typing. Keywords were 53% of
+it, and the cost was per-call overhead rather than the algorithm.
+
+**11.42ms → 4.68ms** by remembering the folded fields and folding the query once
+per tool. All eight benches byte-identical.
+
+**Still open if it ever needs to go further:** the remaining time is spread
+evenly across ~3,350 scoring calls per search, so the next real win is fewer
+CALLS — an inverted index over the keywords — which is a much larger change with
+real regression risk, and 4.7ms does not justify it yet.

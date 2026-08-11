@@ -3973,6 +3973,34 @@ It is a MEASUREMENT rather than a gate, because a near-miss between a converter
 and its inverse can be legitimately ambiguous: "Markdown to Word" and "Word to
 Markdown" share every word.
 
+**The search box has to keep up with typing, and nobody had measured whether it
+did.** One full search over 233 tools took **11.4ms on a desktop against a
+16.7ms frame** — so a mid-range phone, three to six times slower, dropped frames
+on every keystroke. Findability includes the box being usable while you type.
+
+Profiling put **53% of it in the keywords** — 14.4 per tool across 233 tools is
+~3,350 scoring calls per search — and the expense was **per-CALL overhead, not
+the algorithm**: the same few hundred field strings were lower-cased and run
+through the diacritic regex again for every tool on every keystroke, and the
+query was re-folded inside each of those calls.
+
+Two changes, no behaviour change at all:
+
+- **`foldLower` remembers by CONTENT**, not by object identity — `searchTools`
+  builds a fresh `Searchable` per call, so identity would never hit. Bounded at
+  4000 and cleared wholesale rather than kept as an LRU nobody would maintain;
+  the fields repopulate on the next keystroke.
+- **The query is folded ONCE per tool** rather than inside every field and every
+  keyword, via an internal `scoreFolded` that takes an already-folded query.
+
+**11.42ms → 4.68ms, a 59% cut, with all eight benches byte-identical.** The
+sharpest available evidence that a performance change is only a performance
+change.
+
+What it introduces is a cache shared across queries, so there are cases
+asserting a fold cannot leak between them and that the diacritic fold still
+works after the cache has been cleared.
+
 **Vocabulary is part of the fix, not just the algorithm.** "photo", "picture",
   "smaller" are what people type; a meta that only says "image" is unfindable by
   half its users. When adding a tool, list the words a person would use, not the

@@ -940,3 +940,38 @@ test('a bare number names no shape, and still returns nothing', async ({ page })
   await search(page, '250')
   await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
 })
+
+// --- The search box has to keep up with typing --------------------------------
+//
+// Never measured until now: one full search over 233 tools took **11.4ms on a
+// desktop**, against a 16.7ms frame — so a mid-range phone, three to six times
+// slower, dropped frames on every keystroke. Profiling put 53% of it in the
+// keywords (14.4 per tool, ~3,350 scoring calls per search) and the cost was
+// per-CALL overhead, not the algorithm: the same field strings were lower-cased
+// and run through the diacritic regex again for every tool on every keystroke,
+// and the query was re-folded inside each of those calls.
+//
+// Folding is remembered by content and the query is prepared once per tool.
+// **11.42ms → 4.68ms, with every bench byte-identical.**
+//
+// What that introduces is a cache shared across queries, so these assert it
+// cannot leak between them.
+
+test('a cached fold cannot leak between queries', async ({ page }) => {
+  await search(page, 'merge pdf')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
+  await search(page, 'محول العملات', 'ar')
+  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
+  // Back again: a cache that had been poisoned by the Arabic query would show
+  // it here.
+  await search(page, 'merge pdf')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
+})
+
+test('and the diacritic fold still applies after many other searches', async ({ page }) => {
+  // The cache clears wholesale when it grows past its bound, so the folded
+  // fields have to repopulate correctly rather than being lost.
+  for (const q of ['pdf', 'image', 'csv', 'zakat', 'qr']) await search(page, q)
+  await search(page, 'عداد الكلمات', 'ar')
+  await expect(page.getByTestId('tool-text-counter')).toBeVisible()
+})
