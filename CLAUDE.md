@@ -2165,6 +2165,32 @@ Carries an `official` Disclaimer, is in `e2e/disclaimers.spec.ts`, and is
 badged **beta**, because the windows and the excluded categories can be revised
 without anyone touching this code.
 
+## The hub knew a date and nothing about the rule (`id-expiry`)
+
+A code sweep of the tool built for "what runs out next" found two things, and
+the second is the one worth carrying.
+
+- **Every one of its seven document kinds was PERSONAL** — iqama, passport,
+  licence, istimara, insurance, visa — on a site that now also answers when a
+  commercial register's window opens. The documents whose lapse suspends a
+  BUSINESS were missing from the only tool that tracks expiry. Added with the
+  lead times that are the substance: **90 days for the commercial register and
+  the municipal licence**, because that is exactly when the window opens, and 30
+  for the Chamber subscription, which is a prerequisite for both and therefore
+  worth chasing before its own date.
+- **It had ZERO outbound links.** It would say "your iqama runs out in six
+  weeks" on a site with `iqama-fees` for what the renewal costs, `exit-reentry`
+  for the visa that cannot outrun it, `vehicle-renewal` for the Fahes that gates
+  an istimara, and `cr-renewal` for the register's two windows. Every one lived
+  a click away with nothing pointing at it. **A hub that knows a date and not
+  the rule behind it is half a tool**, and the rule was already written.
+
+`GUIDE` maps a kind to the tool that owns its rule — **and only where one
+genuinely does.** A passport and an insurance policy have no rule module here,
+and a plausible-looking link would be worse than none; there is a case
+asserting a passport row shows no link, without which the fix could have been
+"always show something".
+
 ## The commercial register's grace period is not an extension (`cr-renewal`)
 
 Found by sweeping what a small BUSINESS here must work out — every earlier

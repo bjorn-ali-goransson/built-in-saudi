@@ -144,3 +144,47 @@ test('it works in Arabic', async ({ page }) => {
   // in half the characters an English one does.
   expect(ics).toMatch(/[؀-ۿ]/)
 })
+
+// --- The hub knew a date and nothing about the rule behind it -------------------
+//
+// Found by a code sweep. `id-expiry` is the one tool built for "what runs out
+// next", and two things were true of it: every one of its seven document kinds
+// was PERSONAL, on a site that also answers when a commercial register's
+// renewal window opens; and it had **zero outbound links** — it would tell
+// somebody their iqama runs out in six weeks without mentioning that the site
+// works out what the renewal costs, or that an exit-re-entry visa cannot
+// outrun it.
+
+const addDoc = async (page: import('@playwright/test').Page, kind: string, expiry: string) => {
+  await page.getByTestId('exp-kind').selectOption(kind)
+  await page.getByTestId('exp-date').fill(expiry)
+  await page.getByTestId('exp-add').click()
+}
+
+test('a business owner can track the documents whose lapse suspends the business', async ({ page }) => {
+  await page.goto('/en/apps/id-expiry')
+  await addDoc(page, 'cr', '2026-12-01')
+  await expect(page.getByTestId('exp-item-cr')).toContainText('Commercial registration')
+  // Its renewal window opens 90 days out, not the generic 30.
+  await addDoc(page, 'municipal', '2026-12-01')
+  await expect(page.getByTestId('exp-item-municipal')).toBeVisible()
+})
+
+test('a row points at the tool that owns the rule behind its date', async ({ page }) => {
+  await page.goto('/en/apps/id-expiry')
+  await addDoc(page, 'cr', '2026-12-01')
+  const guide = page.getByTestId('exp-guide').first()
+  await expect(guide).toBeVisible()
+  await guide.click()
+  await expect(page).toHaveURL(/\/en\/apps\/cr-renewal/)
+})
+
+test('and a document with no rule module gets no invented link', async ({ page }) => {
+  // A passport has no rule tool here. Linking it somewhere plausible would be
+  // worse than linking it nowhere — without this case the fix could have been
+  // "always show a link".
+  await page.goto('/en/apps/id-expiry')
+  await addDoc(page, 'passport', '2027-01-01')
+  await expect(page.getByTestId('exp-item-passport')).toBeVisible()
+  await expect(page.getByTestId('exp-guide')).toHaveCount(0)
+})

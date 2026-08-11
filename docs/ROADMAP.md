@@ -2189,3 +2189,16 @@ fees, for the same reason.
 one is personal**. A business owner's commercial registration, municipal licence
 and Chamber subscription are absent from the one tool built for "what runs out
 next". Adding them is small; the lead times are the substance.
+
+## Code sweep, 11 August 2026 — the hub with no links
+
+`id-expiry` tracked seven document kinds, all personal, and linked to NOTHING.
+Added the business documents (commercial register and municipal licence at a
+90-day lead, Chamber subscription at 30) and a per-kind link to the tool that
+owns the rule — only where one exists, with a case asserting a passport gets no
+invented link.
+
+**Still open:** six pdf-lib tools on the main thread; `blocksToHtml` unused by
+the two Markdown writers; the dead-export sweep needing a real reference
+analysis; and the undriven-UI queue, where `book-me` (28 of 32 testids never
+driven, with a real backend behind it) remains the standout.

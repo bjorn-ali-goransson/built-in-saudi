@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocale } from '../../i18n'
+import { useLocale, localePath } from '../../i18n'
 import { Button, Disclaimer, Input, Panel, Select, Stack } from '../../components/ui'
 import { TrashIcon, CalendarIcon, DownloadIcon } from '../../components/icons'
 import { buildIcsCalendar, downloadIcs } from '../../lib/ics'
 import { HIJRI_MONTHS } from '../prayer-times/islamic'
 import {
-  load, save, daysLeft, status, STATUS_TONE, KINDS, KIND_LABEL, LEAD_DAYS,
+  load, save, daysLeft, status, STATUS_TONE, KINDS, KIND_LABEL, LEAD_DAYS, GUIDE,
   hijriInputToIso, isoToHijri, bothCalendars, newId,
   type Doc, type DocKind, type Calendar,
 } from './docs'
@@ -161,6 +161,14 @@ export default function IdExpiryTool() {
                     </span>
                     <span className="font-mono text-[0.78rem] text-ink-faint">{both.greg}</span>
                     <span className="text-[0.78rem] text-ink-faint rtl:font-ar">{both.hijri}</span>
+                    {GUIDE[d.kind] && (
+                      // This tool knows a DATE. The rule behind the date lives
+                      // in another tool, and until now nothing pointed at it.
+                      <a className="text-[0.78rem] rtl:font-ar w-fit" data-testid="exp-guide"
+                        href={localePath(locale, `/apps/${GUIDE[d.kind]!.tool}`)}>
+                        {GUIDE[d.kind]![locale]}
+                      </a>
+                    )}
                   </div>
                   <div className="flex flex-col items-end">
                     <span className={`font-display text-[1.15rem] ${st === 'expired' || st === 'urgent' ? 'text-gold-500' : 'text-ink'}`}
