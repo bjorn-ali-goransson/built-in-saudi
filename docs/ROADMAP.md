@@ -2260,3 +2260,17 @@ it.
 **Still untried as a held-out axis:** the competitor product name (mostly a
 NOMATCH measurement, since this site refuses to stuff brands into tools) and the
 compound task ("merge these and add page numbers").
+
+## Web sweep, 11 August 2026 — what people download APPS for
+
+A different source from every earlier sweep, which looked at websites. It points
+at device capabilities this site barely uses.
+
+**Shipped `doc-scan`.** Projective straightening with hand-placed,
+keyboard-nudgeable corners, plus the clean-up that is the actual size win.
+
+**Seen and not taken:** automatic edge detection (it fails silently, which is
+the one thing the tool refuses); a spirit level and protractor via
+DeviceOrientation (real app-store categories, but closer to the "irrelevant
+noise" exclusion than to anything this site does); multi-page capture, which
+`images-to-pdf` already covers and the tool links to.

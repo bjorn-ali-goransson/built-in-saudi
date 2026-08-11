@@ -609,6 +609,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'doc-scan',
+    en: { name: 'Photo to Scan', description: 'Turn a photo of a page into something that looks scanned — straightened by a projective transform, paper made white, and a fraction of the size. Nothing uploaded. Free, in your browser.' },
+    ar: { name: 'تصحيح صورة المستند', description: 'حوّل صورة صفحة إلى ما يشبه المسح الضوئي — معدّلة الميل بتحويل إسقاطي، والورق أبيض، وبجزء يسير من الحجم. ولا يُرفع شيء. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'pdf-diff',
     en: { name: 'Compare PDFs', description: 'See exactly which words changed between two versions of a PDF, and on which page — text-aligned, not pixel-compared. Neither file is uploaded. Free, in your browser.' },
     ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },

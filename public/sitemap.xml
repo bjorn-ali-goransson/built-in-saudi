@@ -3585,4 +3585,18 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pdf-diff"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pdf-diff"/>
   </url>
+  <url>
+    <loc>https://built-in-saudi.com/en/apps/doc-scan/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/doc-scan"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/doc-scan"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/doc-scan"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/doc-scan/</loc>
+    <lastmod>2026-08-11</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/doc-scan"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/doc-scan"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/doc-scan"/>
+  </url>
 </urlset>

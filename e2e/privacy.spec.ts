@@ -203,6 +203,7 @@ export const CASES: Case[] = [
   { id: 'pdf-diff', testid: 'pd-file-a', name: 'contract-v1.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'print-size', testid: 'ps-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
+  { id: 'doc-scan', testid: 'ds-file', name: 'page.png', mime: 'image/png', make: pngWithToken },
   {
     id: 'zip-create',
     testid: 'zc-file',

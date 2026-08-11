@@ -5,6 +5,7 @@ import { imageFormatConverterTool } from './image-format-converter/meta'
 import { imageCropperTool } from './image-cropper/meta'
 import { imageRearrangeTool } from './image-rearrange/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
+import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfSplitTool } from './pdf-split/meta'
 import { pdfToImagesTool } from './pdf-to-images/meta'
@@ -371,6 +372,7 @@ export const tools: Tool[] = [
   imageFormatConverterTool,
   imageCropperTool,
   imageRearrangeTool,
+  docScanTool,
   imagesToPdfTool,
   pdfMergeTool,
   pdfSplitTool,

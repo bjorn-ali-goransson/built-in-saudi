@@ -1145,6 +1145,53 @@ owns "counter". Measured after: `jwt token` and `decode a token` still go to
 unchanged, own names 455/456. A bare `token` leads with the counter and puts
 the decoder second — genuinely ambiguous, recorded rather than tuned.
 
+## A photo of a page is not a big scan (`doc-scan`)
+
+Found by sweeping what people download APPS for rather than what they search the
+web for — a different source, and it points at device capabilities this site
+barely uses.
+
+**The claim it is built on is measurable, and my own fixture refuted it first.**
+The reason a phone photo of a document is several megabytes is not detail: it is
+that the paper is not white and the sensor is noisy. Flatten the paper to white
+and the ink to black and the same page compresses to a fraction — and becomes
+far easier for OCR, which looks for letter shapes rather than lighting.
+
+The first fixture was a smooth gradient with bars on it and compressed to
+**39KB — smaller than the cleaned output**, so the tool's own spec reported the
+claim false. That fixture was missing the property under test: **grain is what a
+photographic codec cannot predict and therefore must store**, and it is exactly
+what the clean-up throws away. With sensor noise added, the claim holds. Same
+lesson as the lam-alef sentence and the real HEIC file: **a fixture has to
+contain the hard case or it measures the easy one.**
+
+- **Straightening a page is a PROJECTIVE transform, not a crop.** A camera is
+  never square to the paper, so the far edge is shorter than the near one, and
+  no amount of cropping or rotating fixes that. `lib/homography.ts` solves the
+  eight unknowns by Gaussian elimination — no dependency — and was verified
+  independently before the tool was wired: a known quadrilateral's four corners
+  land exactly on the rectangle, and a degenerate one returns null instead of
+  dividing by zero. **The typechecker caught a real bug in it**: `row[i][i]`
+  indexes into a number, where the diagonal is `m[i][i]`.
+- **The corners are placed by hand, on purpose.** Automatic edge detection is
+  what makes a scanner app feel magic and what makes it fail silently on a
+  patterned tablecloth or a page with a photograph on it. Four handles you can
+  see cannot be wrong without you seeing it — and they are **keyboard-nudgeable**,
+  which is both the accessible answer and the reason the behaviour is testable
+  at all.
+- **The output size is shown both ways round**, and there is a case asserting
+  that turning the clean-up OFF gives the saving back — without which the size
+  claim would pass against a tool that merely re-encoded everything smaller.
+
+**It took two Arabic queries, and the keyword fix did not work.** «مسح ضوئي»
+went to it over `pdf-ocr` — a phrase CLAUDE.md already records being taken off
+`pdf-organise` for the same reason — and removing the keyword changed nothing,
+because the Arabic NAME «صورة إلى مسح ضوئي» contained the phrase at TRIPLE
+weight. Renamed «تصحيح صورة المستند», exactly as `print-size` was renamed off
+«الصورة». That then took «وقّع المستند» from `pdf-sign`, whose name is «توقيع
+PDF» and carries no «مستند» — fixed by giving the signer the phrase. Tuned bench
+back to 131/131 and every other bench at or above its previous number.
+
 ## "300 DPI" is arm's length, not a law (`print-size`)
 
 Found by diffing a second large catalogue against ours. The gap is not the
