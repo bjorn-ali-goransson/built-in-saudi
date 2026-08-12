@@ -127,6 +127,11 @@ test.describe('tap bpm', () => {
 test.describe('tuner', () => {
   test('offers instrument presets including the oud', async ({ page }) => {
     await page.goto('/en/apps/tuner')
+    // `allInnerTexts()` does NOT auto-wait: on a lazily-loaded tool that has
+    // not rendered yet it returns [], and `[].join(' ')` is '' — which fails
+    // with "received empty string" rather than a timeout, so the cause reads
+    // like a missing preset. Wait for the control to exist first.
+    await expect(page.getByTestId('tu-tuning')).toBeVisible()
     const options = await page.getByTestId('tu-tuning').locator('option').allInnerTexts()
     expect(options.join(' ')).toContain('Oud')
     expect(options.join(' ')).toContain('Guitar')

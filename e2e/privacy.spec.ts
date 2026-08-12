@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { deflateRawSync, deflateSync, crc32 } from 'node:zlib'
 import { readFileSync } from 'node:fs'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
+import { ANALYTICS } from './helpers'
 
 // "Files are never uploaded" is the site's first principle and the reason it
 // exists rather than the adware incumbents. **109 tools say it in their own
@@ -22,7 +23,8 @@ import { PDFDocument, StandardFonts } from 'pdf-lib'
 // token, because "we do not upload your file" and "we count page views" are
 // different claims and only one of them is being tested here.
 
-const ANALYTICS = /googletagmanager\.com|google-analytics\.com|analytics\.google\.com|analytics\.ali-web-services\.com/
+// One definition, in `helpers.ts` — see the note there. A private copy here is
+// what let `password-breach.spec.ts` keep asserting the old rule.
 
 const TOKEN = `bis-privacy-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 

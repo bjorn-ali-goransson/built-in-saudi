@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createHash } from 'node:crypto'
+import { ANALYTICS } from './helpers'
 
 // The optional breach check on `password-strength`.
 //
@@ -58,8 +59,12 @@ test('the password itself never appears in any request', async ({ page }) => {
   page.on('request', (r) => {
     const url = r.url()
     const body = r.postData() ?? ''
+    // The password check is matched on EVERY request, analytics included — a
+    // beacon carrying the password would be the exact leak this case exists
+    // for. Only the blanket "no body at all" rule exempts the analytics
+    // origins, and it is the narrower of the two claims.
     if (url.includes(PW) || body.includes(PW)) leaked.push(url.slice(0, 120))
-    if (body) bodies.push(`${r.method()} ${url.slice(0, 120)}`)
+    if (body && !ANALYTICS.test(url)) bodies.push(`${r.method()} ${url.slice(0, 120)}`)
   })
 
   await page.goto('/en/apps/password-strength')

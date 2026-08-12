@@ -2,6 +2,24 @@ import { inflateRawSync } from 'node:zlib'
 import type { Page } from '@playwright/test'
 
 /**
+ * The origins allowed to receive a request BODY.
+ *
+ * Several specs assert that nothing on this site POSTs anywhere — the honest
+ * form of "your file never leaves the page", since a body we cannot read is
+ * still a body. Analytics is the one exception: counting page views is a
+ * different claim from uploading your file, and it is allowlisted by ORIGIN and
+ * separately asserted never to carry the user's own content.
+ *
+ * It lives here because it was a private constant in `privacy.spec.ts` when a
+ * second analytics provider was added, and `password-breach.spec.ts` makes the
+ * same assertion and was NOT updated — so the deploy failed on a spec nobody
+ * associated with analytics. One definition; add a beacon host here and every
+ * body assertion on the site learns about it at once.
+ */
+export const ANALYTICS =
+  /googletagmanager\.com|google-analytics\.com|analytics\.google\.com|analytics\.ali-web-services\.com/
+
+/**
  * Read a number out of the UI, in either language.
  *
  * **`ar-SA` formats with Arabic-Indic digits** (`٧٩` rather than `79`), so the

@@ -9,15 +9,21 @@ test.describe('maths worksheets', () => {
     // This is the whole reason the seed is exposed: a reprint after a paper jam
     // must match the answer key already in the teacher's hand.
     await page.goto('/en/apps/worksheets')
+    // Same hazard as the tuner: `allInnerTexts()` has no auto-wait, so on a
+    // lazily-loaded tool the first read can be [] under a loaded suite.
+    await expect(page.getByTestId('worksheets')).toBeVisible()
+    await expect.poll(() => problemsOn(page).then((p) => p.length)).toBeGreaterThan(0)
     const first = await problemsOn(page)
-    expect(first.length).toBeGreaterThan(0)
 
+    // `fill` resolves when the value is set, NOT when React has repainted from
+    // it — so reading straight after is a render race that passes every time
+    // the file runs alone and fails under a loaded suite. Poll for the thing
+    // under test rather than for time to pass.
     await page.getByTestId('ws-seed').fill('ZZZ999')
-    const second = await problemsOn(page)
-    expect(second).not.toEqual(first)
+    await expect.poll(() => problemsOn(page)).not.toEqual(first)
 
     await page.getByTestId('ws-seed').fill('ABC123')
-    expect(await problemsOn(page)).toEqual(first)
+    await expect.poll(() => problemsOn(page)).toEqual(first)
   })
 
   test('“new sheet” actually changes the sheet code', async ({ page }) => {

@@ -1441,7 +1441,21 @@ test.describe('analytics', () => {
     await expect(page.getByText(/cookieless mode/i)).toBeVisible()
     await expect(page.getByText(/no cookie banner/i)).toBeVisible()
     await page.goto('/ar/privacy')
-    await expect(page.getByText(/بلا كوكيز/)).toBeVisible()
+    // A LOOSE match broke the moment a second analytics provider was disclosed
+    // (#249): both paragraphs say «بلا كوكيز», so `getByText` matched two
+    // elements and failed on strict mode — a true page and a red test. Pin the
+    // sentence that carries the claim rather than the phrase both share.
+    await expect(page.getByText(/ويعمل بوضع بلا كوكيز/)).toBeVisible()
+  })
+
+  test('both analytics providers are disclosed, in both locales', async ({ page }) => {
+    // The disclosure is the claim; the count of providers is what can go stale.
+    // Named per locale so adding a third cannot pass silently.
+    await page.goto('/en/privacy')
+    await expect(page.getByText(/analytics\.ali-web-services\.com/)).toBeVisible()
+    await expect(page.getByText(/Google Analytics|Analytics is configured/i).first()).toBeVisible()
+    await page.goto('/ar/privacy')
+    await expect(page.getByText(/analytics\.ali-web-services\.com/)).toBeVisible()
   })
 })
 
