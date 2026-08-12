@@ -61,8 +61,10 @@ export const MAX_CONSECUTIVE_HOURS = 5
 /** Total daily rest, in continuous hours. */
 export const DAILY_REST_HOURS = 8
 
-/** Wage Protection became mandatory for every employer on this date. */
-export const WPS_ALL_EMPLOYERS = '2026-01-01'
+// The date Wage Protection became mandatory for every employer is recorded in
+// the SOURCES block above and written out in both locales' copy. It was also a
+// constant here, which nothing read — a third copy of one fact, and the one a
+// reader never sees. `evals/deadexports.mjs` found it the day it shipped.
 
 export interface Service {
   /** Monthly wage in riyals. */

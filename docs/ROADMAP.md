@@ -2582,3 +2582,38 @@ broken assertion rather than a missing wait.
 assistant, or job-title/role) before believing any future search number; 41
 tools on `TEXT_UNVERIFIED`; five pdf-lib tools still on the main thread, blocked
 on `OffscreenCanvas` in `textImage.ts`.
+
+### Code sweep, 12 August 2026 — a capability with one caller
+
+Built the instrument this sweep shape has been asking for. `lib/ics.ts` and
+`lib/wordDiff.ts` were both found by hand — a module in `src/lib/` reached by
+exactly one file — and **found twice by accident is this repo's threshold for
+an instrument**. `node evals/libreach.mjs`: 76 lib modules, 16 with one caller,
+median 4 callers for the rest.
+
+**Its first run found a live defect.** `lib/inAppBrowser.ts` had one caller (the
+CV optimizer) while **six surfaces call `loadGis`** — and Google refuses OAuth
+inside an embedded WebView, so on five of them the sign-in button was dead with
+nothing saying why. The worst was the Privacy page's "delete my data". Fixed
+with `components/ui/InAppNote.tsx`; see CLAUDE.md. Verified to fail.
+
+`node evals/deadexports.mjs` also reported **2 dead exports, both in tools
+shipped in the last two days** — `WPS_ALL_EMPLOYERS` (a third copy of a date
+that already lives in the SOURCES block and in both locales' copy) and
+`marginToMarkup` (written for symmetry with its used inverse, called by
+nothing). Both deleted; the count is back to 0. Over-exported is 249 and is not
+a backlog.
+
+**The rest of the 16 were checked and are filed correctly**, which is the
+result worth recording so nobody re-opens them: a format reader used by the one
+tool that reads that format (`pptx`, `vcardRead`, `docx`), a search internal
+with one entry point by design (`numericIntent`, `productAliases`,
+`searchDirection`, `categoryMatch`), and two extractions made specifically so a
+harness could reach them without pulling in every React component
+(`relatedPick`, `cvPatch`).
+
+**Still open from this sweep:** `blocksToHtml` has one caller and CLAUDE.md
+records Markdown-to-PDF as the third tool the Markdown parser was supposed to
+unlock — `markdown-docx` and `markdown-epub` shipped and the PDF one did not.
+`evals/rtlpdf.mjs` says react-pdf cannot carry an Arabic text layer, so it needs
+a different route than the other two and is not a checklist job.

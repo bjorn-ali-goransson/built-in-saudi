@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Stack, Button, Textarea, Field } from '../../components/ui'
+import { InAppNote } from '../../components/ui/InAppNote'
 import { loadGis, GOOGLE_CLIENT_ID } from '../../lib/cvApi'
 
 const FN = 'https://us-central1-blitz-ksa.cloudfunctions.net'
@@ -161,6 +162,7 @@ export default function PromptAnalyzerTool() {
             {!idToken && <div ref={btnRef} className="[color-scheme:light]" />}
           </div>
           {!idToken && <p className="text-[0.8rem] text-ink-faint">{s.signinNote}</p>}
+          {!idToken && <InAppNote locale={locale} />}
         </>
       )}
 

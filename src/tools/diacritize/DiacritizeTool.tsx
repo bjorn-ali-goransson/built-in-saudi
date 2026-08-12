@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Stack, Button, Textarea } from '../../components/ui'
+import { InAppNote } from '../../components/ui/InAppNote'
 import { CopyIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID } from '../../lib/cvApi'
 
@@ -83,6 +84,7 @@ export default function DiacritizeTool() {
             {!idToken && <div ref={btnRef} className="[color-scheme:light]" />}
           </div>
           {!idToken && <p className="text-[0.8rem] text-ink-faint">{s.signinNote}</p>}
+          {!idToken && <InAppNote locale={locale} />}
         </>
       )}
 

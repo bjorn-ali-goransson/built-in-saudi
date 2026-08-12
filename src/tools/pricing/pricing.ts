@@ -128,6 +128,11 @@ export function naivePrice(cost: number, margin: number): number {
   return Math.max(0, cost || 0) / (1 - margin)
 }
 
-/** Markup converted to the margin it really is, and back. */
+/**
+ * Markup converted to the margin it really is.
+ *
+ * The inverse was written beside it for symmetry and called by nothing — the
+ * shape `evals/deadexports.mjs` exists to find. `breakDown` already reports
+ * both figures for a real price, so nothing needs to travel back the other way.
+ */
 export const markupToMargin = (markup: number) => markup / (1 + markup)
-export const marginToMarkup = (margin: number) => (margin >= 1 ? Infinity : margin / (1 - margin))

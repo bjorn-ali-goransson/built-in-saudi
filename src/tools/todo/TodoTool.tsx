@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocale, localePath } from '../../i18n'
 import { Link } from 'react-router-dom'
 import { Stack, Button, Input, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
+import { InAppNote } from '../../components/ui/InAppNote'
 import { TrashIcon, CloudIcon, UserPlusIcon, LockIcon, CheckIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID, decodeJwt } from '../../lib/cvApi'
 import { syncList, fetchLists, shareList, removeList } from './api'
@@ -277,6 +278,7 @@ export default function TodoTool() {
         <Sheet onClose={() => !busy && setSyncOpen(false)} data-testid="todo-sync-sheet">
           <SheetTitle>{s.sync}</SheetTitle>
           <p className="text-[0.9rem] text-ink-soft leading-relaxed">{s.syncBody}</p>
+          {!idToken && <InAppNote locale={locale} />}
           {err && <p className="text-[0.85rem] text-gold-500" data-testid="todo-sync-err">{err}</p>}
           <SheetActions>
             <Button variant="primary" onClick={enableSync} disabled={busy} data-testid="todo-sync-go">

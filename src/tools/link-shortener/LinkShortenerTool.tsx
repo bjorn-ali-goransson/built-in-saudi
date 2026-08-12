@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Input, Stack, Spinner, Sheet, SheetTitle } from '../../components/ui'
+import { InAppNote } from '../../components/ui/InAppNote'
 import { LinkIcon } from '../../components/icons'
 import { loadGis, GOOGLE_CLIENT_ID } from '../../lib/cvApi'
 import { shortenUrl, myLinks, deleteLink, type ShortLink } from '../../lib/shortenApi'
@@ -211,6 +212,7 @@ export default function LinkShortenerTool() {
             <div ref={btnRef} className="[color-scheme:light]" data-testid="link-signin" />
             <span className="text-[0.85rem] text-ink-faint flex-1 min-w-[12rem]">{s.signinNote}</span>
           </div>
+          <div className="wrap pb-3"><InAppNote locale={locale} /></div>
         </div>,
         document.body,
       )}

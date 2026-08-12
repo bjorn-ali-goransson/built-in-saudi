@@ -7,7 +7,7 @@ import { loadGis, GOOGLE_CLIENT_ID, decodeJwt, generateCv, improveCv, type CvIss
 import { hideFooterStore } from '../../lib/hideFooter'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { cvHeaderStore } from '../../lib/cvHeader'
-import { inAppBrowser } from '../../lib/inAppBrowser'
+import { InAppNote } from '../../components/ui/InAppNote'
 import { renderCvHtml } from './template'
 import { cvToDocxBlob } from './docx'
 import { cvFilename, type Cv } from './schema'
@@ -21,7 +21,6 @@ const STR = {
     extracted: (n: number) => `Got it — read ${n.toLocaleString()} characters.`,
     tooShort: 'Couldn’t read enough text. Try a text-based PDF or a .docx.',
     extractErr: 'Couldn’t read that file. Try a PDF, .docx or .txt.',
-    inAppWarn: (app: string) => `You’re in ${app}’s in-app browser, which can’t read PDFs here. Open this page in Safari or Chrome — tap ⋯ (or Share) and choose “Open in browser”.`,
     browserErr: 'Something went wrong reading your file. This can happen on an older browser, or an app’s built-in browser (like LinkedIn). Open this page in a full browser and try again.',
     openInBrowser: 'Open in a browser',
     linkCopied: 'Link copied — paste it into Safari or Chrome.',
@@ -106,7 +105,6 @@ const STR = {
     extracted: (n: number) => `تمّ — قُرئ ${n.toLocaleString()} حرفًا.`,
     tooShort: 'تعذّرت قراءة نص كافٍ. جرّب PDF نصيًا أو .docx.',
     extractErr: 'تعذّرت قراءة الملف. جرّب PDF أو .docx أو .txt.',
-    inAppWarn: (app: string) => `أنت داخل متصفح ${app}، الذي لا يستطيع قراءة ملفات PDF هنا. افتح الصفحة في Safari أو Chrome — اضغط ⋯ (أو مشاركة) واختر «فتح في المتصفح».`,
     browserErr: 'حدث خطأ أثناء قراءة ملفك. قد يحدث هذا في متصفح قديم أو في متصفح تطبيق مُضمَّن (مثل LinkedIn). افتح الصفحة في متصفح كامل وحاول مجددًا.',
     openInBrowser: 'افتح في متصفح',
     linkCopied: 'نُسخ الرابط — الصقه في Safari أو Chrome.',
@@ -319,7 +317,6 @@ export default function CvGeneratorTool() {
   const { locale } = useLocale()
   const s = STR[locale]
   const ar = locale === 'ar'
-  const inApp = inAppBrowser() // e.g. "LinkedIn" if in an in-app WebView
   const [idToken, setIdToken] = useState<string | null>(null)
   const [gisReady, setGisReady] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
@@ -762,11 +759,12 @@ export default function CvGeneratorTool() {
         <>
           {(status === 'idle' || (status === 'extracting' && origPages.length === 0)) && hero}
 
-          {inApp && status === 'idle' && (
-            <div className="flex items-start gap-2 border-s-[3px] border-gold-500 bg-[color-mix(in_srgb,var(--color-gold-400)_12%,transparent)] ps-3 pe-3 py-2.5 rounded-e-md" data-testid="inapp-warn">
-              <span className="text-[0.85rem] text-ink leading-snug">{s.inAppWarn(inApp)}</span>
-            </div>
-          )}
+          {/* This one says `pdf`: an embedded WebView cannot run pdf.js, which
+              bites before the sign-in does. The five other surfaces that call
+              `loadGis` render the same component with the default `signin`
+              reason — the wording is the substance here, so it lives in one
+              place, exactly as `PdfPassword` does. */}
+          {status === 'idle' && <InAppNote locale={locale} reason="pdf" />}
 
           {status === 'extracting' && origPages.length === 0 && (
             <div className="py-24 flex justify-center" data-testid="cv-loading"><Spinner className="size-9" label={s.extracting} /></div>

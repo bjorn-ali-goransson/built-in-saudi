@@ -1541,6 +1541,57 @@ repeats, a location and an organizer, none of which a list of dated facts has,
 and bending one function into both would give every caller the other's
 parameters.
 
+## A capability with one caller (`evals/libreach.mjs`)
+
+`src/lib/` is where this site keeps what more than one tool needs, so **a module
+in there with exactly ONE caller is the shape of a capability nobody noticed was
+general.** That shape has now found two real ones **by hand** — `lib/ics.ts`,
+which wrote a calendar file for the calendar builder and for nothing else while
+six tools computed a date somebody needs reminding of; and `lib/wordDiff.ts`,
+written for `pdf-diff` while the site's PRIMARY text comparison tool carried a
+byte-identical copy of the same LCS and over-reported by 4.4x. **Found twice by
+accident is this repo's threshold for building the instrument.**
+
+It is a MEASUREMENT, not a gate, and the reason is in its own output: **one
+caller is a question, not a defect.** A format reader used by the one tool that
+reads that format (`pptx`, `vcardRead`) is filed correctly, and
+`relatedPick`/`cvPatch` are in `lib/` precisely so a harness can reach them
+without pulling every React component in. Measured: **76 lib modules, 16 with
+one caller, median 4** — so a lonely module is genuinely unusual rather than the
+norm.
+
+**Its first run found `lib/inAppBrowser.ts`, and the defect was live.** It
+detects an embedded WebView (LinkedIn, Instagram, Facebook…) and had **one
+caller for its whole life**, the CV optimizer, where such a browser cannot run
+pdf.js. Meanwhile **six surfaces call `loadGis`**: the CV optimizer, the Arabic
+diacritizer, the link shortener, the prompt analyzer, the to-do lists, and the
+**Privacy page's "delete my data"**.
+
+**Google REFUSES OAuth in an embedded WebView** — its stated
+`disallowed_useragent` policy, not a capability gap anyone could work around —
+so on five of those six **the sign-in button was simply dead, with nothing on
+screen saying why.** The worst is the Privacy page: exercising the right to have
+your data deleted is the one thing on a privacy-first site that must not fail
+silently, and a privacy link is exactly the kind people open from a message.
+
+`components/ui/InAppNote.tsx` carries it, with two reasons because they are two
+different facts — `signin` is a refusal by Google, `pdf` is a WebView that
+cannot run the reader — and one escape hatch, written once. Four decisions:
+
+- **It renders NOTHING in an ordinary browser**, which is what makes it safe to
+  put on all six. There is a case asserting exactly that, without which the fix
+  could have been "always warn" and would have put a confusing note in front of
+  every visitor on six surfaces.
+- **It names the app.** A generic "your browser may not support this" is a
+  warning nobody acts on; "you are in LinkedIn's browser" is.
+- **Extracted at the SECOND caller, not the third**, on the `PdfPassword`
+  precedent: the wording IS the substance here, and six surfaces drifting into
+  six answers about why sign-in failed would be worse than the duplication.
+- **`{...rest}` is not spread**, so a caller cannot rename the `data-testid` the
+  guard reads — the `Disclaimer` rule, applied on the way past.
+
+**Verified to fail:** removing the note from the Privacy page reddens two cases.
+
 ## An export nothing calls is one of three things
 
 **The sweep that finds them was rebuilt, because the second attempt at it was

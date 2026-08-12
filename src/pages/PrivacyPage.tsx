@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../i18n'
 import { useDocumentMeta } from '../lib/useDocumentMeta'
 import { Button, Spinner } from '../components/ui'
+import { InAppNote } from '../components/ui/InAppNote'
 import { myData, type MyDataReport } from '../lib/bookingApi'
 import { loadGis, GOOGLE_CLIENT_ID } from '../lib/cvApi'
 
@@ -276,6 +277,11 @@ function DeleteMyData({ locale }: { locale: 'en' | 'ar' }) {
       <section className="flex flex-col gap-3 rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5">
         <h2 className="font-display text-[1.2rem] text-ink">{t.h}</h2>
         <p className="text-[0.95rem] text-ink-soft leading-relaxed">{t.p}</p>
+        {/* Google refuses OAuth inside an app's WebView, so this button is
+            simply dead there. Of every surface that signs in, this is the one
+            that must not fail silently: it is how somebody exercises the right
+            to have their data deleted. */}
+        {!report && <InAppNote locale={locale} />}
         {!report && <div ref={btnRef} data-testid="mydata-signin" className="[color-scheme:light]" />}
         {status === 'loading' && <Spinner className="size-5" />}
         {report && (
