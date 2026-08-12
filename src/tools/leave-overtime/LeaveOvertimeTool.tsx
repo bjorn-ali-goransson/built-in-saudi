@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useLocale } from '../../i18n'
+import { useLocale, localePath } from '../../i18n'
+import { Link } from 'react-router-dom'
 import { Field, Input, Stack, Panel, Disclaimer } from '../../components/ui'
 import {
   entitlement, overtimePay, LEAVE_BASE, LEAVE_AFTER, LEAVE_STEP_YEARS,
@@ -151,6 +152,18 @@ export default function LeaveOvertimeTool() {
         </Panel>
       </div>
 
+      {/* Same exclusion: a domestic worker's leave is 30 days after TWO
+          years, not 21 or 30 a year, and the overtime rules here do not reach
+          them at all. */}
+      <p className="text-[0.9rem] text-ink-soft rtl:font-ar" data-testid="lo-domestic">
+        {locale === 'ar'
+          ? 'لا ينطبق هذا على العمالة المنزلية — إجازتهم ثلاثون يومًا بعد سنتين بموجب لائحة مستقلة. '
+          : 'This does not apply to a domestic worker — their leave is 30 days after two years, under a separate regulation. '}
+        <Link to={localePath(locale, '/apps/domestic-worker')} data-testid="lo-domestic-link"
+          className="text-green-700">
+          {locale === 'ar' ? 'حقوق العمالة المنزلية' : 'Domestic worker entitlements'}
+        </Link>
+      </p>
       <Disclaimer kind="legal" locale={locale}>{s.disclaimer}</Disclaimer>
     </Stack>
   )

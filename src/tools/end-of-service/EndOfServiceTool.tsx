@@ -17,7 +17,8 @@
 //   the sources live here.
 
 import { useMemo, useState } from 'react'
-import { useLocale } from '../../i18n'
+import { useLocale, localePath } from '../../i18n'
+import { Link } from 'react-router-dom'
 import { Disclaimer, FieldLabel, Input, Panel, Seg, SegButton, Stack } from '../../components/ui'
 
 const STR = {
@@ -126,6 +127,20 @@ export default function EndOfServiceTool() {
         </div>
       </Panel>
 
+      {/* The Labour Law EXPRESSLY EXCLUDES domestic workers, and this tool
+          answered as though it did not — measured on a SAR 1,500 wage, it
+          overstates their reward by 2.0x at four years and 3.2x at twelve. A
+          rule that does not apply is worse than no answer, so it says so and
+          routes. */}
+      <p className="text-[0.9rem] text-ink-soft rtl:font-ar" data-testid="eos-domestic">
+        {locale === 'ar'
+          ? 'لا ينطبق هذا على العمالة المنزلية — فنظام العمل يستثنيهم صراحةً، ولهم لائحة أخرى تعطي أجر شهر عن كل أربع سنوات. '
+          : 'This does not apply to a domestic worker — the Labour Law expressly excludes them, and a separate regulation gives one month’s wage per four years. '}
+        <Link to={localePath(locale, '/apps/domestic-worker')} data-testid="eos-domestic-link"
+          className="text-green-700">
+          {locale === 'ar' ? 'حقوق العمالة المنزلية' : 'Domestic worker entitlements'}
+        </Link>
+      </p>
       <Disclaimer kind="legal" locale={locale}>{s.note}</Disclaimer>
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>
     </Stack>

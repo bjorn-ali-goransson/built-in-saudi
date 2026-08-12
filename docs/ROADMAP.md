@@ -2532,3 +2532,53 @@ on a query that names one. Fixed; see CLAUDE.md.
 held-out set #9 on an untried axis. The two recorded candidates remain — the
 query typed as a QUESTION to an assistant ("can you make this smaller"), and the
 query that names a JOB TITLE or role rather than a task.
+
+### Web sweep #14, 12 August 2026 — the household that employs a domestic worker
+
+A vertical never swept: Musaned, and the roughly-one-in-two Saudi households
+that employ a domestic worker. **It did not find a market gap. It found a
+CORRECTNESS DEFECT in two tools we already shipped**, which is a better result
+than a new tool and an argument for sweeping a *vertical* rather than a
+keyword list — a keyword sweep would have reported "we already have an
+end-of-service calculator" and moved on.
+
+**Article 7 of the Labour Law expressly excludes domestic workers**, and both
+`end-of-service` and `leave-overtime` answered as though it did not. Measured on
+a SAR 1,500 wage, `end-of-service` overstated by **2.0x at four years, 2.8x at
+eight, 3.2x at twelve** — and the gap widens with service, because the Labour
+Law accrues per year with a step at five while the rule that covers domestic
+workers accrues per four years. A grep confirmed **no caveat existed in either
+tool**.
+
+**The sources disagreed and the `iqama-fees` rule settled it.** A commercial
+guide states "2 years minimum, then one month per year", four times the truth at
+eight years; the official Musaned platform states one month's salary per four
+consecutive years. One of the two was the authority publishing the rule, so it
+settles rather than averages.
+
+Shipped `domestic-worker` (beta, `legal` disclaimer naming Musaned) and fixed
+both existing tools with the exclusion plus a link to it. See CLAUDE.md.
+
+**What the sweep did NOT find worth building:** a recruitment-cost calculator
+(the fees are agency-quoted and vary by country of origin — the number would be
+ours to invent), and a contract generator (Musaned issues the contract itself,
+so ours would compete with the binding document).
+
+### Deploy, 12 August 2026 — prod served a build predating its own analytics
+
+Worth recording because the cost was a full day of the site not shipping. The
+analytics PR added a second beacon origin to the body allowlist in
+`privacy.spec.ts` and could not know that `password-breach.spec.ts` kept a
+private copy of the same rule. Its run was superseded, the next run failed on
+that copy, and **every commit after it was stuck behind a red build** while
+`built-in-saudi.com` served a build from before the tag it was meant to ship.
+
+Two rules out of it, both now in CLAUDE.md: the allowlist lives once in
+`e2e/helpers.ts`, and `allInnerTexts()` has no auto-wait — on a lazily-loaded
+tool it returns `[]`, and the empty-string failure that follows reads as a
+broken assertion rather than a missing wait.
+
+**Still open, unchanged:** held-out set #9 on an untried axis (question-to-an-
+assistant, or job-title/role) before believing any future search number; 41
+tools on `TEXT_UNVERIFIED`; five pdf-lib tools still on the main thread, blocked
+on `OffscreenCanvas` in `textImage.ts`.

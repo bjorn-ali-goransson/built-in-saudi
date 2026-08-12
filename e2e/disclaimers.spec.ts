@@ -32,6 +32,7 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'import-duty', kind: 'official' },
   { id: 'rett', kind: 'official' },
   { id: 'pricing', kind: 'financial' },
+  { id: 'domestic-worker', kind: 'legal' },
   { id: 'rent-rules', kind: 'legal' },
   { id: 'early-settlement', kind: 'financial' },
   { id: 'leave-overtime', kind: 'legal' },

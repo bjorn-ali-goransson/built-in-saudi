@@ -2992,6 +2992,65 @@ the three grounds written out beside it, rather than four buttons: they are
 mutually exclusive legal grounds with the same consequence, and a form offering
 a choice between them would pretend the distinction changed the answer.
 
+## The Labour Law does not cover a domestic worker (`domestic-worker`)
+
+Found by sweeping a vertical never swept — Musaned and the households that
+employ a domestic worker. **It turned up a defect in our own catalogue rather
+than a gap in the market**, which is the more valuable result and the reason to
+sweep a vertical instead of a keyword list: **Article 7 of the Labour Law
+expressly EXCLUDES domestic workers, and `end-of-service` and `leave-overtime`
+answered as though it did not.** Both took a wage and years of service and
+returned a Labour Law number, on a site whose Saudi tools exist precisely
+because the free calculators get the rule wrong.
+
+**Measured on a SAR 1,500 wage, our own `end-of-service` overstated by:**
+
+| service | it said | the rule that covers them | over |
+|---|---|---|---|
+| 4 years | 3,000 | 1,500 | **2.0x** |
+| 8 years | 8,250 | 3,000 | **2.8x** |
+| 12 years | 14,250 | 4,500 | **3.2x** |
+
+And the gap WIDENS with service, because the Labour Law accrues per year with a
+step at five while the domestic-worker rule accrues per four years — so the
+tool was worst exactly for the person who had been there longest.
+
+**The sources disagreed, and the `iqama-fees` rule decided it.** A commercial
+guide states "2 years minimum, then one month per year" — which is **four times**
+the truth at eight years — while the **official Musaned platform** says *one
+month's salary for every four consecutive years*. An uncorroborated figure does
+not go in, and here one of the two was the authority publishing the rule, so it
+settles rather than averages. There is a case pinning the three-year answer at
+**zero**, because the commercial figure would give 4,500 there.
+
+Rules in `src/tools/domestic-worker/domestic.ts`:
+
+- **One month's wage per four COMPLETE years**, so nothing at all is due before
+  four — and the tool says how long is left rather than printing a bare zero,
+  since "you get nothing" and "you get nothing yet" are different facts.
+- **30 days annual leave after two years, plus a round-trip ticket.** The ticket
+  is the part no calculator carries and it is worth more than a month's wage.
+- **30 days sick leave — 15 at full pay, the rest at half.** Shown as a daily
+  figure, because the wage is monthly and the entitlement is in days.
+- **24h weekly rest, no more than 5 consecutive hours of work, 8h daily rest.**
+- **Wage Protection became mandatory for EVERY household employer on 1 January
+  2026**, which is the thing most likely to be news to the reader.
+
+**It refuses the part-period question**, the seventh tool to make that call.
+Whether a worker who leaves at six years gets a pro-rata share of the seventh
+is **not stated** in what Musaned publishes, and inventing a proportion would
+put a number in a settlement negotiation that nobody could stand behind.
+
+**The fix to the two existing tools is a caveat AND a link, not just a caveat.**
+A tool that says "this does not apply to you" and stops is a dead end on the
+one question the reader came with. Both now name the exclusion and route to the
+tool that answers it, with a case asserting the link actually navigates —
+without which the fix could have been a sentence pointing nowhere.
+
+Carries a `legal` Disclaimer naming Musaned, is in `e2e/disclaimers.spec.ts`,
+and is badged **beta**. **Verified to fail:** substituting the commercial
+"one month per year" figure reddens five cases.
+
 ## Adding up a week of hours (`timesheet`)
 
 Found by a web sweep: the time-card calculator is one of the **highest-traffic
@@ -5245,6 +5304,40 @@ callback → the app) and went over the default under a loaded suite at
 `--workers=2`, while passing every time the file ran alone. That signature —
 green in isolation, red under load — is a timeout that is too tight, not a
 broken flow, and the fix is to say so at the assertion rather than to retry it.
+
+**`allInnerTexts()` has NO auto-wait, and that is why it flakes in a way that
+does not look like a flake.** Every other Playwright locator method retries
+until the element is actionable; this one returns whatever is on the page right
+now. On a lazily-loaded tool that is `[]` — and `[].join(' ')` is the **empty
+string**, so the failure reads *"expected to contain X, received empty
+string"*, which looks like a broken assertion or a renamed testid rather than a
+missing wait. Two specs (`batch13`, `batch15`) passed alone and failed under
+`--workers=2` for exactly this. Put an explicit `toBeVisible()` — or an
+`expect.poll` over the array — in front of it.
+
+**A regex loose enough to pass is loose enough to break when somebody adds a
+paragraph.** `app.spec.ts` asserted the Arabic cookieless position with a bare
+match on «بلا كوكيز»; a later PR added a second disclosure paragraph containing
+the same phrase, and the case died on a strict-mode violation — **red for a
+reason that had nothing to do with what it was testing**. Pinned to the
+sentence it means, plus a case asserting BOTH providers are disclosed, which is
+the property that was actually wanted and the one the loose match could never
+have held. **When a locator breaks because the page gained content, ask what
+the case meant to assert — that is usually a property nobody wrote down.**
+
+**The same change broke a spec nobody would associate with analytics.** The
+allowlist of origins permitted to receive a request BODY lived as a private
+constant in `privacy.spec.ts`, and the PR correctly added the new beacon host
+to it — while `password-breach.spec.ts` makes the *same* assertion over every
+request and kept the old rule. So the tightest privacy guard on the site went
+red, **the deploy stopped, and production served a build predating the tag it
+was meant to ship for a day.** `ANALYTICS` now lives once in `e2e/helpers.ts`.
+Two decisions worth keeping: the *password* match is deliberately **NOT**
+exempted for analytics — a beacon carrying the password is the exact leak that
+case exists for, and only the blanket no-body rule is relaxed, which is the
+broader of the two claims; and this is the same "use the shared one, do not
+write a second" lesson the loaders record, arriving in the **test** layer,
+which is the one place it had not yet been said.
 
 **Build a test date in LOCAL terms, never `toISOString().slice(0, 10)`.** East
 of Greenwich those disagree between local midnight and UTC midnight, so a date

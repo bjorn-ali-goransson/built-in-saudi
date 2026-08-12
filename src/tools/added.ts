@@ -9,6 +9,7 @@
 export const ADDED: Record<string, string> = {
   'cr-renewal': '2026-08-11',
   'doc-scan': '2026-08-11',
+  'domestic-worker': '2026-08-11',
   'pdf-diff': '2026-08-11',
   'pricing': '2026-08-11',
   'readable-text': '2026-08-11',

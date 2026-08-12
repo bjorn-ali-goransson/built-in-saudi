@@ -564,6 +564,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
   },
   {
+    id: 'domestic-worker',
+    en: { name: 'Domestic Worker Entitlements', description: 'What a domestic worker in Saudi Arabia is really entitled to — one month’s wage per four years, 30 days leave after two, sick pay and rest — under the regulation that covers them, not the Labour Law that does not. Free, in your browser.' },
+    ar: { name: 'حقوق العمالة المنزلية', description: 'ما تستحقه العمالة المنزلية فعلًا — أجر شهر عن كل أربع سنوات، وثلاثون يوم إجازة بعد سنتين، والإجازة المرضية والراحة — بموجب اللائحة التي تشملهم لا نظام العمل. مجانًا داخل متصفحك.' },
+  },
+  {
     id: 'pricing',
     en: { name: 'Product Pricing & Margin', description: 'What a sale really leaves you where the advertised price already includes the 15% and the payment fee is taken on all of it — plus the price to display to truly hit your margin, and why markup is not margin. Free, in your browser.' },
     ar: { name: 'تسعير المنتج وهامش الربح', description: 'كم تترك لك عملية البيع فعلًا حيث السعر المعلن شامل للضريبة والرسوم تُقتطع من كامله — والسعر الواجب عرضه لتحقيق هامشك، ولماذا نسبة الإضافة ليست الهامش. مجانًا داخل متصفحك.' },
