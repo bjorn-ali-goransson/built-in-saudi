@@ -61,7 +61,6 @@ export const UNTUNED2 = [
   ['how long will i sleep', 'sleep-cycle'],
   ['blood sugar units', 'glucose-units'],
   ['when to take my medicine', 'medicine-schedule'],
-  ['tune my guitar', 'tuner'],
   ['how loud is it', 'sound-meter'],
   ['fake names for testing', 'fake-data'],
   ['json to typescript', 'json-to-types'],

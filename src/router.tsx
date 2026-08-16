@@ -53,6 +53,10 @@ export const router = createBrowserRouter([
       { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
       // Retired: an interest-based calculator does not belong in this catalogue.
       { path: 'apps/loan-calculator', element: <RetiredToolRedirect /> },
+      // Retired: a musical instrument tuner exists only to serve music, which is
+      // a matter of Islamic disagreement this catalogue does not want to take a
+      // side on. Withdrawn August 2026 — see docs/ROADMAP.md "Out of scope".
+      { path: 'apps/tuner', element: <RetiredToolRedirect /> },
       // Before apps/:toolId in the file, though React Router ranks a static
       // segment above a dynamic one regardless of order.
       { path: 'c/:slug', element: <CategoryPage />, errorElement: <ErrorPage /> },

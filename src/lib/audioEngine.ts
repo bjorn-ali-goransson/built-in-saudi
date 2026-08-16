@@ -106,8 +106,8 @@ export interface MicStream {
 /**
  * Open the microphone with the browser's own processing OFF. Echo cancellation
  * and noise suppression are designed for speech on a call: they gate quiet
- * sounds and reshape the spectrum, which makes a tuner read the wrong pitch and
- * a sound meter read a level that is not there.
+ * sounds and reshape the spectrum, which makes a sound meter read a level that
+ * is not there.
  */
 export async function openMic(fftSize = 2048): Promise<MicStream> {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -132,82 +132,6 @@ export async function openMic(fftSize = 2048): Promise<MicStream> {
       source.disconnect()
     },
   }
-}
-
-/**
- * Fundamental frequency by autocorrelation. FFT peak-picking is the obvious
- * approach and it is wrong for instruments: the loudest partial is often the
- * second or third harmonic, so a guitar's low E reads an octave high.
- * Autocorrelation finds the repeating PERIOD, which is the fundamental even
- * when it is quieter than its overtones.
- */
-export function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
-  const size = buffer.length
-  let rms = 0
-  for (let i = 0; i < size; i++) rms += buffer[i] * buffer[i]
-  rms = Math.sqrt(rms / size)
-  // Too quiet to be a note rather than a room.
-  if (rms < 0.008) return null
-
-  // Trim leading and trailing near-silence so the correlation is over signal.
-  const threshold = 0.2
-  let start = 0
-  let end = size - 1
-  while (start < size / 2 && Math.abs(buffer[start]) < threshold) start++
-  while (end > size / 2 && Math.abs(buffer[end]) < threshold) end--
-  const trimmed = buffer.slice(start, end)
-  const n = trimmed.length
-  if (n < 128) return null
-
-  const c = new Float32Array(n).fill(0)
-  for (let lag = 0; lag < n; lag++) {
-    for (let i = 0; i < n - lag; i++) c[lag] += trimmed[i] * trimmed[i + lag]
-  }
-
-  // Skip the zero-lag peak, then take the first maximum after the dip.
-  let d = 0
-  while (d < n - 1 && c[d] > c[d + 1]) d++
-  let maxVal = -1
-  let maxPos = -1
-  for (let i = d; i < n; i++) {
-    if (c[i] > maxVal) { maxVal = c[i]; maxPos = i }
-  }
-  if (maxPos <= 0) return null
-
-  // Parabolic interpolation around the peak: without it the reading quantises to
-  // whole samples, which near the top of the range is several cents of error.
-  const y1 = c[maxPos - 1] ?? c[maxPos]
-  const y2 = c[maxPos]
-  const y3 = c[maxPos + 1] ?? c[maxPos]
-  const a = (y1 + y3 - 2 * y2) / 2
-  const b = (y3 - y1) / 2
-  const period = a ? maxPos - b / (2 * a) : maxPos
-
-  const freq = sampleRate / period
-  return freq > 20 && freq < 5000 ? freq : null
-}
-
-// ── Notes ───────────────────────────────────────────────────────────────────
-
-const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-
-export interface Note { name: string; octave: number; cents: number; midi: number }
-
-/** Nearest note, and how far off in cents. A440 is configurable — orchestras
- *  and older instruments do not all agree on it. */
-export function toNote(freq: number, a4 = 440): Note {
-  const midiFloat = 69 + 12 * Math.log2(freq / a4)
-  const midi = Math.round(midiFloat)
-  return {
-    name: NAMES[((midi % 12) + 12) % 12],
-    octave: Math.floor(midi / 12) - 1,
-    cents: Math.round((midiFloat - midi) * 100),
-    midi,
-  }
-}
-
-export function noteFrequency(midi: number, a4 = 440): number {
-  return a4 * 2 ** ((midi - 69) / 12)
 }
 
 /** Peak and RMS level of a buffer, in dBFS. */

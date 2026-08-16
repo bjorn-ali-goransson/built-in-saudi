@@ -135,7 +135,6 @@ export const ADDED: Record<string, string> = {
   'team-maker': '2026-08-05',
   'timezone-planner': '2026-08-05',
   'totp': '2026-08-05',
-  'tuner': '2026-08-05',
   'url-parser': '2026-08-05',
   'video-audio': '2026-08-05',
   'video-gif': '2026-08-05',

@@ -66,8 +66,9 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
    description on every page. Each tool page's crawlable block also links to all
    other tools (kills orphan pages) under a "More free tools" H2.
 **BEFORE step 1, read `docs/ROADMAP.md` "Out of scope".** Some tools are
-excluded on purpose — interest/EMI calculators for Shariah reasons, anything
-needing a scraped source or a key we will not run — and the exclusion says WHY.
+excluded on purpose — interest/EMI calculators and instrument tuners for
+Shariah reasons, anything needing a scraped source or a key we will not run —
+and the exclusion says WHY.
 This is not a formality: in August 2026 a web sweep re-proposed the loan
 calculator that had been withdrawn in July for exactly that reason, and it was
 rebuilt in full — module, UI, meta, seo, sitemap, disclaimer, spec — before
@@ -76,6 +77,30 @@ router making its own page render the catalogue. `scripts/check-retired.mjs` now
 fails the build when a withdrawn id comes back, because a decision that lives
 only in prose and in one router line is a decision nobody consults while adding
 a tool. **A disclaimer does not fix a tool that should not exist.**
+
+**The second withdrawal was `tuner`, and it is the one that says what the rule
+actually is.** An `Instrument Tuner` shipped in August 2026 and came out the
+same month: the permissibility of musical instruments is contested in Islamic
+law, and a chromatic tuner has no use except playing one, so it puts the
+catalogue on a side of that question. **The exclusion is a SUBJECT, not a
+technology** — `metronome`, `bpm-tap` and `sound-meter` all share
+`lib/audioEngine.ts` with it and all stayed, because a metronome times any
+repeated activity, a tap counter measures a rate and a meter measures noise.
+Ask what a tool is FOR, not what it is built from.
+
+**Removing a tool is the same checklist as adding one, run backwards**, and
+every step is a build gate except the last two: delete the folder, the registry
+import and entry, the `added.ts` date, the `seo.ts` entry and BOTH sitemap
+URLs; add a `RetiredToolRedirect` (which is what `check-retired.mjs` reads, so
+without it the id can silently come back); drop its rows from
+`evals/benchqueries.mjs` and any held-out set; and delete the e2e block, adding
+a redirect case in `app.spec.ts` `retired tools` instead. Two things the gates
+do NOT catch: **`lib/` exports the tool was the only caller of** — three pitch
+helpers in `audioEngine.ts` here, found the way `evals/deadexports.mjs` says to
+find them, dead the moment the tool left — and **prose in other files naming
+it**, which was in `fft.ts`, `audioEngine.ts` and `ROADMAP.md`. Re-run
+`node evals/inbound.mjs`: removing a tool changes the graph exactly as adding
+one does, and a neighbour that was only reachable through it becomes an orphan.
 
 **Steps 2–5 are enforced, not remembered.** `npm run build` runs
 `scripts/check-tool-registry.mjs`, which fails on a live tool that has no

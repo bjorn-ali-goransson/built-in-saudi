@@ -3,7 +3,7 @@
 // `lib/audio.ts` already decodes anything the browser can play — mp3, m4a, ogg,
 // flac, wav and the audio track of a video — and three tools use it without any
 // of them ever looking at the FREQUENCY content. `AnalyserNode` is the
-// platform's own FFT and is used by `tuner` and `sound-meter`, but it only
+// platform's own FFT and is used by `sound-meter`, but it only
 // works on live playback: there is no way to ask it about a file without
 // playing the file through in real time. Hence this.
 //

@@ -774,11 +774,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'ميقاتية (متـرونوم)', description: 'إيقاع من ٣٠ إلى ٣٠٠، وأي ميزان، وتقسيمات ونبضة أولى مشدّدة. تُجدوَل النبضات على ساعة الصوت لا على مؤقّت جافاسكربت — فالمؤقّت ينحرف بعشرات الأجزاء من الثانية ويتوقّف في تبويب خلفي، وهو خطأ مسموع خلال مازورات قليلة.' },
   },
   {
-    id: 'tuner',
-    en: { name: 'Instrument Tuner', description: 'A chromatic tuner with presets for guitar, bass, ukulele, oud and violin, and an adjustable reference pitch. Pitch is found by autocorrelation — on a guitar or an oud the loudest partial is often the second harmonic, so a peak-picking tuner reads the low string an octave high. The audio never leaves the page.' },
-    ar: { name: 'موالف الآلات الموسيقية', description: 'موالف كروماتي بإعدادات جاهزة للجيتار والباص واليوكوليلي والعود والكمان، مع نغمة مرجعية قابلة للضبط. تُستخرج النغمة بالارتباط الذاتي — ففي الجيتار أو العود يكون أعلى تردد جزئي هو التوافقي الثاني غالبًا، فيقرأ الموالف القائم على القمم الوتر المنخفض أوكتافًا أعلى. ولا يغادر الصوت الصفحة.' },
-  },
-  {
     id: 'bpm-tap',
     en: { name: 'Tap BPM', description: 'Find a track’s tempo by tapping along. It averages over a sliding window so it follows a tempo change instead of burying it, and it tells you how steady your tapping was. It also gives the quarter, eighth and dotted-eighth times in milliseconds, which is what a delay pedal wants.' },
     ar: { name: 'قياس الإيقاع بالنقر', description: 'اعرف إيقاع مقطع بالنقر معه. تحسب الأداة المتوسط على نافذة متحركة فتتابع تغيّر الإيقاع بدل أن تدفنه، وتخبرك بمدى ثبات نقرك. وتعطيك أزمنة النغمة الربعية والثمانية والثمانية المنقوطة بالمللي ثانية، وهو ما يحتاجه جهاز التأخير.' },

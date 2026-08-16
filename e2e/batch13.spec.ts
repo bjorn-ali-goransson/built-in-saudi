@@ -124,49 +124,6 @@ test.describe('tap bpm', () => {
   })
 })
 
-test.describe('tuner', () => {
-  test('offers instrument presets including the oud', async ({ page }) => {
-    await page.goto('/en/apps/tuner')
-    // `allInnerTexts()` does NOT auto-wait: on a lazily-loaded tool that has
-    // not rendered yet it returns [], and `[].join(' ')` is '' — which fails
-    // with "received empty string" rather than a timeout, so the cause reads
-    // like a missing preset. Wait for the control to exist first.
-    await expect(page.getByTestId('tu-tuning')).toBeVisible()
-    const options = await page.getByTestId('tu-tuning').locator('option').allInnerTexts()
-    expect(options.join(' ')).toContain('Oud')
-    expect(options.join(' ')).toContain('Guitar')
-  })
-
-  test('the reference pitch is adjustable and clamped', async ({ page }) => {
-    await page.goto('/en/apps/tuner')
-    await expect(page.getByTestId('tu-a4')).toHaveValue('440')
-    await page.getByTestId('tu-a4').fill('442')
-    await expect(page.getByTestId('tu-a4')).toHaveValue('442')
-    await page.getByTestId('tu-a4').fill('900')
-    await expect(page.getByTestId('tu-a4')).toHaveValue('466')
-  })
-
-  test('explains why it does not use FFT peak-picking', async ({ page }) => {
-    await page.goto('/en/apps/tuner')
-    await expect(page.getByText(/autocorrelation/)).toBeVisible()
-    await expect(page.getByText(/octave high/)).toBeVisible()
-  })
-
-  test('a refused microphone is explained, not left silent', async ({ page, context }) => {
-    // Deny the permission so getUserMedia rejects.
-    await context.clearPermissions()
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'mediaDevices', {
-        value: { getUserMedia: () => Promise.reject(new Error('denied')) },
-        configurable: true,
-      })
-    })
-    await page.goto('/en/apps/tuner')
-    await page.getByTestId('tu-toggle').click()
-    await expect(page.getByTestId('tu-error')).toContainText('never leaves this page')
-  })
-})
-
 test.describe('sound meter', () => {
   test('says plainly it is not a calibrated instrument', async ({ page }) => {
     await page.goto('/en/apps/sound-meter')

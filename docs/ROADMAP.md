@@ -47,6 +47,16 @@ diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the Privacy page.
   redirect making its own page render the catalogue. `scripts/check-retired.mjs`
   now fails the build on a withdrawn id, so the next sweep is caught at the
   first build rather than at the last test.
+- **Tools whose only purpose is making music.** No instrument tuner. Excluded
+  for Islamic (Shariah) reasons — the permissibility of musical instruments is
+  contested, and a tuner has no use outside playing them, so it is a subject
+  this catalogue does not want to be in. *An `Instrument Tuner` was built during
+  the August 2026 sweep and withdrawn in the same month; `/apps/tuner` redirects
+  to the catalogue and `scripts/check-retired.mjs` fails the build if the id
+  comes back.* **This is deliberately narrower than "audio tools".**
+  `metronome`, `bpm-tap` and `sound-meter` stay: a metronome times any repeated
+  activity, tapping a tempo measures a rate, and a sound meter measures noise —
+  each has ordinary non-musical uses, and none of them is an instrument.
 - **Irrelevant noise** — construction-cost estimators, CGPA, arcade games, and
   the filler seen on competitor "all-in-one" sites.
 - **Anything needing a scraped source or an API key we don't want to run**
@@ -852,8 +862,8 @@ converters we already ship. Three specific gaps came out of it:
    converter, which the repo does not have in that direction. **Genuine
    differentiator: an RTL Arabic EPUB**, which the incumbents do not produce.
 3. **Spectrogram / waveform view of an audio file.** `lib/audio.ts` already
-   decodes, and `AnalyserNode` is the platform's own FFT. `sound-meter` and
-   `tuner` do this live; nothing does it for a file.
+   decodes, and `AnalyserNode` is the platform's own FFT. `sound-meter` does
+   this live; nothing does it for a file.
 
 Deliberately NOT taken from the sweep:
 

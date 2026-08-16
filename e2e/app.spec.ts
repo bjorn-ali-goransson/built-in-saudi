@@ -1868,6 +1868,20 @@ test.describe('retired tools', () => {
     await page.locator('.tool-search__input').fill('loan')
     await expect(page.locator('[data-testid="tool-loan-calculator"]')).toHaveCount(0)
   })
+
+  test('the instrument tuner is withdrawn too', async ({ page }) => {
+    // Withdrawn for the same shape of reason as loan-calculator: a subject the
+    // catalogue does not want to be in, rather than a tool that worked badly.
+    await page.goto('/en/apps/tuner')
+    await expect(page).toHaveURL(/\/en\/?$/)
+    await expect(page.locator('.tool-search__input')).toBeVisible()
+  })
+
+  test('the tuner is gone from search and the catalogue', async ({ page }) => {
+    await page.goto('/en')
+    await page.locator('.tool-search__input').fill('tuner')
+    await expect(page.locator('[data-testid="tool-tuner"]')).toHaveCount(0)
+  })
 })
 
 test.describe('qr email fields (#sweep)', () => {

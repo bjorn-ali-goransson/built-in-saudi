@@ -177,7 +177,6 @@ import { colourBlindTool } from './colour-blind/meta'
 import { svgOptimiseTool } from './svg-optimise/meta'
 import { batchWatermarkTool } from './batch-watermark/meta'
 import { metronomeTool } from './metronome/meta'
-import { tunerTool } from './tuner/meta'
 import { bpmTapTool } from './bpm-tap/meta'
 import { soundMeterTool } from './sound-meter/meta'
 import { saudiPlateTool } from './saudi-plate/meta'
@@ -299,7 +298,6 @@ export const tools: Tool[] = [
   aspectRatioTool,
   pomodoroTool,
   metronomeTool,
-  tunerTool,
   bpmTapTool,
   soundMeterTool,
   endOfServiceTool,

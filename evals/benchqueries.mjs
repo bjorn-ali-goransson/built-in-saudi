@@ -58,7 +58,6 @@ export const BENCH_QUERIES = [
   ['short address', 'short-address'],
   ['name in english', 'name-spelling'],
   ['metronome', 'metronome'],
-  ['tuner', 'tuner'],
   ['invoice', 'invoice-generator'],
   ['cv', 'ats-cv-optimizer'],
   ['resume', 'ats-cv-optimizer'],

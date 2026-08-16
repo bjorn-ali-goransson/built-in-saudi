@@ -9,7 +9,7 @@ test.describe('maths worksheets', () => {
     // This is the whole reason the seed is exposed: a reprint after a paper jam
     // must match the answer key already in the teacher's hand.
     await page.goto('/en/apps/worksheets')
-    // Same hazard as the tuner: `allInnerTexts()` has no auto-wait, so on a
+    // The documented `allInnerTexts()` hazard: it has no auto-wait, so on a
     // lazily-loaded tool the first read can be [] under a loaded suite.
     await expect(page.getByTestId('worksheets')).toBeVisible()
     await expect.poll(() => problemsOn(page).then((p) => p.length)).toBeGreaterThan(0)
