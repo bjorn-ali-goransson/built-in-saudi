@@ -65,10 +65,32 @@ docs/                 ROADMAP.md, tools/<id>.md specs, BACKEND.md
    across lines; a naïve single-line regex silently leaves the *default*
    description on every page. Each tool page's crawlable block also links to all
    other tools (kills orphan pages) under a "More free tools" H2.
-**BEFORE step 1, read `docs/ROADMAP.md` "Out of scope".** Some tools are
-excluded on purpose — interest/EMI calculators and instrument tuners for
-Shariah reasons, anything needing a scraped source or a key we will not run —
-and the exclusion says WHY.
+**BEFORE step 1, read `docs/ROADMAP.md` "Out of scope", whose first rule is
+that EVERY APP HERE MUST BE HALAL.** That is a product principle alongside the
+five above, not a footnote to one: a tool whose subject is impermissible is not
+a tool with a caveat on it, it is a tool that does not belong in this
+catalogue. Both withdrawals this site has ever made were for that reason and
+nothing else. The rest of the exclusions — a scraped source, a key we will not
+run — are ordinary scope, and each says WHY.
+
+**Three things decide it, and they are what to apply when a sweep proposes
+something:**
+
+- **Ask what a tool is FOR, not what it is built from, and not what it
+  tolerates.** Same test as the keyword rules further down. `metronome`,
+  `bpm-tap` and `sound-meter` all share `lib/audioEngine.ts` with the withdrawn
+  tuner and all stayed — a metronome times any repeated activity, a tap counter
+  measures a rate, a meter measures noise. `early-settlement` encodes the SAMA
+  rule that WAIVES the remaining term cost, so it is the tool a riba keyword
+  check would wrongly fire on. **The exclusion is a SUBJECT, not a technology.**
+- **A contested subject counts, because we abstain rather than pick a side.**
+  The tuner did not come out because a ruling is settled; instruments are
+  disputed. It came out because a chromatic tuner has no use except playing one,
+  so shipping it takes a side. Where scholars differ, the catalogue is silent —
+  the `iqama-fees` posture, one level up.
+- **A disclaimer does not fix a tool that should not exist.** Learned the
+  expensive way: the loan calculator shipped with one.
+
 This is not a formality: in August 2026 a web sweep re-proposed the loan
 calculator that had been withdrawn in July for exactly that reason, and it was
 rebuilt in full — module, UI, meta, seo, sitemap, disclaimer, spec — before
@@ -76,17 +98,21 @@ anything objected. What finally objected was the `RetiredToolRedirect` in the
 router making its own page render the catalogue. `scripts/check-retired.mjs` now
 fails the build when a withdrawn id comes back, because a decision that lives
 only in prose and in one router line is a decision nobody consults while adding
-a tool. **A disclaimer does not fix a tool that should not exist.**
+a tool.
 
-**The second withdrawal was `tuner`, and it is the one that says what the rule
-actually is.** An `Instrument Tuner` shipped in August 2026 and came out the
-same month: the permissibility of musical instruments is contested in Islamic
-law, and a chromatic tuner has no use except playing one, so it puts the
-catalogue on a side of that question. **The exclusion is a SUBJECT, not a
-technology** — `metronome`, `bpm-tap` and `sound-meter` all share
-`lib/audioEngine.ts` with it and all stayed, because a metronome times any
-repeated activity, a tap counter measures a rate and a meter measures noise.
-Ask what a tool is FOR, not what it is built from.
+**The gate is deliberately narrow, and the reason is in `check-retired.mjs`'s
+own header:** it enforces "a withdrawn id may not come back", NOT "is this
+subject halal", because the second is not decidable by a regex and a guess
+fires on `early-settlement`. So the sweep-facing half is a list to refuse at
+the PROPOSAL rather than at the build — interest/EMI/mortgage/amortisation,
+betting and lottery and casino, blood alcohol and drinks, horoscopes and tarot
+and numerology, dating and adult content. `docs/ROADMAP.md` carries that list.
+
+**Applied to the whole catalogue, the rule removes nothing else** — a sweep of
+every meta for gambling, alcohol, divination, interest and music vocabulary
+surfaced five candidates and all five are IN. `dice-roller` is the one worth
+knowing: it draws lots, **قرعة**, so the dice are the randomiser and not a
+stake. Recorded as a negative so the next sweep does not re-derive it.
 
 **Removing a tool is the same checklist as adding one, run backwards**, and
 every step is a build gate except the last two: delete the folder, the registry

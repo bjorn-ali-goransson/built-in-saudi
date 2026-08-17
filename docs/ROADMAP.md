@@ -37,26 +37,86 @@ diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the Privacy page.
 
 ## Out of scope (deliberately excluded)
 
-- **Interest / riba-based tools.** No loan, EMI or interest calculators.
-  Excluded for Islamic (Shariah) reasons. *A `loan-calculator` was built during
-  the July 2026 sweep in contradiction of this rule and was removed in August
+### The first rule: every app here must be halal
+
+**This is a product principle, not a footnote to one.** The catalogue is
+Saudi-made and bilingual, and its Islamic tools are a stated wedge — so a tool
+whose subject is impermissible is not a tool with a caveat on it, it is a tool
+that does not belong here. **Both ids in the retired list are here for this
+reason** — no tool has ever been pulled from the catalogue for anything else —
+and both of them shipped, or were rebuilt after being withdrawn, before
+anything objected. That is why the rule is written out rather than assumed.
+(A Word-to-PDF tool was also abandoned in August 2026, but before it shipped
+and for a correctness reason: react-pdf mangles Arabic lam-alef. It has no
+retired route because it never had a route.)
+
+**The test is what a tool is FOR, not what it is built from, and not what it
+tolerates.** That is the same test the keyword rules use elsewhere in this file,
+and it is what keeps the exclusion from spreading over a whole technology:
+
+| in | out | why |
+|---|---|---|
+| `early-settlement` | a loan/EMI calculator | it encodes the SAMA rule that **waives** the remaining term cost |
+| `metronome`, `bpm-tap`, `sound-meter` | an instrument tuner | a metronome times any repeated activity, a tap counter measures a rate, a meter measures noise |
+| `dice-roller` | a betting, casino or lottery tool | it draws lots — **قرعة**, an established practice — and the dice are the randomiser, not a stake |
+| `bingo-cards` | a lottery or betting tool | it makes printable cards from a teacher's own word list |
+
+**A contested subject counts.** The tuner was not withdrawn because a ruling is
+settled — the permissibility of musical instruments is disputed. It was
+withdrawn because a chromatic tuner has no use except playing an instrument, so
+shipping one puts the catalogue on a side of a question it has no business
+taking a side on. **Where scholars differ, the catalogue abstains.** That is
+the same posture as the `iqama-fees` rule about disagreeing sources: when we
+cannot stand behind an answer, we do not print one.
+
+**A disclaimer does not fix a tool that should not exist.** This was learned the
+expensive way: the loan calculator shipped complete with one.
+
+**What a sweep should expect to have to refuse.** The loan calculator was
+re-proposed by a web sweep and rebuilt in full, so the failure mode is known —
+these are staples of every "all-in-one tools" site and will keep coming back:
+interest, EMI, mortgage, amortisation, compound-interest and credit-card-interest
+calculators; betting odds, lottery numbers, poker and casino tools; blood
+alcohol, drink units and cocktail or wine tools; horoscopes, zodiac and birth
+charts, tarot, numerology and any other fortune-telling; and dating or adult
+content. Refuse them at the proposal, not at the build.
+
+**It is deliberately NOT a keyword gate**, and that was reasoned before it was
+skipped — see the header of `scripts/check-retired.mjs`. "Does this tool concern
+interest?" is not decidable by a regex, and a guess fires on `early-settlement`,
+which exists to encode the rule replacing interest. What IS enforced is the
+narrower, objective thing: a **withdrawn id may not come back**. Both retirements
+below are build failures, so the next sweep is caught at the first build rather
+than at the last test.
+
+**The two withdrawals, as instances of the rule:**
+
+- **Interest / riba.** No loan, EMI or interest calculators. *A
+  `loan-calculator` was built during the July 2026 sweep and removed in August
   2026; `/apps/loan-calculator` redirects to the catalogue.* If instalment
   finance is ever wanted here it should be modelled as Murabaha or Ijara, not as
-  interest. **It was re-proposed by a web sweep on 10 August 2026 and rebuilt in
-  full before anything objected** — the only thing that stopped it was the
-  redirect making its own page render the catalogue. `scripts/check-retired.mjs`
-  now fails the build on a withdrawn id, so the next sweep is caught at the
-  first build rather than at the last test.
-- **Tools whose only purpose is making music.** No instrument tuner. Excluded
-  for Islamic (Shariah) reasons — the permissibility of musical instruments is
-  contested, and a tuner has no use outside playing them, so it is a subject
-  this catalogue does not want to be in. *An `Instrument Tuner` was built during
-  the August 2026 sweep and withdrawn in the same month; `/apps/tuner` redirects
-  to the catalogue and `scripts/check-retired.mjs` fails the build if the id
-  comes back.* **This is deliberately narrower than "audio tools".**
-  `metronome`, `bpm-tap` and `sound-meter` stay: a metronome times any repeated
-  activity, tapping a tempo measures a rate, and a sound meter measures noise —
-  each has ordinary non-musical uses, and none of them is an instrument.
+  interest.
+- **Tools whose only purpose is making music.** No instrument tuner. *An
+  `Instrument Tuner` shipped in the August 2026 sweep and was withdrawn in the
+  same month; `/apps/tuner` redirects to the catalogue.* Deliberately narrower
+  than "audio tools" — see the table above.
+
+**The rule was applied to the whole catalogue when it was written, and it
+removes nothing else.** Sweeping every meta for gambling, alcohol, divination,
+interest and music vocabulary surfaced five candidates and all five resolve to
+IN on the "what is it FOR" test: `dice-roller` and `bingo-cards` and
+`passphrase` (whose `diceware` / «نرد» keywords are a cryptographic term),
+plus `early-settlement` and `metronome` as above. **Zero live tools to remove**
+— worth recording as a negative, so the next sweep does not re-derive it.
+
+One loose end left deliberately: **`metronome` indexes `music` / «موسيقى» as
+keywords**, so it advertises itself for the use the tuner was withdrawn over
+even though the tool itself stays. Dropping those two words is the consistent
+move; it costs findability for a legitimate use, so it is recorded rather than
+done unilaterally.
+
+### Everything else
+
 - **Irrelevant noise** — construction-cost estimators, CGPA, arcade games, and
   the filler seen on competitor "all-in-one" sites.
 - **Anything needing a scraped source or an API key we don't want to run**

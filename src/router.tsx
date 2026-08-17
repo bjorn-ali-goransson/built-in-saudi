@@ -51,11 +51,15 @@ export const router = createBrowserRouter([
       // Renamed tool: /apps/cv-generator → /apps/ats-cv-optimizer (static, so it
       // outranks the :toolId route below).
       { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
-      // Retired: an interest-based calculator does not belong in this catalogue.
+      // Both retirements below are the same rule: every app here must be halal,
+      // so a tool whose SUBJECT is impermissible does not belong in the
+      // catalogue at all. See docs/ROADMAP.md "Out of scope" — and note these
+      // lines are what scripts/check-retired.mjs reads, so deleting one lets
+      // the id silently come back.
       { path: 'apps/loan-calculator', element: <RetiredToolRedirect /> },
-      // Retired: a musical instrument tuner exists only to serve music, which is
-      // a matter of Islamic disagreement this catalogue does not want to take a
-      // side on. Withdrawn August 2026 — see docs/ROADMAP.md "Out of scope".
+      // A chromatic tuner has no use except playing an instrument, which is a
+      // contested question the catalogue abstains from rather than takes a side
+      // on. Withdrawn August 2026.
       { path: 'apps/tuner', element: <RetiredToolRedirect /> },
       // Before apps/:toolId in the file, though React Router ranks a static
       // segment above a dynamic one regardless of order.
