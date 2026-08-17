@@ -17,10 +17,10 @@
 // It compiles `relatedPick.ts` itself, the way `evals/patchcheck.mjs` does:
 // `evals/gen` is gitignored and a gate has to run on a clean clone.
 
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { compile } from '../evals/lib/tsc.mjs'
 
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -40,17 +40,12 @@ if (live.length < 100) {
 
 // --- the real selection function --------------------------------------------
 const out = mkdtempSync(path.join(tmpdir(), 'bis-orphans-'))
-execFileSync(process.execPath, [
-  `${root}/node_modules/typescript/bin/tsc`,
-  `${root}/src/lib/relatedPick.ts`, `${root}/src/lib/fuzzy.ts`,
-  '--outDir', out,
-  '--module', 'esnext', '--target', 'es2022', '--moduleResolution', 'bundler',
-], { stdio: 'inherit' })
-// tsc emits the specifier exactly as written, so `./fuzzy` is unresolvable
-// under Node ESM. Rewriting it here beats putting .js extensions into the
-// product's own imports and making one file inconsistent with every other.
+// `compile` also rewrites the extensionless relative specifiers tsc emits
+// verbatim (`./fuzzy`), which Node ESM will not resolve. Shared rather than
+// inlined here: the same trap was patched three different ways, and the two
+// hardcoded `./fuzzy` rewrites would have missed the next import to appear.
+compile(root, [`${root}/src/lib/relatedPick.ts`, `${root}/src/lib/fuzzy.ts`], out)
 const compiled = `${out}/relatedPick.js`
-writeFileSync(compiled, readFileSync(compiled, 'utf8').replace(/from '\.\/fuzzy'/g, "from './fuzzy.js'"))
 const { pickRelated } = await import(`file://${compiled}`)
 
 // --- every edge in the graph -------------------------------------------------

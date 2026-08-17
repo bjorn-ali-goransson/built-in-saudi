@@ -16,8 +16,14 @@
 //
 // This mirrors `relatedTools` rather than importing it, because the real one
 // pulls in `../tools` and therefore every React component on the site.
-import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs'
-import { scoreTool } from './gen/fuzzy.js'
+// NOTE: no static `import … from './gen/fuzzy.js'` here. A static import is
+// resolved BEFORE this module's body runs, so it would need `gen/` to have
+// been populated by some other harness first — which is exactly why this file
+// died on a clean checkout while passing for anyone who had run `searchbench`.
+// The compiled module is pulled in with `await import` after the compile below.
+// (The `scoreTool` this used to import was also dead: the scoring moved into
+// `relatedPick.ts` when the copied selection logic was deleted.)
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const reg = readFileSync(`${ROOT}/src/tools/index.ts`, 'utf8')
@@ -59,23 +65,14 @@ for (const d of dirs) {
 // 37% of pages, long after the fix took that to 0. Anyone reading it would have
 // been sent to fix what was already fixed. `relatedPick.ts` takes the tool list
 // as an argument precisely so this can call it.
-import { execFileSync } from 'node:child_process'
+// `compile` also adds `.js` to the extensionless relative specifiers tsc emits
+// verbatim (`./fuzzy`), which Node ESM will not resolve — rather than putting
+// `.js` into the product's own imports and making one file inconsistent with
+// every other in src/.
+import { compile } from './lib/tsc.mjs'
 const hereDir = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 if (!existsSync(`${hereDir}gen/relatedPick.js`)) {
-  execFileSync(process.execPath, [
-    `${ROOT}/node_modules/typescript/bin/tsc`, `${ROOT}/src/lib/relatedPick.ts`,
-    '--outDir', `${hereDir}gen`, '--module', 'esnext', '--target', 'es2022',
-    '--moduleResolution', 'bundler',
-  ], { stdio: 'inherit' })
-}
-// tsc emits the import specifier exactly as written — `./fuzzy` — and Node ESM
-// will not resolve an extensionless path. Rewriting it here rather than putting
-// `.js` extensions into the product's own imports, which would be correct ESM
-// and inconsistent with every other file in src/.
-{
-  const out = `${hereDir}gen/relatedPick.js`
-  const js = readFileSync(out, 'utf8')
-  if (js.includes("from './fuzzy'")) writeFileSync(out, js.replace("from './fuzzy'", "from './fuzzy.js'"))
+  compile(ROOT, [`${ROOT}/src/lib/relatedPick.ts`], `${hereDir}gen`)
 }
 const { pickRelated, MIN_SCORE, CLUSTERS } = await import('./gen/relatedPick.js')
 const threshold = MIN_SCORE

@@ -5,6 +5,28 @@ import { defineConfig, devices } from '@playwright/test'
 // production build via `vite preview`.
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4173'
 
+// `scripts/e2e-preflight.mjs` sets BIS_OFFLINE when the third-party hosts the
+// shell loads (Google Fonts, GA4, the analytics beacon) cannot be reached from
+// the BROWSER. They must then fail instantly rather than time out: `page.goto`
+// waits for the load event, so one unreachable host costs ~26s on EVERY
+// navigation, and a four-navigation test blows the 60s budget mid-`goto` —
+// which reads as a broken tool and is not one.
+//
+// **A dead proxy, not `--host-resolver-rules`.** The obvious flag was tried
+// first and does nothing here: this sandbox gives Chromium an HTTP proxy, and a
+// proxy resolves hostnames itself, so resolver rules never get a say and the
+// requests still sat for 26s before ERR_CONNECTION_RESET. Pointing the browser
+// at a port with nothing on it fails in microseconds however the network is
+// arranged, and `bypass` keeps the site under test reachable.
+//
+// The requests are still ISSUED, so `page.on('request')` still sees them and
+// `route()` still intercepts them — which is what keeps the privacy guards
+// (nothing POSTs a body anywhere but the analytics origins) meaningful offline,
+// and what lets `password-breach.spec.ts` go on mocking its own endpoint.
+const offlineProxy = process.env.BIS_OFFLINE
+  ? { server: 'http://127.0.0.1:1', bypass: 'localhost, 127.0.0.1, ::1' }
+  : undefined
+
 export default defineConfig({
   testDir: './e2e',
   // Playwright's default 30s per-test budget is too small for the multi-context
@@ -46,5 +68,10 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
       },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], launchOptions: { proxy: offlineProxy } },
+    },
+  ],
 })

@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/e2e-preflight.mjs",
     "predev": "node scripts/copy-ocr-core.mjs",
     "prebuild": "node scripts/copy-ocr-core.mjs && node scripts/check-disclaimers.mjs && node scripts/check-tool-docs.mjs && node scripts/check-tool-registry.mjs && node scripts/check-ats-dims.mjs && node scripts/check-privacy-coverage.mjs && node scripts/check-saudi-beta.mjs && node scripts/check-collections.mjs && node scripts/check-retired.mjs && node scripts/check-inverses.mjs && node scripts/check-orphans.mjs"
   },

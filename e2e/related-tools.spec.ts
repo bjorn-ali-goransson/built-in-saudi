@@ -85,6 +85,12 @@ test('the row is still capped rather than listing a whole category', async ({ pa
   // The crawlable block below already links to every tool; this row exists
   // because a list of 200 is the same as no list.
   await page.goto('/en/apps/image-compressor')
+  // `count()` does NOT auto-wait — same family as the documented `allInnerTexts()`
+  // hazard. On a lazily-loaded tool it returns 0 before the row has rendered, so
+  // `toBeGreaterThan(0)` fails as though the tool had no related row at all. That
+  // passed alone and failed under the full suite. Wait for the row to exist, then
+  // count; the cap is still the property under test.
+  await expect(row(page).locator('a').first()).toBeVisible()
   const n = await row(page).locator('a').count()
   expect(n).toBeGreaterThan(0)
   expect(n).toBeLessThanOrEqual(4)

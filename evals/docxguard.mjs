@@ -16,28 +16,21 @@
 // satisfy both. So the structural checks below do NOT go through the reader —
 // they look at the ZIP directly for the parts Word requires, and at the raw XML
 // for the escaping. The round-trip then checks that content actually survives.
-import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { compile } from './lib/tsc.mjs'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
-const compile = (src) => {
-  execFileSync(process.execPath, [
-    `${root}/node_modules/typescript/bin/tsc`, `${root}/${src}`,
-    '--outDir', `${here}gen`, '--module', 'esnext', '--target', 'es2022',
-    '--moduleResolution', 'bundler',
-  ], { stdio: 'inherit' })
-}
-if (!existsSync(`${here}gen/cvdocx.js`)) {
+
+if (!existsSync(`${here}gen/cvdocx/docx.js`)) {
   // Compiled to its own name so it cannot collide with lib/docx.ts's output —
   // one writes a .docx and the other reads one, and they are both "docx.ts".
-  execFileSync(process.execPath, [
-    `${root}/node_modules/typescript/bin/tsc`, `${root}/src/tools/cv-generator/docx.ts`,
-    '--outDir', `${here}gen/cvdocx`, '--module', 'esnext', '--target', 'es2022',
-    '--moduleResolution', 'bundler',
-  ], { stdio: 'inherit' })
+  compile(root, [`${root}/src/tools/cv-generator/docx.ts`], `${here}gen/cvdocx`)
 }
-if (!existsSync(`${here}gen/docx.js`)) compile('src/lib/docx.ts')
+// `lib/docx.ts` imports `./unzip`, so tsc emits that module too and leaves the
+// specifier extensionless — `compile` fixes it. Without that this gate died on
+// a clean checkout, reporting a broken Word writer that was perfectly fine.
+if (!existsSync(`${here}gen/docx.js`)) compile(root, [`${root}/src/lib/docx.ts`], `${here}gen`)
 
 const { cvToDocxBlob } = await import('./gen/cvdocx/docx.js')
 const { readDocx } = await import('./gen/docx.js')

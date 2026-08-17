@@ -1,7 +1,12 @@
 // Minimal OpenAI chat client for the evals — mirrors functions/cv.js's call
 // (json_object response format, same temperature) plus retries and a running
 // token/cost tally so a sweep can't quietly burn the budget.
-import { OPENAI_KEY } from './env.mjs'
+import { OPENAI_KEY, requireKey } from './env.mjs'
+
+// Fail fast, and HERE rather than in env.mjs: importing this module is the
+// thing that means "this harness talks to the API". The API-free gates import
+// env.mjs for ROOT and must survive with no key.
+requireKey()
 
 export const usage = { calls: 0, in: 0, out: 0 }
 

@@ -3957,6 +3957,42 @@ BOTH gates — letter-spacing changes what the extractor recovers, so `cvtextche
 sees the text diverge too. The gates are not independent, and that redundancy is
 useful rather than wasteful.
 
+**None of `evals/` runs in CI.** The deploy is gated by typecheck → build →
+Playwright and nothing else (`.github/workflows/deploy.yml`), so an eval can
+never block a deploy. Run `node evals/check.mjs` by hand before touching the CV
+pipeline; that is the whole contract.
+
+**And for a long time the API-free gates could not run at all — because of
+where a key check lived.** `evals/lib/env.mjs` exports `ROOT`, a plain path
+constant, and also did `process.exit(1)` at MODULE SCOPE when there was no
+`OPENAI_KEY`. `pdfguard`, `cvtextcheck` and `docxguard` import that file for
+`ROOT`, so on any machine without a `.env` all three died at import — and
+`check.mjs` printed them as **FAIL**. The three guards whose entire reason for
+existing is "checkable WITHOUT an API key" were the three a missing key broke,
+and they reported the CV pipeline as broken when the harness was. The demand
+now sits next to the thing that needs it: `requireKey()` is called by
+`lib/openai.mjs`, which is imported by exactly the six harnesses that reach the
+API, so they still fail fast and the key-free ones run. **Put a precondition
+next to the capability it guards, not next to a path constant.**
+
+**`docxguard` was separately dead on a clean checkout**, and it is the
+`./fuzzy` trap for the third time: `tsc` emits an import specifier exactly as
+written, so `lib/docx.ts`'s `from './unzip'` is unresolvable under Node ESM.
+`relatedcheck` and `check-orphans` had each hardcoded a rewrite of the ONE
+specifier they knew about; `docxguard` had none. It is `evals/lib/tsc.mjs` now,
+which rewrites every extensionless relative specifier in the emitted output,
+and all three use it. **Fix the class, not the instance** — a rewrite naming
+one module is a rewrite that breaks when the module gains an import.
+
+**A static import cannot wait for a compile step.** `relatedcheck` had
+`import { scoreTool } from './gen/fuzzy.js'` at the top: static imports resolve
+before the module body runs, so it needed `evals/gen/` to have been populated
+by some other harness first, and passed only for people who had run
+`searchbench`. On a clean tree it died. The import was also dead — `scoreTool`
+moved into `relatedPick.ts` when the copied selection logic was deleted — so
+the fix was to remove it. Anything compiled at run time must be pulled in with
+`await import`.
+
 **BLOCKED as of 7 Aug 2026:** the `OPENAI_KEY` in the root `.env` is rejected
 with `invalid_api_key` (key ending `q6UA`), so none of these can be run and no
 claim about the `impact` ceiling can be re-measured until it is replaced. The
@@ -5289,7 +5325,9 @@ npm run dev        # dev server
 npm run typecheck  # tsc --noEmit
 npm run build      # dist/ + SPA 404 + per-tool prerender
 npm run preview    # preview the production build
-npm run test:e2e   # Playwright e2e (serves the build, runs e2e/*.spec.ts)
+npm run test:e2e   # Playwright e2e (serves the build, runs e2e/*.spec.ts).
+                   # Probes the third-party hosts first and blocks them if they
+                   # are unreachable, so an outage cannot stall every navigation.
 ```
 
 ## Which tools are big and barely tested (`evals/coverageshape.mjs`)
@@ -5387,6 +5425,45 @@ expose. `npm run test:e2e` builds nothing itself — it starts `vite preview` on
 stale build). Container path: `docker compose -f docker-compose.e2e.yml run --rm
 e2e` (Playwright's official image, tag must match the `@playwright/test`
 version). **Keep tests green and add a spec when you add a tool.**
+
+**The suite's RUNTIME depended on three third-party hosts, and that is a deploy
+risk, not just a local annoyance.** `index.html` loads Google Fonts, the GA4 tag
+and the analytics beacon; `page.goto` waits for the load event, so when those
+hosts are unreachable **every navigation costs ~26s** — measured at fonts 12.9s,
+gtag 12.9s, beacon 25.7s, all ending in `ERR_CONNECTION_RESET`. A one-navigation
+test survives the 60s budget; a four-navigation test does not. That is the whole
+explanation for four cases failing with a timeout mid-`goto` (the image-tool and
+media/privacy dropzone cases, and the two shell/update-gate cases) — a broken
+tool is what it looked like, and none of them was broken. Precedent for taking
+it seriously: `29e8c03`, where the second analytics provider blocked the deploy
+for a day.
+
+`npm run test:e2e` now goes through `scripts/e2e-preflight.mjs`, which probes
+those hosts and, when they are unreachable, sets `BIS_OFFLINE` so
+`playwright.config.ts` gives the browser a **dead proxy with localhost
+bypassed**. Navigation went **25,876ms → 275ms**, and `app.spec.ts` **40.7min →
+1.7min**. Four decisions:
+
+- **It is a probe, not a flag defaulted on.** Blocking the hosts costs real
+  fidelity: with GA4 genuinely loading, the cookieless case proves our consent
+  config stops it writing `_ga`, and that half cannot fail when the tag never
+  loads (it caught a real bug once — GA4 silently ignores the Universal
+  Analytics `client_storage` parameter). So a normal machine is unaffected, and
+  a reduced-fidelity run **says so loudly** rather than looking like a full one.
+- **A dead proxy, NOT `--host-resolver-rules`.** The obvious flag was tried and
+  does nothing when a proxy is configured, because the proxy resolves hostnames
+  itself — the requests still sat for 26s. A port with nothing on it fails in
+  microseconds however the network is arranged.
+- **The probe must run in the BROWSER.** Its first version used Node's `fetch`,
+  which went through the sandbox's `HTTPS_PROXY` — a network Playwright's
+  Chromium does not use — so it reported every host reachable and disabled the
+  fix for the problem it exists to detect. Same lesson as `relatedcheck` and the
+  search benches: **an unfaithful measurement hides a defect as readily as it
+  invents one.**
+- **The requests are still ISSUED**, so `page.on('request')` still sees them and
+  `route()` still intercepts them. That is what keeps `privacy.spec.ts` (nothing
+  POSTs a body anywhere but the analytics origins) and `password-breach.spec.ts`
+  meaningful offline — verified, 119 of those cases green under it.
 
 **A test that reads today's date is asserting the season.** `medicine-schedule`
 spreads doses across the fasting window, which is Maghrib → Fajr and therefore
