@@ -2486,14 +2486,22 @@ attack needing no expertise is the one to design against.
   the mode is solid. Keyframed interpolation is the obvious next step and is
   deliberately out of v1.
 
-**OPEN: a preview that will not play, reported from Android and NOT reproduced.**
+**OPEN: a preview that will not play, reported from Android, INTERMITTENT.**
+The same file on the same build played on a second attempt — which is the most
+useful fact in this entry and arrived after the first version of it was written.
+**It rules out every deterministic explanation**: an unsupported codec, a
+container mp4box reads and `<video>` does not, a missing MIME type. Those fail
+the same way every time. What is left is a transient — memory pressure, or a
+race on first load — and that is exactly the shape the untested hypothesis
+below predicts.
 A 25-second Android screen recording (1078×654) demuxed perfectly — the clip row
 showed its real size and duration, so mp4box read it and `VideoDecoder` reported
 it decodable — and the `<video>` preview showed a broken thumbnail at 0:00 with
 the frame canvas black, because `paint` bails when `videoWidth` is 0.
 
 **Two hypotheses were tested and BOTH were wrong**, which is why the fix is
-instrumentation rather than a guess. An empty MIME type — which Android's picker
+instrumentation rather than a guess — and the intermittency later confirmed that
+neither could have been right. An empty MIME type — which Android's picker
 really does hand over, and which this tool invites by carrying no `accept`
 (#225) — plays fine: driven through the real input with `mimeType: ''`, metadata
 loads and `videoWidth` is 320. And nothing in the blob-URL lifetime explains it.
