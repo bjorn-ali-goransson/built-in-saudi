@@ -25,7 +25,7 @@
 
 import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
-import { activeAt, captionAt, drawFrame, type Crop } from './compose'
+import { activeAt, applyCensors, captionAt, drawFrame, type Censor, type Crop } from './compose'
 
 export interface AudioInfo {
   codec: string
@@ -77,6 +77,7 @@ export interface RenderPlan {
   bitrate: number
   keepAudio: boolean
   captions: PlanCaption[]
+  censors: Censor[]
 }
 
 export type Req =
@@ -268,6 +269,10 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
           if (cancelled) return
           const tOut = offsetSec + frame.timestamp / 1e6 - base
           drawFrame(ctx, frame, source, plan.crop, plan.out)
+          // Censors go on the PICTURE, before the captions — a caption is
+          // something you chose to show, and hiding it under a black box that
+          // was aimed at a face behind it would be the wrong way round.
+          applyCensors(ctx, plan.censors, tOut, plan.out)
           drawCaptions(ctx, plan.captions, tOut, plan.out)
           // Monotonic by construction. A decoder is entitled to hand back two
           // frames a microsecond apart after rounding, and an encoder given a

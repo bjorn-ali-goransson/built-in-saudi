@@ -2290,13 +2290,14 @@ outside — every privacy-first converter site lists audio and we did not.
   discard quality a second time. Stating it beats looking like a missing
   feature.
 
-## Crop, join and caption a video (`video-edit`)
+## Crop, join, caption and censor a video (`video-edit`)
 
 The video family could trim, take a still, pull the sound out and make a GIF, and
 **every one of those deliberately avoids touching the picture.** Cropping,
-joining and captioning cannot: all three change what is IN the frame, so the
-frames must be decoded, redrawn and encoded again. One pipeline gives all three,
-which is why they are one tool rather than three that chain through a download.
+joining, captioning and hiding part of the picture cannot: all four change what
+is IN the frame, so the frames must be decoded, redrawn and encoded again. One
+pipeline gives all four, which is why they are one tool rather than four that
+chain through a download.
 
 **The blocker was believed to be browser support, and the belief was WRONG for
 three years.** This file said frame-exact seeking needs `VideoDecoder`, "which
@@ -2438,6 +2439,92 @@ darkens rows 179–214 by ~16 and rows 189–200 brighten by up to 11. It averag
 the whole band now. Fourth time in this file that an instrument invented a defect
 the code did not have — and the cheap way out was the screenshot, not more
 reasoning.
+
+**Hiding something is a fourth job, and which mode to DEFAULT to is measurable**
+(`node evals/pixelleak.mjs`). Draw a box on the export preview and it is blacked
+out, pixelated or blurred for a time range you set. The intuition everybody has
+is that a video is a lot of stills, so mosaicing one must be at least as safe as
+mosaicing a photo. **It is the opposite, and the measurement says by how much:**
+
+| frames of a MOVING subject | pixels recovered |
+|---|---|
+| 1 | 68.3% — which is what a blank guess scores, i.e. nothing |
+| 16 | 84.9% |
+| **64** (2.1s at 30fps) | **98.6%**, RMSE 0.442 → 0.097 — the plate reads |
+
+The mosaic grid is fixed to the FRAME while the subject moves through it, so
+every frame samples the same picture on a differently-aligned grid and each one
+is a fresh set of constraints on the same pixels. The reconstruction is textbook
+back-projection in forty lines with no libraries — deliberately, because an
+attack needing no expertise is the one to design against.
+
+- **The CONTROL is the load-bearing half.** A *static* subject stays at 68.3% at
+  64 frames, exactly as at 1. Without that row the harness would be measuring
+  "reconstruction works" and the finding would be about arithmetic rather than
+  about motion — and motion is the whole point, because the subject worth hiding
+  is the one that moves.
+- **Solid is the default and the other two say what they cost**, with the
+  warning rendered only when a recoverable mode is actually chosen. There is a
+  case asserting it does NOT appear for the default, without which the fix could
+  have been "always warn", which is the caveat nobody reads.
+- **Pixelate and blur are the same operation** — discard resolution, smoothing
+  off or on — done by scaling down and back up rather than through
+  `ctx.filter`, which is not on every engine this tool otherwise runs on. **A
+  blur that silently does nothing is far worse than a crude one**, because what
+  it silently fails to do is hide a face. It also keeps the preview and the
+  export identical, which is the property the whole tool rests on.
+- **THIS DOES NOT CONDEMN `image-redact`'s pixelate default.** It measures what
+  many differently-aligned frames give back; one frame gave back nothing. A
+  future sweep must not "fix" that tool on the strength of this number —
+  claiming what was measured, and only that, is the difference between a finding
+  and folklore.
+- **It hides the picture, not the sound.** The audio is copied untouched, so a
+  spoken name survives a black box over the face saying it. Stated next to the
+  boxes, because it is exactly the thing somebody would assume was handled.
+- **The box does not follow anything.** Fixed rectangle, fixed span, so a moving
+  subject needs a generous box or several in sequence — which costs nothing when
+  the mode is solid. Keyframed interpolation is the obvious next step and is
+  deliberately out of v1.
+
+**A raw `page.mouse` drag needs its target scrolled into view, and I diagnosed
+this wrong twice before instrumenting it.** Three censor specs failed on a drag
+that plainly worked by hand. The symptom — one spec of three, then all three —
+looks exactly like React batching, so the in-progress box was moved from state
+into a ref on that theory. **It was not the cause.** One run with the pointer
+events logged found the canvas at **y = -169**: clicking an aspect button, which
+sits BELOW the canvases, auto-scrolls it into view and pushes the preview off the
+top, so every `mouse.move` landed outside the page and the canvas received
+nothing at all. Playwright's locator actions scroll for you; `page.mouse` works
+in raw viewport coordinates and does not. The helper scrolls first and now
+THROWS when a DRAG POINT falls outside the viewport, so the next occurrence names
+itself instead of looking like a broken interaction.
+
+**The first version of that guard tested the box's ORIGIN and was wrong**, which
+cost another round: `scrollIntoViewIfNeeded` leaves the element flush with the
+top and sub-pixel rounding reports `y = -0.36`, so it rejected three drags that
+were fine — and the debug run that found the real cause had already created a
+box successfully at exactly that y. **Guard the thing you are about to do, not a
+proxy for it.**
+
+Two things worth keeping from getting it wrong. **The failing-spec COUNT is not
+evidence of a mechanism** — "two passed, one failed" felt like a race and was
+really a page that had grown taller, because the censor section I had just added
+changed the layout. And the cheap instrument (log the events, print the
+bounding box) answered in one run what two rounds of reasoning had not. The ref
+stayed, because avoiding a render per `pointermove` is worth it on its own, but
+it fixed nothing and the comment on it says so.
+
+**And the keyword list cost two benches before it earned anything.** Adding the
+censor vocabulary took held-out #2 from 45 to 44 and #4 from 38 to 37, in two
+distinct ways worth knowing: `black out part of a video` handed over the generic
+word **"part"**, so `blur part of a picture` came here instead of to
+`image-redact`; and three near-duplicates (`blur a video`, `blur faces in
+video`, `blur a face in a video`) strengthened this tool's match on the bare word
+**"video"** until `my video file is too long to send` beat `video-trim` by 2%.
+**A keyword list is not free — every entry also competes for the words it
+happens to contain.** Six precise phrases restored every bench to its baseline,
+and «طمس وجه في صورة» still goes to the image tool while «طمس وجه في فيديو»
+comes here.
 
 **Search: the plural is a different word, and this is the family where the plural
 IS the intent.** Only this tool takes more than one video, so `videos`, `clips`

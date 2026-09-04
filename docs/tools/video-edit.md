@@ -7,15 +7,16 @@
 
 ## Why
 The video family here could trim, take a still, extract the sound and make a GIF
-— and every one of those avoids touching the picture. Cropping, joining and
-captioning all change what is *in* the frame, so all three need the same thing:
-decode, redraw, encode. Building it once gives all three.
+— and every one of those avoids touching the picture. Cropping, joining,
+captioning and hiding part of the picture all change what is *in* the frame, so
+all four need the same thing: decode, redraw, encode. Building it once gives all
+four.
 
 It is the tool people go looking for when they have a recording and a platform
 that wants a different shape, and the incumbents want the file uploaded first —
 which is the one thing this site will not do.
 
-## The three claims it is built on
+## The four claims it is built on
 
 1. **A crop is a loss, and the loss is measurable.** 16:9 → 9:16 keeps
    `(9/16) ÷ (16/9)` of the width — **31.6% of the frame**. The tool prints the
@@ -30,6 +31,14 @@ which is the one thing this site will not do.
    `isConfigSupported({codec:'mp4a.40.2'})` is **false in Chrome on Linux**,
    on a browser whose video encoder works perfectly. A tool that re-encoded
    audio would lose it for a whole platform.
+4. **A mosaic does not survive a video.** Measured, `node evals/pixelleak.mjs`:
+   the mosaic grid is fixed to the frame while the subject moves through it, so
+   every frame samples the same picture on a differently-aligned grid.
+   Back-projection recovers **98.6% of a pixelated number plate from 64 frames
+   — 2.1 seconds at 30fps** — against 68.3% from one frame, which is what a
+   blank guess scores. A **static** subject stays at 68.3% however many frames
+   there are, which is the control proving the leak comes from motion. So the
+   default is a solid box, and pixelate/blur say what they cost.
 
 ## User stories
 - As someone posting a Reel, I want to crop a landscape recording to 9:16 and
@@ -41,7 +50,8 @@ which is the one thing this site will not do.
   than watch an export fail.
 
 ## Inputs → Outputs
-One or more MP4/MOV files + a crop shape + captions → one progressive MP4.
+One or more MP4/MOV files + a crop shape + captions + censor boxes → one
+progressive MP4.
 
 ## Requirements (v1)
 - [x] Several clips, reorderable and removable; joined in order.
@@ -53,6 +63,9 @@ One or more MP4/MOV files + a crop shape + captions → one progressive MP4.
 - [x] Audio copied when every clip agrees on its format; otherwise the export is
       silent and the page says so BEFORE the encode.
 - [x] A capability gate naming WebCodecs/H.264, routing to `video-trim`.
+- [x] Censor boxes: drag on the export preview to draw one, drag to move it,
+      each with its own time range and mode. Solid by default; a warning naming
+      the measured figure appears only when a recoverable mode is chosen.
 
 ## Acceptance criteria
 - The exported file decodes in a real browser at the cropped size, and a two-clip
@@ -60,10 +73,30 @@ One or more MP4/MOV files + a crop shape + captions → one progressive MP4.
 - The kept-percentage and output size are right for a known fixture: 320×240 to
   9:16 is 42% and **134**×240 — even, from an odd 135.
 - A caption darkens its row of the preview only between its `from` and `to`.
+- A censor box blacks out its region and nothing else, and the box is present in
+  the DECODED EXPORT — read back off the exported file, since a preview
+  assertion cannot tell "drawn on screen" from "encoded into the video", and the
+  whole point of a redaction is that it survives into the file somebody opens.
 - `evals/mp4guard.mjs` re-parses the muxer's output with mp4box and gets every
   sample back byte for byte.
 
 ## Known limits (stated in the UI, not implied away)
+- **A censor box does not follow anything.** It is a fixed rectangle for a fixed
+  span, so a moving subject needs a box big enough for the whole path or several
+  boxes in sequence — which the UI says, because a box that is right for one
+  second and wrong for the next has published the thing it was hiding. Keyframed
+  boxes that interpolate between two positions are the obvious next step and are
+  deliberately not in v1.
+- **A censor box can only be created with a pointer.** Its time range and mode
+  are keyboard-reachable, its position is not — unlike the crop, which nudges
+  with the arrow keys. Worth fixing; recorded rather than glossed.
+- **Censoring hides the picture, not the sound.** The audio is copied across
+  untouched, so a spoken name survives a black box over the face saying it. The
+  UI states this next to the boxes.
+- **The pixelleak finding does NOT transfer to a single still.** It measures
+  what many differently-aligned frames give back; one frame gave back nothing.
+  `image-redact`'s pixelate default is therefore not condemned by it, and should
+  not be changed on the strength of it.
 - **MP4/MOV in, MP4 out.** WebM and MKV are different containers; `mp4box` does
   not read them.
 - **Clips whose sound is stored differently cannot be joined with sound.** The

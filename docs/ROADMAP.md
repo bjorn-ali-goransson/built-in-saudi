@@ -328,6 +328,7 @@ earn a slot. **`client` unless noted.**
 |---|---|
 | ~~Progressive MP4 muxer for `video-trim`~~ | **Done** (Sept 2026). `lib/mp4Writer.ts` writes one real sample table; the trimmer and `video-edit` both use it, and `evals/mp4guard.mjs` re-parses the output with mp4box. |
 | ~~Video convert / re-encode~~ | **Half done** as `video-edit`, which decodes and re-encodes to crop, join and caption. A pure *compressor* — same picture, smaller file — is still unbuilt and now needs no new machinery. |
+| Keyframed censor boxes in `video-edit` | The box is a fixed rectangle for a fixed span, so a moving subject needs a generous box or several in sequence. Interpolating between a start and an end position is little code; the design question is which keyframe you are editing. |
 | Collage / contact sheet | Print chassis plus image decoding, both already here. |
 | Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |
 

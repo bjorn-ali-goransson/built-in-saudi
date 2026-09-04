@@ -4,8 +4,8 @@ import { Button, FileError, Panel, Seg, SegButton, Spinner, Stack, Input, Check 
 import { DownloadIcon, UploadIcon, ScissorsIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
-  ASPECTS, activeAt, captionAt, cropRect, drawFrame, keptShare, outputSize, timeline, totalDuration,
-  type Caption, type ClipInfo, type Crop,
+  ASPECTS, activeAt, applyCensors, captionAt, cropRect, drawFrame, keptShare, outputSize, timeline, totalDuration,
+  type Caption, type Censor, type CensorMode, type ClipInfo, type Crop,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
 
@@ -41,6 +41,14 @@ const STR = {
     colour: 'Colour',
     band: 'Band behind the text',
     captionWhy: 'The caption is drawn once, here, with this page’s own fonts — and that same picture is laid into every frame. So Arabic joins up and runs right to left the way the browser writes it, and the preview is not an approximation of the export, it is the export.',
+    censors: 'Hide something',
+    censorHint: 'Drag on the export preview to draw a box over anything you want hidden. Drag an existing box to move it.',
+    modeBlock: 'Solid',
+    modePixelate: 'Pixelate',
+    modeBlur: 'Blur',
+    censorWhy: 'A solid box is the default because it is the only one that removes anything. Pixelating and blurring both work by throwing away resolution — and resolution comes back out of a video in a way it does not out of a photo: the mosaic grid is fixed to the frame while your subject moves through it, so every frame samples the same face on a different grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame.',
+    censorMoves: 'If what you are hiding moves, make the box big enough for the whole path, or add a second box for the later part. A box that is right for one second and wrong for the next has published the thing you were hiding.',
+    censorAudio: 'This hides the picture and not the sound. The audio is copied across untouched, so a name that is spoken is still spoken.',
     output: 'Output',
     quality: 'Quality',
     qualities: ['Smaller file', 'Normal', 'Sharper'],
@@ -105,6 +113,14 @@ const STR = {
     colour: 'اللون',
     band: 'شريط خلف النص',
     captionWhy: 'يُرسم النص مرة واحدة هنا بخطوط هذه الصفحة نفسها، ثم تُوضع الصورة ذاتها في كل إطار. فتتصل الحروف العربية وتجري من اليمين إلى اليسار كما يكتبها المتصفح، والمعاينة ليست تقريبًا للمُخرَج بل هي المُخرَج نفسه.',
+    censors: 'إخفاء جزء',
+    censorHint: 'اسحب على معاينة المُخرَج لترسم مربّعًا فوق ما تريد إخفاءه. واسحب مربّعًا موجودًا لتحريكه.',
+    modeBlock: 'حجب كامل',
+    modePixelate: 'بكسلة',
+    modeBlur: 'تمويه',
+    censorWhy: 'الحجب الكامل هو الأصل لأنه الوحيد الذي يزيل شيئًا فعلًا. أما البكسلة والتمويه فيعملان بإسقاط الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة ثابتة على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد.',
+    censorMoves: 'إن كان ما تخفيه يتحرك، فوسّع المربّع ليغطي مساره كله، أو أضف مربّعًا ثانيًا للجزء التالي. فمربّعٌ يصيب في ثانية ويخطئ في التي تليها قد نشر ما كنت تخفيه.',
+    censorAudio: 'هذا يخفي الصورة لا الصوت. فالصوت يُنسخ كما هو، والاسم المنطوق يبقى منطوقًا.',
     output: 'المُخرَج',
     quality: 'الجودة',
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
@@ -243,6 +259,7 @@ export default function VideoEditTool() {
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
   const [captions, setCaptions] = useState<Caption[]>([])
+  const [censors, setCensors] = useState<Censor[]>([])
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
   const [keepAudio, setKeepAudio] = useState(true)
@@ -259,6 +276,19 @@ export default function VideoEditTool() {
   const frameRef = useRef<HTMLCanvasElement>(null)
   const resultRef = useRef<HTMLCanvasElement>(null)
   const bitmaps = useRef<Map<string, ImageBitmap>>(new Map())
+  // The box being drawn or moved right now. A ref rather than state because it
+  // changes on every pointer event and only the rendered rect needs to re-render.
+  const censorDrag = useRef<{ id: string; ox: number; oy: number } | { from: { x: number; y: number } } | null>(null)
+  // The box being drawn lives in a REF, not in state, and `paint` reads it on
+  // the next animation frame — the rAF loop is already repainting, so a drag
+  // needs no render of its own and this way it does not cause one per
+  // `pointermove`.
+  //
+  // It was state first, and the spec failures that prompted the change were NOT
+  // caused by that: see `drawBox` in the e2e, where the real cause was the
+  // canvas being scrolled out of the viewport. Kept because it is cheaper, not
+  // because it fixed anything.
+  const drawingRef = useRef<Censor | null>(null)
   const [bitmapTick, setBitmapTick] = useState(0)
 
   useEffect(() => {
@@ -402,6 +432,10 @@ export default function VideoEditTool() {
         // a second opinion about what the export will look like.
         drawFrame(ctx, v, clip, crop, shown)
         const t = previewTime()
+        // The same function the worker calls. The box being dragged right now
+        // is drawn with the rest, so what you are aiming at is what you get.
+        const inProgress = drawingRef.current
+        applyCensors(ctx, inProgress ? [...censors, inProgress] : censors, t, shown)
         for (const c of activeAt(captions, t)) {
           const bmp = bitmaps.current.get(c.id)
           if (!bmp) continue
@@ -412,7 +446,7 @@ export default function VideoEditTool() {
         }
       }
     }
-  }, [current, crop, size, captions, previewTime])
+  }, [current, crop, size, captions, censors, previewTime])
 
   // Repaint on every displayed frame while playing, and once whenever anything
   // that affects the picture changes.
@@ -491,6 +525,68 @@ export default function VideoEditTool() {
     })
   }
 
+  /** Pointer position on the result canvas, as a fraction of the output frame. */
+  function atResult(e: React.PointerEvent<HTMLCanvasElement>) {
+    const r = e.currentTarget.getBoundingClientRect()
+    return {
+      x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
+    }
+  }
+
+  function censorDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (e.button !== 0) return
+    const p = atResult(e)
+    const t = previewTime()
+    // Inside an existing box moves it; anywhere else draws a new one. Hit
+    // testing walks BACKWARDS so the box drawn most recently — the one on top —
+    // is the one you grab.
+    const showing = activeAt(censors, t)
+    const hit = [...showing].reverse().find((c) => p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h)
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (hit) { censorDrag.current = { id: hit.id, ox: p.x - hit.x, oy: p.y - hit.y }; return }
+    censorDrag.current = { from: p }
+    drawingRef.current = {
+      id: `z${Date.now()}`, x: p.x, y: p.y, w: 0, h: 0, mode: 'block',
+      from: Math.max(0, Math.round(t * 10) / 10),
+      to: Math.min(duration, Math.round((t + 3) * 10) / 10),
+    }
+  }
+
+  function censorMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    const drag = censorDrag.current
+    if (!drag) return
+    const p = atResult(e)
+    if ('id' in drag) {
+      setCensors((list) => list.map((c) => (c.id === drag.id
+        ? { ...c, x: Math.min(1 - c.w, Math.max(0, p.x - drag.ox)), y: Math.min(1 - c.h, Math.max(0, p.y - drag.oy)) }
+        : c)))
+      return
+    }
+    const d = drawingRef.current
+    if (!d) return
+    d.x = Math.min(drag.from.x, p.x)
+    d.y = Math.min(drag.from.y, p.y)
+    d.w = Math.abs(p.x - drag.from.x)
+    d.h = Math.abs(p.y - drag.from.y)
+  }
+
+  function censorUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    const drag = censorDrag.current
+    censorDrag.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    if (!drag || 'id' in drag) return
+    const d = drawingRef.current
+    drawingRef.current = null
+    // A stray click is not a box. Anything under about a fiftieth of the frame
+    // is a misclick, and committing it would leave invisible specks that still
+    // count as censors.
+    if (d && d.w > 0.02 && d.h > 0.02) setCensors((list) => [...list, d])
+  }
+
+  const setCensor = (id: string, patch: Partial<Censor>) =>
+    setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+
   function nudge(e: React.KeyboardEvent<HTMLCanvasElement>) {
     const step = e.shiftKey ? 0.05 : 0.01
     const by: Record<string, [number, number]> = {
@@ -521,6 +617,7 @@ export default function VideoEditTool() {
       bitrate,
       keepAudio: keepAudio && audioPlan === 'copy',
       captions: planCaptions,
+      censors,
     }
     const res = await ask({ kind: 'render', plan }, planCaptions.map((c) => c.bitmap))
     setBusy('')
@@ -615,7 +712,9 @@ export default function VideoEditTool() {
             <div className="flex flex-col gap-1">
               <span className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.result}</span>
               <canvas ref={resultRef} data-testid="ve-result"
-                className="w-full max-h-[46vh] object-contain rounded-md bg-black" />
+                onPointerDown={censorDown} onPointerMove={censorMove}
+                onPointerUp={censorUp} onPointerCancel={censorUp}
+                className="w-full max-h-[46vh] object-contain rounded-md bg-black cursor-crosshair touch-none" />
             </div>
           </div>
 
@@ -638,6 +737,41 @@ export default function VideoEditTool() {
               </label>
             </div>
             <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.keptWhy}</p>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.censors}</h2>
+            <p className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="ve-censor-hint">{s.censorHint}</p>
+            {censors.map((c, i) => (
+              <div key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-[color:var(--line)] p-2 text-[0.85rem]"
+                data-testid={`ve-censor-${i}`}>
+                <Seg>
+                  {(['block', 'pixelate', 'blur'] as CensorMode[]).map((m) => (
+                    <SegButton key={m} active={c.mode === m} data-testid={`ve-censor-${m}-${i}`}
+                      onClick={() => setCensor(c.id, { mode: m })}>
+                      {m === 'block' ? s.modeBlock : m === 'pixelate' ? s.modePixelate : s.modeBlur}
+                    </SegButton>
+                  ))}
+                </Seg>
+                <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.from}
+                  <Input type="number" min={0} max={duration} step={0.1} value={c.from} className="w-20"
+                    data-testid={`ve-censor-from-${i}`}
+                    onChange={(e) => setCensor(c.id, { from: Number(e.target.value) })} />
+                </label>
+                <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.to}
+                  <Input type="number" min={0} max={duration} step={0.1} value={c.to} className="w-20"
+                    data-testid={`ve-censor-to-${i}`}
+                    onChange={(e) => setCensor(c.id, { to: Number(e.target.value) })} />
+                </label>
+                <Button className="px-2 py-0.5 ms-auto" data-testid={`ve-censor-remove-${i}`}
+                  onClick={() => setCensors((list) => list.filter((x) => x.id !== c.id))}>×</Button>
+              </div>
+            ))}
+            {!!censors.length && censors.some((c) => c.mode !== 'block') && (
+              <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-censor-warning">{s.censorWhy}</p>
+            )}
+            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.censorMoves}</p>
+            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-censor-audio">{s.censorAudio}</p>
           </section>
 
           <section className="flex flex-col gap-2">
@@ -748,7 +882,7 @@ export default function VideoEditTool() {
           data-testid="ve-again"
           onClick={() => {
             for (const c of clips) { URL.revokeObjectURL(c.url); void ask({ kind: 'drop', slot: c.slot }) }
-            setClips([]); setCaptions([]); setSel(0)
+            setClips([]); setCaptions([]); setCensors([]); setSel(0)
             setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
           }}>
           {s.again}

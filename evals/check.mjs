@@ -34,6 +34,7 @@ const GATES = [
 
 /** Numbers a person reads. No pass/fail, and some need the real corpus. */
 const MEASURES = [
+  ['pixelleak.mjs', 'how much of a pixelated region a video gives back — the video-edit censor default', false],
   ['docxextract.mjs', 'which .docx reader keeps a CV’s bullets', false],
   ['pdfextract.mjs', 'two-column CVs and split keywords', false],
   ['pdfcolumns.mjs', 'how often the column split fires on real CVs', true],

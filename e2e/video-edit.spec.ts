@@ -218,6 +218,168 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(before - 2)
 })
 
+/**
+ * Drag a box on the export preview, in fractions of the canvas.
+ *
+ * The scroll is load-bearing, not defensive. `page.mouse` works in VIEWPORT
+ * coordinates, and clicking an aspect button — which sits below the canvases —
+ * auto-scrolls it into view and pushes the preview off the top: measured at
+ * y = -169. Every pointer event then lands outside the page and none of them
+ * reaches the canvas, which reads as "the drag did not work" rather than as
+ * "the drag happened somewhere else". Playwright's own locator actions scroll
+ * for you; raw mouse coordinates do not.
+ */
+async function drawBox(page: Page, from: [number, number], to: [number, number]) {
+  await page.getByTestId('ve-result').scrollIntoViewIfNeeded()
+  const box = await page.getByTestId('ve-result').boundingBox()
+  if (!box) throw new Error('no result canvas')
+  const at = (f: [number, number]) => ({ x: box.x + box.width * f[0], y: box.y + box.height * f[1] })
+  const a = at(from), b = at(to)
+  // The POINTS have to be on screen, which is not the same as the box's origin
+  // being on screen. `scrollIntoViewIfNeeded` leaves the element flush with the
+  // top and sub-pixel rounding puts its y at -0.36 — a guard on the origin
+  // therefore rejects a perfectly good drag, which is what the first version of
+  // this did to three specs that were fine.
+  const view = page.viewportSize()
+  for (const pt of [a, b]) {
+    if (pt.x < 0 || pt.y < 0 || (view && (pt.x > view.width || pt.y > view.height))) {
+      throw new Error(`drag point (${Math.round(pt.x)}, ${Math.round(pt.y)}) is outside the viewport — `
+        + 'page.mouse works in viewport coordinates and the event would reach nothing')
+    }
+  }
+  await page.mouse.move(a.x, a.y)
+  await page.mouse.down()
+  await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2)
+  await page.mouse.move(b.x, b.y)
+  await page.mouse.up()
+}
+
+/** Mean brightness of a rectangle of the export preview, in canvas fractions. */
+function meanOf(page: Page, r: [number, number, number, number]) {
+  return page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement, box) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return -1
+    const x = Math.round(box[0] * c.width), y = Math.round(box[1] * c.height)
+    const w = Math.max(1, Math.round((box[2] - box[0]) * c.width))
+    const h = Math.max(1, Math.round((box[3] - box[1]) * c.height))
+    const px = ctx.getImageData(x, y, w, h).data
+    let sum = 0
+    for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
+    return sum / (px.length / 4)
+  }, r)
+}
+
+test('a drawn box censors that part of the picture, and only while it is showing', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+
+  const REGION: [number, number, number, number] = [0.3, 0.3, 0.6, 0.6]
+  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
+  const before = await meanOf(page, REGION)
+
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await expect(page.getByTestId('ve-censor-0')).toBeVisible()
+
+  // Solid is the default, so that region of the picture is now black.
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
+  // And the rest of the frame is untouched — without this the case would pass
+  // against a tool that blacked out everything.
+  expect(await meanOf(page, [0.0, 0.0, 0.15, 0.15])).toBeGreaterThan(10)
+
+  // It ends when its window ends. The box defaults to a 3s span from t=1.
+  await page.getByTestId('ve-censor-to-0').fill('1.5')
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 4 })
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
+})
+
+test('solid is the default, and choosing a recoverable mode says why', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+
+  // No warning for the safe default — a caveat shown to everybody is one
+  // nobody reads, which is the failure this branch exists to rule out.
+  await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
+
+  await page.getByTestId('ve-censor-pixelate-0').click()
+  await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
+  await expect(page.getByTestId('ve-censor-warning')).toContainText('98.6%')
+
+  await page.getByTestId('ve-censor-block-0').click()
+  await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
+})
+
+test('pixelating keeps the colours it is hiding, which is why it is not the default', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  const REGION: [number, number, number, number] = [0.35, 0.35, 0.55, 0.55]
+  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
+  const before = await meanOf(page, REGION)
+
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await page.getByTestId('ve-censor-pixelate-0').click()
+
+  // A mosaic is the AVERAGE of what was there, so the region keeps roughly its
+  // brightness — the visual difference from a solid box, and the reason the
+  // information is still in the file.
+  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
+})
+
+test('the censor is burnt into the exported file, not just the preview', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 0 })
+  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  // Cover the whole clip: the default span is 3s and the fixture is 6s.
+  await page.getByTestId('ve-censor-from-0').fill('0')
+  await page.getByTestId('ve-censor-to-0').fill('6')
+
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-result-panel')).toBeVisible({ timeout: 120_000 })
+
+  // Decode the EXPORTED file and read its pixels. A preview assertion cannot
+  // tell "drawn on screen" from "encoded into the video", and the whole point
+  // of a redaction is that it survives into the file somebody else opens.
+  const mean = await page.getByTestId('ve-out-video').evaluate((v: HTMLVideoElement) => new Promise<number>((resolve, reject) => {
+    const read = () => {
+      const c = document.createElement('canvas')
+      c.width = v.videoWidth
+      c.height = v.videoHeight
+      const ctx = c.getContext('2d')
+      if (!ctx) return reject(new Error('no ctx'))
+      ctx.drawImage(v, 0, 0)
+      const px = ctx.getImageData(
+        Math.round(c.width * 0.35), Math.round(c.height * 0.35),
+        Math.round(c.width * 0.2), Math.round(c.height * 0.2),
+      ).data
+      let sum = 0
+      for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
+      resolve(sum / (px.length / 4))
+    }
+    v.addEventListener('seeked', read, { once: true })
+    v.addEventListener('error', () => reject(new Error('decode failed')), { once: true })
+    setTimeout(() => reject(new Error('timeout')), 20_000)
+    v.currentTime = 2
+  }))
+  // Black in the encoded frame. H.264 is lossy, so this is "near black" rather
+  // than exactly zero.
+  expect(mean).toBeLessThan(12)
+})
+
 test('Arabic in a caption is shaped and joined, not left as separate letters', async ({ page }) => {
   await load(page, 'ar')
   // No encoder needed: this is about how the page draws text, which is the same
