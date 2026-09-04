@@ -2510,8 +2510,27 @@ every demuxed sample per clip, which on a phone is several copies of a large
 recording, and Chrome drops media resources under pressure. Plausible, unproven,
 and not worth a redesign on a hunch.
 
-What shipped is the part that is right whatever the cause: **the failure now
-names itself.** A silent broken thumbnail is the dead-UI failure this file
+**So the next step is DIAGNOSTICS, not a fix.** `diagnostics.ts` records a
+timeline from the pick — with the heap in use at every mark, because the
+hypothesis is about GROWTH and one figure says nothing — and the worker reports
+`retainedBytes` and `sampleCount`, which is the quantity the theory turns on,
+measured rather than estimated. Beside it: `readyState`/`networkState`, which
+separate "never started" from "started and stalled" where the error code cannot;
+whether the tab was backgrounded, which is a documented reason Chrome on Android
+drops media; and whether the EXPORT succeeded, which is what separates "only
+`<video>` is affected" from "the whole media stack is". It shows itself on a
+failure and is available on a toggle otherwise — an intermittent fault needs a
+report from a WORKING run to compare against.
+
+**It carries no filename, and there is a case pinning that.** The report that
+prompted this was `Screen_Recording_20260904_125339_WhatsApp.mp4`, which names
+an app, a date and a time, and the block exists to be pasted somewhere else. The
+extension is kept because the container matters; nothing else about the name
+does. Nothing is sent anywhere either — it is text on the page with a copy
+button, which is the only shape a diagnostic can honestly take on this site.
+
+What shipped alongside is the part that is right whatever the cause: **the
+failure now names itself.** A silent broken thumbnail is the dead-UI failure this file
 already refuses for image picks, and the media error CODE is the one fact that
 separates "cannot play this format" (4) from "started and then failed" (3) — not
 guessable from outside, and now on screen. It also says the export uses a

@@ -8,6 +8,7 @@ import {
   type Caption, type Censor, type CensorMode, type ClipInfo, type Crop,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
+import { createRecorder, formatReport, heap } from './diagnostics'
 
 const WIP = 'video-edit'
 
@@ -41,6 +42,11 @@ const STR = {
     colour: 'Colour',
     band: 'Band behind the text',
     captionWhy: 'The caption is drawn once, here, with this page’s own fonts — and that same picture is laid into every frame. So Arabic joins up and runs right to left the way the browser writes it, and the preview is not an approximation of the export, it is the export.',
+    diagShow: 'Diagnostics',
+    diagHide: 'Hide diagnostics',
+    diagWhy: 'Nothing here is sent anywhere — it is text on this page. It carries no filename and none of the video, only what the browser reports about itself and about this clip. Copy it into a bug report if the preview keeps failing.',
+    diagCopy: 'Copy',
+    diagCopied: 'Copied',
     previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so the crop box and the censor boxes have no picture to aim at.`,
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
     censors: 'Hide something',
@@ -115,6 +121,11 @@ const STR = {
     colour: 'اللون',
     band: 'شريط خلف النص',
     captionWhy: 'يُرسم النص مرة واحدة هنا بخطوط هذه الصفحة نفسها، ثم تُوضع الصورة ذاتها في كل إطار. فتتصل الحروف العربية وتجري من اليمين إلى اليسار كما يكتبها المتصفح، والمعاينة ليست تقريبًا للمُخرَج بل هي المُخرَج نفسه.',
+    diagShow: 'تشخيص',
+    diagHide: 'إخفاء التشخيص',
+    diagWhy: 'لا يُرسَل شيء مما هنا إلى أي مكان — إنما هو نص على هذه الصفحة. ولا يحمل اسم الملف ولا شيئًا من الفيديو، بل ما يذكره المتصفح عن نفسه وعن هذا المقطع فقط. انسخه في تقرير عطل إن استمرت المعاينة في الفشل.',
+    diagCopy: 'نسخ',
+    diagCopied: 'نُسخ',
     previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها مربّع الاقتصاص ولا مربّعات الحجب.`,
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
     censors: 'إخفاء جزء',
@@ -271,6 +282,11 @@ export default function VideoEditTool() {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState('')
   const [previewError, setPreviewError] = useState(0)
+  const [showDiag, setShowDiag] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const diag = useRef(createRecorder())
+  const heapAtPick = useRef<ReturnType<typeof heap>>(null)
+  const wasHidden = useRef(false)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
   const workerRef = useRef<Worker | null>(null)
@@ -322,6 +338,18 @@ export default function VideoEditTool() {
       } catch { if (live) setSupported(false) }
     })()
     return () => { live = false }
+  }, [])
+
+  // Chrome on Android drops media resources when a tab goes to the background,
+  // and a long upload is exactly when somebody switches away — so whether that
+  // happened is a fact the report has to carry rather than leave to memory.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') wasHidden.current = true
+      diag.current.mark(`tab ${document.visibilityState}`)
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
   useEffect(() => () => { setWorkInProgress(WIP, false) }, [])
@@ -468,6 +496,9 @@ export default function VideoEditTool() {
     setOut(null)
     setBusy('read')
     setPreviewError(0)
+    if (!clips.length) diag.current.reset()
+    heapAtPick.current = heap()
+    diag.current.mark(`pick (${(f.size / 1048576).toFixed(1)} MB)`)
     const slot = ++slotId.current
     // Minted BEFORE the probe, not after. The worker reads the whole file to
     // demux it, which on a phone is seconds and a second copy of it in memory;
@@ -476,7 +507,11 @@ export default function VideoEditTool() {
     // effect, so it stays out of the state updater — the same fix `removeClip`
     // carries.
     const url = URL.createObjectURL(f)
+    diag.current.mark('preview url created, probe sent')
     const res = await ask({ kind: 'probe', slot, file: f })
+    diag.current.mark(res.kind === 'probed'
+      ? `probe done (${(res.info.retainedBytes / 1048576).toFixed(1)} MB retained)`
+      : `probe failed (${res.kind === 'error' ? res.message : res.kind})`)
     setBusy('')
     if (res.kind === 'error') {
       URL.revokeObjectURL(url)
@@ -601,6 +636,37 @@ export default function VideoEditTool() {
   const setCensor = (id: string, patch: Partial<Censor>) =>
     setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
 
+  /** The diagnostics block. Built on render so it is current when it is read. */
+  function report(): string {
+    const v = videoRef.current
+    const c = clips[Math.min(sel, clips.length - 1)]
+    const name = c?.file.name ?? ''
+    const dot = name.lastIndexOf('.')
+    return formatReport({
+      marks: diag.current.marks(),
+      // The EXTENSION only. The report that prompted all this was called
+      // `Screen_Recording_…_WhatsApp.mp4`, and this block exists to be pasted
+      // somewhere else.
+      extension: dot > 0 ? name.slice(dot + 1).toLowerCase().slice(0, 8) : 'unknown',
+      fileBytes: c?.file.size ?? 0,
+      clipCount: clips.length,
+      width: c?.info.width ?? 0,
+      height: c?.info.height ?? 0,
+      durationSec: c?.info.durationSec ?? 0,
+      codec: c?.info.videoCodec ?? 'unknown',
+      decodable: !!c?.info.decodable,
+      sampleCount: c?.info.sampleCount ?? 0,
+      retainedBytes: c?.info.retainedBytes ?? 0,
+      errorCode: previewError,
+      errorMessage: v?.error?.message ?? '',
+      readyState: v?.readyState ?? -1,
+      networkState: v?.networkState ?? -1,
+      wasHidden: wasHidden.current,
+      heapAtPick: heapAtPick.current,
+      heapNow: heap(),
+    })
+  }
+
   function nudge(e: React.KeyboardEvent<HTMLCanvasElement>) {
     const step = e.shiftKey ? 0.05 : 0.01
     const by: Record<string, [number, number]> = {
@@ -617,6 +683,7 @@ export default function VideoEditTool() {
     setBusy('render')
     setError('')
     setProgress({ done: 0, total: 0 })
+    diag.current.mark(`export started (${size.width}×${size.height})`)
     // Fresh bitmaps: an ImageBitmap handed to a worker in the transfer list is
     // gone from this side, and the preview still needs its copies.
     const planCaptions: RenderPlan['captions'] = []
@@ -634,6 +701,11 @@ export default function VideoEditTool() {
       censors,
     }
     const res = await ask({ kind: 'render', plan }, planCaptions.map((c) => c.bitmap))
+    // Whether the export works while the preview does not is exactly what
+    // separates "only `<video>` is affected" from "the whole media stack is".
+    diag.current.mark(res.kind === 'rendered'
+      ? `export done (${(res.blob.size / 1048576).toFixed(1)} MB, audio ${res.audio})`
+      : `export failed (${res.kind === 'error' ? res.message : res.kind})`)
     setBusy('')
     if (res.kind === 'error') { setError(s.errors[res.message] ?? s.errors.generic); return }
     if (res.kind !== 'rendered') return
@@ -713,8 +785,15 @@ export default function VideoEditTool() {
           </section>
 
           <video ref={videoRef} src={current.url} controls playsInline data-testid="ve-video"
-            onError={() => setPreviewError(videoRef.current?.error?.code ?? -1)}
-            onLoadedMetadata={() => setPreviewError(0)}
+            onLoadStart={() => diag.current.mark('video loadstart')}
+            onError={() => {
+              diag.current.mark(`video error ${videoRef.current?.error?.code ?? -1}`)
+              setPreviewError(videoRef.current?.error?.code ?? -1)
+            }}
+            onLoadedMetadata={() => {
+              diag.current.mark('video loadedmetadata — the preview is working')
+              setPreviewError(0)
+            }}
             className="w-full max-h-[34vh] rounded-md bg-black" />
 
           {/* A preview that fails silently leaves a broken thumbnail and a black
@@ -728,6 +807,33 @@ export default function VideoEditTool() {
               {s.previewFailed(previewError)}
               {current.info.decodable ? ` ${s.previewStillExports}` : ''}
             </p>
+          )}
+
+          <button type="button" data-testid="ve-diag-toggle"
+            className="self-start border-0 bg-transparent p-0 text-[0.8rem] text-ink-faint underline cursor-pointer rtl:font-ar"
+            onClick={() => setShowDiag((v) => !v)}>
+            {showDiag ? s.diagHide : s.diagShow}
+          </button>
+
+          {/* Shown on failure without being asked, because somebody whose
+              preview just broke should not have to find a toggle — and
+              available on demand the rest of the time, so a WORKING run can be
+              reported for comparison, which is what an intermittent fault needs. */}
+          {(showDiag || previewError !== 0) && (
+            <div className="flex flex-col gap-2" data-testid="ve-diagnostics">
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.diagWhy}</p>
+              <pre className="overflow-x-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-2 text-[0.72rem] font-mono text-ink"
+                data-testid="ve-diag-text">{report()}</pre>
+              <Button className="self-start px-3 py-1" data-testid="ve-diag-copy"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(report()).then(() => {
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }).catch(() => {})
+                }}>
+                {copied ? s.diagCopied : s.diagCopy}
+              </Button>
+            </div>
           )}
 
           <div className="grid gap-3 min-[860px]:grid-cols-[1.4fr_1fr]">

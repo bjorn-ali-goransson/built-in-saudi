@@ -424,6 +424,57 @@ test('a preview that will not play says so, with the code that identifies it', a
   await expect(page.getByTestId('ve-preview-error')).toContainText(/error \d/)
 })
 
+test('the diagnostics carry what the fault turns on, and never the filename', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+
+  // A name of exactly the shape that prompted this: it says which app, on which
+  // date, at which time. The block exists to be pasted somewhere else.
+  const NAME = 'Screen_Recording_20260904_125339_WhatsApp.mp4'
+  await page.getByTestId('ve-file').setInputFiles({ name: NAME, mimeType: 'video/mp4', buffer: bytes() })
+  await expect(page.getByTestId('ve-clip-0')).toBeVisible({ timeout: 30_000 })
+
+  // Not shown until asked for, while everything is working.
+  await expect(page.getByTestId('ve-diagnostics')).toHaveCount(0)
+  await page.getByTestId('ve-diag-toggle').click()
+  const text = page.getByTestId('ve-diag-text')
+  await expect(text).toBeVisible()
+
+  const body = await text.innerText()
+  // THE PRIVACY PROPERTY. Without this the block could grow a filename later
+  // and nothing would notice.
+  expect(body).not.toContain('WhatsApp')
+  expect(body).not.toContain('Screen_Recording')
+  expect(body).not.toContain('125339')
+  expect(body).toContain('.mp4')
+
+  // And the facts the memory hypothesis actually turns on.
+  expect(body).toMatch(/retained by the worker: \d+ samples/)
+  expect(body).toContain('320×240')
+  expect(body).toMatch(/timeline:/)
+  expect(body).toMatch(/\+\s*\d+ms.*\bpick\b/)
+  expect(body).toContain('video loadedmetadata')
+  // A working clip must not be described as having an error.
+  expect(body).toContain('preview: playing, no error')
+  // The heap column is the memory hypothesis made visible; Chrome reports it.
+  expect(body).toMatch(/\d+ MB {2}pick/)
+})
+
+test('a failed preview shows the diagnostics without being asked', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await expect(page.getByTestId('ve-diagnostics')).toHaveCount(0)
+
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => {
+    v.src = 'blob:invalid-source-for-this-test'
+  })
+  // Somebody whose preview just broke should not have to find a toggle.
+  await expect(page.getByTestId('ve-diagnostics')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('ve-diag-text')).toContainText(/preview: error \d/)
+  await expect(page.getByTestId('ve-diag-text')).toContainText(/video error \d/)
+})
+
 test('a file that is not an MP4 is refused with a reason', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')

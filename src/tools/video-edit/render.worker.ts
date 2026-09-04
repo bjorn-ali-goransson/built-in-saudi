@@ -47,6 +47,16 @@ export interface ProbeInfo {
   fps: number
   /** False when this browser has no decoder for the clip — a fixable, nameable state. */
   decodable: boolean
+  /**
+   * How many samples the session is holding, and how many bytes of payload.
+   *
+   * Reported because the one untested explanation for the intermittent Android
+   * preview failure is memory: probing keeps every demuxed sample per clip, for
+   * as long as the clip is in the list. This is that quantity, measured rather
+   * than estimated, so a field report can settle it.
+   */
+  sampleCount: number
+  retainedBytes: number
   audio: AudioInfo | null
 }
 
@@ -176,6 +186,8 @@ async function probe(slot: number, file: File): Promise<ProbeInfo> {
     videoCodec: v.codec,
     fps: session.durationSec > 0 ? v.samples.length / session.durationSec : 30,
     decodable,
+    sampleCount: session.tracks.reduce((n, t) => n + t.samples.length, 0),
+    retainedBytes: session.tracks.reduce((n, t) => n + t.samples.reduce((m, x) => m + x.data.length, 0), 0),
     audio: a ? { codec: a.codec, sampleRate: a.sampleRate ?? 0, channels: a.channels ?? 0, fingerprint: fingerprint(a) } : null,
   }
 }
