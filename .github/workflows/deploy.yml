@@ -25,7 +25,26 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # THE SUITE OUTGREW 25 MINUTES, and the way it announced that was a deploy
+    # blocked with every test green. Run 640 was cancelled at 25m15s having
+    # reached case 1583 of ~1690 — 94% done, nothing red. GitHub reports a job
+    # timeout as "The operation was canceled", which reads as somebody pressing
+    # the button rather than as a budget being spent, so it is worth knowing the
+    # signature: conclusion `cancelled`, no failing test, and a runtime equal to
+    # this number.
+    #
+    # It was two things at once, and neither is a defect:
+    #   npm ci        7m01s  — the npm cache is evicted after 7 days unused and
+    #                          the previous run was 18 days earlier, so a cold
+    #                          install ate 28% of the budget on its own
+    #   typecheck+build+browser  1m09s
+    #   Playwright   16m54s  — ~1,690 cases at --workers=2
+    #
+    # 45 leaves room for a cold cache AND for the catalogue to keep growing,
+    # while still killing a genuinely hung job long before GitHub's own 6-hour
+    # default would. Raise it again when the arithmetic above says to, rather
+    # than after another blocked deploy.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 

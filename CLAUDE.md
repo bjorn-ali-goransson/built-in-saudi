@@ -5697,7 +5697,18 @@ carried that since they were written and only failed when a run happened to
 cross 00:00. The tool was right; the test was wrong.
 
 **The suite gates the deploy** (`.github/workflows/deploy.yml`): typecheck →
-build → Playwright, and nothing reaches Pages unless all three pass. The same
+build → Playwright, and nothing reaches Pages unless all three pass.
+
+**A job TIMEOUT looks exactly like somebody cancelling the run**, and that cost
+a deploy. Run 640 ended `cancelled` at 25m15s against `timeout-minutes: 25`,
+having reached case 1583 of ~1690 with nothing red — GitHub writes a spent
+budget as `##[error]The operation was canceled`, so the natural reading is that
+a person pressed the button. The signature to recognise: conclusion
+**`cancelled`, no failing test, and a runtime equal to the budget**. Two things
+spent it together, neither a defect — a cold `npm ci` at **7m01s** (the npm
+cache is evicted after 7 days unused and the previous run was 18 days earlier)
+and a suite that is now 16m54s on its own. Raised to 45. **Check the elapsed
+time against the budget before concluding a run was interrupted.** The same
 workflow runs on **pull requests** (so a PR, including one from a fork, is
 verified before merge) but the `deploy` job is guarded to `push` on `main`, so a
 PR never publishes. A failed run uploads the Playwright report as an artifact.
