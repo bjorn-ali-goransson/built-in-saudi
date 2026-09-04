@@ -16,13 +16,16 @@
 // a 60s 720p one, both decoding clean under ffmpeg and playing in Chromium with
 // audio in sync.
 //
-// KNOWN LIMIT of the muxing step: mp4box v2's `addSample` writes a moof+mdat
-// pair PER SAMPLE, so the output is a fragmented MP4 rather than a progressive
-// one — 1604 fragments for a 22-second 720p clip, about 2% size overhead, and
-// no sample-table index to seek by. It decodes cleanly in ffmpeg and plays in
-// Chrome, which covers the common cases, but a hand-written progressive muxer
-// would produce a friendlier file for other editors. Worth doing; not worth
-// blocking the tool on.
+// THE READING AND THE WRITING BOTH MOVED TO `lib/`, and the fragmented-output
+// limit recorded here for the life of this tool is gone with them. It used to
+// mux through mp4box's `addSample`, which writes a moof+mdat pair PER SAMPLE —
+// 1604 fragments for a 22-second clip and no seek index at all. `lib/mp4Writer`
+// writes one real sample table, so the trimmed file is a progressive MP4 that
+// other editors and uploaders can index. Nothing about the copying changed:
+// `evals/mp4guard.mjs` asserts every sample comes back byte for byte.
+
+import { demuxMp4, type Demuxed } from '../../lib/mp4Demux'
+import { writeMp4 } from '../../lib/mp4Writer'
 
 export interface TrackInfo {
   id: number
@@ -49,124 +52,22 @@ export interface TrimResult {
   endSec: number
 }
 
-// The bits of mp4box we touch, typed locally: its own types are sprawling and
-// we only ever use this corner of them.
-interface Box { type: string; boxes?: Box[] }
-interface SampleEntry extends Box { channel_count?: number; samplesize?: number; samplerate?: number }
-interface Sample {
-  data: Uint8Array
-  size: number
-  duration: number
-  cts: number
-  dts: number
-  timescale: number
-  is_sync: boolean
-  description: SampleEntry
-}
-interface MovieTrack {
-  id: number
-  type: string
-  codec: string
-  timescale: number
-  language?: string
-  nb_samples: number
-  video?: { width: number; height: number }
-  audio?: { sample_rate: number; channel_count: number; sample_size: number }
-}
-interface Movie { duration: number; timescale: number; tracks: MovieTrack[] }
-interface Mp4File {
-  onReady?: (info: Movie) => void
-  onSamples?: (id: number, user: unknown, samples: Sample[]) => void
-  onError?: (e: unknown) => void
-  appendBuffer(b: ArrayBuffer): number
-  flush(): void
-  start(): void
-  setExtractionOptions(id: number, user?: unknown, o?: { nbSamples?: number }): void
-  init(o: Record<string, unknown>): unknown
-  addTrack(o: Record<string, unknown>): number
-  addSample(id: number, data: Uint8Array, o: Record<string, unknown>): unknown
-  getBuffer(): { buffer: ArrayBuffer; position?: number }
-}
-interface Mp4Box {
-  createFile(): Mp4File
-  MP4BoxBuffer: { fromArrayBuffer(b: ArrayBuffer, fileStart: number): ArrayBuffer }
-}
-
-let lib: Promise<Mp4Box> | null = null
-// ~1MB of parser, in its own chunk, fetched only when a video is actually
-// picked — the catalogue page must not pay for it.
-const mp4box = () => (lib ??= import('mp4box') as unknown as Promise<Mp4Box>)
-
 /** Everything held between a parse and the trims that follow it. */
-export interface Session {
-  info: Movie
-  samples: Map<number, Sample[]>
-}
-
-/**
- * Does this even claim to be an ISO-BMFF file?
- *
- * mp4box does not reject a file it cannot understand — it simply never calls
- * onReady, so a text file renamed .mp4 leaves the tool spinning for ever. The
- * box header at offset 4 is the cheap, honest check, and it covers the older
- * QuickTime layouts that lead with something other than `ftyp`.
- */
-export function looksLikeMp4(data: ArrayBuffer): boolean {
-  if (data.byteLength < 12) return false
-  const head = new Uint8Array(data, 4, 4)
-  const tag = String.fromCharCode(...head)
-  return ['ftyp', 'moov', 'mdat', 'free', 'skip', 'wide', 'pnot'].includes(tag)
-}
+export type Session = Demuxed
 
 export async function parseMp4(data: ArrayBuffer): Promise<{ session: Session; parsed: Parsed }> {
-  if (!looksLikeMp4(data)) throw new Error('not-mp4')
-  const { createFile, MP4BoxBuffer } = await mp4box()
-  const file = createFile()
-  const samples = new Map<number, Sample[]>()
-
-  let ready = false
-  const info = await new Promise<Movie>((resolve, reject) => {
-    file.onError = (e) => reject(new Error(String(e)))
-    file.onReady = (movie) => {
-      ready = true
-      for (const t of movie.tracks) {
-        samples.set(t.id, [])
-        // One extraction pass over everything; the samples are needed for the
-        // keyframe list anyway, so there is nothing to gain by streaming twice.
-        file.setExtractionOptions(t.id, null, { nbSamples: 1_000_000 })
-      }
-      file.start()
-      file.flush()
-      resolve(movie)
-    }
-    file.onSamples = (id, _user, list) => { samples.get(id)?.push(...list) }
-    try {
-      file.appendBuffer(MP4BoxBuffer.fromArrayBuffer(data, 0))
-      file.flush()
-      // appendBuffer/flush run the whole parse synchronously, so if onReady has
-      // not fired by now it never will — a truncated or malformed file would
-      // otherwise leave this promise pending for the life of the page.
-      if (!ready) reject(new Error('not-mp4'))
-    } catch (e) { reject(e instanceof Error ? e : new Error(String(e))) }
-  })
-
-  if (!info.tracks?.length) throw new Error('no-tracks')
-
-  const video = info.tracks.find((t) => t.type === 'video')
-  const vs = video ? samples.get(video.id) ?? [] : []
-  const keyframes = vs.filter((s) => s.is_sync).map((s) => s.cts / s.timescale)
-
+  const session = await demuxMp4(data)
   return {
-    session: { info, samples },
+    session,
     parsed: {
-      durationSec: info.duration / info.timescale,
-      tracks: info.tracks.map((t) => ({
-        id: t.id, type: t.type, codec: t.codec, language: t.language,
-        width: t.video?.width, height: t.video?.height,
+      durationSec: session.durationSec,
+      tracks: session.tracks.map((t) => ({
+        id: t.id, type: t.kind, codec: t.codec, language: t.language,
+        width: t.width, height: t.height,
       })),
-      keyframes,
-      hasVideo: !!video,
-      hasAudio: info.tracks.some((t) => t.type === 'audio'),
+      keyframes: session.keyframes,
+      hasVideo: session.hasVideo,
+      hasAudio: session.hasAudio,
     },
   }
 }
@@ -183,70 +84,24 @@ export function snapStart(keyframes: number[], sec: number): number {
 }
 
 export async function trimMp4(session: Session, startSec: number, endSec: number): Promise<TrimResult> {
-  const { createFile } = await mp4box()
-  const { info, samples } = session
-
-  const video = info.tracks.find((t) => t.type === 'video')
-  const vs = video ? samples.get(video.id) ?? [] : []
   // One origin for every track. Resetting each to its own first sample is the
   // obvious thing to write and it desynchronises the audio by however far the
   // video snapped back — ~0.95s on the first version of this.
-  const origin = vs.length
-    ? snapStart(vs.filter((s) => s.is_sync).map((s) => s.cts / s.timescale), startSec)
-    : startSec
+  const origin = session.keyframes.length ? snapStart(session.keyframes, startSec) : startSec
 
-  const out = createFile()
-  out.init({ brands: ['isom', 'iso2', 'avc1', 'mp41'], timescale: info.timescale })
-
-  let wrote = 0
-  for (const t of info.tracks) {
-    const list = samples.get(t.id)
-    if (!list?.length) continue
-    const entry = list[0].description
-    const isVideo = t.type === 'video'
-
-    const kept = list.filter((s) => {
-      const at = s.cts / s.timescale
-      return at >= origin - 1e-9 && at <= endSec
-    })
-    if (!kept.length) continue
-
-    const trackId = out.addTrack({
-      // Without the source's own entry type this defaults to avc1 and an audio
-      // track comes out claiming to be video.
-      type: entry.type,
-      timescale: t.timescale,
-      language: t.language,
-      hdlr: isVideo ? 'vide' : 'soun',
-      name: isVideo ? 'VideoHandler' : 'SoundHandler',
-      width: isVideo ? t.video?.width : undefined,
-      height: isVideo ? t.video?.height : undefined,
-      channel_count: isVideo ? undefined : entry.channel_count,
-      samplesize: isVideo ? undefined : entry.samplesize,
-      samplerate: isVideo ? undefined : entry.samplerate,
-      // The codec configuration, copied verbatim — avcC/hvcC for video, esds for
-      // AAC. Leave it out and the file parses fine and no decoder can play it.
-      description_boxes: (entry.boxes ?? []).filter((b) => b.type !== 'sinf'),
-    })
-    if (!trackId) continue
-
+  const tracks = session.tracks.map((t) => {
     const offset = Math.round(origin * t.timescale)
-    for (const s of kept) {
-      out.addSample(trackId, s.data, {
-        duration: s.duration,
-        dts: s.dts - offset,
-        cts: s.cts - offset,
-        is_sync: s.is_sync,
-      })
+    return {
+      ...t,
+      samples: t.samples
+        .filter((s) => {
+          const at = s.cts / t.timescale
+          return at >= origin - 1e-9 && at <= endSec
+        })
+        .map((s) => ({ ...s, dts: s.dts - offset, cts: s.cts - offset })),
     }
-    wrote += kept.length
-  }
+  }).filter((t) => t.samples.length)
 
-  if (!wrote) throw new Error('empty-selection')
-
-  const ds = out.getBuffer()
-  const bytes = new Uint8Array(ds.buffer, 0, ds.position ?? ds.buffer.byteLength)
-  // Copy out of mp4box's buffer so the result can be transferred to the page
-  // without dragging the whole parse along with it.
-  return { bytes: new Uint8Array(bytes), originSec: origin, endSec }
+  if (!tracks.length) throw new Error('empty-selection')
+  return { bytes: writeMp4(tracks), originSec: origin, endSec }
 }

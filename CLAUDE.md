@@ -717,6 +717,12 @@ CHANGED. Three decisions, each measured or derived rather than chosen:
   thing 216 files can disagree about and nobody can check. One traversal, not
   one per tool — asking git 216 separate questions took six minutes and this
   takes three seconds.
+  **And it now REFUSES to run in a shallow clone**, which is what a cloud
+  session gets. Git reports the boundary commit as the moment every older file
+  was added, so regenerating there rewrote **230 of 238 dates to a single day**
+  — a silent, total loss of the only thing the file holds, and one that looks
+  exactly like a correct run. Add the one new row by hand there, or
+  `git fetch --unshallow` first. Verified to fail.
 - **The row is the N NEWEST, not a date window.** Measured first: additions are
   bursty — 63 tools landed on one day and 47 on another, with single-tool days
   between — so "everything from the last 30 days" would show 63 or none
@@ -2284,6 +2290,169 @@ outside — every privacy-first converter site lists audio and we did not.
   discard quality a second time. Stating it beats looking like a missing
   feature.
 
+## Crop, join and caption a video (`video-edit`)
+
+The video family could trim, take a still, pull the sound out and make a GIF, and
+**every one of those deliberately avoids touching the picture.** Cropping,
+joining and captioning cannot: all three change what is IN the frame, so the
+frames must be decoded, redrawn and encoded again. One pipeline gives all three,
+which is why they are one tool rather than three that chain through a download.
+
+**The blocker was believed to be browser support, and the belief was WRONG for
+three years.** This file said frame-exact seeking needs `VideoDecoder`, "which
+Safari does not have", and the roadmap said "Safari has no `VideoEncoder`". Read
+from `mdn/browser-compat-data` rather than from prose or a blog — which is what
+the August sweep said to do and nobody had done:
+
+| | Chrome | Firefox | Firefox Android | Safari |
+|---|---|---|---|---|
+| `VideoEncoder` · `VideoDecoder` | 94 | 130 | **no** | **16.4** |
+| `AudioEncoder` | 94 | 130 | **no** | **26** |
+
+**The browser with none of it is Firefox on Android**, and that alone is why
+WebCodecs is "not Baseline". The general lesson is the one that let the claim
+survive: **"not Baseline" names a gap, it does not name WHICH browser** — and
+the only thing that does is the compatibility table.
+
+**The audio is COPIED, never re-encoded, and that is a measurement rather than a
+preference.** `AudioEncoder.isConfigSupported({codec:'mp4a.40.2'})` answers
+**false in Chrome on Linux** — on a browser whose video encoder works perfectly
+— because Chrome leans on a platform AAC encoder that is not there. A tool that
+re-encoded sound would therefore lose it for a whole platform. Copying the
+compressed AAC frames costs nothing, is lossless, and works wherever the file
+could be read at all. The price is real and is stated **before** the export
+rather than discovered after it: clips whose sound is stored differently cannot
+be concatenated, so that export is silent and the page says which case it is.
+
+**And joining sound is not just appending it. A TRACK'S TIMELINE IS THE SUM OF
+ITS SAMPLE DURATIONS**, not the `dts` values — `stts` stores durations and a
+player adds them up, so offsets written into the samples do nothing for audio.
+The fixture's AAC covers 6.037s against a 6.000s clip, because AAC frames are
+1024 samples and do not divide the video's length; laid end to end, every join
+pushes the sound **37ms** further ahead of the picture. One join is
+imperceptible and five is a fifth of a second, plainly out. At a join the sound
+that runs past the cut is dropped and the last surviving frame is stretched to
+land exactly on it, so the picture and the sound meet at every boundary.
+**The FINAL clip is left alone** —
+there is nothing after it to drift against, and trimming it would break the
+promise that the sound is copied untouched. Found by reading the arithmetic
+rather than by hearing it, which on a six-second fixture nobody would have.
+
+**A progressive muxer, at last** (`lib/mp4Writer.ts`). The roadmap has said since
+`video-trim` shipped that "a compressor is the point at which a progressive muxer
+stops being optional", because mp4box's `addSample` writes a moof+mdat pair PER
+SAMPLE — 1604 fragments for a 22-second clip and **no sample table at all**, so
+the output cannot be seeked or indexed. It writes one real `stts`/`stss`/`ctts`/
+`stsc`/`stsz`/`stco`, and **`video-trim` adopted it too**, so the fragmented-output
+limit recorded there for the life of that tool is gone.
+
+- **`stco` holds absolute file offsets, which depend on how big `moov` is, which
+  depends on `stco`.** Every field is fixed-width, so the table is built once
+  with zeros to MEASURE it and again with the real numbers. Estimating the size
+  instead is how a muxer ends up four bytes out on files with an odd track count.
+- **Every sample is its own chunk**, which is the simplest correct `stsc` and
+  costs 4 bytes a sample — 18KB on a ten-minute track. It also makes the
+  interleave exact: samples are laid down in decode-TIME order across tracks, not
+  in tick order, or a video at timescale 15360 and audio at 44100 do not
+  interleave at all.
+- **The codec configuration is passed through, never interpreted.** `mp4Demux`
+  slices the whole `avcC`/`esds` box verbatim out of the source using mp4box's
+  own box offsets, and `VideoEncoder` hands its record over directly. Nothing
+  here understands an SPS or an ES descriptor, and nothing has to.
+
+**`evals/mp4guard.mjs` is the gate, and it caught a real bug on its first run.**
+`ctts` is run-length encoded in (count, offset) PAIRS, exactly like `stts` — I
+wrote one bare offset per sample, so the box declared twice the bytes it
+contained and every parser read straight off the end of it. It is checked the way
+`docxguard` checks the Word writer: a real file is demuxed, re-muxed and
+**re-parsed by mp4box**, which is somebody else's implementation. Two hand-written
+implementations agreeing is weaker evidence than one being right.
+**Verified to fail**: dropping the 8-byte mdat header from the offset sum leaves
+every structural check green and turns "sample BYTES survive" from 180/180 to
+**0/180** — an offset table that is subtly wrong hands back samples of the right
+COUNT read from the wrong PLACE.
+
+**The caption is drawn on the PAGE, not in the worker**, as one `ImageBitmap`
+per caption that is composited into every frame. Three things fall out of that
+single decision:
+
+- **Arabic is shaped by the browser's own text engine**, joined and run right to
+  left, because it is drawn by the same canvas that draws the rest of the site.
+  A worker draws with whatever fonts the worker has, which on a machine with no
+  Arabic face is a row of empty boxes.
+- **The preview is not an approximation of the export, it is the export** — the
+  same bitmap, positioned by the same `captionAt`, over a frame drawn by the same
+  `drawFrame`. `compose.ts` is pure and takes a `CanvasImageSource`, so the
+  preview's `<video>` and the exporter's decoded `VideoFrame` go through one
+  function. A preview computed its own way is a preview that can lie, and you
+  only find out after the encode.
+- **Never `await document.fonts.ready` before the first draw.** That was the
+  first version and it makes a caption invisible until every font on the page has
+  resolved — tens of seconds on a slow connection, or where the font host is
+  simply unreachable. It draws at once with whatever face is loaded and again
+  when the fonts settle.
+
+**What a crop costs is the thing the tool exists to say.** 16:9 to 9:16 keeps
+`(9/16) ÷ (16/9)` of the width — **31.6% of the frame, so more than two thirds
+is thrown away** — and whatever was filmed is rarely in the middle of what is
+left, which is why every automatic re-framer decapitates somebody. The percentage
+is computed for the actual clip and the centre is dragged, or nudged with the
+arrow keys.
+
+- **The crop is an ASPECT and a CENTRE, not a rectangle.** A rectangle in
+  fractions of the frame means a different shape on a portrait clip than on a
+  landscape one, so joining two would have to squeeze one of them. An aspect plus
+  a centre gives every clip the same output shape and nothing is stretched.
+- **Output dimensions are snapped EVEN.** H.264 stores colour at half resolution
+  in each direction, so an odd width has no whole chroma sample for its last
+  column and the encoder refuses the configuration outright — which surfaces as
+  "export failed" for the entirely fixable reason that a 9:16 crop of a
+  240-tall frame is 135 wide. **And `even()` rounds before it snaps**: an aspect
+  derived by division lands on 319.9999 for a frame that is plainly 320, and
+  flooring that gives 318 — a two-pixel squeeze on a crop nobody asked to crop.
+- **It never upscales.** The output is the smallest clip's crop, capped by the
+  chosen size — upscaling adds pixels and no detail, the same honesty
+  `print-size` applies to paper.
+
+**Baseline profile, on purpose.** No B-frames means a frame is never presented
+before it is decoded, so decode order and presentation order are identical and
+the sample table cannot acquire the composition offsets that are the fiddliest
+thing in an MP4 to get right. The level is chosen from the frame size, because an
+encoder may refuse a stream that exceeds the level it was asked for.
+
+**The e2e ASKS the browser what it can do, and both answers are asserted.** This
+is not defensive coding: a Chromium built without proprietary codecs exposes
+`VideoEncoder` and has no H.264 behind it, answering `supported: false` for every
+avc1 configuration — the container this repo was developed in ships exactly such
+a build, while `npx playwright install chromium` (what CI uses) ships one that
+encodes and decodes H.264 fine. So the spec measures support and then asserts
+either the working path or the gate, and there is a case pinning that **the gate
+does NOT fire on a browser that can do the job** — a warning shown to everybody
+is the failure that branch exists to rule out.
+
+**And the measurement was wrong before the product was.** The caption case
+sampled the single row at `0.82 × height` and reported the picture getting
+BRIGHTER, while a screenshot showed the caption drawn perfectly — because that
+row is the middle of the TEXT, where the white glyphs are. Row by row: the band
+darkens rows 179–214 by ~16 and rows 189–200 brighten by up to 11. It averages
+the whole band now. Fourth time in this file that an instrument invented a defect
+the code did not have — and the cheap way out was the screenshot, not more
+reasoning.
+
+**Search: the plural is a different word, and this is the family where the plural
+IS the intent.** Only this tool takes more than one video, so `videos`, `clips`
+and — the one that matters — the Arabic DUAL «فيديوهين»/«فيديوين», which is
+simply how you say "two videos", are indexed on it. A query cannot be longer than
+the word it matches, so «فيديوهين» could never reach «فيديو» and `join two
+videos` went to **`csv-merge`**. Same trap as «كلمات» hiding «كلمة» and the
+-ise/-ize pair. Measured after: every one of the nine benches is byte-identical
+and own-names went 473/474 → **475/476**.
+
+**`crop video` came off `video-trim`.** Trimming cuts in TIME and never touches
+the frame, so the word described what that tool tolerates rather than what it
+does — the documented rule, and it was taking the query from the tool that crops
+for real.
+
 ## Taking a still out of a video (`video-frames`)
 
 No new dependency and no WebCodecs: a `<video>` element, a seek, and
@@ -2300,7 +2469,9 @@ to show you the video.
   keyframes you land a moment either side of the time you asked for. Claiming
   millisecond accuracy would be a lie; the frame is shown before it is saved so
   the choice can be nudged, and the limit is written down. Frame-exact would
-  need `VideoDecoder`, which Safari does not have.
+  need `VideoDecoder` — **which Safari has had since 16.4; that claim was wrong
+  for three years and is corrected under the video editor below.** Frame-exact
+  seeking is still unbuilt here; it is now a question of effort, not support.
 - **The filename carries the timestamp**, so several stills from one clip do not
   overwrite each other in the downloads folder.
 - Named **Video to Image**, joining the site's X-to-Y family, and deliberately

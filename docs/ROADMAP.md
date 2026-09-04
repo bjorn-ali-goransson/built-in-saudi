@@ -326,8 +326,8 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Progressive MP4 muxer for `video-trim` | The trimmer ships with fragmented output (a moof+mdat per sample). It plays, but a real muxer would make friendlier files. |
-| Video convert / re-encode | The trimmer copies samples; changing codec or size needs WebCodecs encode, which is a different tool with different honesty problems. |
+| ~~Progressive MP4 muxer for `video-trim`~~ | **Done** (Sept 2026). `lib/mp4Writer.ts` writes one real sample table; the trimmer and `video-edit` both use it, and `evals/mp4guard.mjs` re-parses the output with mp4box. |
+| ~~Video convert / re-encode~~ | **Half done** as `video-edit`, which decodes and re-encodes to crop, join and caption. A pure *compressor* — same picture, smaller file — is still unbuilt and now needs no new machinery. |
 | Collage / contact sheet | Print chassis plus image decoding, both already here. |
 | Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |
 
@@ -437,7 +437,10 @@ the Saudi-local wedge rather than in generic utilities.
 ### Media and developer, lower priority
 
 21. **Video compressor** (WebCodecs re-encode) — the honest complement to
-    `video-trim`, which deliberately never re-encodes.
+    `video-trim`, which deliberately never re-encodes. **The machinery now
+    exists**: `video-edit` already decodes, re-encodes and muxes, so a
+    compressor is that pipeline with the crop and the captions taken out and a
+    target size put in.
 22. **Audio format converter** (wav ↔ opus/mp3).
 23. **GIF → MP4**, the inverse of `video-gif`.
 24. **On-device dictation** (Web Speech API), same stance as the built-in AI
@@ -876,6 +879,11 @@ Still open, and still needing a key, in this order:
   - **Safari has no `VideoEncoder`.** The tool must detect and say so plainly,
     the way `ModelGate` does for the on-device AI — not fail obscurely on an
     iPhone.
+    **WRONG, corrected 4 Sept 2026 from MDN's compatibility data: Safari has had
+    `VideoEncoder` since 16.4.** The browser with none of it is Firefox on
+    Android. The detection was built anyway and is right to exist — a Chromium
+    compiled without proprietary codecs answers `supported: false` for every
+    avc1 configuration — but it must not name the wrong browser.
   - Audio has to be re-encoded too; check whether `AudioEncoder` offers AAC or
     only Opus, because the answer decides the output container.
   - `mp4box.addSample` writes a moof+mdat per sample (a *fragmented* MP4, ~2%
@@ -1626,6 +1634,23 @@ Two negative findings and one guard; no tool shipped, deliberately.
   `VideoDecoder` is **"not Baseline — does not work in some of the most
   widely-used browsers."** Sources disagree, so nothing was changed. Re-check
   against MDN's compatibility table, not a blog, before revisiting any of them.
+
+  **RESOLVED, 4 September 2026, and the instruction was followed: MDN's
+  compatibility DATA, not its prose and not a blog.** Read from
+  `mdn/browser-compat-data`:
+
+  | | Chrome | Firefox | Firefox Android | Safari |
+  |---|---|---|---|---|
+  | `VideoEncoder` · `VideoDecoder` | 94 | 130 | **no** | **16.4** |
+  | `AudioEncoder` | 94 | 130 | **no** | **26** |
+
+  So **"Safari does not have `VideoDecoder`" was wrong**, and had been for three
+  years — the reason WebCodecs is "not Baseline" is **Firefox on Android**, which
+  has none of it. That claim was in `video-frames`' description on the live site
+  and in the sweep note above; both are corrected. The lesson is the one this
+  file already states and the one that made the claim survive: **"not Baseline"
+  names a gap, it does not name WHICH browser**, and the only way to find out is
+  the compatibility table.
 - **Worth keeping from the research anyway:** SAMA's Consumer Financing
   Regulations Article 11(3) independently corroborates the three-month cap that
   `early-settlement` already encodes, read from the primary source rather than a

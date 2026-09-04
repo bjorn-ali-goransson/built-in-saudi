@@ -188,6 +188,7 @@ import { quizMakerTool } from './quiz-maker/meta'
 import { translateTool } from './translate/meta'
 import { summarizeTool } from './summarize/meta'
 import { videoTrimTool } from './video-trim/meta'
+import { videoEditTool } from './video-edit/meta'
 import { arabicHandwritingTool } from './arabic-handwriting/meta'
 import { xlsxConvertTool } from './xlsx-convert/meta'
 import { khatmaTool } from './khatma/meta'
@@ -257,6 +258,7 @@ export const tools: Tool[] = [
   videoAudioTool,
   audioConvertTool,
   audioSpectrumTool,
+  videoEditTool,
   videoTrimTool,
   videoGifTool,
   videoFramesTool,

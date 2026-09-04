@@ -291,6 +291,7 @@ ${TOKEN}
   { id: 'video-audio', testid: 'va-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-trim', testid: 'vt-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
+  { id: 'video-edit', testid: 've-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   // --- The last of the UNVERIFIED list except the two OCR tools, which pull
   // the tesseract models and belong in a slower pass of their own.
   { id: 'image-format-converter', testid: 'ifc-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },

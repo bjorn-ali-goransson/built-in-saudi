@@ -11,7 +11,10 @@ export const videoTrimTool: Tool = {
     'Trim an MP4 or MOV in your browser by copying its frames rather than re-encoding them — so the output is the same video at the same quality, and a half-hour recording trims in seconds instead of minutes. The start of a cut snaps to the nearest keyframe, which the tool shows you on the timeline. Nothing is uploaded.',
   category: 'Files',
   keywords: [
-    'video', 'trim', 'cut', 'clip', 'mp4', 'mov', 'shorten', 'crop video', 'lossless', 'no re-encode', 'split',
+    // NOT 'crop video': trimming cuts a clip in TIME and never touches the
+    // frame, so the word described what this tool tolerates rather than what it
+    // does — and it took the query off `video-edit`, which crops for real.
+    'video', 'trim', 'cut', 'clip', 'mp4', 'mov', 'shorten', 'lossless', 'no re-encode', 'split',
     'فيديو', 'قص', 'اقتطاع', 'مقطع', 'تقصير', 'بدون إعادة ترميز', 'دون رفع',
   ],
   status: 'beta',

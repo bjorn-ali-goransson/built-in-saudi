@@ -7,6 +7,7 @@
 //
 // Newest first, which is also the order the catalogue reads it in.
 export const ADDED: Record<string, string> = {
+  'video-edit': '2026-09-04',
   'cr-renewal': '2026-08-11',
   'doc-scan': '2026-08-11',
   'domestic-worker': '2026-08-11',

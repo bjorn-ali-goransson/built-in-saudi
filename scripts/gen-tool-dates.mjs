@@ -15,6 +15,23 @@
 import { execSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 
+// A SHALLOW CLONE CANNOT ANSWER THIS QUESTION, and it does not say so — it
+// reports the boundary commit as the moment every older file was added. Run
+// here in a cloud session with a 50-commit clone, this rewrote 230 of 238 dates
+// to one day, which is a silent, total loss of the only thing the file is for:
+// "Recently added" would have shown an arbitrary handful and the real history
+// would have been gone from git as well as from here.
+//
+// So it refuses rather than producing a plausible wrong answer — the same
+// judgement as every `check-*.mjs` in this repo, and the one thing an
+// unfaithful measurement must never do is look faithful.
+if (existsSync('.git/shallow')) {
+  console.error('gen-tool-dates: this is a SHALLOW clone, so git cannot say when older tools were added.')
+  console.error('  Every date would collapse to the clone boundary. Run `git fetch --unshallow` first,')
+  console.error('  or add the one new row to src/tools/added.ts by hand.')
+  process.exit(1)
+}
+
 const log = execSync(
   'git log --diff-filter=A --format=@%as --name-only --reverse -- src/tools',
   { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },

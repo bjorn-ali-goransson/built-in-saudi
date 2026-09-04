@@ -1,0 +1,186 @@
+// What the output frame looks like — the crop geometry and the caption
+// placement, with no canvas, no codec and no React in sight.
+//
+// IT IS PURE BECAUSE IT IS USED TWICE. The preview on the page draws from a
+// `<video>` element and the exporter draws from a decoded `VideoFrame`, and
+// both are a `CanvasImageSource`, so `drawFrame` below is called by both with
+// the same numbers. A preview computed by one set of rules and an export
+// computed by another is a preview that lies, which is the single worst thing
+// an editor can do — you would only find out after the encode.
+
+/** A rectangle in FRACTIONS of the source frame, so it survives a change of clip. */
+export interface Rect { x: number; y: number; w: number; h: number }
+
+export interface Crop {
+  /** Width ÷ height of the output. */
+  aspect: number
+  /** Where the middle of the kept rectangle sits, as a fraction of the frame. */
+  cx: number
+  cy: number
+  /** 1 keeps as much as the aspect allows; 2 keeps half the width and height. */
+  zoom: number
+}
+
+export interface Caption {
+  id: string
+  text: string
+  /** The caption's centre, as a fraction of the OUTPUT frame. */
+  x: number
+  y: number
+  /** Text size as a fraction of the output HEIGHT. */
+  size: number
+  colour: string
+  /** A band behind the text. Unreadable captions are the commonest failure. */
+  band: boolean
+  /** Seconds on the OUTPUT timeline. */
+  from: number
+  to: number
+}
+
+export interface ClipInfo {
+  name: string
+  durationSec: number
+  width: number
+  height: number
+}
+
+/**
+ * H.264 stores colour at half resolution in each direction, so a frame with an
+ * odd width or height has no whole chroma sample to put in the last row or
+ * column. Encoders answer that by refusing the configuration outright — which
+ * surfaces as "export failed" for the entirely fixable reason that a crop came
+ * out 607 pixels wide.
+ */
+export function even(n: number): number {
+  // Rounded BEFORE snapping. An aspect derived by division lands on 319.9999
+  // for a frame that is plainly 320 wide, and flooring that gives 318 — a
+  // two-pixel squeeze applied to a crop the reader asked not to be cropped.
+  const r = Math.round(n)
+  return Math.max(2, r - (r % 2))
+}
+
+/** The biggest rectangle of `aspect` that fits inside a `w`×`h` frame. */
+export function fitRect(w: number, h: number, aspect: number): { w: number; h: number } {
+  return w / h > aspect ? { w: h * aspect, h } : { w, h: w / aspect }
+}
+
+/**
+ * The crop, in the pixels of one particular clip.
+ *
+ * The crop is stored as an ASPECT and a CENTRE rather than as a rectangle,
+ * which is what makes joining clips of different shapes work: a rectangle in
+ * fractions of the frame means a different aspect ratio on a portrait clip than
+ * on a landscape one, so the two would have to be squeezed to a common size and
+ * the join would visibly distort. An aspect plus a centre gives every clip the
+ * same output shape and nothing is stretched.
+ */
+export function cropRect(clip: { width: number; height: number }, crop: Crop): Rect {
+  const fit = fitRect(clip.width, clip.height, crop.aspect)
+  const w = Math.min(clip.width, fit.w / Math.max(1, crop.zoom))
+  const h = Math.min(clip.height, fit.h / Math.max(1, crop.zoom))
+  // Clamped rather than allowed off the edge: dragging to the corner should
+  // stop at the corner, not start filling the frame with nothing.
+  const x = Math.min(Math.max(crop.cx * clip.width - w / 2, 0), clip.width - w)
+  const y = Math.min(Math.max(crop.cy * clip.height - h / 2, 0), clip.height - h)
+  return { x, y, w, h }
+}
+
+/**
+ * The share of the picture a crop keeps.
+ *
+ * This is the number the tool exists to put in front of people. Going from a
+ * 16:9 recording to a 9:16 post keeps 9/16 ÷ 16/9 of the width — **31.6% of the
+ * frame, so more than two thirds of the picture is thrown away** — and the
+ * subject is almost never in the middle of what remains. That is why every
+ * automatic re-framer decapitates somebody, and why this one asks.
+ */
+export function keptShare(clip: { width: number; height: number }, crop: Crop): number {
+  const r = cropRect(clip, crop)
+  return (r.w * r.h) / (clip.width * clip.height)
+}
+
+/**
+ * The output size: the crop, at the resolution of the SMALLEST clip that has to
+ * fill it, capped by `maxHeight`.
+ *
+ * Never larger than the source. Upscaling adds pixels and no detail, and a
+ * 1080-wide file made out of a 540-wide crop is a bigger upload that looks
+ * exactly the same — the same honesty `print-size` applies to paper.
+ */
+export function outputSize(clips: ClipInfo[], crop: Crop, maxHeight: number): { width: number; height: number } {
+  const heights = clips.map((c) => cropRect(c, crop).h)
+  const h = Math.min(maxHeight, ...(heights.length ? heights : [maxHeight]))
+  return { width: even(h * crop.aspect), height: even(h) }
+}
+
+/** Where each clip starts and ends on the joined timeline. */
+export function timeline(clips: ClipInfo[]): { start: number; end: number }[] {
+  let at = 0
+  return clips.map((c) => {
+    const start = at
+    at += c.durationSec
+    return { start, end: at }
+  })
+}
+
+export function totalDuration(clips: ClipInfo[]): number {
+  return clips.reduce((n, c) => n + c.durationSec, 0)
+}
+
+/**
+ * The items showing at `t` seconds on the output timeline.
+ *
+ * Structural rather than typed to `Caption`, because the page holds captions
+ * with text and colours and the worker holds captions that have already become
+ * bitmaps. Both are "a thing with a start and an end", and one function that
+ * takes that shape beats two that can disagree about what "showing" means.
+ */
+export function activeAt<T extends { from: number; to: number }>(items: T[], t: number): T[] {
+  return items.filter((c) => t >= c.from - 1e-6 && t < c.to)
+}
+
+/**
+ * Draw one source frame, cropped, filling the output canvas.
+ *
+ * `source` is a `<video>` in the preview and a decoded `VideoFrame` in the
+ * export. Both satisfy `CanvasImageSource`, which is the whole reason there is
+ * one function here rather than two that drift.
+ */
+export function drawFrame(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  source: CanvasImageSource,
+  clip: { width: number; height: number },
+  crop: Crop,
+  out: { width: number; height: number },
+): void {
+  const r = cropRect(clip, crop)
+  ctx.clearRect(0, 0, out.width, out.height)
+  // Rounded, because a fractional source rectangle makes the browser resample
+  // half a pixel and every frame shimmers against the next one.
+  ctx.drawImage(
+    source,
+    Math.round(r.x), Math.round(r.y), Math.round(r.w), Math.round(r.h),
+    0, 0, out.width, out.height,
+  )
+}
+
+/** Top-left corner, in output pixels, of a caption bitmap of this size. */
+export function captionAt(
+  caption: { x: number; y: number },
+  bitmap: { width: number; height: number },
+  out: { width: number; height: number },
+): { x: number; y: number } {
+  return {
+    x: Math.round(caption.x * out.width - bitmap.width / 2),
+    y: Math.round(caption.y * out.height - bitmap.height / 2),
+  }
+}
+
+/** The aspect ratios worth offering, and what each is for. */
+export const ASPECTS: { id: string; aspect: number; label: string; labelAr: string }[] = [
+  { id: 'source', aspect: 0, label: 'Original', labelAr: 'كما هو' },
+  { id: '9:16', aspect: 9 / 16, label: '9:16 Reels · TikTok · Shorts', labelAr: '٩:١٦ ريلز · تيك توك · شورتس' },
+  { id: '1:1', aspect: 1, label: '1:1 Square', labelAr: '١:١ مربّع' },
+  { id: '4:5', aspect: 4 / 5, label: '4:5 Instagram feed', labelAr: '٤:٥ منشور إنستغرام' },
+  { id: '16:9', aspect: 16 / 9, label: '16:9 YouTube · X', labelAr: '١٦:٩ يوتيوب · إكس' },
+]
