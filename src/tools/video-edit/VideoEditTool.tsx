@@ -41,6 +41,8 @@ const STR = {
     colour: 'Colour',
     band: 'Band behind the text',
     captionWhy: 'The caption is drawn once, here, with this page’s own fonts — and that same picture is laid into every frame. So Arabic joins up and runs right to left the way the browser writes it, and the preview is not an approximation of the export, it is the export.',
+    previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so the crop box and the censor boxes have no picture to aim at.`,
+    previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
     censors: 'Hide something',
     censorHint: 'Drag on the export preview to draw a box over anything you want hidden. Drag an existing box to move it.',
     modeBlock: 'Solid',
@@ -113,6 +115,8 @@ const STR = {
     colour: 'اللون',
     band: 'شريط خلف النص',
     captionWhy: 'يُرسم النص مرة واحدة هنا بخطوط هذه الصفحة نفسها، ثم تُوضع الصورة ذاتها في كل إطار. فتتصل الحروف العربية وتجري من اليمين إلى اليسار كما يكتبها المتصفح، والمعاينة ليست تقريبًا للمُخرَج بل هي المُخرَج نفسه.',
+    previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها مربّع الاقتصاص ولا مربّعات الحجب.`,
+    previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
     censors: 'إخفاء جزء',
     censorHint: 'اسحب على معاينة المُخرَج لترسم مربّعًا فوق ما تريد إخفاءه. واسحب مربّعًا موجودًا لتحريكه.',
     modeBlock: 'حجب كامل',
@@ -266,6 +270,7 @@ export default function VideoEditTool() {
   const [busy, setBusy] = useState<'' | 'read' | 'render'>('')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState('')
+  const [previewError, setPreviewError] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
   const workerRef = useRef<Worker | null>(null)
@@ -462,15 +467,24 @@ export default function VideoEditTool() {
     setError('')
     setOut(null)
     setBusy('read')
+    setPreviewError(0)
     const slot = ++slotId.current
+    // Minted BEFORE the probe, not after. The worker reads the whole file to
+    // demux it, which on a phone is seconds and a second copy of it in memory;
+    // handing the URL over first lets the browser start decoding the picture
+    // from the file directly instead of queueing behind that. It is also a side
+    // effect, so it stays out of the state updater — the same fix `removeClip`
+    // carries.
+    const url = URL.createObjectURL(f)
     const res = await ask({ kind: 'probe', slot, file: f })
     setBusy('')
     if (res.kind === 'error') {
+      URL.revokeObjectURL(url)
       setError(s.errors[res.message] ?? s.errors['not-mp4'])
       return
     }
-    if (res.kind !== 'probed') return
-    setClips((list) => [...list, { slot, file: f, url: URL.createObjectURL(f), info: res.info }])
+    if (res.kind !== 'probed') { URL.revokeObjectURL(url); return }
+    setClips((list) => [...list, { slot, file: f, url, info: res.info }])
   }
 
   function removeClip(i: number) {
@@ -699,7 +713,22 @@ export default function VideoEditTool() {
           </section>
 
           <video ref={videoRef} src={current.url} controls playsInline data-testid="ve-video"
+            onError={() => setPreviewError(videoRef.current?.error?.code ?? -1)}
+            onLoadedMetadata={() => setPreviewError(0)}
             className="w-full max-h-[34vh] rounded-md bg-black" />
+
+          {/* A preview that fails silently leaves a broken thumbnail and a black
+              canvas with nothing saying why — the dead-UI failure this repo
+              already refuses for image picks (#225). The media error CODE is
+              named because it is the one thing that distinguishes "this browser
+              cannot play this format" (4) from "it started and then failed" (3),
+              and neither is guessable from the outside. */}
+          {previewError !== 0 && (
+            <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-preview-error">
+              {s.previewFailed(previewError)}
+              {current.info.decodable ? ` ${s.previewStillExports}` : ''}
+            </p>
+          )}
 
           <div className="grid gap-3 min-[860px]:grid-cols-[1.4fr_1fr]">
             <div className="flex flex-col gap-1">

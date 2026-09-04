@@ -2486,6 +2486,33 @@ attack needing no expertise is the one to design against.
   the mode is solid. Keyframed interpolation is the obvious next step and is
   deliberately out of v1.
 
+**OPEN: a preview that will not play, reported from Android and NOT reproduced.**
+A 25-second Android screen recording (1078×654) demuxed perfectly — the clip row
+showed its real size and duration, so mp4box read it and `VideoDecoder` reported
+it decodable — and the `<video>` preview showed a broken thumbnail at 0:00 with
+the frame canvas black, because `paint` bails when `videoWidth` is 0.
+
+**Two hypotheses were tested and BOTH were wrong**, which is why the fix is
+instrumentation rather than a guess. An empty MIME type — which Android's picker
+really does hand over, and which this tool invites by carrying no `accept`
+(#225) — plays fine: driven through the real input with `mimeType: ''`, metadata
+loads and `videoWidth` is 320. And nothing in the blob-URL lifetime explains it.
+What remains untested is memory: the probe reads the whole file AND retains
+every demuxed sample per clip, which on a phone is several copies of a large
+recording, and Chrome drops media resources under pressure. Plausible, unproven,
+and not worth a redesign on a hunch.
+
+What shipped is the part that is right whatever the cause: **the failure now
+names itself.** A silent broken thumbnail is the dead-UI failure this file
+already refuses for image picks, and the media error CODE is the one fact that
+separates "cannot play this format" (4) from "started and then failed" (3) — not
+guessable from outside, and now on screen. It also says the export uses a
+different decoder and may still work, which is true and is the thing the reader
+most needs. Two smaller things went in beside it, both right on their own terms:
+the object URL is minted OUTSIDE the state updater (the fix `removeClip` already
+carried, left undone six lines away) and BEFORE the probe, so the browser starts
+on the picture rather than queueing behind a full parse.
+
 **A raw `page.mouse` drag needs its target scrolled into view, and I diagnosed
 this wrong twice before instrumenting it.** Three censor specs failed on a drag
 that plainly worked by hand. The symptom — one spec of three, then all three —

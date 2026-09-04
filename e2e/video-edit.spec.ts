@@ -402,6 +402,28 @@ test('Arabic in a caption is shaped and joined, not left as separate letters', a
   expect(shaping!.joined).toBeLessThan(shaping!.apart * 0.95)
 })
 
+test('a preview that will not play says so, with the code that identifies it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // A working clip must NOT carry the note — a warning shown to everybody is
+  // the failure this branch exists to rule out.
+  await expect(page.getByTestId('ve-preview-error')).toHaveCount(0)
+
+  // Break the element the way a browser that cannot play the file does. The
+  // real report was an Android screen recording that demuxed perfectly and left
+  // a broken thumbnail and a black canvas with nothing saying why, which is the
+  // dead-UI failure this repo already refuses for image picks.
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => {
+    v.src = 'blob:invalid-source-for-this-test'
+  })
+  await expect(page.getByTestId('ve-preview-error')).toBeVisible({ timeout: 15_000 })
+  // The CODE is the point: it is the only thing separating "cannot play this
+  // format" from "started and then failed", and it is not guessable outside.
+  await expect(page.getByTestId('ve-preview-error')).toContainText(/error \d/)
+})
+
 test('a file that is not an MP4 is refused with a reason', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
