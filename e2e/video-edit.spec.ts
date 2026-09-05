@@ -328,6 +328,37 @@ test('a corner SEGMENT sets a FREE proportion', async ({ page }) => {
   expect(size).not.toBe('320×240')
 })
 
+test('a segment moves by the DELTA, so an edge is reachable without a finger on it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+
+  // Grab the EAST segment at its middle — which is a sixth of the frame inside
+  // the edge it moves — and drag left by a tenth of the stage.
+  await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
+  const b = (await page.getByTestId('ve-stage').boundingBox())!
+  const seg = (await page.getByTestId('ve-crop-e').boundingBox())!
+  const from = { x: seg.x + seg.width / 2, y: seg.y + seg.height / 2 }
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(from.x - b.width * 0.1, from.y, { steps: 6 })
+  await page.mouse.up()
+
+  await page.getByTestId('ve-settings').click()
+  const size = (await page.getByTestId('ve-out-size').textContent()) ?? ''
+  const width = Number(/(\d+)×/.exec(size)?.[1])
+
+  // THE POINT OF THE CASE. A delta moves the right edge from 1.0 to 0.9, so
+  // 320 becomes 288. The absolute version puts the edge under the fingertip —
+  // the segment's own middle, minus the drag — which is 0.733 and 234 wide.
+  // Reaching the frame's edge would then need a finger ON the edge of the
+  // screen, in the bezel and the back-gesture strip, which is the whole
+  // complaint. The two readings are 54px apart, so this cannot pass by rounding.
+  expect(width).toBeGreaterThan(275)
+  expect(width).toBeLessThan(300)
+})
+
 test('never upscales past the source', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')

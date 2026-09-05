@@ -677,10 +677,24 @@ export default function VideoEditTool() {
    * every other mode shows the output so a fraction is of the OUTPUT. Each mode
    * only ever places things in its own space, so the two never meet.
    */
-  function at(e: React.PointerEvent) {
+  /**
+   * Where the pointer is, in fractions of the stage, WITHOUT clamping.
+   *
+   * A drag measured as a DELTA has to keep counting once the finger leaves the
+   * picture: the stage is letterboxed, so on a phone there is black either side
+   * of it that a thumb crosses long before it reaches the edge of the screen.
+   * Clamping here would silently stop the drag at the picture's border, which
+   * is the same reachability problem the delta exists to solve.
+   */
+  function atRaw(e: React.PointerEvent) {
     const r = overlayRef.current?.getBoundingClientRect()
     if (!r) return { x: 0.5, y: 0.5 }
-    return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) }
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
+  }
+
+  function at(e: React.PointerEvent) {
+    const p = atRaw(e)
+    return { x: clamp01(p.x), y: clamp01(p.y) }
   }
 
   /** A time span starting where the playhead is, clamped to the clip. */
@@ -720,11 +734,12 @@ export default function VideoEditTool() {
     // their own drags. A drag that begins OUTSIDE it moves it, which is the
     // gesture people try first on a picture with a frame on it.
     if (mode === 'crop') {
+      const raw = atRaw(e)
       dragRef.current = {
         kind: 'crop-seg',
         id: 'move',
-        px: p.x,
-        py: p.y,
+        px: raw.x,
+        py: raw.y,
         rect: { x0: cropBox.x, y0: cropBox.y, x1: cropBox.x + cropBox.w, y1: cropBox.y + cropBox.h },
       }
     }
@@ -734,27 +749,35 @@ export default function VideoEditTool() {
     const d = dragRef.current
     if (!d || !current) return
     const p = at(e)
+    const pr = atRaw(e)
     if (d.kind === 'crop-seg') {
-      // Every segment is the same gesture with a different set of edges
-      // following the pointer, so there is one piece of arithmetic rather than
-      // nine. The middle cell moves the whole rectangle, which is the drag the
-      // stage used to own outright.
+      // EVERY segment moves by the DELTA from where the finger went down, never
+      // to where the finger IS — the middle one and the eight that resize alike,
+      // so there is one piece of arithmetic rather than nine.
+      //
+      // The absolute version puts the edge under your fingertip, which means
+      // reaching the frame's edge requires putting a finger ON the edge of the
+      // screen — into the bezel and the back-gesture strip, on the device this
+      // tool is most used from. A segment is a THIRD of the rectangle, so a
+      // delta keeps whatever offset you grabbed it at and the edge arrives
+      // while the finger is still comfortably inside the picture. It is also
+      // the only version that does not jump the moment you touch a segment
+      // anywhere but on its own boundary.
       const r = { ...d.rect }
-      const px = clamp01(p.x), py = clamp01(p.y)
+      const dx = pr.x - d.px, dy = pr.y - d.py
       if (d.id === 'move') {
-        // By the DELTA from where the finger went down, not to where it is.
-        // Centring the rectangle on the pointer makes it jump the moment you
-        // touch it anywhere but its exact middle.
         const w = r.x1 - r.x0, h = r.y1 - r.y0
-        const cx = Math.min(Math.max((r.x0 + r.x1) / 2 + (px - d.px), w / 2), 1 - w / 2)
-        const cy = Math.min(Math.max((r.y0 + r.y1) / 2 + (py - d.py), h / 2), 1 - h / 2)
+        const cx = Math.min(Math.max((r.x0 + r.x1) / 2 + dx, w / 2), 1 - w / 2)
+        const cy = Math.min(Math.max((r.y0 + r.y1) / 2 + dy, h / 2), 1 - h / 2)
         r.x0 = cx - w / 2; r.x1 = cx + w / 2
         r.y0 = cy - h / 2; r.y1 = cy + h / 2
       } else {
-        if (d.id.includes('n')) r.y0 = py
-        if (d.id.includes('s')) r.y1 = py
-        if (d.id.includes('w')) r.x0 = px
-        if (d.id.includes('e')) r.x1 = px
+        // Clamped on the RESULT rather than on the pointer: the rectangle may
+        // not leave the picture, and the finger may.
+        if (d.id.includes('n')) r.y0 = clamp01(d.rect.y0 + dy)
+        if (d.id.includes('s')) r.y1 = clamp01(d.rect.y1 + dy)
+        if (d.id.includes('w')) r.x0 = clamp01(d.rect.x0 + dx)
+        if (d.id.includes('e')) r.x1 = clamp01(d.rect.x1 + dx)
       }
       const x0 = Math.min(r.x0, r.x1), x1 = Math.max(r.x0, r.x1)
       const y0 = Math.min(r.y0, r.y1), y1 = Math.max(r.y0, r.y1)
@@ -1204,7 +1227,7 @@ export default function VideoEditTool() {
                       onPointerDown={(e) => {
                         e.stopPropagation()
                         overlayRef.current?.setPointerCapture(e.pointerId)
-                        const q = at(e)
+                        const q = atRaw(e)
                         dragRef.current = {
                           kind: 'crop-seg',
                           id: seg.id,

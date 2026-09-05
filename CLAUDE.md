@@ -2759,6 +2759,22 @@ on the caption, arriving one control later.
   between them are the rule-of-thirds guides a camera draws, so the thing you
   resize with is the thing you compose against. A 14px square is smaller than a
   fingertip; a third of a rectangle is not.
+- **And EVERY segment moves by the pointer's DELTA, never to where the pointer
+  IS.** The middle cell was written that way from the start and the eight that
+  resize were not, which was reported from a phone as the edges being hard to
+  reach — correctly, and the mechanism is worth keeping: the absolute version
+  puts the edge under the fingertip, so getting the frame's edge to 0 needs a
+  finger ON the edge of the screen, in the bezel and the back-gesture strip. A
+  segment is a THIRD of the rectangle, so a delta keeps whatever offset you
+  grabbed it at and the edge arrives while the finger is still inside the
+  picture. Two details: the grab point and the move are both read UNCLAMPED
+  (`atRaw`), because the stage is letterboxed and a thumb crosses the black long
+  before the screen ends — clamping the pointer would stop the drag at the
+  picture's border, which is the same reachability problem one level in — and
+  the clamp moves onto the RESULT, since the rectangle may not leave the picture
+  and the finger may. **Verified to fail**: restoring the absolute version
+  reddens the new case and NO other, which is the point — the four existing crop
+  cases drag from a segment's centre and pass either way.
 - **The crop chips moved off the bottom of the picture**, and that was a bug
   rather than taste: the floating bar sat on top of the crop rectangle's lower
   third, so the corner segment could not be dragged at all. Found with
