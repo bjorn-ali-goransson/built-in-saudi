@@ -217,7 +217,7 @@ test('the tool buttons switch which controls the picture carries', async ({ page
   await expect(page.getByTestId('ve-censor-hint')).toBeVisible()
 
   await page.getByTestId('ve-mode-text').click()
-  await expect(page.getByTestId('ve-text-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-caption-hint')).toBeVisible()
   await expect(page.getByTestId('ve-censor-bar')).toHaveCount(0)
 
   // Settings are a full screen, not a fifth pill: on a phone that row was wider
@@ -229,7 +229,7 @@ test('the tool buttons switch which controls the picture carries', async ({ page
   await expect(page.getByTestId('ve-height')).toBeVisible()
   await page.getByTestId('ve-settings-close').click()
   await expect(page.getByTestId('ve-settings-panel')).toHaveCount(0)
-  await expect(page.getByTestId('ve-text-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-caption-hint')).toBeVisible()
 })
 
 /** The stage canvas's own aspect ratio — what shape is being shown right now. */
@@ -299,7 +299,7 @@ test('the output size follows the shape, and comes back EVEN', async ({ page }) 
   await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
 })
 
-test('a corner handle sets a FREE proportion', async ({ page }) => {
+test('a corner SEGMENT sets a FREE proportion', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -310,9 +310,9 @@ test('a corner handle sets a FREE proportion', async ({ page }) => {
   // already on is a control that does nothing.
   await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
 
-  // Pull the bottom-right corner in. The stage keeps showing the WHOLE clip in
-  // crop mode, so what changes is the output — which is what the shape of the
-  // crop decides.
+  // Drag the bottom-right SEGMENT in — a ninth of the rectangle rather than a
+  // 14px square, which is the whole reason the squares are gone. The stage
+  // keeps showing the WHOLE clip in crop mode, so what changes is the output.
   await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
   const b = (await page.getByTestId('ve-stage').boundingBox())!
   const handle = (await page.getByTestId('ve-crop-se').boundingBox())!
@@ -418,6 +418,45 @@ function meanOf(page: Page, r: [number, number, number, number]) {
   }, r)
 }
 
+/**
+ * How many DISTINCT colours a region holds.
+ *
+ * The observable had to change when solid did: a mosaic is the average of what
+ * was there, so brightness is roughly preserved and "the region went black" no
+ * longer describes anything the tool does. What a mosaic destroys is the count
+ * of different values — a region of real picture holds hundreds, and one made
+ * of a handful of flat squares holds a handful. Quantised to 5 bits a channel
+ * so codec noise between two decodes of the same frame cannot inflate it.
+ */
+/**
+ * The band of this fixture that has DETAIL in it.
+ *
+ * The rest is flat colour bars, and a mosaic of a flat bar is that same flat
+ * bar — so a censor drawn there is undetectable however hard you look. These
+ * cases read black boxes before, which hid that. Kept above the bottom bar,
+ * which overlays the stage and would swallow the drag.
+ */
+const GRAD: [number, number, number, number] = [0.35, 0.73, 0.55, 0.81]
+
+/** The rows a caption drawn at 0.76–0.88 occupies. */
+const BAND: [number, number, number, number] = [0, 0.74, 1, 0.9]
+
+function coloursIn(page: Page, r: [number, number, number, number]) {
+  return page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement, box) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return -1
+    const x = Math.round(box[0] * c.width), y = Math.round(box[1] * c.height)
+    const w = Math.max(1, Math.round((box[2] - box[0]) * c.width))
+    const h = Math.max(1, Math.round((box[3] - box[1]) * c.height))
+    const px = ctx.getImageData(x, y, w, h).data
+    const seen = new Set<number>()
+    for (let i = 0; i < px.length; i += 4) {
+      seen.add(((px[i] >> 3) << 10) | ((px[i + 1] >> 3) << 5) | (px[i + 2] >> 3))
+    }
+    return seen.size
+  }, r)
+}
+
 test('a caption is drawn into the picture, and only while it is showing', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
@@ -434,30 +473,29 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   // slightly UP while a screenshot showed the caption drawn perfectly. Row by
   // row: the band darkens rows 179–214 by ~16, and rows 189–200 brighten by up
   // to 11 because that is where the letters are.
-  const bandMean = () => meanOf(page, [0, 0.74, 1, 0.9])
-
   await seek(page, 1)
-  await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(0)
-  const before = await bandMean()
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(0)
+  const before = await coloursIn(page, BAND)
 
   await page.getByTestId('ve-mode-text').click()
   await drawBox(page, [0.1, 0.76], [0.9, 0.88])
-  // Drawing a box opens the editor straight away: an empty caption draws
-  // nothing, so a new one that did not ask for its words is a rectangle with
-  // no way in.
-  await expect(page.getByTestId('ve-caption-editor')).toBeVisible()
-  await page.getByTestId('ve-caption-text').fill('HELLO')
-  await page.getByTestId('ve-caption-done').click()
+  // Drawing it selects it, and a selected caption carries a transparent field
+  // over the box — so the caret is already where the words will land. There is
+  // no dialog to open and none to close.
+  await page.getByTestId('ve-caption-text-0').fill('HELLO')
 
-  // The band plus the text darkens those rows noticeably.
-  await expect.poll(bandMean, { timeout: 15_000 }).toBeLessThan(before - 4)
+  // Counted in COLOURS rather than brightness, because the band went with the
+  // options panel: white glyphs and their dark outline ADD values to a flat
+  // bar, where a dark band used to subtract light from it. Asserting the mean
+  // still fell would be asserting a band nothing draws any more.
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(before + 2)
 
   // And it is STILL there at the far end of the clip. A caption runs the whole
   // video now — the span was two number fields most people never touched, and
   // a caption that stops halfway is a defect far more often than a choice — so
   // this is the property that replaced "it goes when its window closes".
   await seek(page, 5.5)
-  await expect.poll(bandMean, { timeout: 15_000 }).toBeLessThan(before - 4)
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(before + 2)
 })
 
 test('a caption is a drawn box, and can be removed again', async ({ page }) => {
@@ -471,16 +509,15 @@ test('a caption is a drawn box, and can be removed again', async ({ page }) => {
   await expect(page.getByTestId('ve-caption-hint')).toBeVisible()
 
   await drawBox(page, [0.15, 0.7], [0.85, 0.9])
-  await page.getByTestId('ve-caption-text').fill('HELLO')
-  await page.getByTestId('ve-caption-done').click()
+  await page.getByTestId('ve-caption-text-0').fill('HELLO')
   await expect(page.getByTestId('ve-caption-box-0')).toBeVisible()
 
   await page.getByTestId('ve-caption-box-0-delete').click()
   await expect(page.getByTestId('ve-caption-box-0')).toHaveCount(0)
-  await expect(page.getByTestId('ve-caption-edit')).toHaveCount(0)
+  await expect(page.getByTestId('ve-caption-text-0')).toHaveCount(0)
 })
 
-test('clicking a selected caption a second time opens its editor', async ({ page }) => {
+test('a caption is typed onto the picture, and its colour lives on the box', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -488,27 +525,23 @@ test('clicking a selected caption a second time opens its editor', async ({ page
   await page.getByTestId('ve-mode-text').click()
 
   await drawBox(page, [0.15, 0.6], [0.85, 0.85])
-  await page.getByTestId('ve-caption-text').fill('HELLO')
-  await page.getByTestId('ve-caption-done').click()
-  await expect(page.getByTestId('ve-caption-editor')).toHaveCount(0)
+  // The field is ON the box, in the colour and roughly the size the canvas
+  // will draw — not in a dialog somewhere else. Fidelity is approximate on
+  // purpose; being in the right PLACE is the point.
+  const field = page.getByTestId('ve-caption-text-0')
+  await expect(field).toBeVisible()
+  await field.fill('HELLO')
+  await expect(field).toHaveValue('HELLO')
 
-  // The box is still selected from being drawn, so ONE click is the second
-  // one: it opens the words rather than merely re-selecting what is already
-  // selected. Without this the only way back to the text was a control on the
-  // bar, a long way from the thing it changes.
-  await page.getByTestId('ve-caption-box-0').click()
-  await expect(page.getByTestId('ve-caption-editor')).toBeVisible()
-  await expect(page.getByTestId('ve-caption-text')).toHaveValue('HELLO')
-  await page.getByTestId('ve-caption-done').click()
+  // Everything a caption has is on the caption: the bin, the resize grip and
+  // the colour well, one per corner. There is no bar along the bottom.
+  await expect(page.getByTestId('ve-caption-colour-0')).toBeVisible()
+  await expect(page.getByTestId('ve-text-bar')).toHaveCount(0)
 
-  // And the words survive a DRAG, which must not be read as a click — without
-  // that separation a selected box could no longer be moved at all.
-  const box = (await page.getByTestId('ve-caption-box-0').boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 30, { steps: 5 })
-  await page.mouse.up()
-  await expect(page.getByTestId('ve-caption-editor')).toHaveCount(0)
+  // Deselecting takes the field away — the words stay in the picture, which is
+  // where they were typed.
+  await page.getByTestId('ve-mode-crop').click()
+  await expect(page.getByTestId('ve-caption-text-0')).toHaveCount(0)
 })
 
 /**
@@ -553,28 +586,36 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await page.getByTestId('ve-aspect-source').click()
   await seek(page, 1)
 
-  const REGION: [number, number, number, number] = [0.3, 0.3, 0.6, 0.6]
-  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
-  const before = await meanOf(page, REGION)
+  // OVER THE GRADIENT, and that is the whole design of this case. The fixture
+  // is mostly flat colour bars, and a mosaic of a flat bar is that same flat
+  // bar — so the region these cases used to read cannot show that a mosaic
+  // happened at all. It worked before only because Solid painted it black.
+  // The gradient band is the part of this fixture with detail in it, which is
+  // the thing a mosaic destroys.
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const before = await coloursIn(page, GRAD)
 
   await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
   // Drawing it selects it, which is what puts its controls on the bar.
   await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
+  await page.getByTestId('ve-censor-from').fill('0')
+  await page.getByTestId('ve-censor-to').fill('6')
 
-  // Pixelate is the default, so the region keeps roughly its brightness — a
-  // mosaic is the average of what was there. Solid would read near zero.
-  await page.getByTestId('ve-censor-block').click()
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
+  // Measured: 77 distinct colours become 8. The blocks are a fraction of the
+  // frame, so a region of real picture collapses to a handful of flat squares.
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(before / 4)
   // And the rest of the frame is untouched — without this the case would pass
-  // against a tool that blacked out everything.
-  expect(await meanOf(page, [0.0, 0.0, 0.15, 0.15])).toBeGreaterThan(10)
+  // against a tool that mosaiced everything.
+  expect(await meanOf(page, [0.0, 0.0, 0.15, 0.15])).toBeLessThan(20)
+  expect(await meanOf(page, [0.3, 0.3, 0.6, 0.6])).toBeGreaterThan(100)
 
-  // It ends when its window ends. The box defaults to a 3s span from t=1.
+  // It ends when its window ends. Captions run the whole clip now; a box does
+  // not, because hiding something for part of a clip is the ordinary case.
   await page.getByTestId('ve-censor-to').fill('1.5')
   await seek(page, 4)
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
 })
 
 test('a selected box can be deleted', async ({ page }) => {
@@ -583,18 +624,18 @@ test('a selected box can be deleted', async ({ page }) => {
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
   await seek(page, 1)
-  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const before = await coloursIn(page, GRAD)
 
   await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await page.getByTestId('ve-censor-block').click()
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(before / 4)
 
   await page.getByTestId('ve-box-0-delete').click()
   await expect(page.getByTestId('ve-box-0')).toHaveCount(0)
   // The picture comes back — a delete that only removed the handle would leave
   // the censor burnt into every frame with no way to reach it.
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
   await expect(page.getByTestId('ve-censor-hint')).toBeVisible()
 })
 
@@ -607,8 +648,8 @@ test('a box outside its own span is still reachable', async ({ page }) => {
   await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
 
   await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await page.getByTestId('ve-censor-block').click()
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await page.getByTestId('ve-censor-from').fill('0')
   await page.getByTestId('ve-censor-to').fill('1.5')
 
   // Scrub past the end of its span. Drawing only the boxes showing at this
@@ -616,57 +657,61 @@ test('a box outside its own span is still reachable', async ({ page }) => {
   // the one whose span you need to widen, and guessing where it was is not a
   // recovery. The handle stays, drawn faintly.
   await seek(page, 4)
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
   await page.getByTestId('ve-box-0').click()
   await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
   // And widening it brings the censor back over the frame on screen.
   await page.getByTestId('ve-censor-to').fill('6')
-  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(20)
 })
 
-test('the recoverable default says what it costs, and solid clears the warning', async ({ page }) => {
+test('what a mosaic costs is on the box, behind its own "i"', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+
+  // NOT standing on the page. It used to be a paragraph under every censor,
+  // which is the caveat-shown-to-everybody this repo already refuses — and it
+  // is exactly the text somebody needs at the moment they wonder, which is
+  // when they are looking at the box.
+  await expect(page.getByTestId('ve-censor-why')).toHaveCount(0)
+
+  await page.getByTestId('ve-box-0-info').click()
+  await expect(page.getByTestId('ve-censor-why')).toBeVisible()
+  // The measured figure, not a vague warning. Without this the case would pass
+  // against a panel that said "be careful".
+  await expect(page.getByTestId('ve-censor-why')).toContainText('98.6%')
+
+  await page.getByTestId('ve-censor-why-close').click()
+  await expect(page.getByTestId('ve-censor-why')).toHaveCount(0)
+})
+
+test('a mosaic throws away detail and KEEPS the light, which is what it costs', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
   await seek(page, 1)
-  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
-  await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-
-  // The default is now PIXELATE — a black rectangle read as "pixelation is not
-  // implemented, here is the fallback" — so the measured cost of that choice
-  // has to be on screen from the moment a box exists.
-  await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
-  await expect(page.getByTestId('ve-censor-warning')).toContainText('98.6%')
-
-  // And it must GO when the mode that actually removes the information is
-  // chosen, without which the warning would be decoration on every censor.
-  await page.getByTestId('ve-censor-block').click()
-  await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
-
-  await page.getByTestId('ve-censor-pixelate').click()
-  await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
-})
-
-test('pixelating keeps the colours it is hiding, which is what it costs', async ({ page }) => {
-  await load(page)
-  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await pick(page)
-  await page.getByTestId('ve-aspect-source').click()
-  await seek(page, 1)
-  const REGION: [number, number, number, number] = [0.35, 0.35, 0.55, 0.55]
-  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
-  const before = await meanOf(page, REGION)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const colours = await coloursIn(page, GRAD)
+  const light = await meanOf(page, GRAD)
 
   await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await page.getByTestId('ve-censor-from').fill('0')
+  await page.getByTestId('ve-censor-to').fill('6')
 
-  // A mosaic is the AVERAGE of what was there, so the region keeps roughly its
-  // brightness — the visual difference from a solid box, and the reason the
-  // information is still in the file.
-  await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
+  // Both halves, because each alone is satisfied by something wrong. The
+  // detail goes — 77 distinct colours down to 8, measured — while the light
+  // stays, because a mosaic is the AVERAGE of what was there. That average IS
+  // the information still sitting in the file, which is what the "i" says.
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(colours / 4)
+  expect(await meanOf(page, GRAD)).toBeGreaterThan(light * 0.8)
+  expect(await meanOf(page, GRAD)).toBeLessThan(light * 1.2)
 })
 
 test('the censor is burnt into the exported file, not just the stage', async ({ page }) => {
@@ -678,8 +723,7 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
   await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
 
   await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await page.getByTestId('ve-censor-block').click()
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
   // Cover the whole clip: the default span is 3s and the fixture is 6s.
   await page.getByTestId('ve-censor-from').fill('0')
   await page.getByTestId('ve-censor-to').fill('6')
@@ -691,7 +735,7 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
   // "drawn on screen" from "encoded into the video", and the whole point of a
   // redaction is that it survives into the file somebody else opens.
   const href = await page.getByTestId('ve-download').getAttribute('href')
-  const mean = await page.evaluate((url) => new Promise<number>((resolve, reject) => {
+  const colours = await page.evaluate((url) => new Promise<{ hidden: number; control: number }>((resolve, reject) => {
     const v = document.createElement('video')
     v.preload = 'auto'
     const read = () => {
@@ -701,13 +745,26 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
       const ctx = c.getContext('2d')
       if (!ctx) return reject(new Error('no ctx'))
       ctx.drawImage(v, 0, 0)
-      const px = ctx.getImageData(
-        Math.round(c.width * 0.35), Math.round(c.height * 0.35),
-        Math.round(c.width * 0.2), Math.round(c.height * 0.2),
-      ).data
-      let sum = 0
-      for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
-      resolve(sum / (px.length / 4))
+      // Five bits a channel, the same quantiser the stage helper uses — and
+      // that was MEASURED rather than assumed. Four bits, chosen to be safe
+      // against codec noise, is too coarse to separate the two: it reads 24
+      // against 30, where five bits reads 32 against 75.
+      const count = (fx: number) => {
+        const px = ctx.getImageData(
+          Math.round(c.width * fx), Math.round(c.height * 0.73),
+          Math.round(c.width * 0.2), Math.round(c.height * 0.08),
+        ).data
+        const seen = new Set<number>()
+        for (let i = 0; i < px.length; i += 4) {
+          seen.add(((px[i] >> 3) << 10) | ((px[i + 1] >> 3) << 5) | (px[i + 2] >> 3))
+        }
+        return seen.size
+      }
+      // The box covered x 0.3–0.6, so the SAME band at x 0.62 is uncensored
+      // gradient in the SAME encoded frame — same codec, same quantiser, same
+      // row of pixels. That is the control, and it is what makes this a
+      // comparison rather than a threshold somebody picked.
+      resolve({ hidden: count(0.35), control: count(0.62) })
     }
     v.addEventListener('seeked', read, { once: true })
     v.addEventListener('loadedmetadata', () => { v.currentTime = 2 }, { once: true })
@@ -715,9 +772,13 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
     setTimeout(() => reject(new Error('timeout')), 20_000)
     v.src = url!
   }), href)
-  // Black in the encoded frame. H.264 is lossy, so this is "near black" rather
-  // than exactly zero.
-  expect(mean).toBeLessThan(12)
+  // The censored half of the band arrives as a few flat squares; the half
+  // beside it keeps the spread of colours the gradient holds. Solid's "near
+  // black" reading went with solid, so the property asserted is the one a
+  // mosaic actually has — and the control is what stops a codec that flattened
+  // everything from passing this.
+  expect(colours.control).toBeGreaterThan(50)
+  expect(colours.hidden).toBeLessThan(colours.control / 2)
 })
 
 test('Arabic in a caption is shaped and joined, not left as separate letters', async ({ page }) => {

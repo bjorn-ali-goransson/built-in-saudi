@@ -50,24 +50,32 @@ export interface Caption {
 }
 
 /**
- * How a region is hidden.
+ * How a region is hidden: a COARSE MOSAIC, and only that.
  *
- * `block` is the default and the only one that actually removes the
- * information. The other two discard RESOLUTION — which is the same operation
- * with the smoothing turned on or off — and resolution is recoverable from a
- * video in a way it is not from a still.
+ * There used to be three modes — solid, pixelate, blur — and solid was the only
+ * one that removed anything. `node evals/pixelleak.mjs` measures why: the
+ * mosaic grid stays fixed to the FRAME while the subject moves through it, so
+ * every frame samples the same picture on a differently-aligned grid and each
+ * one is a fresh set of constraints on the same pixels. Textbook
+ * back-projection, no libraries, recovers **98.6% of a pixelated number plate
+ * from 64 frames — 2.1 seconds at 30fps** — against 68.3% from one frame, which
+ * is the score a blank guess gets. The control is the load-bearing half: a
+ * STATIC subject stays at 68.3% however many frames you have, so the leak comes
+ * from motion rather than from the reconstruction being clever.
  *
- * Measured, `node evals/pixelleak.mjs`: the mosaic grid is fixed to the FRAME
- * while the subject moves through it, so every frame samples the same picture
- * on a differently-aligned grid and each one is a fresh set of constraints on
- * the same pixels. Textbook back-projection, no libraries, recovers **98.6% of
- * a pixelated number plate from 64 frames — 2.1 seconds at 30fps** — against
- * 68.3% from one frame, which is the score a blank guess gets. The control is
- * the load-bearing half: a STATIC subject stays at 68.3% however many frames
- * you have, so the leak comes from motion and not from the reconstruction being
- * clever. The subject worth hiding is the one that moves.
+ * That measurement now sits behind the box's own "i" rather than deciding what
+ * the tool offers. **The mitigation left in the code is the BLOCK SIZE**: it is
+ * a fraction of the frame rather than a fixed number of pixels, so a small box
+ * collapses to one or two averaged squares — which is a solid box in all but
+ * name — and a large one is coarse enough that what it hides is not legible at
+ * a glance. A fine mosaic reads as a face; this does not.
+ *
+ * The size being a FRACTION is also what keeps the promise this file is built
+ * on. The stage draws at preview size and the exporter at output size, so a
+ * block counted in pixels was literally a different mosaic in the two — the
+ * preview showing something the export would not produce, which is the one
+ * thing this architecture exists to prevent.
  */
-export type CensorMode = 'block' | 'pixelate' | 'blur'
 
 export interface Censor {
   id: string
@@ -76,7 +84,6 @@ export interface Censor {
   y: number
   w: number
   h: number
-  mode: CensorMode
   /** Seconds on the OUTPUT timeline. */
   from: number
   to: number
@@ -221,13 +228,12 @@ let scratch: OffscreenCanvas | null = null
 /**
  * Hide the regions showing at `t`, drawing over the frame already on `ctx`.
  *
- * PIXELATE AND BLUR ARE THE SAME OPERATION — scale the region down and back up,
- * with the smoothing off for hard blocks and on for a soft one. Doing it this
- * way rather than through `ctx.filter` is deliberate: `filter` is not on every
- * engine this tool otherwise runs on, and a blur that silently does nothing is
- * far worse than a blur that looks slightly cruder, because what it silently
- * fails to do is hide somebody's face. This runs identically everywhere, which
- * is also what keeps the preview and the export the same pixels.
+ * Scale the region down and straight back up with the smoothing OFF, rather
+ * than reaching for `ctx.filter`: that is not on every engine this tool
+ * otherwise runs on, and a blur that silently does nothing is far worse than a
+ * crude one, because what it silently fails to do is hide somebody's face.
+ * This runs identically everywhere, which is also what keeps the preview and
+ * the export the same pixels.
  */
 export function applyCensors(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -242,20 +248,12 @@ export function applyCensors(
     const h = Math.round(c.h * out.height)
     if (w < 2 || h < 2) continue
 
-    if (c.mode === 'block') {
-      ctx.fillStyle = '#000'
-      ctx.fillRect(x, y, w, h)
-      continue
-    }
-
-    // How much resolution to throw away. Blur goes coarser because the
-    // smoothing hides the blockiness, and a soft patch that still reads as a
-    // face is the failure people do not notice.
-    // Coarse on purpose. A fine mosaic still reads as a face at a glance — and
-    // at preview size it barely reads as censored at all, which is the state a
-    // reader is deciding from. Bigger blocks also throw more away, though the
-    // measurement above is why that is not a substitute for a solid box.
-    const block = c.mode === 'pixelate' ? 22 : 30
+    // A FRACTION of the frame, never a pixel count. The stage draws at preview
+    // size and the exporter at output size, so a fixed block was a different
+    // mosaic in each — the preview showing a coarseness the export would not
+    // produce. Big, because a fine mosaic still reads as a face at a glance and
+    // the size is the only mitigation left now that solid is gone.
+    const block = Math.max(4, Math.round(out.height / 16))
     const tw = Math.max(1, Math.round(w / block))
     const th = Math.max(1, Math.round(h / block))
     if (!scratch) scratch = new OffscreenCanvas(tw, th)
@@ -263,10 +261,11 @@ export function applyCensors(
     scratch.height = th
     const sctx = scratch.getContext('2d')
     if (!sctx) continue
-    const smooth = c.mode === 'blur'
-    sctx.imageSmoothingEnabled = smooth
+    // Hard squares, both ways. Smoothing here would soften the edges into
+    // something that reads as "slightly out of focus" rather than as hidden.
+    sctx.imageSmoothingEnabled = false
     sctx.drawImage(ctx.canvas, x, y, w, h, 0, 0, tw, th)
-    ctx.imageSmoothingEnabled = smooth
+    ctx.imageSmoothingEnabled = false
     ctx.drawImage(scratch, 0, 0, tw, th, x, y, w, h)
     ctx.imageSmoothingEnabled = true
   }

@@ -2552,6 +2552,69 @@ an English caption typed on the Arabic side of the site used to lay out
 right-to-left in the box while the picture drew it left-to-right, so the field
 disagreed with the result it was producing.
 
+**A fifth pass took the panels off the picture entirely, and the biggest change
+is one this file argued the other way about.**
+
+- **THERE IS ONE WAY OF HIDING NOW: a coarse mosaic.** Solid and blur are gone.
+  The measurement below stands — solid was the only mode that removed anything
+  — so what it bought is replaced rather than dropped: `applyCensors` scales
+  the block to a FRACTION of the frame, which makes a small box collapse to one
+  or two averaged squares, a solid box in all but name. **The fraction also
+  fixed a real defect**: the block was a pixel count, and the stage draws at
+  preview size while the exporter draws at output size, so the preview was
+  showing a mosaic the export would not produce — in the one file whose entire
+  job is that those two agree.
+- **What the measurement says is behind the box's own "i".** It was a paragraph
+  under every censor, which is the caveat-shown-to-everybody this file already
+  refuses; it is now one tap from the box it is about, next to the bin.
+- **The crop rectangle is NINE SEGMENTS and has no handle squares.** The middle
+  moves it, an edge moves that edge, a corner moves both — and the lines
+  between them are the rule-of-thirds guides a camera draws, so the thing you
+  resize with is the thing you compose against. A 14px square is smaller than a
+  fingertip; a third of a rectangle is not.
+- **The crop chips moved off the bottom of the picture**, and that was a bug
+  rather than taste: the floating bar sat on top of the crop rectangle's lower
+  third, so the corner segment could not be dragged at all. Found with
+  `elementFromPoint`, which returned the bar where the segment should have
+  been — **a control that is behind another control is not a control, and only
+  a hit test says so.**
+- **A caption is typed ONTO THE PICTURE.** A transparent textarea sits exactly
+  over the box in the colour and roughly the size the canvas will draw. It is
+  not pixel-perfect and does not need to be; what it buys is that "click once
+  to select, again to edit" costs no rule at all — the first click lands on the
+  box, the next lands in the field. The modal is gone, the options bar is gone,
+  and the colour is a well in the box's SW corner opposite the bin.
+- **The box is the size control.** With no slider, a caption whose text stayed
+  put while its rectangle grew would be a resize doing half of what it looks
+  like it is doing. The band went with the bar: the outline `renderCaption`
+  already strokes is what keeps white text readable, and a dark bar behind
+  every caption is a lower-third rather than a caption.
+- **The stage CONTAINS, it does not stretch.** It was `aspectRatio` on the
+  wrapper with `height: 100%` and `maxWidth: 100%` — and when the width cap bit,
+  the height did not follow, so the wrapper stopped matching the ratio it
+  declared and the canvas was squashed to fill it. A canvas carries its own
+  intrinsic size, so two max constraints and nothing else IS "contain".
+
+**Three assertions had to change, and each one was measuring the thing that
+went away rather than the thing the tool does.** "The region goes near black"
+described Solid; "the band darkens those rows" described a band nothing draws.
+The replacement is `coloursIn` — **how many DISTINCT values a region holds** —
+which is what a mosaic actually destroys and what glyphs actually add.
+Measured on the stage: the fixture's gradient band goes **77 colours → 8**
+while its mean brightness barely moves, because a mosaic is the average of what
+was there. **And the fixture nearly made this untestable**: it is mostly flat
+colour bars, and a mosaic of a flat bar is that same flat bar, so the region
+these cases used to read cannot show that a mosaic happened at all — it worked
+only because Solid painted it black. The cases moved to the one band with
+detail in it. **A fixture has to contain the hard case**, for the third time in
+this file.
+
+The export case gets an **internal control** rather than a threshold: the box
+covers half the gradient band, so the other half is uncensored gradient in the
+SAME encoded frame — same codec, same quantiser, same rows. 32 against 75. The
+quantiser was measured too: four bits a channel, picked to be safe against
+codec noise, reads 24 against 30 and cannot separate them.
+
 **PIXELATE IS NOW THE DEFAULT, reversing the measured decision above, and the
 reason is the one thing `pixelleak.mjs` could not measure.** The finding stands:
 a mosaic gives a moving subject back, 98.6% of a number plate from 64 frames,
