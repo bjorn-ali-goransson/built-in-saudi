@@ -2735,6 +2735,74 @@ is one this file argued the other way about.**
   paragraph under every censor, which is the caveat-shown-to-everybody this file
   already refuses.
 
+**A censor is KEYFRAMED now, and the limit this file recorded as "deliberately
+out of v1" is gone.** `Key` and `boxAt` in `compose.ts`; a box holds a list of
+positions sorted by time, and the rectangle at any moment is the tween between
+the two either side of it. Four decisions:
+
+- **Interpolated in `compose.ts`, not in the page.** That module is pure
+  *because* it is used twice, and a tween computed in the preview against a
+  tween computed in the worker is two opinions about where somebody's face was.
+  The export followed for free — `render.worker.ts` passes `plan.censors` to
+  `applyCensors` and needed no change at all.
+- **The DRAG writes the key.** There is no mode to enter and nothing to arm:
+  moving or resizing a box at time *t* replaces the key at *t*, which is why it
+  works on a phone. A tolerance of 0.05s is what makes a continuous drag replace
+  one key rather than lay down one per `pointermove` — a path of three hundred
+  keys is the same path with nothing left to reason about.
+- **A drawn box is keyed at BOTH ENDS.** With one key there is nothing to tween
+  against; with two identical ones it holds still until somebody moves it, which
+  is exactly what a box used to be. So nothing about the old behaviour changed
+  for anyone who does not drag.
+- **Outside the keys it HOLDS rather than extrapolating.** A box that carried on
+  moving past its last key drifts off the subject and then off the frame, and
+  what it stops hiding is the thing it was drawn for.
+
+The state is on the box, at the NW corner — the free one, with the bin and the
+cog opposite: **filled when the playhead is on a key, hollow when it is not**,
+so "is this frame one I decided, or one that was worked out for me?" is answered
+by looking at the box. There is no timeline to put it on, and on a phone there
+is no room for one. Tapping removes a key, refused at two, because those two are
+the ends.
+
+**A CENSOR NOW DEFAULTS TO THE WHOLE CLIP, and that is a safety decision.** It
+defaulted to three seconds from the playhead — so a box drawn over a face
+silently STOPPED hiding it partway through. The failure is invisible at the
+moment you make it, because you are looking at a frame where the box is showing,
+and **what a censor does wrong when it disappears is uncensor something.** The
+span is still typed, behind the cog; what changed is that the default cannot
+quietly do the one thing this tool must not do. A box that ran to the end also
+follows the clip list when a clip is added, for the same reason. Captions were
+already the whole clip.
+
+**A caption is not drawn behind its own field.** The textarea sits exactly over
+the box in the same colour and size — it IS the caption while it is open — so
+drawing the bitmap underneath showed the words twice, offset by however far the
+two disagree about wrapping. Reported as duplicated text. The case asserts both
+halves: nothing extra in the picture while the field is open, and it back the
+moment the field goes — without which the fix could have been "never draw a
+caption on the stage", which would make the preview disagree with the export.
+
+**Nothing to draw is not the same as draw nothing, and the difference is a black
+screen.** Reported from a phone as "this is what happens when the browser goes
+idle for a moment": the editor came back to a black rectangle with the boxes
+still floating on it. `paint` sets `rc.width`, which CLEARS the canvas, and
+`drawImage` of a video with no decoded frame is a silent no-op — so a moment of
+idle, after which Chrome on Android drops the decoded frame while keeping the
+metadata (`videoWidth` intact, `readyState` back to 1), wiped the picture and
+drew nothing over it. It returns before clearing now, and asks for the frame
+back on `visibilitychange` by re-setting `currentTime` to where it already is.
+**A stale frame is a far smaller lie than a black one.**
+
+**Its first spec could not fail, and why is worth more than the fix.** Stubbing
+`readyState` to 1 proved nothing: **Chromium's `drawImage` reads the element's
+internal state, not the JS getter**, so the real frame went on drawing and the
+case passed with the guard removed. The spec says `drawImage` draws nothing
+below `HAVE_CURRENT_DATA`; the case emulates that alongside the stubbed
+`readyState`, and the pair is the platform behaviour the guard exists for.
+**Verified to fail** only after that. Same family as every other vacuous green
+in this file — and the tell was the same one: it passed either way.
+
 **A SIXTH pass gave the modes back, and the shape is the lesson rather than the
 decision.** Removing solid and blur removed a real capability to buy one less
 control on a crowded bar — and the measurement below is unambiguous that solid

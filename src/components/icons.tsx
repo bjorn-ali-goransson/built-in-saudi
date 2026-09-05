@@ -1306,3 +1306,18 @@ export function SteadyIcon({ className }: P) {
     </svg>
   )
 }
+
+/**
+ * A keyframe — the diamond every timeline in the world draws one as.
+ *
+ * Filled when the playhead is ON one and hollow when it is not, which is the
+ * whole state the button carries: "there is a key here" against "put one
+ * here". A dot would have been simpler and says nothing about time.
+ */
+export function KeyframeIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 4l8 8-8 8-8-8z" />
+    </svg>
+  )
+}

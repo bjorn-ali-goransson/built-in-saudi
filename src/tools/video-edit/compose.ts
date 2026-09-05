@@ -81,17 +81,55 @@ export interface Caption {
  */
 export type CensorMode = 'pixelate' | 'solid' | 'blur'
 
+/**
+ * Where a box IS at one moment, in fractions of the output frame.
+ *
+ * A censor used to be one fixed rectangle, and the limit that came with it was
+ * stated rather than solved: the thing worth hiding is almost always the thing
+ * that MOVES, so a fixed box has to be drawn generously enough to cover
+ * everywhere the subject goes — which hides most of the picture to hide one
+ * face, or does not hide it at the end.
+ */
+export interface Key { t: number; x: number; y: number; w: number; h: number }
+
 export interface Censor {
   id: string
   mode: CensorMode
-  /** The box, in fractions of the OUTPUT frame. */
-  x: number
-  y: number
-  w: number
-  h: number
+  /**
+   * Where the box is, at the times it was put there. Sorted by `t` and never
+   * empty; one key is a box that does not move, and two identical ones are the
+   * same thing — which is what a freshly drawn box is.
+   */
+  keys: Key[]
   /** Seconds on the OUTPUT timeline. */
   from: number
   to: number
+}
+
+/**
+ * The box at `t`, tweened between the keys either side of it.
+ *
+ * Outside the keyed range it HOLDS rather than extrapolating: a box that
+ * carried on moving past its last key would drift off the subject and off the
+ * frame, and what it stops hiding is the thing it was drawn for.
+ */
+export function boxAt(keys: Key[], t: number): Rect {
+  if (!keys.length) return { x: 0, y: 0, w: 0, h: 0 }
+  const first = keys[0]
+  if (t <= first.t) return { x: first.x, y: first.y, w: first.w, h: first.h }
+  const last = keys[keys.length - 1]
+  if (t >= last.t) return { x: last.x, y: last.y, w: last.w, h: last.h }
+  let i = 0
+  while (i < keys.length - 2 && keys[i + 1].t <= t) i += 1
+  const a = keys[i], b = keys[i + 1]
+  const span = b.t - a.t
+  const f = span > 1e-6 ? (t - a.t) / span : 0
+  return {
+    x: a.x + (b.x - a.x) * f,
+    y: a.y + (b.y - a.y) * f,
+    w: a.w + (b.w - a.w) * f,
+    h: a.h + (b.h - a.h) * f,
+  }
 }
 
 export interface ClipInfo {
@@ -232,10 +270,15 @@ export function applyCensors(
   out: { width: number; height: number },
 ): void {
   for (const c of activeAt(censors, t)) {
-    const x = Math.round(c.x * out.width)
-    const y = Math.round(c.y * out.height)
-    const w = Math.round(c.w * out.width)
-    const h = Math.round(c.h * out.height)
+    // Interpolated HERE, so the preview and the export follow the same path by
+    // construction — the whole reason this module is pure. A tween computed in
+    // the page and a tween computed in the worker is two opinions about where
+    // somebody's face was.
+    const b = boxAt(c.keys, t)
+    const x = Math.round(b.x * out.width)
+    const y = Math.round(b.y * out.height)
+    const w = Math.round(b.w * out.width)
+    const h = Math.round(b.h * out.height)
     if (w < 2 || h < 2) continue
 
     if (c.mode === 'solid') {

@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, KeyframeIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon,
+  TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
-  ASPECTS, activeAt, applyCensors, captionRect, cropRect, drawFrame, fitRect, outputSize, timeline, totalDuration,
-  type Caption, type Censor, type ClipInfo, type Crop,
+  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropRect, drawFrame, fitRect, outputSize, timeline,
+  totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
 import { createRecorder, formatReport, heap } from './diagnostics'
@@ -65,6 +66,8 @@ const STR = {
     previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so there is no picture to aim the crop and the boxes at.`,
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
     boxSettings: 'This box',
+    keyAdd: 'Put a keyframe here',
+    keyHere: 'A keyframe is set here — tap to remove it',
     hideWith: 'Hide with',
     modes: { pixelate: 'Pixelate', solid: 'Solid', blur: 'Blur' },
     censorWhy: 'Pixelating and blurring do not remove anything — they throw away resolution, and resolution comes back out of a VIDEO in a way it does not out of a photo: the mosaic grid stays fixed to the frame while your subject moves through it, so every frame samples the same face on a differently aligned grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame. Solid is the only one of the three that removes anything.',
@@ -136,6 +139,8 @@ const STR = {
     previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها الاقتصاص ولا المربّعات.`,
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
     boxSettings: 'هذا المربّع',
+    keyAdd: 'ضع نقطة مسار هنا',
+    keyHere: 'هنا نقطة مسار — اضغط لإزالتها',
     hideWith: 'طريقة الإخفاء',
     modes: { pixelate: 'بكسلة', solid: 'حجب كامل', blur: 'تمويه' },
     censorWhy: 'البكسلة والتمويه لا يزيلان شيئًا — إنما يُسقطان الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة تثبت على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة المحاذاة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد. والحجب الكامل وحده من الثلاثة هو ما يزيل شيئًا.',
@@ -366,7 +371,10 @@ export default function VideoEditTool() {
   // the next animation frame — the rAF loop is already repainting, so a drag
   // needs no render of its own and this way it does not cause one per
   // `pointermove`.
-  const drawingRef = useRef<Censor | null>(null)
+  /** The censor being dragged out, before it is one. A plain rectangle: it has
+   *  no keys yet, because a box that exists for the length of one drag has no
+   *  path to interpolate along. */
+  const drawingRef = useRef<{ id: string; mode: CensorMode; x: number; y: number; w: number; h: number } | null>(null)
   /** The caption box being dragged out, before it is a caption. */
   const drawingTextRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
   const [textTick, setTextTick] = useState(0)
@@ -498,6 +506,25 @@ export default function VideoEditTool() {
       : list))
   }, [duration])
 
+  /**
+   * A censor's span is TYPED, so it is not derived — but it must not silently
+   * stop covering the end of a longer film.
+   *
+   * A box that ran to the end goes on running to the end when a clip is added,
+   * and any box left claiming seconds that no longer exist is pulled back. The
+   * failure this prevents is the one that matters here: a censor that ends
+   * early does not look wrong, it just stops hiding something.
+   */
+  const lastDuration = useRef(duration)
+  useEffect(() => {
+    const prev = lastDuration.current
+    lastDuration.current = duration
+    if (prev === duration) return
+    setCensors((list) => list.map((c) => (Math.abs(c.to - prev) < 1e-6 || c.to > duration
+      ? { ...c, to: duration }
+      : c)))
+  }, [duration])
+
   /** The time on the JOINED timeline that the stage is currently showing. */
   const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
   const t = spanStart + pos
@@ -531,6 +558,18 @@ export default function VideoEditTool() {
     const v = videoRef.current
     const rc = stageRef.current
     if (!v || !rc || !current || !v.videoWidth) return
+    // NOTHING TO DRAW IS NOT THE SAME AS DRAW NOTHING, and the difference is a
+    // black screen. Setting `rc.width` below CLEARS the canvas, and
+    // `drawImage` of a video with no decoded frame is a silent no-op — so a
+    // moment of idle, after which Chrome on Android drops the decoded frame
+    // while keeping the metadata (`videoWidth` intact, `readyState` back to 1),
+    // wiped the picture and drew nothing over it. The editor came back to a
+    // black rectangle with the boxes still on it, reported from a phone.
+    //
+    // Leaving the last good frame up is right on its own terms too: it is what
+    // was on screen, it is still what the export will contain, and a stale
+    // frame is a far smaller lie than a black one.
+    if (v.readyState < 2) return
     const clip = { width: current.info.width, height: current.info.height }
     const now = previewTime()
 
@@ -573,15 +612,54 @@ export default function VideoEditTool() {
     // second opinion about what the export will look like. THIS IS THE ONLY
     // VIEW: there is no separate result preview to disagree with it.
     drawFrame(ctx, v, clip, crop, shown)
-    const inProgress = drawingRef.current
+    const d = drawingRef.current
+    // One key, at the moment on screen: a box being dragged out does not move,
+    // so `boxAt` returns it unchanged whatever `now` is.
+    const inProgress: Censor | null = d
+      ? { id: d.id, mode: d.mode, keys: [{ t: now, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: duration }
+      : null
     applyCensors(ctx, inProgress ? [...censors, inProgress] : censors, now, shown)
     for (const c of activeAt(captions, now)) {
+      // The one being edited is ALREADY on screen — the textarea sits exactly
+      // over its box in the same colour and size, so drawing the bitmap under
+      // it too shows the words twice, offset by however far the two disagree
+      // about wrapping. The field is the picture while it is open.
+      if (mode === 'text' && c.id === pickedCaption) continue
       const bmp = bitmaps.current.get(c.id)
       if (!bmp) continue
       const r = captionRect(c, shown)
       ctx.drawImage(bmp, r.x, r.y, r.w, r.h)
     }
-  }, [current, crop, cropBox, mode, size, captions, censors, previewTime])
+  }, [current, crop, cropBox, mode, size, captions, censors, previewTime, pickedCaption, duration])
+
+  /**
+   * Ask for the frame BACK when the tab returns.
+   *
+   * Holding the last frame stops the screen going black; it does not make the
+   * picture live again, and a preview frozen on the frame you left is its own
+   * kind of broken. Chrome drops decoded frames under memory pressure and when
+   * a tab is backgrounded — documented behaviour, not a fault — and re-setting
+   * `currentTime` to where it already is makes it fetch and decode that frame
+   * again. It is a no-op on a browser that never dropped anything.
+   */
+  useEffect(() => {
+    const wake = () => {
+      const v = videoRef.current
+      if (!v || document.hidden || v.paused === false) return
+      if (v.readyState >= 2) return
+      diag.current.mark(`preview frame dropped (readyState ${v.readyState}) — asking for it again`)
+      // eslint-disable-next-line no-self-assign
+      v.currentTime = v.currentTime
+    }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('focus', wake)
+    window.addEventListener('pageshow', wake)
+    return () => {
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('focus', wake)
+      window.removeEventListener('pageshow', wake)
+    }
+  }, [])
 
   // Repaint on every displayed frame while playing, and once whenever anything
   // that affects the picture changes.
@@ -670,6 +748,26 @@ export default function VideoEditTool() {
     setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
 
   /**
+   * How close the playhead has to be to count as ON a key.
+   *
+   * A tenth of a second, which is the step the span fields use and finer than
+   * anybody can aim a scrubber at. It is what makes a drag REPLACE the key it
+   * is editing instead of laying down one per pointermove — a path made of
+   * three hundred keys is the same path and nothing can be reasoned about it.
+   */
+  const KEY_NEAR = 0.05
+
+  const keyIndexAt = (c: Censor, at: number) => c.keys.findIndex((k) => Math.abs(k.t - at) <= KEY_NEAR)
+
+  /** The box with a key at `at`, replacing one already there. */
+  const keyed = (c: Censor, at: number, rect: { x: number; y: number; w: number; h: number }): Censor => {
+    const keys = c.keys.filter((k) => Math.abs(k.t - at) > KEY_NEAR)
+    keys.push({ t: at, ...rect })
+    keys.sort((a, b) => a.t - b.t)
+    return { ...c, keys }
+  }
+
+  /**
    * Pointer position as a fraction of the STAGE.
    *
    * Which frame that is depends on the mode, and deliberately so: crop mode
@@ -697,11 +795,18 @@ export default function VideoEditTool() {
     return { x: clamp01(p.x), y: clamp01(p.y) }
   }
 
-  /** A time span starting where the playhead is, clamped to the clip. */
-  const spanNow = () => ({
-    from: Math.max(0, Math.round(t * 10) / 10),
-    to: Math.min(duration, Math.round((t + 3) * 10) / 10),
-  })
+  /**
+   * A censor's default span is the WHOLE clip, and that is a safety decision
+   * rather than a convenience.
+   *
+   * It used to be three seconds from the playhead, so a box drawn over a face
+   * silently STOPPED hiding it partway through — and the failure is invisible
+   * at the moment you make it, because you are looking at the frame where the
+   * box is showing. What a censor does wrong when it disappears is uncensor
+   * something, which is the one mistake this tool must not make quietly. The
+   * span is still editable, behind the box's own cog.
+   */
+  const wholeClip = () => ({ from: 0, to: duration })
 
   function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
@@ -720,7 +825,7 @@ export default function VideoEditTool() {
       // looks like a missing feature sends people to a tool that uploads their
       // video, so the default is the one people recognise and the cost of it is
       // written beside the choice.
-      drawingRef.current = { id: `z${Date.now()}`, mode: 'pixelate', x: p.x, y: p.y, w: 0, h: 0, ...spanNow() }
+      drawingRef.current = { id: `z${Date.now()}`, mode: 'pixelate', x: p.x, y: p.y, w: 0, h: 0 }
       setPickedBox(null)
       return
     }
@@ -812,16 +917,33 @@ export default function VideoEditTool() {
       setTextTick((n) => n + 1)
       return
     }
+    // MOVING OR RESIZING A BOX WRITES A KEY AT THE PLAYHEAD. It is the same
+    // gesture it always was — nothing new to learn, no mode to be in — and it
+    // means the path is built out of the frames somebody actually looked at.
     if (d.kind === 'move') {
-      setCensors((list) => list.map((c) => (c.id === d.id
-        ? { ...c, x: clamp01(Math.min(1 - c.w, p.x - d.ox)), y: clamp01(Math.min(1 - c.h, p.y - d.oy)) }
-        : c)))
+      setCensors((list) => list.map((c) => {
+        if (c.id !== d.id) return c
+        const b = boxAt(c.keys, t)
+        return keyed(c, t, {
+          x: clamp01(Math.min(1 - b.w, p.x - d.ox)),
+          y: clamp01(Math.min(1 - b.h, p.y - d.oy)),
+          w: b.w,
+          h: b.h,
+        })
+      }))
       return
     }
     if (d.kind === 'resize') {
-      setCensors((list) => list.map((c) => (c.id === d.id
-        ? { ...c, w: Math.max(0.02, Math.min(1 - c.x, p.x - c.x)), h: Math.max(0.02, Math.min(1 - c.y, p.y - c.y)) }
-        : c)))
+      setCensors((list) => list.map((c) => {
+        if (c.id !== d.id) return c
+        const b = boxAt(c.keys, t)
+        return keyed(c, t, {
+          x: b.x,
+          y: b.y,
+          w: Math.max(0.02, Math.min(1 - b.x, p.x - b.x)),
+          h: Math.max(0.02, Math.min(1 - b.y, p.y - b.y)),
+        })
+      }))
       return
     }
     if (d.kind === 'caption') {
@@ -860,7 +982,18 @@ export default function VideoEditTool() {
       const box = drawingRef.current
       drawingRef.current = null
       if (box && box.w > 0.02 && box.h > 0.02) {
-        setCensors((list) => [...list, box])
+        const span = wholeClip()
+        const rect = { x: box.x, y: box.y, w: box.w, h: box.h }
+        // A key at each END, which is what makes the first drag anywhere in
+        // between produce a path rather than a jump: with only one key there is
+        // nothing to tween against, and with two the box holds still until
+        // somebody moves it.
+        setCensors((list) => [...list, {
+          id: box.id,
+          mode: box.mode,
+          keys: [{ t: span.from, ...rect }, { t: span.to, ...rect }],
+          ...span,
+        }])
         setPickedBox(box.id)
       }
       return
@@ -1108,6 +1241,41 @@ export default function VideoEditTool() {
         placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
   )
 
+  /**
+   * The keyframe control, at the box's NW corner — the one free corner, with
+   * the bin and the cog opposite it.
+   *
+   * It carries exactly one piece of state and is the only thing that does:
+   * FILLED when the playhead sits on a key, hollow when it does not. So the
+   * question "is this frame one I decided, or one that was worked out for me?"
+   * is answered by looking at the box rather than at a timeline somewhere else
+   * — and on a phone there is no room for a timeline anyway.
+   *
+   * Tapping it puts a key here, or takes this one away. Removing is refused
+   * while two keys are left, because those two are the ends: a box with one
+   * key cannot move, and a path with no end has nothing to hold at.
+   */
+  const keyButton = (c: Censor, i: number) => {
+    const on = keyIndexAt(c, t) >= 0
+    const label = on ? s.keyHere : s.keyAdd
+    return (
+      <button key="key" type="button" title={label} aria-label={label} aria-pressed={on}
+        data-testid={`ve-box-${i}-key`} data-key={on ? 'on' : 'off'}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => setCensors((list) => list.map((x) => {
+          if (x.id !== c.id) return x
+          const at = keyIndexAt(x, t)
+          if (at < 0) return keyed(x, t, boxAt(x.keys, t))
+          if (x.keys.length <= 2) return x
+          return { ...x, keys: x.keys.filter((_, n) => n !== at) }
+        }))}
+        className={`absolute -top-3 -start-3 grid place-items-center w-7 h-7 rounded-full border cursor-pointer ${
+          on ? 'bg-green-500 border-green-200 text-white' : 'bg-black/80 border-white/40 text-white'}`}>
+        <KeyframeIcon className={`w-3.5 h-3.5 ${on ? 'fill-current' : 'fill-none'}`} />
+      </button>
+    )
+  }
+
   /** A box handle on the stage — the same affordance for a censor and a caption. */
   const handle = (
     key: string, testid: string, box: { x: number; y: number; w: number; h: number },
@@ -1243,13 +1411,18 @@ export default function VideoEditTool() {
                 </div>
               )}
 
+              {/* The box is drawn WHERE IT IS NOW, which for a keyed box is
+                  somewhere between two keys. `boxAt` is the same function the
+                  canvas and the encoder call, so the outline cannot sit
+                  anywhere but over the region actually being hidden. */}
               {mode === 'censor' && censors.map((c) => handle(
-                c.id, `ve-box-${censors.indexOf(c)}`, c, pickedBox === c.id, !isNow(c),
+                c.id, `ve-box-${censors.indexOf(c)}`, boxAt(c.keys, t), pickedBox === c.id, !isNow(c),
                 (e) => {
                   e.stopPropagation()
                   const p = at(e)
+                  const b = boxAt(c.keys, t)
                   overlayRef.current?.setPointerCapture(e.pointerId)
-                  dragRef.current = { kind: 'move', id: c.id, ox: p.x - c.x, oy: p.y - c.y }
+                  dragRef.current = { kind: 'move', id: c.id, ox: p.x - b.x, oy: p.y - b.y }
                   setPickedBox(c.id)
                 },
                 () => { setCensors((l) => l.filter((x) => x.id !== c.id)); setPickedBox(null) },
@@ -1259,6 +1432,7 @@ export default function VideoEditTool() {
                   dragRef.current = { kind: 'resize', id: c.id }
                 },
                 () => setBoxPanel(true),
+                keyButton(c, censors.indexOf(c)),
               ))}
 
               {/* A caption is the same rectangle, and clicking one opens its

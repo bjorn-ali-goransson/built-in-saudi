@@ -70,9 +70,19 @@ async function openClips(page: Page) {
   await expect(page.getByTestId('ve-clips')).toBeVisible()
 }
 
-/** Show the picture at `sec` and wait for the stage to have drawn something. */
+/**
+ * Show the picture at `sec`, and WAIT for the element to be there.
+ *
+ * Setting `currentTime` resolves long before the frame does, and anything read
+ * straight afterwards is read at the previous time. Most cases hide that by
+ * polling on pixels; a case that asks where a keyframe landed cannot, because
+ * the answer depends on the playhead at the moment of the drag.
+ */
 async function seek(page: Page, sec: number) {
   await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement, s) => { v.currentTime = s }, sec)
+  await expect.poll(() => page.getByTestId('ve-video')
+    .evaluate((v: HTMLVideoElement) => (v.seeking ? -1 : v.currentTime)), { timeout: 10_000 })
+    .toBeGreaterThan(sec - 0.35)
 }
 
 /**
@@ -513,6 +523,11 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   // over the box — so the caret is already where the words will land. There is
   // no dialog to open and none to close.
   await page.getByTestId('ve-caption-text-0').fill('HELLO')
+  // Deselect first: while the field is open it IS the caption on screen, and
+  // the canvas deliberately leaves the bitmap out so the words are not drawn
+  // twice. A small drag makes no box (under the 5% floor) and clears the
+  // selection, which is what a tap on the picture does by hand.
+  await deselectCaption(page)
 
   // Counted in COLOURS rather than brightness, because the band went with the
   // options panel: white glyphs and their dark outline ADD values to a flat
@@ -526,6 +541,35 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   // this is the property that replaced "it goes when its window closes".
   await seek(page, 5.5)
   await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(before + 2)
+})
+
+test('an open caption field is not drawn behind itself', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(0)
+  const bare = await coloursIn(page, BAND)
+
+  await page.getByTestId('ve-mode-text').click()
+  await drawBox(page, [0.1, 0.76], [0.9, 0.88])
+  await page.getByTestId('ve-caption-text-0').fill('HELLO')
+
+  // The field sits exactly over the box in the same colour and size, so it is
+  // ALREADY the caption on screen. Drawing the bitmap under it as well shows
+  // the words twice, offset by however far the textarea and the canvas
+  // disagree about wrapping — reported as duplicated text. So while the field
+  // is open the canvas carries none of it, and the band reads as bare picture.
+  await expect(page.getByTestId('ve-caption-text-0')).toBeVisible()
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeLessThanOrEqual(bare + 2)
+
+  // And it comes straight back when the field goes. Without this half the fix
+  // could have been "never draw a caption on the stage", which would make the
+  // preview disagree with the export — the one thing this tool rests on.
+  await deselectCaption(page)
+  await expect(page.getByTestId('ve-caption-text-0')).toHaveCount(0)
+  await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(bare + 2)
 })
 
 test('a caption is a drawn box, and can be removed again', async ({ page }) => {
@@ -609,6 +653,20 @@ async function drawBox(page: Page, from: [number, number], to: [number, number])
   await page.mouse.up()
 }
 
+/**
+ * Put the caption down: a drag too small to be a box, which is what a tap on
+ * the picture is. Text mode clears the selection on pointer DOWN and only
+ * commits a caption above 5% of the frame, so this leaves the list alone.
+ */
+async function deselectCaption(page: Page) {
+  // Left-of-centre, well clear of BOTH the toolbar docked over the top of the
+  // picture and the caption band below. The first version of this tapped the
+  // top-left corner and hit the back button, which raises the discard dialog —
+  // a control that is behind another control, one level over.
+  await drawBox(page, [0.05, 0.45], [0.06, 0.46])
+  await expect(page.getByTestId('ve-caption-text-0')).toHaveCount(0)
+}
+
 /** Set a box's span, which lives behind the box's own cog along with how it
  *  hides. Opened and closed rather than left up, because the sheet covers the
  *  stage every other assertion in these cases is about. */
@@ -656,6 +714,101 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await span(page, 0, 0, 1.5)
   await seek(page, 4)
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
+})
+
+/** Where a box's handle sits on the stage, in fractions of it. */
+async function boxAtStage(page: Page, i: number) {
+  const stage = await page.getByTestId('ve-stage').boundingBox()
+  const box = await page.getByTestId(`ve-box-${i}`).boundingBox()
+  if (!stage || !box) throw new Error('no stage or box')
+  return { x: (box.x - stage.x) / stage.width, y: (box.y - stage.y) / stage.height }
+}
+
+test('a box hides to the END of the clip unless told otherwise', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const before = await coloursIn(page, GRAD)
+
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(before / 4)
+
+  // NO span was set. It used to default to three seconds from the playhead, so
+  // a box drawn over a face silently stopped hiding it partway through — and
+  // what a censor does wrong when it disappears is UNCENSOR something, which
+  // is invisible at the moment you make the mistake because you are looking at
+  // a frame where the box is showing.
+  await seek(page, 5.5)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(before / 4)
+  // Still typed rather than derived, so the panel's fields still bite.
+  await span(page, 0, 0, 1.5)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
+})
+
+test('a box moved at another time TWEENS between the two', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 0)
+  await page.getByTestId('ve-mode-censor').click()
+
+  // Drawn once, which lays a key at each end of the clip holding the same
+  // rectangle — so it is a box that does not move until somebody moves it.
+  await drawBox(page, [0.2, 0.3], [0.4, 0.5])
+  const start = await boxAtStage(page, 0)
+  expect(start.x).toBeGreaterThan(0.15)
+  expect(start.x).toBeLessThan(0.25)
+
+  // Move it near the end of the clip. The drag itself writes the key — there
+  // is no mode to be in and nothing to arm first, which is what keeps this
+  // usable on a phone.
+  await seek(page, 5)
+  await drawBox(page, [0.3, 0.4], [0.7, 0.4])
+  const late = await boxAtStage(page, 0)
+  expect(late.x).toBeGreaterThan(start.x + 0.2)
+
+  // And halfway between the two keys the box is halfway between the two
+  // places. This is the property the whole feature is: a fixed box has to be
+  // drawn big enough to cover everywhere the subject goes, which hides most of
+  // the picture to hide one face.
+  await seek(page, 2.5)
+  const mid = await boxAtStage(page, 0)
+  expect(mid.x).toBeGreaterThan(start.x + 0.05)
+  expect(mid.x).toBeLessThan(late.x - 0.05)
+
+  // It HOLDS outside the keys rather than carrying on — a box that extrapolated
+  // would drift off the subject and off the frame, and what it stops hiding is
+  // the thing it was drawn for.
+  await seek(page, 0)
+  const back = await boxAtStage(page, 0)
+  expect(Math.abs(back.x - start.x)).toBeLessThan(0.02)
+})
+
+test('the keyframe button says whether this frame is one you decided', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 2)
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+
+  // A drawn box is keyed at each END, so a frame in the middle is one that was
+  // worked out rather than one somebody chose. That distinction is the only
+  // state this button carries, and it is on the box because on a phone there
+  // is no room for a timeline to put it on.
+  const key = page.getByTestId('ve-box-0-key')
+  await expect(key).toHaveAttribute('data-key', 'off')
+  await key.click()
+  await expect(key).toHaveAttribute('data-key', 'on')
+  // Tapping the lit one takes it away again.
+  await key.click()
+  await expect(key).toHaveAttribute('data-key', 'off')
 })
 
 test('a selected box can be deleted', async ({ page }) => {
@@ -870,6 +1023,44 @@ test('Arabic in a caption is shaped and joined, not left as separate letters', a
   // roughly the same width or more.
   expect(shaping!.joined).toBeGreaterThan(0)
   expect(shaping!.joined).toBeLessThan(shaping!.apart * 0.95)
+})
+
+test('the picture is HELD when the decoded frame goes away, not wiped', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const before = await coloursIn(page, GRAD)
+
+  // Exactly what Chrome on Android does after a moment of idle: the metadata
+  // stays — so `videoWidth` is intact and the frame loop keeps running — and
+  // the DECODED FRAME is gone. Setting the canvas size CLEARS it, and
+  // `drawImage` of a video with nothing decoded is a silent no-op, so the
+  // picture was wiped to black with the boxes still floating on it. Reported
+  // from a phone, and the black is the whole symptom: a stale frame is a far
+  // smaller lie than an empty one.
+  //
+  // BOTH HALVES OF THAT STATE HAVE TO BE FAKED, and finding out why is the
+  // reason this case is worth reading. Stubbing `readyState` alone proved
+  // nothing — Chromium's `drawImage` reads the element's internal state rather
+  // than the JS getter, so the real frame went on drawing and the case passed
+  // with the fix removed. The spec says `drawImage` draws nothing below
+  // HAVE_CURRENT_DATA; here that is emulated, so the pair is the platform
+  // behaviour this guard exists for. Everything else — the element, the
+  // canvas, the paint loop — is the product's own.
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => {
+    Object.defineProperty(v, 'readyState', { get: () => 1, configurable: true })
+    const real = CanvasRenderingContext2D.prototype.drawImage
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    CanvasRenderingContext2D.prototype.drawImage = function (this: any, src: any, ...rest: any[]) {
+      if (src instanceof HTMLVideoElement && src.readyState < 2) return
+      return real.apply(this, [src, ...rest] as any)
+    } as any
+  })
+  await page.waitForTimeout(500)
+  expect(await coloursIn(page, GRAD)).toBeGreaterThan(before / 2)
 })
 
 test('a preview that will not play says so, with the code that identifies it', async ({ page }) => {
