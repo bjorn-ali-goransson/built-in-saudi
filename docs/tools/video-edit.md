@@ -50,6 +50,25 @@ and a *second* player for the result. Five decisions:
   green band, one sentence about what this is, and one button. A wall of
   controls nobody can act on until a file exists teaches nothing, and there is a
   case asserting the editor is not rendered at all before a pick.
+- **The crop rectangle has corner handles, and a drag sets a FREE proportion.**
+  The presets give five shapes and the zoom changes the size, never the shape,
+  so an arbitrary crop could not be expressed at all. The drag is converted
+  back into the aspect + centre + zoom the crop is stored as, because that is
+  what lets clips of different shapes share one output frame.
+- **Nothing on the crop bar but the shapes.** The kept-percentage and the zoom
+  slider are gone: the rectangle is drawn over the WHOLE clip, so what a crop
+  throws away is the shaded part on screen. The pixel size sits in the settings
+  screen beside the largest-side picker, which is where the question is asked.
+- **The aspect chips are the ratio alone.** `9:16 Reels · TikTok · Shorts` is a
+  better label in a list and made the row wider than a phone, so the shapes at
+  the end were unreachable.
+- **A caption is edited by tapping it a second time**, and drawing one opens
+  the editor at once — an empty caption draws nothing, so a box with no way in
+  is a dead end. It runs the whole video: the span was two number fields nobody
+  touched, and a caption that stops halfway is a defect more often than a
+  choice. Censors keep their span.
+- **Export is not green until there is a file to download.** Primary colour is
+  a claim about what to do next, and before an export there is nothing.
 - **The editor is FULL SCREEN — the site's header and footer included.** It is a
   `fixed inset-0` shell rather than a Layout change, because the condition is a
   piece of this tool's state (a clip is open) and not a route; the body's scroll

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Select, Spinner, Stack, Textarea } from '../../components/ui'
 import {
-  BackIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
-  ASPECTS, activeAt, applyCensors, captionRect, cropRect, drawFrame, keptShare, outputSize, timeline, totalDuration,
+  ASPECTS, activeAt, applyCensors, captionRect, cropRect, drawFrame, fitRect, outputSize, timeline, totalDuration,
   type Caption, type Censor, type CensorMode, type ClipInfo, type Crop,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
@@ -51,12 +51,13 @@ const STR = {
     modeMore: 'Output settings',
     play: 'Play',
     pause: 'Pause',
-    kept: (pct: number) => `Keeps ${pct}%`,
-    zoom: 'Zoom',
+    free: 'Free',
     addBox: 'Drag on the video to draw a box.',
     deleteBox: 'Delete this box',
     addCaptionBox: 'Drag on the video to draw a text box.',
-    done: 'Done',
+    editText: 'Edit the text',
+    captionWhole: 'Shows for the whole video.',
+    close: 'Close',
     text: 'Text',
     from: 'From',
     to: 'To',
@@ -78,7 +79,6 @@ const STR = {
     qualities: ['Smaller file', 'Normal', 'Sharper'],
     maxHeight: 'Largest side',
     noUpscale: 'Never larger than the source: upscaling adds pixels and no detail.',
-    outSize: (w: number, h: number) => `${w}×${h}`,
     keepAudio: 'Keep the sound',
     audioCopied: 'The sound is copied across untouched — it is never re-encoded, so it loses nothing.',
     audioMixed: 'These clips store their sound differently, so it cannot be joined without re-encoding — which this browser cannot do. The export will be silent.',
@@ -92,8 +92,6 @@ const STR = {
     outInfo: (mb: string, a: string) => `${mb} · ${a}`,
     withSound: 'with sound',
     silent: 'silent',
-    trimNote: 'Whole clips, in this order. To shorten one first, trim it — that copies the frames instead of re-encoding them, so it costs nothing in quality.',
-    trimName: 'Video Trimmer',
     big: 'These clips are large. Every frame is decoded and encoded again here, so this will take a while and use a lot of memory — a phone may run out.',
     unsupportedTitle: 'This browser cannot re-encode video',
     unsupportedBody: 'Cropping, joining and captioning all change what is in the picture, so the frames have to be decoded and encoded again. That needs WebCodecs with H.264, which this browser does not offer. Chrome, Edge and Safari 16.4 or later can; Firefox on Android cannot. Trimming a clip needs none of it and still works here.',
@@ -130,12 +128,13 @@ const STR = {
     modeMore: 'إعدادات المُخرَج',
     play: 'تشغيل',
     pause: 'إيقاف',
-    kept: (pct: number) => `يبقى ${arNum(pct)}٪`,
-    zoom: 'التقريب',
+    free: 'حرّ',
     addBox: 'اسحب على الفيديو لترسم مربّعًا.',
     deleteBox: 'احذف هذا المربّع',
     addCaptionBox: 'اسحب على الفيديو لترسم مربّع نص.',
-    done: 'تم',
+    editText: 'حرّر النص',
+    captionWhole: 'يظهر طوال الفيديو.',
+    close: 'إغلاق',
     text: 'النص',
     from: 'من',
     to: 'إلى',
@@ -157,7 +156,6 @@ const STR = {
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
     maxHeight: 'أطول ضلع',
     noUpscale: 'لا يتجاوز المصدر أبدًا: التكبير يضيف بكسلات ولا يضيف تفصيلًا.',
-    outSize: (w: number, h: number) => `${w}×${h}`,
     keepAudio: 'أبقِ الصوت',
     audioCopied: 'يُنسخ الصوت كما هو دون إعادة ترميز، فلا يفقد شيئًا.',
     audioMixed: 'تخزّن هذه المقاطع صوتها بصيغ مختلفة، فلا يمكن دمجه دون إعادة ترميز، وهذا ما لا يقدر عليه هذا المتصفح. سيخرج المقطع صامتًا.',
@@ -171,8 +169,6 @@ const STR = {
     outInfo: (mb: string, a: string) => `${mb} · ${a}`,
     withSound: 'بالصوت',
     silent: 'صامت',
-    trimNote: 'المقاطع كاملة، بهذا الترتيب. ولتقصير أحدها أولًا اقتطعه — فالاقتطاع ينسخ الإطارات بدل إعادة ترميزها، فلا يكلّف شيئًا من الجودة.',
-    trimName: 'قص الفيديو',
     big: 'هذه المقاطع كبيرة. يُفَكّ ترميز كل إطار ويُعاد ترميزه هنا، فسيستغرق ذلك وقتًا ويستهلك ذاكرة كبيرة — وقد تنفد ذاكرة الهاتف.',
     unsupportedTitle: 'هذا المتصفح لا يستطيع إعادة ترميز الفيديو',
     unsupportedBody: 'الاقتصاص والدمج وإضافة النص كلها تغيّر ما في الصورة، فلا بد من فك ترميز الإطارات وإعادة ترميزها. وهذا يحتاج WebCodecs مع H.264، وهو ما لا يوفّره هذا المتصفح. تقدر عليه كروم وإيدج وسفاري ١٦٫٤ فأحدث؛ ولا يقدر عليه فَيرفُكس على أندرويد. أما اقتطاع مقطع فلا يحتاج شيئًا من ذلك ويعمل هنا.',
@@ -205,6 +201,21 @@ const PREVIEW_MAX = 720
 /** Bits per pixel per second, at each quality. Multiplied by w×h×fps. */
 const QUALITY = [0.05, 0.09, 0.15]
 const HEIGHTS = [480, 720, 1080, 1440]
+
+/**
+ * The four corners of the crop rectangle.
+ *
+ * PHYSICAL left/right rather than the logical `start`/`end` this repo prefers
+ * everywhere else, and deliberately: these sit on a picture, and a picture does
+ * not mirror under RTL. A top-left handle that moved to the top-right in Arabic
+ * would be pulling the opposite corner of the frame from the one under it.
+ */
+const CORNERS = [
+  { id: 'nw', v: 'top', h: 'left', cursor: 'cursor-nwse-resize' },
+  { id: 'ne', v: 'top', h: 'right', cursor: 'cursor-nesw-resize' },
+  { id: 'sw', v: 'bottom', h: 'left', cursor: 'cursor-nesw-resize' },
+  { id: 'se', v: 'bottom', h: 'right', cursor: 'cursor-nwse-resize' },
+] as const
 
 type Mode = 'crop' | 'censor' | 'text' | 'more'
 
@@ -288,11 +299,26 @@ async function renderCaption(c: Caption, out: { width: number; height: number })
 type Drag =
   /** Moving the crop rectangle over a picture that stays put. */
   | { kind: 'frame'; px: number; py: number; cx: number; cy: number }
+  /**
+   * Pulling one corner of the crop rectangle, which sets a FREE proportion.
+   *
+   * `ax`/`ay` is the corner diagonally opposite the one being pulled, in
+   * fractions of the frame — it is the fixed point of the gesture, so the
+   * rectangle grows out of the corner you are not touching rather than
+   * jumping under your finger.
+   */
+  | { kind: 'crop-handle'; ax: number; ay: number }
   | { kind: 'draw'; fx: number; fy: number }
   | { kind: 'draw-text'; fx: number; fy: number }
   | { kind: 'move'; id: string; ox: number; oy: number }
   | { kind: 'resize'; id: string }
-  | { kind: 'caption'; id: string; ox: number; oy: number }
+  /**
+   * `was` records that the box was ALREADY selected when the pointer went
+   * down, and `moved` that the pointer then travelled. Together they separate
+   * a click from a drag on the same target, which is what lets a second click
+   * open the editor without taking the ability to move a selected box away.
+   */
+  | { kind: 'caption'; id: string; ox: number; oy: number; was: boolean; moved: boolean }
   | { kind: 'caption-resize'; id: string }
 
 export default function VideoEditTool() {
@@ -304,12 +330,18 @@ export default function VideoEditTool() {
   const [sel, setSel] = useState(0)
   const [mode, setMode] = useState<Mode>('crop')
   const [aspectId, setAspectId] = useState('9:16')
+  // The proportion a corner drag produced. Held separately from `aspectId` so
+  // that going back to a preset and then to Free again returns to the shape
+  // that was dragged, rather than to whatever preset was last selected.
+  const [freeAspect, setFreeAspect] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
   const [captions, setCaptions] = useState<Caption[]>([])
   const [censors, setCensors] = useState<Censor[]>([])
   const [pickedBox, setPickedBox] = useState<string | null>(null)
   const [pickedCaption, setPickedCaption] = useState<string | null>(null)
+  /** The caption whose words are being edited, if any. */
+  const [editText, setEditText] = useState<string | null>(null)
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
   const [keepAudio, setKeepAudio] = useState(true)
@@ -415,13 +447,13 @@ export default function VideoEditTool() {
   const current = clips[Math.min(sel, clips.length - 1)]
   const sourceAspect = current ? current.info.width / current.info.height : 9 / 16
   const aspect = useMemo(() => {
+    if (aspectId === 'free' && freeAspect) return freeAspect
     const found = ASPECTS.find((a) => a.id === aspectId)
     return found && found.aspect ? found.aspect : sourceAspect
-  }, [aspectId, sourceAspect])
+  }, [aspectId, freeAspect, sourceAspect])
 
   const crop: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom }), [aspect, centre, zoom])
   const size = useMemo(() => outputSize(infos, crop, maxHeight), [infos, crop, maxHeight])
-  const kept = current ? Math.round(keptShare({ width: current.info.width, height: current.info.height }, crop) * 100) : 100
   const spans = useMemo(() => timeline(infos), [infos])
   const duration = useMemo(() => totalDuration(infos), [infos])
 
@@ -460,6 +492,16 @@ export default function VideoEditTool() {
     void document.fonts?.ready.then(() => { if (live) void build() })
     return () => { live = false }
   }, [captions, size.width, size.height])
+
+  // A caption's span is DERIVED now rather than typed, so it has to follow the
+  // clip list — removing a clip must not leave a caption claiming seconds that
+  // no longer exist. Guarded on the comparison, or setting state from an effect
+  // that reads it re-renders forever.
+  useEffect(() => {
+    setCaptions((list) => (list.some((c) => c.from !== 0 || c.to !== duration)
+      ? list.map((c) => ({ ...c, from: 0, to: duration }))
+      : list))
+  }, [duration])
 
   /** The time on the JOINED timeline that the stage is currently showing. */
   const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
@@ -701,6 +743,32 @@ export default function VideoEditTool() {
       setCentre({ x: clamp01(d.cx + (p.x - d.px)), y: clamp01(d.cy + (p.y - d.py)) })
       return
     }
+    if (d.kind === 'crop-handle') {
+      // A corner drag is a rectangle, and a rectangle has a proportion — so it
+      // sets one, rather than being squeezed back into whichever preset was
+      // selected. The crop is still stored as an aspect plus a centre plus a
+      // zoom, because that is what lets clips of different shapes share an
+      // output frame; the drag is simply converted into those three numbers.
+      const clip = { width: current.info.width, height: current.info.height }
+      const fw = Math.max(0.04, Math.abs(clamp01(p.x) - d.ax)) * clip.width
+      const fh = Math.max(0.04, Math.abs(clamp01(p.y) - d.ay)) * clip.height
+      const a = fw / fh
+      const fit = fitRect(clip.width, clip.height, a)
+      // Clamped to the zoom slider's own range, so the two controls cannot
+      // disagree about the same rectangle — a slider pinned at 3 while the box
+      // is a tenth of the frame is a lie about what it does.
+      const z = Math.min(3, Math.max(1, fit.w / fw))
+      const w = fit.w / z
+      const h = fit.h / z
+      setFreeAspect(a)
+      setAspectId('free')
+      setZoom(z)
+      setCentre({
+        x: clamp01((Math.min(d.ax * clip.width, clamp01(p.x) * clip.width) + w / 2) / clip.width),
+        y: clamp01((Math.min(d.ay * clip.height, clamp01(p.y) * clip.height) + h / 2) / clip.height),
+      })
+      return
+    }
     if (d.kind === 'draw') {
       const box = drawingRef.current
       if (!box) return
@@ -733,6 +801,7 @@ export default function VideoEditTool() {
       return
     }
     if (d.kind === 'caption') {
+      d.moved = true
       setCaptions((list) => list.map((c) => (c.id === d.id
         ? { ...c, x: clamp01(Math.min(1 - c.w, p.x - d.ox)), y: clamp01(Math.min(1 - c.h, p.y - d.oy)) }
         : c)))
@@ -749,6 +818,13 @@ export default function VideoEditTool() {
     const d = dragRef.current
     dragRef.current = null
     if (overlayRef.current?.hasPointerCapture(e.pointerId)) overlayRef.current.releasePointerCapture(e.pointerId)
+
+    // A SECOND click on a caption opens its editor. The first selects it, so
+    // the box can still be moved and resized; only a click that selected
+    // nothing new and travelled nowhere is asking to edit the words. The text
+    // is the thing on screen, so the text is what you should be able to reach
+    // for by touching it.
+    if (d?.kind === 'caption' && d.was && !d.moved) { setEditText(d.id); return }
 
     // A stray click is not a box. Anything under about a fiftieth of the frame
     // is a misclick, and committing it would leave invisible specks that still
@@ -780,9 +856,18 @@ export default function VideoEditTool() {
         size: Math.max(0.03, Math.min(0.18, box.h * 0.45)),
         colour: '#ffffff',
         band: true,
-        ...spanNow(),
+        // A caption runs the WHOLE video. It was a span you set in two number
+        // fields, which is a control most people never touched and everybody
+        // had to read past — and a caption that runs out halfway is a defect
+        // far more often than it is a choice. Boxes keep their span, because
+        // hiding something for part of a clip is the ordinary case there.
+        from: 0,
+        to: duration,
       }])
       setPickedCaption(id)
+      // Straight into the editor: an empty box draws nothing, so a new caption
+      // that did not ask for its words is a rectangle with no way in.
+      setEditText(id)
     }
   }
 
@@ -952,6 +1037,7 @@ export default function VideoEditTool() {
   const isNow = (c: { from: number; to: number }) => activeAt([c], t).length > 0
   const picked = censors.find((c) => c.id === pickedBox) ?? null
   const caption = captions.find((c) => c.id === pickedCaption) ?? null
+  const editingCaption = captions.find((c) => c.id === editText) ?? null
   const drawingText = textTick >= 0 ? drawingTextRef.current : null
 
   const toolBtn = (m: Mode, label: string, icon: React.ReactNode) => (
@@ -1046,9 +1132,29 @@ export default function VideoEditTool() {
               {/* The crop rectangle, over the uncropped picture. The canvas dims
                   everything outside it; this is the edge you actually drag. */}
               {mode === 'crop' && (
-                <div data-testid="ve-crop-box" aria-hidden="true"
+                <div data-testid="ve-crop-box"
                   style={{ left: `${cropBox.x * 100}%`, top: `${cropBox.y * 100}%`, width: `${cropBox.w * 100}%`, height: `${cropBox.h * 100}%` }}
-                  className="absolute border-2 border-green-400 pointer-events-none" />
+                  className="absolute border-2 border-green-400 pointer-events-none">
+                  {/* A corner you can PULL. Without them the only way to a
+                      proportion the presets do not cover was the zoom slider,
+                      which changes the size and never the shape — so an
+                      arbitrary crop was simply not expressible. Each one
+                      anchors on the opposite corner. */}
+                  {CORNERS.map((c) => (
+                    <span key={c.id} data-testid={`ve-crop-${c.id}`} title={s.free} aria-label={s.free}
+                      style={{ [c.v]: '-7px', [c.h]: '-7px' } as React.CSSProperties}
+                      className={`absolute w-3.5 h-3.5 rounded-[2px] bg-green-400 border border-black/40 pointer-events-auto ${c.cursor}`}
+                      onPointerDown={(e) => {
+                        e.stopPropagation()
+                        overlayRef.current?.setPointerCapture(e.pointerId)
+                        dragRef.current = {
+                          kind: 'crop-handle',
+                          ax: c.h === 'left' ? cropBox.x + cropBox.w : cropBox.x,
+                          ay: c.v === 'top' ? cropBox.y + cropBox.h : cropBox.y,
+                        }
+                      }} />
+                  ))}
+                </div>
               )}
 
               {mode === 'censor' && censors.map((c) => handle(
@@ -1077,7 +1183,10 @@ export default function VideoEditTool() {
                   e.stopPropagation()
                   const p = at(e)
                   overlayRef.current?.setPointerCapture(e.pointerId)
-                  dragRef.current = { kind: 'caption', id: c.id, ox: p.x - c.x, oy: p.y - c.y }
+                  dragRef.current = {
+                    kind: 'caption', id: c.id, ox: p.x - c.x, oy: p.y - c.y,
+                    was: pickedCaption === c.id, moved: false,
+                  }
                   setPickedCaption(c.id)
                 },
                 () => { setCaptions((l) => l.filter((x) => x.id !== c.id)); setPickedCaption(null) },
@@ -1120,6 +1229,13 @@ export default function VideoEditTool() {
                 className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
                 <CogIcon className="w-5 h-5" />
               </button>
+              {/* GREEN ONLY ONCE THERE IS A FILE. Primary colour is a claim
+                  that this is the thing to do next, and before an export there
+                  is nothing to download — a button that shouts from the moment
+                  the editor opens is one more thing shouting, and when the
+                  file really is ready nothing distinguishes it. So export
+                  wears the same dark chrome as the tools beside it, and the
+                  download that replaces it is the only green on the frame. */}
               {out ? (
                 <a href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download"
                   title={`${s.download} · ${s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}`}
@@ -1130,7 +1246,7 @@ export default function VideoEditTool() {
               ) : (
                 <button type="button" title={s.exportBtn} aria-label={s.exportBtn} data-testid="ve-export"
                   onClick={doExport} disabled={busy !== ''}
-                  className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer disabled:opacity-60">
+                  className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
                   {busy === 'render'
                     ? <Spinner />
                     : <DownloadIcon className="w-5 h-5" />}
@@ -1151,13 +1267,16 @@ export default function VideoEditTool() {
                         {locale === 'ar' ? a.labelAr : a.label}
                       </button>
                     ))}
-                    <span className="text-[0.78rem] opacity-80 ps-1 rtl:font-ar" data-testid="ve-kept">{s.kept(kept)}</span>
-                    <span className="text-[0.78rem] opacity-80 font-mono" data-testid="ve-out-size">{s.outSize(size.width, size.height)}</span>
-                    <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">
-                      {s.zoom}
-                      <input type="range" min={1} max={3} step={0.05} value={zoom} data-testid="ve-zoom"
-                        className="w-20" onChange={(e) => setZoom(Number(e.target.value))} />
-                    </label>
+                    {/* Free is shown only once a corner drag has made one. It
+                        is a RESULT, not a mode to switch into — there is
+                        nothing for it to mean before a rectangle exists. */}
+                    {freeAspect > 0 && (
+                      <button type="button" data-testid="ve-aspect-free" onClick={() => setAspectId('free')}
+                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                          aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                        {s.free}
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1194,19 +1313,17 @@ export default function VideoEditTool() {
                   <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-text-bar">
                     {caption ? (
                       <>
-                        <Input value={caption.text} placeholder={s.text} data-testid="ve-caption-text"
-                          className="w-40 !py-0.5 !text-[0.8rem]"
-                          onChange={(e) => setCaption(caption.id, { text: e.target.value })} />
-                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.from}
-                          <Input type="number" min={0} max={duration} step={0.1} value={caption.from} className="w-16 !py-0.5 !text-[0.78rem]"
-                            data-testid="ve-caption-from"
-                            onChange={(e) => setCaption(caption.id, { from: Number(e.target.value) })} />
-                        </label>
-                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.to}
-                          <Input type="number" min={0} max={duration} step={0.1} value={caption.to} className="w-16 !py-0.5 !text-[0.78rem]"
-                            data-testid="ve-caption-to"
-                            onChange={(e) => setCaption(caption.id, { to: Number(e.target.value) })} />
-                        </label>
+                        {/* The words are edited by TAPPING THE CAPTION, not
+                            from here. A text field on this bar is a second
+                            place to type the same thing, sitting a long way
+                            from the thing it changes — and it was the control
+                            that made this row wider than a phone. */}
+                        <button type="button" data-testid="ve-caption-edit"
+                          onClick={() => setEditText(caption.id)}
+                          dir="auto"
+                          className="rounded px-2 py-1 text-[0.8rem] border border-white/25 bg-transparent hover:bg-white/10 cursor-pointer rtl:font-ar max-w-[10rem] truncate">
+                          {caption.text.trim() || s.editText}
+                        </button>
                         <input type="range" min={0.03} max={0.18} step={0.005} value={caption.size} title={s.size}
                           data-testid="ve-caption-size" className="w-16"
                           onChange={(e) => setCaption(caption.id, { size: Number(e.target.value) })} />
@@ -1298,6 +1415,29 @@ export default function VideoEditTool() {
           )}
         </div>
 
+        {/* The caption editor. A TEXTAREA, because a caption wraps to its box
+            and a single-line field cannot show where it breaks — and over the
+            picture, so the box being typed into is still visible behind it. */}
+        {editingCaption && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-black/70 p-4" data-testid="ve-caption-editor">
+            <div className="w-[min(92vw,26rem)] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-4 flex flex-col gap-3">
+              <Textarea rows={3} autoFocus dir="auto" value={editingCaption.text} placeholder={s.text}
+                data-testid="ve-caption-text"
+                onChange={(e) => setCaption(editingCaption.id, { text: e.target.value })} />
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.captionWhole}</p>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button data-testid="ve-caption-delete"
+                  onClick={() => {
+                    setCaptions((l) => l.filter((x) => x.id !== editingCaption.id))
+                    setPickedCaption(null)
+                    setEditText(null)
+                  }}>{s.deleteBox}</Button>
+                <Button variant="primary" data-testid="ve-caption-done" onClick={() => setEditText(null)}>{s.close}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Leaving throws the session away, so it asks. Rendered over the
             editor rather than as a `window.confirm` so it can say what is
             actually lost and read as part of the tool. */}
@@ -1324,7 +1464,15 @@ export default function VideoEditTool() {
           <div className="wrap py-6 flex flex-col gap-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display rtl:font-ar text-[1.3rem] font-semibold text-ink">{s.modeMore}</h2>
-              <Button data-testid="ve-settings-close" onClick={() => setSettings(false)}>{s.done}</Button>
+              {/* An X, not a "Done" button. Nothing here is submitted — every
+                  control takes effect as it is touched — so a word that reads
+                  like a commit step describes a transaction that does not
+                  happen. This screen is closed, not finished. */}
+              <button type="button" data-testid="ve-settings-close" onClick={() => setSettings(false)}
+                title={s.close} aria-label={s.close}
+                className="grid place-items-center w-9 h-9 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink cursor-pointer hover:bg-[color:var(--bg)]">
+                <CloseIcon className="w-4 h-4" />
+              </button>
             </div>
 
             <Field label={s.quality}>
@@ -1339,7 +1487,10 @@ export default function VideoEditTool() {
                   {HEIGHTS.map((h) => <option key={h} value={h}>{h}p</option>)}
                 </Select>
               </Field>
-              <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.noUpscale}</p>
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar">
+                <span className="font-mono" data-testid="ve-out-size">{size.width}×{size.height}</span>
+                {' — '}{s.noUpscale}
+              </p>
             </div>
 
             {audioPlan === 'copy' && (
@@ -1375,11 +1526,6 @@ export default function VideoEditTool() {
                 </ul>
               </div>
             )}
-
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">
-              {s.trimNote}{' '}
-              <a className="text-green-700 underline" href={`/${locale}/apps/video-trim`}>{s.trimName}</a>
-            </p>
           </div>
         </div>
       )}

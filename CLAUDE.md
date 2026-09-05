@@ -2493,6 +2493,65 @@ been about reclaiming space inside what was left.
 - **The clip list moved into the settings screen** with the other power
   features, because there is no longer a page under the video to put it on.
 
+**A fourth pass, all of it about the bar over the picture.** Every control on
+this tool sits on a frame that is 355px wide on the phone it is used from, so
+anything that is not the decision itself is in the way of it.
+
+- **The crop rectangle has CORNER HANDLES, and pulling one sets a FREE
+  proportion.** The presets could only ever give five shapes; the zoom slider
+  changed the SIZE and never the shape, so an arbitrary crop was simply not
+  expressible. A drag is converted back into the aspect-plus-centre-plus-zoom
+  the crop is stored as — that storage is what lets clips of different shapes
+  share one output frame, and it is not given up to add handles. The `Free`
+  chip appears only once a drag has made one: it is a RESULT, not a mode, and
+  there is nothing for it to mean before a rectangle exists.
+- **`Keeps 42% · 134×240 · Zoom` came off the bar entirely**, and the first of
+  those is the one worth arguing about, because this file calls it the thing
+  the tool exists to say. It still says it — **the crop rectangle is drawn over
+  the WHOLE clip**, so what is thrown away is the shaded part you are looking
+  at. A percentage beside it is a second telling of the same thing in the one
+  place with no room for it. The pixel size moved to the settings screen,
+  beside the largest-side picker, which is where somebody is actually asking
+  what they are getting.
+- **The aspect chips are named by the RATIO alone** — `9:16`, not `9:16 Reels ·
+  TikTok · Shorts`. The longer label is more helpful in a list and wrong in a
+  row of chips over a video: five of them were wider than the viewport, so the
+  shapes at the end could not be reached at all.
+- **A caption is edited by TAPPING THE CAPTION.** A second click on a selected
+  box opens a textarea over the picture; the first click still selects, and a
+  drag is still a drag, which is what the `was`/`moved` pair on that drag
+  exists to separate. Drawing a box opens the editor at once, because an empty
+  caption draws nothing and a rectangle with no way into it is a dead end.
+- **A caption runs the WHOLE video, and its two number fields are gone.** The
+  span was a control most people never touched and everybody read past, and a
+  caption that stops halfway is a defect far more often than a choice. Censors
+  keep their span — hiding something for part of a clip is the ordinary case
+  there. The span is still in the data and now DERIVED, kept level with the
+  clip list by an effect, so `activeAt` stays one rule for boxes and captions
+  alike rather than growing a special case.
+- **Export is not green until there is something to download.** Primary colour
+  is a claim that this is the thing to do next; before an export there is no
+  file, and a button that shouts from the moment the editor opens leaves
+  nothing to distinguish the moment the file is actually ready.
+- **"Done" became an X.** Nothing on the settings screen is submitted — every
+  control takes effect as it is touched — so a word that reads like a commit
+  step describes a transaction that does not happen.
+
+**A reported bug that the instrument says is NOT in the code, recorded rather
+than "fixed".** A caption typed as `Wowi` was reported as drawing `iwoW`. The
+letters W, o, w and i are all very nearly symmetric about the vertical, so
+that string reads the same mirrored as reversed — which is why it looked like a
+bidi bug. Driven through the real tool with an ASYMMETRIC word (`Fab7`, in a
+throwaway spec) the caption draws correctly, and a probe of the canvas itself
+confirms Chrome does not reorder Latin text under `direction: 'rtl'` either.
+**A fixture has to contain the hard case, and a symmetric word cannot tell a
+mirror from a reversal** — the lam-alef lesson, in a new place. What DID change
+is the field: the editor's textarea carries `dir="auto"`, so the direction
+comes from the text, exactly as `isRtl` already decides it for the canvas —
+an English caption typed on the Arabic side of the site used to lay out
+right-to-left in the box while the picture drew it left-to-right, so the field
+disagreed with the result it was producing.
+
 **PIXELATE IS NOW THE DEFAULT, reversing the measured decision above, and the
 reason is the one thing `pixelleak.mjs` could not measure.** The finding stands:
 a mosaic gives a moving subject back, 98.6% of a number plate from 64 frames,

@@ -174,7 +174,9 @@ test('leaving asks first, and only then throws the session away', async ({ page 
   await page.getByTestId('ve-back-cancel').click()
   await expect(page.getByTestId('ve-confirm-back')).toHaveCount(0)
   await expect(page.getByTestId('ve-fullscreen')).toBeVisible()
+  await page.getByTestId('ve-settings').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
+  await page.getByTestId('ve-settings-close').click()
 
   // And discarding goes back to the upload screen, with the editor gone.
   await page.getByTestId('ve-back').click()
@@ -268,29 +270,63 @@ test('cropping shows the WHOLE clip; leaving crop mode applies it', async ({ pag
   await expect.poll(() => stageShape(page), { timeout: 15_000 }).toBeCloseTo(4 / 3, 1)
 })
 
-test('says what a crop costs, and the output size follows the shape', async ({ page }) => {
+test('the output size follows the shape, and comes back EVEN', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
 
-  // The fixture is 320×240 — 4:3. Cropped to 9:16 the kept rectangle is
-  // 135×240, which is 135×240 / 320×240 = 42% of the frame.
-  await page.getByTestId('ve-aspect-9:16').click()
-  await expect(page.getByTestId('ve-kept')).toContainText('42%')
-  // 240 tall, 240 × 9/16 = 135 wide — and 135 is ODD, so it must come back
-  // even or the encoder refuses the configuration outright.
+  // The size lives beside the largest-side picker now rather than on a readout
+  // over the picture — the crop rectangle drawn over the WHOLE frame is what
+  // says what a crop costs, and a percentage next to it was a second telling
+  // of the same thing in the one place with no room for it.
+  await page.getByTestId('ve-settings').click()
+
+  // The fixture is 320×240 — 4:3 — and the editor opens on 9:16, so the kept
+  // rectangle is 240 tall and 240 × 9/16 = 135 wide. 135 is ODD, so it must
+  // come back even or the encoder refuses the configuration outright.
   await expect(page.getByTestId('ve-out-size')).toHaveText('134×240')
 
-  // Square from the same frame keeps 240×240 of 320×240 = 75%.
-  await page.getByTestId('ve-aspect-1:1').click()
-  await expect(page.getByTestId('ve-kept')).toContainText('75%')
-  await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
-
-  // And the original keeps all of it — the case that would pass against a tool
-  // that always reported a loss.
+  // Original keeps the whole frame — the reading that would pass against a
+  // tool reporting a crop it had not made.
+  await page.getByTestId('ve-settings-close').click()
   await page.getByTestId('ve-aspect-source').click()
-  await expect(page.getByTestId('ve-kept')).toContainText('100%')
+  await page.getByTestId('ve-settings').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('320×240')
+
+  await page.getByTestId('ve-settings-close').click()
+  await page.getByTestId('ve-aspect-1:1').click()
+  await page.getByTestId('ve-settings').click()
+  await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
+})
+
+test('a corner handle sets a FREE proportion', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+
+  // Free is not offered until a drag has made one — there is nothing for it to
+  // mean before a rectangle exists, and a chip that selects the shape you are
+  // already on is a control that does nothing.
+  await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
+
+  // Pull the bottom-right corner in. The stage keeps showing the WHOLE clip in
+  // crop mode, so what changes is the output — which is what the shape of the
+  // crop decides.
+  await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
+  const b = (await page.getByTestId('ve-stage').boundingBox())!
+  const handle = (await page.getByTestId('ve-crop-se').boundingBox())!
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width * 0.75, b.y + b.height * 0.95, { steps: 6 })
+  await page.mouse.up()
+
+  await expect(page.getByTestId('ve-aspect-free')).toBeVisible()
+  // The preset it started on is no longer the selected one, or the drag would
+  // have been squeezed straight back into a shape nobody asked for.
+  await page.getByTestId('ve-settings').click()
+  const size = await page.getByTestId('ve-out-size').textContent()
+  expect(size).not.toBe('320×240')
 })
 
 test('never upscales past the source', async ({ page }) => {
@@ -302,8 +338,8 @@ test('never upscales past the source', async ({ page }) => {
   // pixels and no detail, and the claim in the copy has to be true.
   await page.getByTestId('ve-settings').click()
   await page.getByTestId('ve-height').selectOption('1440')
-  await page.getByTestId('ve-settings-close').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('320×240')
+  await page.getByTestId('ve-settings-close').click()
 })
 
 test('crops and exports a real, playable MP4 at the cropped size', async ({ page }) => {
@@ -311,7 +347,9 @@ test('crops and exports a real, playable MP4 at the cropped size', async ({ page
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-1:1').click()
+  await page.getByTestId('ve-settings').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
+  await page.getByTestId('ve-settings-close').click()
 
   await page.getByTestId('ve-export').click()
   await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 120_000 })
@@ -404,17 +442,22 @@ test('a caption is drawn into the picture, and only while it is showing', async 
 
   await page.getByTestId('ve-mode-text').click()
   await drawBox(page, [0.1, 0.76], [0.9, 0.88])
-  await page.getByTestId('ve-caption-from').fill('0')
-  await page.getByTestId('ve-caption-to').fill('2')
+  // Drawing a box opens the editor straight away: an empty caption draws
+  // nothing, so a new one that did not ask for its words is a rectangle with
+  // no way in.
+  await expect(page.getByTestId('ve-caption-editor')).toBeVisible()
   await page.getByTestId('ve-caption-text').fill('HELLO')
+  await page.getByTestId('ve-caption-done').click()
 
   // The band plus the text darkens those rows noticeably.
   await expect.poll(bandMean, { timeout: 15_000 }).toBeLessThan(before - 4)
 
-  // And it goes when its window closes. Without this the case would pass
-  // against a tool that painted every caption over the whole clip.
-  await page.getByTestId('ve-caption-to').fill('0.5')
-  await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(before - 2)
+  // And it is STILL there at the far end of the clip. A caption runs the whole
+  // video now — the span was two number fields most people never touched, and
+  // a caption that stops halfway is a defect far more often than a choice — so
+  // this is the property that replaced "it goes when its window closes".
+  await seek(page, 5.5)
+  await expect.poll(bandMean, { timeout: 15_000 }).toBeLessThan(before - 4)
 })
 
 test('a caption is a drawn box, and can be removed again', async ({ page }) => {
@@ -429,11 +472,43 @@ test('a caption is a drawn box, and can be removed again', async ({ page }) => {
 
   await drawBox(page, [0.15, 0.7], [0.85, 0.9])
   await page.getByTestId('ve-caption-text').fill('HELLO')
+  await page.getByTestId('ve-caption-done').click()
   await expect(page.getByTestId('ve-caption-box-0')).toBeVisible()
 
   await page.getByTestId('ve-caption-box-0-delete').click()
   await expect(page.getByTestId('ve-caption-box-0')).toHaveCount(0)
-  await expect(page.getByTestId('ve-caption-text')).toHaveCount(0)
+  await expect(page.getByTestId('ve-caption-edit')).toHaveCount(0)
+})
+
+test('clicking a selected caption a second time opens its editor', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-mode-text').click()
+
+  await drawBox(page, [0.15, 0.6], [0.85, 0.85])
+  await page.getByTestId('ve-caption-text').fill('HELLO')
+  await page.getByTestId('ve-caption-done').click()
+  await expect(page.getByTestId('ve-caption-editor')).toHaveCount(0)
+
+  // The box is still selected from being drawn, so ONE click is the second
+  // one: it opens the words rather than merely re-selecting what is already
+  // selected. Without this the only way back to the text was a control on the
+  // bar, a long way from the thing it changes.
+  await page.getByTestId('ve-caption-box-0').click()
+  await expect(page.getByTestId('ve-caption-editor')).toBeVisible()
+  await expect(page.getByTestId('ve-caption-text')).toHaveValue('HELLO')
+  await page.getByTestId('ve-caption-done').click()
+
+  // And the words survive a DRAG, which must not be read as a click — without
+  // that separation a selected box could no longer be moved at all.
+  const box = (await page.getByTestId('ve-caption-box-0').boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 30, { steps: 5 })
+  await page.mouse.up()
+  await expect(page.getByTestId('ve-caption-editor')).toHaveCount(0)
 })
 
 /**

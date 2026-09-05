@@ -598,6 +598,14 @@ export function BackIcon({ className }: P) {
   )
 }
 
+export function CloseIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
 export function CropIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

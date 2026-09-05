@@ -291,11 +291,20 @@ export function captionRect(
   }
 }
 
-/** The aspect ratios worth offering, and what each is for. */
+/**
+ * The aspect ratios worth offering.
+ *
+ * Named by the RATIO alone. They used to carry what each is for — "9:16 Reels ·
+ * TikTok · Shorts" — which is the more helpful label in a list and the wrong
+ * one in a row of chips over a video on a phone: five of them were wider than
+ * the viewport, so the shapes at the end could not be reached at all. A ratio
+ * is what people already say, and the ones that need explaining are exactly
+ * the ones nobody picks.
+ */
 export const ASPECTS: { id: string; aspect: number; label: string; labelAr: string }[] = [
   { id: 'source', aspect: 0, label: 'Original', labelAr: 'كما هو' },
-  { id: '9:16', aspect: 9 / 16, label: '9:16 Reels · TikTok · Shorts', labelAr: '٩:١٦ ريلز · تيك توك · شورتس' },
-  { id: '1:1', aspect: 1, label: '1:1 Square', labelAr: '١:١ مربّع' },
-  { id: '4:5', aspect: 4 / 5, label: '4:5 Instagram feed', labelAr: '٤:٥ منشور إنستغرام' },
-  { id: '16:9', aspect: 16 / 9, label: '16:9 YouTube · X', labelAr: '١٦:٩ يوتيوب · إكس' },
+  { id: '9:16', aspect: 9 / 16, label: '9:16', labelAr: '٩:١٦' },
+  { id: '1:1', aspect: 1, label: '1:1', labelAr: '١:١' },
+  { id: '4:5', aspect: 4 / 5, label: '4:5', labelAr: '٤:٥' },
+  { id: '16:9', aspect: 16 / 9, label: '16:9', labelAr: '١٦:٩' },
 ]
