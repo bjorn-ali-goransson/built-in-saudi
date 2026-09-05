@@ -2632,7 +2632,15 @@ attack needing no expertise is the one to design against.
   the mode is solid. Keyframed interpolation is the obvious next step and is
   deliberately out of v1.
 
-**OPEN: a preview that will not play, reported from Android, INTERMITTENT.**
+**PARKED: a preview that will not play, reported from Android, INTERMITTENT.**
+Parked rather than fixed, and parked rather than deleted — **the instrument is
+built and the fault has not been seen since, so there is nothing left to do
+that is not a guess.** Both hypotheses anyone had were tested and both were
+wrong; the third is untestable without a report from a failing device, which is
+exactly what `diagnostics.ts` exists to produce. **What reopens it is a
+diagnostics block from a real failure**, not another round of reasoning — and
+until one arrives, more work here is redesigning on a hunch, which is what the
+two dead hypotheses below cost already.
 The same file on the same build played on a second attempt — which is the most
 useful fact in this entry and arrived after the first version of it was written.
 **It rules out every deterministic explanation**: an unsupported codec, a
@@ -2656,7 +2664,8 @@ every demuxed sample per clip, which on a phone is several copies of a large
 recording, and Chrome drops media resources under pressure. Plausible, unproven,
 and not worth a redesign on a hunch.
 
-**So the next step is DIAGNOSTICS, not a fix.** `diagnostics.ts` records a
+**So what shipped is DIAGNOSTICS, not a fix**, and that is where this rests.
+`diagnostics.ts` records a
 timeline from the pick — with the heap in use at every mark, because the
 hypothesis is about GROWTH and one figure says nothing — and the worker reports
 `retainedBytes` and `sampleCount`, which is the quantity the theory turns on,
