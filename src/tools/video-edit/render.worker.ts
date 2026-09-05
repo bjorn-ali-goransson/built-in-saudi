@@ -25,6 +25,7 @@
 
 import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
+import { avcCBox, codecFor, smallest } from '../../lib/mp4Encode'
 import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from './compose'
 
 export interface AudioInfo {
@@ -126,40 +127,7 @@ function fingerprint(t: DemuxTrack): string {
   return `${t.entryType}/${t.sampleRate}/${t.channels}/${Array.from(t.config).join(',')}`
 }
 
-/**
- * The codec string to encode with.
- *
- * BASELINE, on purpose. A baseline stream has no B-frames, so a frame is never
- * presented before it is decoded — decode order and presentation order are the
- * same, and the sample table cannot acquire the composition offsets that are
- * the fiddliest thing in an MP4 to get right. The level comes from the frame
- * size because an encoder is entitled to refuse a stream that exceeds the level
- * it was asked for, and "export failed" is a poor way to learn that 1080p needs
- * level 4.
- */
-function codecFor(width: number, height: number): string {
-  const macroblocks = Math.ceil(width / 16) * Math.ceil(height / 16)
-  if (macroblocks <= 3600) return 'avc1.42001f'   // level 3.1 — up to 1280×720
-  if (macroblocks <= 8192) return 'avc1.420028'   // level 4.0 — up to 1920×1080
-  return 'avc1.420033'                            // level 5.1 — beyond that
-}
-
 const idle = () => new Promise((r) => setTimeout(r, 4))
-
-/**
- * The smallest of a field across samples, WITHOUT a spread.
- *
- * `Math.min(...samples.map(…))` reads better and throws `RangeError: Maximum
- * call stack size exceeded` somewhere north of sixty thousand arguments — which
- * is a ten-minute clip at 30fps hitting a limit that a six-second fixture never
- * will. The bug would only ever appear on the long recordings this tool is most
- * useful for.
- */
-function smallest(samples: WriterSample[], pick: (s: WriterSample) => number): number {
-  let out = Infinity
-  for (const s of samples) { const v = pick(s); if (v < out) out = v }
-  return Number.isFinite(out) ? out : 0
-}
 
 async function probe(slot: number, file: File): Promise<ProbeInfo> {
   const data = await file.arrayBuffer()
@@ -439,21 +407,6 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
 
   const bytes = writeMp4(tracks)
   return { blob: new Blob([bytes as unknown as BlobPart], { type: 'video/mp4' }), audio }
-}
-
-/**
- * Wrap the encoder's raw AVCDecoderConfigurationRecord in its box.
- *
- * `VideoEncoder` hands back the record; `stsd` wants the `avcC` box around it.
- * `mp4Demux` slices whole boxes out of a source file for exactly the same
- * reason — one shape reaches the writer, whichever end it came from.
- */
-function avcCBox(record: Uint8Array): Uint8Array {
-  const out = new Uint8Array(record.length + 8)
-  new DataView(out.buffer).setUint32(0, record.length + 8)
-  out.set([0x61, 0x76, 0x63, 0x43], 4) // 'avcC'
-  out.set(record, 8)
-  return out
 }
 
 self.onmessage = async (e: MessageEvent<Req>) => {

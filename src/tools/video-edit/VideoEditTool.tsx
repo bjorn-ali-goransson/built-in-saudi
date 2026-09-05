@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
   BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
 } from '../../components/icons'
@@ -64,8 +64,11 @@ const STR = {
     diagCopied: 'Copied',
     previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so there is no picture to aim the crop and the boxes at.`,
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
-    censorInfo: 'What pixelating does and does not do',
-    censorWhy: 'Pixelating and blurring do not remove anything — they throw away resolution, and resolution comes back out of a VIDEO in a way it does not out of a photo: the mosaic grid stays fixed to the frame while your subject moves through it, so every frame samples the same face on a differently aligned grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame.',
+    boxSettings: 'This box',
+    hideWith: 'Hide with',
+    modes: { pixelate: 'Pixelate', solid: 'Solid', blur: 'Blur' },
+    censorWhy: 'Pixelating and blurring do not remove anything — they throw away resolution, and resolution comes back out of a VIDEO in a way it does not out of a photo: the mosaic grid stays fixed to the frame while your subject moves through it, so every frame samples the same face on a differently aligned grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame. Solid is the only one of the three that removes anything.',
+    solidWhy: 'Solid paints the region out, so there is nothing left in the picture to recover. It hides the picture and not the sound: the audio is copied across untouched, so a name that is spoken is still spoken.',
     quality: 'Quality',
     qualities: ['Smaller file', 'Normal', 'Sharper'],
     maxHeight: 'Largest side',
@@ -132,8 +135,11 @@ const STR = {
     diagCopied: 'نُسخ',
     previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها الاقتصاص ولا المربّعات.`,
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
-    censorInfo: 'ما تفعله البكسلة وما لا تفعله',
-    censorWhy: 'البكسلة والتمويه لا يزيلان شيئًا — إنما يُسقطان الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة تثبت على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة المحاذاة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد.',
+    boxSettings: 'هذا المربّع',
+    hideWith: 'طريقة الإخفاء',
+    modes: { pixelate: 'بكسلة', solid: 'حجب كامل', blur: 'تمويه' },
+    censorWhy: 'البكسلة والتمويه لا يزيلان شيئًا — إنما يُسقطان الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة تثبت على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة المحاذاة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد. والحجب الكامل وحده من الثلاثة هو ما يزيل شيئًا.',
+    solidWhy: 'الحجب الكامل يطمس المنطقة تمامًا، فلا يبقى في الصورة ما يمكن استرداده. وهو يخفي الصورة لا الصوت: فالصوت يُنسخ كما هو، والاسم المنطوق يبقى منطوقًا.',
     quality: 'الجودة',
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
     maxHeight: 'أطول ضلع',
@@ -330,7 +336,7 @@ export default function VideoEditTool() {
   const [pickedBox, setPickedBox] = useState<string | null>(null)
   const [pickedCaption, setPickedCaption] = useState<string | null>(null)
   /** Is the "what pixelating costs" note open? */
-  const [why, setWhy] = useState(false)
+  const [boxPanel, setBoxPanel] = useState(false)
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
   const [keepAudio, setKeepAudio] = useState(true)
@@ -693,15 +699,14 @@ export default function VideoEditTool() {
     // of, which is the one thing a person cannot judge in advance.
     if (mode === 'censor') {
       dragRef.current = { kind: 'draw', fx: p.x, fy: p.y }
-      // ONE WAY OF HIDING: a coarse mosaic. Solid and blur are gone — three
-      // modes made the reader choose between things two of which were the same
-      // operation, and a black rectangle was read as "pixelation is not
-      // implemented here, so you are getting the fallback". What solid bought
-      // is not free to lose, so `compose.ts` scales the block to the frame:
-      // a small box collapses to one or two averaged squares, which is a solid
-      // box in all but name. What the measurement says is still on the page,
-      // behind the box's own "i".
-      drawingRef.current = { id: `z${Date.now()}`, x: p.x, y: p.y, w: 0, h: 0, ...spanNow() }
+      // Pixelate by DEFAULT, with solid and blur behind the box's own cog.
+      // The measurement in `compose.ts` says solid is the only one of the three
+      // that removes anything — and a black rectangle was read, from a real
+      // phone, as "pixelation is not implemented here". A safest mode that
+      // looks like a missing feature sends people to a tool that uploads their
+      // video, so the default is the one people recognise and the cost of it is
+      // written beside the choice.
+      drawingRef.current = { id: `z${Date.now()}`, mode: 'pixelate', x: p.x, y: p.y, w: 0, h: 0, ...spanNow() }
       setPickedBox(null)
       return
     }
@@ -1100,15 +1105,16 @@ export default function VideoEditTool() {
             className="absolute -top-3 -end-3 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer">
             <TrashIcon className="w-3.5 h-3.5" />
           </button>
-          {/* What a mosaic does NOT do is worth knowing and is not worth
-              printing under every working run — a caveat shown to everybody is
-              one nobody reads. It sits on the box it is about, next to the
-              only other thing you can do to that box. */}
+          {/* Everything else this box can be is behind its own cog — how it
+              hides, when it shows, and what the mosaic costs. On the box it is
+              about, next to the only other thing you can do to that box, and
+              not printed under every working run: a caveat shown to everybody
+              is one nobody reads. */}
           {onInfo && (
-            <button type="button" title={s.censorInfo} aria-label={s.censorInfo} data-testid={`${testid}-info`}
+            <button type="button" title={s.boxSettings} aria-label={s.boxSettings} data-testid={`${testid}-settings`}
               onPointerDown={(e) => e.stopPropagation()} onClick={onInfo}
-              className="absolute -top-3 -end-12 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer font-display italic text-[0.85rem] leading-none">
-              i
+              className="absolute -top-3 -end-12 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer">
+              <CogIcon className="w-3.5 h-3.5" />
             </button>
           )}
           {/* A box you can move and not resize is a box you have to delete and
@@ -1229,7 +1235,7 @@ export default function VideoEditTool() {
                   overlayRef.current?.setPointerCapture(e.pointerId)
                   dragRef.current = { kind: 'resize', id: c.id }
                 },
-                () => setWhy(true),
+                () => setBoxPanel(true),
               ))}
 
               {/* A caption is the same rectangle, and clicking one opens its
@@ -1367,25 +1373,11 @@ export default function VideoEditTool() {
             {/* And the controls for whichever tool is active, along the bottom. */}
             <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
               <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
-                {mode === 'censor' && (
-                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-censor-bar">
-                    {picked ? (
-                      <>
-                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.from}
-                          <Input type="number" min={0} max={duration} step={0.1} value={picked.from} className="w-16 !py-0.5 !text-[0.78rem]"
-                            data-testid="ve-censor-from"
-                            onChange={(e) => setCensor(picked.id, { from: Number(e.target.value) })} />
-                        </label>
-                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.to}
-                          <Input type="number" min={0} max={duration} step={0.1} value={picked.to} className="w-16 !py-0.5 !text-[0.78rem]"
-                            data-testid="ve-censor-to"
-                            onChange={(e) => setCensor(picked.id, { to: Number(e.target.value) })} />
-                        </label>
-                      </>
-                    ) : (
-                      <span className="text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-censor-hint">{s.addBox}</span>
-                    )}
-                  </div>
+                {/* Censor mode has no panel either, for the same reason: what a
+                    box is, is a property of the box. What is left is the
+                    GESTURE, once, while there is nothing on screen to touch. */}
+                {mode === 'censor' && !picked && (
+                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-censor-hint">{s.addBox}</span>
                 )}
 
                 {/* Text mode has no panel — everything a caption has is on the
@@ -1461,13 +1453,47 @@ export default function VideoEditTool() {
           )}
         </div>
 
-        {why && (
-          <div className="absolute inset-0 z-10 grid place-items-center bg-black/70 p-4" data-testid="ve-censor-why">
-            <div className="w-[min(92vw,30rem)] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5 flex flex-col gap-3">
-              <p className="font-display rtl:font-ar text-[1.05rem] font-semibold text-ink">{s.censorInfo}</p>
-              <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.censorWhy}</p>
+        {/* One sheet for everything a box is: how it hides, when it shows,
+            and what that choice costs. Small on purpose — a settings screen
+            over a video is a settings screen you cannot see the video through. */}
+        {boxPanel && picked && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-black/70 p-4" data-testid="ve-box-panel">
+            <div className="w-[min(92vw,30rem)] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5 flex flex-col gap-4">
+              <p className="font-display rtl:font-ar text-[1.05rem] font-semibold text-ink">{s.boxSettings}</p>
+
+              <Field label={s.hideWith}>
+                <Seg>
+                  {(['pixelate', 'solid', 'blur'] as const).map((m) => (
+                    <SegButton key={m} active={picked.mode === m} data-testid={`ve-box-mode-${m}`}
+                      onClick={() => setCensor(picked.id, { mode: m })}>{s.modes[m]}</SegButton>
+                  ))}
+                </Seg>
+              </Field>
+
+              {/* The cost is stated where the choice is made, and it CHANGES
+                  with the choice — solid is the one that removes something, so
+                  saying the same thing under all three would make it wallpaper.
+                  There is a case asserting the warning clears on solid. */}
+              <p className={`text-[0.85rem] rtl:font-ar ${picked.mode === 'solid' ? 'text-ink-soft' : 'text-gold-700'}`}
+                data-testid="ve-box-why">
+                {picked.mode === 'solid' ? s.solidWhy : s.censorWhy}
+              </p>
+
+              <div className="flex items-end gap-3">
+                <Field label={s.from}>
+                  <Input type="number" min={0} max={duration} step={0.1} value={picked.from} className="w-24"
+                    data-testid="ve-censor-from"
+                    onChange={(e) => setCensor(picked.id, { from: Number(e.target.value) })} />
+                </Field>
+                <Field label={s.to}>
+                  <Input type="number" min={0} max={duration} step={0.1} value={picked.to} className="w-24"
+                    data-testid="ve-censor-to"
+                    onChange={(e) => setCensor(picked.id, { to: Number(e.target.value) })} />
+                </Field>
+              </div>
+
               <div className="flex justify-end">
-                <Button variant="primary" data-testid="ve-censor-why-close" onClick={() => setWhy(false)}>{s.close}</Button>
+                <Button variant="primary" data-testid="ve-box-panel-close" onClick={() => setBoxPanel(false)}>{s.close}</Button>
               </div>
             </div>
           </div>

@@ -211,14 +211,13 @@ test('the tool buttons switch which controls the picture carries', async ({ page
   await expect(page.getByTestId('ve-mode-crop')).toHaveAttribute('aria-pressed', 'true')
 
   await page.getByTestId('ve-mode-censor').click()
-  await expect(page.getByTestId('ve-censor-bar')).toBeVisible()
   await expect(page.getByTestId('ve-crop-bar')).toHaveCount(0)
   // With nothing drawn there is nothing to configure, so it says what to do.
   await expect(page.getByTestId('ve-censor-hint')).toBeVisible()
 
   await page.getByTestId('ve-mode-text').click()
   await expect(page.getByTestId('ve-caption-hint')).toBeVisible()
-  await expect(page.getByTestId('ve-censor-bar')).toHaveCount(0)
+  await expect(page.getByTestId('ve-censor-hint')).toHaveCount(0)
 
   // Settings are a full screen, not a fifth pill: on a phone that row was wider
   // than the viewport, so the controls it held were partly unreachable. It is
@@ -579,6 +578,17 @@ async function drawBox(page: Page, from: [number, number], to: [number, number])
   await page.mouse.up()
 }
 
+/** Set a box's span, which lives behind the box's own cog along with how it
+ *  hides. Opened and closed rather than left up, because the sheet covers the
+ *  stage every other assertion in these cases is about. */
+async function span(page: Page, box: number, from: number, to: number) {
+  await page.getByTestId(`ve-box-${box}-settings`).click()
+  await page.getByTestId('ve-censor-from').fill(String(from))
+  await page.getByTestId('ve-censor-to').fill(String(to))
+  await page.getByTestId('ve-box-panel-close').click()
+  await expect(page.getByTestId('ve-box-panel')).toHaveCount(0)
+}
+
 test('a drawn box censors that part of the picture, and only while it is showing', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
@@ -600,8 +610,7 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
   // Drawing it selects it, which is what puts its controls on the bar.
   await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
-  await page.getByTestId('ve-censor-from').fill('0')
-  await page.getByTestId('ve-censor-to').fill('6')
+  await span(page, 0, 0, 6)
 
   // Measured: 77 distinct colours become 8. The blocks are a fraction of the
   // frame, so a region of real picture collapses to a handful of flat squares.
@@ -613,7 +622,7 @@ test('a drawn box censors that part of the picture, and only while it is showing
 
   // It ends when its window ends. Captions run the whole clip now; a box does
   // not, because hiding something for part of a clip is the ordinary case.
-  await page.getByTestId('ve-censor-to').fill('1.5')
+  await span(page, 0, 0, 1.5)
   await seek(page, 4)
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
 })
@@ -649,8 +658,7 @@ test('a box outside its own span is still reachable', async ({ page }) => {
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.72], [0.6, 0.82])
-  await page.getByTestId('ve-censor-from').fill('0')
-  await page.getByTestId('ve-censor-to').fill('1.5')
+  await span(page, 0, 0, 1.5)
 
   // Scrub past the end of its span. Drawing only the boxes showing at this
   // instant looks tidier and traps you: the box that is out of reach is exactly
@@ -662,11 +670,11 @@ test('a box outside its own span is still reachable', async ({ page }) => {
   await page.getByTestId('ve-box-0').click()
   await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
   // And widening it brings the censor back over the frame on screen.
-  await page.getByTestId('ve-censor-to').fill('6')
+  await span(page, 0, 0, 6)
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(20)
 })
 
-test('what a mosaic costs is on the box, behind its own "i"', async ({ page }) => {
+test('how a box hides, and what that costs, are on the box', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -678,16 +686,48 @@ test('what a mosaic costs is on the box, behind its own "i"', async ({ page }) =
   // which is the caveat-shown-to-everybody this repo already refuses — and it
   // is exactly the text somebody needs at the moment they wonder, which is
   // when they are looking at the box.
-  await expect(page.getByTestId('ve-censor-why')).toHaveCount(0)
+  await expect(page.getByTestId('ve-box-panel')).toHaveCount(0)
 
-  await page.getByTestId('ve-box-0-info').click()
-  await expect(page.getByTestId('ve-censor-why')).toBeVisible()
+  await page.getByTestId('ve-box-0-settings').click()
+  await expect(page.getByTestId('ve-box-panel')).toBeVisible()
+  // Pixelate is where it starts, for the measured reason in `compose.ts`: a
+  // black rectangle reads as a missing feature and sends people to a tool that
+  // uploads their video.
+  await expect(page.getByTestId('ve-box-mode-pixelate')).toHaveAttribute('aria-pressed', 'true')
   // The measured figure, not a vague warning. Without this the case would pass
   // against a panel that said "be careful".
-  await expect(page.getByTestId('ve-censor-why')).toContainText('98.6%')
+  await expect(page.getByTestId('ve-box-why')).toContainText('98.6%')
 
-  await page.getByTestId('ve-censor-why-close').click()
-  await expect(page.getByTestId('ve-censor-why')).toHaveCount(0)
+  // And it CLEARS on the mode that actually removes something. Without this
+  // the warning would be decoration — the same text under all three choices is
+  // the caveat nobody reads, one level in.
+  await page.getByTestId('ve-box-mode-solid').click()
+  await expect(page.getByTestId('ve-box-mode-solid')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ve-box-why')).not.toContainText('98.6%')
+
+  await page.getByTestId('ve-box-panel-close').click()
+  await expect(page.getByTestId('ve-box-panel')).toHaveCount(0)
+})
+
+test('solid removes what a mosaic keeps', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await span(page, 0, 0, 6)
+  // A mosaic is the AVERAGE of what was there, so the light survives it — that
+  // is the whole reason it leaks. Solid is the one that leaves nothing.
+  expect(await meanOf(page, GRAD)).toBeGreaterThan(20)
+
+  await page.getByTestId('ve-box-0-settings').click()
+  await page.getByTestId('ve-box-mode-solid').click()
+  await page.getByTestId('ve-box-panel-close').click()
+  await expect.poll(() => meanOf(page, GRAD), { timeout: 15_000 }).toBeLessThan(6)
 })
 
 test('a mosaic throws away detail and KEEPS the light, which is what it costs', async ({ page }) => {
@@ -702,8 +742,7 @@ test('a mosaic throws away detail and KEEPS the light, which is what it costs', 
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.72], [0.6, 0.82])
-  await page.getByTestId('ve-censor-from').fill('0')
-  await page.getByTestId('ve-censor-to').fill('6')
+  await span(page, 0, 0, 6)
 
   // Both halves, because each alone is satisfied by something wrong. The
   // detail goes — 77 distinct colours down to 8, measured — while the light
@@ -725,8 +764,7 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.72], [0.6, 0.82])
   // Cover the whole clip: the default span is 3s and the fixture is 6s.
-  await page.getByTestId('ve-censor-from').fill('0')
-  await page.getByTestId('ve-censor-to').fill('6')
+  await span(page, 0, 0, 6)
 
   await page.getByTestId('ve-export').click()
   await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 120_000 })
