@@ -2290,6 +2290,140 @@ outside — every privacy-first converter site lists audio and we did not.
   discard quality a second time. Stating it beats looking like a missing
   feature.
 
+## Steadying a shaky clip, and what that costs (`video-stabilize`)
+
+A SEPARATE APP rather than a fifth mode in the editor, and the reason is what
+the two tools are. Everything `video-edit` does is a decision somebody makes ON
+the picture, which is why it is a full-screen editor with its controls on the
+frame. Stabilising is one measurement, one choice about how hard, and one number
+saying what that costs — so it is an ordinary tool page. Burying it behind a
+mode would also have hidden it from everyone who arrives with the SYMPTOM
+(`my video is shaky`) and no interest in cropping, which is how held-out set #4
+says people actually type.
+
+**The claim it is built on is that stabilising costs picture, and the amount is
+a property of YOUR clip.** Sliding a frame back under the output rectangle
+slides its far edge out of it, so every stabiliser crops; almost none of them
+says by how much, and the ones that do make you pick a percentage *before* you
+know what you needed. `requiredZoom` derives it in closed form from the measured
+corrections — the worst frame decides, and the two constraints are the rotated
+output rectangle's worst corner against each axis — so the figure on screen is a
+measurement rather than a default.
+
+**The clip is measured ONCE.** Gentle, medium and strong re-price instantly,
+because changing the smoothing is three array passes over three numbers a frame
+and not a second decode. That is what lets the trade be a live figure instead of
+a setting you commit to and wait for, and there is a case asserting no busy
+state appears when the level changes — without which the tool could be silently
+re-decoding the whole file on every click.
+
+**A smoothed path is not a still camera.** Holding the picture still fights a
+deliberate pan as hard as it fights a wobble, and the result lurches back every
+time you stop moving. What is removed is the difference between where the camera
+went and where it was heading — and **that distinction cost a round of testing**,
+below.
+
+**`motion.ts` is PURE with no runtime imports**, so `evals/shakeprobe.mjs`
+compiles it standalone with tsc and calls the real function — the
+`relatedPick.ts` / `cvPatch.ts` arrangement, for the reason recorded five times
+in this file. Four decisions inside it:
+
+- **A 4×4 grid of tiles, matched coarse-to-fine down a three-level pyramid**,
+  with a parabola fit for the sub-pixel part. The frames are looked at ~320px
+  wide, so a whole analysis pixel is six real ones on 1080p and the sub-pixel
+  step is what makes the estimate usable at all.
+- **Tiles with no detail are rejected, and the survivors are filtered against
+  their own MEDIAN before a transform is fitted.** That is what stops a person
+  walking through a locked-off shot dragging the camera estimate after them.
+- **Rigid — rotation and translation, and nothing more.** A scale term reads
+  every zoom or forward step as shake and fights it.
+- **The per-frame steps are COMPOSED, not summed.** Summing `dx` and `rot`
+  separately is what every stabiliser tutorial does, and it is only right while
+  the total rotation stays near zero.
+
+**Measured before the UI existed** (`node evals/shakeprobe.mjs`, a gate in
+`evals/check.mjs`, no API key, synthetic path so the answer is known):
+
+| | |
+|---|---|
+| per-step translation error | **0.05 / 0.07 px** |
+| per-step rotation error | **0.027°** |
+| accumulated drift over 48 frames | **0.63 px** |
+| a still camera reported as moving | **0.0001 px** |
+| a subject filling **17%** of the frame | 0.009 px — rejected |
+| a subject filling **31%** of the frame | **9.8 px — followed** |
+| a frame with no detail | 0 tiles, reported as unmeasured |
+
+**The subject sweep is the load-bearing control, and where it BREAKS is the
+useful half.** Past half the tiles the subject is the majority and no median can
+know which half is the room — so the sweep reports the limit rather than
+asserting a threshold nobody chose. **Verified to fail**: dropping the median
+rejection reddens the subject case, dropping the detail floor reddens the flat
+one.
+
+**The fixture is synthesised, because the steady one cannot test this tool at
+all** (`scripts/make-shaky-mp4.mjs`, run once, both files committed). Against
+`sample.mp4` a stabiliser corrects by nothing, crops by nothing, and passes
+every assertion having measured nothing — the fixture-has-to-contain-the-hard-case
+lesson for the fifth time. It carries a slow **sway** (which a gentle setting
+leaves alone and a strong one fights, so "steadying harder costs more picture"
+is a difference a test can see: 85% against 76%), a fast **wobble**, and one
+bright **marker** at a fixed place in the world. Both sizes were **simulated
+against the real `motion.ts` before the file was made**, so the fixture shows
+each property by a margin rather than only just.
+
+`steady.mp4` is the control, from the same world with the camera nailed down.
+**It could not be `sample.mp4`:** that clip's content moves, which any global
+estimator correctly reads as camera motion — so using it would have proved the
+"this clip is already steady" branch unreachable rather than proving it right.
+
+**Three things went wrong that are worth more than the tool.**
+
+- **A cleanup keyed on a changing value runs while the thing is still in use.**
+  `useEffect(() => () => { worker.terminate(); revoke(url) }, [url])` terminated
+  the worker the moment a file was picked — the old render's cleanup fires when
+  `url` changes, which is between the probe and the analysis — so the next
+  request went to a dead worker and was never answered. The page sat on
+  "measuring the movement" for ever with **nothing to report and nothing to
+  retry**. Two effects now, and the terminate one has no dependencies. Its
+  sibling fix is in the worker: a throw inside a decoder's output callback used
+  to leave the queue undrained and the feed loop waiting for ever, so it is
+  caught and reported like any other failure.
+- **I measured the thing that was easy instead of the thing the tool claims.**
+  The first version of the "it actually works" case measured how far the marker
+  WANDERS over the clip — and the tool is designed to keep the pan, so that
+  measures precisely what it does not touch. It reported the stabiliser as
+  barely working (1.3×). Frame-to-frame JUMP is what a stabiliser claims, and
+  reads 5.6×.
+- **Setting `currentTime` does not step frame by frame.** The rewritten case
+  seeked to consecutive frame times and the element handed back the SAME picture
+  for two of every three seeks — under-reporting the raw side and desynchronising
+  the correction index on the steadied one, so the numbers came out *backwards*.
+  It plays the files instead and samples in `requestVideoFrameCallback`, which
+  fires once per frame actually presented; and it measures the EXPORTED file
+  against the source blob rather than the app's canvas, so neither side depends
+  on when a repaint happened. **Verified to fail**: making `drawStabilised`
+  ignore the correction while keeping the zoom reddens that one case and no
+  other — which is exactly the point, since every other case would pass against
+  a tool that only crops.
+
+**Stated limits, in the UI rather than implied away**: no rolling-shutter
+correction (whole frames are moved and turned, so the diagonal jelly stays);
+motion blur is not undone, and taking the movement out usually makes it easier
+to see; it steadies the camera, not the subject; and a shake bigger than the
+margin a crop can buy back is named rather than half-corrected.
+
+**It stole nothing, which was measured rather than assumed** — including the
+Arabic name «تثبيت الفيديو», which contains «الفيديو» and is exactly the shape
+that has cost this repo six renames. Baselined by stashing the tool and
+re-running: all nine benches byte-identical, own names **475/476 → 477/478**.
+
+**`lib/mp4Encode.ts` is the shared half of re-encoding** — `codecFor`,
+`avcCBox`, `smallest` and `even`, extracted at the second caller. Each one
+carries a measured lesson (the level table, the box header, the `RangeError` a
+ten-minute clip hits, the chroma rounding), and a copy loses the comment along
+with the code.
+
 ## Crop, join, caption and censor a video (`video-edit`)
 
 The video family could trim, take a still, pull the sound out and make a GIF, and
@@ -2555,18 +2689,35 @@ disagreed with the result it was producing.
 **A fifth pass took the panels off the picture entirely, and the biggest change
 is one this file argued the other way about.**
 
-- **THERE IS ONE WAY OF HIDING NOW: a coarse mosaic.** Solid and blur are gone.
-  The measurement below stands — solid was the only mode that removed anything
-  — so what it bought is replaced rather than dropped: `applyCensors` scales
-  the block to a FRACTION of the frame, which makes a small box collapse to one
-  or two averaged squares, a solid box in all but name. **The fraction also
-  fixed a real defect**: the block was a pixel count, and the stage draws at
-  preview size while the exporter draws at output size, so the preview was
-  showing a mosaic the export would not produce — in the one file whose entire
-  job is that those two agree.
-- **What the measurement says is behind the box's own "i".** It was a paragraph
-  under every censor, which is the caveat-shown-to-everybody this file already
-  refuses; it is now one tap from the box it is about, next to the bin.
+- **The three modes came off the bar, and `applyCensors` scaled the block to a
+  FRACTION of the frame.** That second half **fixed a real defect** and is the
+  part to keep whatever the modes do: the block was a pixel count, and the stage
+  draws at preview size while the exporter draws at output size, so the preview
+  was showing a mosaic the export would not produce — in the one file whose
+  entire job is that those two agree.
+- **What the measurement says came off the page and onto the box.** It was a
+  paragraph under every censor, which is the caveat-shown-to-everybody this file
+  already refuses.
+
+**A SIXTH pass gave the modes back, and the shape is the lesson rather than the
+decision.** Removing solid and blur removed a real capability to buy one less
+control on a crowded bar — and the measurement below is unambiguous that solid
+is the only one of the three that removes anything, so what was left was the
+recoverable mode with no way to reach the safe one. They are now behind **the
+selected box's own cog** (`ve-box-<n>-settings` → `ve-box-panel`), together with
+the box's span, which was the last thing left on the bottom bar. **What a box
+is, is a property of the box** — the same argument that put the caption editor
+on the caption, arriving one control later.
+
+- **The cost is stated where the CHOICE is made, and it changes with it.** The
+  98.6% figure shows for pixelate and blur and **clears on solid**, with a case
+  for each. The same paragraph under all three would be wallpaper — the
+  caveat-nobody-reads failure one level in, which is exactly what taking it off
+  the page was supposed to fix.
+- **Solid is measured, not asserted.** The case reads the stage: a mosaic is the
+  AVERAGE of what was there, so it keeps the light — that is *why* it leaks —
+  and solid leaves the region dark. Without that the two modes would be
+  distinguishable only by which button is pressed.
 - **The crop rectangle is NINE SEGMENTS and has no handle squares.** The middle
   moves it, an edge moves that edge, a corner moves both — and the lines
   between them are the rule-of-thirds guides a camera draws, so the thing you
@@ -2615,7 +2766,7 @@ SAME encoded frame — same codec, same quantiser, same rows. 32 against 75. The
 quantiser was measured too: four bits a channel, picked to be safe against
 codec noise, reads 24 against 30 and cannot separate them.
 
-**PIXELATE IS NOW THE DEFAULT, reversing the measured decision above, and the
+**PIXELATE IS THE DEFAULT, reversing the measured decision above, and the
 reason is the one thing `pixelleak.mjs` could not measure.** The finding stands:
 a mosaic gives a moving subject back, 98.6% of a number plate from 64 frames,
 and solid is the only mode that removes anything. What the measurement is silent

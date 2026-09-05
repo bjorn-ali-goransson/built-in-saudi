@@ -30,6 +30,7 @@ const GATES = [
   ['patchcheck.mjs', 'an improve pass cannot delete a section of the candidate CV'],
   ['docxguard.mjs', 'the exported Word file is valid and keeps its content'],
   ['mp4guard.mjs', 'the MP4 we write re-parses, with every sample byte for byte, in mp4box'],
+  ['shakeprobe.mjs', 'the stabiliser recovers a known camera path, and is not dragged by a moving subject'],
 ]
 
 /** Numbers a person reads. No pass/fail, and some need the real corpus. */

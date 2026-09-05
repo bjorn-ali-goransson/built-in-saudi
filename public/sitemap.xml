@@ -2382,6 +2382,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/summarize"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/video-stabilize/</loc>
+    <changefreq>monthly</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/video-stabilize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/video-stabilize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/video-stabilize"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/video-stabilize/</loc>
+    <changefreq>monthly</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/video-stabilize"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/video-stabilize"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/video-stabilize"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/video-edit/</loc>
     <lastmod>2026-09-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/video-edit"/>

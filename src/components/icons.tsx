@@ -1295,3 +1295,14 @@ export function AddressPinIcon({ className }: P) {
     </svg>
   )
 }
+
+/** A frame held steady inside a wobbling one — the crop a stabiliser spends. */
+export function SteadyIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="2.5" y="4.5" width="19" height="15" rx="1.5" opacity="0.4" strokeDasharray="2.5 2" />
+      <rect x="6" y="8" width="12" height="8" rx="1" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2" />
+    </svg>
+  )
+}
