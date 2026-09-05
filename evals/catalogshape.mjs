@@ -31,6 +31,12 @@ const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
 const consumed = new Set([...RECOMMENDED, ...DUA])
 
 const byCat = new Map()
+// The tool's OWN filing, before a curated section eats it. CLAUDE.md: "a tool's
+// category describes the tool, not which curated section eats it" — so this is
+// the number that describes the catalogue, and `byCat` below is the number that
+// describes what renders. `docs/ROADMAP.md`'s table is the first, and is
+// checked against this by `scripts/check-roadmap-counts.mjs`.
+const byFiling = new Map()
 const ids = []
 for (const d of dirs) {
   const src = readFileSync(`${ROOT}/src/tools/${d}/meta.ts`, 'utf8')
@@ -40,6 +46,8 @@ for (const d of dirs) {
   const cat = /category: '([^']+)'/.exec(src)?.[1]
   if (!id || !cat) continue
   ids.push(id)
+  if (!byFiling.has(cat)) byFiling.set(cat, [])
+  byFiling.get(cat).push(id)
   if (consumed.has(id)) continue
   if (!byCat.has(cat)) byCat.set(cat, [])
   byCat.get(cat).push(id)
@@ -62,4 +70,10 @@ const biggest = rows[0]
 console.log(`\nlargest: ${biggest.cat} at ${biggest.n}, ${(biggest.n / median).toFixed(1)}x the median`)
 if (process.argv.includes('--list')) {
   for (const r of rows) console.log(`\n${r.cat}:\n  ${r.list.join(', ')}`)
+}
+
+console.log('\ncategories as FILED (what docs/ROADMAP.md counts — a curated section does not move a tool):')
+for (const [cat, list] of [...byFiling.entries()].sort((a, b) => b[1].length - a[1].length)) {
+  console.log(`  ${cat.padEnd(14)} ${String(list.length).padStart(3)}`)
+  if (process.argv.includes('--list')) console.log(`      ${list.join(', ')}`)
 }

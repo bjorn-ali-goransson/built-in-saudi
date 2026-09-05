@@ -88,6 +88,12 @@ for (const d of dirs) {
     nameAr: arPick('name') || pick('nameAr'),
     tagline: `${arPick('tagline')} ${pick('tagline')}`.trim(),
     category: `${arCategory(category)} ${category}`.trim(),
+    // The category as FILED, on its own. `category` above is what the UI SCORES
+    // against — the Arabic label and the English one joined — which is right
+    // for search and useless to anything counting the catalogue.
+    // `scripts/check-roadmap-counts.mjs` needs the plain value, and this is the
+    // shared loader, so it is added here rather than swept a second time.
+    filed: category,
     keywords,
     // Read from the COMMENT-STRIPPED source, like everything else here.
     inverse: /\binverse: '([a-z0-9-]+)'/.exec(src)?.[1],

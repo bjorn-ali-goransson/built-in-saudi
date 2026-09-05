@@ -138,6 +138,42 @@ is never crawled; a missing slash means a 301 on every visit; and no e2e is
 exactly how `file-metadata` sat unprotected while hiding a real bug. Verified by
 injecting each omission and watching it be named.
 
+**And the ROADMAP's count is a build gate too** (`scripts/check-roadmap-counts.mjs`,
+in `prebuild`, **verified to fail** three ways). `docs/ROADMAP.md` opens by
+saying it was reorganised *because* it had gone stale — "it listed shipped tools
+as unbuilt ideas" — and then went stale again in exactly that way, quietly,
+because nothing read it: **186 tools are live** against a registry of 239, with
+a table still naming `Calculators` at 18 and `Saudi / Local` at 27 after both
+had been split, so it listed categories that no longer exist and undercounted
+the ones that do. Adding a tool now means one number in the header and one in
+its category's row; the failure names both. **What is checked is what is
+STRUCTURED** — a number in a sentence and a number in a column. The "shape of
+it" prose beside them is not, because a guard that pretended to check prose
+would be asserting a requirement nobody verified, which is the `docxguard`
+lesson about `document.xml.rels`.
+
+**The count it checks is the tool's own FILING, not the section it renders in.**
+Ten tools are consumed by Recommended and Duʿāʾ and appear under no category
+heading, and this file already says a tool's category describes the tool rather
+than which curated section eats it — so the roadmap counts 12 Islamic tools
+where the rendered catalogue shows 6. `evals/catalogshape.mjs` prints both, and
+labels which is which.
+
+**The loader gained a `filed` field rather than the guard gaining a sweep.**
+`evals/lib/tools.mjs` builds `category` as the Arabic label and the English one
+joined, because that is what the UI SCORES against — right for search and
+useless to anything counting. Adding the plain value there is one line; sweeping
+the metas again in `scripts/` would have been the sixth second-loader in this
+file. All nine benches are byte-identical after it.
+
+**The same pass found four backlog rows and three parked rows describing tools
+that had shipped** — the electricity and fuel calculators, the iqama-fee and
+traffic-fine references, the Hijri countdown, GOSI, PDF→Word, and the HIBP
+breach check, whose "blocked on" reason was simply **wrong**: the range API is
+k-anonymous, so nothing ever needed proxying. `GPA` was on the *out of scope*
+list as competitor filler and shipped on a finding instead. None of that is
+catchable by a script — it is why the numbers being catchable matters.
+
 5. Add a Playwright case to `e2e/app.spec.ts` (drive the `data-testid`s you
    expose). For a **substantial** tool, also work from a spec in
    `docs/tools/<id>.md`; the many small single-purpose utilities are built

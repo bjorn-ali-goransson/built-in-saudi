@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **186 tools are live.** This
+The backlog, and an honest account of what exists. **239 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -13,25 +13,47 @@ optional [backend worker](./BACKEND.md).
 
 ---
 
-## What is live (August 2026)
+## What is live
+
+Counts are the tool's **own filing**, not the section it renders in — a tool
+consumed by the hand-picked Recommended or Duʿāʾ rows is still filed where it
+belongs. Read them off `node evals/catalogshape.mjs`, which prints both;
+`scripts/check-roadmap-counts.mjs` fails the build when this table and the
+registry disagree.
 
 | Category | Count | Shape of it |
 |---|---|---|
-| Developer | 32 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, URL parsing, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers |
-| Saudi / Local | 27 | prayer, Hijri, qibla, adhkar, IBAN, tafqeet, Arabic normalisation/numerals/Franco, phone, iqama expiry, weather, vehicle plates, short address, **khatma planner**, **monthly prayer timetable**, **name spelling**, **invoice QR reader** |
-| Text | 22 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, **on-device translator and summariser** |
-| Images | 19 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator |
-| Calculators | 18 | VAT, zakat, dates, coordinates, timezones, sun times, and the health cluster |
-| Generators | 21 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, Arabic handwriting sheets, .ics events, seating charts, attendance sheets |
-| PDF | 13 | merge/split/compress/sign/fill/edit, →images, →text, booklet imposition, stamping, **page organiser**, **true redaction** |
-| Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser |
-| Files | 14 | archives, metadata, hex, encryption, audio trim/extract, video→GIF, **video trim (no re-encode)**, **xlsx→CSV/JSON**, **spreadsheet→vCard**, **spreadsheet diff**, **remove silence**, **EPUB→text**, **CSV split** |
-| Business | 5 | invoice, quotation/receipt, certificates, CV optimizer, Book Me |
-| Converters, Communication, Utilities | 5 | units, base64, timestamps, Calls, QR reader |
+| Saudi / Local | 27 | iqama fees and expiry, GOSI and end of service, exit/re-entry, sponsorship transfer, retirement age, VAT registration and the **e-invoicing waves**, **RETT**, rent rules, **traffic fines**, vehicle and commercial-register renewal, import duty, IBAN, plates, short address, phone, weather |
+| Developer | 26 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers, **AI token counter** |
+| Images | 24 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator, **document-scan correction**, **print sizing**, **stills from video** |
+| Text | 24 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, on-device **translator, summariser and language detector**, **password strength with the k-anonymous breach check**, to-do and kanban |
+| Generators | 22 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, **word searches**, Arabic handwriting sheets, .ics events, seating charts, attendance sheets, **school timetables** |
+| PDF | 16 | merge/split/compress/sign/fill/edit, →images, →text, **→Word**, booklet imposition, stamping, page organiser, true redaction, OCR, **diffing** |
+| Files | 15 | archives (read **and write**), metadata, hex, encryption, audio trim/extract/**spectrum**, remove silence, video→GIF, video trim (no re-encode), **the video editor and the stabiliser**, CSV split, spreadsheet diff |
+| Converters | 14 | **Markdown ↔ Word / EPUB / HTML**, docx/pptx/EPUB→text, xlsx→CSV/JSON, CSV→xlsx, contacts ↔ spreadsheet, image→base64, **audio** |
+| Islamic | 12 | prayer times and printable timetables, qibla, Hijri calendar and age, adhkar, Hisn al-Muslim, istikhara, khatma planner, zakat, hajj & umrah |
+| Calculators | 11 | VAT, percentage, units, currency, coordinates, split bill, GPA, **AC sizing**, **fuel cost**, tempo tap, sound meter |
+| Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser, box shadow, aspect ratio, tier list |
+| Time & Date | 9 | age, date difference, working days, countdown, sun times, timezone planner, **timesheet**, **stopwatch**, pomodoro |
+| Web | 8 | meta tags, robots.txt, link preview, link shortener, URL encode/parse, user agent, accessibility check |
+| Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
+| Health | 7 | **due date**, **ovulation**, calories, water intake, sleep cycles, glucose units, medicine schedule |
+| Business | 6 | invoice, quotation/receipt, certificates, CV optimizer, Book Me, **pricing and margin** |
+| Communication | 1 | Calls — P2P video, whiteboard, direct messages |
+
+**Three of those categories did not exist in the August 2026 table**, and the
+splits are recorded in CLAUDE.md rather than here: `Calculators` was several
+subjects wearing one shape and became **Health** and **Time & Date**;
+`Saudi / Local` gave up **Islamic** and **Arabic**, because neither Islamic
+practice nor the Arabic language is a Saudi *administrative* matter; and
+`Developer` gave up **Web**, the tools you point at a site rather than at code.
 
 Everything is client-side except the documented server-backed tools (Book Me,
-Calls signalling, CV optimizer, link shortener, prompt analyzer, Arabic
-diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the Privacy page.
+Calls signalling, prayer alerts, to-do list sync, CV optimizer, link shortener,
+prompt analyzer, Arabic diacritizer) — see [`BACKEND.md`](./BACKEND.md) and the
+Privacy page. `password-strength` makes the site's one deliberate network call
+about user input, and only when asked: a **k-anonymous** 5-character hash prefix
+to Have I Been Pwned, which is a property of the protocol rather than a promise.
 
 ---
 
@@ -117,8 +139,12 @@ done unilaterally.
 
 ### Everything else
 
-- **Irrelevant noise** — construction-cost estimators, CGPA, arcade games, and
-  the filler seen on competitor "all-in-one" sites.
+- **Irrelevant noise** — construction-cost estimators, arcade games, and the
+  filler seen on competitor "all-in-one" sites. **GPA came off this list and
+  shipped**, on a finding rather than on demand: a fail is worth 1.00 on the
+  Saudi 5-point scale, so the `(GPA ÷ 5) × 4` formula every GPA site publishes
+  is wrong in the direction that flatters a weak record. `gpa-calculator`
+  converts grade by grade and shows both.
 - **Anything needing a scraped source or an API key we don't want to run**
   (keyword research, AI blog/social generators) unless offered as an external
   showcase.
@@ -136,11 +162,11 @@ Wanted, but blocked on something real. Do not build these casually.
 |---|---|
 | **On-device AI: Prompt / Writer / Rewriter / Proofreader** | Origin trial or flag only, verified in a real browser August 2026. The three **stable** APIs are shipped — see below. Revisit when these leave trial; a Proofreader would be the strongest of them. |
 | **JSON ↔ YAML ↔ TOML** | Needs real parsers. Hand-rolling YAML is how you ship silently-wrong output. |
-| **GOSI contributions** | Rates changed with the 2024 pension law and differ by nationality and hire date. Needs an authoritative current source, not memory. |
+| ~~**GOSI contributions**~~ | **Shipped** as `gosi-salary`. The blocker was the right one — the 2024 pension law runs two parallel schemes chosen by first registration date — and it was cleared by sourcing the rates rather than by remembering them. `gosi.ts` carries the SOURCES block. |
 | **Mirath / inheritance (فرائض)** | The highest-demand Saudi wedge left, and the one most in need of scholarly sourcing and review. Same bar as `zakat` and `end-of-service`. |
-| **PDF ↔ Word/Excel, ML upscaling, heavy ffmpeg** | Compute we would have to host — see [`BACKEND.md`](./BACKEND.md). |
+| **ML upscaling, heavy ffmpeg** | Compute we would have to host — see [`BACKEND.md`](./BACKEND.md). **PDF→Word and the spreadsheet directions came off this row**: `pdf-to-word`, `xlsx-convert` and `csv-to-xlsx` all run in the browser. Word→PDF was built and **withdrawn before shipping** — react-pdf reverses the lam-alef ligature's codepoints, so Arabic came out scrambled. |
 | **ZATCA / Fatoora e-invoicing** | Needs a backend and a crypto stamp. We may decode a QR; we must never call anything "a compliant invoice". |
-| **HIBP breach check** | Needs an API we would have to proxy, which puts a hash of your password through our server. |
+| ~~**HIBP breach check**~~ | **Shipped** in `password-strength`, and the reasoning here was simply wrong: the range API is **k-anonymous**, so it takes a 5-character hash prefix and returns about a thousand suffixes to compare locally. Nothing is proxied and no password leaves the page. It is never automatic, `Add-Padding` is sent, and a failed check reports as neither safe nor breached. |
 
 ---
 
@@ -291,11 +317,11 @@ earn a slot. **`client` unless noted.**
 
 | Idea | Why it earns a slot |
 |---|---|
-| Electricity bill estimator (SEC tariff) | A real money question. Needs `<Disclaimer kind="financial">` **and a printed tariff-as-of date**, or it rots silently. |
-| Fuel / trip cost calculator | Same shape — let the user set the price rather than baking in a number that goes stale. |
+| ~~Electricity bill estimator (SEC tariff)~~ | **Shipped** as `electricity-bill`. The tariff is marginal, not a cliff — 5,999 to 6,001 kWh costs about 14 halalas more, not hundreds of riyals — and the tool says so in words as well as in the breakdown. |
+| ~~Fuel / trip cost calculator~~ | **Shipped** as `fuel-cost`, with the prices as editable defaults. It also answers the question no incumbent does: 95 costs 6.9% more per litre, so it pays only if the car goes 6.9% further on one. |
 | Arabic contract and letter templates | Bilingual printable forms; pairs with `quotation` and `invoice`. |
-| Hijri event countdown (print + share) | Ramadan, Hajj, National Day; all the date machinery is here. |
-| Iqama fee / traffic fine reference | Reference tables only, clearly dated. **Never** a live lookup — that needs an API we should not proxy. |
+| ~~Hijri event countdown (print + share)~~ | **Shipped** as `saudi-holidays`, which computes the Article 112 entitlements rather than tabulating them, exports the year through `lib/ics.ts`, and states that the calendar and the moon sighting can disagree by a day. |
+| ~~Iqama fee / traffic fine reference~~ | **Shipped** as `iqama-fees` and `traffic-fine`, both badged beta with a SOURCES block. Still not a live lookup, and both say so: only Absher knows what is recorded against a person. |
 
 ### Files and formats
 
@@ -334,10 +360,16 @@ earn a slot. **`client` unless noted.**
 
 ### Not a tool, and possibly worth more than the next ten
 
-At 168 tools, **discoverability is the constraint, not supply**. A visitor who
-cannot find the right app has the same experience as one for whom it was never
-built. Worth its own piece of work: search ranking, a "what do you need?" entry
-point, and grouping that survives another fifty tools.
+At 239 tools, **discoverability is still the constraint, not supply**. A visitor
+who cannot find the right app has the same experience as one for whom it was
+never built.
+
+Much of what this line asked for has since been built and is recorded in
+CLAUDE.md rather than here: the scorer is benched against nine query sets, seven
+of them written blind and then spent; category and collection pages; a jump bar;
+recently-added and recently-used rows; typo correction; and a relevance floor.
+**What is still open is the "what do you need?" entry point** — every surface
+today answers a query, and none of them helps somebody who cannot phrase one.
 
 ---
 
