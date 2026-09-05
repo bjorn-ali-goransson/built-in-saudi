@@ -25,7 +25,7 @@
 
 import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
-import { activeAt, applyCensors, captionAt, drawFrame, type Censor, type Crop } from './compose'
+import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from './compose'
 
 export interface AudioInfo {
   codec: string
@@ -73,8 +73,11 @@ export interface ProbeInfo {
  * a machine with no Arabic face is a row of empty boxes.
  */
 export interface PlanCaption {
+  /** The box, in fractions of the output frame — the rectangle that was drawn. */
   x: number
   y: number
+  w: number
+  h: number
   from: number
   to: number
   bitmap: ImageBitmap
@@ -199,8 +202,11 @@ function drawCaptions(
   out: { width: number; height: number },
 ): void {
   for (const c of activeAt(captions, t)) {
-    const at = captionAt(c, c.bitmap, out)
-    ctx.drawImage(c.bitmap, at.x, at.y)
+    const r = captionRect(c, out)
+    // Drawn INTO the rectangle rather than at its corner: the bitmap is
+    // rendered at the box's size on the page, but a rounding difference of a
+    // pixel between the two would otherwise shift the caption.
+    ctx.drawImage(c.bitmap, r.x, r.y, r.w, r.h)
   }
 }
 

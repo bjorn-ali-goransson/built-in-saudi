@@ -2423,6 +2423,66 @@ stronger rather than weaker.** They now pull the blob off the download button's
 `href` and decode it in the page, which is what a reader actually receives —
 the old assertions were about an element the tool happened to render.
 
+**A second pass on the screen, from a phone, and four of the five findings were
+about what the UI SAYS rather than what it does.**
+
+- **Crop mode now shows the WHOLE clip with the crop rectangle over it**; every
+  other mode shows the cropped output. Showing the result while cropping makes
+  the picture appear to zoom, and puts nothing on screen to say what is outside
+  the frame — which is exactly the thing this tool exists to quantify. A crop is
+  a choice of rectangle and a rectangle cannot be judged without the thing it is
+  taken out of. Dragging now moves the RECTANGLE over a picture that stays put,
+  which is also the more obvious model. **Verified to fail** — reverting the
+  branch reddens the case that reads the stage canvas's own aspect ratio.
+- **A caption is a drawn RECTANGLE, the same gesture as a censor**, with the
+  text centred in it and wrapped to ITS width. It was a point you dropped, with
+  the text wrapped at 90% of the frame — which asks somebody to place the middle
+  of something whose extent they cannot see, and find out where it broke
+  afterwards. Clicking one opens its editor.
+- **Settings are a full screen, not a fifth pill along the bottom.** Measured
+  from the phone screenshot: the overflow row was wider than the viewport and
+  the first thing visible of it was **"argest side"** — so controls it held were
+  partly unreachable on the device this tool is most used from. The button is a
+  COG rather than a "⋯", because it opens settings rather than a context menu.
+- **The export is the download button in the corner** beside the tools, and the
+  page below it is gone: the standing prose panel, "Start again", and the
+  diagnostics toggle. The diagnostics now appear only when the preview has
+  actually failed — a toggle beside every working run is a permanent invitation
+  to read a bug report about a tool that is behaving.
+- **The beta badge came off, and that is this repo's own rule rather than a
+  claim about maturity.** The badge means "this figure can go stale WITHOUT
+  anyone touching the code" — a GOSI rate that steps every July. Nothing here
+  can rot on its own: a crop percentage is arithmetic and the 98.6% is a
+  measurement in this repo. It was carrying the badge in the maturity sense the
+  badge explicitly is not for, and paying for it with a bar above the video on
+  every visit. `check-saudi-beta` is unaffected — video-edit cites no SOURCES.
+
+**PIXELATE IS NOW THE DEFAULT, reversing the measured decision above, and the
+reason is the one thing `pixelleak.mjs` could not measure.** The finding stands:
+a mosaic gives a moving subject back, 98.6% of a number plate from 64 frames,
+and solid is the only mode that removes anything. What the measurement is silent
+on is what a black rectangle COMMUNICATES — and reported from a phone, in these
+words, it was *"the censor rectangle is completely black"*, i.e. read as
+**"pixelation is not implemented here, so you are getting the fallback"**. The
+live mosaic had worked from the day it shipped; nobody could tell, because the
+first thing every box did was go black.
+
+**A tool whose safest mode looks like a missing feature has protected nobody**,
+because the person goes and finds a tool that does the visible thing — one that
+almost certainly uploads the video. So: pixelate by default, solid one tap away,
+and the warning carrying the measured figure now shows whenever a recoverable
+mode is in use. **That inverts the earlier "a caveat shown to everybody is one
+nobody reads" reasoning and is the right way round here**: when the default is
+recoverable, everybody genuinely does need telling. The case asserting the
+warning CLEARS on Solid is what stops it becoming decoration.
+
+**And the defect was found by measuring before changing anything.** The report
+read as "live pixelation is impossible, fall back to a generic pattern"; a probe
+drove the real tool and read the canvas back — the pixelated region measured
+**min 84.3, max 170.7**, real variation, where a solid block reads flat near
+zero. So the renderer was right and the DEFAULT was the bug. Reaching for the
+described fix would have built a fallback for a capability that already worked.
+
 **The caption is drawn on the PAGE, not in the worker**, as one `ImageBitmap`
 per caption that is composited into every frame. Three things fall out of that
 single decision:

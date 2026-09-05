@@ -1,7 +1,7 @@
 # Video Editor
 
 - **Slug:** `/apps/video-edit` · **Category:** Files · **Priority:** Tier 1
-- **Runs:** 100% client-side · **Status:** Live (beta)
+- **Runs:** 100% client-side · **Status:** Live
 - **Libraries:** WebCodecs (`VideoDecoder`/`VideoEncoder`), `mp4box` for demuxing,
   `src/lib/mp4Writer.ts` for muxing. No new dependency.
 
@@ -37,8 +37,9 @@ which is the one thing this site will not do.
    Back-projection recovers **98.6% of a pixelated number plate from 64 frames
    — 2.1 seconds at 30fps** — against 68.3% from one frame, which is what a
    blank guess scores. A **static** subject stays at 68.3% however many frames
-   there are, which is the control proving the leak comes from motion. So the
-   default is a solid box, and pixelate/blur say what they cost.
+   there are, which is the control proving the leak comes from motion. Solid is
+   therefore the only mode that removes anything — and it is NOT the default,
+   for a reason measured on a person rather than on pixels: see below.
 
 ## The shape of the screen
 
@@ -62,6 +63,23 @@ and a *second* player for the result. Five decisions:
   and a resize grip on it and its mode and span on the bar; the tests read the
   same handles, so "a box can be deleted and the picture comes back" is a real
   case rather than a claim about a handle disappearing.
+- **Crop mode shows the WHOLE clip with the crop rectangle over it**, and every
+  other mode shows the cropped output. A crop is a choice of rectangle, and a
+  rectangle cannot be judged without the thing it is being taken out of —
+  showing the result while cropping makes the picture appear to zoom and puts
+  nothing on screen to say what is outside it.
+- **A caption is a drawn RECTANGLE, the same gesture as a censor.** The text is
+  centred in it and wraps to its width, so the shape you drew is the shape you
+  get; clicking one opens its editor. It used to be a point you dropped, with
+  the text wrapped at 90% of the frame — which asks somebody to place the middle
+  of something whose extent they cannot see.
+- **Settings are a full screen, not a fifth pill.** Measured on a phone: the
+  overflow row was wider than the viewport — the first thing visible of it was
+  "argest side" — so controls it held were partly unreachable on the device this
+  tool is most used from.
+- **The export is the download button in the corner**, beside the tools, rather
+  than a row below the video. Progress takes over the stage and then the button
+  becomes the download.
 - **Every box keeps a handle, not only the ones showing right now.** Drawing
   only the active ones looks tidier and traps you: scrub past a box's span and
   the box you can no longer reach is exactly the one whose span you need to
@@ -93,8 +111,9 @@ progressive MP4.
 - [x] A capability gate naming WebCodecs/H.264, routing to `video-trim`.
 - [x] Censor boxes: drag on the stage to draw one, drag to move it, drag its
       grip to resize it, a delete button on the selected one, each with its own
-      time range and mode. Solid by default; a warning naming the measured
-      figure appears only when a recoverable mode is chosen.
+      time range and mode. **Pixelate by default** (see below); a warning naming
+      the measured figure shows whenever a recoverable mode is in use, and
+      clears on Solid.
 
 ## Acceptance criteria
 - The exported file decodes in a real browser at the cropped size, and a two-clip
@@ -123,6 +142,16 @@ progressive MP4.
 - **Censoring hides the picture, not the sound.** The audio is copied across
   untouched, so a spoken name survives a black box over the face saying it. The
   UI states this next to the boxes.
+- **Pixelate is the DEFAULT even though solid is the only mode that removes
+  anything**, and the reversal is worth understanding rather than undoing. The
+  measurement says solid protects; what it does not measure is what a black
+  rectangle COMMUNICATES, which is "pixelation is not implemented here, so you
+  are getting the fallback" — reported in exactly those words. A tool whose
+  safest mode reads as a missing feature protects nobody, because the person
+  goes and finds a tool that does the visible thing. Solid is one tap away, the
+  warning carries the 98.6% figure whenever a recoverable mode is in use, and
+  there is a case asserting the warning clears on Solid so it cannot become
+  decoration.
 - **The pixelleak finding does NOT transfer to a single still.** It measures
   what many differently-aligned frames give back; one frame gave back nothing.
   `image-redact`'s pixelate default is therefore not condemned by it, and should

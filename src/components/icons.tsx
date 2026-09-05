@@ -564,6 +564,31 @@ export function PauseIcon({ className }: P) {
   )
 }
 
+/**
+ * A mosaic: four grey tones in a 3x3 grid.
+ *
+ * The eraser it replaced said "rub something out", which is the wrong promise
+ * — the tool does not remove the thing, it hides it — and the outline gave no
+ * clue which of the three modes was behind the button. A pixel grid is what
+ * censoring LOOKS like, so the icon names the result. Filled rather than
+ * stroked, because a mosaic drawn as outlines is a grid, not a mosaic.
+ */
+export function MosaicIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true" fill="currentColor" stroke="none">
+      <rect x="3" y="3" width="6" height="6" opacity="0.95" />
+      <rect x="9" y="3" width="6" height="6" opacity="0.4" />
+      <rect x="15" y="3" width="6" height="6" opacity="0.7" />
+      <rect x="3" y="9" width="6" height="6" opacity="0.55" />
+      <rect x="9" y="9" width="6" height="6" opacity="0.85" />
+      <rect x="15" y="9" width="6" height="6" opacity="0.3" />
+      <rect x="3" y="15" width="6" height="6" opacity="0.7" />
+      <rect x="9" y="15" width="6" height="6" opacity="0.45" />
+      <rect x="15" y="15" width="6" height="6" opacity="0.95" />
+    </svg>
+  )
+}
+
 export function CropIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

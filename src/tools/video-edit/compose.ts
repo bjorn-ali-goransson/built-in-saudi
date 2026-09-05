@@ -21,12 +21,24 @@ export interface Crop {
   zoom: number
 }
 
+/**
+ * A caption is a BOX, exactly like a censor, and that is the point.
+ *
+ * It used to be a point with the text centred on it and wrapped at 90% of the
+ * frame, which means the writer places the middle of something whose extent
+ * they cannot see and finds out where it broke afterwards. A rectangle is
+ * drawn with the same gesture that draws a censor, the text is centred inside
+ * it, and it wraps to the WIDTH THAT IS ON SCREEN — so the shape you drew is
+ * the shape you get.
+ */
 export interface Caption {
   id: string
   text: string
-  /** The caption's centre, as a fraction of the OUTPUT frame. */
+  /** The box, in fractions of the OUTPUT frame. */
   x: number
   y: number
+  w: number
+  h: number
   /** Text size as a fraction of the output HEIGHT. */
   size: number
   colour: string
@@ -239,7 +251,11 @@ export function applyCensors(
     // How much resolution to throw away. Blur goes coarser because the
     // smoothing hides the blockiness, and a soft patch that still reads as a
     // face is the failure people do not notice.
-    const block = c.mode === 'pixelate' ? 12 : 20
+    // Coarse on purpose. A fine mosaic still reads as a face at a glance — and
+    // at preview size it barely reads as censored at all, which is the state a
+    // reader is deciding from. Bigger blocks also throw more away, though the
+    // measurement above is why that is not a substitute for a solid box.
+    const block = c.mode === 'pixelate' ? 22 : 30
     const tw = Math.max(1, Math.round(w / block))
     const th = Math.max(1, Math.round(h / block))
     if (!scratch) scratch = new OffscreenCanvas(tw, th)
@@ -256,15 +272,22 @@ export function applyCensors(
   }
 }
 
-/** Top-left corner, in output pixels, of a caption bitmap of this size. */
-export function captionAt(
-  caption: { x: number; y: number },
-  bitmap: { width: number; height: number },
+/**
+ * The caption's box in output PIXELS.
+ *
+ * The bitmap is rendered at exactly this size, so it is drawn at the corner
+ * rather than centred on a point — which is what makes the drawn rectangle and
+ * the encoded result the same thing.
+ */
+export function captionRect(
+  caption: { x: number; y: number; w: number; h: number },
   out: { width: number; height: number },
-): { x: number; y: number } {
+): { x: number; y: number; w: number; h: number } {
   return {
-    x: Math.round(caption.x * out.width - bitmap.width / 2),
-    y: Math.round(caption.y * out.height - bitmap.height / 2),
+    x: Math.round(caption.x * out.width),
+    y: Math.round(caption.y * out.height),
+    w: Math.max(1, Math.round(caption.w * out.width)),
+    h: Math.max(1, Math.round(caption.h * out.height)),
   }
 }
 

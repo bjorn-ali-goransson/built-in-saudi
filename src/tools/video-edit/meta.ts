@@ -46,7 +46,14 @@ export const videoEditTool: Tool = {
     'طمس وجه في فيديو', 'تمويه فيديو', 'إخفاء وجه في مقطع', 'حجب جزء من الفيديو',
     'تمويه لوحة السيارة', 'بكسلة فيديو',
   ],
-  status: 'beta',
+  // NOT beta, and that is this repo's own rule rather than a downgrade in
+  // confidence. The badge here means "this figure can go stale WITHOUT anyone
+  // touching the code" — a GOSI rate that steps every July, a tariff that
+  // moves. Nothing this tool prints can rot on its own: a crop percentage is
+  // arithmetic and the pixel-recovery figure is a measurement in this repo. It
+  // was carrying the badge in the maturity sense the badge explicitly is not
+  // for, and paying for it with a bar above the video on every visit.
+  status: 'stable',
   Icon: CropIcon,
   component: lazyTool(() => import('./VideoEditTool')),
   ar: {

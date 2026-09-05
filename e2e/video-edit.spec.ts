@@ -48,11 +48,13 @@ async function pick(page: Page) {
   await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
 }
 
-/** The second file input lives behind the overflow ("⋯") bar, as power features do. */
+/** The second file input lives in the settings sheet, as power features do. */
 async function addAnother(page: Page) {
-  await page.getByTestId('ve-mode-more').click()
+  await page.getByTestId('ve-settings').click()
   await page.getByTestId('ve-add').setInputFiles({ name: 'second.mp4', mimeType: 'video/mp4', buffer: bytes() })
-  await expect(page.getByTestId('ve-clip-1')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ve-clip-1')).toBeAttached({ timeout: 30_000 })
+  await page.getByTestId('ve-settings-close').click()
+  await expect(page.getByTestId('ve-clip-1')).toBeVisible()
 }
 
 /** Show the picture at `sec` and wait for the stage to have drawn something. */
@@ -135,9 +137,54 @@ test('the tool buttons switch which controls the picture carries', async ({ page
   await expect(page.getByTestId('ve-text-bar')).toBeVisible()
   await expect(page.getByTestId('ve-censor-bar')).toHaveCount(0)
 
-  await page.getByTestId('ve-mode-more').click()
-  await expect(page.getByTestId('ve-more-bar')).toBeVisible()
-  await expect(page.getByTestId('ve-text-bar')).toHaveCount(0)
+  // Settings are a full screen, not a fifth pill: on a phone that row was wider
+  // than the viewport, so the controls it held were partly unreachable. It is
+  // an OVERLAY rather than a mode, so the text bar is still behind it — what
+  // has to hold is that it opens over everything and closes back.
+  await page.getByTestId('ve-settings').click()
+  await expect(page.getByTestId('ve-settings-panel')).toBeVisible()
+  await expect(page.getByTestId('ve-height')).toBeVisible()
+  await page.getByTestId('ve-settings-close').click()
+  await expect(page.getByTestId('ve-settings-panel')).toHaveCount(0)
+  await expect(page.getByTestId('ve-text-bar')).toBeVisible()
+})
+
+/** The stage canvas's own aspect ratio — what shape is being shown right now. */
+const stageShape = (page: Page) =>
+  page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => c.width / c.height)
+
+test('cropping shows the WHOLE clip; leaving crop mode applies it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // The fixture is 320x240, so 4:3 = 1.333. Crop mode must show that shape
+  // whatever the crop is set to: you are choosing a rectangle, and a rectangle
+  // cannot be judged without the thing it is being taken out of. Showing the
+  // cropped result while cropping makes the picture appear to zoom and puts
+  // nothing on screen to say what is outside it.
+  await page.getByTestId('ve-aspect-9:16').click()
+  await expect(page.getByTestId('ve-crop-box')).toBeVisible()
+  expect(await stageShape(page)).toBeCloseTo(4 / 3, 1)
+
+  // And the crop rectangle drawn over it is the 9:16 one — narrower than the
+  // frame, which is the whole point of showing both at once.
+  const frame = await page.getByTestId('ve-stage').boundingBox()
+  const box = await page.getByTestId('ve-crop-box').boundingBox()
+  expect(frame && box).toBeTruthy()
+  expect(box!.width).toBeLessThan(frame!.width * 0.75)
+  expect(box!.width / box!.height).toBeCloseTo(9 / 16, 1)
+
+  // Leaving crop mode applies it: now the stage IS the output, 9:16, and there
+  // is nothing else on screen. Without this the case would pass against a tool
+  // that simply never cropped.
+  await page.getByTestId('ve-mode-censor').click()
+  await expect(page.getByTestId('ve-crop-box')).toHaveCount(0)
+  await expect.poll(() => stageShape(page), { timeout: 15_000 }).toBeCloseTo(9 / 16, 1)
+
+  // Back to crop and the whole frame returns.
+  await page.getByTestId('ve-mode-crop').click()
+  await expect.poll(() => stageShape(page), { timeout: 15_000 }).toBeCloseTo(4 / 3, 1)
 })
 
 test('says what a crop costs, and the output size follows the shape', async ({ page }) => {
@@ -172,9 +219,9 @@ test('never upscales past the source', async ({ page }) => {
   await page.getByTestId('ve-aspect-source').click()
   // Asking for 1440p from a 240-tall clip must still give 240: upscaling adds
   // pixels and no detail, and the claim in the copy has to be true.
-  await page.getByTestId('ve-mode-more').click()
+  await page.getByTestId('ve-settings').click()
   await page.getByTestId('ve-height').selectOption('1440')
-  await page.getByTestId('ve-mode-crop').click()
+  await page.getByTestId('ve-settings-close').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('320×240')
 })
 
@@ -207,10 +254,11 @@ test('joins two clips into one video of both their lengths', async ({ page }) =>
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await addAnother(page)
-  await expect(page.getByTestId('ve-total')).toContainText('2 clips')
+  // The joined length is the transport's own total — twelve seconds of two
+  // six-second clips, which is the property, wherever it is displayed.
   await expect(page.getByTestId('ve-total')).toContainText('0:12')
+  await expect(page.getByTestId('ve-clip-1')).toBeVisible()
 
-  await page.getByTestId('ve-mode-crop').click()
   await page.getByTestId('ve-aspect-source').click()
   await page.getByTestId('ve-export').click()
   await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
@@ -236,7 +284,6 @@ test('a clip can be removed and reordered', async ({ page }) => {
   await page.getByTestId('ve-remove-1').click()
   // Back to one clip, and the list of clips goes with it.
   await expect(page.getByTestId('ve-clips')).toHaveCount(0)
-  await expect(page.getByTestId('ve-total')).toContainText('1 clip')
   await expect(page.getByTestId('ve-total')).toContainText('0:06')
 })
 
@@ -278,7 +325,7 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   const before = await bandMean()
 
   await page.getByTestId('ve-mode-text').click()
-  await page.getByTestId('ve-caption-add').click()
+  await drawBox(page, [0.1, 0.76], [0.9, 0.88])
   await page.getByTestId('ve-caption-from').fill('0')
   await page.getByTestId('ve-caption-to').fill('2')
   await page.getByTestId('ve-caption-text').fill('HELLO')
@@ -292,15 +339,21 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(before - 2)
 })
 
-test('a caption can be removed again', async ({ page }) => {
+test('a caption is a drawn box, and can be removed again', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
   await page.getByTestId('ve-mode-text').click()
-  await page.getByTestId('ve-caption-add').click()
+  // Nothing to configure until a box exists, so it says what to do — the same
+  // shape as the censor hint, because it is now the same gesture.
+  await expect(page.getByTestId('ve-caption-hint')).toBeVisible()
+
+  await drawBox(page, [0.15, 0.7], [0.85, 0.9])
   await page.getByTestId('ve-caption-text').fill('HELLO')
   await expect(page.getByTestId('ve-caption-box-0')).toBeVisible()
-  await page.getByTestId('ve-caption-remove').click()
+
+  await page.getByTestId('ve-caption-box-0-delete').click()
   await expect(page.getByTestId('ve-caption-box-0')).toHaveCount(0)
   await expect(page.getByTestId('ve-caption-text')).toHaveCount(0)
 })
@@ -355,9 +408,11 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
   // Drawing it selects it, which is what puts its controls on the bar.
-  await expect(page.getByTestId('ve-box-delete-0')).toBeVisible()
+  await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
 
-  // Solid is the default, so that region of the picture is now black.
+  // Pixelate is the default, so the region keeps roughly its brightness — a
+  // mosaic is the average of what was there. Solid would read near zero.
+  await page.getByTestId('ve-censor-block').click()
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
   // And the rest of the frame is untouched — without this the case would pass
   // against a tool that blacked out everything.
@@ -379,9 +434,10 @@ test('a selected box can be deleted', async ({ page }) => {
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await page.getByTestId('ve-censor-block').click()
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
 
-  await page.getByTestId('ve-box-delete-0').click()
+  await page.getByTestId('ve-box-0-delete').click()
   await expect(page.getByTestId('ve-box-0')).toHaveCount(0)
   // The picture comes back — a delete that only removed the handle would leave
   // the censor burnt into every frame with no way to reach it.
@@ -399,6 +455,7 @@ test('a box outside its own span is still reachable', async ({ page }) => {
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await page.getByTestId('ve-censor-block').click()
   await page.getByTestId('ve-censor-to').fill('1.5')
 
   // Scrub past the end of its span. Drawing only the boxes showing at this
@@ -409,13 +466,13 @@ test('a box outside its own span is still reachable', async ({ page }) => {
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(10)
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
   await page.getByTestId('ve-box-0').click()
-  await expect(page.getByTestId('ve-box-delete-0')).toBeVisible()
+  await expect(page.getByTestId('ve-box-0-delete')).toBeVisible()
   // And widening it brings the censor back over the frame on screen.
   await page.getByTestId('ve-censor-to').fill('6')
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
 })
 
-test('solid is the default, and choosing a recoverable mode says why', async ({ page }) => {
+test('the recoverable default says what it costs, and solid clears the warning', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -425,19 +482,22 @@ test('solid is the default, and choosing a recoverable mode says why', async ({ 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
 
-  // No warning for the safe default — a caveat shown to everybody is one
-  // nobody reads, which is the failure this branch exists to rule out.
+  // The default is now PIXELATE — a black rectangle read as "pixelation is not
+  // implemented, here is the fallback" — so the measured cost of that choice
+  // has to be on screen from the moment a box exists.
+  await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
+  await expect(page.getByTestId('ve-censor-warning')).toContainText('98.6%')
+
+  // And it must GO when the mode that actually removes the information is
+  // chosen, without which the warning would be decoration on every censor.
+  await page.getByTestId('ve-censor-block').click()
   await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
 
   await page.getByTestId('ve-censor-pixelate').click()
   await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
-  await expect(page.getByTestId('ve-censor-warning')).toContainText('98.6%')
-
-  await page.getByTestId('ve-censor-block').click()
-  await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
 })
 
-test('pixelating keeps the colours it is hiding, which is why it is not the default', async ({ page }) => {
+test('pixelating keeps the colours it is hiding, which is what it costs', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -449,7 +509,6 @@ test('pixelating keeps the colours it is hiding, which is why it is not the defa
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await page.getByTestId('ve-censor-pixelate').click()
 
   // A mosaic is the AVERAGE of what was there, so the region keeps roughly its
   // brightness — the visual difference from a solid box, and the reason the
@@ -467,6 +526,7 @@ test('the censor is burnt into the exported file, not just the stage', async ({ 
 
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await page.getByTestId('ve-censor-block').click()
   // Cover the whole clip: the default span is 3s and the fixture is 6s.
   await page.getByTestId('ve-censor-from').fill('0')
   await page.getByTestId('ve-censor-to').fill('6')
@@ -561,11 +621,14 @@ test('the diagnostics carry what the fault turns on, and never the filename', as
   await page.getByTestId('ve-file').setInputFiles({ name: NAME, mimeType: 'video/mp4', buffer: bytes() })
   await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
 
-  // Not shown until asked for, while everything is working.
+  // They appear only on a FAILURE now — a toggle beside every working run is a
+  // standing invitation to read a bug report about a tool that is behaving.
   await expect(page.getByTestId('ve-diagnostics')).toHaveCount(0)
-  await page.getByTestId('ve-diag-toggle').click()
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => {
+    v.src = 'blob:invalid-source-for-this-test'
+  })
   const text = page.getByTestId('ve-diag-text')
-  await expect(text).toBeVisible()
+  await expect(text).toBeVisible({ timeout: 15_000 })
 
   const body = await text.innerText()
   // THE PRIVACY PROPERTY. Without this the block could grow a filename later
@@ -581,8 +644,6 @@ test('the diagnostics carry what the fault turns on, and never the filename', as
   expect(body).toMatch(/timeline:/)
   expect(body).toMatch(/\+\s*\d+ms.*\bpick\b/)
   expect(body).toContain('video loadedmetadata')
-  // A working clip must not be described as having an error.
-  expect(body).toContain('preview: playing, no error')
   // The heap column is the memory hypothesis made visible; Chrome reports it.
   expect(body).toMatch(/\d+ MB {2}pick/)
 })
