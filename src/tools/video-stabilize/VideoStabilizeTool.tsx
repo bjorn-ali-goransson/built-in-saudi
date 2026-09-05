@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Field, FileError, Panel, Seg, SegButton, Spinner, Stack } from '../../components/ui'
+import { Button, Field, FileError, Panel, Spinner, Stack } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { even } from '../../lib/mp4Encode'
 import {
-  accumulate, corrections, drawStabilised, keptFraction, requiredZoom, shakeOf, smooth,
-  type Estimate, type Motion,
+  accumulate, corrections, drawStabilised, keptFraction, requiredZoom, shakeOf, smooth, STILL,
+  type Estimate,
 } from './motion'
 // TYPES ONLY from the worker. Importing a value out of a `.worker.ts` pulls its
 // module body into the page bundle, and its body assigns `self.onmessage` —
@@ -20,6 +20,12 @@ type ReqBody = Req extends infer T ? (T extends { id: number } ? Omit<T, 'id'> :
  *  is how an Arabic page ends up printing `1.4` in the middle of a sentence. */
 const arNum = (n: number) => n.toLocaleString('ar-SA')
 
+/** m:ss, which is what a clip this length is read in. */
+const clock = (sec: number) => {
+  const t = Math.max(0, Math.floor(sec))
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+}
+
 /**
  * How far the smoothing looks, IN SECONDS rather than in frames.
  *
@@ -28,8 +34,19 @@ const arNum = (n: number) => n.toLocaleString('ar-SA')
  * on what the phone recorded at. What a person is choosing is how long a wobble
  * has to last before it counts as where the camera is going.
  */
-const LEVELS = { gentle: 0.25, medium: 0.5, strong: 1 } as const
-type Level = keyof typeof LEVELS
+/**
+ * How much of the camera path to smooth, in SECONDS, as the ends of one slider.
+ *
+ * It was three named levels, and a slider is the better control here for a
+ * measured reason rather than a stylistic one: this tool's whole pitch is that
+ * the cost of steadying is a live figure derived from YOUR clip, and three
+ * buttons quantise a continuous trade into three samples of it. The clip is
+ * analysed once, so any value on the bar re-prices in three array passes — the
+ * property that made the levels instant in the first place is what makes a
+ * slider affordable now.
+ */
+const MIN_SMOOTH = 0.1
+const MAX_SMOOTH = 1.5
 
 /** Below this there is nothing worth taking out, and saying so is more useful
  *  than charging somebody 15% of their picture for it. Source pixels, RMS. */
@@ -45,15 +62,17 @@ const STR = {
     exporting: 'Writing the video…',
     frames: (a: number, b: number) => `${a} of ${b} frames`,
     smoothing: 'How much to steady',
-    levels: { gentle: 'Gentle', medium: 'Medium', strong: 'Strong' },
+    seconds: (v: string) => `${v}s of camera path smoothed`,
+    lessSteady: 'Less',
+    moreSteady: 'More',
     cost: (kept: string, w: number, h: number) => `Keeps ${kept} of the picture · ${w}×${h}`,
     removed: (px: string, deg: string) => `Takes out ${px} px and ${deg}° of wobble, on average, per frame.`,
     steady: 'There is almost no camera shake in this clip — steadying it would cost picture and change nothing you can see. It is offered anyway, in case you disagree with the measurement.',
     tooMuch: 'The shake in this clip is bigger than the margin a crop can buy back, so some frames will still drift. Gentle costs the least picture and gets the most of it.',
-    showOriginal: 'Show the original',
-    showSteady: 'Show steadied',
-    original: 'Original',
-    steadied: 'Steadied',
+    position: 'Position in the clip',
+    ghost: 'Ghost the original over it',
+    ghostHint: 'Both at once, half and half. What you are looking at is the gap between them — where the frame had to move to hold the picture still.',
+    measuring: 'Measuring the movement — the picture is playing meanwhile.',
     play: 'Play',
     pause: 'Pause',
     keepAudio: 'Keep the sound',
@@ -62,8 +81,6 @@ const STR = {
     download: 'Download',
     again: 'Start again',
     out: (mb: string) => `${mb} MB`,
-    limits: 'What it does not do',
-    limitsBody: 'It moves and turns whole frames, so it cannot undo a rolling-shutter wobble — the diagonal jelly a phone sensor puts into a hard shake — and it cannot sharpen motion blur. A blurred frame stays blurred, and taking the movement out often makes that blur easier to see rather than harder. It also does not follow a subject: it steadies the camera, not the person in front of it.',
     unsupportedTitle: 'This browser cannot re-encode video',
     unsupportedBody: 'Steadying a clip means decoding every frame, redrawing it and encoding it again, which needs WebCodecs with an H.264 encoder behind it. This browser does not have one. Chrome, Edge and Safari 16.4 and later do; Firefox on Android does not.',
     trimLink: 'Trim a video without re-encoding',
@@ -84,15 +101,17 @@ const STR = {
     exporting: 'جارٍ كتابة الفيديو…',
     frames: (a: number, b: number) => `${arNum(a)} من ${arNum(b)} إطارًا`,
     smoothing: 'مقدار التثبيت',
-    levels: { gentle: 'خفيف', medium: 'متوسط', strong: 'قوي' },
+    seconds: (v: string) => `تنعيم ${v} ثانية من مسار الكاميرا`,
+    lessSteady: 'أقل',
+    moreSteady: 'أكثر',
     cost: (kept: string, w: number, h: number) => `يُبقي ${kept} من الصورة · ${arNum(w)}×${arNum(h)}`,
     removed: (px: string, deg: string) => `يزيل ${px} بكسل و${deg}° من الاهتزاز في المتوسط لكل إطار.`,
     steady: 'لا يكاد يوجد اهتزاز في هذا المقطع — وتثبيته سيكلّف صورةً دون تغيير تراه. والخيار متاح على أي حال إن كنت ترى غير ما قِيس.',
     tooMuch: 'الاهتزاز في هذا المقطع أكبر من الهامش الذي يشتريه الاقتصاص، فستبقى بعض الإطارات منزاحة. والخيار الخفيف أقلّها كلفةً في الصورة وأكثرها إبقاءً لها.',
-    showOriginal: 'اعرض الأصل',
-    showSteady: 'اعرض المُثبَّت',
-    original: 'الأصل',
-    steadied: 'مُثبَّت',
+    position: 'الموضع في المقطع',
+    ghost: 'اعرض الأصل شفّافًا فوقه',
+    ghostHint: 'الاثنان معًا، نصفًا بنصف. وما تراه هو الفرق بينهما — أي كم تحرّك الإطار ليبقى المنظر ثابتًا.',
+    measuring: 'جارٍ قياس الحركة — والصورة تعمل في أثناء ذلك.',
     play: 'تشغيل',
     pause: 'إيقاف',
     keepAudio: 'أبقِ الصوت',
@@ -101,8 +120,6 @@ const STR = {
     download: 'تنزيل',
     again: 'ابدأ من جديد',
     out: (mb: string) => `${mb} ميجابايت`,
-    limits: 'ما لا تفعله',
-    limitsBody: 'تحرّك الإطارات كاملةً وتديرها، فلا تستطيع إزالة اهتزاز المصراع المتدحرج — ذلك التموّج المائل الذي يحدثه مستشعر الهاتف في الاهتزاز الشديد — ولا تستطيع تحسين ضبابية الحركة. فالإطار الضبابي يبقى ضبابيًّا، وإزالة الحركة كثيرًا ما تجعل تلك الضبابية أظهر لا أخفى. وهي لا تتعقّب شخصًا كذلك: إنما تثبّت الكاميرا لا من أمامها.',
     unsupportedTitle: 'هذا المتصفح لا يستطيع إعادة ترميز الفيديو',
     unsupportedBody: 'تثبيت المقطع يعني فكّ ترميز كل إطار وإعادة رسمه وترميزه من جديد، وهذا يحتاج WebCodecs ومعه مرمّز H.264. وهذا المتصفح لا يملكه. كروم وإيدج وسفاري ١٦٫٤ فأحدث تملكه، وفَيَرفُكس على أندرويد لا يملكه.',
     trimLink: 'قصّ فيديو دون إعادة ترميز',
@@ -126,12 +143,15 @@ export default function VideoStabilizeTool() {
   const [url, setUrl] = useState('')
   const [info, setInfo] = useState<ProbeInfo | null>(null)
   const [steps, setSteps] = useState<Estimate[] | null>(null)
-  const [level, setLevel] = useState<Level>('medium')
+  const [smoothSec, setSmoothSec] = useState(0.5)
   const [keepAudio, setKeepAudio] = useState(true)
   const [busy, setBusy] = useState<'' | 'read' | 'analyse' | 'export'>('')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState('')
-  const [showOriginal, setShowOriginal] = useState(false)
+  const [ghost, setGhost] = useState(false)
+  const [pos, setPos] = useState(0)
+  /** The element's own duration, which arrives before the probe's does. */
+  const [elDur, setElDur] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
@@ -212,16 +232,26 @@ export default function VideoStabilizeTool() {
     // so the browser starts on the picture rather than queueing behind a full
     // demux — the fix `video-edit` records having left undone six lines away.
     const next = URL.createObjectURL(f)
+    // THE PICTURE COMES UP FIRST, before the probe and long before the
+    // analysis. Demuxing a phone recording and measuring every frame takes
+    // seconds, and a blank rectangle for those seconds is indistinguishable
+    // from a tool that did not accept the file — which is the dead-UI failure
+    // this repo already refuses for image picks. The `<video>` needs nothing
+    // from us but a URL, so there is no reason to make anybody wait for it.
+    if (url) URL.revokeObjectURL(url)
+    setFile(f)
+    setUrl(next)
+    setInfo(null)
+    setPos(0)
     const res = await ask({ kind: 'probe', file: f })
     if (res.kind !== 'probed') {
       URL.revokeObjectURL(next)
+      setFile(null)
+      setUrl('')
       setBusy('')
       setError(s.errors[res.kind === 'error' ? res.message : 'generic'] ?? s.errors.generic)
       return
     }
-    if (url) URL.revokeObjectURL(url)
-    setFile(f)
-    setUrl(next)
     setInfo(res.info)
     setKeepAudio(res.info.hasAudio)
 
@@ -243,7 +273,7 @@ export default function VideoStabilizeTool() {
   const path = useMemo(() => (steps ? accumulate(steps) : null), [steps])
   const plan = useMemo(() => {
     if (!path || !info) return null
-    const radius = Math.max(1, Math.round(LEVELS[level] * info.fps))
+    const radius = Math.max(1, Math.round(smoothSec * info.fps))
     const cs = corrections(path, smooth(path, radius))
     const zoom = requiredZoom(cs, info.width, info.height)
     // NEVER LARGER THAN WHAT SURVIVED. The output is the cropped rectangle at
@@ -253,7 +283,7 @@ export default function VideoStabilizeTool() {
     const outW = even(info.width / zoom)
     const outH = even(info.height / zoom)
     return { cs, zoom, shake: shakeOf(cs, steps ?? []), out: { width: outW, height: outH } }
-  }, [path, info, level, steps])
+  }, [path, info, smoothSec, steps])
 
   /**
    * The preview and the export go through ONE function.
@@ -265,31 +295,46 @@ export default function VideoStabilizeTool() {
    * is built on and the reason there is no second renderer here either.
    */
   useEffect(() => {
-    if (!plan || !info) return
     let raf = 0
     const paint = () => {
       raf = requestAnimationFrame(paint)
       const v = videoRef.current
       const c = canvasRef.current
-      if (!v || !c || !v.videoWidth) return
+      if (!v || !c || !v.videoWidth || v.readyState < 2) return
       const ctx = c.getContext('2d')
       if (!ctx) return
+      const src = { width: v.videoWidth, height: v.videoHeight }
+      const out = { width: c.width, height: c.height }
+      // BEFORE THE ANALYSIS THERE IS NOTHING TO CORRECT, and the clip is shown
+      // anyway. Identity motion at zoom 1 is the frame as recorded, drawn by
+      // the same function everything else here goes through.
+      if (!plan || !info) {
+        drawStabilised(ctx, v, src, STILL, 1, out)
+        return
+      }
       // Frame index from the clock. A browser gives no frame number, so this is
       // right to within one frame — and the correction for adjacent frames
       // differs by a fraction of a pixel, which is why that is good enough here
       // and not good enough for the export, where the index is the arrival
       // order of the decoded frames themselves.
       const i = Math.min(plan.cs.length - 1, Math.max(0, Math.round(v.currentTime * info.fps)))
-      const src = { width: info.width, height: info.height }
-      if (showOriginal) {
-        drawStabilised(ctx, v, src, { rot: 0, dx: 0, dy: 0 } as Motion, 1, { width: c.width, height: c.height })
-      } else {
-        drawStabilised(ctx, v, src, plan.cs[i], plan.zoom, { width: c.width, height: c.height })
+      const clip = { width: info.width, height: info.height }
+      if (ghost) {
+        // The original UNDERNEATH at the same zoom, so the two are the same
+        // framing and the only difference on screen is the correction itself.
+        // Comparing a full frame against a cropped one would show the crop,
+        // which is the other thing this tool measures and not this one.
+        drawStabilised(ctx, v, clip, STILL, plan.zoom, out)
+        ctx.globalAlpha = 0.5
+        drawStabilised(ctx, v, clip, plan.cs[i], plan.zoom, out, false)
+        ctx.globalAlpha = 1
+        return
       }
+      drawStabilised(ctx, v, clip, plan.cs[i], plan.zoom, out)
     }
     raf = requestAnimationFrame(paint)
     return () => cancelAnimationFrame(raf)
-  }, [plan, info, showOriginal])
+  }, [plan, info, ghost])
 
   async function run() {
     if (!plan || !info) return
@@ -322,7 +367,7 @@ export default function VideoStabilizeTool() {
     void ask({ kind: 'drop' })
     if (url) URL.revokeObjectURL(url)
     if (out) URL.revokeObjectURL(out.url)
-    setFile(null); setUrl(''); setInfo(null); setSteps(null); setOut(null); setError(''); setShowOriginal(false)
+    setFile(null); setUrl(''); setInfo(null); setSteps(null); setOut(null); setError(''); setGhost(false); setPos(0); setElDur(0)
   }
 
   function togglePlay() {
@@ -331,16 +376,6 @@ export default function VideoStabilizeTool() {
     if (v.paused) void v.play()
     else v.pause()
   }
-
-  // Stated, not implied away, and on BOTH screens: a stabiliser that says
-  // nothing about rolling shutter and motion blur is one people blame for both,
-  // and the moment to read it is before spending ten seconds on an analysis.
-  const limits = (
-    <Panel className="gap-2" data-testid="vs-limits">
-      <p className="text-[0.9rem] font-semibold text-ink rtl:font-ar">{s.limits}</p>
-      <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.limitsBody}</p>
-    </Panel>
-  )
 
   if (supported === false) {
     return (
@@ -384,23 +419,30 @@ export default function VideoStabilizeTool() {
           </div>
         </div>
         {error && <FileError message={error} />}
-        {limits}
       </Stack>
     )
   }
 
+  // From the ELEMENT rather than from the probe, so the scrubber works before
+  // the analysis has said anything about the file.
+  const clipSeconds = info?.durationSec || elDur
   const kept = plan ? `${(keptFraction(plan.zoom) * 100).toFixed(0)}%` : ''
   const keptLabel = isRtl && plan ? `${arNum(Math.round(keptFraction(plan.zoom) * 100))}٪` : kept
 
   return (
     <Stack data-testid="video-stabilize">
-      {/* The source element is what `drawStabilised` reads, and it is not shown:
-          a page showing the shaky original next to the steadied canvas invites
-          the reader to wonder which one is the answer. It still has to be laid
-          out and decoding, so it is a 1px transparent element rather than
+      {/* The source element is what `drawStabilised` reads, and it is never the
+          picture: ONE canvas is the answer, and the original appears only
+          ghosted through it, in the same framing, where the gap between the
+          two is the thing being shown. A second player beside it would be a
+          second opinion about what the export contains. It still has to be
+          laid out and decoding, so it is a 1px transparent element rather than
           `display: none`, which would stop it painting. */}
       <video ref={videoRef} src={url} playsInline muted loop data-testid="vs-video"
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+        onLoadedMetadata={() => setElDur(videoRef.current?.duration ?? 0)}
+        onTimeUpdate={() => setPos(videoRef.current?.currentTime ?? 0)}
+        onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
         className="absolute w-px h-px opacity-0 pointer-events-none" />
 
       <div className="grid place-items-center bg-black rounded-md overflow-hidden p-1">
@@ -410,19 +452,23 @@ export default function VideoStabilizeTool() {
           className="block max-w-full max-h-[60vh]" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* A CLIP YOU CANNOT SCRUB IS A CLIP YOU CANNOT JUDGE. Shake is not
+          uniform along a recording — the bad two seconds are what somebody
+          wants to look at, and playing from the top every time to reach them
+          is the difference between checking the result and hoping. */}
+      <div className="flex items-center gap-3">
         <Button data-testid="vs-play" onClick={togglePlay}>{playing ? s.pause : s.play}</Button>
-        {/* Held down rather than a toggle you can forget you left on: the
-            comparison is a glance, and a page that is quietly showing the
-            unsteadied clip is a page that says this tool does nothing. */}
-        <Button data-testid="vs-compare"
-          onPointerDown={() => setShowOriginal(true)}
-          onPointerUp={() => setShowOriginal(false)}
-          onPointerLeave={() => setShowOriginal(false)}>
-          {s.showOriginal}
-        </Button>
-        <span className="text-[0.8rem] font-mono opacity-70" data-testid="vs-showing">
-          {showOriginal ? s.original : s.steadied}
+        <input type="range" className="flex-1 min-w-0 accent-green-600" data-testid="vs-scrub"
+          aria-label={s.position}
+          min={0} max={Math.max(0.1, clipSeconds)} step={0.01} value={Math.min(pos, clipSeconds)}
+          onChange={(e) => {
+            const v = videoRef.current
+            if (!v) return
+            v.currentTime = Number(e.target.value)
+            setPos(Number(e.target.value))
+          }} />
+        <span className="text-[0.8rem] font-mono opacity-70 tabular-nums" data-testid="vs-time">
+          {clock(Math.min(pos, clipSeconds))} / {clock(clipSeconds)}
         </span>
       </div>
 
@@ -431,18 +477,41 @@ export default function VideoStabilizeTool() {
           <Spinner /> {s.analysing} {s.frames(progress.done, progress.total)}
         </p>
       )}
+      {busy && !plan && (
+        <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="vs-measuring">{s.measuring}</p>
+      )}
 
       {plan && info && (
         <Panel className="gap-3" data-testid="vs-panel">
+          {/* A SLIDER, not three buttons. The cost below re-prices as it moves,
+              because the clip is analysed once and a new value is three array
+              passes over three numbers a frame — so the trade is continuous
+              here, and quantising it into three samples was throwing away the
+              one thing this tool has that the incumbents do not. */}
           <Field label={s.smoothing}>
-            <Seg>
-              {(['gentle', 'medium', 'strong'] as const).map((l) => (
-                <SegButton key={l} active={level === l} data-testid={`vs-level-${l}`} onClick={() => setLevel(l)}>
-                  {s.levels[l]}
-                </SegButton>
-              ))}
-            </Seg>
+            <div className="flex items-center gap-3">
+              <span className="text-[0.75rem] text-ink-faint rtl:font-ar">{s.lessSteady}</span>
+              <input type="range" className="flex-1 min-w-0 accent-green-600" data-testid="vs-smooth"
+                aria-label={s.smoothing}
+                min={MIN_SMOOTH} max={MAX_SMOOTH} step={0.05} value={smoothSec}
+                onChange={(e) => { setSmoothSec(Number(e.target.value)); setOut(null) }} />
+              <span className="text-[0.75rem] text-ink-faint rtl:font-ar">{s.moreSteady}</span>
+            </div>
           </Field>
+          <p className="text-[0.8rem] font-mono opacity-70" data-testid="vs-smooth-value">
+            {s.seconds(isRtl ? arNum(smoothSec) : smoothSec.toFixed(2))}
+          </p>
+
+          {/* Both at once rather than a hold-to-compare, which showed one or
+              the other and left the reader to remember the first. The offset
+              between the two IS the correction, so the thing being judged is
+              on screen at the same moment as the thing it is judged against. */}
+          <label className="inline-flex items-center gap-2 text-[0.9rem] text-ink-soft rtl:font-ar">
+            <input type="checkbox" checked={ghost} data-testid="vs-ghost"
+              onChange={(e) => setGhost(e.target.checked)} />
+            {s.ghost}
+          </label>
+          {ghost && <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="vs-ghost-hint">{s.ghostHint}</p>}
 
           {/* THE PRICE, and it is the reason this tool is worth building rather
               than copying: every stabiliser crops and almost none of them says
@@ -499,8 +568,6 @@ export default function VideoStabilizeTool() {
           </div>
         </Panel>
       )}
-
-      {limits}
 
       {error && <FileError message={error} />}
     </Stack>

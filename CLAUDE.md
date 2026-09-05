@@ -2443,6 +2443,41 @@ estimator correctly reads as camera motion — so using it would have proved the
   other — which is exactly the point, since every other case would pass against
   a tool that only crops.
 
+**A second pass, all of it about the screen rather than the estimator.**
+
+- **The picture comes up BEFORE the probe, let alone the analysis.** Demuxing a
+  phone recording and measuring every frame takes seconds, and a blank
+  rectangle for those seconds is indistinguishable from a tool that did not
+  accept the file — the dead-UI failure this file already refuses for image
+  picks. The `<video>` needs nothing from us but an object URL. The paint loop
+  draws identity-at-zoom-1 until there is a plan, so it is the same function
+  either way rather than a second renderer.
+- **The comparison is a GHOST, not a hold-to-compare button.** Held down, the
+  screen showed one or the other and left the reader to remember the first —
+  and what is being judged is the DIFFERENCE. Both at 50%, in the same framing
+  (the original is drawn at the same zoom, or the comparison would be showing
+  the crop, which is the other thing this tool measures). `drawStabilised` took
+  a `clear` flag so the second layer sits on the first instead of replacing it.
+  The case counts COLOURS rather than brightness, because a 50/50 average of a
+  picture with itself has almost the same mean.
+- **A scrubber, because shake is not spread evenly along a recording.** The bad
+  two seconds are what somebody wants to look at, and playing from the top to
+  reach them is the difference between checking a result and hoping.
+- **The three levels became one slider.** This tool's whole pitch is that the
+  cost is a live figure derived from YOUR clip, and three buttons quantise a
+  continuous trade into three samples of it. It is affordable for exactly the
+  reason the levels were instant: the clip is analysed once and a new value is
+  three array passes.
+- **The "What it does not do" panel is gone**, at the owner's request. It was a
+  standing paragraph on both screens — the caveat-shown-to-everybody this file
+  refuses elsewhere — and the limits it named are not ones the tool can quietly
+  get wrong the way an uncensored region is. What remains is what the tool
+  MEASURES, which is on the panel and changes as you move the slider.
+
+**Verified to fail:** waiting on the plan before painting reddens the
+early-preview case, and drawing only the steadied layer reddens the ghost —
+each one case and no other.
+
 **Stated limits, in the UI rather than implied away**: no rolling-shutter
 correction (whole frames are moved and turned, so the diagonal jelly stays);
 motion blur is not undone, and taking the movement out usually makes it easier

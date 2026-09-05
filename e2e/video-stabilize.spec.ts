@@ -123,6 +123,16 @@ async function frameJitter(page: Page, url: string): Promise<{ jitter: number; f
   }, url)
 }
 
+/**
+ * Move the smoothing slider, which is a continuous control now rather than
+ * three named levels — so a case says how many SECONDS of camera path it wants
+ * smoothed, which is the number the tool actually works from.
+ */
+async function setSmooth(page: Page, seconds: number) {
+  await page.getByTestId('vs-smooth').fill(String(seconds))
+  await expect(page.getByTestId('vs-smooth-value')).toContainText(seconds.toFixed(2))
+}
+
 test('a browser without an H.264 encoder is told so, and pointed somewhere useful', async ({ page }) => {
   await load(page)
   if (await canEncode(page)) {
@@ -175,11 +185,11 @@ test('steadying harder costs more picture, and that is priced instantly', async 
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
 
-  await page.getByTestId('vs-level-gentle').click()
+  await setSmooth(page, 0.15)
   const gentle = await kept(page)
   const gentleSize = await outSize(page)
 
-  await page.getByTestId('vs-level-strong').click()
+  await setSmooth(page, 1.5)
   const strong = await kept(page)
   const strongSize = await outSize(page)
 
@@ -200,7 +210,7 @@ test('the picture stops jumping between frames, which is not the same as being c
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
-  await page.getByTestId('vs-level-strong').click()
+  await setSmooth(page, 1.5)
   await page.getByTestId('vs-export').click()
   await expect(page.getByTestId('vs-download')).toBeVisible({ timeout: 120_000 })
 
@@ -217,6 +227,84 @@ test('the picture stops jumping between frames, which is not the same as being c
   // A percentage on a panel says what the tool BELIEVES; this says what it
   // wrote into the file somebody downloads.
   expect(raw.jitter).toBeGreaterThan(steadied.jitter * 2.5)
+})
+
+/** How many distinct colours the stage is showing, quantised to 5 bits a
+ *  channel so codec and resampling noise cannot be mistaken for detail. */
+async function stageColours(page: Page): Promise<number> {
+  return page.getByTestId('vs-stage').evaluate((c: HTMLCanvasElement) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return -1
+    const px = ctx.getImageData(0, 0, c.width, c.height).data
+    const seen = new Set<number>()
+    for (let i = 0; i < px.length; i += 4) {
+      seen.add(((px[i] >> 3) << 10) | ((px[i + 1] >> 3) << 5) | (px[i + 2] >> 3))
+    }
+    return seen.size
+  })
+}
+
+test('the picture is up before the measuring is finished', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await page.getByTestId('vs-file').setInputFiles({
+    name: 'shaky.mp4', mimeType: 'video/mp4', buffer: readFileSync(SHAKY),
+  })
+
+  // Demuxing a phone recording and measuring every frame in it takes seconds,
+  // and a blank rectangle for those seconds is indistinguishable from a tool
+  // that did not accept the file. The `<video>` needs nothing from us but a
+  // URL, so nobody waits for the analysis to see their own clip.
+  await expect(page.getByTestId('vs-measuring')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('vs-stage')).toBeVisible()
+  // PAINTED, not merely present — a canvas that exists and is black is the
+  // failure this is about, and asserting the element would pass against it.
+  expect(await stageColours(page)).toBeGreaterThan(8)
+  // The panel is what the analysis produces, and it is not here yet.
+  await expect(page.getByTestId('vs-panel')).toHaveCount(0)
+
+  await expect(page.getByTestId('vs-panel')).toBeVisible({ timeout: 60_000 })
+})
+
+test('the clip can be scrubbed, not only played from the top', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // Shake is not spread evenly along a recording: the bad two seconds are what
+  // somebody wants to look at, and playing from the top to reach them every
+  // time is the difference between checking a result and hoping.
+  // The fixture is 2.5s, so the bar's own end is what a case can aim at.
+  await expect(page.getByTestId('vs-time')).toContainText('0:00')
+  await page.getByTestId('vs-scrub').fill('2')
+  await expect(page.getByTestId('vs-time')).toContainText('0:02')
+  expect(await page.getByTestId('vs-video')
+    .evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(1.5)
+})
+
+test('the ghost shows both at once, which is what makes the correction visible', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await setSmooth(page, 1.5)
+  await page.getByTestId('vs-scrub').fill('2')
+
+  await expect(page.getByTestId('vs-ghost-hint')).toHaveCount(0)
+  const one = await stageColours(page)
+
+  await page.getByTestId('vs-ghost').check()
+  await expect(page.getByTestId('vs-ghost-hint')).toBeVisible()
+
+  // TWO OFFSET COPIES AT HALF ALPHA, so every place they disagree becomes a
+  // blend of two values that were not there before — which is exactly the
+  // gap the correction moved the frame by, and the only thing this display
+  // exists to show. Counted in colours rather than in brightness, because a
+  // 50/50 average of a picture with itself has almost the same mean.
+  await expect.poll(() => stageColours(page), { timeout: 10_000 }).toBeGreaterThan(one + 10)
+
+  // And it is a toggle you can turn off, not a mode you get stuck in.
+  await page.getByTestId('vs-ghost').uncheck()
+  await expect(page.getByTestId('vs-ghost-hint')).toHaveCount(0)
 })
 
 test('the steadied clip exports as a real, playable MP4 at the cropped size', async ({ page }) => {
@@ -300,10 +388,3 @@ test('the Arabic side prints Arabic digits in the figures it computes', async ({
   await expect(page.getByTestId('vs-removed')).toContainText(/[٠-٩]/)
 })
 
-test('what it cannot do is on the page, not implied away', async ({ page }) => {
-  await load(page)
-  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await expect(page.getByTestId('vs-limits')).toBeVisible()
-  await expect(page.getByTestId('vs-limits')).toContainText('rolling-shutter')
-  await expect(page.getByTestId('vs-limits')).toContainText('blur')
-})

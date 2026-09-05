@@ -379,12 +379,17 @@ export function drawStabilised(
   c: Motion,
   zoom: number,
   out: { width: number; height: number },
+  /** Paint the black ground first. Off for the second layer of the ghost
+   *  comparison, which has to sit ON the first rather than replace it. */
+  clear = true,
 ): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   // Black underneath, because a rounding error of a pixel at the edge is a
   // transparent seam otherwise — and on a video that reads as a flicker.
-  ctx.fillStyle = '#000'
-  ctx.fillRect(0, 0, out.width, out.height)
+  if (clear) {
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, out.width, out.height)
+  }
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   ctx.translate(out.width / 2, out.height / 2)
