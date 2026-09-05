@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, FileError, Panel, Seg, SegButton, Spinner, Stack, Input, Check } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ScissorsIcon } from '../../components/icons'
+import { Button, FileError, Panel, Spinner, Stack, Input } from '../../components/ui'
+import {
+  CropIcon, DownloadIcon, EraseIcon, MoreVIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
+} from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
   ASPECTS, activeAt, applyCensors, captionAt, cropRect, drawFrame, keptShare, outputSize, timeline, totalDuration,
@@ -15,49 +17,63 @@ const WIP = 'video-edit'
 // Omit over a union has to distribute, or neither variant's fields survive.
 type ReqBody = Req extends infer T ? (T extends { id: number } ? Omit<T, 'id'> : never) : never
 
+/**
+ * Arabic-Indic digits.
+ *
+ * A template literal renders a number in Latin digits whatever the locale, so
+ * an Arabic page interpolating one prints `42٪` — which this repo has now
+ * shipped three times and caught three times, always because a test happened to
+ * assert on a NUMBER rather than on prose.
+ */
+const arNum = (n: number) => n.toLocaleString('ar-SA')
+
 const STR = {
   en: {
-    intro: 'Crop a clip to the shape a platform wants, join a few of them together, and put a caption on top — on your device. Nothing is uploaded.',
+    heroTitle: 'Edit a video without uploading it',
+    heroBody: 'Crop a clip to the shape a platform wants, join a few together, add a caption, and hide anything that should not be in the picture. Every frame is decoded and encoded again on your device — the file never leaves it.',
     pick: 'Choose a video',
+    privacy: 'MP4 and MOV. Nothing is uploaded, and nothing is sent anywhere.',
     add: 'Add another clip',
     reading: 'Reading the video…',
-    clips: 'Clips',
-    joined: (n: number, d: string) => `${n} clip${n === 1 ? '' : 's'} · ${d} in total`,
+    joined: (n: number, d: string) => `${n} clip${n === 1 ? '' : 's'} · ${d}`,
     remove: 'Remove',
     up: 'Move earlier',
     down: 'Move later',
-    shape: 'Shape',
-    kept: (pct: number) => `Keeps ${pct}% of the picture`,
-    keptWhy: 'A 16:9 recording cropped to 9:16 throws away more than two thirds of the frame, and whatever you were filming is rarely in the middle of what is left. Drag the picture to choose what survives.',
+    // The three modes, named on their buttons for a screen reader.
+    modeCrop: 'Crop',
+    modeCensor: 'Hide something',
+    modeText: 'Caption',
+    modeMore: 'Output settings',
+    play: 'Play',
+    pause: 'Pause',
+    kept: (pct: number) => `Keeps ${pct}%`,
+    keptWhy: 'A 16:9 recording cropped to 9:16 throws away more than two thirds of the frame, and whatever you were filming is rarely in the middle of what is left. Drag the picture to choose what survives; the arrow keys nudge it.',
     zoom: 'Zoom',
-    frame: 'The whole frame',
-    result: 'What gets exported',
-    dragHint: 'Drag to move the crop. Arrow keys nudge it.',
+    addBox: 'Drag on the video to draw a box.',
+    deleteBox: 'Delete this box',
     captions: 'Captions',
     addCaption: 'Add a caption',
+    noCaption: 'Add a caption, then drag it where you want it.',
     text: 'Text',
     from: 'From',
     to: 'To',
     size: 'Size',
     colour: 'Colour',
     band: 'Band behind the text',
-    captionWhy: 'The caption is drawn once, here, with this page’s own fonts — and that same picture is laid into every frame. So Arabic joins up and runs right to left the way the browser writes it, and the preview is not an approximation of the export, it is the export.',
+    captionWhy: 'The caption is drawn once, here, with this page’s own fonts — and that same picture is laid into every frame. So Arabic joins up and runs right to left the way the browser writes it, and what you see is what is encoded.',
     diagShow: 'Diagnostics',
     diagHide: 'Hide diagnostics',
     diagWhy: 'Nothing here is sent anywhere — it is text on this page. It carries no filename and none of the video, only what the browser reports about itself and about this clip. Copy it into a bug report if the preview keeps failing.',
     diagCopy: 'Copy',
     diagCopied: 'Copied',
-    previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so the crop box and the censor boxes have no picture to aim at.`,
+    previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so there is no picture to aim the crop and the boxes at.`,
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
-    censors: 'Hide something',
-    censorHint: 'Drag on the export preview to draw a box over anything you want hidden. Drag an existing box to move it.',
     modeBlock: 'Solid',
     modePixelate: 'Pixelate',
     modeBlur: 'Blur',
     censorWhy: 'A solid box is the default because it is the only one that removes anything. Pixelating and blurring both work by throwing away resolution — and resolution comes back out of a video in a way it does not out of a photo: the mosaic grid is fixed to the frame while your subject moves through it, so every frame samples the same face on a different grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame.',
     censorMoves: 'If what you are hiding moves, make the box big enough for the whole path, or add a second box for the later part. A box that is right for one second and wrong for the next has published the thing you were hiding.',
     censorAudio: 'This hides the picture and not the sound. The audio is copied across untouched, so a name that is spoken is still spoken.',
-    output: 'Output',
     quality: 'Quality',
     qualities: ['Smaller file', 'Normal', 'Sharper'],
     maxHeight: 'Largest side',
@@ -72,7 +88,6 @@ const STR = {
     exporting: 'Encoding…',
     cancel: 'Cancel',
     progress: (d: number, t: number) => `${Math.round((d / Math.max(1, t)) * 100)}%`,
-    resultTitle: 'Result',
     download: 'Download',
     outInfo: (mb: string, a: string) => `${mb} · ${a}`,
     withSound: 'with sound',
@@ -96,47 +111,50 @@ const STR = {
     } as Record<string, string>,
   },
   ar: {
-    intro: 'اقتصّ المقطع بالشكل الذي تريده المنصّة، وادمج عدة مقاطع، وضع نصًّا فوقها — على جهازك. ولا يُرفع شيء.',
+    heroTitle: 'حرّر الفيديو دون رفعه',
+    heroBody: 'اقتصّ المقطع بالشكل الذي تريده المنصّة، وادمج عدة مقاطع، وأضف نصًّا، واحجب ما لا ينبغي أن يظهر. يُفَكّ ترميز كل إطار ويُعاد ترميزه على جهازك — ولا يغادر الملفُ جهازك أبدًا.',
     pick: 'اختر فيديو',
+    privacy: 'صيغتا MP4 وMOV. لا يُرفع شيء، ولا يُرسل شيء إلى أي مكان.',
     add: 'أضف مقطعًا آخر',
-    reading: 'تُقرأ الفيديو…',
-    clips: 'المقاطع',
-    joined: (n: number, d: string) => `${n} مقطع · ${d} إجمالًا`,
+    reading: 'جارٍ قراءة الفيديو…',
+    joined: (n: number, d: string) => `${n} مقطع · ${d}`,
     remove: 'إزالة',
     up: 'إلى الأمام',
     down: 'إلى الخلف',
-    shape: 'الشكل',
-    kept: (pct: number) => `يبقى ${pct}٪ من الصورة`,
-    keptWhy: 'اقتصاص تسجيل ١٦:٩ إلى ٩:١٦ يرمي أكثر من ثلثي الإطار، وما كنت تصوّره نادرًا ما يكون في وسط ما تبقّى. اسحب الصورة لتختار ما يبقى منها.',
+    modeCrop: 'اقتصاص',
+    modeCensor: 'إخفاء جزء',
+    modeText: 'نص',
+    modeMore: 'إعدادات المُخرَج',
+    play: 'تشغيل',
+    pause: 'إيقاف',
+    kept: (pct: number) => `يبقى ${arNum(pct)}٪`,
+    keptWhy: 'اقتصاص تسجيل ١٦:٩ إلى ٩:١٦ يرمي أكثر من ثلثي الإطار، وما كنت تصوّره نادرًا ما يكون في وسط ما تبقّى. اسحب الصورة لتختار ما يبقى منها، وتحرّكها مفاتيح الأسهم.',
     zoom: 'التقريب',
-    frame: 'الإطار كاملًا',
-    result: 'ما سيُصدَّر',
-    dragHint: 'اسحب لتحريك الاقتصاص. وتحرّكه مفاتيح الأسهم.',
+    addBox: 'اسحب على الفيديو لترسم مربّعًا.',
+    deleteBox: 'احذف هذا المربّع',
     captions: 'النصوص',
     addCaption: 'أضف نصًّا',
+    noCaption: 'أضف نصًّا ثم اسحبه إلى حيث تريد.',
     text: 'النص',
     from: 'من',
     to: 'إلى',
     size: 'الحجم',
     colour: 'اللون',
     band: 'شريط خلف النص',
-    captionWhy: 'يُرسم النص مرة واحدة هنا بخطوط هذه الصفحة نفسها، ثم تُوضع الصورة ذاتها في كل إطار. فتتصل الحروف العربية وتجري من اليمين إلى اليسار كما يكتبها المتصفح، والمعاينة ليست تقريبًا للمُخرَج بل هي المُخرَج نفسه.',
+    captionWhy: 'يُرسم النص مرة واحدة هنا بخطوط هذه الصفحة نفسها، ثم تُوضع الصورة ذاتها في كل إطار. فتتصل الحروف العربية وتجري من اليمين إلى اليسار كما يكتبها المتصفح، وما تراه هو ما يُرمَّز.',
     diagShow: 'تشخيص',
     diagHide: 'إخفاء التشخيص',
     diagWhy: 'لا يُرسَل شيء مما هنا إلى أي مكان — إنما هو نص على هذه الصفحة. ولا يحمل اسم الملف ولا شيئًا من الفيديو، بل ما يذكره المتصفح عن نفسه وعن هذا المقطع فقط. انسخه في تقرير عطل إن استمرت المعاينة في الفشل.',
     diagCopy: 'نسخ',
     diagCopied: 'نُسخ',
-    previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها مربّع الاقتصاص ولا مربّعات الحجب.`,
+    previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها الاقتصاص ولا المربّعات.`,
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
-    censors: 'إخفاء جزء',
-    censorHint: 'اسحب على معاينة المُخرَج لترسم مربّعًا فوق ما تريد إخفاءه. واسحب مربّعًا موجودًا لتحريكه.',
     modeBlock: 'حجب كامل',
     modePixelate: 'بكسلة',
     modeBlur: 'تمويه',
     censorWhy: 'الحجب الكامل هو الأصل لأنه الوحيد الذي يزيل شيئًا فعلًا. أما البكسلة والتمويه فيعملان بإسقاط الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة ثابتة على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد.',
     censorMoves: 'إن كان ما تخفيه يتحرك، فوسّع المربّع ليغطي مساره كله، أو أضف مربّعًا ثانيًا للجزء التالي. فمربّعٌ يصيب في ثانية ويخطئ في التي تليها قد نشر ما كنت تخفيه.',
     censorAudio: 'هذا يخفي الصورة لا الصوت. فالصوت يُنسخ كما هو، والاسم المنطوق يبقى منطوقًا.',
-    output: 'المُخرَج',
     quality: 'الجودة',
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
     maxHeight: 'أطول ضلع',
@@ -150,8 +168,7 @@ const STR = {
     exportBtn: 'تصدير',
     exporting: 'يجري الترميز…',
     cancel: 'إلغاء',
-    progress: (d: number, t: number) => `${Math.round((d / Math.max(1, t)) * 100)}٪`,
-    resultTitle: 'النتيجة',
+    progress: (d: number, t: number) => `${arNum(Math.round((d / Math.max(1, t)) * 100))}٪`,
     download: 'تنزيل',
     outInfo: (mb: string, a: string) => `${mb} · ${a}`,
     withSound: 'بالصوت',
@@ -177,25 +194,28 @@ const STR = {
 } as const
 
 /**
- * The longest side either preview canvas is drawn at.
+ * The longest side the stage canvas is drawn at.
  *
- * The previews repaint on every animation frame, so drawing them at the source
- * resolution means compositing a 4K frame sixty times a second on the main
- * thread — for a picture that is a few hundred pixels wide on screen. Scaling
- * costs nothing in fidelity here: the crop rectangle and the caption placement
- * are both proportional, so the preview is the same composition at a smaller
- * size, and the EXPORT is unaffected — it is drawn in the worker at full size.
+ * It repaints on every animation frame, so drawing at the source resolution
+ * means compositing a 4K frame sixty times a second on the main thread for a
+ * picture a few hundred pixels wide on screen. Scaling costs nothing in
+ * fidelity: the crop, the boxes and the captions are all proportional, so this
+ * is the same composition at a smaller size, and the EXPORT is untouched — the
+ * worker draws it at full size.
  */
-const PREVIEW_MAX = 540
+const PREVIEW_MAX = 720
 
 /** Bits per pixel per second, at each quality. Multiplied by w×h×fps. */
 const QUALITY = [0.05, 0.09, 0.15]
 const HEIGHTS = [480, 720, 1080, 1440]
 
+type Mode = 'crop' | 'censor' | 'text' | 'more'
+
 interface Clip { slot: number; file: File; url: string; info: ProbeInfo }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const mb = (b: number) => `${(b / 1048576).toFixed(1)} MB`
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
 /** Arabic decides the text direction, not the UI locale — somebody writing an
  *  English caption on the Arabic side of the site wants a left-to-right line. */
@@ -205,7 +225,7 @@ const isRtl = (text: string) => /[؀-ۿݐ-ݿ]/.test(text)
  * Draw one caption to its own bitmap, at output resolution.
  *
  * Everything about the way this text looks is decided here, once, on the page —
- * so the preview and the encoded frame are literally the same pixels.
+ * so the stage and the encoded frame are literally the same pixels.
  */
 async function renderCaption(c: Caption, out: { width: number; height: number }): Promise<ImageBitmap | null> {
   const text = c.text.trim()
@@ -263,6 +283,14 @@ async function renderCaption(c: Caption, out: { width: number; height: number })
   return createImageBitmap(canvas)
 }
 
+/** What the pointer is doing to the picture right now. */
+type Drag =
+  | { kind: 'pan'; px: number; py: number; cx: number; cy: number }
+  | { kind: 'draw'; fx: number; fy: number }
+  | { kind: 'move'; id: string; ox: number; oy: number }
+  | { kind: 'resize'; id: string }
+  | { kind: 'caption'; id: string; ox: number; oy: number }
+
 export default function VideoEditTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -270,11 +298,14 @@ export default function VideoEditTool() {
   const [supported, setSupported] = useState<boolean | null>(null)
   const [clips, setClips] = useState<Clip[]>([])
   const [sel, setSel] = useState(0)
+  const [mode, setMode] = useState<Mode>('crop')
   const [aspectId, setAspectId] = useState('9:16')
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
   const [captions, setCaptions] = useState<Caption[]>([])
   const [censors, setCensors] = useState<Censor[]>([])
+  const [pickedBox, setPickedBox] = useState<string | null>(null)
+  const [pickedCaption, setPickedCaption] = useState<string | null>(null)
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
   const [keepAudio, setKeepAudio] = useState(true)
@@ -284,9 +315,8 @@ export default function VideoEditTool() {
   const [previewError, setPreviewError] = useState(0)
   const [showDiag, setShowDiag] = useState(false)
   const [copied, setCopied] = useState(false)
-  const diag = useRef(createRecorder())
-  const heapAtPick = useRef<ReturnType<typeof heap>>(null)
-  const wasHidden = useRef(false)
+  const [playing, setPlaying] = useState(false)
+  const [pos, setPos] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
   const workerRef = useRef<Worker | null>(null)
@@ -294,23 +324,19 @@ export default function VideoEditTool() {
   const slotId = useRef(0)
   const pending = useRef(new Map<number, (r: Res) => void>())
   const videoRef = useRef<HTMLVideoElement>(null)
-  const frameRef = useRef<HTMLCanvasElement>(null)
-  const resultRef = useRef<HTMLCanvasElement>(null)
+  const stageRef = useRef<HTMLCanvasElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
   const bitmaps = useRef<Map<string, ImageBitmap>>(new Map())
-  // The box being drawn or moved right now. A ref rather than state because it
-  // changes on every pointer event and only the rendered rect needs to re-render.
-  const censorDrag = useRef<{ id: string; ox: number; oy: number } | { from: { x: number; y: number } } | null>(null)
   // The box being drawn lives in a REF, not in state, and `paint` reads it on
   // the next animation frame — the rAF loop is already repainting, so a drag
   // needs no render of its own and this way it does not cause one per
   // `pointermove`.
-  //
-  // It was state first, and the spec failures that prompted the change were NOT
-  // caused by that: see `drawBox` in the e2e, where the real cause was the
-  // canvas being scrolled out of the viewport. Kept because it is cheaper, not
-  // because it fixed anything.
   const drawingRef = useRef<Censor | null>(null)
+  const dragRef = useRef<Drag | null>(null)
   const [bitmapTick, setBitmapTick] = useState(0)
+  const diag = useRef(createRecorder())
+  const heapAtPick = useRef<ReturnType<typeof heap>>(null)
+  const wasHidden = useRef(false)
 
   useEffect(() => {
     const w = new Worker(new URL('./render.worker.ts', import.meta.url), { type: 'module' })
@@ -390,7 +416,7 @@ export default function VideoEditTool() {
   }, [clips])
 
   // Caption bitmaps are rebuilt whenever what they say, or how big the frame is,
-  // changes. They are the thing that gets composited, in the preview and in the
+  // changes. They are the thing that gets composited, on the stage and in the
   // export alike, so there is exactly one of them per caption.
   useEffect(() => {
     let live = true
@@ -406,17 +432,17 @@ export default function VideoEditTool() {
       setBitmapTick((n) => n + 1)
     }
     // Drawn AT ONCE with whatever face is loaded, and again once the web fonts
-    // have settled. Awaiting `document.fonts.ready` before the first draw is
-    // the obvious code and it makes the caption invisible until every font on
-    // the page has resolved — which on a slow connection, or one where the font
-    // host is simply unreachable, is tens of seconds of a preview that appears
-    // to have ignored what was typed.
+    // have settled. Awaiting `document.fonts.ready` before the first draw makes
+    // a caption invisible until every font on the page has resolved — tens of
+    // seconds on a slow connection, or one where the font host is unreachable.
     void build()
     void document.fonts?.ready.then(() => { if (live) void build() })
     return () => { live = false }
   }, [captions, size.width, size.height])
 
-  /** The time on the JOINED timeline that the preview is currently showing. */
+  /** The time on the JOINED timeline that the stage is currently showing. */
+  const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
+  const t = spanStart + pos
   const previewTime = useCallback(() => {
     const v = videoRef.current
     const span = spans[Math.min(sel, spans.length - 1)]
@@ -425,59 +451,31 @@ export default function VideoEditTool() {
 
   const paint = useCallback(() => {
     const v = videoRef.current
-    if (!v || !current || !v.videoWidth) return
+    const rc = stageRef.current
+    if (!v || !rc || !current || !v.videoWidth) return
     const clip = { width: current.info.width, height: current.info.height }
-    const rect = cropRect(clip, crop)
-
-    // The whole frame, with everything outside the crop dimmed. Showing only
-    // the result would hide the decision the tool is asking you to make.
-    const fc = frameRef.current
-    if (fc) {
-      const k = Math.min(1, PREVIEW_MAX / Math.max(clip.width, clip.height))
-      fc.width = Math.round(clip.width * k)
-      fc.height = Math.round(clip.height * k)
-      const ctx = fc.getContext('2d')
-      if (ctx) {
-        const x = rect.x * k, y = rect.y * k, w = rect.w * k, h = rect.h * k
-        ctx.drawImage(v, 0, 0, fc.width, fc.height)
-        ctx.fillStyle = 'rgba(0,0,0,0.55)'
-        ctx.fillRect(0, 0, fc.width, y)
-        ctx.fillRect(0, y + h, fc.width, fc.height - y - h)
-        ctx.fillRect(0, y, x, h)
-        ctx.fillRect(x + w, y, fc.width - x - w, h)
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-        ctx.lineWidth = 2
-        ctx.strokeRect(x, y, w, h)
-      }
-    }
-
-    const rc = resultRef.current
-    if (rc) {
-      const k = Math.min(1, PREVIEW_MAX / Math.max(size.width, size.height))
-      const shown = { width: Math.max(2, Math.round(size.width * k)), height: Math.max(2, Math.round(size.height * k)) }
-      rc.width = shown.width
-      rc.height = shown.height
-      const ctx = rc.getContext('2d')
-      if (ctx) {
-        // The SAME function the worker calls, with the same crop. Only the
-        // destination size differs, and every caption is placed and scaled by
-        // the same ratio — so this is the export, at preview size, rather than
-        // a second opinion about what the export will look like.
-        drawFrame(ctx, v, clip, crop, shown)
-        const t = previewTime()
-        // The same function the worker calls. The box being dragged right now
-        // is drawn with the rest, so what you are aiming at is what you get.
-        const inProgress = drawingRef.current
-        applyCensors(ctx, inProgress ? [...censors, inProgress] : censors, t, shown)
-        for (const c of activeAt(captions, t)) {
-          const bmp = bitmaps.current.get(c.id)
-          if (!bmp) continue
-          const w = bmp.width * k
-          const h = bmp.height * k
-          const at = captionAt(c, { width: w, height: h }, shown)
-          ctx.drawImage(bmp, at.x, at.y, w, h)
-        }
-      }
+    const k = Math.min(1, PREVIEW_MAX / Math.max(size.width, size.height))
+    const shown = { width: Math.max(2, Math.round(size.width * k)), height: Math.max(2, Math.round(size.height * k)) }
+    rc.width = shown.width
+    rc.height = shown.height
+    const ctx = rc.getContext('2d')
+    if (!ctx) return
+    // The SAME functions the worker calls, with the same crop and the same
+    // boxes. Only the destination size differs, and everything on top is placed
+    // by the same ratio — so the stage IS the export at stage size, not a
+    // second opinion about what the export will look like. THIS IS THE ONLY
+    // VIEW: there is no separate result preview to disagree with it.
+    drawFrame(ctx, v, clip, crop, shown)
+    const now = previewTime()
+    const inProgress = drawingRef.current
+    applyCensors(ctx, inProgress ? [...censors, inProgress] : censors, now, shown)
+    for (const c of activeAt(captions, now)) {
+      const bmp = bitmaps.current.get(c.id)
+      if (!bmp) continue
+      const w = bmp.width * k
+      const h = bmp.height * k
+      const at = captionAt(c, { width: w, height: h }, shown)
+      ctx.drawImage(bmp, at.x, at.y, w, h)
     }
   }, [current, crop, size, captions, censors, previewTime])
 
@@ -504,8 +502,7 @@ export default function VideoEditTool() {
     // demux it, which on a phone is seconds and a second copy of it in memory;
     // handing the URL over first lets the browser start decoding the picture
     // from the file directly instead of queueing behind that. It is also a side
-    // effect, so it stays out of the state updater — the same fix `removeClip`
-    // carries.
+    // effect, so it stays out of the state updater — the fix `removeClip` carries.
     const url = URL.createObjectURL(f)
     diag.current.mark('preview url created, probe sent')
     const res = await ask({ kind: 'probe', slot, file: f })
@@ -548,93 +545,119 @@ export default function VideoEditTool() {
   }
 
   function addCaption() {
-    const at = previewTime()
+    const id = `c${Date.now()}${captions.length}`
     setCaptions((list) => [...list, {
-      id: `c${Date.now()}${list.length}`,
+      id,
       text: '',
       x: 0.5,
       y: 0.82,
       size: 0.07,
       colour: '#ffffff',
       band: true,
-      from: Math.max(0, Math.round(at * 10) / 10),
-      to: Math.min(duration, Math.round((at + 3) * 10) / 10),
+      from: Math.max(0, Math.round(t * 10) / 10),
+      to: Math.min(duration, Math.round((t + 3) * 10) / 10),
     }])
+    setPickedCaption(id)
   }
 
   const setCaption = (id: string, patch: Partial<Caption>) =>
     setCaptions((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+  const setCensor = (id: string, patch: Partial<Censor>) =>
+    setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
 
-  function dragCrop(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (e.buttons !== 1 || !frameRef.current) return
-    const r = frameRef.current.getBoundingClientRect()
-    setCentre({
-      x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
-      y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
-    })
+  /** Pointer position as a fraction of the OUTPUT frame. */
+  function at(e: React.PointerEvent) {
+    const r = overlayRef.current?.getBoundingClientRect()
+    if (!r) return { x: 0.5, y: 0.5 }
+    return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) }
   }
 
-  /** Pointer position on the result canvas, as a fraction of the output frame. */
-  function atResult(e: React.PointerEvent<HTMLCanvasElement>) {
-    const r = e.currentTarget.getBoundingClientRect()
-    return {
-      x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
-      y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
-    }
-  }
-
-  function censorDown(e: React.PointerEvent<HTMLCanvasElement>) {
+  function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
-    const p = atResult(e)
-    const t = previewTime()
-    // Inside an existing box moves it; anywhere else draws a new one. Hit
-    // testing walks BACKWARDS so the box drawn most recently — the one on top —
-    // is the one you grab.
-    const showing = activeAt(censors, t)
-    const hit = [...showing].reverse().find((c) => p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h)
-    e.currentTarget.setPointerCapture(e.pointerId)
-    if (hit) { censorDrag.current = { id: hit.id, ox: p.x - hit.x, oy: p.y - hit.y }; return }
-    censorDrag.current = { from: p }
-    drawingRef.current = {
-      id: `z${Date.now()}`, x: p.x, y: p.y, w: 0, h: 0, mode: 'block',
-      from: Math.max(0, Math.round(t * 10) / 10),
-      to: Math.min(duration, Math.round((t + 3) * 10) / 10),
+    const p = at(e)
+    overlayRef.current?.setPointerCapture(e.pointerId)
+    if (mode === 'censor') {
+      dragRef.current = { kind: 'draw', fx: p.x, fy: p.y }
+      drawingRef.current = {
+        id: `z${Date.now()}`, x: p.x, y: p.y, w: 0, h: 0, mode: 'block',
+        from: Math.max(0, Math.round(t * 10) / 10),
+        to: Math.min(duration, Math.round((t + 3) * 10) / 10),
+      }
+      setPickedBox(null)
+      return
     }
+    // Crop mode pans the PICTURE, not a rectangle: the frame stays where it is
+    // and the image slides under it. That is the model every phone gallery uses,
+    // and it is the only one that keeps the stage showing nothing but output.
+    if (mode === 'crop') dragRef.current = { kind: 'pan', px: p.x, py: p.y, cx: centre.x, cy: centre.y }
   }
 
-  function censorMove(e: React.PointerEvent<HTMLCanvasElement>) {
-    const drag = censorDrag.current
-    if (!drag) return
-    const p = atResult(e)
-    if ('id' in drag) {
-      setCensors((list) => list.map((c) => (c.id === drag.id
-        ? { ...c, x: Math.min(1 - c.w, Math.max(0, p.x - drag.ox)), y: Math.min(1 - c.h, Math.max(0, p.y - drag.oy)) }
+  function moveDrag(e: React.PointerEvent<HTMLDivElement>) {
+    const d = dragRef.current
+    if (!d || !current) return
+    const p = at(e)
+    if (d.kind === 'pan') {
+      // A drag of one output width moves the crop by one crop width, so the
+      // picture tracks the finger exactly.
+      const r = cropRect({ width: current.info.width, height: current.info.height }, crop)
+      const dx = (p.x - d.px) * (r.w / current.info.width)
+      const dy = (p.y - d.py) * (r.h / current.info.height)
+      setCentre({ x: clamp01(d.cx - dx), y: clamp01(d.cy - dy) })
+      return
+    }
+    if (d.kind === 'draw') {
+      const box = drawingRef.current
+      if (!box) return
+      box.x = Math.min(d.fx, p.x)
+      box.y = Math.min(d.fy, p.y)
+      box.w = Math.abs(p.x - d.fx)
+      box.h = Math.abs(p.y - d.fy)
+      return
+    }
+    if (d.kind === 'move') {
+      setCensors((list) => list.map((c) => (c.id === d.id
+        ? { ...c, x: clamp01(Math.min(1 - c.w, p.x - d.ox)), y: clamp01(Math.min(1 - c.h, p.y - d.oy)) }
         : c)))
       return
     }
-    const d = drawingRef.current
-    if (!d) return
-    d.x = Math.min(drag.from.x, p.x)
-    d.y = Math.min(drag.from.y, p.y)
-    d.w = Math.abs(p.x - drag.from.x)
-    d.h = Math.abs(p.y - drag.from.y)
+    if (d.kind === 'resize') {
+      setCensors((list) => list.map((c) => (c.id === d.id
+        ? { ...c, w: Math.max(0.02, Math.min(1 - c.x, p.x - c.x)), h: Math.max(0.02, Math.min(1 - c.y, p.y - c.y)) }
+        : c)))
+      return
+    }
+    if (d.kind === 'caption') {
+      setCaption(d.id, { x: clamp01(p.x - d.ox), y: clamp01(p.y - d.oy) })
+    }
   }
 
-  function censorUp(e: React.PointerEvent<HTMLCanvasElement>) {
-    const drag = censorDrag.current
-    censorDrag.current = null
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
-    if (!drag || 'id' in drag) return
-    const d = drawingRef.current
+  function up(e: React.PointerEvent<HTMLDivElement>) {
+    const d = dragRef.current
+    dragRef.current = null
+    if (overlayRef.current?.hasPointerCapture(e.pointerId)) overlayRef.current.releasePointerCapture(e.pointerId)
+    if (d?.kind !== 'draw') return
+    const box = drawingRef.current
     drawingRef.current = null
     // A stray click is not a box. Anything under about a fiftieth of the frame
     // is a misclick, and committing it would leave invisible specks that still
     // count as censors.
-    if (d && d.w > 0.02 && d.h > 0.02) setCensors((list) => [...list, d])
+    if (box && box.w > 0.02 && box.h > 0.02) {
+      setCensors((list) => [...list, box])
+      setPickedBox(box.id)
+    }
   }
 
-  const setCensor = (id: string, patch: Partial<Censor>) =>
-    setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+  function nudge(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (mode !== 'crop') return
+    const step = e.shiftKey ? 0.05 : 0.01
+    const by: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+    }
+    const d = by[e.key]
+    if (!d) return
+    e.preventDefault()
+    setCentre((c) => ({ x: clamp01(c.x + d[0]), y: clamp01(c.y + d[1]) }))
+  }
 
   /** The diagnostics block. Built on render so it is current when it is read. */
   function report(): string {
@@ -667,17 +690,6 @@ export default function VideoEditTool() {
     })
   }
 
-  function nudge(e: React.KeyboardEvent<HTMLCanvasElement>) {
-    const step = e.shiftKey ? 0.05 : 0.01
-    const by: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
-    }
-    const d = by[e.key]
-    if (!d) return
-    e.preventDefault()
-    setCentre((c) => ({ x: Math.min(1, Math.max(0, c.x + d[0])), y: Math.min(1, Math.max(0, c.y + d[1])) }))
-  }
-
   async function doExport() {
     if (!clips.length) return
     setBusy('render')
@@ -685,7 +697,7 @@ export default function VideoEditTool() {
     setProgress({ done: 0, total: 0 })
     diag.current.mark(`export started (${size.width}×${size.height})`)
     // Fresh bitmaps: an ImageBitmap handed to a worker in the transfer list is
-    // gone from this side, and the preview still needs its copies.
+    // gone from this side, and the stage still needs its copies.
     const planCaptions: RenderPlan['captions'] = []
     for (const c of captions) {
       const bmp = await renderCaption(c, size)
@@ -715,6 +727,13 @@ export default function VideoEditTool() {
     })
   }
 
+  function togglePlay() {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) void v.play()
+    else v.pause()
+  }
+
   if (supported === false) {
     return (
       <Stack data-testid="video-edit">
@@ -727,64 +746,81 @@ export default function VideoEditTool() {
     )
   }
 
+  // ---------------------------------------------------------------- intake ---
+  // Full-bleed green intro, the shape the CV optimizer uses: one sentence about
+  // what this is and one button, rather than a panel of controls nobody can act
+  // on until a file exists.
+  //
+  // It does NOT carry the CV tool's negative top margin. That cancels the
+  // page's top padding to dock the band flush to the navbar, which works there
+  // because that tool is `stable` and `ToolPage` renders nothing above it. This
+  // one is `beta`, so the badge — the thing that says the answer can go stale
+  // without the code changing — sits in exactly that space, and pulling a green
+  // band over it would hide the one line on the page that qualifies everything
+  // below it.
+  if (!clips.length) {
+    return (
+      <Stack data-testid="video-edit">
+        <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] bg-green-600 text-sand-100">
+          <div className="wrap py-[clamp(1.6rem,4.5vw,2.4rem)] flex flex-col gap-3">
+            <h1 className="font-display rtl:font-ar text-[clamp(1.5rem,4.5vw,2.1rem)] font-bold leading-tight" style={{ color: 'var(--sand-100)' }}>
+              {s.heroTitle}
+            </h1>
+            <p className="text-[0.98rem] leading-relaxed opacity-90 max-w-[46rem] rtl:font-ar">{s.heroBody}</p>
+            <div className="flex flex-wrap items-center gap-3 mt-1">
+              <label className="inline-flex self-start">
+                {/* No `accept`: an image accept string sends Chrome on Android to
+                    the gallery picker, and the same trap applies to video. */}
+                <input type="file" className="sr-only" data-testid="ve-file"
+                  onChange={(e) => { void addFile(e.target.files?.[0]) }} />
+                <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-white text-green-700 px-4 py-2 text-[0.9rem] font-semibold hover:bg-sand-100 rtl:font-ar">
+                  {s.pick}
+                </span>
+              </label>
+              {busy === 'read' && (
+                <span className="inline-flex items-center gap-2 text-[0.9rem] opacity-90 rtl:font-ar" data-testid="ve-reading">
+                  <Spinner /> {s.reading}
+                </span>
+              )}
+            </div>
+            <p className="text-[0.82rem] opacity-80 rtl:font-ar">{s.privacy}</p>
+          </div>
+        </div>
+        {error && <FileError message={error} />}
+      </Stack>
+    )
+  }
+
+  // ------------------------------------------------------------------ edit ---
+  // EVERY box gets a handle, not only the ones showing at this instant. Drawing
+  // just the active ones looks tidier and traps you: scrub past a box's span
+  // and the only way to reach it again — to widen the span that put it out of
+  // reach — is to guess where it was. The inactive ones are drawn faintly, so
+  // "showing now" is still legible.
+  const isNow = (c: { from: number; to: number }) => activeAt([c], t).length > 0
+  const picked = censors.find((c) => c.id === pickedBox) ?? null
+  const caption = captions.find((c) => c.id === pickedCaption) ?? null
+
+  const toolBtn = (m: Mode, label: string, icon: React.ReactNode) => (
+    <button type="button" title={label} aria-label={label} aria-pressed={mode === m}
+      data-testid={`ve-mode-${m}`} onClick={() => setMode(m)}
+      className={`grid place-items-center w-10 h-10 rounded-md border cursor-pointer transition-colors ${
+        mode === m
+          ? 'bg-green-600 border-green-700 text-[color:var(--primary-ink)]'
+          : 'bg-black/55 border-white/25 text-white hover:bg-black/70'}`}>
+      {icon}
+    </button>
+  )
+
   return (
     <Stack data-testid="video-edit">
-      {!clips.length && (
-        <Panel className="gap-3">
-          <p className="text-[0.95rem] text-ink-soft rtl:font-ar">{s.intro}</p>
-          <label className="inline-flex items-center gap-2 self-start px-[1.15rem] py-[0.7rem] rounded-md border border-green-700 bg-green-600 text-[color:var(--primary-ink)] font-semibold text-[0.95rem] cursor-pointer">
-            <UploadIcon /> {s.pick}
-            {/* No `accept`: an image accept string sends Chrome on Android to the
-                gallery picker, and the same trap applies to video. */}
-            <input type="file" className="hidden" data-testid="ve-file"
-              onChange={(e) => { void addFile(e.target.files?.[0]) }} />
-          </label>
-        </Panel>
-      )}
-
       {error && <FileError message={error} />}
 
-      {clips.reduce((n, c) => n + c.file.size, 0) > 300 * 1048576 && (
-        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-big">{s.big}</p>
-      )}
-
-      {busy === 'read' && (
-        <p className="flex items-center gap-2 text-ink-faint rtl:font-ar" data-testid="ve-reading"><Spinner /> {s.reading}</p>
-      )}
-
-      {!!clips.length && current && (
-        <>
-          <section className="flex flex-col gap-2">
-            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.clips}</h2>
-            <p className="text-[0.85rem] text-ink-faint" data-testid="ve-total">{s.joined(clips.length, fmt(duration))}</p>
-            <ul className="flex flex-col gap-1">
-              {clips.map((c, i) => (
-                <li key={c.slot} data-testid={`ve-clip-${i}`}
-                  className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-[0.85rem] ${i === sel ? 'border-green-700' : 'border-[color:var(--line)]'}`}>
-                  <button type="button" className="border-0 bg-transparent p-0 text-start text-ink underline-offset-2 hover:underline"
-                    onClick={() => setSel(i)} data-testid={`ve-select-${i}`}>{c.file.name}</button>
-                  <span className="text-ink-faint font-mono">{c.info.width}×{c.info.height} · {fmt(c.info.durationSec)}</span>
-                  {!c.info.decodable && <span className="text-gold-500 rtl:font-ar" data-testid={`ve-undecodable-${i}`}>{s.undecodable}</span>}
-                  <span className="ms-auto flex gap-1">
-                    <Button className="px-2 py-0.5" onClick={() => move(i, -1)} disabled={i === 0} data-testid={`ve-up-${i}`}>↑<span className="sr-only">{s.up}</span></Button>
-                    <Button className="px-2 py-0.5" onClick={() => move(i, 1)} disabled={i === clips.length - 1} data-testid={`ve-down-${i}`}>↓<span className="sr-only">{s.down}</span></Button>
-                    <Button className="px-2 py-0.5" onClick={() => removeClip(i)} data-testid={`ve-remove-${i}`}>×<span className="sr-only">{s.remove}</span></Button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-trim-note">
-              {s.trimNote}{' '}
-              <a className="text-green-700 underline" href={`/${locale}/apps/video-trim`}>{s.trimName}</a>
-            </p>
-            <label className="self-start text-[0.85rem] text-green-700 underline cursor-pointer rtl:font-ar">
-              {s.add}
-              <input type="file" className="hidden" data-testid="ve-add"
-                onChange={(e) => { void addFile(e.target.files?.[0]); e.target.value = '' }} />
-            </label>
-          </section>
-
-          <video ref={videoRef} src={current.url} controls playsInline data-testid="ve-video"
+      <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] bg-black">
+        <div className="relative h-[min(68vh,760px)] min-h-[300px] flex items-center justify-center">
+          {/* The source. It is not the preview — it is what `drawFrame` reads —
+              so it is invisible but must stay laid out and decoding. */}
+          <video ref={videoRef} src={current.url} playsInline data-testid="ve-video"
             onLoadStart={() => diag.current.mark('video loadstart')}
             onError={() => {
               diag.current.mark(`video error ${videoRef.current?.error?.code ?? -1}`)
@@ -794,234 +830,362 @@ export default function VideoEditTool() {
               diag.current.mark('video loadedmetadata — the preview is working')
               setPreviewError(0)
             }}
-            className="w-full max-h-[34vh] rounded-md bg-black" />
+            onTimeUpdate={() => setPos(videoRef.current?.currentTime ?? 0)}
+            onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            className="absolute w-px h-px opacity-0 pointer-events-none" />
 
-          {/* A preview that fails silently leaves a broken thumbnail and a black
-              canvas with nothing saying why — the dead-UI failure this repo
-              already refuses for image picks (#225). The media error CODE is
-              named because it is the one thing that distinguishes "this browser
-              cannot play this format" (4) from "it started and then failed" (3),
-              and neither is guessable from the outside. */}
-          {previewError !== 0 && (
-            <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-preview-error">
-              {s.previewFailed(previewError)}
-              {current.info.decodable ? ` ${s.previewStillExports}` : ''}
-            </p>
-          )}
+          <div className="relative" style={{ aspectRatio: `${size.width} / ${size.height}`, height: '100%', maxWidth: '100%' }}>
+            <canvas ref={stageRef} data-testid="ve-result" className="block w-full h-full" />
 
-          <button type="button" data-testid="ve-diag-toggle"
-            className="self-start border-0 bg-transparent p-0 text-[0.8rem] text-ink-faint underline cursor-pointer rtl:font-ar"
-            onClick={() => setShowDiag((v) => !v)}>
-            {showDiag ? s.diagHide : s.diagShow}
-          </button>
+            {/* One overlay for every interaction, so the pointer maths lives in
+                one place and a box cannot be dragged in a coordinate space the
+                canvas does not share. */}
+            <div ref={overlayRef} tabIndex={0} data-testid="ve-stage"
+              onPointerDown={down} onPointerMove={moveDrag} onPointerUp={up} onPointerCancel={up}
+              onKeyDown={nudge}
+              className={`absolute inset-0 touch-none outline-none ${mode === 'crop' ? 'cursor-move' : mode === 'censor' ? 'cursor-crosshair' : ''}`}>
 
-          {/* Shown on failure without being asked, because somebody whose
-              preview just broke should not have to find a toggle — and
-              available on demand the rest of the time, so a WORKING run can be
-              reported for comparison, which is what an intermittent fault needs. */}
-          {(showDiag || previewError !== 0) && (
-            <div className="flex flex-col gap-2" data-testid="ve-diagnostics">
-              <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.diagWhy}</p>
-              <pre className="overflow-x-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-2 text-[0.72rem] font-mono text-ink"
-                data-testid="ve-diag-text">{report()}</pre>
-              <Button className="self-start px-3 py-1" data-testid="ve-diag-copy"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(report()).then(() => {
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 2000)
-                  }).catch(() => {})
-                }}>
-                {copied ? s.diagCopied : s.diagCopy}
-              </Button>
-            </div>
-          )}
-
-          <div className="grid gap-3 min-[860px]:grid-cols-[1.4fr_1fr]">
-            <div className="flex flex-col gap-1">
-              <span className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.frame}</span>
-              <canvas ref={frameRef} data-testid="ve-frame" tabIndex={0}
-                onPointerDown={dragCrop} onPointerMove={dragCrop} onKeyDown={nudge}
-                className="w-full rounded-md bg-black cursor-move touch-none" />
-              <span className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.dragHint}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.result}</span>
-              <canvas ref={resultRef} data-testid="ve-result"
-                onPointerDown={censorDown} onPointerMove={censorMove}
-                onPointerUp={censorUp} onPointerCancel={censorUp}
-                className="w-full max-h-[46vh] object-contain rounded-md bg-black cursor-crosshair touch-none" />
-            </div>
-          </div>
-
-          <section className="flex flex-col gap-2">
-            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.shape}</h2>
-            <Seg>
-              {ASPECTS.map((a) => (
-                <SegButton key={a.id} active={aspectId === a.id} onClick={() => setAspectId(a.id)} data-testid={`ve-aspect-${a.id}`}>
-                  {locale === 'ar' ? a.labelAr : a.label}
-                </SegButton>
-              ))}
-            </Seg>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.85rem]">
-              <span className="text-ink-faint rtl:font-ar" data-testid="ve-kept">{s.kept(kept)}</span>
-              <span className="text-ink-faint font-mono" data-testid="ve-out-size">{s.outSize(size.width, size.height)}</span>
-              <label className="flex items-center gap-2 text-ink-faint ms-auto rtl:font-ar">
-                {s.zoom}
-                <input type="range" min={1} max={3} step={0.05} value={zoom} data-testid="ve-zoom"
-                  onChange={(e) => setZoom(Number(e.target.value))} />
-              </label>
-            </div>
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.keptWhy}</p>
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.censors}</h2>
-            <p className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="ve-censor-hint">{s.censorHint}</p>
-            {censors.map((c, i) => (
-              <div key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-[color:var(--line)] p-2 text-[0.85rem]"
-                data-testid={`ve-censor-${i}`}>
-                <Seg>
-                  {(['block', 'pixelate', 'blur'] as CensorMode[]).map((m) => (
-                    <SegButton key={m} active={c.mode === m} data-testid={`ve-censor-${m}-${i}`}
-                      onClick={() => setCensor(c.id, { mode: m })}>
-                      {m === 'block' ? s.modeBlock : m === 'pixelate' ? s.modePixelate : s.modeBlur}
-                    </SegButton>
-                  ))}
-                </Seg>
-                <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.from}
-                  <Input type="number" min={0} max={duration} step={0.1} value={c.from} className="w-20"
-                    data-testid={`ve-censor-from-${i}`}
-                    onChange={(e) => setCensor(c.id, { from: Number(e.target.value) })} />
-                </label>
-                <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.to}
-                  <Input type="number" min={0} max={duration} step={0.1} value={c.to} className="w-20"
-                    data-testid={`ve-censor-to-${i}`}
-                    onChange={(e) => setCensor(c.id, { to: Number(e.target.value) })} />
-                </label>
-                <Button className="px-2 py-0.5 ms-auto" data-testid={`ve-censor-remove-${i}`}
-                  onClick={() => setCensors((list) => list.filter((x) => x.id !== c.id))}>×</Button>
-              </div>
-            ))}
-            {!!censors.length && censors.some((c) => c.mode !== 'block') && (
-              <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-censor-warning">{s.censorWhy}</p>
-            )}
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.censorMoves}</p>
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-censor-audio">{s.censorAudio}</p>
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.captions}</h2>
-            {captions.map((c, i) => (
-              <div key={c.id} className="flex flex-col gap-2 rounded-md border border-[color:var(--line)] p-2" data-testid={`ve-caption-${i}`}>
-                <Input value={c.text} placeholder={s.text} data-testid={`ve-caption-text-${i}`}
-                  onChange={(e) => setCaption(c.id, { text: e.target.value })} />
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.85rem]">
-                  <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.from}
-                    <Input type="number" min={0} max={duration} step={0.1} value={c.from} className="w-20"
-                      data-testid={`ve-caption-from-${i}`}
-                      onChange={(e) => setCaption(c.id, { from: Number(e.target.value) })} />
-                  </label>
-                  <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.to}
-                    <Input type="number" min={0} max={duration} step={0.1} value={c.to} className="w-20"
-                      data-testid={`ve-caption-to-${i}`}
-                      onChange={(e) => setCaption(c.id, { to: Number(e.target.value) })} />
-                  </label>
-                  <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.size}
-                    <input type="range" min={0.03} max={0.18} step={0.005} value={c.size} data-testid={`ve-caption-size-${i}`}
-                      onChange={(e) => setCaption(c.id, { size: Number(e.target.value) })} />
-                  </label>
-                  <label className="flex items-center gap-1 text-ink-faint rtl:font-ar">{s.colour}
-                    <input type="color" value={c.colour} data-testid={`ve-caption-colour-${i}`}
-                      onChange={(e) => setCaption(c.id, { colour: e.target.value })} />
-                  </label>
-                  <Check>
-                    <input type="checkbox" checked={c.band} data-testid={`ve-caption-band-${i}`}
-                      onChange={(e) => setCaption(c.id, { band: e.target.checked })} />
-                    <span className="rtl:font-ar">{s.band}</span>
-                  </Check>
-                  <Button className="px-2 py-0.5 ms-auto" data-testid={`ve-caption-remove-${i}`}
-                    onClick={() => setCaptions((list) => list.filter((x) => x.id !== c.id))}>×</Button>
+              {mode === 'censor' && censors.map((c) => (
+                <div key={c.id} data-testid={`ve-box-${censors.indexOf(c)}`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    const p = at(e)
+                    overlayRef.current?.setPointerCapture(e.pointerId)
+                    dragRef.current = { kind: 'move', id: c.id, ox: p.x - c.x, oy: p.y - c.y }
+                    setPickedBox(c.id)
+                  }}
+                  style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.w * 100}%`, height: `${c.h * 100}%` }}
+                  className={`absolute cursor-move border-2 ${pickedBox === c.id ? 'border-green-400' : 'border-white/60 border-dashed'}${isNow(c) ? '' : ' opacity-40'}`}>
+                  {pickedBox === c.id && (
+                    <>
+                      <button type="button" title={s.deleteBox} aria-label={s.deleteBox}
+                        data-testid={`ve-box-delete-${censors.indexOf(c)}`}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => { setCensors((l) => l.filter((x) => x.id !== c.id)); setPickedBox(null) }}
+                        className="absolute -top-3 -end-3 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer">
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                      {/* The resize grip. A box you can move and not resize is a
+                          box you have to delete and redraw to make bigger. */}
+                      <span data-testid={`ve-box-resize-${censors.indexOf(c)}`}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          overlayRef.current?.setPointerCapture(e.pointerId)
+                          dragRef.current = { kind: 'resize', id: c.id }
+                        }}
+                        className="absolute -bottom-2 -end-2 w-4 h-4 rounded-sm bg-green-400 border border-green-700 cursor-nwse-resize" />
+                    </>
+                  )}
                 </div>
-              </div>
-            ))}
-            <Button className="self-start px-3 py-1" onClick={addCaption} data-testid="ve-caption-add">{s.addCaption}</Button>
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.captionWhy}</p>
-          </section>
+              ))}
 
-          <section className="flex flex-col gap-2">
-            <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.output}</h2>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.85rem]">
-              <label className="flex items-center gap-2 text-ink-faint rtl:font-ar">{s.quality}
-                <select className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-2 py-1 text-ink"
-                  value={quality} data-testid="ve-quality" onChange={(e) => setQuality(Number(e.target.value))}>
-                  {s.qualities.map((q, i) => <option key={q} value={i}>{q}</option>)}
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-ink-faint rtl:font-ar">{s.maxHeight}
-                <select className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-2 py-1 text-ink"
-                  value={maxHeight} data-testid="ve-height" onChange={(e) => setMaxHeight(Number(e.target.value))}>
-                  {HEIGHTS.map((h) => <option key={h} value={h}>{h}p</option>)}
-                </select>
-              </label>
-              {audioPlan === 'copy' && (
-                <Check>
-                  <input type="checkbox" checked={keepAudio} data-testid="ve-keep-audio"
-                    onChange={(e) => setKeepAudio(e.target.checked)} />
-                  <span className="rtl:font-ar">{s.keepAudio}</span>
-                </Check>
-              )}
+              {mode === 'text' && captions.map((c) => {
+                const bmp = bitmaps.current.get(c.id)
+                const w = bmp ? bmp.width / size.width : 0.3
+                const h = bmp ? bmp.height / size.height : 0.08
+                return (
+                  <div key={c.id} data-testid={`ve-caption-box-${captions.indexOf(c)}`}
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      const p = at(e)
+                      overlayRef.current?.setPointerCapture(e.pointerId)
+                      dragRef.current = { kind: 'caption', id: c.id, ox: p.x - c.x, oy: p.y - c.y }
+                      setPickedCaption(c.id)
+                    }}
+                    style={{ left: `${(c.x - w / 2) * 100}%`, top: `${(c.y - h / 2) * 100}%`, width: `${w * 100}%`, height: `${h * 100}%` }}
+                    className={`absolute cursor-move border-2 ${pickedCaption === c.id ? 'border-green-400' : 'border-white/50 border-dashed'}${isNow(c) ? '' : ' opacity-40'}`} />
+                )
+              })}
             </div>
-            <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.noUpscale}</p>
-            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-audio-note">
-              {audioPlan === 'copy' ? s.audioCopied
-                : audioPlan === 'mixed' ? s.audioMixed
-                : audioPlan === 'missing' ? s.audioMissing
-                : s.audioNone}
-            </p>
-          </section>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={doExport} disabled={busy !== ''} data-testid="ve-export">
-              <ScissorsIcon /> {busy === 'render' ? s.exporting : s.exportBtn}
-            </Button>
-            {busy === 'render' && (
-              <>
-                <span className="text-[0.85rem] text-ink-faint font-mono" data-testid="ve-progress">
-                  {s.progress(progress.done, progress.total)}
-                </span>
-                <Button className="px-3 py-1" data-testid="ve-cancel"
-                  onClick={() => { void ask({ kind: 'cancel' }) }}>{s.cancel}</Button>
-              </>
-            )}
+            {/* The context buttons, over the top-right of the picture. */}
+            <div className="absolute top-2 end-2 flex gap-1.5" data-testid="ve-tools">
+              {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
+              {toolBtn('censor', s.modeCensor, <EraseIcon className="w-5 h-5" />)}
+              {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+              {toolBtn('more', s.modeMore, <MoreVIcon className="w-5 h-5" />)}
+            </div>
+
+            {/* And the controls for whichever is active, along the bottom. */}
+            <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
+              <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
+                {mode === 'crop' && (
+                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-crop-bar">
+                    {ASPECTS.map((a) => (
+                      <button key={a.id} type="button" data-testid={`ve-aspect-${a.id}`}
+                        onClick={() => setAspectId(a.id)}
+                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                          aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                        {locale === 'ar' ? a.labelAr : a.label}
+                      </button>
+                    ))}
+                    <span className="text-[0.78rem] opacity-80 ps-1 rtl:font-ar" data-testid="ve-kept">{s.kept(kept)}</span>
+                    <span className="text-[0.78rem] opacity-80 font-mono" data-testid="ve-out-size">{s.outSize(size.width, size.height)}</span>
+                    <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">
+                      {s.zoom}
+                      <input type="range" min={1} max={3} step={0.05} value={zoom} data-testid="ve-zoom"
+                        className="w-20" onChange={(e) => setZoom(Number(e.target.value))} />
+                    </label>
+                  </div>
+                )}
+
+                {mode === 'censor' && (
+                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-censor-bar">
+                    {picked ? (
+                      <>
+                        {(['block', 'pixelate', 'blur'] as CensorMode[]).map((m) => (
+                          <button key={m} type="button" data-testid={`ve-censor-${m}`}
+                            onClick={() => setCensor(picked.id, { mode: m })}
+                            className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                              picked.mode === m ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                            {m === 'block' ? s.modeBlock : m === 'pixelate' ? s.modePixelate : s.modeBlur}
+                          </button>
+                        ))}
+                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.from}
+                          <Input type="number" min={0} max={duration} step={0.1} value={picked.from} className="w-16 !py-0.5 !text-[0.78rem]"
+                            data-testid="ve-censor-from"
+                            onChange={(e) => setCensor(picked.id, { from: Number(e.target.value) })} />
+                        </label>
+                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.to}
+                          <Input type="number" min={0} max={duration} step={0.1} value={picked.to} className="w-16 !py-0.5 !text-[0.78rem]"
+                            data-testid="ve-censor-to"
+                            onChange={(e) => setCensor(picked.id, { to: Number(e.target.value) })} />
+                        </label>
+                      </>
+                    ) : (
+                      <span className="text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-censor-hint">{s.addBox}</span>
+                    )}
+                  </div>
+                )}
+
+                {mode === 'text' && (
+                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-text-bar">
+                    {caption ? (
+                      <>
+                        <Input value={caption.text} placeholder={s.text} data-testid="ve-caption-text"
+                          className="w-40 !py-0.5 !text-[0.8rem]"
+                          onChange={(e) => setCaption(caption.id, { text: e.target.value })} />
+                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.from}
+                          <Input type="number" min={0} max={duration} step={0.1} value={caption.from} className="w-16 !py-0.5 !text-[0.78rem]"
+                            data-testid="ve-caption-from"
+                            onChange={(e) => setCaption(caption.id, { from: Number(e.target.value) })} />
+                        </label>
+                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">{s.to}
+                          <Input type="number" min={0} max={duration} step={0.1} value={caption.to} className="w-16 !py-0.5 !text-[0.78rem]"
+                            data-testid="ve-caption-to"
+                            onChange={(e) => setCaption(caption.id, { to: Number(e.target.value) })} />
+                        </label>
+                        <input type="range" min={0.03} max={0.18} step={0.005} value={caption.size} title={s.size}
+                          data-testid="ve-caption-size" className="w-16"
+                          onChange={(e) => setCaption(caption.id, { size: Number(e.target.value) })} />
+                        <input type="color" value={caption.colour} title={s.colour} data-testid="ve-caption-colour"
+                          className="w-7 h-7 bg-transparent border-0 p-0 cursor-pointer"
+                          onChange={(e) => setCaption(caption.id, { colour: e.target.value })} />
+                        <label className="flex items-center gap-1 text-[0.78rem] opacity-80 rtl:font-ar">
+                          <input type="checkbox" checked={caption.band} data-testid="ve-caption-band"
+                            onChange={(e) => setCaption(caption.id, { band: e.target.checked })} />
+                          {s.band}
+                        </label>
+                        <button type="button" data-testid="ve-caption-remove" title={s.remove} aria-label={s.remove}
+                          onClick={() => { setCaptions((l) => l.filter((x) => x.id !== caption.id)); setPickedCaption(null) }}
+                          className="grid place-items-center w-7 h-7 rounded border border-white/25 bg-transparent text-white cursor-pointer hover:bg-white/10">
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-[0.8rem] opacity-85 rtl:font-ar">{s.noCaption}</span>
+                    )}
+                    <button type="button" data-testid="ve-caption-add" onClick={addCaption}
+                      className="rounded px-2 py-1 text-[0.8rem] border border-white/25 bg-transparent cursor-pointer hover:bg-white/10 rtl:font-ar">
+                      + {s.addCaption}
+                    </button>
+                  </div>
+                )}
+
+                {mode === 'more' && (
+                  <div className="flex items-center gap-3 whitespace-nowrap text-[0.78rem]" data-testid="ve-more-bar">
+                    <label className="flex items-center gap-1 opacity-85 rtl:font-ar">{s.quality}
+                      <select value={quality} data-testid="ve-quality"
+                        className="rounded border border-white/25 bg-black/40 px-1 py-0.5 text-white"
+                        onChange={(e) => setQuality(Number(e.target.value))}>
+                        {s.qualities.map((q, i) => <option key={q} value={i} className="text-ink">{q}</option>)}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1 opacity-85 rtl:font-ar">{s.maxHeight}
+                      <select value={maxHeight} data-testid="ve-height"
+                        className="rounded border border-white/25 bg-black/40 px-1 py-0.5 text-white"
+                        onChange={(e) => setMaxHeight(Number(e.target.value))}>
+                        {HEIGHTS.map((h) => <option key={h} value={h} className="text-ink">{h}p</option>)}
+                      </select>
+                    </label>
+                    {audioPlan === 'copy' && (
+                      <label className="flex items-center gap-1 opacity-85 rtl:font-ar">
+                        <input type="checkbox" checked={keepAudio} data-testid="ve-keep-audio"
+                          onChange={(e) => setKeepAudio(e.target.checked)} />
+                        {s.keepAudio}
+                      </label>
+                    )}
+                    <label className="inline-flex items-center gap-1 cursor-pointer opacity-85 rtl:font-ar">
+                      <input type="file" className="sr-only" data-testid="ve-add"
+                        onChange={(e) => { void addFile(e.target.files?.[0]); e.target.value = '' }} />
+                      + {s.add}
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </>
+        </div>
+
+        {/* Transport. The native controls are gone with the visible video, and a
+            clip you cannot scrub is a clip you cannot aim a caption at. */}
+        <div className="wrap py-2 flex items-center gap-3 text-sand-100">
+          <button type="button" onClick={togglePlay} data-testid="ve-play"
+            title={playing ? s.pause : s.play} aria-label={playing ? s.pause : s.play}
+            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
+            {playing ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
+          </button>
+          <input type="range" min={0} max={Math.max(0.1, current.info.durationSec)} step={0.05} value={pos}
+            data-testid="ve-seek" className="flex-1 accent-green-500"
+            onChange={(e) => {
+              const v = videoRef.current
+              if (v) v.currentTime = Number(e.target.value)
+              setPos(Number(e.target.value))
+            }} />
+          <span className="text-[0.8rem] font-mono opacity-80">{fmt(t)} / {fmt(duration)}</span>
+        </div>
+      </div>
+
+      {previewError !== 0 && (
+        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-preview-error">
+          {s.previewFailed(previewError)}
+          {current.info.decodable ? ` ${s.previewStillExports}` : ''}
+        </p>
       )}
 
-      {out && (
-        <section className="flex flex-col gap-2" data-testid="ve-result-panel">
-          <h2 className="font-body text-[0.68rem] uppercase tracking-[0.06em] text-ink-faint">{s.resultTitle}</h2>
-          <video src={out.url} controls playsInline className="w-full max-h-[50vh] rounded-md bg-black" data-testid="ve-out-video" />
-          <div className="flex flex-wrap items-center gap-3">
+      {/* The generate step, on the same stage: a button, a percentage, then the
+          download. There is deliberately NO preview of the result — the stage
+          above already showed it frame for frame, and a second player would be
+          a second opinion about what was encoded. */}
+      <div className="flex flex-wrap items-center gap-3">
+        {!out && (
+          <Button variant="primary" onClick={doExport} disabled={busy !== ''} data-testid="ve-export">
+            <DownloadIcon /> {busy === 'render' ? s.exporting : s.exportBtn}
+          </Button>
+        )}
+        {busy === 'render' && (
+          <>
+            <span className="text-[0.85rem] text-ink-faint font-mono" data-testid="ve-progress">
+              {s.progress(progress.done, progress.total)}
+            </span>
+            <Button className="px-3 py-1" data-testid="ve-cancel"
+              onClick={() => { void ask({ kind: 'cancel' }) }}>{s.cancel}</Button>
+          </>
+        )}
+        {out && (
+          <>
             <Button variant="primary" href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download">
               <DownloadIcon /> {s.download}
             </Button>
             <span className="text-[0.85rem] text-ink-faint font-mono" data-testid="ve-out-info">
               {s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}
             </span>
-          </div>
-        </section>
+            <Button className="px-3 py-1" data-testid="ve-export-again" onClick={() => setOut(null)}>{s.exportBtn}</Button>
+          </>
+        )}
+        <span className="text-[0.85rem] text-ink-faint ms-auto" data-testid="ve-total">
+          {s.joined(clips.length, fmt(duration))}
+        </span>
+      </div>
+
+      {clips.length > 1 && (
+        <ul className="flex flex-col gap-1" data-testid="ve-clips">
+          {clips.map((c, i) => (
+            <li key={c.slot} data-testid={`ve-clip-${i}`}
+              className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-[0.85rem] ${i === sel ? 'border-green-700' : 'border-[color:var(--line)]'}`}>
+              <button type="button" className="border-0 bg-transparent p-0 text-start text-ink underline-offset-2 hover:underline cursor-pointer"
+                onClick={() => setSel(i)} data-testid={`ve-select-${i}`}>{c.file.name}</button>
+              <span className="text-ink-faint font-mono">{c.info.width}×{c.info.height} · {fmt(c.info.durationSec)}</span>
+              {!c.info.decodable && <span className="text-gold-500 rtl:font-ar" data-testid={`ve-undecodable-${i}`}>{s.undecodable}</span>}
+              <span className="ms-auto flex gap-1">
+                <Button className="px-2 py-0.5" onClick={() => move(i, -1)} disabled={i === 0} data-testid={`ve-up-${i}`}>↑<span className="sr-only">{s.up}</span></Button>
+                <Button className="px-2 py-0.5" onClick={() => move(i, 1)} disabled={i === clips.length - 1} data-testid={`ve-down-${i}`}>↓<span className="sr-only">{s.down}</span></Button>
+                <Button className="px-2 py-0.5" onClick={() => removeClip(i)} data-testid={`ve-remove-${i}`}>×<span className="sr-only">{s.remove}</span></Button>
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
 
-      {!!clips.length && (
-        <button type="button" className="self-start border-0 bg-transparent p-0 text-[0.85rem] text-green-700 underline cursor-pointer rtl:font-ar"
-          data-testid="ve-again"
+      {clips.reduce((n, c) => n + c.file.size, 0) > 300 * 1048576 && (
+        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-big">{s.big}</p>
+      )}
+
+      {/* The honesty notes, under the stage rather than over the picture: they
+          are worth reading once, not worth covering the video with. */}
+      <Panel className="gap-1.5">
+        {mode === 'crop' && <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.keptWhy}</p>}
+        {mode === 'text' && <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.captionWhy}</p>}
+        {mode === 'censor' && (
+          <>
+            <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.censorMoves}</p>
+            <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-censor-audio">{s.censorAudio}</p>
+          </>
+        )}
+        {censors.some((c) => c.mode !== 'block') && (
+          <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-censor-warning">{s.censorWhy}</p>
+        )}
+        <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-audio-note">
+          {audioPlan === 'copy' ? s.audioCopied
+            : audioPlan === 'mixed' ? s.audioMixed
+            : audioPlan === 'missing' ? s.audioMissing
+            : s.audioNone}
+        </p>
+        <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.noUpscale}</p>
+        <p className="text-[0.85rem] text-ink-soft rtl:font-ar">
+          {s.trimNote}{' '}
+          <a className="text-green-700 underline" href={`/${locale}/apps/video-trim`}>{s.trimName}</a>
+        </p>
+      </Panel>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <button type="button" data-testid="ve-diag-toggle"
+          className="border-0 bg-transparent p-0 text-[0.8rem] text-ink-faint underline cursor-pointer rtl:font-ar"
+          onClick={() => setShowDiag((v) => !v)}>
+          {showDiag ? s.diagHide : s.diagShow}
+        </button>
+        <button type="button" data-testid="ve-again"
+          className="border-0 bg-transparent p-0 text-[0.85rem] text-green-700 underline cursor-pointer rtl:font-ar"
           onClick={() => {
             for (const c of clips) { URL.revokeObjectURL(c.url); void ask({ kind: 'drop', slot: c.slot }) }
-            setClips([]); setCaptions([]); setCensors([]); setSel(0)
+            setClips([]); setCaptions([]); setCensors([]); setSel(0); setMode('crop')
             setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
           }}>
           {s.again}
         </button>
+      </div>
+
+      {/* Shown on failure without being asked, because somebody whose preview
+          just broke should not have to find a toggle — and available on a toggle
+          otherwise, so a WORKING run can be reported for comparison, which is
+          what an intermittent fault needs. */}
+      {(showDiag || previewError !== 0) && (
+        <div className="flex flex-col gap-2" data-testid="ve-diagnostics">
+          <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.diagWhy}</p>
+          <pre className="overflow-x-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-2 text-[0.72rem] font-mono text-ink"
+            data-testid="ve-diag-text">{report()}</pre>
+          <Button className="self-start px-3 py-1" data-testid="ve-diag-copy"
+            onClick={() => {
+              void navigator.clipboard?.writeText(report()).then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }).catch(() => {})
+            }}>
+            {copied ? s.diagCopied : s.diagCopy}
+          </Button>
+        </div>
       )}
     </Stack>
   )

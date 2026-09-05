@@ -35,25 +35,52 @@ async function load(page: Page, locale = 'en') {
   await expect(page.getByTestId('video-edit')).toBeVisible()
 }
 
+/**
+ * Pick the fixture and wait for the EDIT stage.
+ *
+ * The clip list only renders for more than one clip — a list of one is a list
+ * of nothing — so the signal that a file landed is the stage itself, which is
+ * also the thing every case below reads from.
+ */
 async function pick(page: Page) {
+  await expect(page.getByTestId('ve-file')).toHaveCount(1)
   await page.getByTestId('ve-file').setInputFiles({ name: 'sample.mp4', mimeType: 'video/mp4', buffer: bytes() })
-  await expect(page.getByTestId('ve-clip-0')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
 }
 
+/** The second file input lives behind the overflow ("⋯") bar, as power features do. */
 async function addAnother(page: Page) {
+  await page.getByTestId('ve-mode-more').click()
   await page.getByTestId('ve-add').setInputFiles({ name: 'second.mp4', mimeType: 'video/mp4', buffer: bytes() })
   await expect(page.getByTestId('ve-clip-1')).toBeVisible({ timeout: 30_000 })
 }
 
-/** Read a `<video>`'s real decoded metadata, or fail saying it would not play. */
-async function meta(page: Page, testid: string) {
-  return page.getByTestId(testid).evaluate((v: HTMLVideoElement) => new Promise<{ d: number; w: number; h: number }>((resolve, reject) => {
-    const done = () => resolve({ d: v.duration, w: v.videoWidth, h: v.videoHeight })
-    if (v.readyState >= 1) return done()
-    v.addEventListener('loadedmetadata', done, { once: true })
-    v.addEventListener('error', () => reject(new Error('decode failed')), { once: true })
-    setTimeout(() => reject(new Error('timeout')), 20_000)
-  }))
+/** Show the picture at `sec` and wait for the stage to have drawn something. */
+async function seek(page: Page, sec: number) {
+  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement, s) => { v.currentTime = s }, sec)
+}
+
+/**
+ * Decode the EXPORTED file — there is deliberately no result player.
+ *
+ * The old version of this suite read a `<video data-testid="ve-out-video">`,
+ * and that element is gone on purpose: the stage above IS the export, frame for
+ * frame, so a second player would be a second opinion about what was encoded.
+ * The download button's `href` is the same blob, so the assertions that matter
+ * — a hand-written MP4 that a browser will actually decode, at the right size
+ * and the right length — survive unchanged.
+ */
+async function decodeExport(page: Page): Promise<{ d: number; w: number; h: number }> {
+  const href = await page.getByTestId('ve-download').getAttribute('href')
+  expect(href).toMatch(/^blob:/)
+  return page.evaluate((url) => new Promise<{ d: number; w: number; h: number }>((resolve, reject) => {
+    const v = document.createElement('video')
+    v.preload = 'metadata'
+    v.addEventListener('loadedmetadata', () => resolve({ d: v.duration, w: v.videoWidth, h: v.videoHeight }), { once: true })
+    v.addEventListener('error', () => reject(new Error('the exported file would not decode')), { once: true })
+    setTimeout(() => reject(new Error('timeout decoding the exported file')), 20_000)
+    v.src = url!
+  }), href)
 }
 
 test('a browser without an H.264 encoder is told so, and pointed somewhere useful', async ({ page }) => {
@@ -70,6 +97,47 @@ test('a browser without an H.264 encoder is told so, and pointed somewhere usefu
     // A dead end is not an answer: trimming needs no encoder and still works.
     await expect(page.getByTestId('ve-unsupported').getByRole('link')).toHaveAttribute('href', /video-trim/)
   }
+})
+
+test('the first screen asks for a file and nothing else', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  // Nothing to fiddle with before there is a video to fiddle with — the whole
+  // point of the intake screen, and the property that would quietly rot if the
+  // editor ever rendered its controls empty.
+  await expect(page.getByTestId('ve-stage')).toHaveCount(0)
+  await expect(page.getByTestId('ve-tools')).toHaveCount(0)
+  await expect(page.getByTestId('ve-export')).toHaveCount(0)
+
+  await pick(page)
+  // And then the editor, all of it on one stage.
+  await expect(page.getByTestId('ve-tools')).toBeVisible()
+  await expect(page.getByTestId('ve-result')).toBeVisible()
+  await expect(page.getByTestId('ve-export')).toBeVisible()
+})
+
+test('the tool buttons switch which controls the picture carries', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // Crop is where it opens, because a crop is the first decision.
+  await expect(page.getByTestId('ve-crop-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-mode-crop')).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByTestId('ve-mode-censor').click()
+  await expect(page.getByTestId('ve-censor-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-crop-bar')).toHaveCount(0)
+  // With nothing drawn there is nothing to configure, so it says what to do.
+  await expect(page.getByTestId('ve-censor-hint')).toBeVisible()
+
+  await page.getByTestId('ve-mode-text').click()
+  await expect(page.getByTestId('ve-text-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-censor-bar')).toHaveCount(0)
+
+  await page.getByTestId('ve-mode-more').click()
+  await expect(page.getByTestId('ve-more-bar')).toBeVisible()
+  await expect(page.getByTestId('ve-text-bar')).toHaveCount(0)
 })
 
 test('says what a crop costs, and the output size follows the shape', async ({ page }) => {
@@ -104,7 +172,9 @@ test('never upscales past the source', async ({ page }) => {
   await page.getByTestId('ve-aspect-source').click()
   // Asking for 1440p from a 240-tall clip must still give 240: upscaling adds
   // pixels and no detail, and the claim in the copy has to be true.
+  await page.getByTestId('ve-mode-more').click()
   await page.getByTestId('ve-height').selectOption('1440')
+  await page.getByTestId('ve-mode-crop').click()
   await expect(page.getByTestId('ve-out-size')).toHaveText('320×240')
 })
 
@@ -116,12 +186,12 @@ test('crops and exports a real, playable MP4 at the cropped size', async ({ page
   await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
 
   await page.getByTestId('ve-export').click()
-  await expect(page.getByTestId('ve-result-panel')).toBeVisible({ timeout: 120_000 })
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 120_000 })
 
   // The whole failure mode of a hand-built MP4 is a file that parses and plays
   // nothing, so the browser is asked to decode it rather than the bytes being
   // inspected.
-  const m = await meta(page, 've-out-video')
+  const m = await decodeExport(page)
   expect(m.w).toBe(240)
   expect(m.h).toBe(240)
   expect(m.d).toBeGreaterThan(5)
@@ -140,11 +210,12 @@ test('joins two clips into one video of both their lengths', async ({ page }) =>
   await expect(page.getByTestId('ve-total')).toContainText('2 clips')
   await expect(page.getByTestId('ve-total')).toContainText('0:12')
 
+  await page.getByTestId('ve-mode-crop').click()
   await page.getByTestId('ve-aspect-source').click()
   await page.getByTestId('ve-export').click()
-  await expect(page.getByTestId('ve-result-panel')).toBeVisible({ timeout: 180_000 })
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
 
-  const m = await meta(page, 've-out-video')
+  const m = await decodeExport(page)
   expect(m.w).toBe(320)
   expect(m.h).toBe(240)
   // Twelve seconds, not six: a merge that silently kept one clip would still
@@ -163,10 +234,26 @@ test('a clip can be removed and reordered', async ({ page }) => {
   await addAnother(page)
   await expect(page.getByTestId('ve-total')).toContainText('0:12')
   await page.getByTestId('ve-remove-1').click()
-  await expect(page.getByTestId('ve-clip-1')).toHaveCount(0)
+  // Back to one clip, and the list of clips goes with it.
+  await expect(page.getByTestId('ve-clips')).toHaveCount(0)
   await expect(page.getByTestId('ve-total')).toContainText('1 clip')
   await expect(page.getByTestId('ve-total')).toContainText('0:06')
 })
+
+/** Mean brightness of a rectangle of the stage, in canvas fractions. */
+function meanOf(page: Page, r: [number, number, number, number]) {
+  return page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement, box) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return -1
+    const x = Math.round(box[0] * c.width), y = Math.round(box[1] * c.height)
+    const w = Math.max(1, Math.round((box[2] - box[0]) * c.width))
+    const h = Math.max(1, Math.round((box[3] - box[1]) * c.height))
+    const px = ctx.getImageData(x, y, w, h).data
+    let sum = 0
+    for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
+    return sum / (px.length / 4)
+  }, r)
+}
 
 test('a caption is drawn into the picture, and only while it is showing', async ({ page }) => {
   await load(page)
@@ -174,14 +261,9 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
 
-  // The preview canvas IS what the encoder draws — the same `drawFrame` and the
-  // same caption bitmap — so asking whether a caption reached the picture is a
+  // The stage IS what the encoder draws — the same `drawFrame` and the same
+  // caption bitmap — so asking whether a caption reached the picture is a
   // question about pixels rather than about the DOM.
-  //
-  // Measured as a mean brightness of the row the caption sits on, and compared
-  // against the SAME row of the SAME frame without it. An absolute darkness
-  // threshold would be a claim about the fixture's colours at that height; a
-  // difference is a claim about the caption.
   //
   // Measured over the BAND of rows the caption occupies, not the one row at its
   // centre. The first version of this sampled `0.82 × height` exactly — which
@@ -189,50 +271,54 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   // slightly UP while a screenshot showed the caption drawn perfectly. Row by
   // row: the band darkens rows 179–214 by ~16, and rows 189–200 brighten by up
   // to 11 because that is where the letters are.
-  const bandMean = async () => page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => {
-    const ctx = c.getContext('2d', { willReadFrequently: true })
-    if (!ctx || !c.width) return -1
-    const top = Math.round(c.height * 0.74)
-    const rows = Math.max(1, Math.round(c.height * 0.16))
-    const px = ctx.getImageData(0, top, c.width, rows).data
-    let sum = 0
-    for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
-    return sum / (px.length / 4)
-  })
+  const bandMean = () => meanOf(page, [0, 0.74, 1, 0.9])
 
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  await seek(page, 1)
   await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(0)
   const before = await bandMean()
 
+  await page.getByTestId('ve-mode-text').click()
   await page.getByTestId('ve-caption-add').click()
-  await page.getByTestId('ve-caption-from-0').fill('0')
-  await page.getByTestId('ve-caption-to-0').fill('2')
-  await page.getByTestId('ve-caption-text-0').fill('HELLO')
+  await page.getByTestId('ve-caption-from').fill('0')
+  await page.getByTestId('ve-caption-to').fill('2')
+  await page.getByTestId('ve-caption-text').fill('HELLO')
 
-  // The band plus the text darkens that row noticeably.
+  // The band plus the text darkens those rows noticeably.
   await expect.poll(bandMean, { timeout: 15_000 }).toBeLessThan(before - 4)
 
   // And it goes when its window closes. Without this the case would pass
   // against a tool that painted every caption over the whole clip.
-  await page.getByTestId('ve-caption-to-0').fill('0.5')
+  await page.getByTestId('ve-caption-to').fill('0.5')
   await expect.poll(bandMean, { timeout: 15_000 }).toBeGreaterThan(before - 2)
 })
 
+test('a caption can be removed again', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-mode-text').click()
+  await page.getByTestId('ve-caption-add').click()
+  await page.getByTestId('ve-caption-text').fill('HELLO')
+  await expect(page.getByTestId('ve-caption-box-0')).toBeVisible()
+  await page.getByTestId('ve-caption-remove').click()
+  await expect(page.getByTestId('ve-caption-box-0')).toHaveCount(0)
+  await expect(page.getByTestId('ve-caption-text')).toHaveCount(0)
+})
+
 /**
- * Drag a box on the export preview, in fractions of the canvas.
+ * Drag a box on the stage, in fractions of the canvas.
  *
  * The scroll is load-bearing, not defensive. `page.mouse` works in VIEWPORT
- * coordinates, and clicking an aspect button — which sits below the canvases —
- * auto-scrolls it into view and pushes the preview off the top: measured at
- * y = -169. Every pointer event then lands outside the page and none of them
- * reaches the canvas, which reads as "the drag did not work" rather than as
- * "the drag happened somewhere else". Playwright's own locator actions scroll
- * for you; raw mouse coordinates do not.
+ * coordinates, and anything that scrolls the page between the measurement and
+ * the drag sends every pointer event somewhere the canvas is not — which reads
+ * as "the drag did not work" rather than as "the drag happened elsewhere".
+ * Playwright's own locator actions scroll for you; raw mouse coordinates do
+ * not. Measured once at y = -169 while chasing a bug that was not React.
  */
 async function drawBox(page: Page, from: [number, number], to: [number, number]) {
-  await page.getByTestId('ve-result').scrollIntoViewIfNeeded()
-  const box = await page.getByTestId('ve-result').boundingBox()
-  if (!box) throw new Error('no result canvas')
+  await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
+  const box = await page.getByTestId('ve-stage').boundingBox()
+  if (!box) throw new Error('no stage')
   const at = (f: [number, number]) => ({ x: box.x + box.width * f[0], y: box.y + box.height * f[1] })
   const a = at(from), b = at(to)
   // The POINTS have to be on screen, which is not the same as the box's origin
@@ -254,34 +340,22 @@ async function drawBox(page: Page, from: [number, number], to: [number, number])
   await page.mouse.up()
 }
 
-/** Mean brightness of a rectangle of the export preview, in canvas fractions. */
-function meanOf(page: Page, r: [number, number, number, number]) {
-  return page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement, box) => {
-    const ctx = c.getContext('2d', { willReadFrequently: true })
-    if (!ctx || !c.width) return -1
-    const x = Math.round(box[0] * c.width), y = Math.round(box[1] * c.height)
-    const w = Math.max(1, Math.round((box[2] - box[0]) * c.width))
-    const h = Math.max(1, Math.round((box[3] - box[1]) * c.height))
-    const px = ctx.getImageData(x, y, w, h).data
-    let sum = 0
-    for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3
-    return sum / (px.length / 4)
-  }, r)
-}
-
 test('a drawn box censors that part of the picture, and only while it is showing', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  await seek(page, 1)
 
   const REGION: [number, number, number, number] = [0.3, 0.3, 0.6, 0.6]
   await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
   const before = await meanOf(page, REGION)
 
+  await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await expect(page.getByTestId('ve-censor-0')).toBeVisible()
+  await expect(page.getByTestId('ve-box-0')).toBeVisible()
+  // Drawing it selects it, which is what puts its controls on the bar.
+  await expect(page.getByTestId('ve-box-delete-0')).toBeVisible()
 
   // Solid is the default, so that region of the picture is now black.
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
@@ -290,9 +364,55 @@ test('a drawn box censors that part of the picture, and only while it is showing
   expect(await meanOf(page, [0.0, 0.0, 0.15, 0.15])).toBeGreaterThan(10)
 
   // It ends when its window ends. The box defaults to a 3s span from t=1.
-  await page.getByTestId('ve-censor-to-0').fill('1.5')
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 4 })
+  await page.getByTestId('ve-censor-to').fill('1.5')
+  await seek(page, 4)
   await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
+})
+
+test('a selected box can be deleted', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
+
+  await page.getByTestId('ve-box-delete-0').click()
+  await expect(page.getByTestId('ve-box-0')).toHaveCount(0)
+  // The picture comes back — a delete that only removed the handle would leave
+  // the censor burnt into every frame with no way to reach it.
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await expect(page.getByTestId('ve-censor-hint')).toBeVisible()
+})
+
+test('a box outside its own span is still reachable', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
+  await page.getByTestId('ve-censor-to').fill('1.5')
+
+  // Scrub past the end of its span. Drawing only the boxes showing at this
+  // instant looks tidier and traps you: the box that is out of reach is exactly
+  // the one whose span you need to widen, and guessing where it was is not a
+  // recovery. The handle stays, drawn faintly.
+  await seek(page, 4)
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await expect(page.getByTestId('ve-box-0')).toBeVisible()
+  await page.getByTestId('ve-box-0').click()
+  await expect(page.getByTestId('ve-box-delete-0')).toBeVisible()
+  // And widening it brings the censor back over the frame on screen.
+  await page.getByTestId('ve-censor-to').fill('6')
+  await expect.poll(() => meanOf(page, [0.35, 0.35, 0.55, 0.55]), { timeout: 15_000 }).toBeLessThan(8)
 })
 
 test('solid is the default, and choosing a recoverable mode says why', async ({ page }) => {
@@ -300,19 +420,20 @@ test('solid is the default, and choosing a recoverable mode says why', async ({ 
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  await seek(page, 1)
   await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
+  await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
 
   // No warning for the safe default — a caveat shown to everybody is one
   // nobody reads, which is the failure this branch exists to rule out.
   await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
 
-  await page.getByTestId('ve-censor-pixelate-0').click()
+  await page.getByTestId('ve-censor-pixelate').click()
   await expect(page.getByTestId('ve-censor-warning')).toBeVisible()
   await expect(page.getByTestId('ve-censor-warning')).toContainText('98.6%')
 
-  await page.getByTestId('ve-censor-block-0').click()
+  await page.getByTestId('ve-censor-block').click()
   await expect(page.getByTestId('ve-censor-warning')).toHaveCount(0)
 })
 
@@ -321,13 +442,14 @@ test('pixelating keeps the colours it is hiding, which is why it is not the defa
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 1 })
+  await seek(page, 1)
   const REGION: [number, number, number, number] = [0.35, 0.35, 0.55, 0.55]
   await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(10)
   const before = await meanOf(page, REGION)
 
+  await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-  await page.getByTestId('ve-censor-pixelate-0').click()
+  await page.getByTestId('ve-censor-pixelate').click()
 
   // A mosaic is the AVERAGE of what was there, so the region keeps roughly its
   // brightness — the visual difference from a solid box, and the reason the
@@ -335,26 +457,30 @@ test('pixelating keeps the colours it is hiding, which is why it is not the defa
   await expect.poll(() => meanOf(page, REGION), { timeout: 15_000 }).toBeGreaterThan(before * 0.5)
 })
 
-test('the censor is burnt into the exported file, not just the preview', async ({ page }) => {
+test('the censor is burnt into the exported file, not just the stage', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   await page.getByTestId('ve-aspect-source').click()
-  await page.getByTestId('ve-video').evaluate((v: HTMLVideoElement) => { v.currentTime = 0 })
+  await seek(page, 0)
   await expect.poll(() => meanOf(page, [0.3, 0.3, 0.6, 0.6]), { timeout: 15_000 }).toBeGreaterThan(10)
 
+  await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [0.3, 0.3], [0.6, 0.6])
   // Cover the whole clip: the default span is 3s and the fixture is 6s.
-  await page.getByTestId('ve-censor-from-0').fill('0')
-  await page.getByTestId('ve-censor-to-0').fill('6')
+  await page.getByTestId('ve-censor-from').fill('0')
+  await page.getByTestId('ve-censor-to').fill('6')
 
   await page.getByTestId('ve-export').click()
-  await expect(page.getByTestId('ve-result-panel')).toBeVisible({ timeout: 120_000 })
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 120_000 })
 
-  // Decode the EXPORTED file and read its pixels. A preview assertion cannot
-  // tell "drawn on screen" from "encoded into the video", and the whole point
-  // of a redaction is that it survives into the file somebody else opens.
-  const mean = await page.getByTestId('ve-out-video').evaluate((v: HTMLVideoElement) => new Promise<number>((resolve, reject) => {
+  // Decode the EXPORTED file and read its pixels. A stage assertion cannot tell
+  // "drawn on screen" from "encoded into the video", and the whole point of a
+  // redaction is that it survives into the file somebody else opens.
+  const href = await page.getByTestId('ve-download').getAttribute('href')
+  const mean = await page.evaluate((url) => new Promise<number>((resolve, reject) => {
+    const v = document.createElement('video')
+    v.preload = 'auto'
     const read = () => {
       const c = document.createElement('canvas')
       c.width = v.videoWidth
@@ -371,10 +497,11 @@ test('the censor is burnt into the exported file, not just the preview', async (
       resolve(sum / (px.length / 4))
     }
     v.addEventListener('seeked', read, { once: true })
+    v.addEventListener('loadedmetadata', () => { v.currentTime = 2 }, { once: true })
     v.addEventListener('error', () => reject(new Error('decode failed')), { once: true })
     setTimeout(() => reject(new Error('timeout')), 20_000)
-    v.currentTime = 2
-  }))
+    v.src = url!
+  }), href)
   // Black in the encoded frame. H.264 is lossy, so this is "near black" rather
   // than exactly zero.
   expect(mean).toBeLessThan(12)
@@ -432,7 +559,7 @@ test('the diagnostics carry what the fault turns on, and never the filename', as
   // date, at which time. The block exists to be pasted somewhere else.
   const NAME = 'Screen_Recording_20260904_125339_WhatsApp.mp4'
   await page.getByTestId('ve-file').setInputFiles({ name: NAME, mimeType: 'video/mp4', buffer: bytes() })
-  await expect(page.getByTestId('ve-clip-0')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
 
   // Not shown until asked for, while everything is working.
   await expect(page.getByTestId('ve-diagnostics')).toHaveCount(0)
@@ -483,4 +610,7 @@ test('a file that is not an MP4 is refused with a reason', async ({ page }) => {
   })
   await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByTestId('file-error')).toContainText('MP4')
+  // And the first screen stays put, rather than dropping into an editor with
+  // nothing in it.
+  await expect(page.getByTestId('ve-file')).toBeVisible()
 })

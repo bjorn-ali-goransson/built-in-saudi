@@ -40,6 +40,34 @@ which is the one thing this site will not do.
    there are, which is the control proving the leak comes from motion. So the
    default is a solid box, and pixelate/blur say what they cost.
 
+## The shape of the screen
+
+Rewritten after the first version put a stack of panels under a small preview
+and a *second* player for the result. Five decisions:
+
+- **An intake screen first**, the shape `ats-cv-optimizer` uses: a full-bleed
+  green band, one sentence about what this is, and one button. A wall of
+  controls nobody can act on until a file exists teaches nothing, and there is a
+  case asserting the editor is not rendered at all before a pick.
+- **One full-width stage, and it is the ONLY view.** The `<video>` is invisible
+  and exists to be read by `drawFrame`; the canvas over it is the output frame.
+  The tools dock over the picture — crop, censor, text and an overflow — in the
+  top-right, each raising its own control pill along the bottom centre.
+- **There is deliberately NO result preview.** The stage already showed the
+  export frame for frame, from the same functions the worker calls, so a second
+  player would be a second opinion about what was encoded — and the one that
+  cannot be wrong is the one that isn't there. Export therefore turns the same
+  button row into a percentage and then a download.
+- **A censor box is selected, then acted on.** Clicking one puts a delete button
+  and a resize grip on it and its mode and span on the bar; the tests read the
+  same handles, so "a box can be deleted and the picture comes back" is a real
+  case rather than a claim about a handle disappearing.
+- **Every box keeps a handle, not only the ones showing right now.** Drawing
+  only the active ones looks tidier and traps you: scrub past a box's span and
+  the box you can no longer reach is exactly the one whose span you need to
+  widen. Inactive handles are drawn faintly, and there is a case that scrubs
+  past one and edits it back into view.
+
 ## User stories
 - As someone posting a Reel, I want to crop a landscape recording to 9:16 and
   choose which part of the frame survives.
@@ -63,20 +91,22 @@ progressive MP4.
 - [x] Audio copied when every clip agrees on its format; otherwise the export is
       silent and the page says so BEFORE the encode.
 - [x] A capability gate naming WebCodecs/H.264, routing to `video-trim`.
-- [x] Censor boxes: drag on the export preview to draw one, drag to move it,
-      each with its own time range and mode. Solid by default; a warning naming
-      the measured figure appears only when a recoverable mode is chosen.
+- [x] Censor boxes: drag on the stage to draw one, drag to move it, drag its
+      grip to resize it, a delete button on the selected one, each with its own
+      time range and mode. Solid by default; a warning naming the measured
+      figure appears only when a recoverable mode is chosen.
 
 ## Acceptance criteria
 - The exported file decodes in a real browser at the cropped size, and a two-clip
   export is the length of both.
 - The kept-percentage and output size are right for a known fixture: 320×240 to
   9:16 is 42% and **134**×240 — even, from an odd 135.
-- A caption darkens its row of the preview only between its `from` and `to`.
+- A caption darkens its rows of the stage only between its `from` and `to`.
 - A censor box blacks out its region and nothing else, and the box is present in
-  the DECODED EXPORT — read back off the exported file, since a preview
-  assertion cannot tell "drawn on screen" from "encoded into the video", and the
-  whole point of a redaction is that it survives into the file somebody opens.
+  the DECODED EXPORT — decoded from the blob behind the download button, since
+  a stage assertion cannot tell "drawn on screen" from "encoded into the video",
+  and the whole point of a redaction is that it survives into the file somebody
+  opens.
 - `evals/mp4guard.mjs` re-parses the muxer's output with mp4box and gets every
   sample back byte for byte.
 

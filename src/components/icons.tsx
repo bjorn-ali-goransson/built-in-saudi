@@ -546,6 +546,24 @@ export function TallyIcon({ className }: P) {
   )
 }
 
+/** A filled triangle — the transport control, not an outline like the rest. */
+export function PlayIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/** Filled bars to match the filled triangle; a stroked pair reads as thin. */
+export function PauseIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M7 4.5h3.5v15H7zM13.5 4.5H17v15h-3.5z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function CropIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -2373,6 +2373,56 @@ every structural check green and turns "sample BYTES survive" from 180/180 to
 **0/180** — an offset table that is subtly wrong hands back samples of the right
 COUNT read from the wrong PLACE.
 
+**The screen was rebuilt around ONE stage, and the strongest decision is what
+was deleted.** The first version was the shape a tool of this size defaults to:
+a small preview, a stack of panels under it, and — after an export — a SECOND
+`<video>` playing the result. That second player is the part worth writing down.
+The whole architecture rests on `compose.ts` being pure so the preview and the
+export go through one function; a separate result player is a second opinion
+about what was encoded, and the view that cannot disagree with the export is the
+one that is not there. So the export step is now the same button row turning
+into a percentage and then a download, on the same stage.
+
+Five more decisions:
+
+- **An intake screen before any controls**, the full-bleed green band
+  `ats-cv-optimizer` uses: one sentence and one button. Panels nobody can act on
+  until a file exists teach nothing about the tool, and there is a case
+  asserting the editor is not rendered at all before a pick — without which
+  "friendlier" could have meant a nicer-looking wall of the same controls.
+- **The `<video>` is INVISIBLE and the canvas is the picture.** The element is
+  what `drawFrame` reads; a page showing both shows the uncropped source next to
+  the cropped output and invites the reader to think one of them is the answer.
+  It still has to stay laid out and decoding, which is why it is a 1px opacity-0
+  element rather than `display:none`.
+- **The tools dock over the top-right of the picture and each raises its own
+  pill along the bottom centre** — crop, censor, text, and an overflow for
+  quality, output height, sound and a second clip. That is the
+  "less copy, more capability" rule applied to an editor: four affordances on
+  the frame instead of every control at once, with the power features behind
+  the "⋯" this repo already prescribes.
+- **A censor box is SELECTED, then acted on.** Clicking one puts a delete button
+  and a resize grip on it, and its mode and span on the bar. The delete case
+  asserts the PICTURE comes back, not that a handle vanished — a delete that
+  only removed the handle would leave the censor burnt into every frame with
+  nothing left to reach it by.
+- **Every box keeps its handle, not only the ones showing at this instant.**
+  Drawing just the active ones is the tidier version and it traps you: scrub
+  past a box's span and the box you can no longer reach is precisely the one
+  whose span you need to widen, and guessing where it was is not a recovery.
+  The inactive ones are dimmed instead, with a case that scrubs past one and
+  edits it back into view.
+
+**Verified to fail**, both of the new properties, from one injected build: a
+delete button that clears the selection without removing the censor, and boxes
+drawn only where `activeAt` says they are showing. Two cases go red and no
+others.
+
+**The e2e had to stop reading the result player, and that made two cases
+stronger rather than weaker.** They now pull the blob off the download button's
+`href` and decode it in the page, which is what a reader actually receives —
+the old assertions were about an element the tool happened to render.
+
 **The caption is drawn on the PAGE, not in the worker**, as one `ImageBitmap`
 per caption that is composited into every frame. Three things fall out of that
 single decision:
