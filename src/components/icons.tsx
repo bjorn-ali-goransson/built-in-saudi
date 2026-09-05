@@ -589,6 +589,15 @@ export function MosaicIcon({ className }: P) {
   )
 }
 
+/** A left arrow — the way out of a full-screen editor. Flipped under RTL. */
+export function BackIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M15 19l-7-7 7-7" />
+    </svg>
+  )
+}
+
 export function CropIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

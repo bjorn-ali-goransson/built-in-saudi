@@ -48,13 +48,26 @@ async function pick(page: Page) {
   await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
 }
 
-/** The second file input lives in the settings sheet, as power features do. */
-async function addAnother(page: Page) {
+/**
+ * Pick TWO clips in one go.
+ *
+ * There is no adding a clip mid-edit any more: the join order is decided when
+ * the files are chosen, which is the moment somebody knows what order they
+ * want. So a two-clip session starts as a two-file pick.
+ */
+async function pickTwo(page: Page) {
+  await page.getByTestId('ve-file').setInputFiles([
+    { name: 'one.mp4', mimeType: 'video/mp4', buffer: bytes() },
+    { name: 'two.mp4', mimeType: 'video/mp4', buffer: bytes() },
+  ])
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ve-total')).toContainText('0:12', { timeout: 30_000 })
+}
+
+/** The clip list lives in the settings sheet now, with the other power features. */
+async function openClips(page: Page) {
   await page.getByTestId('ve-settings').click()
-  await page.getByTestId('ve-add').setInputFiles({ name: 'second.mp4', mimeType: 'video/mp4', buffer: bytes() })
-  await expect(page.getByTestId('ve-clip-1')).toBeAttached({ timeout: 30_000 })
-  await page.getByTestId('ve-settings-close').click()
-  await expect(page.getByTestId('ve-clip-1')).toBeVisible()
+  await expect(page.getByTestId('ve-clips')).toBeVisible()
 }
 
 /** Show the picture at `sec` and wait for the stage to have drawn something. */
@@ -116,6 +129,74 @@ test('the first screen asks for a file and nothing else', async ({ page }) => {
   await expect(page.getByTestId('ve-tools')).toBeVisible()
   await expect(page.getByTestId('ve-result')).toBeVisible()
   await expect(page.getByTestId('ve-export')).toBeVisible()
+})
+
+test('the editor takes the whole screen, chrome included', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+
+  // The site's own header is there before a pick — this is an ordinary page.
+  await expect(page.locator('header').first()).toBeVisible()
+
+  await pick(page)
+
+  // And afterwards the editor covers it. Asserted by GEOMETRY rather than by a
+  // class name: what matters is that nothing of the site is on top of or
+  // beside the video, which is the thing that was taking a third of the height
+  // on a phone.
+  const shell = page.getByTestId('ve-fullscreen')
+  await expect(shell).toBeVisible()
+  const box = await shell.boundingBox()
+  const view = page.viewportSize()
+  expect(box && view).toBeTruthy()
+  expect(box!.x).toBeLessThanOrEqual(1)
+  expect(box!.y).toBeLessThanOrEqual(1)
+  expect(box!.width).toBeGreaterThanOrEqual(view!.width - 1)
+  expect(box!.height).toBeGreaterThanOrEqual(view!.height - 1)
+
+  // The page behind must not scroll under it — a second scrollbar dragging the
+  // site's chrome around beneath a full-screen editor is the classic bug.
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden')
+})
+
+test('leaving asks first, and only then throws the session away', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-1:1').click()
+
+  // Nothing here is saved anywhere, so leaving has to ask.
+  await page.getByTestId('ve-back').click()
+  await expect(page.getByTestId('ve-confirm-back')).toBeVisible()
+
+  // Cancelling keeps BOTH the editor and the work — without this the case
+  // would pass against a dialog whose two buttons did the same thing.
+  await page.getByTestId('ve-back-cancel').click()
+  await expect(page.getByTestId('ve-confirm-back')).toHaveCount(0)
+  await expect(page.getByTestId('ve-fullscreen')).toBeVisible()
+  await expect(page.getByTestId('ve-out-size')).toHaveText('240×240')
+
+  // And discarding goes back to the upload screen, with the editor gone.
+  await page.getByTestId('ve-back').click()
+  await page.getByTestId('ve-back-discard').click()
+  await expect(page.getByTestId('ve-fullscreen')).toHaveCount(0)
+  await expect(page.getByTestId('ve-file')).toBeVisible()
+  await expect(page.getByTestId('ve-stage')).toHaveCount(0)
+  // The page scrolls again, or the catalogue below is unreachable for good.
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
+})
+
+test('several clips are picked at once and joined in that order', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickTwo(page)
+
+  // Two six-second clips are twelve seconds, and there is no way to add a
+  // third from in here — the order is settled at the pick.
+  await openClips(page)
+  await expect(page.getByTestId('ve-clip-0')).toContainText('one.mp4')
+  await expect(page.getByTestId('ve-clip-1')).toContainText('two.mp4')
+  await expect(page.getByTestId('ve-add')).toHaveCount(0)
 })
 
 test('the tool buttons switch which controls the picture carries', async ({ page }) => {
@@ -252,12 +333,9 @@ test('crops and exports a real, playable MP4 at the cropped size', async ({ page
 test('joins two clips into one video of both their lengths', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await pick(page)
-  await addAnother(page)
   // The joined length is the transport's own total — twelve seconds of two
   // six-second clips, which is the property, wherever it is displayed.
-  await expect(page.getByTestId('ve-total')).toContainText('0:12')
-  await expect(page.getByTestId('ve-clip-1')).toBeVisible()
+  await pickTwo(page)
 
   await page.getByTestId('ve-aspect-source').click()
   await page.getByTestId('ve-export').click()
@@ -278,12 +356,12 @@ test('joins two clips into one video of both their lengths', async ({ page }) =>
 test('a clip can be removed and reordered', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await pick(page)
-  await addAnother(page)
-  await expect(page.getByTestId('ve-total')).toContainText('0:12')
+  await pickTwo(page)
+  await openClips(page)
   await page.getByTestId('ve-remove-1').click()
   // Back to one clip, and the list of clips goes with it.
   await expect(page.getByTestId('ve-clips')).toHaveCount(0)
+  await page.getByTestId('ve-settings-close').click()
   await expect(page.getByTestId('ve-total')).toContainText('0:06')
 })
 

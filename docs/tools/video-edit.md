@@ -50,6 +50,21 @@ and a *second* player for the result. Five decisions:
   green band, one sentence about what this is, and one button. A wall of
   controls nobody can act on until a file exists teaches nothing, and there is a
   case asserting the editor is not rendered at all before a pick.
+- **The editor is FULL SCREEN — the site's header and footer included.** It is a
+  `fixed inset-0` shell rather than a Layout change, because the condition is a
+  piece of this tool's state (a clip is open) and not a route; the body's scroll
+  is locked while it is up. Asserted by geometry against the viewport rather
+  than by a class name.
+- **Leaving CONFIRMS.** There is no site chrome to leave by, so the back button
+  is the only way out, and everything in the editor is unsaved by construction —
+  a mis-tap would take the crop, the boxes and the captions with it. The case
+  asserts that cancelling keeps the work as well as the editor, without which it
+  would pass against a dialog whose two buttons did the same thing.
+- **Several clips are picked AT ONCE, and joined in that order.** Adding one
+  mid-edit is gone: the order is decided when the files are chosen, which is the
+  moment somebody actually knows what order they want. The probes run one at a
+  time rather than in parallel — otherwise the join order is whatever order they
+  happened to demux in, and it keeps the memory cost to one file at a time.
 - **One full-width stage, and it is the ONLY view.** The `<video>` is invisible
   and exists to be read by `drawFrame`; the canvas over it is the output frame.
   The tools dock over the picture — crop, censor, text and an overflow — in the
@@ -100,7 +115,8 @@ One or more MP4/MOV files + a crop shape + captions + censor boxes → one
 progressive MP4.
 
 ## Requirements (v1)
-- [x] Several clips, reorderable and removable; joined in order.
+- [x] Several clips, picked in one go and joined in that order; reorderable and
+      removable from the settings screen.
 - [x] Aspect presets (original, 9:16, 1:1, 4:5, 16:9) with a draggable, and
       keyboard-nudgeable, crop centre and a zoom.
 - [x] Output size derived from the crop, never upscaled, snapped to even

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, FileError, Input, Panel, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Select, Spinner, Stack } from '../../components/ui'
 import {
-  CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
+  BackIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
@@ -31,9 +32,13 @@ const STR = {
   en: {
     heroTitle: 'Edit a video without uploading it',
     heroBody: 'Crop a clip to the shape a platform wants, join a few together, add a caption, and hide anything that should not be in the picture. Every frame is decoded and encoded again on your device — the file never leaves it.',
-    pick: 'Choose a video',
-    privacy: 'MP4 and MOV. Nothing is uploaded, and nothing is sent anywhere.',
-    add: 'Add another clip',
+    pick: 'Choose videos',
+    back: 'Back',
+    discardTitle: 'Leave the editor?',
+    discardBody: 'Your crop, boxes and captions are only here — nothing has been saved anywhere, because nothing has been uploaded anywhere. Export first if you want to keep them.',
+    keepEditing: 'Keep editing',
+    discard: 'Discard and leave',
+    privacy: 'MP4 and MOV. Pick several and they are joined in the order you chose them. Nothing is uploaded, and nothing is sent anywhere.',
     reading: 'Reading the video…',
     joined: (n: number, d: string) => `${n} clip${n === 1 ? '' : 's'} · ${d}`,
     remove: 'Remove',
@@ -107,9 +112,13 @@ const STR = {
   ar: {
     heroTitle: 'حرّر الفيديو دون رفعه',
     heroBody: 'اقتصّ المقطع بالشكل الذي تريده المنصّة، وادمج عدة مقاطع، وأضف نصًّا، واحجب ما لا ينبغي أن يظهر. يُفَكّ ترميز كل إطار ويُعاد ترميزه على جهازك — ولا يغادر الملفُ جهازك أبدًا.',
-    pick: 'اختر فيديو',
-    privacy: 'صيغتا MP4 وMOV. لا يُرفع شيء، ولا يُرسل شيء إلى أي مكان.',
-    add: 'أضف مقطعًا آخر',
+    pick: 'اختر مقاطع الفيديو',
+    back: 'رجوع',
+    discardTitle: 'الخروج من المحرّر؟',
+    discardBody: 'الاقتصاص والمربّعات والنصوص موجودة هنا فقط — لم يُحفظ شيء في أي مكان، لأنه لم يُرفع شيء إلى أي مكان. صدّر أولًا إن أردت الاحتفاظ بها.',
+    keepEditing: 'متابعة التحرير',
+    discard: 'تجاهل واخرج',
+    privacy: 'صيغتا MP4 وMOV. اختر عدة مقاطع فتُدمج بالترتيب الذي اخترتها به. لا يُرفع شيء، ولا يُرسل شيء إلى أي مكان.',
     reading: 'جارٍ قراءة الفيديو…',
     joined: (n: number, d: string) => `${n} مقطع · ${d}`,
     remove: 'إزالة',
@@ -309,10 +318,14 @@ export default function VideoEditTool() {
   const [error, setError] = useState('')
   const [previewError, setPreviewError] = useState(0)
   const [settings, setSettings] = useState(false)
+  const [confirmBack, setConfirmBack] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
+
+  /** Is there a clip open? That is what turns this into a full-screen editor. */
+  const editing = clips.length > 0
 
   const workerRef = useRef<Worker | null>(null)
   const reqId = useRef(0)
@@ -378,6 +391,16 @@ export default function VideoEditTool() {
 
   useEffect(() => () => { setWorkInProgress(WIP, false) }, [])
   useEffect(() => { setWorkInProgress(WIP, clips.length > 0) }, [clips.length])
+
+  // The editor covers the whole viewport, header and footer included, so the
+  // page behind it must not scroll — a second scrollbar dragging the site's own
+  // chrome around under a full-screen editor is the classic modal-overlay bug.
+  useEffect(() => {
+    if (!editing) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [editing])
 
   const ask = useCallback((req: ReqBody, transfer: Transferable[] = []) => new Promise<Res>((resolve) => {
     const id = ++reqId.current
@@ -534,6 +557,22 @@ export default function VideoEditTool() {
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
   }, [paint, bitmapTick])
+
+  /**
+   * Take several clips at once, IN THE ORDER THEY WERE CHOSEN.
+   *
+   * Sequential rather than `Promise.all` on purpose: the probes would otherwise
+   * finish in whatever order the files happened to demux in, and the join order
+   * is the whole reason somebody picked more than one. It also keeps the memory
+   * cost to one file at a time, which is the untested hypothesis behind the
+   * intermittent Android failure recorded in CLAUDE.md.
+   */
+  async function addFiles(files: FileList | File[] | null | undefined) {
+    for (const f of Array.from(files ?? [])) {
+      // eslint-disable-next-line no-await-in-loop
+      await addFile(f)
+    }
+  }
 
   async function addFile(f: File | undefined | null) {
     if (!f) return
@@ -747,6 +786,19 @@ export default function VideoEditTool() {
     }
   }
 
+  /** Throw the session away and go back to the upload screen. */
+  function discard() {
+    for (const c of clips) { URL.revokeObjectURL(c.url); void ask({ kind: 'drop', slot: c.slot }) }
+    setClips([])
+    setCaptions([])
+    setCensors([])
+    setSel(0)
+    setMode('crop')
+    setSettings(false)
+    setConfirmBack(false)
+    setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
+  }
+
   function nudge(e: React.KeyboardEvent<HTMLDivElement>) {
     if (mode !== 'crop') return
     const step = e.shiftKey ? 0.05 : 0.01
@@ -871,8 +923,8 @@ export default function VideoEditTool() {
               <label className="inline-flex self-start">
                 {/* No `accept`: an image accept string sends Chrome on Android to
                     the gallery picker, and the same trap applies to video. */}
-                <input type="file" className="sr-only" data-testid="ve-file"
-                  onChange={(e) => { void addFile(e.target.files?.[0]) }} />
+                <input type="file" multiple className="sr-only" data-testid="ve-file"
+                  onChange={(e) => { void addFiles(e.target.files) }} />
                 <span className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-white text-green-700 px-4 py-2 text-[0.9rem] font-semibold hover:bg-sand-100 rtl:font-ar">
                   {s.pick}
                 </span>
@@ -940,12 +992,25 @@ export default function VideoEditTool() {
     </div>
   )
 
+  // THE EDITOR IS PORTALLED TO `document.body`, and that is load-bearing rather
+  // than tidy. `ToolPage`'s wrapper carries `animate-[fadeUp…_both]`, whose fill
+  // leaves a `transform` on the element for good — and a transformed ancestor
+  // becomes the containing block for `position: fixed`, so `inset-0` resolved
+  // against the padded content column instead of the viewport. The editor was
+  // therefore NOT full screen, and its own case caught it by measuring against
+  // the viewport rather than trusting the class name.
   return (
     <Stack data-testid="video-edit">
       {error && <FileError message={error} />}
 
-      <div className="mx-[calc(50%-50vw)] w-screen max-w-[100vw] bg-black">
-        <div className="relative h-[min(68vh,760px)] min-h-[300px] flex items-center justify-center">
+      {createPortal(<>
+      {/* FULL SCREEN, header and footer included. An editor is a place you are
+          IN, not a panel on a page — and on a phone the site's own chrome was
+          taking a third of the height above a video that is the entire point.
+          It is `fixed` rather than a Layout change because the condition is a
+          piece of this tool's state (a clip is open), not a route. */}
+      <div className="fixed inset-0 z-40 bg-black flex flex-col" data-testid="ve-fullscreen">
+        <div className="relative flex-1 min-h-0 flex items-center justify-center">
           {/* The source. It is not the preview — it is what `drawFrame` reads —
               so it is invisible but must stay laid out and decoding. */}
           <video ref={videoRef} src={current.url} playsInline data-testid="ve-video"
@@ -1032,6 +1097,16 @@ export default function VideoEditTool() {
                   className="absolute border-2 border-green-400 border-dashed pointer-events-none" />
               )}
             </div>
+
+            {/* Back, over the top-left. There is no site chrome to leave by any
+                more, so this is the only way out — and it CONFIRMS, because
+                everything in this editor is unsaved by construction and a
+                mis-tap would take a crop, some boxes and a caption with it. */}
+            <button type="button" data-testid="ve-back" onClick={() => setConfirmBack(true)}
+              title={s.back} aria-label={s.back}
+              className="absolute top-2 start-2 grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
+              <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
+            </button>
 
             {/* The context buttons, over the top-right of the picture — and the
                 DOWNLOAD beside them, because exporting is what you came to do
@@ -1189,61 +1264,56 @@ export default function VideoEditTool() {
               was already showing. */}
           <span className="text-[0.8rem] font-mono opacity-80" data-testid="ve-total">{fmt(t)} / {fmt(duration)}</span>
         </div>
+
+        {/* The notes that have to stay on screen, on one line under the
+            transport rather than a page below it — there is no page below it
+            any more. */}
+        <div className="wrap pb-2 flex flex-col gap-1 text-sand-100">
+          {previewError !== 0 && (
+            <p className="text-[0.8rem] text-gold-400 rtl:font-ar" data-testid="ve-preview-error">
+              {s.previewFailed(previewError)}
+              {current.info.decodable ? ` ${s.previewStillExports}` : ''}
+            </p>
+          )}
+          {mode === 'censor' && (
+            <p className="text-[0.78rem] opacity-70 rtl:font-ar" data-testid="ve-censor-audio">
+              {s.censorMoves} {s.censorAudio}
+            </p>
+          )}
+          {censors.some((c) => c.mode !== 'block') && (
+            <p className="text-[0.78rem] text-gold-400 rtl:font-ar" data-testid="ve-censor-warning">{s.censorWhy}</p>
+          )}
+          {audioPlan !== 'copy' && (
+            <p className="text-[0.78rem] text-gold-400 rtl:font-ar" data-testid="ve-audio-note">
+              {audioPlan === 'mixed' ? s.audioMixed : audioPlan === 'missing' ? s.audioMissing : s.audioNone}
+            </p>
+          )}
+          {out && (
+            <p className="text-[0.78rem] opacity-70 font-mono" data-testid="ve-out-info">
+              {s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}
+            </p>
+          )}
+          {clips.reduce((n, c) => n + c.file.size, 0) > 300 * 1048576 && (
+            <p className="text-[0.78rem] text-gold-400 rtl:font-ar" data-testid="ve-big">{s.big}</p>
+          )}
+        </div>
+
+        {/* Leaving throws the session away, so it asks. Rendered over the
+            editor rather than as a `window.confirm` so it can say what is
+            actually lost and read as part of the tool. */}
+        {confirmBack && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-black/70 p-4" data-testid="ve-confirm-back">
+            <div className="w-[min(92vw,26rem)] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-5 flex flex-col gap-3">
+              <p className="font-display rtl:font-ar text-[1.05rem] font-semibold text-ink">{s.discardTitle}</p>
+              <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.discardBody}</p>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button data-testid="ve-back-cancel" onClick={() => setConfirmBack(false)}>{s.keepEditing}</Button>
+                <Button variant="primary" data-testid="ve-back-discard" onClick={discard}>{s.discard}</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {out && (
-        <p className="text-[0.85rem] text-ink-faint font-mono" data-testid="ve-out-info">
-          {s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}
-        </p>
-      )}
-
-      {previewError !== 0 && (
-        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-preview-error">
-          {s.previewFailed(previewError)}
-          {current.info.decodable ? ` ${s.previewStillExports}` : ''}
-        </p>
-      )}
-
-      {clips.length > 1 && (
-        <ul className="flex flex-col gap-1" data-testid="ve-clips">
-          {clips.map((c, i) => (
-            <li key={c.slot} data-testid={`ve-clip-${i}`}
-              className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-[0.85rem] ${i === sel ? 'border-green-700' : 'border-[color:var(--line)]'}`}>
-              <button type="button" className="border-0 bg-transparent p-0 text-start text-ink underline-offset-2 hover:underline cursor-pointer"
-                onClick={() => setSel(i)} data-testid={`ve-select-${i}`}>{c.file.name}</button>
-              <span className="text-ink-faint font-mono">{c.info.width}×{c.info.height} · {fmt(c.info.durationSec)}</span>
-              {!c.info.decodable && <span className="text-gold-500 rtl:font-ar" data-testid={`ve-undecodable-${i}`}>{s.undecodable}</span>}
-              <span className="ms-auto flex gap-1">
-                <Button className="px-2 py-0.5" onClick={() => move(i, -1)} disabled={i === 0} data-testid={`ve-up-${i}`}>↑<span className="sr-only">{s.up}</span></Button>
-                <Button className="px-2 py-0.5" onClick={() => move(i, 1)} disabled={i === clips.length - 1} data-testid={`ve-down-${i}`}>↓<span className="sr-only">{s.down}</span></Button>
-                <Button className="px-2 py-0.5" onClick={() => removeClip(i)} data-testid={`ve-remove-${i}`}>×<span className="sr-only">{s.remove}</span></Button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {clips.reduce((n, c) => n + c.file.size, 0) > 300 * 1048576 && (
-        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-big">{s.big}</p>
-      )}
-
-      {/* Two documented limits that stay in the UI, because both are things a
-          reader would otherwise assume were handled: a box does not follow a
-          moving subject, and hiding the picture does not hide the sound. They
-          are one line each in censor mode rather than a standing panel. */}
-      {mode === 'censor' && (
-        <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="ve-censor-audio">
-          {s.censorMoves} {s.censorAudio}
-        </p>
-      )}
-      {censors.some((c) => c.mode !== 'block') && (
-        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-censor-warning">{s.censorWhy}</p>
-      )}
-      {audioPlan !== 'copy' && (
-        <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ve-audio-note">
-          {audioPlan === 'mixed' ? s.audioMixed : audioPlan === 'missing' ? s.audioMissing : s.audioNone}
-        </p>
-      )}
 
       {/* Settings are FULL SCREEN, not a pill along the bottom. On a phone that
           row was wider than the viewport — "argest side" was the first thing
@@ -1280,11 +1350,31 @@ export default function VideoEditTool() {
               </Check>
             )}
 
-            <label className="inline-flex items-center gap-2 cursor-pointer text-green-700 underline rtl:font-ar">
-              <input type="file" className="sr-only" data-testid="ve-add"
-                onChange={(e) => { void addFile(e.target.files?.[0]); e.target.value = '' }} />
-              + {s.add}
-            </label>
+            {/* The clips live HERE now, not on a page under the video — there
+                is no page under the video. Adding one mid-edit is gone with it:
+                the join order is decided when you pick the files, which is the
+                moment somebody actually knows what order they want. */}
+            {clips.length > 1 && (
+              <div className="flex flex-col gap-1">
+                <FieldLabel>{s.joined(clips.length, fmt(duration))}</FieldLabel>
+                <ul className="flex flex-col gap-1" data-testid="ve-clips">
+                  {clips.map((c, i) => (
+                    <li key={c.slot} data-testid={`ve-clip-${i}`}
+                      className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-[0.85rem] ${i === sel ? 'border-green-700' : 'border-[color:var(--line)]'}`}>
+                      <button type="button" className="border-0 bg-transparent p-0 text-start text-ink underline-offset-2 hover:underline cursor-pointer"
+                        onClick={() => { setSel(i); setSettings(false) }} data-testid={`ve-select-${i}`}>{c.file.name}</button>
+                      <span className="text-ink-faint font-mono">{c.info.width}×{c.info.height} · {fmt(c.info.durationSec)}</span>
+                      {!c.info.decodable && <span className="text-gold-500 rtl:font-ar" data-testid={`ve-undecodable-${i}`}>{s.undecodable}</span>}
+                      <span className="ms-auto flex gap-1">
+                        <Button className="px-2 py-0.5" onClick={() => move(i, -1)} disabled={i === 0} data-testid={`ve-up-${i}`}>↑<span className="sr-only">{s.up}</span></Button>
+                        <Button className="px-2 py-0.5" onClick={() => move(i, 1)} disabled={i === clips.length - 1} data-testid={`ve-down-${i}`}>↓<span className="sr-only">{s.down}</span></Button>
+                        <Button className="px-2 py-0.5" onClick={() => removeClip(i)} data-testid={`ve-remove-${i}`}>×<span className="sr-only">{s.remove}</span></Button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <p className="text-[0.85rem] text-ink-soft rtl:font-ar">
               {s.trimNote}{' '}
@@ -1313,6 +1403,7 @@ export default function VideoEditTool() {
           </Button>
         </div>
       )}
+      </>, document.body)}
     </Stack>
   )
 }

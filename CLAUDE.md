@@ -2457,6 +2457,42 @@ about what the UI SAYS rather than what it does.**
   badge explicitly is not for, and paying for it with a bar above the video on
   every visit. `check-saudi-beta` is unaffected — video-edit cites no SOURCES.
 
+**And a third pass made it a full-screen editor**, which is the change the
+previous two were circling. The site's header and footer were taking a third of
+a phone's height above the one thing the tool is for, and every fix so far had
+been about reclaiming space inside what was left.
+
+- **`fixed inset-0`, not a Layout change.** Layout hides its chrome by ROUTE
+  (`/book/`), and this condition is a piece of the tool's own state — a clip is
+  open. The body's scroll is locked while it is up, or the site's chrome drags
+  around underneath it, which is the classic modal-overlay bug.
+- **And it MUST be portalled to `document.body`.** `ToolPage`'s wrapper carries
+  `animate-[fadeUp_0.5s_ease_both]`, and the `both` fill leaves
+  `transform: translateY(0)` on the element permanently — **a transformed
+  ancestor becomes the containing block for `position: fixed`**, so `inset-0`
+  resolved against the padded content column and the editor was not full screen
+  at all. Six cases went red on it: the new one directly, and five censor drags
+  because `page.mouse` works in viewport coordinates against a stage that was
+  somewhere else. **The case asserts the geometry against the VIEWPORT rather
+  than trusting the class name, which is the only reason it was caught** — an
+  assertion on `class` or on computed `position` would have been green
+  throughout. Any future full-screen surface on a tool page needs the portal.
+- **Leaving confirms, because there is nothing else to leave by.** Everything in
+  this editor is unsaved by construction — that is the privacy stance, not an
+  omission — so the back button raises a dialog that says exactly what is lost.
+  The case asserts CANCELLING keeps the work as well as the editor, without
+  which it would pass against a dialog whose two buttons did the same thing.
+- **Clips are picked ALL AT ONCE and joined in that order**, and adding one
+  mid-edit is gone. The order is decided at the pick, which is the moment
+  somebody knows what order they want — and a mid-edit add is a second way to
+  express the same thing, arriving when they no longer have the files in front
+  of them. The probes run SEQUENTIALLY, not `Promise.all`: otherwise the join
+  order is whatever order the files happened to demux in, and one at a time also
+  keeps the peak memory to one file, which is the untested hypothesis behind the
+  intermittent Android failure below.
+- **The clip list moved into the settings screen** with the other power
+  features, because there is no longer a page under the video to put it on.
+
 **PIXELATE IS NOW THE DEFAULT, reversing the measured decision above, and the
 reason is the one thing `pixelleak.mjs` could not measure.** The finding stands:
 a mosaic gives a moving subject back, 98.6% of a number plate from 64 frames,
