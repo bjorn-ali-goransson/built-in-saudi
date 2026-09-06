@@ -2909,6 +2909,35 @@ halves: nothing extra in the picture while the field is open, and it back the
 moment the field goes — without which the fix could have been "never draw a
 caption on the stage", which would make the preview disagree with the export.
 
+**THE CAPTION BOX WRAPS THE TEXT; IT DOES NOT CUT IT.** The bitmap was sized to
+the box exactly — `canvas.width = box.w` — so a caption needing one line more
+than its rectangle allows, or carrying a word too long to break, simply lost the
+overflow, in the picture and in the field it was typed into. Reported as the
+text box clipping. The box stays the contract for **wrapping** and for where the
+caption sits; what changed is that the bitmap GROWS past it when it has to,
+centred on it, and `renderCaption` returns the grown rectangle **in fractions of
+the frame** alongside the bitmap. Both the stage and `render.worker.ts` draw into
+that rect, so the property this whole tool rests on is untouched: the preview
+cannot crop a caption the export keeps. The worker needed no change at all —
+`PlanCaption` already carried its own x/y/w/h rather than the caption's.
+
+**And the field had the same defect for its own reason.** A textarea CLIPS its
+content, so `inset-0` plus `overflow-hidden` cut off exactly the lines the canvas
+was cutting — the field disagreeing with the picture it is producing. It takes
+the box's height as a FLOOR now and its own content above that, centred with a
+computed `paddingTop` the way the canvas centres its block of lines. The case
+reads the rows ABOVE the rectangle, where a box-sized bitmap can draw nothing at
+all, so it cannot pass against the old behaviour.
+
+**The preview's sound is on the transport, not behind the cog.** `keepAudio`
+decides what the FILE gets and is a choice made once; muting is what you reach
+for the moment a clip starts playing out loud in a room with other people in it,
+so it sits beside play as a speaker toggle. Default UNMUTED, because a preview
+silent by default cannot be told apart from a clip with no sound in it — which
+is a thing this tool has to be able to say (`audioPlan` says it). The case
+asserts the `<video>` element's own `muted`, not the button's state: a toggle
+that lights up and leaves the sound playing is the failure it is there for.
+
 **Nothing to draw is not the same as draw nothing, and the difference is a black
 screen.** Reported from a phone as "this is what happens when the browser goes
 idle for a moment": the editor came back to a black rectangle with the boxes

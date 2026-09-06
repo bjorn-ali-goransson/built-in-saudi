@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, KeyframeIcon, MosaicIcon, PauseIcon, PlayIcon, TextIcon,
-  TrashIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, KeyframeIcon, MosaicIcon, MuteIcon, PauseIcon, PlayIcon,
+  TextIcon, TrashIcon, VolumeIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
   ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropRect, drawFrame, fitRect, outputSize, timeline,
-  totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop,
+  totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop, type Rect,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
 import { createRecorder, formatReport, heap } from './diagnostics'
@@ -51,6 +51,8 @@ const STR = {
     modeMore: 'Output settings',
     play: 'Play',
     pause: 'Pause',
+    mute: 'Mute the preview',
+    unmute: 'Unmute the preview',
     free: 'Free',
     addBox: 'Drag on the video to draw a box.',
     deleteBox: 'Delete this box',
@@ -124,6 +126,8 @@ const STR = {
     modeMore: 'إعدادات المُخرَج',
     play: 'تشغيل',
     pause: 'إيقاف',
+    mute: 'كتم صوت المعاينة',
+    unmute: 'إلغاء كتم صوت المعاينة',
     free: 'حرّ',
     addBox: 'اسحب على الفيديو لترسم مربّعًا.',
     deleteBox: 'احذف هذا المربّع',
@@ -238,12 +242,18 @@ const isRtl = (text: string) => /[؀-ۿݐ-ݿ]/.test(text)
  * Everything about the way this text looks is decided here, once, on the page —
  * so the stage and the encoded frame are literally the same pixels.
  *
- * The box is the contract: the text wraps to its width and is centred in its
- * height, so the rectangle somebody dragged is exactly the area the caption
- * occupies. Wrapping at "90% of the frame" instead, as this did, means the
+ * The box is the contract for WRAPPING: the text runs to its width and is
+ * centred in its height, so the rectangle somebody dragged is where the
+ * caption sits. Wrapping at "90% of the frame" instead, as this did, means the
  * writer sets the middle of something whose extent they cannot see.
+ *
+ * It is not a crop, though: text that needs more room than the box has spills
+ * out of it rather than losing a line, and the returned rect says how far.
  */
-async function renderCaption(c: Caption, out: { width: number; height: number }): Promise<ImageBitmap | null> {
+async function renderCaption(
+  c: Caption,
+  out: { width: number; height: number },
+): Promise<{ bitmap: ImageBitmap; rect: Rect } | null> {
   const text = c.text.trim()
   if (!text) return null
   const box = captionRect(c, out)
@@ -264,10 +274,24 @@ async function renderCaption(c: Caption, out: { width: number; height: number })
     else line = next
   }
   if (line) lines.push(line)
+  const lineHeight = Math.round(px * 1.3)
+
+  // THE BOX WRAPS THE TEXT; IT DOES NOT CUT IT. The rectangle is where the
+  // writer put the caption and how wide the lines run, and a canvas sized
+  // exactly to it silently took a chunk off a caption that needed more room —
+  // a word too long to break, or one line more than the height allows. So the
+  // bitmap GROWS past the box when it has to, centred on it, and the rectangle
+  // it is drawn into grows with it. It is one rect, returned with the bitmap
+  // and used by the stage and by the worker alike, so the preview cannot crop
+  // a caption the export keeps or the other way round.
+  const stroke = c.band ? 0 : Math.max(2, px * 0.09)
+  const widest = lines.reduce((m, l) => Math.max(m, measure.measureText(l).width), 0)
+  const width = Math.max(box.w, Math.ceil(widest + pad * 2 + stroke))
+  const height = Math.max(box.h, Math.ceil(lines.length * lineHeight + pad * 2 + stroke))
 
   const canvas = document.createElement('canvas')
-  canvas.width = box.w
-  canvas.height = box.h
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
   if (c.band) {
@@ -288,14 +312,21 @@ async function renderCaption(c: Caption, out: { width: number; height: number })
   }
   // Centred in the BOX, top to bottom. A block of lines pinned to the top of a
   // tall rectangle looks like a mistake rather than a choice.
-  const lineHeight = Math.round(px * 1.3)
   const top = (canvas.height - lines.length * lineHeight) / 2
   lines.forEach((l, i) => {
     const y = top + i * lineHeight + lineHeight / 2
     if (!c.band) ctx.strokeText(l, canvas.width / 2, y)
     ctx.fillText(l, canvas.width / 2, y)
   })
-  return createImageBitmap(canvas)
+  return {
+    bitmap: await createImageBitmap(canvas),
+    rect: {
+      x: (box.x - (width - box.w) / 2) / out.width,
+      y: (box.y - (height - box.h) / 2) / out.height,
+      w: width / out.width,
+      h: height / out.height,
+    },
+  }
 }
 
 /** What the pointer is doing to the picture right now. */
@@ -353,6 +384,16 @@ export default function VideoEditTool() {
   const [confirmBack, setConfirmBack] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playing, setPlaying] = useState(false)
+  /**
+   * The PREVIEW's sound, not the export's.
+   *
+   * Which is why it lives on the transport beside play rather than behind the
+   * cog: `keepAudio` decides what the file gets and is a choice made once,
+   * while this is the thing you reach for the moment a clip starts playing out
+   * loud in a room with other people in it. Default ON, because a preview that
+   * is silent by default hides a clip having no sound at all.
+   */
+  const [muted, setMuted] = useState(false)
   const [pos, setPos] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
@@ -366,7 +407,7 @@ export default function VideoEditTool() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const stageRef = useRef<HTMLCanvasElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
-  const bitmaps = useRef<Map<string, ImageBitmap>>(new Map())
+  const bitmaps = useRef<Map<string, { bitmap: ImageBitmap; rect: Rect }>>(new Map())
   // The box being drawn lives in a REF, not in state, and `paint` reads it on
   // the next animation frame — the rAF loop is already repainting, so a drag
   // needs no render of its own and this way it does not cause one per
@@ -477,13 +518,13 @@ export default function VideoEditTool() {
   useEffect(() => {
     let live = true
     const build = async () => {
-      const next = new Map<string, ImageBitmap>()
+      const next = new Map<string, { bitmap: ImageBitmap; rect: Rect }>()
       for (const c of captions) {
-        const bmp = await renderCaption(c, size)
-        if (bmp) next.set(c.id, bmp)
+        const drawn = await renderCaption(c, size)
+        if (drawn) next.set(c.id, drawn)
       }
-      if (!live) { next.forEach((b) => b.close()); return }
-      bitmaps.current.forEach((b) => b.close())
+      if (!live) { next.forEach((b) => b.bitmap.close()); return }
+      bitmaps.current.forEach((b) => b.bitmap.close())
       bitmaps.current = next
       setBitmapTick((n) => n + 1)
     }
@@ -625,10 +666,13 @@ export default function VideoEditTool() {
       // it too shows the words twice, offset by however far the two disagree
       // about wrapping. The field is the picture while it is open.
       if (mode === 'text' && c.id === pickedCaption) continue
-      const bmp = bitmaps.current.get(c.id)
-      if (!bmp) continue
-      const r = captionRect(c, shown)
-      ctx.drawImage(bmp, r.x, r.y, r.w, r.h)
+      const drawn = bitmaps.current.get(c.id)
+      if (!drawn) continue
+      // The rect the RENDER produced, not the caption's own box: a caption
+      // whose text needs more room than the rectangle it was drawn in gets it,
+      // in the preview and in the export alike.
+      const r = captionRect(drawn.rect, shown)
+      ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
   }, [current, crop, cropBox, mode, size, captions, censors, previewTime, pickedCaption, duration])
 
@@ -1101,8 +1145,8 @@ export default function VideoEditTool() {
     // gone from this side, and the stage still needs its copies.
     const planCaptions: RenderPlan['captions'] = []
     for (const c of captions) {
-      const bmp = await renderCaption(c, size)
-      if (bmp) planCaptions.push({ x: c.x, y: c.y, w: c.w, h: c.h, from: c.from, to: c.to, bitmap: bmp })
+      const drawn = await renderCaption(c, size)
+      if (drawn) planCaptions.push({ ...drawn.rect, from: c.from, to: c.to, bitmap: drawn.bitmap })
     }
     const plan: RenderPlan = {
       slots: clips.map((c) => c.slot),
@@ -1231,12 +1275,29 @@ export default function VideoEditTool() {
       spellCheck={false}
       onPointerDown={(e) => e.stopPropagation()}
       onChange={(e) => setCaption(c.id, { text: e.target.value })}
+      // IT GROWS, IT DOES NOT SCROLL. A textarea clips its own content, so a
+      // caption one line taller than its box was cut off while being typed and
+      // whole in the file — the field disagreeing with the picture it is
+      // producing. It takes the box's height as a floor and its own content
+      // above that, centred, which is what the canvas does with the same text.
+      ref={(el) => {
+        if (!el) return
+        el.style.paddingTop = '0px'
+        el.style.height = 'auto'
+        const content = el.scrollHeight
+        const box = el.parentElement?.clientHeight ?? 0
+        // Centred the way the canvas centres its block of lines, so a short
+        // caption in a tall box sits where the picture will put it.
+        el.style.paddingTop = `${Math.max(0, (box - content) / 2)}px`
+        el.style.height = `${Math.max(box, content)}px`
+      }}
       style={{
+        boxSizing: 'border-box',
         color: c.colour,
         fontSize: `${Math.max(8, c.size * (stageRef.current?.clientHeight || 0))}px`,
         lineHeight: 1.3,
       }}
-      className="absolute inset-0 w-full h-full resize-none bg-transparent border-0 outline-none
+      className="absolute start-0 top-1/2 -translate-y-1/2 w-full resize-none bg-transparent border-0 outline-none
         text-center p-0 overflow-hidden font-sans font-semibold
         placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
   )
@@ -1339,7 +1400,7 @@ export default function VideoEditTool() {
         <div className="relative flex-1 min-h-0 flex items-center justify-center">
           {/* The source. It is not the preview — it is what `drawFrame` reads —
               so it is invisible but must stay laid out and decoding. */}
-          <video ref={videoRef} src={current.url} playsInline data-testid="ve-video"
+          <video ref={videoRef} src={current.url} playsInline muted={muted} data-testid="ve-video"
             onLoadStart={() => diag.current.mark('video loadstart')}
             onError={() => {
               diag.current.mark(`video error ${videoRef.current?.error?.code ?? -1}`)
@@ -1611,6 +1672,15 @@ export default function VideoEditTool() {
             title={playing ? s.pause : s.play} aria-label={playing ? s.pause : s.play}
             className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
             {playing ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
+          </button>
+          {/* Beside play, because that is when it is wanted: the clip starts
+              playing out loud and the reach is for the speaker, not for a
+              settings screen two taps away. */}
+          <button type="button" onClick={() => setMuted((m) => !m)} data-testid="ve-mute"
+            title={muted ? s.unmute : s.mute} aria-label={muted ? s.unmute : s.mute}
+            aria-pressed={muted}
+            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
+            {muted ? <MuteIcon className="w-4 h-4" /> : <VolumeIcon className="w-4 h-4" />}
           </button>
           <input type="range" min={0} max={Math.max(0.1, current.info.durationSec)} step={0.05} value={pos}
             data-testid="ve-seek" className="flex-1 accent-green-500"

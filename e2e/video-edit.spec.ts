@@ -543,6 +543,55 @@ test('a caption is drawn into the picture, and only while it is showing', async 
   await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(before + 2)
 })
 
+/**
+ * The rows just ABOVE a caption box drawn at 0.45–0.50.
+ *
+ * Flat colour bars in this fixture, so anything counted here is ink that came
+ * from the caption — which is the whole question: does text that needs more
+ * room than its box has spill out of it, or lose a line?
+ */
+const ABOVE: [number, number, number, number] = [0.3, 0.4, 0.7, 0.44]
+
+test('the preview can be muted, and is not muted to begin with', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  const video = page.getByTestId('ve-video')
+  const muted = () => video.evaluate((v: HTMLVideoElement) => v.muted)
+
+  // NOT muted by default: a preview that is silent until somebody finds a
+  // control cannot be told apart from a clip that has no sound in it, which is
+  // a thing this tool has to be able to say.
+  expect(await muted()).toBe(false)
+  await page.getByTestId('ve-mute').click()
+  // The ELEMENT, not the button's own state — a toggle that lights up and
+  // leaves the sound playing is the failure this is here for.
+  expect(await muted()).toBe(true)
+  await page.getByTestId('ve-mute').click()
+  expect(await muted()).toBe(false)
+})
+
+test('a caption that outgrows its box spills out of it rather than being cut', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, ABOVE), { timeout: 15_000 }).toBeGreaterThan(0)
+  const before = await coloursIn(page, ABOVE)
+
+  // A SHORT box and a long caption: the text wraps to the box's width — which
+  // is what the box is for — and then needs several times its height. The
+  // bitmap used to be the box's exact size, so those lines were simply cut off
+  // in the picture, and the field they were typed into clipped them too.
+  await page.getByTestId('ve-mode-text').click()
+  await drawBox(page, [0.3, 0.45], [0.7, 0.5])
+  await page.getByTestId('ve-caption-text-0').fill('ONE TWO THREE FOUR FIVE SIX SEVEN EIGHT')
+  await deselectCaption(page)
+
+  // Read ABOVE the rectangle, where a box-sized bitmap can draw nothing at all.
+  await expect.poll(() => coloursIn(page, ABOVE), { timeout: 15_000 }).toBeGreaterThan(before)
+})
+
 test('an open caption field is not drawn behind itself', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
