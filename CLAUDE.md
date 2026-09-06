@@ -2961,6 +2961,28 @@ computed `paddingTop` the way the canvas centres its block of lines. The case
 reads the rows ABOVE the rectangle, where a box-sized bitmap can draw nothing at
 all, so it cannot pass against the old behaviour.
 
+**THE DRAWING RESOLUTION AND THE DISPLAY SIZE ARE TWO DIFFERENT THINGS, and
+only the first comes from the file.** A canvas is laid out at its INTRINSIC
+size, and `max-width`/`max-height` only ever SHRINK it — so a clip smaller than
+the screen came up as a postage stamp in the middle of a black editor with the
+tool bar over most of it. Reported with a screenshot of a short, silent, low-res
+phone clip, which is exactly the shape of file this happens to.
+
+**It is fitted in code, not with `object-fit`**, and that is the load-bearing
+part: `object-fit: contain` letterboxes INSIDE the element, so the overlay would
+cover black margin — and every drag in these tools reads fractions of the
+overlay's own rectangle, which is why the wrapper has to BE the picture. The
+container is measured with a `ResizeObserver` and the box computed, so the ratio
+is preserved by construction rather than by asking CSS to honour `aspect-ratio`
+against two max constraints at once — which is what squashed this stage once
+already, in the other direction.
+
+**The observer has to be keyed on the EDITOR being up, not on mount.** These
+components render an intake screen first, so on the first pass there is no
+container to measure and an effect with no dependencies never looks again — it
+read 82% of the frame in the case, which is the fixture's own 320px against a
+390px screen, i.e. the fallback doing nothing.
+
 **THE CODED FRAME IS NOT THE PICTURE, and that made the stabiliser's preview
 "very stretched" on a phone recording.** A clip held upright is stored
 LANDSCAPE with a 90° matrix in its `tkhd`; a `<video>` element applies that

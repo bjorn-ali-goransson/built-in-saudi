@@ -325,6 +325,33 @@ export default function VideoStabilizeTool() {
   // re-runs three array passes over three numbers a frame and nothing else — no
   // second decode — which is why the trade can be shown as a live figure rather
   // than as a setting you commit to and wait for.
+  /**
+   * THE PICTURE FILLS THE SPACE, whatever size the clip is.
+   *
+   * A canvas is laid out at its INTRINSIC size and `max-width` only shrinks it,
+   * so a small clip came up as a postage stamp — the drawing resolution comes
+   * from the file, and the display size must not. Fitted in code rather than
+   * with `object-fit`, because the box someone drags is read in fractions of
+   * this element's own rectangle: it has to be exactly the picture, with no
+   * letterbox inside it.
+   */
+  const frameRef = useRef<HTMLDivElement>(null)
+  const [frame, setFrame] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const read = () => {
+      const r = el.getBoundingClientRect()
+      setFrame((f) => (Math.abs(f.width - r.width) > 0.5 || Math.abs(f.height - r.height) > 0.5
+        ? { width: r.width, height: r.height }
+        : f))
+    }
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [!!url])
+
   const path = useMemo(() => (steps ? accumulate(steps) : null), [steps])
   const plan = useMemo(() => {
     if (!path || !info) return null
@@ -372,6 +399,19 @@ export default function VideoStabilizeTool() {
    * would only find out after the encode — which is the property `video-edit`
    * is built on and the reason there is no second renderer here either.
    */
+  /** The shape the stage is showing: the frame AS RECORDED while a subject is
+   *  being chosen, the corrected output once there is a plan. */
+  const stageShape = ((mode === 'subject' && !points ? info : null)
+    ?? plan?.out ?? info ?? { width: 320, height: 180 })
+
+  const fitted = useMemo(() => {
+    const ar = stageShape.width / Math.max(1, stageShape.height)
+    if (!frame.width || !Number.isFinite(ar) || ar <= 0) return undefined
+    const cap = frame.height || frame.width / ar
+    const width = Math.min(frame.width, cap * ar)
+    return { width: `${Math.max(1, Math.floor(width))}px`, height: `${Math.max(1, Math.floor(width / ar))}px` }
+  }, [frame.width, frame.height, stageShape.width, stageShape.height])
+
   useEffect(() => {
     let raf = 0
     const paint = () => {
@@ -620,17 +660,17 @@ export default function VideoStabilizeTool() {
         onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
         className="absolute w-px h-px opacity-0 pointer-events-none" />
 
-      <div className="grid place-items-center bg-black rounded-md overflow-hidden p-1">
+      <div ref={frameRef} className="grid place-items-center bg-black rounded-md overflow-hidden p-1 max-h-[60vh]">
         {/* The overlay is exactly the canvas, so a box drawn on it is a box in
             fractions of the PICTURE rather than of some padded container — the
             same thing the worker matches against. */}
         <div ref={boxRef} className="relative" data-testid="vs-frame"
           onPointerDown={boxDown} onPointerMove={boxMove} onPointerUp={boxUp}
-          style={{ touchAction: mode === 'subject' ? 'none' : undefined }}>
+          style={{ ...fitted, touchAction: mode === 'subject' ? 'none' : undefined }}>
           <canvas ref={canvasRef} data-testid="vs-stage"
-            width={(mode === 'subject' && !points ? info?.width : plan?.out.width) ?? info?.width ?? 320}
-            height={(mode === 'subject' && !points ? info?.height : plan?.out.height) ?? info?.height ?? 180}
-            className="block max-w-full max-h-[60vh]" />
+            width={stageShape.width}
+            height={stageShape.height}
+            className="block w-full h-full" />
           {mode === 'subject' && drawing && (
             <div data-testid="vs-box" className="absolute border-2 border-green-400 pointer-events-none"
               style={{

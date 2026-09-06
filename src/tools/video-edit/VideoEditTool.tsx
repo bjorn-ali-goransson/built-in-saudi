@@ -602,6 +602,56 @@ export default function VideoEditTool() {
   // stabiliser.
   useEffect(() => { adoptShape() }, [adoptShape, current?.info.width, current?.info.height])
 
+  /**
+   * THE PICTURE FILLS THE EDITOR, whatever size the clip is.
+   *
+   * A canvas is laid out at its INTRINSIC size, and `max-width`/`max-height`
+   * only ever shrink it — so a small clip (a short silent one off a phone, say)
+   * came up as a postage stamp in the middle of a black screen with the tool
+   * bar covering most of it, reported with a screenshot. The drawing resolution
+   * and the display size are two different things, and only the first should
+   * come from the file.
+   *
+   * Fitted HERE rather than with `object-fit`, which would letterbox INSIDE the
+   * element and leave the overlay covering black margin: every drag in this file
+   * reads fractions of the overlay's own rectangle, so the wrapper has to be
+   * exactly the picture. So the container is measured and the box computed —
+   * the ratio is preserved by construction, in one place, rather than by asking
+   * CSS to honour `aspect-ratio` against two max constraints at once, which is
+   * what squashed this stage once already.
+   */
+  const frameRef = useRef<HTMLDivElement>(null)
+  const [frame, setFrame] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const read = () => {
+      const r = el.getBoundingClientRect()
+      setFrame((f) => (Math.abs(f.width - r.width) > 0.5 || Math.abs(f.height - r.height) > 0.5
+        ? { width: r.width, height: r.height }
+        : f))
+    }
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+    // Keyed on whether the EDITOR is up, not on mount: this component renders
+    // the intake screen first, so on the first pass there is no container to
+    // measure and an effect with no dependencies would never look again.
+  }, [clips.length > 0])
+
+  /** The shape the stage is showing: the WHOLE clip while cropping, else the output. */
+  const stageShape = mode === 'crop' && current
+    ? { width: current.info.width, height: current.info.height }
+    : size
+
+  const fitted = useMemo(() => {
+    const ar = stageShape.width / Math.max(1, stageShape.height)
+    if (!frame.width || !frame.height || !Number.isFinite(ar) || ar <= 0) return undefined
+    const width = Math.min(frame.width, frame.height * ar)
+    return { width: `${Math.max(1, Math.floor(width))}px`, height: `${Math.max(1, Math.floor(width / ar))}px` }
+  }, [frame.width, frame.height, stageShape.width, stageShape.height])
+
   /** The time on the JOINED timeline that the stage is currently showing. */
   const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
   const t = spanStart + pos
@@ -1433,7 +1483,7 @@ export default function VideoEditTool() {
           It is `fixed` rather than a Layout change because the condition is a
           piece of this tool's state (a clip is open), not a route. */}
       <div className="fixed inset-0 z-40 bg-black flex flex-col" data-testid="ve-fullscreen">
-        <div className="relative flex-1 min-h-0 flex items-center justify-center">
+        <div ref={frameRef} className="relative flex-1 min-h-0 flex items-center justify-center">
           {/* The source. It is not the preview — it is what `drawFrame` reads —
               so it is invisible but must stay laid out and decoding. */}
           <video ref={videoRef} src={current.url} playsInline muted={muted} data-testid="ve-video"
@@ -1464,8 +1514,8 @@ export default function VideoEditTool() {
               constraints IS "contain", and the wrapper shrink-wraps it — which
               also keeps the overlay exactly over the picture, which is what
               every pointer coordinate in this file depends on. */}
-          <div className="relative inline-block max-w-full max-h-full leading-none">
-            <canvas ref={stageRef} data-testid="ve-result" className="block max-w-full max-h-full" />
+          <div className="relative leading-none" style={fitted}>
+            <canvas ref={stageRef} data-testid="ve-result" className="block w-full h-full" />
 
             {/* One overlay for every interaction, so the pointer maths lives in
                 one place and a box cannot be dragged in a coordinate space the

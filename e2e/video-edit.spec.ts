@@ -1287,3 +1287,26 @@ test('the stage takes its shape from the ELEMENT, not from the file', async ({ p
   const shape = await page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => c.width / c.height)
   expect(shape).toBeCloseTo(320 / 180, 2)
 })
+
+test('a small clip fills the editor rather than sitting in the middle of it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await load(page)
+  await pick(page)
+
+  // A canvas is laid out at its INTRINSIC size and `max-width` only shrinks it,
+  // so a clip smaller than the screen came up as a postage stamp with the tool
+  // bar over most of it — reported with a screenshot of a short phone clip. The
+  // drawing resolution comes from the file; the display size must not.
+  const fit = await page.getByTestId('ve-stage').evaluate((el) => {
+    const box = el.getBoundingClientRect()
+    const frame = el.closest('.flex-1')!.getBoundingClientRect()
+    return { w: box.width, h: box.height, fw: frame.width, fh: frame.height }
+  })
+  // It fills one axis and overflows neither, which IS "contain".
+  expect(Math.max(fit.w / fit.fw, fit.h / fit.fh)).toBeCloseTo(1, 1)
+  expect(fit.w).toBeLessThanOrEqual(fit.fw + 1)
+  expect(fit.h).toBeLessThanOrEqual(fit.fh + 1)
+  // And the fixture's own 4:3 survives being scaled up — the squash this stage
+  // has already had once, in the other direction.
+  expect(fit.w / fit.h).toBeCloseTo(4 / 3, 1)
+})

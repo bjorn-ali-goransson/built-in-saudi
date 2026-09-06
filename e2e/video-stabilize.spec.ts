@@ -651,3 +651,22 @@ test('the stage takes its shape from the ELEMENT, not from the file', async ({ p
   const shape = await page.getByTestId('vs-stage').evaluate((c: HTMLCanvasElement) => c.width / c.height)
   expect(shape).toBeCloseTo(320 / 240, 1)
 })
+
+test('a small clip fills the stage rather than sitting in the middle of it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // A canvas is laid out at its intrinsic size and `max-width` only shrinks it,
+  // so a clip smaller than the column came up as a postage stamp. The drawing
+  // resolution comes from the file; the display size must not.
+  const fit = await page.getByTestId('vs-frame').evaluate((el) => {
+    const box = el.getBoundingClientRect()
+    const frame = (el.parentElement as HTMLElement).getBoundingClientRect()
+    return { w: box.width, h: box.height, fw: frame.width }
+  })
+  expect(fit.w).toBeGreaterThan(fit.fw * 0.9)
+  // The fixture is 16:9 and stays 16:9 while being scaled up.
+  expect(fit.w / fit.h).toBeCloseTo(16 / 9, 1)
+})
