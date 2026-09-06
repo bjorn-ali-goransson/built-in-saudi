@@ -629,3 +629,25 @@ test('a rotated recording is shown upright, not stretched into the stored shape'
   expect(shape.vh).toBeGreaterThan(shape.vw)
   expect(shape.cw / shape.ch).toBeCloseTo(shape.vw / shape.vh, 2)
 })
+
+test('the stage takes its shape from the ELEMENT, not from the file', async ({ page }) => {
+  // The element reports what it will SHOW — the frame size after the rotation
+  // matrix and after the pixel aspect ratio the bitstream asks for — and no
+  // container field settles that: Chromium reports 320×240 for a file whose
+  // track header claims 426×240. So the stage follows the element, whatever
+  // the demuxer read, and this states that directly rather than needing a
+  // fixture per cause.
+  // 4:3 against a fixture stored 16:9 — it has to DIFFER from the file, or the
+  // case passes on a tool that ignores the element entirely. The first version
+  // reported 320×180, which is exactly what `shaky.mp4` already is.
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { get: () => 320 })
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { get: () => 240 })
+  })
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  const shape = await page.getByTestId('vs-stage').evaluate((c: HTMLCanvasElement) => c.width / c.height)
+  expect(shape).toBeCloseTo(320 / 240, 1)
+})

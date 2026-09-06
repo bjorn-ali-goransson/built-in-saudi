@@ -2921,6 +2921,38 @@ that rect, so the property this whole tool rests on is untouched: the preview
 cannot crop a caption the export keeps. The worker needed no change at all —
 `PlanCaption` already carried its own x/y/w/h rather than the caption's.
 
+**AND THE ROTATION WAS ONLY HALF OF IT: the ELEMENT is the authority on the
+picture's shape, not the file.** A second report, of a plain 16:9 clip drawn
+"squashed" into a wider stage, is a disagreement the rotation fix cannot reach —
+so the obvious next move was to read the display size out of the track header
+instead. **Measured first, and it does not work: Chromium reports 320×240 for a
+file whose `tkhd` claims 426×240.** The browser derives the pixel aspect ratio
+from the bitstream, so no container field settles what will be shown, and a
+demuxer's answer is a guess whenever the two differ.
+
+So the probe's dimensions are CORRECTED from `videoWidth`/`videoHeight` the
+moment the metadata lands, in both tools. The probe stays the authority on
+duration, fps, codec and decodability; the element is the authority on shape,
+and everything downstream — the stage, the crop, the output size, the encoder —
+follows from that one place. The worker still draws the CODED frame into the
+corrected output shape, and that non-uniform scale is exactly what un-squeezes
+an anamorphic clip.
+
+**The case states the property rather than hunting a fixture per cause**: the
+element is made to report a shape the file does not have, and the stage must
+follow the element. A rotation fixture proves one cause; this proves the rule.
+**Its first version reported 320×180 — which is exactly what `shaky.mp4`
+already is**, so it passed against a tool ignoring the element entirely. An
+emulated disagreement has to actually disagree.
+
+**And the correction cannot be written back into the probe, because the two
+arrive in EITHER order.** The element has metadata long before a large file has
+been demuxed, so a value written at that moment is overwritten by the probe
+that follows — which is what made this fix look inert in the stabiliser while
+the identical fix in the editor worked. The element's shape is held separately
+and applied on the way OUT (a memo there, an effect on both events in the
+editor), so neither order can lose it.
+
 **And the field had the same defect for its own reason.** A textarea CLIPS its
 content, so `inset-0` plus `overflow-hidden` cut off exactly the lines the canvas
 was cutting — the field disagreeing with the picture it is producing. It takes

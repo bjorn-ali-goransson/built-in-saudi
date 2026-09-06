@@ -1258,3 +1258,32 @@ test('the mute button says when a clip has no sound at all', async ({ page }) =>
   await expect(page.getByTestId('ve-mute')).toHaveAttribute('data-sound', 'on')
   await expect(page.getByTestId('ve-mute')).toBeEnabled()
 })
+
+/**
+ * Make the element disagree with the file about the picture's shape.
+ *
+ * That disagreement is real and has more than one cause — a rotation matrix, a
+ * pixel aspect ratio the bitstream asks for — and no container field settles
+ * it: Chromium reports 320×240 for a file whose track header claims 426×240.
+ * So the property is stated directly instead of hunting a fixture for each
+ * cause: whatever the element says it will show, that is the shape the stage
+ * takes.
+ */
+async function reportShape(page: Page, w: number, h: number) {
+  await page.addInitScript(([vw, vh]) => {
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { get: () => vw })
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { get: () => vh })
+  }, [w, h])
+}
+
+test('the stage takes its shape from the ELEMENT, not from the file', async ({ page }) => {
+  // 16:9 against a fixture stored 4:3 — the squash reported from a phone, and
+  // the one the rotation fix does not reach, since nothing here is turned.
+  await reportShape(page, 320, 180)
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ve-mode-crop').click()
+
+  const shape = await page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => c.width / c.height)
+  expect(shape).toBeCloseTo(320 / 180, 2)
+})

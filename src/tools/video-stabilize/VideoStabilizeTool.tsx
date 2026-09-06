@@ -172,7 +172,21 @@ export default function VideoStabilizeTool() {
   const [supported, setSupported] = useState<boolean | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [url, setUrl] = useState('')
-  const [info, setInfo] = useState<ProbeInfo | null>(null)
+  const [probed, setProbed] = useState<ProbeInfo | null>(null)
+  /**
+   * What the ELEMENT says it will show, which is the authority on the picture's
+   * shape — see the note on the metadata handler below.
+   *
+   * Held separately and applied on the way OUT rather than written back into
+   * the probe, because the two arrive in either order: the element has metadata
+   * long before a large file has been demuxed, so a correction written at that
+   * moment is overwritten by the probe that follows it. That race is exactly
+   * what the first version did, and it looked like the fix not working at all.
+   */
+  const [elShape, setElShape] = useState<{ width: number; height: number } | null>(null)
+  const info = useMemo(() => (probed && elShape && elShape.width && elShape.height
+    ? { ...probed, width: elShape.width, height: elShape.height }
+    : probed), [probed, elShape])
   const [steps, setSteps] = useState<Estimate[] | null>(null)
   const [mode, setMode] = useState<'camera' | 'subject'>('camera')
   /** The tracked subject, in source pixels relative to the frame centre. */
@@ -282,7 +296,7 @@ export default function VideoStabilizeTool() {
     if (url) URL.revokeObjectURL(url)
     setFile(f)
     setUrl(next)
-    setInfo(null)
+    setProbed(null); setElShape(null)
     setPos(0)
     const res = await ask({ kind: 'probe', file: f })
     if (res.kind !== 'probed') {
@@ -293,7 +307,7 @@ export default function VideoStabilizeTool() {
       setError(s.errors[res.kind === 'error' ? res.message : 'generic'] ?? s.errors.generic)
       return
     }
-    setInfo(res.info)
+    setProbed(res.info)
     setKeepAudio(res.info.hasAudio)
 
     setBusy('analyse')
@@ -515,7 +529,7 @@ export default function VideoStabilizeTool() {
     void ask({ kind: 'drop' })
     if (url) URL.revokeObjectURL(url)
     if (out) URL.revokeObjectURL(out.url)
-    setFile(null); setUrl(''); setInfo(null); setSteps(null); setOut(null); setError('')
+    setFile(null); setUrl(''); setProbed(null); setElShape(null); setSteps(null); setOut(null); setError('')
     setGhost(false); setPos(0); setElDur(0); setPoints(null); setDrawing(null); setMode('camera')
   }
 
@@ -589,7 +603,19 @@ export default function VideoStabilizeTool() {
           `display: none`, which would stop it painting. */}
       <video ref={videoRef} src={url} playsInline muted loop data-testid="vs-video"
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
-        onLoadedMetadata={() => setElDur(videoRef.current?.duration ?? 0)}
+        onLoadedMetadata={() => {
+          const v = videoRef.current
+          setElDur(v?.duration ?? 0)
+          // THE ELEMENT IS THE AUTHORITY ON THE PICTURE'S SHAPE. A demuxer reads
+          // the frame size out of the file; this reports what will actually be
+          // shown — that size after the rotation matrix and after the pixel
+          // aspect ratio the bitstream asks for, which no container field
+          // settles (measured: Chromium reports 320×240 for a file whose track
+          // header claims 426×240). Sizing the stage from the probe and drawing
+          // this frame into it is what stretches a picture, so the probe's
+          // dimensions are corrected the moment the real ones arrive.
+          if (v?.videoWidth && v.videoHeight) setElShape({ width: v.videoWidth, height: v.videoHeight })
+        }}
         onTimeUpdate={() => setPos(videoRef.current?.currentTime ?? 0)}
         onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
         className="absolute w-px h-px opacity-0 pointer-events-none" />

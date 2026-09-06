@@ -568,6 +568,40 @@ export default function VideoEditTool() {
       : c)))
   }, [duration])
 
+  /**
+   * THE ELEMENT IS THE AUTHORITY ON THE PICTURE'S SHAPE, and the probe is the
+   * authority on everything else.
+   *
+   * A demuxer reads the frame size out of the file; a `<video>` reports what it
+   * will actually show, which is that size after the rotation matrix AND after
+   * the pixel aspect ratio the bitstream asks for. The two can disagree for
+   * reasons a container cannot settle — measured: Chromium reports 320×240 for
+   * a file whose track header claims 426×240, so even reading the display size
+   * out of the header is a guess. Anything that sizes the stage from the probe
+   * and draws the element's frame into it therefore stretches the picture
+   * whenever they differ.
+   *
+   * So the probe's dimensions are CORRECTED once the metadata lands. Everything
+   * downstream — the stage, the crop, the output size, the encoder — follows
+   * from one place, and the worker still draws the coded frame into that shape,
+   * which is what un-squeezes it.
+   */
+  const adoptShape = useCallback(() => {
+    const v = videoRef.current
+    if (!v?.videoWidth || !v.videoHeight) return
+    setClips((list) => list.map((c, i) => (i === sel
+      && (c.info.width !== v.videoWidth || c.info.height !== v.videoHeight)
+      ? { ...c, info: { ...c.info, width: v.videoWidth, height: v.videoHeight } }
+      : c)))
+  }, [sel])
+
+  // The metadata and the probe arrive in EITHER order — a large file is
+  // demuxed long after the element knows its own size — so the correction is
+  // applied on both, or a slow probe overwrites it and the stage goes back to
+  // the file's shape. That race is what made the same fix look inert in the
+  // stabiliser.
+  useEffect(() => { adoptShape() }, [adoptShape, current?.info.width, current?.info.height])
+
   /** The time on the JOINED timeline that the stage is currently showing. */
   const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
   const t = spanStart + pos
@@ -1411,6 +1445,7 @@ export default function VideoEditTool() {
             onLoadedMetadata={() => {
               diag.current.mark('video loadedmetadata — the preview is working')
               setPreviewError(0)
+              adoptShape()
             }}
             onTimeUpdate={() => setPos(videoRef.current?.currentTime ?? 0)}
             onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
