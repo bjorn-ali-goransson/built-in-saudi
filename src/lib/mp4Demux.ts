@@ -29,6 +29,8 @@ interface MovieTrack {
   nb_samples: number
   video?: { width: number; height: number }
   audio?: { sample_rate: number; channel_count: number; sample_size: number }
+  /** The track header's display matrix, 9 values in 16.16 (and 2.30) fixed point. */
+  matrix?: ArrayLike<number>
 }
 interface Movie { duration: number; timescale: number; tracks: MovieTrack[] }
 interface RawSample {
@@ -63,6 +65,48 @@ export interface DemuxTrack extends WriterTrack {
   id: number
   /** The codec string as the file reports it, e.g. `avc1.64000d`. */
   codec: string
+  /**
+   * Degrees clockwise this track must be TURNED to be shown, from the track
+   * header's display matrix. 0 for everything a computer recorded and 90 or 270
+   * for most of what a phone did.
+   */
+  rotation: 0 | 90 | 180 | 270
+}
+
+/**
+ * The rotation a `tkhd` display matrix asks for.
+ *
+ * THE CODED FRAME IS NOT THE PICTURE. A phone held upright records LANDSCAPE
+ * and writes a 90° matrix beside it, so a `<video>` element reports the turned
+ * size in `videoWidth`/`videoHeight` while a demuxer reads the stored one out
+ * of the sample entry — measured on `e2e/fixtures/rotated.mp4`, 240×320 against
+ * 320×240. Anything that sizes a canvas from one and draws a frame from the
+ * other stretches the picture into the wrong shape, which is exactly what the
+ * stabiliser's preview did.
+ *
+ * Only the a/b terms are needed: the matrix is [a b u, c d v, x y w] in 16.16
+ * fixed point, and the rotation is the angle of its first row.
+ */
+export function rotationOf(matrix?: ArrayLike<number> | null): 0 | 90 | 180 | 270 {
+  if (!matrix || matrix.length < 5) return 0
+  const deg = Math.round(Math.atan2(matrix[1] / 65536, matrix[0] / 65536) * (180 / Math.PI))
+  const turn = ((deg % 360) + 360) % 360
+  // Snapped to a quarter turn: a matrix can also carry scale and shear, and a
+  // rotation of 3° is not something to act on.
+  if (turn >= 45 && turn < 135) return 90
+  if (turn >= 135 && turn < 225) return 180
+  if (turn >= 225 && turn < 315) return 270
+  return 0
+}
+
+/** The size that rotation makes the picture — what the viewer sees. */
+export function displaySize(
+  size: { width: number; height: number },
+  rotation: 0 | 90 | 180 | 270,
+): { width: number; height: number } {
+  return rotation % 180 === 0
+    ? { width: size.width, height: size.height }
+    : { width: size.height, height: size.width }
 }
 
 export interface Demuxed {
@@ -144,6 +188,7 @@ export async function demuxMp4(data: ArrayBuffer): Promise<Demuxed> {
       language: t.language,
       width: t.video?.width,
       height: t.video?.height,
+      rotation: rotationOf(t.matrix),
       sampleRate: t.audio?.sample_rate,
       channels: t.audio?.channel_count,
       config: new Uint8Array(data.slice(configBox.start, configBox.start + configBox.size)),

@@ -25,6 +25,8 @@ const STEADY = fileURLToPath(new URL('./fixtures/steady.mp4', import.meta.url))
 const SUBJECT = fileURLToPath(new URL('./fixtures/subject.mp4', import.meta.url))
 /** The one fixture here with a sound track. */
 const WITH_SOUND = fileURLToPath(new URL('./fixtures/sample.mp4', import.meta.url))
+/** Stored landscape with a 90° matrix, which is what a phone hands over. */
+const ROTATED = fileURLToPath(new URL('./fixtures/rotated.mp4', import.meta.url))
 
 async function canEncode(page: Page): Promise<boolean> {
   return page.evaluate(async () => {
@@ -604,3 +606,26 @@ test('the Arabic side prints Arabic digits in the figures it computes', async ({
   await expect(page.getByTestId('vs-removed')).toContainText(/[٠-٩]/)
 })
 
+
+test('a rotated recording is shown upright, not stretched into the stored shape', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page, ROTATED, 'rotated.mp4')
+
+  // The `<video>` element applies the container's matrix and `VideoDecoder`
+  // does not, so the probe used to report the STORED size while the stage drew
+  // the TURNED frame — 320×240 against 240×320 on this fixture, which is a
+  // picture squashed into the wrong shape. Reported from a phone as "very
+  // stretched".
+  //
+  // Asserted as the stage's own aspect against the element's, because that is
+  // the disagreement: comparing either against a hard-coded 240×320 would pass
+  // against a tool that had simply been given a different clip.
+  const shape = await page.getByTestId('vs-stage').evaluate((c: HTMLCanvasElement) => {
+    const v = document.querySelector('[data-testid="vs-video"]') as HTMLVideoElement | null
+    return { cw: c.width, ch: c.height, vw: v?.videoWidth ?? 0, vh: v?.videoHeight ?? 0 }
+  })
+  expect(shape.vw).toBeGreaterThan(0)
+  expect(shape.vh).toBeGreaterThan(shape.vw)
+  expect(shape.cw / shape.ch).toBeCloseTo(shape.vw / shape.vh, 2)
+})

@@ -2929,6 +2929,47 @@ computed `paddingTop` the way the canvas centres its block of lines. The case
 reads the rows ABOVE the rectangle, where a box-sized bitmap can draw nothing at
 all, so it cannot pass against the old behaviour.
 
+**THE CODED FRAME IS NOT THE PICTURE, and that made the stabiliser's preview
+"very stretched" on a phone recording.** A clip held upright is stored
+LANDSCAPE with a 90° matrix in its `tkhd`; a `<video>` element applies that
+matrix and `VideoDecoder` does not. So the two orientations were mixed: the
+probe read the stored size out of the sample entry and sized the stage from it,
+while the stage drew the element's already-turned frame — and `drawStabilised`
+scales the two axes independently, so the picture was squashed into the wrong
+shape rather than letterboxed.
+
+**Measured before anything was changed**, on a fixture built for it
+(`scripts/make-rotated-mp4.mjs` → `e2e/fixtures/rotated.mp4`, the sample clip
+with nothing re-encoded and only the 36-byte matrix changed): the demuxer says
+**320×240** and the browser says **240×320** for the same file. A fixture has to
+contain the hard case — none of the video fixtures had a rotation, which is why
+every video tool here shipped with this.
+
+- **`rotationOf`/`displaySize` live in `lib/mp4Demux.ts`**, and a probe reports
+  the DISPLAY size. That one change fixes the preview in both tools, because the
+  element was always right and the probe was always wrong.
+- **The frame is turned ONCE, as it leaves the decoder** (`uprightFrame` in
+  `lib/mp4Encode.ts`, used by both workers). `compose.ts` and `motion.ts` stay
+  orientation-free and go on receiving a source that is already the picture — so
+  the preview and the export still run through one function, which is the
+  property this whole family rests on.
+- **The analysis is turned too**, in the one `drawImage` that greys each frame,
+  so every correction is measured in the space the viewer sees. Rotating the
+  motion vectors afterwards would have been the clever version and a second
+  coordinate space to get wrong.
+- **A COPY is the opposite case, and it needed the opposite fix.** `video-trim`
+  re-muxes the stored frames, so for it the rotation must survive in the
+  container: `WriterTrack.rotation` writes a real display matrix, with the
+  translation term that keeps the picture in the positive quadrant. The editor
+  and the stabiliser re-encode UPRIGHT, so their output correctly carries the
+  unity matrix — the same field is right in both directions only because it says
+  what the samples are, not what the source was.
+- **`evals/mp4guard.mjs` pins it**, since this is a property of the bytes:
+  the fixture reads as 90°, the display size is the turned one, and the rotation
+  survives a demux → re-mux → mp4box round trip. **Verified to fail** by writing
+  the unity matrix, which reddens exactly that check while every other one stays
+  green — a file that plays sideways is otherwise perfect.
+
 **The preview's sound is on the transport, not behind the cog.** `keepAudio`
 decides what the FILE gets and is a choice made once; muting is what you reach
 for the moment a clip starts playing out loud in a room with other people in it,
@@ -2937,6 +2978,17 @@ silent by default cannot be told apart from a clip with no sound in it — which
 is a thing this tool has to be able to say (`audioPlan` says it). The case
 asserts the `<video>` element's own `muted`, not the button's state: a toggle
 that lights up and leaves the sound playing is the failure it is there for.
+
+**And it is what SAYS there is no sound**, which retired two standing lines under
+the transport: "This clip has no sound track." and "0.8 MB · silent". Both were
+sentences printed at everybody to describe a state a control can simply show —
+the speaker is struck through and unusable when there is nothing to mute, with
+the reason on it for anyone who asks. What could NOT move there is the join that
+cannot keep its sound (two clips storing audio differently, or one with none):
+the mute button speaks for the preview and cannot know that, so it sits in the
+settings screen beside `keepAudio`, where the sound is decided. The two e2e
+cases that read the removed line now ask the exported FILE for an `mp4a` sample
+entry instead, which is what the reader actually receives.
 
 **Nothing to draw is not the same as draw nothing, and the difference is a black
 screen.** Reported from a phone as "this is what happens when the browser goes

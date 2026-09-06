@@ -88,9 +88,6 @@ const STR = {
     cancel: 'Cancel',
     progress: (d: number, t: number) => `${Math.round((d / Math.max(1, t)) * 100)}%`,
     download: 'Download',
-    outInfo: (mb: string, a: string) => `${mb} · ${a}`,
-    withSound: 'with sound',
-    silent: 'silent',
     big: 'These clips are large. Every frame is decoded and encoded again here, so this will take a while and use a lot of memory — a phone may run out.',
     unsupportedTitle: 'This browser cannot re-encode video',
     unsupportedBody: 'Cropping, joining and captioning all change what is in the picture, so the frames have to be decoded and encoded again. That needs WebCodecs with H.264, which this browser does not offer. Chrome, Edge and Safari 16.4 or later can; Firefox on Android cannot. Trimming a clip needs none of it and still works here.',
@@ -163,9 +160,6 @@ const STR = {
     cancel: 'إلغاء',
     progress: (d: number, t: number) => `${arNum(Math.round((d / Math.max(1, t)) * 100))}٪`,
     download: 'تنزيل',
-    outInfo: (mb: string, a: string) => `${mb} · ${a}`,
-    withSound: 'بالصوت',
-    silent: 'صامت',
     big: 'هذه المقاطع كبيرة. يُفَكّ ترميز كل إطار ويُعاد ترميزه هنا، فسيستغرق ذلك وقتًا ويستهلك ذاكرة كبيرة — وقد تنفد ذاكرة الهاتف.',
     unsupportedTitle: 'هذا المتصفح لا يستطيع إعادة ترميز الفيديو',
     unsupportedBody: 'الاقتصاص والدمج وإضافة النص كلها تغيّر ما في الصورة، فلا بد من فك ترميز الإطارات وإعادة ترميزها. وهذا يحتاج WebCodecs مع H.264، وهو ما لا يوفّره هذا المتصفح. تقدر عليه كروم وإيدج وسفاري ١٦٫٤ فأحدث؛ ولا يقدر عليه فَيرفُكس على أندرويد. أما اقتطاع مقطع فلا يحتاج شيئًا من ذلك ويعمل هنا.',
@@ -503,6 +497,14 @@ export default function VideoEditTool() {
 
   const fps = current ? Math.max(1, Math.min(60, current.info.fps || 30)) : 30
   const bitrate = Math.round(size.width * size.height * fps * QUALITY[quality])
+
+  /**
+   * Whether the clip on screen has any sound at all.
+   *
+   * This is about the PREVIEW, so it is the current clip rather than the export
+   * plan: it decides whether the speaker button has anything to do.
+   */
+  const hasSound = !!current?.info.audio
 
   /** Which of the three audio outcomes this set of clips is heading for. */
   const audioPlan = useMemo(() => {
@@ -1578,7 +1580,7 @@ export default function VideoEditTool() {
                   download that replaces it is the only green on the frame. */}
               {out ? (
                 <a href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download"
-                  title={`${s.download} · ${s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}`}
+                  title={`${s.download} · ${mb(out.size)}`}
                   aria-label={s.download}
                   className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
                   <DownloadIcon className="w-5 h-5" />
@@ -1675,12 +1677,20 @@ export default function VideoEditTool() {
           </button>
           {/* Beside play, because that is when it is wanted: the clip starts
               playing out loud and the reach is for the speaker, not for a
-              settings screen two taps away. */}
+              settings screen two taps away.
+
+              IT IS ALSO WHAT SAYS THERE IS NO SOUND. A clip with no audio track
+              used to be announced by a standing line under the transport, which
+              is a sentence printed at everybody to describe a state this control
+              already shows: struck through and unusable, because there is
+              nothing to mute. The reason is on it for anyone who asks. */}
           <button type="button" onClick={() => setMuted((m) => !m)} data-testid="ve-mute"
-            title={muted ? s.unmute : s.mute} aria-label={muted ? s.unmute : s.mute}
-            aria-pressed={muted}
-            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
-            {muted ? <MuteIcon className="w-4 h-4" /> : <VolumeIcon className="w-4 h-4" />}
+            disabled={!hasSound}
+            title={!hasSound ? s.audioNone : muted ? s.unmute : s.mute}
+            aria-label={!hasSound ? s.audioNone : muted ? s.unmute : s.mute}
+            aria-pressed={muted} data-sound={!hasSound ? 'none' : muted ? 'muted' : 'on'}
+            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20 disabled:opacity-45 disabled:cursor-default">
+            {muted || !hasSound ? <MuteIcon className="w-4 h-4" /> : <VolumeIcon className="w-4 h-4" />}
           </button>
           <input type="range" min={0} max={Math.max(0.1, current.info.durationSec)} step={0.05} value={pos}
             data-testid="ve-seek" className="flex-1 accent-green-500"
@@ -1703,16 +1713,6 @@ export default function VideoEditTool() {
             <p className="text-[0.8rem] text-gold-400 rtl:font-ar" data-testid="ve-preview-error">
               {s.previewFailed(previewError)}
               {current.info.decodable ? ` ${s.previewStillExports}` : ''}
-            </p>
-          )}
-          {audioPlan !== 'copy' && (
-            <p className="text-[0.78rem] text-gold-400 rtl:font-ar" data-testid="ve-audio-note">
-              {audioPlan === 'mixed' ? s.audioMixed : audioPlan === 'missing' ? s.audioMissing : s.audioNone}
-            </p>
-          )}
-          {out && (
-            <p className="text-[0.78rem] opacity-70 font-mono" data-testid="ve-out-info">
-              {s.outInfo(mb(out.size), out.audio === 'copied' ? s.withSound : s.silent)}
             </p>
           )}
           {clips.reduce((n, c) => n + c.file.size, 0) > 300 * 1048576 && (
@@ -1827,6 +1827,16 @@ export default function VideoEditTool() {
                   onChange={(e) => setKeepAudio(e.target.checked)} />
                 <span>{s.keepAudio} <span className="text-ink-faint">— {s.audioCopied}</span></span>
               </Check>
+            )}
+            {/* A JOIN that cannot keep the sound still has to say so, and this
+                is where the sound is decided — the mute button speaks for the
+                preview and cannot know that two clips store their audio
+                differently. It is not on the picture, because it is a fact
+                about the export rather than about the frame in front of you. */}
+            {(audioPlan === 'mixed' || audioPlan === 'missing') && (
+              <p className="text-[0.8rem] text-gold-700 rtl:font-ar" data-testid="ve-audio-note">
+                {audioPlan === 'mixed' ? s.audioMixed : s.audioMissing}
+              </p>
             )}
 
             {/* The clips live HERE now, not on a page under the video — there

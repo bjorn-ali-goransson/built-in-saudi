@@ -23,9 +23,9 @@
 // closed inside the output callback, and the feed loop waits whenever either
 // queue runs ahead.
 
-import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
+import { demuxMp4, displaySize, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
-import { avcCBox, codecFor, smallest } from '../../lib/mp4Encode'
+import { avcCBox, codecFor, smallest, uprightFrame } from '../../lib/mp4Encode'
 import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from './compose'
 
 export interface AudioInfo {
@@ -150,10 +150,15 @@ async function probe(slot: number, file: File): Promise<ProbeInfo> {
   } catch { decodable = false }
 
   const a = audioTrack(session)
+  // The size the picture IS. A phone recording held upright is stored landscape
+  // with a rotation matrix beside it, and the stage draws a `<video>` element,
+  // which has already turned it — so the coded size here would set the crop, the
+  // output frame and the encoder to the wrong shape.
+  const shown = displaySize({ width: v.width ?? 0, height: v.height ?? 0 }, v.rotation)
   return {
     durationSec: session.durationSec,
-    width: v.width ?? 0,
-    height: v.height ?? 0,
+    width: shown.width,
+    height: shown.height,
     videoCodec: v.codec,
     fps: session.durationSec > 0 ? v.samples.length / session.durationSec : 30,
     decodable,
@@ -246,7 +251,11 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
   for (const clip of clips) {
     const v = clip.video
     const base = smallest(v.samples, (s) => s.cts) / v.timescale
-    const source = { width: v.width ?? plan.out.width, height: v.height ?? plan.out.height }
+    const coded = { width: v.width ?? plan.out.width, height: v.height ?? plan.out.height }
+    const source = displaySize(coded, v.rotation)
+    // Turned ONCE as it leaves the decoder, so `compose.ts` receives the picture
+    // the stage showed rather than the frame the file stores.
+    const upright = v.rotation === 0 ? null : new OffscreenCanvas(source.width, source.height)
     let first = true
 
     const decoder = new VideoDecoder({
@@ -254,7 +263,7 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
         try {
           if (cancelled) return
           const tOut = offsetSec + frame.timestamp / 1e6 - base
-          drawFrame(ctx, frame, source, plan.crop, plan.out)
+          drawFrame(ctx, upright ? uprightFrame(frame, v.rotation, upright) : frame, source, plan.crop, plan.out)
           // Censors go on the PICTURE, before the captions — a caption is
           // something you chose to show, and hiding it under a black box that
           // was aimed at a face behind it would be the wrong way round.

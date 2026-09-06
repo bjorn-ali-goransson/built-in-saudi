@@ -72,3 +72,37 @@ export function even(n: number): number {
   const r = Math.round(n)
   return Math.max(2, r - (r % 2))
 }
+
+/**
+ * Turn a decoded frame the way the container says it should be shown.
+ *
+ * A `<video>` element applies the display matrix for us — its `videoWidth` is
+ * already the turned size — and `VideoDecoder` does not: it hands back the
+ * CODED frame, landscape, for a clip a phone recorded upright. So every tool
+ * here that previews with an element and exports with a decoder has two
+ * orientations in play, and mixing them draws the picture into a box of the
+ * wrong shape (measured: 240×320 against 320×240 on `e2e/fixtures/rotated.mp4`).
+ *
+ * Normalising HERE, as the frame leaves the decoder, is what keeps that out of
+ * everything downstream: `compose.ts` and `motion.ts` stay orientation-free and
+ * go on receiving a source that is already the picture, so the preview and the
+ * export still run through one function.
+ */
+export function uprightFrame(
+  source: CanvasImageSource,
+  rotation: 0 | 90 | 180 | 270,
+  into: OffscreenCanvas,
+): OffscreenCanvas {
+  const ctx = into.getContext('2d', { alpha: false })
+  if (!ctx) throw new Error('no-canvas')
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.translate(into.width / 2, into.height / 2)
+  ctx.rotate((rotation * Math.PI) / 180)
+  // Scaled to the canvas rather than assumed equal: the analysis pass draws
+  // into a small canvas on purpose, and this is the same operation there.
+  const w = rotation % 180 === 0 ? into.width : into.height
+  const h = rotation % 180 === 0 ? into.height : into.width
+  ctx.drawImage(source, -w / 2, -h / 2, w, h)
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  return into
+}

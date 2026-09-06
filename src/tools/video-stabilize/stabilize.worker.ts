@@ -17,9 +17,9 @@
 // back a thousand 3MB images), and the SOUND IS COPIED, never re-encoded,
 // because AAC encoding is simply absent in Chrome on Linux.
 
-import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
+import { demuxMp4, displaySize, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
-import { avcCBox, codecFor, smallest } from '../../lib/mp4Encode'
+import { avcCBox, codecFor, smallest, uprightFrame } from '../../lib/mp4Encode'
 import {
   drawStabilised, estimateMotion, pyramid, scaleMotion, startTrack, trackNext,
   type Box, type Estimate, type Gray, type Motion, type TrackPoint, type Tracker,
@@ -115,10 +115,15 @@ async function probe(file: File): Promise<ProbeInfo> {
     decodable = !!s.supported
   } catch { decodable = false }
 
+  // THE SIZE THE PICTURE IS, not the size it is stored at. A clip a phone
+  // recorded upright is landscape with a 90° matrix beside it, and the preview
+  // draws a `<video>` element, which has already turned it — so reporting the
+  // coded size here is what stretched the stage into the wrong shape.
+  const shown = displaySize({ width: v.width ?? 0, height: v.height ?? 0 }, v.rotation)
   return {
     durationSec: session.durationSec,
-    width: v.width ?? 0,
-    height: v.height ?? 0,
+    width: shown.width,
+    height: shown.height,
     fps: session.durationSec > 0 ? v.samples.length / session.durationSec : 30,
     frames: v.samples.length,
     decodable,
@@ -142,8 +147,11 @@ async function scanFrames(
 ): Promise<{ width: number; height: number; back: number; count: number }> {
   cancelled = false
   const { v } = need()
-  const sw = v.width ?? 0
-  const sh = v.height ?? 0
+  // Display orientation throughout, so every correction this pass produces is
+  // in the space the viewer and the exporter both work in.
+  const shown = displaySize({ width: v.width ?? 0, height: v.height ?? 0 }, v.rotation)
+  const sw = shown.width
+  const sh = shown.height
   if (!sw || !sh) throw new Error('no-video')
 
   const aw = Math.max(64, Math.min(sw, ANALYSIS_WIDTH))
@@ -164,7 +172,7 @@ async function scanFrames(
     output: (frame) => {
       try {
         if (cancelled) return
-        ctx.drawImage(frame, 0, 0, aw, ah)
+        uprightFrame(frame, v.rotation, canvas)
         const rgba = ctx.getImageData(0, 0, aw, ah).data
         const g = new Uint8Array(aw * ah)
         for (let i = 0, p = 0; i < g.length; i++, p += 4) {
@@ -277,7 +285,12 @@ async function track(id: number, box: Box, steps: Estimate[]): Promise<TrackPoin
 async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio: 'copied' | 'dropped' | 'none' }> {
   cancelled = false
   const { s: sess, v } = need()
-  const src = { width: v.width ?? plan.out.width, height: v.height ?? plan.out.height }
+  const coded = { width: v.width ?? plan.out.width, height: v.height ?? plan.out.height }
+  const src = displaySize(coded, v.rotation)
+  // A rotated recording is turned ONCE, here, into a buffer the shape of the
+  // picture — so `drawStabilised` goes on receiving the frame the preview
+  // showed rather than the frame the file stores.
+  const upright = v.rotation === 0 ? null : new OffscreenCanvas(src.width, src.height)
 
   const canvas = new OffscreenCanvas(plan.out.width, plan.out.height)
   const ctx = canvas.getContext('2d', { alpha: false })
@@ -337,7 +350,7 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
         // than it did last time should lose its correction, not throw.
         const c = plan.corrections[Math.min(index, plan.corrections.length - 1)]
         index++
-        drawStabilised(ctx, frame, src, c, plan.zoom, plan.out)
+        drawStabilised(ctx, upright ? uprightFrame(frame, v.rotation, upright) : frame, src, c, plan.zoom, plan.out)
         const ts = Math.max(lastTs + 1, Math.round(t * 1e6))
         lastTs = ts
         const key = t - lastKeyAt >= KEY_EVERY || done === 0

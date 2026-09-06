@@ -29,7 +29,7 @@ compile(ROOT, [path.join(ROOT, 'src/lib/mp4Writer.ts'), path.join(ROOT, 'src/lib
 ])
 
 const { writeMp4 } = await import(path.join(GEN, 'mp4Writer.js'))
-const { demuxMp4 } = await import(path.join(GEN, 'mp4Demux.js'))
+const { demuxMp4, rotationOf, displaySize } = await import(path.join(GEN, 'mp4Demux.js'))
 const MP4Box = await import('mp4box')
 
 const fixture = path.join(ROOT, 'e2e/fixtures/sample.mp4')
@@ -123,6 +123,23 @@ if (back.info) {
   check(Math.abs(wroteDur - original.durationSec) < 0.1,
     'the duration survives', `${wroteDur.toFixed(2)}s vs ${original.durationSec.toFixed(2)}s`)
 }
+
+// A ROTATED SOURCE, which is what a phone actually hands over: the frames are
+// stored landscape with a matrix beside them saying to turn them. A trim COPIES
+// those frames, so a writer that emits the unity matrix silently lays a portrait
+// recording on its side — and nothing here would have noticed, because every
+// other check passes on a file that plays sideways.
+const rotated = readFileSync(path.join(ROOT, 'e2e/fixtures/rotated.mp4'))
+const rot = await demuxMp4(rotated.buffer.slice(rotated.byteOffset, rotated.byteOffset + rotated.byteLength))
+const rotVideo = rot.tracks.find((t) => t.kind === 'video')
+check(rotVideo?.rotation === 90, 'the fixture is read as rotated', `${rotVideo?.rotation}°`)
+check(displaySize({ width: rotVideo?.width ?? 0, height: rotVideo?.height ?? 0 }, rotVideo?.rotation ?? 0).width
+  === rotVideo?.height, 'the display size is the turned one')
+
+const rewrote = reread(writeMp4(rot.tracks))
+const rotBack = rewrote.info?.tracks.find((t) => t.video)
+check(rotationOf(rotBack?.matrix) === 90, 'the rotation survives a copy',
+  `${rotationOf(rotBack?.matrix)}° back from mp4box`)
 
 // A muxer that quietly drops a track it does not understand is worse than one
 // that refuses, so the refusal is pinned too.

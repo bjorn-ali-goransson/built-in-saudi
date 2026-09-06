@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 // decode. See e2e/video-trim.spec.ts for how it was generated.
 const FIXTURE = fileURLToPath(new URL('./fixtures/sample.mp4', import.meta.url))
 const bytes = () => readFileSync(FIXTURE)
+/** The same clip stored landscape with a 90° matrix — what a phone hands over. */
+const ROTATED = fileURLToPath(new URL('./fixtures/rotated.mp4', import.meta.url))
 
 /**
  * Whether THIS browser can re-encode H.264 at all.
@@ -95,6 +97,24 @@ async function seek(page: Page, sec: number) {
  * — a hand-written MP4 that a browser will actually decode, at the right size
  * and the right length — survive unchanged.
  */
+/**
+ * Does the exported FILE carry a sound track?
+ *
+ * Read off the bytes — an `mp4a` sample entry is what an audio track is — since
+ * the alternative is trusting a label the page prints about itself. The blob is
+ * the same one the download button hands the reader.
+ */
+async function exportHasSound(page: Page): Promise<boolean> {
+  const href = await page.getByTestId('ve-download').getAttribute('href')
+  expect(href).toMatch(/^blob:/)
+  return page.evaluate(async (url) => {
+    const buf = new Uint8Array(await (await fetch(url!)).arrayBuffer())
+    let text = ''
+    for (let i = 0; i < buf.length; i += 1) text += String.fromCharCode(buf[i])
+    return text.includes('mp4a')
+  }, href)
+}
+
 async function decodeExport(page: Page): Promise<{ d: number; w: number; h: number }> {
   const href = await page.getByTestId('ve-download').getAttribute('href')
   expect(href).toMatch(/^blob:/)
@@ -403,8 +423,12 @@ test('crops and exports a real, playable MP4 at the cropped size', async ({ page
   expect(m.d).toBeGreaterThan(5)
   expect(m.d).toBeLessThan(7)
 
-  // Copied, not re-encoded — the fixture's AAC survives the trip.
-  await expect(page.getByTestId('ve-out-info')).toContainText('with sound')
+  // Copied, not re-encoded — the fixture's AAC survives the trip. Asked of the
+  // FILE rather than of a label beside it: the sound is either in the bytes or
+  // it is not, and the line that used to say so is gone (the mute button speaks
+  // for the preview, and a standing "0.8 MB · silent" under the video was one
+  // more sentence printed at everybody).
+  expect(await exportHasSound(page)).toBe(true)
   await expect(page.getByTestId('ve-download')).toHaveAttribute('download', /edited-/)
 })
 
@@ -428,7 +452,7 @@ test('joins two clips into one video of both their lengths', async ({ page }) =>
   expect(m.d).toBeLessThan(13)
   // Both clips are the same file, so their sound is stored identically and can
   // be concatenated without re-encoding.
-  await expect(page.getByTestId('ve-out-info')).toContainText('with sound')
+  expect(await exportHasSound(page)).toBe(true)
 })
 
 test('a clip can be removed and reordered', async ({ page }) => {
@@ -1197,4 +1221,40 @@ test('a file that is not an MP4 is refused with a reason', async ({ page }) => {
   // And the first screen stays put, rather than dropping into an editor with
   // nothing in it.
   await expect(page.getByTestId('ve-file')).toBeVisible()
+})
+
+test('a rotated recording is edited upright, not squashed into the stored shape', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await page.getByTestId('ve-file').setInputFiles({
+    name: 'rotated.mp4', mimeType: 'video/mp4', buffer: readFileSync(ROTATED),
+  })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
+  await page.getByTestId('ve-aspect-source').click()
+
+  // The stage draws a `<video>`, which has applied the container's matrix; the
+  // probe read the stored size, which has not. Mixing them drew the picture into
+  // a box of the wrong shape — the "very stretched" report, one tool over.
+  const shape = await page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => {
+    const v = document.querySelector('[data-testid="ve-video"]') as HTMLVideoElement | null
+    return { cw: c.width, ch: c.height, vw: v?.videoWidth ?? 0, vh: v?.videoHeight ?? 0 }
+  })
+  expect(shape.vh).toBeGreaterThan(shape.vw)
+  expect(shape.cw / shape.ch).toBeCloseTo(shape.vw / shape.vh, 2)
+
+  // And the EXPORT is upright too, which the stage alone cannot prove: the
+  // encoder is fed decoded frames, which arrive in the stored orientation.
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+  const m = await decodeExport(page)
+  expect(m.h).toBeGreaterThan(m.w)
+})
+
+test('the mute button says when a clip has no sound at all', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  // The fixture HAS sound, so the control is live — without this half, a button
+  // hard-wired to "none" would pass the case below.
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('data-sound', 'on')
+  await expect(page.getByTestId('ve-mute')).toBeEnabled()
 })

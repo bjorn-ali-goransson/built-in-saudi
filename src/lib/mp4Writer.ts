@@ -62,6 +62,15 @@ export interface WriterTrack {
   channels?: number
   /** Three letters, ISO-639-2/T. Defaults to `und`, which is the honest answer. */
   language?: string
+  /**
+   * Degrees clockwise a player must turn this track to show it.
+   *
+   * Set it when the samples are COPIED from a source that carried a rotation —
+   * a trim keeps the stored frames, so dropping the matrix turns a phone
+   * recording on its side. Leave it out when the frames were re-encoded upright,
+   * which is what the editor and the stabiliser do.
+   */
+  rotation?: 0 | 90 | 180 | 270
   samples: WriterSample[]
 }
 
@@ -115,6 +124,30 @@ const MATRIX = concat([
   u32(0), u32(0x00010000), u32(0),
   u32(0), u32(0), u32(0x40000000),
 ])
+
+/**
+ * The display matrix for a quarter turn.
+ *
+ * The translation term is the load-bearing half: a rotation about the origin
+ * puts the picture in a negative quadrant, and a player that honours the matrix
+ * literally then shows nothing at all. Written in 16.16 fixed point, with the
+ * bottom-right corner in 2.30 as the format requires.
+ */
+function matrixFor(rotation: 0 | 90 | 180 | 270, w: number, h: number): Uint8Array {
+  if (rotation === 90) {
+    return concat([u32(0), u32(0x00010000), u32(0), i32(-0x00010000), u32(0), u32(0),
+      u32(h << 16), u32(0), u32(0x40000000)])
+  }
+  if (rotation === 180) {
+    return concat([i32(-0x00010000), u32(0), u32(0), u32(0), i32(-0x00010000), u32(0),
+      u32(w << 16), u32(h << 16), u32(0x40000000)])
+  }
+  if (rotation === 270) {
+    return concat([u32(0), i32(-0x00010000), u32(0), u32(0x00010000), u32(0), u32(0),
+      u32(0), u32(w << 16), u32(0x40000000)])
+  }
+  return MATRIX
+}
 
 /** Three lowercase letters packed five bits each, as `mdhd` wants them. */
 function packLanguage(lang?: string): Uint8Array {
@@ -222,7 +255,7 @@ function trak(p: Placed, id: number, wide: boolean): Uint8Array {
     u32(0), u32(0),
     u16(0), u16(0),                       // layer, alternate_group
     u16(isVideo ? 0 : 0x0100), u16(0),    // volume — zero for a picture
-    MATRIX,
+    isVideo ? matrixFor(t.rotation ?? 0, t.width ?? 0, t.height ?? 0) : MATRIX,
     u32((t.width ?? 0) << 16), u32((t.height ?? 0) << 16),
   )
 
