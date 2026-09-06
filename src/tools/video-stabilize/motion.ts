@@ -400,3 +400,282 @@ export function drawStabilised(
   ctx.drawImage(source, 0, 0, src.width, src.height)
   ctx.setTransform(1, 0, 0, 1, 0, 0)
 }
+
+// --------------------------------------------------------------- following ---
+//
+// FOLLOWING A SUBJECT IS THE SAME MACHINERY POINTED THE OTHER WAY. The estimator
+// above rejects the tiles that disagree with the median precisely BECAUSE they
+// are something moving through the shot; here that thing is what we want, so it
+// is matched on its own rather than voted out.
+//
+// Two separate jobs, and keeping them apart is what makes the result usable:
+// the camera correction takes the shake out at full strength, and the follow
+// term then decides how tightly the framing chases the subject inside the
+// already-steady picture. Smoothing ONE control would have let the shake back
+// in every time somebody wanted a looser follow.
+
+/** A rectangle in the pixels of the plane it was measured in. */
+export interface Box { x: number; y: number; w: number; h: number }
+
+/** Where the subject was found in one frame, relative to the frame CENTRE. */
+export interface TrackPoint {
+  x: number
+  y: number
+  /**
+   * How DISTINCTIVE the match is: 1 means the subject was found somewhere
+   * nothing else nearby resembles, 0 that the best position is no better than
+   * half a subject away — which is what being lost looks like from inside.
+   *
+   * Distinctiveness rather than absolute agreement, and that is a correction
+   * measured on real footage. Scoring the SAD against the template's own
+   * contrast reads 1.00 on synthetic frames and 0.49 on a compressed clip the
+   * tracker was following perfectly, because compression puts a floor under the
+   * SAD that the template's contrast knows nothing about. A confidence whose
+   * good and bad values overlap cannot be thresholded at all.
+   */
+  score: number
+}
+
+/** How far down the pyramid the search starts, and how wide it looks there. */
+const TRACK_COARSE = 8
+/** A box with less texture than this cannot be followed, and saying so beats
+ *  returning a position that is really the search window's centre. */
+const TRACK_MIN_DETAIL = 3.0
+/** Above this the template is worth learning from; below it, a bad frame would
+ *  poison the thing being matched against for the rest of the clip. */
+const TRACK_KEEP = 0.55
+const TRACK_BLEND = 0.12
+/**
+ * Below this the tracker is guessing, and the UI says where it stopped being
+ * sure. Measured on BOTH a synthetic path and a real encoded clip, which is
+ * what the first attempt at this number lacked: a subject in plain view scores
+ * around 0.9 either way, and one that has walked out of the picture scores 0
+ * because there is nothing left to be distinctive against.
+ */
+export const TRACK_LOST = 0.35
+
+export interface Tracker {
+  /** The subject as it looked, one plane per pyramid level. */
+  patch: Gray[]
+  /** Top-left in the pixels of the FULL-resolution analysis plane. */
+  x: number
+  y: number
+  /** Per-frame velocity, which is most of the prediction on a fast subject. */
+  vx: number
+  vy: number
+  /** The template's own mean absolute deviation — the yardstick a SAD is
+   *  scored against, so `score` means the same thing on any subject. */
+  detail: number
+}
+
+function cropPlane(g: Gray, x0: number, y0: number, w: number, h: number): Gray {
+  const out = new Uint8Array(w * h)
+  for (let y = 0; y < h; y++) {
+    const sy = Math.min(g.height - 1, Math.max(0, y0 + y))
+    for (let x = 0; x < w; x++) {
+      out[y * w + x] = g.data[sy * g.width + Math.min(g.width - 1, Math.max(0, x0 + x))]
+    }
+  }
+  return { data: out, width: w, height: h }
+}
+
+/** SAD of a whole small plane against a window of a big one, per pixel.
+ *  Infinity when the window falls outside, so an off-frame guess never wins. */
+function patchSad(t: Gray, g: Gray, x0: number, y0: number): number {
+  if (x0 < 0 || y0 < 0 || x0 + t.width > g.width || y0 + t.height > g.height) return Infinity
+  let s = 0
+  for (let y = 0; y < t.height; y++) {
+    const to = y * t.width
+    const go = (y0 + y) * g.width + x0
+    for (let x = 0; x < t.width; x++) s += Math.abs(t.data[to + x] - g.data[go + x])
+  }
+  return s / (t.width * t.height)
+}
+
+/**
+ * Start following whatever is inside `box`, or refuse.
+ *
+ * The refusal is the useful half: a box drawn on a wall, the sky or a blown-out
+ * window has nothing in it to match, and a tracker that accepted it would
+ * report a confident path that is really the search window sliding about.
+ */
+export function startTrack(pyr: Gray[], box: Box): Tracker | null {
+  const base = pyr[0]
+  // THE BOX IS TRIMMED TO ITS MIDDLE, and that is a measured decision rather
+  // than tidiness. Nobody drags a rectangle tight around a moving subject, so
+  // the corners are background — and background inside the template does not
+  // move with the subject, so the slow blend below smears it into a haze. On a
+  // real clip that showed up twice over: the match quality fell to a floor
+  // after twenty-odd frames, and the match stopped being distinctive from its
+  // own neighbourhood, both while the subject was still being followed
+  // perfectly. Taking the middle 72% keeps what somebody was pointing at and
+  // drops most of what they were not.
+  const inset = 0.14
+  const bx = box.x + box.w * inset
+  const by = box.y + box.h * inset
+  const bw = box.w * (1 - 2 * inset)
+  const bh = box.h * (1 - 2 * inset)
+  const x = Math.round(Math.min(Math.max(0, bx), base.width - 8))
+  const y = Math.round(Math.min(Math.max(0, by), base.height - 8))
+  const w = Math.round(Math.min(bw, base.width - x))
+  const h = Math.round(Math.min(bh, base.height - y))
+  if (w < 8 || h < 8) return null
+  const d = detail(base, x, y, w, h)
+  if (d < TRACK_MIN_DETAIL) return null
+  const patch: Gray[] = []
+  for (let level = 0; level < pyr.length; level++) {
+    const s = 1 << level
+    const lw = Math.max(4, Math.round(w / s))
+    const lh = Math.max(4, Math.round(h / s))
+    if (lw < 4 || lh < 4) break
+    patch.push(cropPlane(pyr[level], Math.round(x / s), Math.round(y / s), lw, lh))
+  }
+  return { patch, x, y, vx: 0, vy: 0, detail: d }
+}
+
+/**
+ * Find the subject in the next frame, and say how sure it is.
+ *
+ * `hint` is the CAMERA step already measured for this pair, which is most of
+ * the answer for free: a subject that did not move at all still moves across
+ * the sensor by exactly the camera's motion, so predicting with it means the
+ * search window only has to cover what the subject itself did.
+ */
+export function trackNext(t: Tracker, pyr: Gray[], hint: Motion, centre: { x: number; y: number }): TrackPoint {
+  const cx = t.x + t.patch[0].width / 2
+  const cy = t.y + t.patch[0].height / 2
+  const moved = applyMotion(hint, cx - centre.x, cy - centre.y)
+  // Where the camera alone would have put it — the baseline the subject's own
+  // velocity is measured AGAINST. Adding the camera step into the velocity and
+  // then applying both is a double count, and it walks the box off the subject
+  // a few pixels at a time: measured at 2.33px rms with the bug and 0.45 after.
+  const camX = moved.x + centre.x - t.patch[0].width / 2
+  const camY = moved.y + centre.y - t.patch[0].height / 2
+  const px = camX + t.vx
+  const py = camY + t.vy
+
+  const top = Math.min(t.patch.length, pyr.length) - 1
+  let bx = Math.round(px), by = Math.round(py), best = Infinity
+  for (let level = top; level >= 0; level--) {
+    const s = 1 << level
+    const reach = level === top ? TRACK_COARSE : 2
+    const g = pyr[level]
+    const patch = t.patch[level]
+    let lx = Math.round(bx / s), ly = Math.round(by / s)
+    let lb = Infinity, nx = lx, ny = ly
+    for (let oy = -reach; oy <= reach; oy++) {
+      for (let ox = -reach; ox <= reach; ox++) {
+        const v = patchSad(patch, g, lx + ox, ly + oy)
+        if (v < lb) { lb = v; nx = lx + ox; ny = ly + oy }
+      }
+    }
+    if (!Number.isFinite(lb)) continue
+    best = lb
+    if (level === 0) {
+      // Sub-pixel only at the bottom, exactly as the tile matcher does it: the
+      // subject rarely moves a whole pixel a frame, and rounding every frame is
+      // a bias rather than noise — it accumulates.
+      const l = patchSad(patch, g, nx - 1, ny)
+      const r = patchSad(patch, g, nx + 1, ny)
+      const u = patchSad(patch, g, nx, ny - 1)
+      const d2 = patchSad(patch, g, nx, ny + 1)
+      bx = nx + vertex(l, lb, r)
+      by = ny + vertex(u, lb, d2)
+    } else {
+      bx = nx * s
+      by = ny * s
+    }
+  }
+  if (!Number.isFinite(best)) {
+    // Nothing matched anywhere — hold the prediction and say it is a guess, so
+    // the caller can report where the subject was lost rather than pretending.
+    t.x = px; t.y = py
+    return { x: t.x + t.patch[0].width / 2 - centre.x, y: t.y + t.patch[0].height / 2 - centre.y, score: 0 }
+  }
+
+  // How much better this position is than being half a subject away. Four
+  // probes rather than a full sidelobe sweep: the cost is four SADs a frame,
+  // and what is being asked is only whether the match is a peak or a plateau.
+  const p0 = t.patch[0]
+  const ix = Math.round(bx), iy = Math.round(by)
+  // A WHOLE patch away, not half. Half still overlaps most of the subject —
+  // measured, that made a perfectly tracked clip read 0.04 for a stretch,
+  // because the template matched itself at the probe almost as well as at the
+  // truth. "Somewhere else" has to mean somewhere else.
+  const ox = Math.max(6, p0.width), oy = Math.max(6, p0.height)
+  const elsewhere = Math.min(
+    patchSad(p0, pyr[0], ix - ox, iy),
+    patchSad(p0, pyr[0], ix + ox, iy),
+    patchSad(p0, pyr[0], ix, iy - oy),
+    patchSad(p0, pyr[0], ix, iy + oy),
+  )
+  const score = Number.isFinite(elsewhere) && elsewhere > 0
+    ? Math.max(0, Math.min(1, 1 - best / elsewhere))
+    // Every probe fell outside the frame, which means the subject is at the
+    // edge and about to leave it. There is nothing to compare against, so this
+    // says "no longer sure" rather than inventing a number.
+    : 0
+
+  t.vx = bx - camX
+  t.vy = by - camY
+  t.x = bx
+  t.y = by
+  if (score >= TRACK_KEEP) {
+    // Learn slowly, and only from a frame worth learning from. A subject turns,
+    // is lit differently and passes behind things; a template frozen at frame
+    // one loses it, and one updated unconditionally walks off onto whatever
+    // happened to be under the box when the match went bad.
+    for (let level = 0; level < t.patch.length && level < pyr.length; level++) {
+      const s = 1 << level
+      const fresh = cropPlane(pyr[level], Math.round(bx / s), Math.round(by / s),
+        t.patch[level].width, t.patch[level].height)
+      const p = t.patch[level].data
+      for (let i = 0; i < p.length; i++) p[i] = Math.round(p[i] * (1 - TRACK_BLEND) + fresh.data[i] * TRACK_BLEND)
+    }
+  }
+  return { x: bx + t.patch[0].width / 2 - centre.x, y: by + t.patch[0].height / 2 - centre.y, score }
+}
+
+/** Where a point relative to the frame CENTRE lands after a correction. The
+ *  inverse of nothing — it is exactly what `drawStabilised` does to a pixel. */
+export function applyMotion(m: Motion, x: number, y: number): { x: number; y: number } {
+  const c = Math.cos(m.rot), s = Math.sin(m.rot)
+  return { x: c * x - s * y + m.dx, y: s * x + c * y + m.dy }
+}
+
+/**
+ * The corrections that hold a tracked subject near the middle.
+ *
+ * COMPOSED WITH THE CAMERA CORRECTION rather than replacing it, which is the
+ * decision that makes the control mean one thing. The subject's position is
+ * read in the ALREADY-STEADY frame, so the shake is out at full strength
+ * whatever the slider says, and smoothing only decides how loosely the framing
+ * chases the subject — a camera operator following somebody, rather than a
+ * rectangle nailed to them.
+ *
+ * `radius` of 0 is that nail: the subject sits dead centre in every frame, and
+ * every step it takes is paid for in crop.
+ */
+export function followCorrections(points: TrackPoint[], cam: Motion[], radius: number): Motion[] {
+  if (!points.length) return cam
+  const want: Motion[] = cam.map((c, i) => {
+    const p = points[Math.min(i, points.length - 1)]
+    const seen = applyMotion(c, p.x, p.y)
+    return { rot: 0, dx: -seen.x, dy: -seen.y }
+  })
+  const eased = smooth(want, radius)
+  return cam.map((c, i) => compose(eased[i], c))
+}
+
+/** How far the subject strays from the middle, RMS, in the pixels the points
+ *  were measured in. The number the follow mode exists to make small. */
+export function subjectSpread(points: TrackPoint[], cs: Motion[]): number {
+  if (!points.length) return 0
+  let sum = 0
+  for (let i = 0; i < cs.length; i++) {
+    const p = points[Math.min(i, points.length - 1)]
+    const s = applyMotion(cs[i], p.x, p.y)
+    sum += s.x * s.x + s.y * s.y
+  }
+  return Math.sqrt(sum / Math.max(1, cs.length))
+}

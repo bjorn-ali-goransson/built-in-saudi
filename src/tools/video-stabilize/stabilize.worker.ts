@@ -20,7 +20,10 @@
 import { demuxMp4, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
 import { avcCBox, codecFor, smallest } from '../../lib/mp4Encode'
-import { drawStabilised, estimateMotion, pyramid, scaleMotion, type Estimate, type Gray, type Motion } from './motion'
+import {
+  drawStabilised, estimateMotion, pyramid, scaleMotion, startTrack, trackNext,
+  type Box, type Estimate, type Gray, type Motion, type TrackPoint, type Tracker,
+} from './motion'
 
 export interface ProbeInfo {
   durationSec: number
@@ -44,6 +47,9 @@ export interface RenderPlan {
 export type Req =
   | { id: number; kind: 'probe'; file: File }
   | { id: number; kind: 'analyse' }
+  /** `box` is in fractions of the frame, and `steps` is what `analyse` returned
+   *  — the camera motion is most of the prediction the tracker needs. */
+  | { id: number; kind: 'track'; box: Box; steps: Estimate[] }
   | { id: number; kind: 'render'; plan: RenderPlan }
   | { id: number; kind: 'cancel' }
   | { id: number; kind: 'drop' }
@@ -52,6 +58,7 @@ export type Res =
   | { id: number; kind: 'done' }
   | { id: number; kind: 'probed'; info: ProbeInfo }
   | { id: number; kind: 'analysed'; steps: Estimate[] }
+  | { id: number; kind: 'tracked'; points: TrackPoint[] }
   | { id: number; kind: 'progress'; done: number; total: number }
   | { id: number; kind: 'rendered'; blob: Blob; audio: 'copied' | 'dropped' | 'none' }
   | { id: number; kind: 'error'; message: string }
@@ -120,13 +127,19 @@ async function probe(file: File): Promise<ProbeInfo> {
 }
 
 /**
- * Decode every frame once and ask what moved between each pair.
+ * Decode every frame once, hand each one over as a grey pyramid, and forget it.
  *
- * The grey buffer is reused, and only ONE pyramid is held at a time — the
- * previous frame's. That is the whole memory footprint of this pass, which is
- * what makes it safe on a phone where retaining decoded frames is not.
+ * ONE loop for both measuring passes, and that is the point rather than tidiness:
+ * the camera estimate and the subject track need exactly the same decode,
+ * backpressure, luma conversion and failure handling, and this repo has recorded
+ * five separate times what a second copy of a thing costs. The frames are NOT
+ * retained — only what the callback keeps — which is what makes either pass safe
+ * on a phone where holding decoded frames is not.
  */
-async function analyse(id: number): Promise<Estimate[]> {
+async function scanFrames(
+  id: number,
+  onFrame: (pyr: Gray[], index: number, prev: Gray[] | null) => void,
+): Promise<{ width: number; height: number; back: number; count: number }> {
   cancelled = false
   const { v } = need()
   const sw = v.width ?? 0
@@ -139,11 +152,10 @@ async function analyse(id: number): Promise<Estimate[]> {
   const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })
   if (!ctx) throw new Error('no-canvas')
 
-  // The estimate is made in analysis pixels and reported in SOURCE pixels, so
+  // Everything is measured in analysis pixels and reported in SOURCE pixels, so
   // nothing downstream has to remember which space it is in.
   const back = sw / aw
 
-  const steps: Estimate[] = []
   let prev: Gray[] | null = null
   let failure: Error | null = null
   let done = 0
@@ -156,18 +168,12 @@ async function analyse(id: number): Promise<Estimate[]> {
         const rgba = ctx.getImageData(0, 0, aw, ah).data
         const g = new Uint8Array(aw * ah)
         for (let i = 0, p = 0; i < g.length; i++, p += 4) {
-          // Integer luma. The estimator compares a plane against itself one
-          // frame later, so the exact weights matter far less than being cheap.
+          // Integer luma. Both passes compare a plane against another plane made
+          // the same way, so the exact weights matter far less than being cheap.
           g[i] = (rgba[p] * 77 + rgba[p + 1] * 150 + rgba[p + 2] * 29) >> 8
         }
         const next = pyramid({ data: g, width: aw, height: ah }, 3)
-        if (prev) {
-          // Scaled to source pixels, but the tile COUNT is not a length and
-          // must survive the scaling — it is what says a frame was measured
-          // at all rather than assumed still.
-          const e = estimateMotion(prev, next)
-          steps.push({ ...scaleMotion(e, back), tiles: e.tiles })
-        }
+        onFrame(next, done, prev)
         prev = next
         done++
       } catch (e) {
@@ -188,13 +194,13 @@ async function analyse(id: number): Promise<Estimate[]> {
   })
 
   const total = v.samples.length
-  for (const s of v.samples) {
+  for (const smp of v.samples) {
     if (cancelled || failure) break
     decoder.decode(new EncodedVideoChunk({
-      type: s.sync ? 'key' : 'delta',
-      timestamp: Math.round((s.cts / v.timescale) * 1e6),
-      duration: Math.round((s.duration / v.timescale) * 1e6),
-      data: s.data,
+      type: smp.sync ? 'key' : 'delta',
+      timestamp: Math.round((smp.cts / v.timescale) * 1e6),
+      duration: Math.round((smp.duration / v.timescale) * 1e6),
+      data: smp.data,
     }))
     while (!cancelled && !failure && decoder.decodeQueueSize > 8) await idle()
     if (done % 15 === 0) postMessage({ id, kind: 'progress', done, total } satisfies Res)
@@ -203,8 +209,69 @@ async function analyse(id: number): Promise<Estimate[]> {
   try { decoder.close() } catch { /* already closed by its own error */ }
   if (cancelled) throw new Error('cancelled')
   if (failure) throw failure
-  if (!steps.length) throw new Error('no-frames')
-  return steps
+  return { width: aw, height: ah, back, count: done }
+}
+
+/** What moved between each pair of frames. */
+async function analyse(id: number): Promise<Estimate[]> {
+  const raw: Estimate[] = []
+  const info = await scanFrames(id, (next, _i, prev) => {
+    if (prev) raw.push(estimateMotion(prev, next))
+  })
+  if (!raw.length) throw new Error('no-frames')
+  // Scaled to source pixels ONCE, here, where the factor is known — but the
+  // tile COUNT is not a length and must survive it, because it is what says a
+  // frame was measured at all rather than assumed still.
+  return raw.map((e) => ({ ...scaleMotion(e, info.back), tiles: e.tiles }))
+}
+
+/**
+ * Follow one subject across the whole clip.
+ *
+ * A SECOND decode rather than a second thing retained from the first, and that
+ * is deliberate: the box cannot be drawn until somebody has SEEN the clip, so
+ * the alternative is holding every frame's pyramid through the whole analysis
+ * on the chance that a box arrives — which on a phone recording is the memory
+ * this pass is arranged to avoid.
+ */
+async function track(id: number, box: Box, steps: Estimate[]): Promise<TrackPoint[]> {
+  const points: TrackPoint[] = []
+  let tracker: Tracker | null = null
+  let refused = false
+  let centre = { x: 0, y: 0 }
+
+  const info = await scanFrames(id, (pyr, i) => {
+    if (i === 0) {
+      centre = { x: pyr[0].width / 2, y: pyr[0].height / 2 }
+      // The box arrives in FRACTIONS of the frame, because the stage it was
+      // drawn on is a different size from the plane it is matched in.
+      tracker = startTrack(pyr, {
+        x: box.x * pyr[0].width,
+        y: box.y * pyr[0].height,
+        w: box.w * pyr[0].width,
+        h: box.h * pyr[0].height,
+      })
+      if (!tracker) { refused = true; return }
+      points.push({
+        x: (box.x + box.w / 2 - 0.5) * pyr[0].width,
+        y: (box.y + box.h / 2 - 0.5) * pyr[0].height,
+        score: 1,
+      })
+      return
+    }
+    if (!tracker) return
+    // The camera step for this pair, back in ANALYSIS pixels — it is stored in
+    // source pixels, and the tracker matches in the analysis plane.
+    const hint = steps[i - 1]
+      ? scaleMotion(steps[i - 1], pyr[0].width / (need().v.width ?? pyr[0].width))
+      : { rot: 0, dx: 0, dy: 0 }
+    points.push(trackNext(tracker, pyr, hint, centre))
+  })
+
+  if (refused) throw new Error('no-subject')
+  if (!points.length) throw new Error('no-frames')
+  // Reported in source pixels, like everything else that leaves this file.
+  return points.map((p) => ({ x: p.x * info.back, y: p.y * info.back, score: p.score }))
 }
 
 async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio: 'copied' | 'dropped' | 'none' }> {
@@ -370,6 +437,10 @@ self.onmessage = async (e: MessageEvent<Req>) => {
     }
     if (req.kind === 'analyse') {
       postMessage({ id: req.id, kind: 'analysed', steps: await analyse(req.id) } satisfies Res)
+      return
+    }
+    if (req.kind === 'track') {
+      postMessage({ id: req.id, kind: 'tracked', points: await track(req.id, req.box, req.steps) } satisfies Res)
       return
     }
     if (req.kind === 'render') {

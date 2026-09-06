@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Field, FileError, Panel, Spinner, Stack } from '../../components/ui'
+import { Button, Field, FileError, Panel, Seg, SegButton, Spinner, Stack } from '../../components/ui'
 import { DownloadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { even } from '../../lib/mp4Encode'
 import {
-  accumulate, corrections, drawStabilised, keptFraction, requiredZoom, shakeOf, smooth, STILL,
-  type Estimate,
+  accumulate, corrections, drawStabilised, followCorrections, keptFraction, requiredZoom, shakeOf,
+  smooth, STILL, subjectSpread, TRACK_LOST,
+  type Box, type Estimate, type TrackPoint,
 } from './motion'
 // TYPES ONLY from the worker. Importing a value out of a `.worker.ts` pulls its
 // module body into the page bundle, and its body assigns `self.onmessage` —
@@ -21,6 +22,8 @@ type ReqBody = Req extends infer T ? (T extends { id: number } ? Omit<T, 'id'> :
 const arNum = (n: number) => n.toLocaleString('ar-SA')
 
 /** m:ss, which is what a clip this length is read in. */
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+
 const clock = (sec: number) => {
   const t = Math.max(0, Math.floor(sec))
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
@@ -61,6 +64,19 @@ const STR = {
     analysing: 'Measuring the movement…',
     exporting: 'Writing the video…',
     frames: (a: number, b: number) => `${a} of ${b} frames`,
+    mode: 'What to hold still',
+    modeCamera: 'The camera',
+    modeSubject: 'A subject',
+    drawBox: 'Drag a box around what to follow.',
+    redraw: 'Draw a different box',
+    tracking: 'Following the subject…',
+    lost: (at: string) => `The subject was lost at ${at}. From there the frame holds where it last saw it — draw a box around something with more texture in it, or on a moment when it is clearer.`,
+    noSubject: 'There is not enough texture in that box to follow. A wall, the sky or a blown-out window has nothing to match from one frame to the next — draw the box around something with detail in it.',
+    strays: (px: string) => `The subject stays within ${px} px of the middle.`,
+    tightness: 'How tightly to follow',
+    looser: 'Looser',
+    tighter: 'Tighter',
+    subjectCost: 'Following a subject costs far more picture than steadying a camera, because the frame has to cover everywhere it goes. The figure below is for this clip and this box.',
     smoothing: 'How much to steady',
     seconds: (v: string) => `${v}s of camera path smoothed`,
     lessSteady: 'Less',
@@ -89,6 +105,7 @@ const STR = {
       'no-video': 'That file has no video track in it.',
       'no-encoder': 'This browser refused to encode a video that size.',
       'no-frames': 'No frames could be decoded from that file.',
+      'no-subject': 'There is not enough texture in that box to follow.',
       generic: 'That video could not be read.',
     } as Record<string, string>,
   },
@@ -100,6 +117,19 @@ const STR = {
     analysing: 'جارٍ قياس الحركة…',
     exporting: 'جارٍ كتابة الفيديو…',
     frames: (a: number, b: number) => `${arNum(a)} من ${arNum(b)} إطارًا`,
+    mode: 'ما الذي يُثبَّت',
+    modeCamera: 'الكاميرا',
+    modeSubject: 'هدف متحرك',
+    drawBox: 'ارسم مربّعًا حول ما تريد تتبّعه.',
+    redraw: 'ارسم مربّعًا آخر',
+    tracking: 'جارٍ تتبّع الهدف…',
+    lost: (at: string) => `فُقد الهدف عند ${at}. ومن هناك يثبت الإطار على آخر موضع رآه فيه — ارسم المربّع حول شيء أوضح تفصيلًا، أو عند لحظة يظهر فيها أبين.`,
+    noSubject: 'لا توجد تفاصيل كافية في هذا المربّع للتتبّع. فالجدار أو السماء أو نافذة محترقة الضوء لا شيء فيها يُطابَق من إطار لآخر — ارسم المربّع حول شيء له تفاصيل.',
+    strays: (px: string) => `يبقى الهدف على بعد ${px} بكسل من المنتصف.`,
+    tightness: 'شدّة الالتصاق بالهدف',
+    looser: 'أوسع',
+    tighter: 'أضيق',
+    subjectCost: 'تتبّع هدف متحرك يكلّف من الصورة أكثر بكثير من تثبيت الكاميرا، لأن الإطار يجب أن يغطي كل ما يمر به. والرقم أدناه محسوب لهذا المقطع ولهذا المربّع.',
     smoothing: 'مقدار التثبيت',
     seconds: (v: string) => `تنعيم ${v} ثانية من مسار الكاميرا`,
     lessSteady: 'أقل',
@@ -128,6 +158,7 @@ const STR = {
       'no-video': 'لا يحتوي هذا الملف على مسار فيديو.',
       'no-encoder': 'رفض المتصفح ترميز فيديو بهذا المقاس.',
       'no-frames': 'تعذّر فكّ ترميز أي إطار من هذا الملف.',
+      'no-subject': 'لا توجد تفاصيل كافية في هذا المربّع للتتبّع.',
       generic: 'تعذّرت قراءة هذا الفيديو.',
     } as Record<string, string>,
   },
@@ -143,15 +174,25 @@ export default function VideoStabilizeTool() {
   const [url, setUrl] = useState('')
   const [info, setInfo] = useState<ProbeInfo | null>(null)
   const [steps, setSteps] = useState<Estimate[] | null>(null)
+  const [mode, setMode] = useState<'camera' | 'subject'>('camera')
+  /** The tracked subject, in source pixels relative to the frame centre. */
+  const [points, setPoints] = useState<TrackPoint[] | null>(null)
+  /** The box being dragged out, in fractions of the stage. */
+  const [drawing, setDrawing] = useState<Box | null>(null)
   const [smoothSec, setSmoothSec] = useState(0.5)
+  /** How tightly the framing chases the subject, in SECONDS of easing. 0 nails
+   *  it to the middle and pays for every step it takes in crop. */
+  const [followSec, setFollowSec] = useState(0.35)
   const [keepAudio, setKeepAudio] = useState(true)
-  const [busy, setBusy] = useState<'' | 'read' | 'analyse' | 'export'>('')
+  const [busy, setBusy] = useState<'' | 'read' | 'analyse' | 'track' | 'export'>('')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState('')
   const [ghost, setGhost] = useState(false)
   const [pos, setPos] = useState(0)
   /** The element's own duration, which arrives before the probe's does. */
   const [elDur, setElDur] = useState(0)
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<{ x: number; y: number } | null>(null)
   const [playing, setPlaying] = useState(false)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
@@ -274,7 +315,15 @@ export default function VideoStabilizeTool() {
   const plan = useMemo(() => {
     if (!path || !info) return null
     const radius = Math.max(1, Math.round(smoothSec * info.fps))
-    const cs = corrections(path, smooth(path, radius))
+    const cam = corrections(path, smooth(path, radius))
+    // FOLLOWING IS COMPOSED ON TOP OF STEADYING, never instead of it. The
+    // subject's position is read in the already-steady frame, so the shake
+    // comes out at full strength whatever the tightness says and the second
+    // slider means exactly one thing.
+    const following = mode === 'subject' && points
+    const cs = following
+      ? followCorrections(points, cam, Math.max(0, Math.round(followSec * info.fps)))
+      : cam
     const zoom = requiredZoom(cs, info.width, info.height)
     // NEVER LARGER THAN WHAT SURVIVED. The output is the cropped rectangle at
     // its own size, so every pixel in the file is a pixel that was recorded;
@@ -282,8 +331,23 @@ export default function VideoStabilizeTool() {
     // detail, which is the honesty `print-size` and `video-edit` both apply.
     const outW = even(info.width / zoom)
     const outH = even(info.height / zoom)
-    return { cs, zoom, shake: shakeOf(cs, steps ?? []), out: { width: outW, height: outH } }
-  }, [path, info, smoothSec, steps])
+    return {
+      cs,
+      zoom,
+      shake: shakeOf(cs, steps ?? []),
+      out: { width: outW, height: outH },
+      following,
+      strays: following ? subjectSpread(points, cs) : 0,
+      // Where the tracker stopped being sure, in seconds — the one thing a
+      // follow can get wrong that looks fine on the frame you are looking at.
+      lostAt: following
+        ? (() => {
+          const i = points.findIndex((p) => p.score < TRACK_LOST)
+          return i > 0 ? i / info.fps : 0
+        })()
+        : 0,
+    }
+  }, [path, info, smoothSec, steps, mode, points, followSec])
 
   /**
    * The preview and the export go through ONE function.
@@ -308,7 +372,14 @@ export default function VideoStabilizeTool() {
       // BEFORE THE ANALYSIS THERE IS NOTHING TO CORRECT, and the clip is shown
       // anyway. Identity motion at zoom 1 is the frame as recorded, drawn by
       // the same function everything else here goes through.
-      if (!plan || !info) {
+      //
+      // AND WHILE A SUBJECT IS BEING CHOSEN, for a different reason that lands
+      // in the same branch: the box is matched against the frame AS RECORDED,
+      // so it has to be drawn on that. A box dragged over an already-cropped,
+      // already-corrected picture is in the wrong coordinates by exactly the
+      // correction — the `video-edit` crop rule, which shows the whole clip
+      // while the rectangle is being decided for the same reason.
+      if (!plan || !info || (mode === 'subject' && !points)) {
         drawStabilised(ctx, v, src, STILL, 1, out)
         return
       }
@@ -334,7 +405,7 @@ export default function VideoStabilizeTool() {
     }
     raf = requestAnimationFrame(paint)
     return () => cancelAnimationFrame(raf)
-  }, [plan, info, ghost])
+  }, [plan, info, ghost, mode, points])
 
   async function run() {
     if (!plan || !info) return
@@ -363,11 +434,89 @@ export default function VideoStabilizeTool() {
     })
   }
 
+  /**
+   * Follow whatever is inside `box` across the whole clip.
+   *
+   * A SECOND decode, and it says so while it runs. The alternative is holding
+   * every frame's pyramid through the first pass on the chance that a box
+   * arrives — which is the memory this tool is arranged to avoid, on the
+   * device it is most used from.
+   */
+  async function runTrack(box: Box) {
+    if (!steps || !info) return
+    setError('')
+    setOut(null)
+    setBusy('track')
+    setProgress({ done: 0, total: info.frames })
+    const res = await ask({ kind: 'track', box, steps })
+    setBusy('')
+    if (res.kind !== 'tracked') {
+      setPoints(null)
+      setError(res.kind === 'error' && res.message === 'no-subject'
+        ? s.noSubject
+        : s.errors[res.kind === 'error' ? res.message : 'generic'] ?? s.errors.generic)
+      return
+    }
+    setPoints(res.points)
+  }
+
+  /** Pointer position as a fraction of the stage, unclamped for the same reason
+   *  `video-edit` reads it unclamped: the stage is letterboxed and a thumb
+   *  crosses the black long before the screen ends. */
+  function at(e: React.PointerEvent) {
+    const r = boxRef.current?.getBoundingClientRect()
+    if (!r) return { x: 0.5, y: 0.5 }
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
+  }
+
+  function boxDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0 || mode !== 'subject' || !steps) return
+    boxRef.current?.setPointerCapture(e.pointerId)
+    const p = at(e)
+    dragRef.current = p
+    setPoints(null)
+    setDrawing({ x: p.x, y: p.y, w: 0, h: 0 })
+  }
+
+  function boxMove(e: React.PointerEvent<HTMLDivElement>) {
+    const from = dragRef.current
+    if (!from) return
+    const p = at(e)
+    setDrawing({
+      x: Math.min(from.x, p.x),
+      y: Math.min(from.y, p.y),
+      w: Math.abs(p.x - from.x),
+      h: Math.abs(p.y - from.y),
+    })
+  }
+
+  function boxUp(e: React.PointerEvent<HTMLDivElement>) {
+    const from = dragRef.current
+    dragRef.current = null
+    if (boxRef.current?.hasPointerCapture(e.pointerId)) boxRef.current.releasePointerCapture(e.pointerId)
+    if (!from) return
+    const p = at(e)
+    const box = {
+      x: clamp01(Math.min(from.x, p.x)),
+      y: clamp01(Math.min(from.y, p.y)),
+      w: Math.abs(p.x - from.x),
+      h: Math.abs(p.y - from.y),
+    }
+    // A stray tap is not a box. Anything under a twentieth of the frame across
+    // is a misclick, and a box that small has nothing in it to match anyway.
+    if (box.w < 0.05 || box.h < 0.05) { setDrawing(null); return }
+    box.w = Math.min(box.w, 1 - box.x)
+    box.h = Math.min(box.h, 1 - box.y)
+    setDrawing(box)
+    void runTrack(box)
+  }
+
   function reset() {
     void ask({ kind: 'drop' })
     if (url) URL.revokeObjectURL(url)
     if (out) URL.revokeObjectURL(out.url)
-    setFile(null); setUrl(''); setInfo(null); setSteps(null); setOut(null); setError(''); setGhost(false); setPos(0); setElDur(0)
+    setFile(null); setUrl(''); setInfo(null); setSteps(null); setOut(null); setError('')
+    setGhost(false); setPos(0); setElDur(0); setPoints(null); setDrawing(null); setMode('camera')
   }
 
   function togglePlay() {
@@ -446,10 +595,31 @@ export default function VideoStabilizeTool() {
         className="absolute w-px h-px opacity-0 pointer-events-none" />
 
       <div className="grid place-items-center bg-black rounded-md overflow-hidden p-1">
-        <canvas ref={canvasRef} data-testid="vs-stage"
-          width={plan?.out.width ?? info?.width ?? 320}
-          height={plan?.out.height ?? info?.height ?? 180}
-          className="block max-w-full max-h-[60vh]" />
+        {/* The overlay is exactly the canvas, so a box drawn on it is a box in
+            fractions of the PICTURE rather than of some padded container — the
+            same thing the worker matches against. */}
+        <div ref={boxRef} className="relative" data-testid="vs-frame"
+          onPointerDown={boxDown} onPointerMove={boxMove} onPointerUp={boxUp}
+          style={{ touchAction: mode === 'subject' ? 'none' : undefined }}>
+          <canvas ref={canvasRef} data-testid="vs-stage"
+            width={(mode === 'subject' && !points ? info?.width : plan?.out.width) ?? info?.width ?? 320}
+            height={(mode === 'subject' && !points ? info?.height : plan?.out.height) ?? info?.height ?? 180}
+            className="block max-w-full max-h-[60vh]" />
+          {mode === 'subject' && drawing && (
+            <div data-testid="vs-box" className="absolute border-2 border-green-400 pointer-events-none"
+              style={{
+                left: `${drawing.x * 100}%`, top: `${drawing.y * 100}%`,
+                width: `${drawing.w * 100}%`, height: `${drawing.h * 100}%`,
+              }} />
+          )}
+          {mode === 'subject' && !drawing && (
+            <span data-testid="vs-draw-hint"
+              className="absolute inset-x-0 bottom-2 text-center text-[0.8rem] text-white
+                [text-shadow:0_0_4px_rgba(0,0,0,0.9)] rtl:font-ar pointer-events-none">
+              {s.drawBox}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* A CLIP YOU CANNOT SCRUB IS A CLIP YOU CANNOT JUDGE. Shake is not
@@ -472,6 +642,11 @@ export default function VideoStabilizeTool() {
         </span>
       </div>
 
+      {busy === 'track' && (
+        <p className="text-[0.9rem] text-ink-soft rtl:font-ar inline-flex items-center gap-2" data-testid="vs-tracking">
+          <Spinner /> {s.tracking} {s.frames(progress.done, progress.total)}
+        </p>
+      )}
       {busy === 'analyse' && (
         <p className="text-[0.9rem] text-ink-soft rtl:font-ar inline-flex items-center gap-2" data-testid="vs-busy">
           <Spinner /> {s.analysing} {s.frames(progress.done, progress.total)}
@@ -483,6 +658,65 @@ export default function VideoStabilizeTool() {
 
       {plan && info && (
         <Panel className="gap-3" data-testid="vs-panel">
+          {/* WHAT to hold still, which is a different question from how hard.
+              Steadying and following share every part of the pipeline — the
+              same estimate, the same zoom arithmetic, the same renderer — so
+              they are one tool with a choice rather than two apps. */}
+          <Field label={s.mode}>
+            <Seg>
+              <SegButton active={mode === 'camera'} data-testid="vs-mode-camera"
+                onClick={() => { setMode('camera'); setOut(null) }}>{s.modeCamera}</SegButton>
+              <SegButton active={mode === 'subject'} data-testid="vs-mode-subject"
+                onClick={() => {
+                  setMode('subject')
+                  setOut(null)
+                  // BACK TO THE START, because the track begins at the first
+                  // frame — so the picture the box is drawn on is the picture
+                  // the tracker is given. Drawing it on frame 300 and matching
+                  // from frame 0 is a box around whatever was there instead.
+                  const v = videoRef.current
+                  if (v) { v.pause(); v.currentTime = 0; setPos(0) }
+                }}>{s.modeSubject}</SegButton>
+            </Seg>
+          </Field>
+
+          {mode === 'subject' && (
+            <>
+              {/* Said BEFORE the box is drawn, not after the number appears.
+                  Following a subject routinely costs half the picture, and
+                  finding that out only once you have committed to a crop is
+                  the thing this tool exists not to do. */}
+              <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="vs-subject-cost">{s.subjectCost}</p>
+              {points && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Button data-testid="vs-redraw" onClick={() => { setPoints(null); setDrawing(null); setOut(null) }}>
+                      {s.redraw}
+                    </Button>
+                  </div>
+                  <Field label={s.tightness}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[0.75rem] text-ink-faint rtl:font-ar">{s.looser}</span>
+                      <input type="range" className="flex-1 min-w-0 accent-green-600" data-testid="vs-tightness"
+                        aria-label={s.tightness}
+                        min={0} max={1.5} step={0.05} value={followSec}
+                        onChange={(e) => { setFollowSec(Number(e.target.value)); setOut(null) }} />
+                      <span className="text-[0.75rem] text-ink-faint rtl:font-ar">{s.tighter}</span>
+                    </div>
+                  </Field>
+                  <p className="text-[0.85rem] text-ink-soft rtl:font-ar" data-testid="vs-strays">
+                    {s.strays(isRtl ? arNum(Number(plan?.strays.toFixed(0) ?? 0)) : (plan?.strays ?? 0).toFixed(0))}
+                  </p>
+                  {!!plan?.lostAt && (
+                    <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="vs-lost">
+                      {s.lost(isRtl ? `${arNum(Number(plan.lostAt.toFixed(1)))} ث` : `${plan.lostAt.toFixed(1)}s`)}
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
           {/* A SLIDER, not three buttons. The cost below re-prices as it moves,
               because the clip is analysed once and a new value is three array
               passes over three numbers a frame — so the trade is continuous

@@ -2478,6 +2478,97 @@ estimator correctly reads as camera motion — so using it would have proved the
 early-preview case, and drawing only the steadied layer reddens the ghost —
 each one case and no other.
 
+**FOLLOWING A SUBJECT is the same machinery pointed the other way**, and that
+is why it is a mode here rather than an app of its own. The estimator's median
+throws away the tiles that disagree with the frame — *because* they are
+something moving through the shot — and following is matching that thing on its
+own instead of voting it out. Everything else is shared: the same decode, the
+same zoom arithmetic, the same renderer, the same export.
+
+- **The camera correction and the follow term are SEPARATE, and composed.** The
+  subject's position is read in the ALREADY-STEADY frame, so the shake comes out
+  at full strength whatever the tightness slider says. Smoothing one combined
+  term was the obvious version and is wrong: it lets the shake back in every
+  time somebody wants a looser follow.
+- **`radius` 0 nails the subject to the middle and pays for every step in
+  crop.** Measured on the synthetic path: the subject strays 56.8px with the
+  camera merely steadied, 17.7px at a loose follow, 0.00px at a hard lock — and
+  the price goes **1.09x → 1.68x**, from 84% of the picture to 36%. That is the
+  figure the tool exists to put on screen, and it is why following is not the
+  default.
+- **The box is drawn on the frame AS RECORDED**, not on the corrected output.
+  The stage switches back to the raw picture while a subject is being chosen,
+  the same rule `video-edit` follows for crop — a rectangle dragged over an
+  already-cropped, already-corrected picture is in the wrong coordinates by
+  exactly the correction.
+- **A SECOND decode, not a second thing retained.** The box cannot be drawn
+  until somebody has seen the clip, so the alternative is holding every frame's
+  pyramid through the whole analysis on the chance a box arrives — which on a
+  phone recording is the memory this pass is arranged to avoid. `scanFrames`
+  is the one decode loop both passes share.
+
+**Three things went wrong, and each was the fixture or the instrument rather
+than the code.**
+
+- **The subject was a 4px CHECKERBOARD, which is the one texture template
+  matching cannot do.** Every alias of the period matches about as well as the
+  truth, so the tracker locked onto the background and the exported clip held
+  the world still while the subject walked out of it. `shakeprobe` had already
+  measured that exact case as a LIMIT — and the fixture then contained *only*
+  the hard case, so it could not show the tool working at all. **A fixture has
+  to contain the hard case; it must not consist of it.**
+- **`subjectSpread` on the panel CANNOT detect a tracker that lost the
+  subject**, and that is worth carrying past this tool. It measures the plan
+  against its own points, so a tracker following a lamp post reports 0px from
+  the middle, confidently. Only the measurement on the EXPORTED FILE — where
+  the true subject is found by its own pixels — can tell. The panel says what
+  the tool believes.
+- **The confidence was measured against the wrong thing, twice.** Scoring the
+  SAD against the template's own contrast reads 1.00 on synthetic frames and
+  **0.49 on a compressed clip being followed perfectly**, because compression
+  puts a floor under the SAD that the contrast knows nothing about — a
+  confidence whose good and bad values overlap cannot be thresholded at all. It
+  is DISTINCTIVENESS now: how much better this position is than a whole patch
+  away. And the probes had to be a whole patch, not half: at half they still
+  overlap most of the subject, which read 0.04 on a clip that was fine.
+
+**The root cause of both bad readings was the same, and fixing it beat fixing
+the score: the drawn box contains background.** Nobody drags a rectangle tight
+around a moving subject, and background inside the template does not move with
+the subject, so the slow blend smears it into a haze — after twenty-odd frames
+the match quality hits a floor and stops being distinctive. `startTrack` trims
+to the middle **72%** of the box. On the real clip the confidence went from a
+cliff at frame 24 to **0.75–0.93 throughout**, against 0.00 when the subject
+leaves the picture.
+
+**And the eval's box had to become LOOSE to match.** It was tight around the
+subject, which is a case the tool never sees, and it penalised the trim for
+doing its job (1.10px rms tight, 0.36px loose). The gate is on **wobble**
+rather than raw error, too: a constant offset between the box somebody drew and
+the patch cut from it puts the subject a fixed pixel off centre and nothing
+else — measured 1.01px of bias against 0.43px of wobble, and only the second is
+a defect.
+
+**The keyword list cost a bench again, and no single entry was to blame.**
+Held-out #4's "my video file is too long to send" went to this tool over
+`video-trim`. The first suspicion was the documented one — three phrases ending
+in the bare word "video" — and removing it changed nothing; bisecting one
+keyword at a time changed nothing either, because it was **cumulative**. The
+worst single entry was `keep subject centred`, where **"send" is a SUBSEQUENCE**
+and the scorer's fallback credited coverage the phrase never meant. Five entries
+became **two**, all nine benches byte-identical and own names 477/478.
+
+**Three e2e traps, all the same family and all already in this file one level
+over.** `page.mouse` works in raw viewport coordinates: the stage was still
+SETTLING when the drag fired (rect read 110, pointer arrived at 43 — a 67px
+miss); `scrollIntoViewIfNeeded` leaves the picture flush with the top, so its
+first rows sit UNDER the sticky header and a box aimed at the top-left is drawn
+on the header; and both failures look like a tool that ignored the gesture.
+The helper centres the element, waits for the rectangle to stop moving, and
+**hit-tests both endpoints with `elementFromPoint`** — which is what found the
+crop-chips bug in `video-edit`, and it names the cause instead of leaving a
+missing box.
+
 **Stated limits, in the UI rather than implied away**: no rolling-shutter
 correction (whole frames are moved and turned, so the diagonal jelly stays);
 motion blur is not undone, and taking the movement out usually makes it easier
@@ -3055,10 +3146,10 @@ attack needing no expertise is the one to design against.
 - **It hides the picture, not the sound.** The audio is copied untouched, so a
   spoken name survives a black box over the face saying it. Stated next to the
   boxes, because it is exactly the thing somebody would assume was handled.
-- **The box does not follow anything.** Fixed rectangle, fixed span, so a moving
-  subject needs a generous box or several in sequence — which costs nothing when
-  the mode is solid. Keyframed interpolation is the obvious next step and is
-  deliberately out of v1.
+- **The box FOLLOWS now**, by keyframes — see "A censor is KEYFRAMED" above.
+  The limit this line recorded (a fixed rectangle, so a moving subject needs a
+  generous box) is gone, and the note is kept as the shape of the decision: it
+  was named as the obvious next step, and it was.
 
 **PARKED: a preview that will not play, reported from Android, INTERMITTENT.**
 Parked rather than fixed, and parked rather than deleted — **the instrument is

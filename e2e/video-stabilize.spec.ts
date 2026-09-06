@@ -14,6 +14,15 @@ const SHAKY = fileURLToPath(new URL('./fixtures/shaky.mp4', import.meta.url))
 // as camera motion and correctly reports as shake — so it would prove the
 // steady branch unreachable rather than proving it right.
 const STEADY = fileURLToPath(new URL('./fixtures/steady.mp4', import.meta.url))
+// The SUBJECT clip: the same shaking camera over the same world, with a
+// textured checkerboard block walking across it at a known world position — and
+// with the world's fixed marker removed, so the moving block is the one
+// near-white thing and the centroid below is unambiguously its.
+//
+// It cannot be `shaky.mp4`: everything in that clip is nailed to the world, so
+// a subject tracker would report a path identical to the camera's and "the
+// subject stays in the middle" would be true of a tool that followed nothing.
+const SUBJECT = fileURLToPath(new URL('./fixtures/subject.mp4', import.meta.url))
 /** The one fixture here with a sound track. */
 const WITH_SOUND = fileURLToPath(new URL('./fixtures/sample.mp4', import.meta.url))
 
@@ -305,6 +314,213 @@ test('the ghost shows both at once, which is what makes the correction visible',
   // And it is a toggle you can turn off, not a mode you get stuck in.
   await page.getByTestId('vs-ghost').uncheck()
   await expect(page.getByTestId('vs-ghost-hint')).toHaveCount(0)
+})
+
+/**
+ * Where the one near-white thing sits in a FILE, per frame, in fractions of the
+ * picture — and how far it strays from the middle.
+ *
+ * Played rather than seeked, and measured on the file rather than on the app's
+ * canvas, for the two reasons `frameJitter` above records: `currentTime` does
+ * not step frame by frame, and a canvas assertion depends on when a repaint
+ * happened. What is measured here is DISTANCE FROM THE CENTRE rather than
+ * frame-to-frame jump, because that is what a follow claims and a steadying
+ * does not touch.
+ */
+async function centreSpread(page: Page, url: string): Promise<{ spread: number; frames: number }> {
+  return page.evaluate(async (src) => {
+    const v = document.createElement('video')
+    v.src = src
+    v.muted = true
+    v.playsInline = true
+    await new Promise((r, reject) => {
+      v.addEventListener('loadedmetadata', r, { once: true })
+      v.addEventListener('error', () => reject(new Error('would not decode')), { once: true })
+    })
+    const c = document.createElement('canvas')
+    c.width = v.videoWidth
+    c.height = v.videoHeight
+    const ctx = c.getContext('2d', { willReadFrequently: true })!
+    const off: number[] = []
+    await new Promise<void>((resolve) => {
+      const onFrame = () => {
+        ctx.drawImage(v, 0, 0)
+        const d = ctx.getImageData(0, 0, c.width, c.height).data
+        let sx = 0, sy = 0, n = 0
+        for (let y = 0; y < c.height; y++) {
+          for (let x = 0; x < c.width; x++) {
+            const o = (y * c.width + x) * 4
+            const r = d[o], g = d[o + 1], b = d[o + 2]
+            if (r > 200 && g > 200 && b > 200 && Math.max(r, g, b) - Math.min(r, g, b) < 40) { sx += x; sy += y; n++ }
+          }
+        }
+        if (n >= 20) {
+          off.push(Math.hypot(sx / n / c.width - 0.5, sy / n / c.height - 0.5))
+        }
+        if (off.length >= 40 || v.ended) { v.pause(); resolve(); return }
+        v.requestVideoFrameCallback(onFrame)
+      }
+      v.addEventListener('ended', () => resolve(), { once: true })
+      v.requestVideoFrameCallback(onFrame)
+      void v.play()
+    })
+    const mean = off.reduce((a, b) => a + b, 0) / Math.max(1, off.length)
+    return { spread: mean, frames: off.length }
+  }, url)
+}
+
+/** Drag a box on the stage, in fractions of the picture it is showing. */
+/**
+ * Choose the follow mode and WAIT FOR THE STAGE TO BECOME THE RAW FRAME.
+ *
+ * Load-bearing, not defensive. Choosing a subject switches the canvas from the
+ * corrected output — which is cropped, so a different size — to the picture as
+ * recorded, because that is the picture the box is matched against. A drag
+ * measured in the same tick as the click is measured against the previous
+ * size, and every fraction in it is wrong by the crop. Caught by a box that
+ * landed 47px from where it was aimed.
+ */
+async function chooseSubject(page: Page, sourceWidth = 320) {
+  await page.getByTestId('vs-mode-subject').click()
+  await expect(page.getByTestId('vs-stage')).toHaveAttribute('width', String(sourceWidth))
+  await expect(page.getByTestId('vs-draw-hint')).toBeVisible()
+}
+
+/**
+ * The stage's rectangle, once it has STOPPED MOVING.
+ *
+ * `page.mouse` works in raw viewport coordinates and does not wait for
+ * anything, so a rectangle read while the page is still settling sends every
+ * event somewhere the canvas is not. Measured here: the rect read 110 and the
+ * pointer arrived when it was 43 — a 67px miss, which lands as a box around
+ * whatever happens to be there and reads as a broken interaction rather than
+ * as a mistimed one. Choosing a subject resizes the canvas AND changes the
+ * panel under it, so there are two reflows to outlast.
+ *
+ * Playwright's own locator actions wait for stability; this is that wait, for
+ * the one gesture that cannot use them.
+ */
+async function stableRect(page: Page) {
+  const read = () => page.getByTestId('vs-frame').evaluate((e) => {
+    const r = e.getBoundingClientRect()
+    return { x: r.x, y: r.y, width: r.width, height: r.height }
+  })
+  let last = await read()
+  for (let i = 0; i < 40; i++) {
+    await page.waitForTimeout(100)
+    const now = await read()
+    if (now.x === last.x && now.y === last.y && now.width === last.width && now.height === last.height) return now
+    last = now
+  }
+  throw new Error('the stage never stopped moving')
+}
+
+async function dragBox(page: Page, from: [number, number], to: [number, number]) {
+  // CENTRED, not merely on screen. `scrollIntoViewIfNeeded` leaves the element
+  // flush with the top of the viewport, which on this site puts its first rows
+  // UNDER the sticky header — so a box aimed at the top-left of the picture is
+  // drawn on the header and nothing happens at all.
+  await page.getByTestId('vs-frame').evaluate((e) => e.scrollIntoView({ block: 'center' }))
+  const b = await stableRect(page)
+  const at = (f: [number, number]) => ({ x: b.x + b.width * f[0], y: b.y + b.height * f[1] })
+  const a = at(from), z = at(to)
+  // AND HIT-TESTED, because "on screen" and "reachable" are different claims —
+  // the same lesson the crop chips taught `video-edit`, where a control sat
+  // under a floating bar and only `elementFromPoint` said so. Without this the
+  // failure is a box that never appears, which reads as a broken tool.
+  for (const pt of [a, z]) {
+    const hit = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return el?.closest('[data-testid=vs-frame]') ? 'ok' : (el?.tagName ?? 'nothing')
+    }, pt)
+    if (hit !== 'ok') {
+      throw new Error(`drag point (${Math.round(pt.x)}, ${Math.round(pt.y)}) lands on ${hit}, not the stage`)
+    }
+  }
+  await page.mouse.move(a.x, a.y)
+  await page.mouse.down()
+  await page.mouse.move((a.x + z.x) / 2, (a.y + z.y) / 2)
+  await page.mouse.move(z.x, z.y)
+  await page.mouse.up()
+}
+
+/**
+ * The subject at the FIRST frame, in fractions of the picture.
+ *
+ * Arithmetic from `scripts/make-shaky-mp4.mjs` rather than a number read off a
+ * screenshot: the subject starts at world (300, 260), the camera at (380,
+ * 279.6) with no roll, so it lands at (80, 70.4) of a 320x180 frame.
+ */
+const SUBJECT_AT_0: [number, number] = [80 / 320, 70.4 / 180]
+
+test('a subject is followed, and the frame holds it near the middle', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page, SUBJECT, 'subject.mp4')
+
+  const steadyKept = await kept(page)
+  await chooseSubject(page)
+
+  await dragBox(page, [SUBJECT_AT_0[0] - 0.06, SUBJECT_AT_0[1] - 0.09], [SUBJECT_AT_0[0] + 0.06, SUBJECT_AT_0[1] + 0.09])
+  await expect(page.getByTestId('vs-strays')).toBeVisible({ timeout: 60_000 })
+
+  // THE PRICE, which is the thing this tool exists to put in front of people
+  // and the reason following is a mode rather than a default: holding a subject
+  // that walks across the frame costs far more picture than holding a camera
+  // that wobbles, and the figure is derived from this clip and this box.
+  const followKept = await kept(page)
+  expect(followKept).toBeLessThan(steadyKept - 10)
+
+  // And it is not shown as lost — this subject is in plain view throughout, so
+  // a warning here would be the caveat-on-everything failure one level in.
+  await expect(page.getByTestId('vs-lost')).toHaveCount(0)
+})
+
+test('the exported file really holds the subject, not just the panel', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page, SUBJECT, 'subject.mp4')
+  await chooseSubject(page)
+  await dragBox(page, [SUBJECT_AT_0[0] - 0.06, SUBJECT_AT_0[1] - 0.09], [SUBJECT_AT_0[0] + 0.06, SUBJECT_AT_0[1] + 0.09])
+  await expect(page.getByTestId('vs-strays')).toBeVisible({ timeout: 60_000 })
+  // Tightest, so the claim under test is the strong one.
+  await page.getByTestId('vs-tightness').fill('0')
+
+  await page.getByTestId('vs-export').click()
+  await expect(page.getByTestId('vs-download')).toBeVisible({ timeout: 120_000 })
+
+  const before = await centreSpread(page, (await page.getByTestId('vs-video').getAttribute('src'))!)
+  const after = await centreSpread(page, (await page.getByTestId('vs-download').getAttribute('href'))!)
+
+  // A measurement that saw two frames would satisfy any ratio.
+  expect(before.frames).toBeGreaterThan(12)
+  expect(after.frames).toBeGreaterThan(12)
+
+  // The subject walks a fifth of the frame across in the source; in the export
+  // it should sit near the middle. Measured on the file a reader downloads,
+  // not on the app's own canvas — a panel says what the tool BELIEVES.
+  expect(after.spread).toBeLessThan(before.spread / 2)
+})
+
+test('a box with nothing in it to follow is refused, and says why', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page, SUBJECT, 'subject.mp4')
+  await chooseSubject(page)
+
+  // OVER THE FLAT PATCH the generator paints for exactly this — the sky, a wall,
+  // a blown-out window. The rest of that world is grained everywhere, which is
+  // what makes it all trackable, so the case the tracker must REFUSE had to be
+  // put into the fixture on purpose. World (230,195)-(290,240) lands at
+  // fractions x 0.03-0.22, y 0.03-0.28 on the first frame.
+  await dragBox(page, [0.06, 0.06], [0.19, 0.24])
+
+  // Named, not silent. A tracker that accepted it would report a confident path
+  // that is really the search window sliding about, and the crop would wander
+  // with nothing on screen to say why.
+  await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByTestId('file-error')).toContainText('texture')
+  await expect(page.getByTestId('vs-strays')).toHaveCount(0)
 })
 
 test('the steadied clip exports as a real, playable MP4 at the cropped size', async ({ page }) => {

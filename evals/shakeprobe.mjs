@@ -233,5 +233,180 @@ const shakePoses = []
   check(M.requiredZoom([M.STILL], W, H) === 1, 'a clip with no shake in it costs nothing')
 }
 
+// ------------------------------------------------------ following a SUBJECT
+//
+// The same scene turned round: the tiles the estimator throws away as "not the
+// camera" are exactly what this half has to lock onto. So the subject is
+// painted at a known WORLD position on a moving path, the camera shakes
+// underneath it, and where it lands on the sensor is arithmetic — which makes
+// the tracked path checkable rather than merely plausible.
+
+/** Where a world point falls on the sensor for a pose, relative to the centre. */
+function worldToFrame(pose, wx, wy) {
+  const c = Math.cos(pose.rot), s = Math.sin(pose.rot)
+  const dx = wx - pose.cx, dy = wy - pose.cy
+  return { x: c * dx + s * dy, y: -s * dx + c * dy }
+}
+
+/**
+ * A textured block, in two flavours, and WHICH one is used is the finding.
+ *
+ * `noise` is what a real subject's fine detail looks like — a face, a shirt, a
+ * number plate — and it is what the accuracy checks below use. `stripes` is a
+ * REPEATING pattern, which is genuinely ambiguous to any template matcher:
+ * every alias of the period matches about as well as the truth. It is kept as a
+ * measured LIMIT rather than a gate, because "a striped shirt is hard" is a
+ * property of template matching and not a defect this code can fix.
+ */
+const SUBJECT_TEX = (() => {
+  const r = rng(4242)
+  const t = new Uint8Array(256 * 256)
+  for (let i = 0; i < t.length; i++) t[i] = 60 + (r() * 190) | 0
+  return t
+})()
+
+function paintBlock(d, cxf, cyf, sw, sh, kind) {
+  const x0 = Math.round(cxf + W / 2 - sw / 2)
+  const y0 = Math.round(cyf + H / 2 - sh / 2)
+  for (let y = Math.max(0, y0); y < Math.min(H, y0 + sh); y++) {
+    for (let x = Math.max(0, x0); x < Math.min(W, x0 + sw); x++) {
+      const u = x - x0, v = y - y0
+      d[y * W + x] = kind === 'stripes'
+        ? ((u * 11 + v * 29) & 127) + 100
+        : SUBJECT_TEX[(v & 255) * 256 + (u & 255)]
+    }
+  }
+}
+
+const SUB = 44
+
+/** Track one painted subject across the shaking path, and report the error. */
+function followRun(kind) {
+  const world = shakePoses.map((_, i) => ({
+    x: SCENE / 2 - 90 + i * 3.4,
+    y: SCENE / 2 + Math.sin(i * 0.4) * 26,
+  }))
+  const truth = shakePoses.map((p, i) => worldToFrame(p, world[i].x, world[i].y))
+  const frames = shakePoses.map((p, i) => pyr(frameAt(p.cx, p.cy, p.rot,
+    (d) => paintBlock(d, truth[i].x, truth[i].y, SUB, SUB, kind))))
+  const est = []
+  for (let i = 1; i < frames.length; i++) est.push(M.estimateMotion(frames[i - 1], frames[i]))
+  const centre = { x: W / 2, y: H / 2 }
+  // A LOOSE box, because that is what a person drags. Nobody gets a rectangle
+  // tight around a moving subject on a phone, and `startTrack` trims to the
+  // middle for exactly that reason — so a fixture with a perfectly tight box
+  // measures a case the tool does not see and penalises the trim for doing its
+  // job. Measured both ways: tight 1.10px rms, loose 0.36px.
+  const margin = SUB * 0.35
+  const box = {
+    x: truth[0].x + W / 2 - SUB / 2 - margin,
+    y: truth[0].y + H / 2 - SUB / 2 - margin,
+    w: SUB + margin * 2,
+    h: SUB + margin * 2,
+  }
+  const t = M.startTrack(frames[0], box)
+  if (!t) return { t: null }
+  const points = [{ x: truth[0].x, y: truth[0].y, score: 1 }]
+  for (let i = 1; i < frames.length; i++) points.push(M.trackNext(t, frames[i], est[i - 1], centre))
+  const err = points.map((p, i) => Math.hypot(p.x - truth[i].x, p.y - truth[i].y))
+  // The BIAS is a constant offset between the box somebody drew and the patch
+  // that was cut from it, and it does not matter: the follow centres whatever
+  // it is tracking, so a fixed half-pixel puts the subject a fixed half-pixel
+  // off centre and nothing else. What matters is the WOBBLE — how much the
+  // reported position moves relative to the subject from frame to frame — so
+  // that is what the gates below are on.
+  const bx = points.reduce((a, p, i) => a + (p.x - truth[i].x), 0) / points.length
+  const by = points.reduce((a, p, i) => a + (p.y - truth[i].y), 0) / points.length
+  const wobble = points.map((p, i) => Math.hypot(p.x - truth[i].x - bx, p.y - truth[i].y - by))
+  return { t, est, points, err, truth, wobble, bias: Math.hypot(bx, by) }
+}
+
+{
+  // The subject walks across the world while the camera shakes and pans.
+  const { t, est, points, err, wobble, bias } = followRun('noise')
+  check(!!t, 'a textured subject can be followed at all')
+  if (process.env.TRACKDBG) console.log('err/frame', err.map((e) => e.toFixed(1)).join(' '))
+  const worst = Math.max(...err)
+  const lowest = Math.min(...points.map((p) => p.score))
+  console.log(`\nsubject: tracked over ${points.length} frames  rms ${rms(err).toFixed(2)}px  worst ${worst.toFixed(2)}px  wobble ${rms(wobble).toFixed(2)}px  bias ${bias.toFixed(2)}px  lowest score ${lowest.toFixed(2)}`)
+  check(rms(wobble) < 0.6, 'the subject is followed to within 0.6px rms of wobble', `${rms(wobble).toFixed(2)}px`)
+  check(Math.max(...wobble) < 1.5, 'and never wobbles more than 1.5px on any frame', `${Math.max(...wobble).toFixed(2)}px`)
+  check(lowest > M.TRACK_LOST, 'a subject in plain view is never reported as lost', `lowest ${lowest.toFixed(2)}`)
+
+  // THE PRODUCT CLAIM: the subject ends up near the middle, and that costs crop.
+  const path = M.accumulate(est)
+  const cam = M.corrections(path, M.smooth(path, 10))
+  const before = M.subjectSpread(points, cam)
+  console.log(`subject: strays ${before.toFixed(1)}px from the middle with the camera merely steadied`)
+  for (const radius of [0, 6, 20]) {
+    const cs = M.followCorrections(points, cam, radius)
+    const after = M.subjectSpread(points, cs)
+    const z = M.requiredZoom(cs, W, H)
+    console.log(`  follow radius ${String(radius).padStart(2)}: strays ${after.toFixed(1)}px  zoom ${z.toFixed(2)}x  keeps ${(M.keptFraction(z) * 100).toFixed(0)}%`)
+  }
+  const locked = M.followCorrections(points, cam, 0)
+  const loose = M.followCorrections(points, cam, 20)
+  check(M.subjectSpread(points, locked) < 0.01,
+    'at radius 0 the subject is nailed to the middle', `${M.subjectSpread(points, locked).toFixed(3)}px`)
+  check(M.subjectSpread(points, loose) < before,
+    'a loose follow still brings it closer to the middle than steadying alone',
+    `${before.toFixed(1)} -> ${M.subjectSpread(points, loose).toFixed(1)}px`)
+  // The trade, and the reason the tool prices it: holding a subject that moves
+  // costs far more picture than holding a camera that wobbles.
+  const camZoom = M.requiredZoom(cam, W, H)
+  const followZoom = M.requiredZoom(locked, W, H)
+  console.log(`subject: steadying costs ${camZoom.toFixed(2)}x, following costs ${followZoom.toFixed(2)}x`)
+  check(followZoom > camZoom, 'following a moving subject costs more picture than steadying',
+    `${camZoom.toFixed(2)}x -> ${followZoom.toFixed(2)}x`)
+}
+
+// ------------------------- the measured LIMIT: a subject with repeating texture
+//
+// Not a gate. A striped shirt, brickwork or a railing matches its own aliases
+// about as well as the truth, and no template matcher settles that from
+// appearance alone — so this reports the number rather than asserting one, and
+// the UI's honest answer is the confidence it already carries.
+{
+  const { err } = followRun('stripes')
+  console.log(`\nsubject with REPEATING texture: rms ${rms(err).toFixed(2)}px  worst ${Math.max(...err).toFixed(2)}px`)
+  console.log('  (a limit of template matching, not of this code — the aliases of a period match equally well)')
+}
+
+// --------------------------------- control: a subject that leaves the picture
+//
+// Saying "it was lost at 1.4s" is the whole difference between a tool and a
+// crop that quietly wanders. Without this the confidence could be decoration.
+{
+  const poses = Array.from({ length: 20 }, () => ({ cx: SCENE / 2, cy: SCENE / 2, rot: 0 }))
+  // Walks steadily out of the right-hand edge and is gone by the end.
+  const at = (i) => ({ x: -60 + i * 22, y: 0 })
+  const frames = poses.map((p, i) => pyr(frameAt(p.cx, p.cy, p.rot,
+    (d) => paintBlock(d, at(i).x, at(i).y, SUB, SUB, 'noise'))))
+  const centre = { x: W / 2, y: H / 2 }
+  const t = M.startTrack(frames[0], { x: at(0).x + W / 2 - SUB / 2, y: at(0).y + H / 2 - SUB / 2, w: SUB, h: SUB })
+  const scores = []
+  for (let i = 1; i < frames.length; i++) scores.push(M.trackNext(t, frames[i], M.STILL, centre).score)
+  const lostAt = scores.findIndex((v) => v < M.TRACK_LOST)
+  console.log(`\nsubject leaving frame: scores ${scores.map((v) => v.toFixed(2)).join(' ')}`)
+  check(lostAt > 0, 'a subject that walks out of the picture is reported as lost, not followed', `first lost at frame ${lostAt + 1}`)
+  check(scores[0] > M.TRACK_LOST, 'and is not called lost while it is still in view', `${scores[0].toFixed(2)}`)
+}
+
+// ------------------------------- control: a box with nothing in it to follow
+//
+// The load-bearing half again. A box on a wall, the sky or a blown-out window
+// has no texture, and every position in the search window matches it equally
+// well — so a tracker that accepted it would report a confident path that is
+// really the window sliding about. Refusing is the only honest answer, and it
+// is what lets the UI say WHY rather than producing a drifting crop.
+{
+  const flat = { data: new Uint8Array(W * H).fill(128), width: W, height: H }
+  check(M.startTrack(pyr(flat), { x: 100, y: 60, w: SUB, h: SUB }) === null,
+    'a box with no texture in it is refused rather than followed')
+  // And a box too small to hold anything is refused for its own reason.
+  check(M.startTrack(pyr(frameAt(SCENE / 2, SCENE / 2, 0)), { x: 10, y: 10, w: 4, h: 4 }) === null,
+    'a box smaller than the matcher can use is refused')
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nall good')
 process.exit(failed ? 1 : 0)

@@ -47,8 +47,8 @@ const blank = path.join(ROOT, 'evals/gen/blank.html')
 writeFileSync(blank, '<!doctype html><title>encode</title>')
 await page.goto(`file://${blank}`)
 
-async function encode(shaky) {
-  return page.evaluate(async ({ W, H, FPS, N, shaky }) => {
+async function encode(kind) {
+  return page.evaluate(async ({ W, H, FPS, N, kind }) => {
   // Fixed generator: a fixture that differs between runs is a fixture nobody
   // can reason about when a case starts failing.
   let seed = 20260905
@@ -77,10 +77,25 @@ async function encode(shaky) {
     grain.data[i] += n; grain.data[i + 1] += n; grain.data[i + 2] += n
   }
   wc.putImageData(grain, 0, 0)
+  if (kind === 'subject') {
+    // A FLAT PATCH, painted AFTER the grain so it really has nothing in it —
+    // the sky, a wall, a blown-out window. The rest of this world is grained
+    // everywhere, which is what makes every part of it trackable, so without
+    // this the fixture cannot show the case the tracker is supposed to REFUSE.
+    // Not near-white, or it would join the subject in the centroid.
+    wc.fillStyle = '#2a3a48'
+    wc.fillRect(WORLD_W / 2 - 150, WORLD_H / 2 - 65, 60, 45)
+  }
   // The marker: one small, unmistakably brightest thing, at a fixed place in
   // the WORLD. A spec finds its centroid and asks how much it moves.
-  wc.fillStyle = '#ffffff'
-  wc.fillRect(WORLD_W / 2 + 96, WORLD_H / 2 - 54, 14, 14)
+  //
+  // NOT in the subject clip, where the moving subject IS the bright thing — two
+  // near-white objects would make the centroid the midpoint of both and every
+  // measurement about half of what it should be.
+  if (kind !== 'subject') {
+    wc.fillStyle = '#ffffff'
+    wc.fillRect(WORLD_W / 2 + 96, WORLD_H / 2 - 54, 14, 14)
+  }
 
   const canvas = new OffscreenCanvas(W, H)
   const ctx = canvas.getContext('2d', { alpha: false })
@@ -108,7 +123,15 @@ async function encode(shaky) {
     // between consecutive frames about 5.6 times as far before steadying as
     // after. A fixture that only just shows a property is a case that fails on
     // a different encoder.
-    const SWAY = shaky ? 26 : 0, SWAY_HZ = 0.4, WOB = shaky ? 4 : 0, WOB_HZ = 5, ROLL = shaky ? 0.02 : 0
+    const moves = kind !== 'steady'
+    const SWAY = moves ? 26 : 0, SWAY_HZ = 0.4, WOB = moves ? 4 : 0, WOB_HZ = 5, ROLL = moves ? 0.02 : 0
+    /** Where the subject is in the WORLD at time t — a walk, not a wobble. Kept
+     *  well inside the span the shaking camera can see, so it never leaves the
+     *  picture: that is a different case and it has its own test. */
+    const subjectAt = (t) => ({
+      x: WORLD_W / 2 - 80 + (t / (N / FPS)) * 140,
+      y: WORLD_H / 2 + Math.sin(2 * Math.PI * 0.55 * t) * 30,
+    })
   for (let i = 0; i < N; i++) {
     const t = i / FPS
     const cx = WORLD_W / 2 + Math.sin(2 * Math.PI * SWAY_HZ * t) * SWAY + Math.sin(2 * Math.PI * WOB_HZ * t) * WOB
@@ -121,6 +144,42 @@ async function encode(shaky) {
     ctx.translate(-cx, -cy)
     ctx.drawImage(world, 0, 0)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
+    if (kind === 'subject') {
+      // Drawn where its WORLD position projects to, so the camera shake moves
+      // it exactly as it moves everything else and the tracker has to separate
+      // the two. A CHECKERBOARD rather than a plain square: a flat block has no
+      // texture to match and the tracker rightly refuses it — the fixture has
+      // to contain the case the tool is for, not the one it rejects.
+      const w = subjectAt(t)
+      const c = Math.cos(-rot), sn = Math.sin(-rot)
+      const dx = w.x - cx, dy = w.y - cy
+      const fx = c * dx - sn * dy + W / 2
+      const fy = sn * dx + c * dy + H / 2
+      const S = 26
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(Math.round(fx - S / 2), Math.round(fy - S / 2), S, S)
+      // A NON-REPEATING mark, and that is a correction rather than a detail. It
+      // was a 4px checkerboard first, which is precisely the repeating texture
+      // `evals/shakeprobe.mjs` measures as the limit of template matching: every
+      // alias of the period matches about as well as the truth, and the tracker
+      // duly locked onto the background instead — the exported clip held the
+      // world still while the subject walked out of it. A fixture has to contain
+      // the hard case; this one contained ONLY the hard case, so it could not
+      // show the tool working at all.
+      //
+      // Mostly white so the near-white centroid a spec measures is still the
+      // block's own, with a fixed irregular pattern inside it for the matcher.
+      let sp = 991
+      const spot = () => { sp = (sp * 1103515245 + 12345) & 0x7fffffff; return sp / 0x7fffffff }
+      ctx.fillStyle = '#101014'
+      for (let k = 0; k < 14; k++) {
+        ctx.fillRect(
+          Math.round(fx - S / 2 + 2 + spot() * (S - 6)),
+          Math.round(fy - S / 2 + 2 + spot() * (S - 6)),
+          2 + Math.round(spot() * 2), 2 + Math.round(spot() * 2),
+        )
+      }
+    }
     const frame = new VideoFrame(canvas, { timestamp: Math.round((i / FPS) * 1e6), duration: Math.round(1e6 / FPS) })
     encoder.encode(frame, { keyFrame: i % 24 === 0 })
     frame.close()
@@ -128,7 +187,7 @@ async function encode(shaky) {
   await encoder.flush()
   encoder.close()
     return { chunks, description }
-  }, { W, H, FPS, N, shaky })
+  }, { W, H, FPS, N, kind })
 }
 
 /**
@@ -140,10 +199,10 @@ async function encode(shaky) {
  * files differing in exactly the property under test is the whole point of a
  * control.
  */
-const files = [['shaky.mp4', true], ['steady.mp4', false]]
+const files = [['shaky.mp4', 'shaky'], ['steady.mp4', 'steady'], ['subject.mp4', 'subject']]
 
-for (const [name, shaky] of files) {
-const encoded = await encode(shaky)
+for (const [name, kind] of files) {
+const encoded = await encode(kind)
 if (!encoded.description) throw new Error('the browser gave back no avcC record — no H.264 encoder?')
 
 const step = Math.round(TIMESCALE / FPS)
