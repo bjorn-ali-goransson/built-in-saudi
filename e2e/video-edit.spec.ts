@@ -401,6 +401,37 @@ async function dragSeg(page: Page, id: string, dx: number, dy: number) {
   await page.mouse.up()
 }
 
+test('the crop segments are NOT mirrored in Arabic', async ({ page }) => {
+  // A PICTURE DOES NOT MIRROR. The segment ids are physical — `nw` drags the
+  // north-west corner — and the nine cells are a CSS grid, which lays its
+  // columns right to left under RTL. So on the Arabic side every cell dragged
+  // the opposite edge of the frame from the one under the finger, and the
+  // rectangle appeared to fight the drag.
+  const corners = async () => {
+    const nw = (await page.getByTestId('ve-crop-nw').boundingBox())!
+    const ne = (await page.getByTestId('ve-crop-ne').boundingBox())!
+    const sw = (await page.getByTestId('ve-crop-sw').boundingBox())!
+    return { nw, ne, sw }
+  }
+
+  await load(page, 'ar')
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  const ar = await corners()
+  expect(ar.nw.x).toBeLessThan(ar.ne.x)
+  // The rows as a control, so this cannot pass against a layout that mirrored
+  // the wrong axis — and so the case says which direction it is about.
+  expect(ar.nw.y).toBeLessThan(ar.sw.y)
+
+  // And the SAME way round in English, which is what makes it a physical
+  // layout rather than a per-locale patch.
+  await load(page, 'en')
+  await pick(page)
+  const en = await corners()
+  expect(en.nw.x).toBeLessThan(en.ne.x)
+  expect(en.nw.y).toBeLessThan(en.sw.y)
+})
+
 test('a drag NEAR a format SNAPS onto it, and the bar says which', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
@@ -415,8 +446,10 @@ test('a drag NEAR a format SNAPS onto it, and the bar says which', async ({ page
 
   await expect(page.getByTestId('ve-aspect-1:1')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('ve-aspect-source')).toHaveAttribute('aria-pressed', 'false')
-  // Free is never offered, because the drag never produced a free shape. This
-  // is the assertion the old behaviour fails outright.
+  // And no Free chip is left behind. The drag crossed the ground between 4:3
+  // and square, so a free proportion genuinely existed in passing — the bar
+  // must not go on offering to return to a shape the finger was only travelling
+  // through. This is the assertion the old behaviour fails outright.
   await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
 
   // And the SHAPE followed the label. Selecting a chip without reshaping the
@@ -710,22 +743,43 @@ test('a caption is drawn into the picture, and only while it is showing', async 
  */
 const ABOVE: [number, number, number, number] = [0.3, 0.4, 0.7, 0.44]
 
-test('the preview can be muted, and is not muted to begin with', async ({ page }) => {
+test('the mute button mutes the FILE, and the preview follows', async ({ page }) => {
   await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
   const video = page.getByTestId('ve-video')
   const muted = () => video.evaluate((v: HTMLVideoElement) => v.muted)
 
-  // NOT muted by default: a preview that is silent until somebody finds a
-  // control cannot be told apart from a clip that has no sound in it, which is
-  // a thing this tool has to be able to say.
+  // It sits with the tools that decide what comes out, not on the transport
+  // where it read as a volume control.
+  await expect(page.getByTestId('ve-tools').getByTestId('ve-mute')).toBeVisible()
+
+  // Sound by default, and the preview is not muted either — a preview silent
+  // until somebody finds a control cannot be told apart from a clip with no
+  // sound in it, which is a thing this tool has to be able to say.
   expect(await muted()).toBe(false)
   await page.getByTestId('ve-mute').click()
-  // The ELEMENT, not the button's own state — a toggle that lights up and
-  // leaves the sound playing is the failure this is here for.
+  // The preview follows, because the preview IS the export here.
   expect(await muted()).toBe(true)
-  await page.getByTestId('ve-mute').click()
-  expect(await muted()).toBe(false)
+
+  // THE POINT OF THE CASE, and the half the old one could not see: the button
+  // used to mute the playback and leave the file talking. The exported track is
+  // what says which of those happened.
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+  expect(await exportHasSound(page)).toBe(false)
+})
+
+test('and unmuted, the very same export keeps its sound', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  // The control half of the case above. Without it, a tool that never wrote an
+  // audio track at all would pass it.
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('aria-pressed', 'false')
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+  expect(await exportHasSound(page)).toBe(true)
 })
 
 test('a caption that outgrows its box spills out of it rather than being cut', async ({ page }) => {
@@ -1382,6 +1436,99 @@ test('a rotated recording is edited upright, not squashed into the stored shape'
   await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
   const m = await decodeExport(page)
   expect(m.h).toBeGreaterThan(m.w)
+})
+
+/**
+ * The width of one of the scrub line's dimmed ends, as a share of the line.
+ *
+ * Measured rather than read off a style, because what is being asserted is that
+ * the dim covers the part that goes. `evaluate` rather than `boundingBox`,
+ * since an uncut end is genuinely zero pixels wide and Playwright reports no
+ * box at all for one of those — which is the state the control case needs.
+ */
+async function cutShare(page: Page, which: 'before' | 'after'): Promise<number> {
+  return page.getByTestId(`ve-cut-${which}`).evaluate((el) => {
+    const line = el.parentElement!.getBoundingClientRect().width
+    return el.getBoundingClientRect().width / Math.max(1, line)
+  })
+}
+
+test('the two cuts shorten the FILE, and dim what they took', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // Nothing is cut to begin with, so both ends of the line are at zero width.
+  // Without this the case below would pass against a tool whose bands are
+  // always drawn — which is the same shape as a warning shown to everybody.
+  expect(await cutShare(page, 'before')).toBeLessThan(0.01)
+  expect(await cutShare(page, 'after')).toBeLessThan(0.01)
+  await expect(page.getByTestId('ve-cut-before')).toHaveAttribute('data-cut', 'no')
+  await expect(page.getByTestId('ve-cut-after')).toHaveAttribute('data-cut', 'no')
+  await expect(page.getByTestId('ve-total')).toContainText('0:06')
+
+  // The fixture is 6 seconds. Cut the first second off the head and the last
+  // two off the tail, leaving three.
+  await seek(page, 1)
+  await page.getByTestId('ve-cut-head').click()
+  await seek(page, 4)
+  await page.getByTestId('ve-cut-tail').click()
+
+  await expect(page.getByTestId('ve-total')).toContainText('0:03')
+  await expect(page.getByTestId('ve-cut-before')).toHaveAttribute('data-cut', 'yes')
+  await expect(page.getByTestId('ve-cut-after')).toHaveAttribute('data-cut', 'yes')
+  // A sixth of the line at the head and a third at the tail — read off the
+  // rendered geometry rather than off a class name, since what is being
+  // asserted is that the dim covers the part that goes.
+  expect(await cutShare(page, 'before')).toBeGreaterThan(0.12)
+  expect(await cutShare(page, 'before')).toBeLessThan(0.21)
+  expect(await cutShare(page, 'after')).toBeGreaterThan(0.28)
+  expect(await cutShare(page, 'after')).toBeLessThan(0.39)
+
+  // And the FILE is what actually has to be shorter. The readout could be
+  // right while the export ignored the cut entirely, which is the whole risk.
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+  const m = await decodeExport(page)
+  expect(m.d).toBeGreaterThan(2.5)
+  expect(m.d).toBeLessThan(3.6)
+})
+
+test('a cut is put back by the control that made it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  await seek(page, 2)
+  await page.getByTestId('ve-cut-head').click()
+  await expect(page.getByTestId('ve-total')).toContainText('0:04')
+  expect(await cutShare(page, 'before')).toBeGreaterThan(0.25)
+
+  // The dimmed stretch stays SCRUBBABLE, which is the only reason this works:
+  // a line that no longer contained the cut part would leave nowhere to put
+  // the playhead to give it back. There is no undo in this editor, and nothing
+  // saved to undo from.
+  await seek(page, 0)
+  await page.getByTestId('ve-cut-head').click()
+  await expect(page.getByTestId('ve-total')).toContainText('0:06')
+  expect(await cutShare(page, 'before')).toBeLessThan(0.01)
+})
+
+test('a caption keeps its place on the SHORTENED timeline', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+
+  // Cut two seconds off the head, then look at the frame two seconds into the
+  // FILE — which is four seconds into the upload. The readout is the contract:
+  // captions and censors are timed on the joined output clock, so a cut that
+  // did not move the playhead with it would leave every box aimed two seconds
+  // from where its author put it.
+  await seek(page, 2)
+  await page.getByTestId('ve-cut-head').click()
+  await seek(page, 4)
+  await expect(page.getByTestId('ve-total')).toContainText('0:02 / 0:04')
 })
 
 test('the mute button says when a clip has no sound at all', async ({ page }) => {

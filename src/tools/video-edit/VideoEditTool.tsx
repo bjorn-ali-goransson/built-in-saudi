@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, KeyframeIcon, MosaicIcon, MuteIcon, PauseIcon, PlayIcon,
-  TextIcon, TrashIcon, VolumeIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, CutHeadIcon, CutTailIcon, DownloadIcon, KeyframeIcon, MosaicIcon,
+  MuteIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon, VolumeIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
@@ -51,8 +51,10 @@ const STR = {
     modeMore: 'Output settings',
     play: 'Play',
     pause: 'Pause',
-    mute: 'Mute the preview',
-    unmute: 'Unmute the preview',
+    mute: 'Export without sound',
+    unmute: 'Export with sound',
+    cutHead: 'Cut everything before here',
+    cutTail: 'Cut everything after here',
     free: 'Free',
     addBox: 'Drag on the video to draw a box.',
     deleteBox: 'Delete this box',
@@ -78,7 +80,6 @@ const STR = {
     qualities: ['Smaller file', 'Normal', 'Sharper'],
     maxHeight: 'Largest side',
     noUpscale: 'Never larger than the source: upscaling adds pixels and no detail.',
-    keepAudio: 'Keep the sound',
     audioCopied: 'The sound is copied across untouched — it is never re-encoded, so it loses nothing.',
     audioMixed: 'These clips store their sound differently, so it cannot be joined without re-encoding — which this browser cannot do. The export will be silent.',
     audioMissing: 'One of these clips has no sound, so the joined video would have a silent stretch. The export will be silent.',
@@ -123,8 +124,10 @@ const STR = {
     modeMore: 'إعدادات المُخرَج',
     play: 'تشغيل',
     pause: 'إيقاف',
-    mute: 'كتم صوت المعاينة',
-    unmute: 'إلغاء كتم صوت المعاينة',
+    mute: 'صدّر بلا صوت',
+    unmute: 'صدّر مع الصوت',
+    cutHead: 'احذف ما قبل هذه النقطة',
+    cutTail: 'احذف ما بعد هذه النقطة',
     free: 'حرّ',
     addBox: 'اسحب على الفيديو لترسم مربّعًا.',
     deleteBox: 'احذف هذا المربّع',
@@ -150,7 +153,6 @@ const STR = {
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
     maxHeight: 'أطول ضلع',
     noUpscale: 'لا يتجاوز المصدر أبدًا: التكبير يضيف بكسلات ولا يضيف تفصيلًا.',
-    keepAudio: 'أبقِ الصوت',
     audioCopied: 'يُنسخ الصوت كما هو دون إعادة ترميز، فلا يفقد شيئًا.',
     audioMixed: 'تخزّن هذه المقاطع صوتها بصيغ مختلفة، فلا يمكن دمجه دون إعادة ترميز، وهذا ما لا يقدر عليه هذا المتصفح. سيخرج المقطع صامتًا.',
     audioMissing: 'أحد هذه المقاطع بلا صوت، فسيكون في الفيديو المدموج فراغ صامت. سيخرج المقطع صامتًا.',
@@ -188,6 +190,15 @@ const STR = {
  * worker draws it at full size.
  */
 const PREVIEW_MAX = 720
+
+/**
+ * The shortest a clip may be cut to, in seconds.
+ *
+ * Not zero: a clip with no frames in it is an encoder failure at the end of a
+ * long job rather than a refusal at the moment it was asked for, and the two
+ * cuts meeting in the middle is an ordinary thing to do by accident.
+ */
+const MIN_CLIP = 0.1
 
 /** Bits per pixel per second, at each quality. Multiplied by w×h×fps. */
 const QUALITY = [0.05, 0.09, 0.15]
@@ -359,6 +370,8 @@ export default function VideoEditTool() {
   // that going back to a preset and then to Free again returns to the shape
   // that was dragged, rather than to whatever preset was last selected.
   const [freeAspect, setFreeAspect] = useState(0)
+  /** Did the drag in progress last land ON a format? Read by `up`. */
+  const snappedRef = useRef(false)
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
   const [captions, setCaptions] = useState<Caption[]>([])
@@ -369,6 +382,17 @@ export default function VideoEditTool() {
   const [boxPanel, setBoxPanel] = useState(false)
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
+  /**
+   * Does the FILE keep its sound?
+   *
+   * It used to be a checkbox behind the cog with a separate speaker on the
+   * transport that muted only the preview — two controls that look like one
+   * thing and are not, so the obvious button was the one that changed nothing
+   * about the export. It is now the speaker, up with the other tools, and it
+   * mutes the preview as well: this whole editor rests on the preview being
+   * the export rather than an impression of it, and a silent file that plays
+   * out loud while you make it is exactly that gap in miniature.
+   */
   const [keepAudio, setKeepAudio] = useState(true)
   const [busy, setBusy] = useState<'' | 'read' | 'render'>('')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
@@ -378,16 +402,6 @@ export default function VideoEditTool() {
   const [confirmBack, setConfirmBack] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playing, setPlaying] = useState(false)
-  /**
-   * The PREVIEW's sound, not the export's.
-   *
-   * Which is why it lives on the transport beside play rather than behind the
-   * cog: `keepAudio` decides what the file gets and is a choice made once,
-   * while this is the thing you reach for the moment a clip starts playing out
-   * loud in a room with other people in it. Default ON, because a preview that
-   * is silent by default hides a clip having no sound at all.
-   */
-  const [muted, setMuted] = useState(false)
   const [pos, setPos] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
@@ -478,11 +492,41 @@ export default function VideoEditTool() {
     workerRef.current?.postMessage({ ...req, id } as Req, transfer)
   }), [])
 
+  /**
+   * How much of each clip survives, in ITS OWN seconds, keyed by slot.
+   *
+   * The joined timeline is then simply the trimmed lengths laid end to end —
+   * `infos` reports the trimmed duration, so `timeline`, `totalDuration` and
+   * every caption and censor span downstream of them are already the output's
+   * clock with nothing to convert. The only thing that still needs the raw
+   * number is the scrubber, which has to show what was cut in order to let it
+   * back.
+   */
+  const [trims, setTrims] = useState<Record<number, { in: number; out: number }>>({})
+  const trimOf = useCallback(
+    (c: Clip) => trims[c.slot] ?? { in: 0, out: c.info.durationSec },
+    [trims],
+  )
+
   const infos: ClipInfo[] = useMemo(
-    () => clips.map((c) => ({ name: c.file.name, durationSec: c.info.durationSec, width: c.info.width, height: c.info.height })),
-    [clips],
+    () => clips.map((c) => {
+      const tr = trims[c.slot] ?? { in: 0, out: c.info.durationSec }
+      return {
+        name: c.file.name,
+        // A floor rather than zero: a clip cut to nothing is a clip with no
+        // frames in it, and an encoder handed none of those fails at the end
+        // of a long job rather than at the moment somebody asked for it.
+        durationSec: Math.max(MIN_CLIP, tr.out - tr.in),
+        width: c.info.width,
+        height: c.info.height,
+      }
+    }),
+    [clips, trims],
   )
   const current = clips[Math.min(sel, clips.length - 1)]
+  /** The current clip's full length and its cut, both in the clip's own seconds. */
+  const clipLen = Math.max(MIN_CLIP, current?.info.durationSec ?? MIN_CLIP)
+  const trim = current ? trimOf(current) : { in: 0, out: clipLen }
   const sourceAspect = current ? current.info.width / current.info.height : 9 / 16
   const aspect = useMemo(() => {
     if (aspectId === 'free' && freeAspect) return freeAspect
@@ -511,14 +555,6 @@ export default function VideoEditTool() {
   const fps = current ? Math.max(1, Math.min(60, current.info.fps || 30)) : 30
   const bitrate = Math.round(size.width * size.height * fps * QUALITY[quality])
 
-  /**
-   * Whether the clip on screen has any sound at all.
-   *
-   * This is about the PREVIEW, so it is the current clip rather than the export
-   * plan: it decides whether the speaker button has anything to do.
-   */
-  const hasSound = !!current?.info.audio
-
   /** Which of the three audio outcomes this set of clips is heading for. */
   const audioPlan = useMemo(() => {
     if (!clips.length) return 'none' as const
@@ -526,6 +562,21 @@ export default function VideoEditTool() {
     const prints = new Set(clips.map((c) => c.info.audio?.fingerprint))
     return prints.size === 1 ? 'copy' as const : 'mixed' as const
   }, [clips])
+
+  /**
+   * Can the export keep its sound at all — and if not, WHY.
+   *
+   * Three different reasons end the same way and are not the same fact: there
+   * was never a sound track, one clip in the join has none, or the clips store
+   * theirs differently and joining would need a re-encode this browser cannot
+   * do. The button is unusable in all three and says which, rather than a
+   * paragraph under the video saying it to everybody.
+   */
+  const canKeepAudio = audioPlan === 'copy'
+  const audioWhy = audioPlan === 'copy' ? null
+    : audioPlan === 'mixed' ? s.audioMixed
+      : clips.length > 1 && audioPlan === 'missing' ? s.audioMissing
+        : s.audioNone
 
   // Caption bitmaps are rebuilt whenever what they say, or how big the frame is,
   // changes. They are the thing that gets composited, on the stage and in the
@@ -581,14 +632,28 @@ export default function VideoEditTool() {
       : c)))
   }, [duration])
 
-  /** The time on the JOINED timeline that the stage is currently showing. */
-  const spanStart = spans[Math.min(sel, Math.max(0, spans.length - 1))]?.start ?? 0
-  const t = spanStart + pos
-  const previewTime = useCallback(() => {
-    const v = videoRef.current
-    const span = spans[Math.min(sel, spans.length - 1)]
-    return (span?.start ?? 0) + (v?.currentTime ?? 0)
-  }, [spans, sel])
+  /**
+   * The time on the JOINED timeline that the stage is currently showing.
+   *
+   * The clip's own clock minus what was cut off its head, because the joined
+   * timeline is the KEPT stretches laid end to end — that is the clock the
+   * captions and the censors are on, so a cut has to move them under the
+   * playhead rather than leave them pointing at frames that will not be there.
+   * Clamped into the kept span, so scrubbing into a cut region shows the
+   * captions of the nearest frame that survives rather than of some other clip.
+   */
+  const outTime = useCallback((clipTime: number, index: number) => {
+    const span = spans[Math.min(index, Math.max(0, spans.length - 1))]
+    const c = clips[Math.min(index, Math.max(0, clips.length - 1))]
+    const tr = c ? trimOf(c) : { in: 0, out: 0 }
+    const len = Math.max(0, (span?.end ?? 0) - (span?.start ?? 0))
+    return (span?.start ?? 0) + Math.min(Math.max(clipTime - tr.in, 0), len)
+  }, [spans, clips, trimOf])
+  const t = outTime(pos, sel)
+  const previewTime = useCallback(
+    () => outTime(videoRef.current?.currentTime ?? 0, sel),
+    [outTime, sel],
+  )
 
   /**
    * The crop rectangle inside the WHOLE frame, in fractions of it.
@@ -785,6 +850,10 @@ export default function VideoEditTool() {
     URL.revokeObjectURL(gone.url)
     void ask({ kind: 'drop', slot: gone.slot })
     setClips((list) => list.filter((_, n) => n !== i))
+    // Its cut goes with it. Slots are handed out fresh rather than reused, so a
+    // leftover entry could never be reached again — but a map that only ever
+    // grows is a leak with a plausible excuse.
+    setTrims((m) => { const next = { ...m }; delete next[gone.slot]; return next })
     setSel(0)
     setOut(null)
   }
@@ -961,8 +1030,11 @@ export default function VideoEditTool() {
       const out = cropFromDrag(r, d.id, formats, clip)
       // The point of asking: the format a drag settles on is the one lit up in
       // the bar, so a rectangle dragged to square by eye says 1:1 rather than
-      // "Free". `freeAspect` is left alone on a snap, so going back to Free
-      // still returns to the last shape that genuinely was free.
+      // "Free". The free shape is kept live here even while snapped, because a
+      // drag between two formats crosses the ground between them and the chip
+      // has to be selectable the whole way — `up` is what decides whether it
+      // survives the gesture.
+      snappedRef.current = !!out.format
       if (out.format) setAspectId(out.format.id)
       else { setFreeAspect(out.aspect); setAspectId('free') }
       setZoom(out.zoom)
@@ -1045,6 +1117,15 @@ export default function VideoEditTool() {
     const d = dragRef.current
     dragRef.current = null
     if (overlayRef.current?.hasPointerCapture(e.pointerId)) overlayRef.current.releasePointerCapture(e.pointerId)
+
+    // A drag that ENDED on a format leaves no free shape behind. Any drag
+    // between two formats crosses the ground between them, so `freeAspect` is
+    // set in passing and the Free chip would otherwise stay on the bar
+    // afterwards offering to go back to a proportion nobody chose — the shape
+    // the finger happened to be passing through. It is cleared here rather
+    // than in the move, so the chip does not appear and vanish under the
+    // gesture while somebody is still making up their mind.
+    if (d?.kind === 'crop-seg' && snappedRef.current) setFreeAspect(0)
 
     // A stray click is not a box. Anything under about a fiftieth of the frame
     // is a misclick, and committing it would leave invisible specks that still
@@ -1177,6 +1258,10 @@ export default function VideoEditTool() {
     }
     const plan: RenderPlan = {
       slots: clips.map((c) => c.slot),
+      // Aligned with `slots`, in each clip's own seconds — the worker decodes
+      // from the file, so it needs the cut in the file's clock rather than in
+      // the joined one `infos` already reports.
+      trims: clips.map((c) => trimOf(c)),
       crop,
       out: size,
       bitrate,
@@ -1202,8 +1287,33 @@ export default function VideoEditTool() {
   function togglePlay() {
     const v = videoRef.current
     if (!v) return
-    if (v.paused) void v.play()
-    else v.pause()
+    if (!v.paused) { v.pause(); return }
+    // Play the KEPT stretch, so pressing play previews the file rather than the
+    // upload. Scrubbing stays unrestricted — the cut has to remain visible and
+    // reachable or it could not be walked back — but a preview that plays
+    // through the part it is about to throw away is the preview lying, which is
+    // the one thing this editor is arranged not to do.
+    if (v.currentTime < trim.in - 0.05 || v.currentTime >= trim.out - 0.02) v.currentTime = trim.in
+    void v.play()
+  }
+
+  /**
+   * Cut to the playhead, at whichever end.
+   *
+   * The same gesture puts a cut back: the head cut is "the file starts here",
+   * so scrubbing to the very start and pressing it again means it starts at the
+   * start. There is no separate undo, and this editor has nothing saved to undo
+   * from — so the control that makes a cut has to be the one that unmakes it.
+   */
+  const cutHead = () => {
+    if (!current) return
+    const at = Math.min(Math.max(pos, 0), trim.out - MIN_CLIP)
+    setTrims((m) => ({ ...m, [current.slot]: { in: at, out: trim.out } }))
+  }
+  const cutTail = () => {
+    if (!current) return
+    const at = Math.max(Math.min(pos, clipLen), trim.in + MIN_CLIP)
+    setTrims((m) => ({ ...m, [current.slot]: { in: trim.in, out: at } }))
   }
 
   if (supported === false) {
@@ -1427,7 +1537,11 @@ export default function VideoEditTool() {
         <div className="relative flex-1 min-h-0 flex items-center justify-center">
           {/* The source. It is not the preview — it is what `drawFrame` reads —
               so it is invisible but must stay laid out and decoding. */}
-          <video ref={videoRef} src={current.url} playsInline muted={muted} data-testid="ve-video"
+          {/* Muted when the FILE is: the preview is the export, so a clip that
+              is going to come out silent has to sound silent while it is being
+              made. */}
+          <video ref={videoRef} src={current.url} playsInline muted={!keepAudio || !canKeepAudio}
+            data-testid="ve-video"
             onLoadStart={() => diag.current.mark('video loadstart')}
             onError={() => {
               diag.current.mark(`video error ${videoRef.current?.error?.code ?? -1}`)
@@ -1437,7 +1551,15 @@ export default function VideoEditTool() {
               diag.current.mark('video loadedmetadata — the preview is working')
               setPreviewError(0)
             }}
-            onTimeUpdate={() => setPos(videoRef.current?.currentTime ?? 0)}
+            onTimeUpdate={() => {
+              const v = videoRef.current
+              if (!v) return
+              // Stop where the file stops. Without this, play runs on through
+              // the stretch the export drops and the preview quietly stops
+              // being a preview.
+              if (!v.paused && v.currentTime >= trim.out - 0.02) { v.pause(); v.currentTime = trim.out }
+              setPos(videoRef.current?.currentTime ?? 0)
+            }}
             onSeeked={() => setPos(videoRef.current?.currentTime ?? 0)}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -1469,7 +1591,13 @@ export default function VideoEditTool() {
               {/* The crop rectangle, over the uncropped picture. The canvas dims
                   everything outside it; this is the edge you actually drag. */}
               {mode === 'crop' && (
-                <div data-testid="ve-crop-box"
+                // `dir="ltr"` because A PICTURE DOES NOT MIRROR. The segment ids
+                // are physical — `nw` drags the north-west corner — and the
+                // grid laid its columns right to left under RTL, so on the
+                // Arabic side every cell dragged the opposite edge of the frame
+                // from the one under the finger. The comment on `SEGMENTS` said
+                // the ids must not mirror and the layout mirrored anyway.
+                <div data-testid="ve-crop-box" dir="ltr"
                   style={{ left: `${cropBox.x * 100}%`, top: `${cropBox.y * 100}%`, width: `${cropBox.w * 100}%`, height: `${cropBox.h * 100}%` }}
                   className="absolute border-2 border-green-400 grid grid-cols-3 grid-rows-3">
                   {/* Nine cells, and the lines between them are the rule-of-
@@ -1591,6 +1719,26 @@ export default function VideoEditTool() {
               {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
               {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
               {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+              {/* The FILE's sound, not the preview's — up here with the other
+                  things that decide what comes out, rather than on the
+                  transport where it read as a volume control. The preview
+                  follows it, because this tool's whole claim is that what is
+                  on the stage is what gets encoded.
+
+                  IT IS ALSO WHAT SAYS THERE IS NO SOUND, and what says a join
+                  cannot keep it: both used to be sentences printed under the
+                  video at everybody, describing a state a single control can
+                  simply show — struck through and unusable, with the reason on
+                  it for anyone who asks. */}
+              <button type="button" data-testid="ve-mute"
+                onClick={() => setKeepAudio((k) => !k)} disabled={!canKeepAudio}
+                title={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
+                aria-label={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
+                aria-pressed={!keepAudio}
+                data-sound={!canKeepAudio ? 'none' : keepAudio ? 'on' : 'muted'}
+                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-45 disabled:cursor-default">
+                {keepAudio && canKeepAudio ? <VolumeIcon className="w-5 h-5" /> : <MuteIcon className="w-5 h-5" />}
+              </button>
               <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ve-settings"
                 onClick={() => setSettings(true)}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
@@ -1700,37 +1848,78 @@ export default function VideoEditTool() {
         </div>
 
         {/* Transport. The native controls are gone with the visible video, and a
-            clip you cannot scrub is a clip you cannot aim a caption at. */}
-        <div className="wrap py-2 flex items-center gap-3 text-sand-100">
+            clip you cannot scrub is a clip you cannot aim a caption at.
+
+            `dir="ltr"` on the whole row, because TIME IS DRAWN LEFT TO RIGHT
+            whatever the language — every media player does it, and a range
+            input mirrors under RTL, so on the Arabic side the scrubber ran
+            backwards and its two end-caps would have swapped ends with it. */}
+        <div className="wrap py-2 flex items-center gap-2 text-sand-100" dir="ltr">
           <button type="button" onClick={togglePlay} data-testid="ve-play"
             title={playing ? s.pause : s.play} aria-label={playing ? s.pause : s.play}
             className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
             {playing ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
           </button>
-          {/* Beside play, because that is when it is wanted: the clip starts
-              playing out loud and the reach is for the speaker, not for a
-              settings screen two taps away.
+          {/* The two cuts sit at the ENDS of the line they act on, which is what
+              makes them legible without a label: the left one takes off the
+              head, the right one takes off the tail, and the dimmed stretch
+              between the button and the playhead is exactly what goes.
 
-              IT IS ALSO WHAT SAYS THERE IS NO SOUND. A clip with no audio track
-              used to be announced by a standing line under the transport, which
-              is a sentence printed at everybody to describe a state this control
-              already shows: struck through and unusable, because there is
-              nothing to mute. The reason is on it for anyone who asks. */}
-          <button type="button" onClick={() => setMuted((m) => !m)} data-testid="ve-mute"
-            disabled={!hasSound}
-            title={!hasSound ? s.audioNone : muted ? s.unmute : s.mute}
-            aria-label={!hasSound ? s.audioNone : muted ? s.unmute : s.mute}
-            aria-pressed={muted} data-sound={!hasSound ? 'none' : muted ? 'muted' : 'on'}
-            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20 disabled:opacity-45 disabled:cursor-default">
-            {muted || !hasSound ? <MuteIcon className="w-4 h-4" /> : <VolumeIcon className="w-4 h-4" />}
+              Both cut TO THE PLAYHEAD, so putting one back is the same gesture
+              at a different place — scrub to the very start, press the left
+              one, and the head is whole again. A cut you cannot walk back with
+              the control that made it would be a trap, and this editor saves
+              nothing to undo from. */}
+          <button type="button" data-testid="ve-cut-head" onClick={() => cutHead()}
+            title={s.cutHead} aria-label={s.cutHead}
+            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
+            <CutHeadIcon className="w-4 h-4" />
           </button>
-          <input type="range" min={0} max={Math.max(0.1, current.info.durationSec)} step={0.05} value={pos}
-            data-testid="ve-seek" className="flex-1 accent-green-500"
-            onChange={(e) => {
-              const v = videoRef.current
-              if (v) v.currentTime = Number(e.target.value)
-              setPos(Number(e.target.value))
-            }} />
+
+          <div className="relative flex-1 h-9 flex items-center" data-testid="ve-scrub">
+            <div aria-hidden="true" className="absolute inset-x-0 h-1.5 rounded-full bg-white/25" />
+            {/* What the export throws away. Dimmed rather than removed, because
+                the rest of the clip has to stay reachable — you cannot decide
+                where a cut belongs while looking at a line that no longer
+                contains the part you cut. */}
+            <div aria-hidden="true" data-testid="ve-cut-before" data-cut={trim.in > 0.001 ? 'yes' : 'no'}
+              style={{ left: 0, width: `${(trim.in / clipLen) * 100}%` }}
+              className="absolute h-1.5 rounded-s-full bg-black/55 border-y border-s border-white/10" />
+            <div aria-hidden="true" data-testid="ve-cut-after" data-cut={trim.out < clipLen - 0.001 ? 'yes' : 'no'}
+              style={{ right: 0, width: `${((clipLen - trim.out) / clipLen) * 100}%` }}
+              className="absolute h-1.5 rounded-e-full bg-black/55 border-y border-e border-white/10" />
+            {/* The kept stretch, so the line reads as a length rather than as a
+                slider with two shadows on it. */}
+            <div aria-hidden="true"
+              style={{ left: `${(trim.in / clipLen) * 100}%`, width: `${((trim.out - trim.in) / clipLen) * 100}%` }}
+              className="absolute h-1.5 bg-green-600/45" />
+            {/* The control itself, on top and with its track made invisible —
+                the line behind it is the track, because a native one cannot be
+                dimmed in parts. */}
+            <input type="range" min={0} max={Math.max(0.1, current.info.durationSec)} step={0.05} value={pos}
+              data-testid="ve-seek"
+              className="relative w-full bg-transparent appearance-none cursor-pointer
+                [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-transparent
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-1
+                [&::-webkit-slider-thumb]:w-[0.9rem] [&::-webkit-slider-thumb]:h-[0.9rem]
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-green-400
+                [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-green-900
+                [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-transparent
+                [&::-moz-range-thumb]:w-[0.9rem] [&::-moz-range-thumb]:h-[0.9rem]
+                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-green-400
+                [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-green-900"
+              onChange={(e) => {
+                const v = videoRef.current
+                if (v) v.currentTime = Number(e.target.value)
+                setPos(Number(e.target.value))
+              }} />
+          </div>
+
+          <button type="button" data-testid="ve-cut-tail" onClick={() => cutTail()}
+            title={s.cutTail} aria-label={s.cutTail}
+            className="grid place-items-center w-9 h-9 rounded-full border border-white/25 bg-white/10 text-white cursor-pointer hover:bg-white/20">
+            <CutTailIcon className="w-4 h-4" />
+          </button>
           {/* The joined length lives here now rather than in a row of its own —
               it is the one fact the removed summary carried that the transport
               was already showing. */}
@@ -1853,18 +2042,17 @@ export default function VideoEditTool() {
               </p>
             </div>
 
+            {/* The CHECKBOX is gone: keeping the sound is now the speaker up
+                with the other tools, and two controls for one setting is how
+                somebody ends up muting the preview and shipping a file that
+                talks. What stays here is the thing a button cannot say — that
+                the sound is copied rather than re-encoded, which is why it
+                loses nothing. */}
             {audioPlan === 'copy' && (
-              <Check>
-                <input type="checkbox" checked={keepAudio} data-testid="ve-keep-audio"
-                  onChange={(e) => setKeepAudio(e.target.checked)} />
-                <span>{s.keepAudio} <span className="text-ink-faint">— {s.audioCopied}</span></span>
-              </Check>
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="ve-audio-note">
+                {s.audioCopied}
+              </p>
             )}
-            {/* A JOIN that cannot keep the sound still has to say so, and this
-                is where the sound is decided — the mute button speaks for the
-                preview and cannot know that two clips store their audio
-                differently. It is not on the picture, because it is a fact
-                about the export rather than about the frame in front of you. */}
             {(audioPlan === 'mixed' || audioPlan === 'missing') && (
               <p className="text-[0.8rem] text-gold-700 rtl:font-ar" data-testid="ve-audio-note">
                 {audioPlan === 'mixed' ? s.audioMixed : s.audioMissing}
@@ -1884,7 +2072,17 @@ export default function VideoEditTool() {
                       className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-[0.85rem] ${i === sel ? 'border-green-700' : 'border-[color:var(--line)]'}`}>
                       <button type="button" className="border-0 bg-transparent p-0 text-start text-ink underline-offset-2 hover:underline cursor-pointer"
                         onClick={() => { setSel(i); setSettings(false) }} data-testid={`ve-select-${i}`}>{c.file.name}</button>
-                      <span className="text-ink-faint font-mono">{c.info.width}×{c.info.height} · {fmt(c.info.durationSec)}</span>
+                      {/* The length this clip CONTRIBUTES, and — when it has
+                          been cut — what it started as, in the `kept / whole`
+                          shape the transport already uses. A row still showing
+                          the full length would disagree with the total in the
+                          heading above it, which is the one place somebody
+                          checks what they are about to export. */}
+                      <span className="text-ink-faint font-mono" data-testid={`ve-clip-len-${i}`}>
+                        {c.info.width}×{c.info.height} · {fmt(infos[i]?.durationSec ?? c.info.durationSec)}
+                        {(infos[i]?.durationSec ?? c.info.durationSec) < c.info.durationSec - 0.01
+                          ? ` / ${fmt(c.info.durationSec)}` : ''}
+                      </span>
                       {!c.info.decodable && <span className="text-gold-500 rtl:font-ar" data-testid={`ve-undecodable-${i}`}>{s.undecodable}</span>}
                       <span className="ms-auto flex gap-1">
                         <Button className="px-2 py-0.5" onClick={() => move(i, -1)} disabled={i === 0} data-testid={`ve-up-${i}`}>↑<span className="sr-only">{s.up}</span></Button>

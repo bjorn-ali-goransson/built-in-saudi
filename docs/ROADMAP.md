@@ -353,8 +353,9 @@ earn a slot. **`client` unless noted.**
 | Idea | Why it earns a slot |
 |---|---|
 | ~~Progressive MP4 muxer for `video-trim`~~ | **Done** (Sept 2026). `lib/mp4Writer.ts` writes one real sample table; the trimmer and `video-edit` both use it, and `evals/mp4guard.mjs` re-parses the output with mp4box. |
-| ~~Video convert / re-encode~~ | **Half done** as `video-edit`, which decodes and re-encodes to crop, join and caption. A pure *compressor* — same picture, smaller file — is still unbuilt and now needs no new machinery. |
-| Keyframed censor boxes in `video-edit` | The box is a fixed rectangle for a fixed span, so a moving subject needs a generous box or several in sequence. Interpolating between a start and an end position is little code; the design question is which keyframe you are editing. |
+| ~~Video convert / re-encode~~ | **Half done** as `video-edit`, which decodes and re-encodes to crop, join, caption, censor and cut. A pure *compressor* — same picture, smaller file — is still unbuilt and now needs no new machinery. |
+| ~~Keyframed censor boxes in `video-edit`~~ | **Done.** A box holds a list of positions and `boxAt` tweens between the two either side of the playhead; the DRAG writes the key, so there is no mode to enter. Outside the keys it holds rather than extrapolating. |
+| ~~Trimming inside `video-edit`~~ | **Done** (Sept 2026). Two cuts flank the scrubber and take to the playhead, the dropped stretch is dimmed and stays scrubbable so a cut can be walked back, and `infos` reports the trimmed length so the joined timeline the captions and censors sit on is already the output's. |
 | Collage / contact sheet | Print chassis plus image decoding, both already here. |
 | Polaroid frame / device mockup | The last two items of the old "image finishing" batch. |
 

@@ -217,6 +217,31 @@ export function MicIcon({ className }: P) {
   )
 }
 
+/**
+ * Cut everything BEFORE this point, and cut everything AFTER it.
+ *
+ * A bar at the edge with the discarded side hatched away from it, so the two
+ * read as a pair pointing outwards. Deliberately not scissors: scissors say
+ * "cut here" and give no clue which side goes.
+ */
+export function CutHeadIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9 4v16M9 4h4M9 20h4" />
+      <path d="M3 9h3M3 12h3M3 15h3" opacity="0.4" />
+    </svg>
+  )
+}
+
+export function CutTailIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M15 4v16M15 4h-4M15 20h-4" />
+      <path d="M18 9h3M18 12h3M18 15h3" opacity="0.4" />
+    </svg>
+  )
+}
+
 export function VolumeIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

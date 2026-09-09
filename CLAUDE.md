@@ -2801,6 +2801,49 @@ anything that is not the decision itself is in the way of it.
   share one output frame, and it is not given up to add handles. The `Free`
   chip appears only once a drag has made one: it is a RESULT, not a mode, and
   there is nothing for it to mean before a rectangle exists.
+- **AND IT SNAPS TO THE FORMATS, which is what a free drag was missing.** The
+  one shape most people want is one a platform actually accepts, and a free
+  drag could only ever get near it: a rectangle dragged to square by eye was 3%
+  oblong and labelled "Free". `snapFormat` decides which offered format a
+  proportion means on a RATIO band rather than a difference — the formats are
+  spread multiplicatively, so a fixed tolerance would be a wide band at the
+  portrait end and a narrow one at the landscape end, and the same gesture
+  would feel like a different control depending on which way up the clip is.
+  **6%, because the closest pair offered is 22% apart**, so a snap is never a
+  coin toss between two chips; the source proportion is the one candidate that
+  can genuinely sit inside another's band, and nearest-wins settles it.
+- **The band is passed THROUGH, not stuck to, and that costs no state at all.**
+  The decision is taken on the RAW rectangle — where the segment started plus
+  how far the finger has gone — never on the snapped one now on screen, so it
+  is a pure function of where the pointer is: inside a band the shape is held
+  exactly and the box merely resizes, and carrying on leaves that band and
+  enters the next with no hysteresis and nothing to get wedged in. `snapRect`
+  anchors on the part the drag is NOT holding — an edge drag sets one dimension
+  and derives the other, a corner drag sets both so neither is the intent and
+  it keeps the AREA, which is what makes a diagonal drag scale the rectangle
+  and hold its shape.
+- **A drag that ends ON a format leaves no Free chip behind**, and finding that
+  out cost two red cases. Any drag between two formats crosses the ground
+  between them, so a free proportion genuinely exists in passing — and the bar
+  went on offering to return to a shape the finger was only travelling through.
+  It is cleared on pointer-UP rather than during the move, so the chip does not
+  appear and vanish under the gesture while somebody is still deciding.
+- **MOVING the rectangle no longer touches the format.** Every segment ran the
+  free-proportion arithmetic, and although a move arrives at the shape the
+  rectangle already had, the selection jumped off 9:16 and onto Free for a
+  gesture that reshaped nothing.
+- **The whole of a resize drag is `cropFromDrag` in the pure module**, so
+  `evals/cropsnap.mjs` calls the real function rather than a copy — the
+  `relatedPick.ts` arrangement, and the fix for the drift `relatedcheck` spent
+  weeks inside. A gate in `evals/check.mjs`, **verified to fail**: removing the
+  snap reddens 25 of its 26 checks, and the one that stays green is the CONTROL
+  that says a shape between two formats is left alone. Without that control the
+  sweep would pass just as well against a tool that snapped everything to its
+  nearest chip, which is a tool with no free crop at all.
+- **The chips gained `aria-pressed`** — a drag can now change which is selected
+  and colour was the only thing saying so, the gap `SegButton` had — and it is
+  the testable contract, since asserting a background class would be testing
+  Tailwind.
 - **`Keeps 42% · 134×240 · Zoom` came off the bar entirely**, and the first of
   those is the one worth arguing about, because this file calls it the thing
   the tool exists to say. It still says it — **the crop rectangle is drawn over
@@ -2970,25 +3013,65 @@ every video tool here shipped with this.
   the unity matrix, which reddens exactly that check while every other one stays
   green — a file that plays sideways is otherwise perfect.
 
-**The preview's sound is on the transport, not behind the cog.** `keepAudio`
-decides what the FILE gets and is a choice made once; muting is what you reach
-for the moment a clip starts playing out loud in a room with other people in it,
-so it sits beside play as a speaker toggle. Default UNMUTED, because a preview
-silent by default cannot be told apart from a clip with no sound in it — which
-is a thing this tool has to be able to say (`audioPlan` says it). The case
-asserts the `<video>` element's own `muted`, not the button's state: a toggle
-that lights up and leaves the sound playing is the failure it is there for.
+**THE SPEAKER MUTES THE FILE, and this reverses the arrangement recorded here
+for a while.** It used to be a preview control on the transport with `keepAudio`
+as a checkbox behind the cog — two controls that look like one thing and are
+not, so the obvious button was the one that changed nothing about the export,
+and somebody could mute the preview and ship a file that talks. There is now one
+button, up with the tools that decide what comes out, and **the preview follows
+it**: this whole editor rests on the preview being the export rather than an
+impression of it, and a silent file that plays out loud while you make it is
+that gap in miniature. The checkbox is gone; the settings screen keeps only the
+thing a button cannot say, which is that the sound is COPIED rather than
+re-encoded and therefore loses nothing.
 
-**And it is what SAYS there is no sound**, which retired two standing lines under
-the transport: "This clip has no sound track." and "0.8 MB · silent". Both were
-sentences printed at everybody to describe a state a control can simply show —
-the speaker is struck through and unusable when there is nothing to mute, with
-the reason on it for anyone who asks. What could NOT move there is the join that
-cannot keep its sound (two clips storing audio differently, or one with none):
-the mute button speaks for the preview and cannot know that, so it sits in the
-settings screen beside `keepAudio`, where the sound is decided. The two e2e
-cases that read the removed line now ask the exported FILE for an `mp4a` sample
-entry instead, which is what the reader actually receives.
+Default sound ON, because a preview silent by default cannot be told apart from
+a clip with no sound in it — which is a thing this tool has to be able to say.
+**And the button is what says it**, for all three reasons at once: no sound
+track, one clip in a join with none, or clips that store theirs differently. All
+three used to be sentences printed at everybody under the video; the button is
+struck through and unusable with the reason on it. The case asserts the exported
+track — an `mp4a` sample entry in the bytes — and not just the `<video>`
+element's `muted`, because muting the playback and leaving the file talking is
+exactly the failure it replaced. **Verified to fail** by stopping `keepAudio`
+reaching the plan, with a control case asserting the same export DOES carry
+sound, without which a tool that never wrote an audio track would pass.
+
+**Two cuts flank the scrubber, and the part they take is DIMMED rather than
+removed.** `trims` holds an in/out per clip in that clip's own seconds, and
+`infos` reports the TRIMMED duration — so `timeline`, `totalDuration` and every
+caption and censor span downstream are already the output's clock with nothing
+to convert, and a cut moves the boxes under the playhead instead of leaving them
+aimed at frames that will not be there. Four decisions:
+
+- **Both cut TO THE PLAYHEAD, which is what makes them reversible.** Scrub to
+  the very start, press the head cut again, and the head is whole. There is no
+  undo in this editor and nothing saved to undo from, so the control that makes
+  a cut has to be the one that unmakes it — and that only works because the
+  dimmed stretch stays SCRUBBABLE. A line that no longer contained the cut part
+  would leave nowhere to put the playhead.
+- **PLAY is bounded by the cut; SCRUBBING is not.** Pressing play previews the
+  file rather than the upload; dragging still reaches everything, or the cut
+  could not be walked back.
+- **The worker DECODES the dropped frames and does not encode them.** The frames
+  that survive are differences from the ones before them, so skipping the feed
+  would open the kept stretch on grey mush — the trap `video-trim` records about
+  starting a copy mid-GOP. Progress counts the KEPT samples, or a clip cut to a
+  fifth crawls to 20% and finishes.
+- **A tail cut ends the "the last clip is left alone" exemption for audio.** That
+  rule existed because there is nothing after the final clip to drift against —
+  and a tail cut puts something after it, namely the end of the file. An open end
+  is now the last clip AND an uncut tail.
+
+**Verified to fail** by making the worker ignore `plan.trims`: the case that
+reads the exported file's DURATION goes red while the page-side ones stay green,
+which is the point — a readout can be right about a cut the export ignored.
+
+**`dir="ltr"` on the transport, because TIME IS DRAWN LEFT TO RIGHT** whatever
+the language. A range input mirrors under RTL, so the Arabic scrubber ran
+backwards and the two end-caps would have swapped ends with it. The native track
+is made transparent and the line behind it is drawn from divs, because a native
+track cannot be dimmed in parts.
 
 **Nothing to draw is not the same as draw nothing, and the difference is a black
 screen.** Reported from a phone as "this is what happens when the browser goes
@@ -3034,6 +3117,14 @@ on the caption, arriving one control later.
   between them are the rule-of-thirds guides a camera draws, so the thing you
   resize with is the thing you compose against. A 14px square is smaller than a
   fingertip; a third of a rectangle is not.
+- **The nine cells carry `dir="ltr"`, because A PICTURE DOES NOT MIRROR.** The
+  ids are physical — `nw` drags the north-west corner, and the comment on
+  `SEGMENTS` says so — but they are laid out by a CSS grid, which flows its
+  columns right to left under RTL. So on the Arabic side every cell dragged the
+  opposite edge of the frame from the one under the finger, and the rectangle
+  appeared to fight the drag. **A rule written in a comment is not a rule the
+  layout obeys**, which is the general form of it. The case asserts the corners'
+  geometry in BOTH locales, so it cannot pass as a per-locale patch.
 - **And EVERY segment moves by the pointer's DELTA, never to where the pointer
   IS.** The middle cell was written that way from the start and the eight that
   resize were not, which was reported from a phone as the edges being hard to

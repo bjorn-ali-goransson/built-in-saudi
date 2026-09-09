@@ -84,8 +84,21 @@ export interface PlanCaption {
   bitmap: ImageBitmap
 }
 
+/** How much of one clip survives, in that clip's OWN seconds. */
+export interface Trim { in: number; out: number }
+
 export interface RenderPlan {
   slots: number[]
+  /**
+   * Aligned with `slots`. Absent means the whole clip.
+   *
+   * In the FILE's clock, not the joined one: the decoder is fed the file's own
+   * samples, so this is where the cut has to be expressed. What comes out the
+   * other side is on the joined clock, which is the kept stretches laid end to
+   * end — so a caption at 4s means 4s into the finished video, not into the
+   * upload, and the page and the worker agree about that by construction.
+   */
+  trims?: Trim[]
   crop: Crop
   out: { width: number; height: number }
   bitrate: number
@@ -185,12 +198,18 @@ function drawCaptions(
 
 async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio: 'copied' | 'dropped' | 'none' }> {
   cancelled = false
-  const clips = plan.slots.map((slot) => {
+  const clips = plan.slots.map((slot, i) => {
     const s = sessions.get(slot)
     if (!s) throw new Error('no-file')
     const v = videoTrack(s)
     if (!v) throw new Error('no-video')
-    return { session: s, video: v, audio: audioTrack(s) }
+    const t = plan.trims?.[i]
+    // Sorted and clamped here rather than trusted: a cut arrives from a
+    // dragged playhead, and everything downstream assumes `in < out` and both
+    // inside the clip.
+    const from = Math.min(Math.max(t?.in ?? 0, 0), s.durationSec)
+    const to = Math.min(Math.max(t?.out ?? s.durationSec, from), s.durationSec)
+    return { session: s, video: v, audio: audioTrack(s), from, span: Math.max(0, to - from), to }
   })
   if (!clips.length) throw new Error('no-file')
 
@@ -242,7 +261,16 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
     latencyMode: 'quality',
   })
 
-  const total = clips.reduce((n, c) => n + c.video.samples.length, 0)
+  // Counted over the KEPT samples, so the percentage is about the work being
+  // done rather than about the file it came from — a clip cut to a fifth used
+  // to crawl to 20% and finish.
+  const total = clips.reduce((n, c) => {
+    const base = smallest(c.video.samples, (x) => x.cts) / c.video.timescale
+    return n + c.video.samples.filter((x) => {
+      const at = x.cts / c.video.timescale - base
+      return at >= c.from - 1e-6 && at < c.to - 1e-6
+    }).length
+  }, 0)
   let done = 0
   let offsetSec = 0
   let lastKeyAt = -Infinity
@@ -262,7 +290,14 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
       output: (frame) => {
         try {
           if (cancelled) return
-          const tOut = offsetSec + frame.timestamp / 1e6 - base
+          const at = frame.timestamp / 1e6 - base
+          // Outside the cut the frame is decoded and DROPPED, never encoded.
+          // It still has to be decoded: the frames that survive are differences
+          // from the ones before them, so skipping the feed would open the kept
+          // stretch on grey mush — the trap `video-trim` records about starting
+          // a copy mid-GOP.
+          if (at < clip.from - 1e-6 || at >= clip.to - 1e-6) return
+          const tOut = offsetSec + at - clip.from
           drawFrame(ctx, upright ? uprightFrame(frame, v.rotation, upright) : frame, source, plan.crop, plan.out)
           // Censors go on the PICTURE, before the captions — a caption is
           // something you chose to show, and hiding it under a black box that
@@ -315,7 +350,7 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
     // A decoder that has already errored is in a closed state, and closing it
     // again throws — which would replace the real failure with a misleading one.
     try { decoder.close() } catch { /* already closed by its own error */ }
-    offsetSec += clip.session.durationSec
+    offsetSec += clip.span
     if (cancelled || failure) break
   }
 
@@ -364,9 +399,17 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
       let wrote = 0
       clips.forEach((clip, i) => {
         const a = audios[i] as DemuxTrack
-        const from = smallest(a.samples, (s) => s.dts)
-        const offset = Math.round(at * a.timescale) - from
-        const last = i === clips.length - 1
+        // The first sample this clip contributes: its own start, plus whatever
+        // was cut off the head. A cut is not a join, but it drifts the same way
+        // — an AAC frame is 1024 samples and lands where it lands — so the
+        // stretch below re-aligns each clip's contribution to exactly the span
+        // the picture got, which is the same correction and for the same reason.
+        const head = smallest(a.samples, (s) => s.dts) + Math.round(clip.from * a.timescale)
+        const offset = Math.round(at * a.timescale) - head
+        // "Nothing after it to drift against" is what let the FINAL clip keep
+        // its sound untouched — and a tail cut puts something after it: the end
+        // of the file. So an open end is the last clip AND an uncut tail.
+        const last = i === clips.length - 1 && clip.to >= clip.session.durationSec - 1e-3
         // A TRACK'S TIMELINE IS THE SUM OF ITS SAMPLE DURATIONS, not the `dts`
         // values — `stts` stores durations and a player adds them up, so
         // offsets written into the samples decide nothing for the sound. Audio
@@ -380,13 +423,14 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
         // surviving frame is stretched to land exactly on it. The FINAL clip is
         // left alone: there is nothing after it to drift against, and trimming
         // it would break the promise that the sound is copied untouched.
-        const limit = Math.round((at + clip.session.durationSec) * a.timescale)
+        const limit = Math.round((at + clip.span) * a.timescale)
         for (const s of a.samples) {
+          if (s.dts < head) continue
           if (!last && s.dts + offset >= limit && samples.length) break
           samples.push({ ...s, dts: s.dts + offset, cts: s.cts + offset })
           wrote += s.duration
         }
-        at += clip.session.durationSec
+        at += clip.span
         if (!last) {
           const tail = samples[samples.length - 1]
           const target = Math.round(at * a.timescale)
