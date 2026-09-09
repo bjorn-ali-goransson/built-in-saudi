@@ -8,7 +8,7 @@ import {
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
-  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropRect, drawFrame, fitRect, outputSize, timeline,
+  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, drawFrame, outputSize, timeline,
   totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop, type Rect,
 } from './compose'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
@@ -490,6 +490,19 @@ export default function VideoEditTool() {
     return found && found.aspect ? found.aspect : sourceAspect
   }, [aspectId, freeAspect, sourceAspect])
 
+  /**
+   * The formats a drag can settle on, with 'Original' resolved to THIS clip's
+   * own proportion.
+   *
+   * `ASPECTS` cannot carry that number — it is a property of the recording, not
+   * of the list — but leaving it out would make the one shape the footage
+   * already has the one shape a drag could not snap back to.
+   */
+  const formats = useMemo(
+    () => ASPECTS.map((a) => ({ id: a.id, aspect: a.aspect || sourceAspect })),
+    [sourceAspect],
+  )
+
   const crop: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom }), [aspect, centre, zoom])
   const size = useMemo(() => outputSize(infos, crop, maxHeight), [infos, crop, maxHeight])
   const spans = useMemo(() => timeline(infos), [infos])
@@ -930,18 +943,30 @@ export default function VideoEditTool() {
         if (d.id.includes('w')) r.x0 = clamp01(d.rect.x0 + dx)
         if (d.id.includes('e')) r.x1 = clamp01(d.rect.x1 + dx)
       }
-      const x0 = Math.min(r.x0, r.x1), x1 = Math.max(r.x0, r.x1)
-      const y0 = Math.min(r.y0, r.y1), y1 = Math.max(r.y0, r.y1)
+      // MOVING is a translate, and it stops here: it reshapes nothing, so it
+      // must not be able to change which format is selected or what the zoom
+      // is. Every segment used to run the free-proportion arithmetic, and
+      // although the number a move arrived at was the shape the rectangle
+      // already had, the selection jumped off 9:16 and onto Free for a gesture
+      // that had changed no proportion at all.
+      if (d.id === 'move') {
+        setCentre({ x: clamp01((r.x0 + r.x1) / 2), y: clamp01((r.y0 + r.y1) / 2) })
+        return
+      }
+
+      // Everything a resize decides — which format it settled on, the exact
+      // shape, the zoom and the centre — is one pure function, so the preview,
+      // the export and `evals/cropsnap.mjs` all read the same arithmetic.
       const clip = { width: current.info.width, height: current.info.height }
-      const fw = Math.max(0.04, x1 - x0) * clip.width
-      const fh = Math.max(0.04, y1 - y0) * clip.height
-      const a = fw / fh
-      const fit = fitRect(clip.width, clip.height, a)
-      const z = Math.max(1, fit.w / fw)
-      setFreeAspect(a)
-      setAspectId('free')
-      setZoom(z)
-      setCentre({ x: clamp01((x0 + x1) / 2), y: clamp01((y0 + y1) / 2) })
+      const out = cropFromDrag(r, d.id, formats, clip)
+      // The point of asking: the format a drag settles on is the one lit up in
+      // the bar, so a rectangle dragged to square by eye says 1:1 rather than
+      // "Free". `freeAspect` is left alone on a snap, so going back to Free
+      // still returns to the last shape that genuinely was free.
+      if (out.format) setAspectId(out.format.id)
+      else { setFreeAspect(out.aspect); setAspectId('free') }
+      setZoom(out.zoom)
+      setCentre({ x: out.cx, y: out.cy })
       return
     }
     if (d.kind === 'draw') {
@@ -1606,8 +1631,14 @@ export default function VideoEditTool() {
                 <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
                 {mode === 'crop' && (
                   <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-crop-bar">
+                    {/* `aria-pressed` because a DRAG can now change which of
+                        these is selected, and colour was the only thing saying
+                        so — the same gap `SegButton` had. It is also the
+                        testable contract for the snap: asserting a background
+                        class would be testing Tailwind. */}
                     {ASPECTS.map((a) => (
                       <button key={a.id} type="button" data-testid={`ve-aspect-${a.id}`}
+                        aria-pressed={aspectId === a.id}
                         onClick={() => setAspectId(a.id)}
                         className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
                           aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
@@ -1618,7 +1649,8 @@ export default function VideoEditTool() {
                         is a RESULT, not a mode to switch into — there is
                         nothing for it to mean before a rectangle exists. */}
                     {freeAspect > 0 && (
-                      <button type="button" data-testid="ve-aspect-free" onClick={() => setAspectId('free')}
+                      <button type="button" data-testid="ve-aspect-free"
+                        aria-pressed={aspectId === 'free'} onClick={() => setAspectId('free')}
                         className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
                           aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
                         {s.free}

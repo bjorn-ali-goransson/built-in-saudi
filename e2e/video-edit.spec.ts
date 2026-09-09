@@ -342,20 +342,154 @@ test('a corner SEGMENT sets a FREE proportion', async ({ page }) => {
   // Drag the bottom-right SEGMENT in — a ninth of the rectangle rather than a
   // 14px square, which is the whole reason the squares are gone. The stage
   // keeps showing the WHOLE clip in crop mode, so what changes is the output.
+  //
+  // It lands on 1.156, which is the MIDPOINT between 1:1 and the fixture's own
+  // 4:3 — 14% from each, against a snap band of 6% — so this is also the
+  // precision half of the snap: a drag that means none of the formats has to
+  // be left alone. Without a margin like that the case would be measuring the
+  // tolerance rather than the behaviour.
   await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
   const b = (await page.getByTestId('ve-stage').boundingBox())!
   const handle = (await page.getByTestId('ve-crop-se').boundingBox())!
   await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
   await page.mouse.down()
-  await page.mouse.move(b.x + b.width * 0.75, b.y + b.height * 0.95, { steps: 6 })
+  await page.mouse.move(b.x + b.width * 0.7, b.y + b.height * 0.95, { steps: 6 })
   await page.mouse.up()
 
   await expect(page.getByTestId('ve-aspect-free')).toBeVisible()
+  await expect(page.getByTestId('ve-aspect-free')).toHaveAttribute('aria-pressed', 'true')
   // The preset it started on is no longer the selected one, or the drag would
   // have been squeezed straight back into a shape nobody asked for.
   await page.getByTestId('ve-settings').click()
   const size = await page.getByTestId('ve-out-size').textContent()
   expect(size).not.toBe('320×240')
+})
+
+/** The output dimensions, off the readout beside the largest-side picker. */
+async function outSize(page: Page): Promise<{ w: number; h: number }> {
+  await page.getByTestId('ve-settings').click()
+  const text = (await page.getByTestId('ve-out-size').textContent()) ?? ''
+  const m = /(\d+)×(\d+)/.exec(text)
+  expect(m, `no size in ${JSON.stringify(text)}`).toBeTruthy()
+  await page.getByTestId('ve-settings-close').click()
+  return { w: Number(m![1]), h: Number(m![2]) }
+}
+
+/**
+ * Drag one crop segment by a delta given in fractions of the STAGE.
+ *
+ * A delta rather than a destination, because that is what the tool itself
+ * works in: a segment is a third of the rectangle, so where inside it the
+ * pointer went down is not something a case should have to know.
+ */
+async function dragSeg(page: Page, id: string, dx: number, dy: number) {
+  await page.getByTestId('ve-stage').scrollIntoViewIfNeeded()
+  const b = (await page.getByTestId('ve-stage').boundingBox())!
+  const seg = (await page.getByTestId(`ve-crop-${id}`).boundingBox())!
+  const from = { x: seg.x + seg.width / 2, y: seg.y + seg.height / 2 }
+  // The same hit test the censor helper does, for the same reason: a segment
+  // sitting under the aspect bar receives nothing, and a missing drag looks
+  // exactly like a tool that ignored the gesture.
+  const hit = await page.evaluate(
+    ([x, y]) => document.elementFromPoint(x, y)?.getAttribute('data-testid') ?? null,
+    [from.x, from.y] as [number, number],
+  )
+  expect(hit, `segment ${id} is behind ${hit}`).toBe(`ve-crop-${id}`)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(from.x + b.width * dx, from.y + b.height * dy, { steps: 8 })
+  await page.mouse.up()
+}
+
+test('a drag NEAR a format SNAPS onto it, and the bar says which', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+
+  // From the whole 320×240 frame, pull the bottom-right corner in until the
+  // rectangle is 249×240 — a proportion of 1.04, which is 4% off square and
+  // therefore inside the 6% band. Nobody drags to an exact ratio by eye; the
+  // point of the snap is that they do not have to.
+  await dragSeg(page, 'se', -0.22, 0.15)
+
+  await expect(page.getByTestId('ve-aspect-1:1')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ve-aspect-source')).toHaveAttribute('aria-pressed', 'false')
+  // Free is never offered, because the drag never produced a free shape. This
+  // is the assertion the old behaviour fails outright.
+  await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
+
+  // And the SHAPE followed the label. Selecting a chip without reshaping the
+  // rectangle would be a lie one level worse than no snap at all, so the
+  // output has to come back square rather than 4% oblong.
+  const size = await outSize(page)
+  expect(size.w).toBe(size.h)
+})
+
+test('once snapped, the drag resizes UNIFORMLY through the format', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-1:1').click()
+  const before = await outSize(page)
+  expect(before.w).toBe(before.h)
+
+  // Pull the corner in along the diagonal, but NOT along it exactly — the
+  // vertical leg is short of the one that would hold the ratio, so the raw
+  // rectangle comes out about 3% oblong. Inside the band that is held to
+  // square, so the box scales and does not distort.
+  await dragSeg(page, 'se', -0.15, -0.22)
+
+  await expect(page.getByTestId('ve-aspect-1:1')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
+
+  const after = await outSize(page)
+  // Still square — that is the uniform half, and the 3% the drag asked for is
+  // what makes it fail without the snap (192×186 rather than 188×188).
+  expect(after.w).toBe(after.h)
+  // And genuinely smaller, or the case would pass against a tool that ignored
+  // the drag entirely and simply left a square where it was.
+  expect(after.w).toBeLessThan(before.w - 20)
+})
+
+test('dragging on past one format snaps to the NEXT', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-1:1').click()
+
+  // Keep pulling the same corner sideways, well past where square stopped
+  // being the nearest shape: 0.82, which is 2% from 4:5 and 20% from 1:1.
+  // A snap that stuck would report 1:1 here, and a snap with hysteresis would
+  // need to be dragged further still — neither is what a person expects from
+  // a rectangle they are still holding.
+  await dragSeg(page, 'se', -0.135, 0)
+
+  await expect(page.getByTestId('ve-aspect-4:5')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ve-aspect-1:1')).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
+
+  const size = await outSize(page)
+  expect(size.w / size.h).toBeCloseTo(0.8, 3)
+})
+
+test('MOVING the rectangle does not change the format', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  // The editor opens on 9:16, so this is the shape it starts with.
+  await expect(page.getByTestId('ve-aspect-9:16')).toHaveAttribute('aria-pressed', 'true')
+  const before = await outSize(page)
+
+  // The middle cell slides the rectangle and reshapes nothing. Every segment
+  // used to run the free-proportion arithmetic, so a pure move landed on the
+  // shape it already had and jumped the selection onto Free anyway — a chip
+  // moving for a gesture that changed no proportion at all.
+  await dragSeg(page, 'move', -0.05, 0)
+
+  await expect(page.getByTestId('ve-aspect-9:16')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ve-aspect-free')).toHaveCount(0)
+  expect(await outSize(page)).toEqual(before)
 })
 
 test('a segment moves by the DELTA, so an edge is reachable without a finger on it', async ({ page }) => {

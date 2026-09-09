@@ -347,3 +347,159 @@ export const ASPECTS: { id: string; aspect: number; label: string; labelAr: stri
   { id: '4:5', aspect: 4 / 5, label: '4:5', labelAr: '٤:٥' },
   { id: '16:9', aspect: 16 / 9, label: '16:9', labelAr: '١٦:٩' },
 ]
+
+/**
+ * How near a dragged proportion has to be to an offered format before it snaps
+ * onto it, as a RATIO: 0.06 is ±6%.
+ *
+ * A ratio rather than a difference, because the formats are spread
+ * multiplicatively — 9:16 is 0.5625 and 16:9 is 1.778 — so a fixed ±0.05 would
+ * be a 9% band at the portrait end and a 3% one at the landscape end, and the
+ * same gesture would feel like a different control depending on which way up
+ * the clip is.
+ *
+ * 6% because the closest pair of OFFERED formats is 4:5 against 1:1, which are
+ * 22% apart: no two bands can meet, so a snap is never a coin toss between two
+ * chips. The source proportion is the exception — it is whatever was recorded
+ * and can genuinely sit inside another format's band — and there the nearest
+ * one wins outright rather than both claiming it.
+ */
+export const SNAP_TOL = 0.06
+
+/**
+ * Which offered format a freely dragged proportion means, or null for none.
+ *
+ * `candidates` carries the source proportion already RESOLVED, because
+ * 'Original' is a format like any other to the person dragging and its number
+ * is a property of the clip rather than of the list above.
+ */
+export function snapFormat(
+  a: number,
+  candidates: { id: string; aspect: number }[],
+  tol: number = SNAP_TOL,
+): { id: string; aspect: number } | null {
+  let best: { id: string; aspect: number } | null = null
+  let off = Infinity
+  for (const c of candidates) {
+    if (!(c.aspect > 0) || !(a > 0)) continue
+    const d = Math.abs(Math.log(a / c.aspect))
+    if (d < off) { off = d; best = c }
+  }
+  return best && off <= tol ? best : null
+}
+
+/**
+ * Re-shape a dragged rectangle to an EXACT proportion, anchored on the part of
+ * it the drag is not holding.
+ *
+ * This is what makes a snap a resize rather than a jump. The rectangle arrives
+ * in fractions of the frame and `aspect` is in PIXELS, so the two disagree by
+ * the frame's own proportion — `fa` is the same shape expressed in fraction
+ * space, and forgetting that conversion is how a 1:1 crop of a 4:3 clip comes
+ * out oblong.
+ *
+ * Which dimension survives is decided by which segment is under the finger,
+ * and that is the whole of the "uniform" part:
+ *
+ * - an EDGE drag sets one dimension and the other follows from the proportion,
+ *   so pulling the right edge out grows the box evenly rather than stretching
+ *   it and then being corrected;
+ * - a CORNER drag sets both, so neither can be taken as the intent — it keeps
+ *   the AREA the drag asked for, which is continuous in both directions and
+ *   means a diagonal drag scales the rectangle and holds its shape.
+ *
+ * `id` must never be `move`: moving a rectangle does not change its shape, and
+ * `'move'.includes('e')` is true, so the anchoring below would read it as an
+ * east drag.
+ */
+export function snapRect(
+  rect: { x0: number; y0: number; x1: number; y1: number },
+  id: string,
+  aspect: number,
+  frame: { width: number; height: number },
+): { x0: number; y0: number; x1: number; y1: number } {
+  const fa = (aspect * frame.height) / frame.width
+  let w = rect.x1 - rect.x0
+  let h = rect.y1 - rect.y0
+  if (id === 'n' || id === 's') w = h * fa
+  else if (id === 'e' || id === 'w') h = w / fa
+  else {
+    const s = Math.sqrt(Math.max(0, w * h))
+    w = s * Math.sqrt(fa)
+    h = s / Math.sqrt(fa)
+  }
+  // The edges the drag is holding move; the ones it is not stay put, and an
+  // axis it never touched stays centred on where it already was.
+  const cx = (rect.x0 + rect.x1) / 2
+  const cy = (rect.y0 + rect.y1) / 2
+  let x0 = cx - w / 2
+  let y0 = cy - h / 2
+  if (id.includes('w')) x0 = rect.x1 - w
+  if (id.includes('e')) x0 = rect.x0
+  if (id.includes('n')) y0 = rect.y1 - h
+  if (id.includes('s')) y0 = rect.y0
+  return { x0, y0, x1: x0 + w, y1: y0 + h }
+}
+
+/** The smallest crop a drag may leave, in fractions of the frame. */
+const MIN_SIDE = 0.04
+
+export interface DragCrop {
+  /** The format it settled on, or null for a proportion between them. */
+  format: { id: string; aspect: number } | null
+  aspect: number
+  zoom: number
+  cx: number
+  cy: number
+}
+
+/**
+ * A RESIZE drag becomes a crop — the whole of it, so a probe can ask what a
+ * gesture produces without a browser, an encoder or a React tree.
+ *
+ * The rectangle handed in is the RAW one: where the segment started plus how
+ * far the finger has gone, never the snapped rectangle currently on screen.
+ * That is what lets a drag pass THROUGH a format rather than sticking to the
+ * first one it touches — the decision is a pure function of where the pointer
+ * is, so it needs no hysteresis and has no state to get wedged in. Inside a
+ * band the shape is held exactly and the box merely resizes; carry on and the
+ * raw proportion leaves the band and eventually enters the next one.
+ *
+ * MOVING is not a resize and does not come through here: it changes no
+ * proportion, so it must not be able to change which format is selected.
+ */
+export function cropFromDrag(
+  rect: { x0: number; y0: number; x1: number; y1: number },
+  id: string,
+  formats: { id: string; aspect: number }[],
+  frame: { width: number; height: number },
+  tol: number = SNAP_TOL,
+): DragCrop {
+  const x0 = Math.min(rect.x0, rect.x1)
+  const y0 = Math.min(rect.y0, rect.y1)
+  let box = {
+    x0,
+    y0,
+    x1: Math.max(Math.max(rect.x0, rect.x1), x0 + MIN_SIDE),
+    y1: Math.max(Math.max(rect.y0, rect.y1), y0 + MIN_SIDE),
+  }
+  let aspect = ((box.x1 - box.x0) * frame.width) / ((box.y1 - box.y0) * frame.height)
+  const format = snapFormat(aspect, formats, tol)
+  if (format) {
+    box = snapRect(box, id, format.aspect, frame)
+    aspect = format.aspect
+  }
+  // The zoom that reproduces this width, since a crop is stored as an aspect
+  // and a centre rather than as a rectangle. Never below 1: `cropRect` treats
+  // that as "as much as the aspect allows" and a drag past the edge should
+  // stop at the biggest fit rather than invent picture that is not there.
+  const fit = fitRect(frame.width, frame.height, aspect)
+  const zoom = Math.max(1, fit.w / ((box.x1 - box.x0) * frame.width))
+  return {
+    format,
+    aspect,
+    zoom,
+    cx: Math.min(1, Math.max(0, (box.x0 + box.x1) / 2)),
+    cy: Math.min(1, Math.max(0, (box.y0 + box.y1) / 2)),
+  }
+}
