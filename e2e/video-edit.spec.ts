@@ -743,7 +743,7 @@ test('a caption is drawn into the picture, and only while it is showing', async 
  */
 const ABOVE: [number, number, number, number] = [0.3, 0.4, 0.7, 0.44]
 
-test('the mute button mutes the FILE, and the preview follows', async ({ page }) => {
+test('the mute button mutes the FILE, and NOT the playback', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
   await pick(page)
@@ -754,13 +754,16 @@ test('the mute button mutes the FILE, and the preview follows', async ({ page })
   // where it read as a volume control.
   await expect(page.getByTestId('ve-tools').getByTestId('ve-mute')).toBeVisible()
 
-  // Sound by default, and the preview is not muted either — a preview silent
-  // until somebody finds a control cannot be told apart from a clip with no
-  // sound in it, which is a thing this tool has to be able to say.
-  expect(await muted()).toBe(false)
+  // Sound in the file by default.
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('aria-pressed', 'false')
   await page.getByTestId('ve-mute').click()
-  // The preview follows, because the preview IS the export here.
-  expect(await muted()).toBe(true)
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('aria-pressed', 'true')
+
+  // AND THE PLAYBACK IS UNTOUCHED, which is the half that says which control
+  // this is. It used to be the other way round entirely — the button muted the
+  // preview and left the file talking — so a case that only watched the
+  // element would have passed against exactly the behaviour being replaced.
+  expect(await muted()).toBe(false)
 
   // THE POINT OF THE CASE, and the half the old one could not see: the button
   // used to mute the playback and leave the file talking. The exported track is

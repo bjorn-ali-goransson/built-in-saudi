@@ -386,12 +386,12 @@ export default function VideoEditTool() {
    * Does the FILE keep its sound?
    *
    * It used to be a checkbox behind the cog with a separate speaker on the
-   * transport that muted only the preview — two controls that look like one
+   * transport that muted only the PREVIEW — two controls that look like one
    * thing and are not, so the obvious button was the one that changed nothing
-   * about the export. It is now the speaker, up with the other tools, and it
-   * mutes the preview as well: this whole editor rests on the preview being
-   * the export rather than an impression of it, and a silent file that plays
-   * out loud while you make it is exactly that gap in miniature.
+   * about the export, and somebody could mute the playback and ship a file
+   * that talks. It is now the speaker, up with the other tools that decide
+   * what comes out. The preview deliberately goes on playing: you still need
+   * to hear what you are cutting after deciding the file should be silent.
    */
   const [keepAudio, setKeepAudio] = useState(true)
   const [busy, setBusy] = useState<'' | 'read' | 'render'>('')
@@ -1537,11 +1537,12 @@ export default function VideoEditTool() {
         <div className="relative flex-1 min-h-0 flex items-center justify-center">
           {/* The source. It is not the preview — it is what `drawFrame` reads —
               so it is invisible but must stay laid out and decoding. */}
-          {/* Muted when the FILE is: the preview is the export, so a clip that
-              is going to come out silent has to sound silent while it is being
-              made. */}
-          <video ref={videoRef} src={current.url} playsInline muted={!keepAudio || !canKeepAudio}
-            data-testid="ve-video"
+          {/* NOT muted by the speaker, deliberately. That button decides what
+              the FILE gets; the preview goes on playing, so you can still hear
+              what you are cutting after deciding the export should be silent.
+              "The preview is the export" is a claim about the PICTURE — what
+              `compose.ts` draws — and the sound is copied rather than drawn. */}
+          <video ref={videoRef} src={current.url} playsInline data-testid="ve-video"
             onLoadStart={() => diag.current.mark('video loadstart')}
             onError={() => {
               diag.current.mark(`video error ${videoRef.current?.error?.code ?? -1}`)
@@ -1721,9 +1722,8 @@ export default function VideoEditTool() {
               {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
               {/* The FILE's sound, not the preview's — up here with the other
                   things that decide what comes out, rather than on the
-                  transport where it read as a volume control. The preview
-                  follows it, because this tool's whole claim is that what is
-                  on the stage is what gets encoded.
+                  transport where it read as a volume control and changed
+                  nothing about the export.
 
                   IT IS ALSO WHAT SAYS THERE IS NO SOUND, and what says a join
                   cannot keep it: both used to be sentences printed under the

@@ -3018,15 +3018,17 @@ for a while.** It used to be a preview control on the transport with `keepAudio`
 as a checkbox behind the cog — two controls that look like one thing and are
 not, so the obvious button was the one that changed nothing about the export,
 and somebody could mute the preview and ship a file that talks. There is now one
-button, up with the tools that decide what comes out, and **the preview follows
-it**: this whole editor rests on the preview being the export rather than an
-impression of it, and a silent file that plays out loud while you make it is
-that gap in miniature. The checkbox is gone; the settings screen keeps only the
-thing a button cannot say, which is that the sound is COPIED rather than
-re-encoded and therefore loses nothing.
+button, up with the tools that decide what comes out. The checkbox is gone; the
+settings screen keeps only the thing a button cannot say, which is that the
+sound is COPIED rather than re-encoded and therefore loses nothing.
 
-Default sound ON, because a preview silent by default cannot be told apart from
-a clip with no sound in it — which is a thing this tool has to be able to say.
+**The PREVIEW deliberately goes on playing**, and that is the one place this
+tool's "the preview is the export" rule does not reach: that rule is a claim
+about the PICTURE — what `compose.ts` draws, once, for the stage and the
+encoder alike — and the sound is copied rather than drawn. You still need to
+hear what you are cutting after deciding the file should be silent, and the
+case asserts the element's `muted` stays FALSE, because a case that only
+watched the button would pass against the behaviour being replaced.
 **And the button is what says it**, for all three reasons at once: no sound
 track, one clip in a join with none, or clips that store theirs differently. All
 three used to be sentences printed at everybody under the video; the button is
