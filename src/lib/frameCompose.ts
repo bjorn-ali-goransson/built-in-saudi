@@ -1,14 +1,21 @@
-// What the output frame looks like — the crop geometry and the caption
-// placement, with no canvas, no codec and no React in sight.
+// What the output frame looks like — the crop geometry, the hidden regions and
+// the caption placement, with no canvas, no codec and no React in sight.
 //
-// IT IS PURE BECAUSE IT IS USED TWICE. The preview on the page draws from a
-// `<video>` element and the exporter draws from a decoded `VideoFrame`, and
-// both are a `CanvasImageSource`, so `drawFrame` below is called by both with
-// the same numbers. A preview computed by one set of rules and an export
-// computed by another is a preview that lies, which is the single worst thing
-// an editor can do — you would only find out after the encode.
+// IT IS PURE BECAUSE IT IS USED TWICE, AND IN LIB BECAUSE IT IS USED BY TWO
+// TOOLS. The preview on the page draws from a `<video>` element or an
+// `ImageBitmap` and the exporter draws from a decoded `VideoFrame` or the same
+// bitmap at full size; all of them are a `CanvasImageSource`, so `drawFrame`
+// below is called by every one of them with the same numbers. A preview
+// computed by one set of rules and an export computed by another is a preview
+// that lies, which is the single worst thing an editor can do — you would only
+// find out after the encode.
+//
+// It was `video-edit/compose.ts` until `image-edit` needed the same crop
+// arithmetic, the same snapping, the same censor drawing and the same caption
+// placement. What a still picture does NOT share with a clip stayed behind: a
+// timeline, a join, an encoder, an audio track.
 
-import { even } from '../../lib/mp4Encode'
+import { even } from './mp4Encode'
 
 // Re-exported: it was defined here first and `outputSize` below is its main
 // caller, so a tool importing it from this module is not wrong.
@@ -104,6 +111,133 @@ export interface Censor {
   /** Seconds on the OUTPUT timeline. */
   from: number
   to: number
+  /**
+   * Set when the box was told to FOLLOW what is underneath it — the measured
+   * path of the subject, which `keys` above is then DERIVED from.
+   *
+   * It is kept in the source picture's own space rather than in the output's,
+   * and that is the decision worth keeping. A censor is placed in the output
+   * frame, so re-cropping afterwards would leave a hand-drawn box exactly where
+   * it was on screen and over something else entirely. A followed box is not a
+   * position on a screen, it is a claim about where a face IS — so it is stored
+   * against the picture, and the crop is applied on the way out. Change the
+   * crop and the box stays on the face, which is the only behaviour that does
+   * not quietly uncensor somebody.
+   */
+  path?: TrackPath
+}
+
+/**
+ * Where a followed box goes, measured in the picture rather than on the screen.
+ *
+ * `keys` are in fractions of the SOURCE frame of clip `slot`, timed in that
+ * CLIP's own seconds — not the joined timeline's. Both halves matter: a trim
+ * moves the clip on the joined clock and must not move the path relative to
+ * the picture, and a crop changes the mapping to the output without changing
+ * where the subject was.
+ */
+export interface TrackPath {
+  /** The clip the path was measured in. A join is a cut, and a face tracked in
+   *  one clip says nothing about the next, so a path belongs to exactly one. */
+  slot: number
+  keys: Key[]
+  /** Where the tracker stopped being sure, in the clip's own seconds, or 0 if
+   *  it never did. Reported rather than hidden: a follow that has lost its
+   *  subject looks perfectly fine on the frame you happen to be looking at. */
+  lostAt: number
+}
+
+/**
+ * A measured path, in the output fractions and joined seconds `keys` uses.
+ *
+ * ONE function, called by the page for the stage AND for the export plan, so
+ * the two cannot disagree about where a box is — the property this whole module
+ * exists to hold. Keys outside the clip's kept stretch are dropped: a cut takes
+ * frames away, and a key pointing at one of them is a position in a picture
+ * that will not be in the file.
+ */
+export function projectPath(
+  path: TrackPath,
+  clip: { width: number; height: number },
+  crop: Crop,
+  trim: { in: number; out: number },
+  /** Where this clip starts on the joined timeline. */
+  offset: number,
+): Key[] {
+  const r = cropRect(clip, crop)
+  const out = path.keys
+    .filter((k) => k.t >= trim.in - 1e-6 && k.t <= trim.out + 1e-6)
+    .map((k) => ({
+      t: offset + Math.max(0, k.t - trim.in),
+      x: (k.x * clip.width - r.x) / r.w,
+      y: (k.y * clip.height - r.y) / r.h,
+      w: (k.w * clip.width) / r.w,
+      h: (k.h * clip.height) / r.h,
+    }))
+  // A cut that lands between two keys leaves none inside it. Holding the
+  // nearest one beats showing nothing, because showing nothing here means the
+  // box is gone and whatever it was hiding is not.
+  if (out.length) return out
+  const near = path.keys.reduce(
+    (best, k) => (Math.abs(k.t - trim.in) < Math.abs(best.t - trim.in) ? k : best),
+    path.keys[0],
+  )
+  return near
+    ? [{
+      t: offset,
+      x: (near.x * clip.width - r.x) / r.w,
+      y: (near.y * clip.height - r.y) / r.h,
+      w: (near.w * clip.width) / r.w,
+      h: (near.h * clip.height) / r.h,
+    }]
+    : []
+}
+
+/**
+ * Drop the keys a path does not need, so a minute of video is not a thousand
+ * rectangles.
+ *
+ * The tracker reports one position per FRAME, which is the right thing for it
+ * to do and the wrong thing to keep: `boxAt` tweens between the two keys either
+ * side of a moment, so a key that sits on the line between its neighbours says
+ * nothing the tween would not already have said. A key survives only if the box
+ * has actually moved since the last one kept, or if enough time has passed that
+ * a slow drift would otherwise be straightened out.
+ *
+ * `tol` is in fractions of the frame: 0.002 is a fifth of one per cent, which
+ * is well under a pixel on any stage this is looked at.
+ */
+export function thinPath(keys: Key[], tol = 0.002, maxGap = 0.5): Key[] {
+  if (keys.length <= 2) return [...keys]
+  const out: Key[] = [keys[0]]
+  for (let i = 1; i < keys.length - 1; i++) {
+    const k = keys[i]
+    const last = out[out.length - 1]
+    const moved = Math.abs(k.x - last.x) + Math.abs(k.y - last.y)
+      + Math.abs(k.w - last.w) + Math.abs(k.h - last.h)
+    if (moved >= tol || k.t - last.t >= maxGap) out.push(k)
+  }
+  out.push(keys[keys.length - 1])
+  return out
+}
+
+/** Move a whole measured path, so dragging a followed box re-aims the follow
+ *  rather than silently ending it. */
+export function shiftPath(path: TrackPath, dx: number, dy: number): TrackPath {
+  return { ...path, keys: path.keys.map((k) => ({ ...k, x: k.x + dx, y: k.y + dy })) }
+}
+
+/**
+ * Resize a whole measured path, so a box drawn too small can be grown without
+ * losing what it learned.
+ *
+ * The TOP-LEFT of each key is held, not its centre, because that is the corner
+ * the resize handle anchors on: growing the box on screen must grow it in the
+ * same direction everywhere else on the path, or the rectangle under the finger
+ * and the rectangle in the export are two different shapes.
+ */
+export function resizePath(path: TrackPath, w: number, h: number): TrackPath {
+  return { ...path, keys: path.keys.map((k) => ({ ...k, w, h })) }
 }
 
 /**
@@ -440,6 +574,31 @@ export function snapRect(
   if (id.includes('s')) y0 = rect.y0
   return { x0, y0, x1: x0 + w, y1: y0 + h }
 }
+
+/**
+ * The crop rectangle as NINE SEGMENTS, in reading order.
+ *
+ * The whole rectangle is the control: the middle cell moves it, an edge cell
+ * moves that edge, a corner cell moves both of its edges. There are no handle
+ * squares to hit — on a phone a 14px square is smaller than a fingertip, and a
+ * third of the rectangle is not.
+ *
+ * `id` names the edges each cell drags. PHYSICAL, not the logical start/end
+ * this repo prefers elsewhere: these sit on a picture, and a picture does not
+ * mirror under RTL — a cell that swapped sides in Arabic would drag the
+ * opposite edge of the frame from the one under the finger.
+ */
+export const SEGMENTS = [
+  { id: 'nw', cursor: 'cursor-nwse-resize' },
+  { id: 'n', cursor: 'cursor-ns-resize' },
+  { id: 'ne', cursor: 'cursor-nesw-resize' },
+  { id: 'w', cursor: 'cursor-ew-resize' },
+  { id: 'move', cursor: 'cursor-move' },
+  { id: 'e', cursor: 'cursor-ew-resize' },
+  { id: 'sw', cursor: 'cursor-nesw-resize' },
+  { id: 's', cursor: 'cursor-ns-resize' },
+  { id: 'se', cursor: 'cursor-nwse-resize' },
+] as const
 
 /** The smallest crop a drag may leave, in fractions of the frame. */
 const MIN_SIDE = 0.04

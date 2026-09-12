@@ -9,6 +9,62 @@ const FIXTURE = fileURLToPath(new URL('./fixtures/sample.mp4', import.meta.url))
 const bytes = () => readFileSync(FIXTURE)
 /** The same clip stored landscape with a 90° matrix — what a phone hands over. */
 const ROTATED = fileURLToPath(new URL('./fixtures/rotated.mp4', import.meta.url))
+/**
+ * The clip with something MOVING in it, borrowed from the stabiliser's suite.
+ *
+ * It cannot be `sample.mp4`: a box that follows is only distinguishable from a
+ * box that does not when the thing underneath it actually goes somewhere, and
+ * that clip's subject does not. A textured block walks across this one at a
+ * known world position — which is also why the tracker can hold it, since the
+ * fixture was built to contain the hard case rather than to consist of it.
+ */
+const SUBJECT = fileURLToPath(new URL('./fixtures/subject.mp4', import.meta.url))
+/**
+ * Where the subject is on the FIRST frame, in fractions of the picture.
+ *
+ * Arithmetic out of `scripts/make-shaky-mp4.mjs` rather than a number read off
+ * a screenshot: the subject starts at world (300, 260) and the camera at (380,
+ * 279.6) with no roll, so it lands at (80, 70.4) of a 320×180 frame.
+ */
+const SUBJECT_AT_0: [number, number] = [80 / 320, 70.4 / 180]
+/**
+ * The box the cases draw, as half-extents of the frame.
+ *
+ * It is a box somebody would actually draw around THIS subject, and that is
+ * load-bearing rather than fussy: a generous one measured here ran the tracker
+ * off the picture by the second second — the template is trimmed to its middle
+ * 72% and then blends slowly, so the background a loose box brings with it
+ * smears into a haze and the match stops being distinctive. The tool reports
+ * that as "lost", which is the honest answer; a CASE built on a loose box would
+ * be testing the failure and calling it the feature.
+ */
+const SUBJECT_BOX: [number, number] = [0.06, 0.09]
+
+async function pickSubject(page: Page) {
+  await page.getByTestId('ve-file').setInputFiles({
+    name: 'subject.mp4', mimeType: 'video/mp4', buffer: readFileSync(SUBJECT),
+  })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
+  await page.getByTestId('ve-aspect-source').click()
+}
+
+/** The follow panel's state and whether its button is usable, read in ONE go.
+ *  Sampling them separately is how a case about "not available until the
+ *  measurement lands" becomes a case about which sample won the race. */
+function followState(page: Page) {
+  return page.getByTestId('ve-box-follow').evaluate((el) => ({
+    state: el.getAttribute('data-state'),
+    disabled: !!el.querySelector('[data-testid="ve-follow"]')?.hasAttribute('disabled'),
+  }))
+}
+
+/** Where a censor box sits on the stage right now, in stage fractions — which
+ *  in every mode but crop are the OUTPUT frame's own fractions. */
+async function boxAtNow(page: Page, i = 0): Promise<{ x: number; w: number }> {
+  const stage = (await page.getByTestId('ve-stage').boundingBox())!
+  const box = (await page.getByTestId(`ve-box-${i}`).boundingBox())!
+  return { x: (box.x - stage.x) / stage.width, w: box.width / stage.width }
+}
 
 /**
  * Whether THIS browser can re-encode H.264 at all.
@@ -554,6 +610,200 @@ test('a segment moves by the DELTA, so an edge is reachable without a finger on 
   // complaint. The two readings are 54px apart, so this cannot pass by rounding.
   expect(width).toBeGreaterThan(275)
   expect(width).toBeLessThan(300)
+})
+
+test('a SECOND crop drag works — the first one does not wedge the editor', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+
+  // THE FIRST GESTURE ALWAYS WORKED, and that is why this went unnoticed: every
+  // other case here drags a crop segment exactly once. A pointerdown on a
+  // segment used to take the capture on the OVERLAY — a different element from
+  // the one the event reached — and the browser's implicit release at pointerup
+  // then applied to the wrong thing. The next drag's first `pointermove` never
+  // came back: the page froze with the picture mid-drag, deterministically, on
+  // the second edge somebody pulls.
+  await dragSeg(page, 'e', -0.2, 0)
+  const once = await outSize(page)
+  await dragSeg(page, 'e', 0.1, 0)
+  const twice = await outSize(page)
+
+  // Reaching here at all is most of the case — a wedged page times out rather
+  // than failing an assertion. The sizes then say the second drag was ACTED on
+  // and not merely survived.
+  expect(twice).not.toEqual(once)
+  expect(twice.w).toBeGreaterThan(once.w)
+})
+
+test('the clip is measured in the BACKGROUND — the editor never waits for it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickSubject(page)
+
+  // The measurement starts at the pick and the editor is usable immediately.
+  // That is the whole design: measuring a phone recording takes as long as
+  // decoding it, and an editor that greyed itself out for that would be an
+  // editor nobody can use for the first minute of every session.
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
+  await expect(page.getByTestId('ve-box-0')).toBeVisible()
+  await page.getByTestId('ve-box-0-settings').click()
+
+  // THE ONE THING THAT WAITS is the control that cannot work without the
+  // measurement — and while it is waiting it is unusable AND says what for.
+  // Read as a pair, so the two cannot be sampled either side of the pass
+  // finishing.
+  const seen = new Set<string>()
+  await expect.poll(async () => {
+    const s = await followState(page)
+    seen.add(s.state ?? '')
+    // The invariant, checked on every sample rather than once: usable exactly
+    // when the clip has been measured.
+    expect(s.disabled, `follow enabled while ${s.state}`).toBe(s.state !== 'ready')
+    return s.state
+  }, { timeout: 120_000, intervals: [200] }).toBe('ready')
+
+  // Only the states this control has. It is deliberately NOT asserted that
+  // 'measuring' was OBSERVED: this fixture is a few seconds of 320×180 and the
+  // pass regularly finishes before the first sample, so requiring it would be a
+  // case that fails on a fast machine. What stops the invariant above being
+  // vacuous is the FOLLOWING case below, which fails outright if the
+  // measurement never happened at all.
+  for (const state of seen) expect(['none', 'measuring', 'ready']).toContain(state)
+
+  // AND NOTHING BLOCKED. The export overlay is the tool's only busy state, and
+  // a measurement that had been allowed to use it would have put a percentage
+  // over the picture for the whole of a pass nobody asked for.
+  await expect(page.getByTestId('ve-progress')).toHaveCount(0)
+})
+
+test('A CENSOR BOX FOLLOWS what is under it, and a plain one does not', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickSubject(page)
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
+
+  // THE CONTROL, and it comes first because it is what makes the rest mean
+  // anything: a box nobody asked to follow stays exactly where it was drawn,
+  // however far the thing underneath it walks.
+  await seek(page, 0)
+  const stillStart = await boxAtNow(page)
+  await seek(page, 2.5)
+  const stillLater = await boxAtNow(page)
+  expect(Math.abs(stillLater.x - stillStart.x)).toBeLessThan(0.01)
+  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'off')
+
+  await seek(page, 0)
+  await page.getByTestId('ve-box-0-settings').click()
+  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
+  await page.getByTestId('ve-follow').click()
+  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
+  await page.getByTestId('ve-box-panel-close').click()
+
+  // And now it moves with the subject. Measured on the BOX as the stage draws
+  // it — `boxAt` is the same function the canvas and the encoder call, so the
+  // outline cannot sit anywhere but over the region actually being hidden.
+  await seek(page, 0)
+  const start = await boxAtNow(page)
+  await seek(page, 2.5)
+  const later = await boxAtNow(page)
+  expect(Math.abs(later.x - start.x),
+    `the box did not follow: it was at ${start.x.toFixed(3)} and is at ${later.x.toFixed(3)}`)
+    .toBeGreaterThan(0.04)
+  // The box keeps the SIZE it was drawn: a censor is a decision about how much
+  // to hide, and letting it breathe frame by frame would make it flicker.
+  expect(Math.abs(later.w - start.w)).toBeLessThan(0.01)
+})
+
+test('a followed box goes back to a plain one, WHERE IT IS rather than where it was drawn', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickSubject(page)
+  await page.getByTestId('ve-mode-censor').click()
+  await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
+  await page.getByTestId('ve-box-0-settings').click()
+  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
+  await page.getByTestId('ve-follow').click()
+  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
+  await page.getByTestId('ve-box-panel-close').click()
+
+  await seek(page, 2.5)
+  const following = await boxAtNow(page)
+
+  await page.getByTestId('ve-box-0-settings').click()
+  await page.getByTestId('ve-unfollow').click()
+  await page.getByTestId('ve-box-panel-close').click()
+
+  // THE POINT: stopping keeps the box where it IS. Dropping the path alone
+  // would snap it back to its hand keys, which on a box that has only ever
+  // followed is where it was drawn — so the one gesture meant to give control
+  // back would move the censor off the thing it is covering.
+  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'off')
+  const released = await boxAtNow(page)
+  expect(Math.abs(released.x - following.x)).toBeLessThan(0.01)
+})
+
+test('a followed box is stored against the PICTURE, so a re-crop takes it with it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickSubject(page)
+  await page.getByTestId('ve-mode-censor').click()
+
+  // Box 0 follows the subject; box 1 is drawn by hand in a clear corner and is
+  // the CONTROL — without it this case would pass against a tool that moved
+  // every box when the crop changed, which is a different (and wrong) product.
+  await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
+  await page.getByTestId('ve-box-0-settings').click()
+  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
+  await page.getByTestId('ve-follow').click()
+  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
+  await page.getByTestId('ve-box-panel-close').click()
+  await drawBox(page, [0.6, 0.7], [0.8, 0.9])
+  await expect(page.getByTestId('ve-box-1')).toHaveAttribute('data-follow', 'off')
+
+  await seek(page, 0)
+  const followedBefore = await boxAtNow(page, 0)
+  const handBefore = await boxAtNow(page, 1)
+
+  // Crop to a square, which narrows the window onto the picture considerably.
+  await page.getByTestId('ve-mode-crop').click()
+  await page.getByTestId('ve-aspect-1:1').click()
+  await page.getByTestId('ve-mode-censor').click()
+  const followedAfter = await boxAtNow(page, 0)
+  const handAfter = await boxAtNow(page, 1)
+
+  // THE PROPERTY. A hand-drawn censor is a position in the OUTPUT frame and
+  // stays exactly where it was put; a followed one is a claim about where
+  // something IS in the picture, so it is stored in the source's own space and
+  // re-projected through whatever crop is in force. Anything else quietly
+  // uncensors somebody the moment the framing changes.
+  expect(Math.abs(handAfter.x - handBefore.x)).toBeLessThan(0.01)
+  expect(Math.abs(handAfter.w - handBefore.w)).toBeLessThan(0.01)
+  expect(Math.abs(followedAfter.x - followedBefore.x)).toBeGreaterThan(0.05)
+  // And it is BIGGER on the output, because the same piece of picture is now a
+  // larger share of a narrower frame.
+  expect(followedAfter.w).toBeGreaterThan(followedBefore.w * 1.3)
+})
+
+test('the download GOES when the video changes under it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+
+  // A green download is a claim that the file behind it is the video in front
+  // of you. Change the crop and it stops being one — so the file goes and the
+  // button goes back to offering to make a new one. Keeping it hands somebody
+  // the previous version of their own clip, which is the one lie the
+  // preview-is-the-export arrangement exists to make impossible.
+  await page.getByTestId('ve-aspect-1:1').click()
+  await expect(page.getByTestId('ve-download')).toHaveCount(0)
+  await expect(page.getByTestId('ve-export')).toBeVisible()
 })
 
 test('never upscales past the source', async ({ page }) => {

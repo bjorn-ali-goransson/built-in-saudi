@@ -8,7 +8,7 @@ import {
   accumulate, corrections, drawStabilised, followCorrections, keptFraction, requiredZoom, shakeOf,
   smooth, STILL, subjectSpread, TRACK_LOST,
   type Box, type Estimate, type TrackPoint,
-} from './motion'
+} from '../../lib/motion'
 // TYPES ONLY from the worker. Importing a value out of a `.worker.ts` pulls its
 // module body into the page bundle, and its body assigns `self.onmessage` —
 // which on the main thread is `window.onmessage`.

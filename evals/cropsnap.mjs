@@ -28,10 +28,10 @@ import { compile } from './lib/tsc.mjs'
 const ROOT = path.join(import.meta.dirname, '..')
 const GEN = path.join(ROOT, 'evals/gen/crop')
 mkdirSync(GEN, { recursive: true })
-compile(ROOT, [path.join(ROOT, 'src/tools/video-edit/compose.ts')], GEN, [
+compile(ROOT, [path.join(ROOT, 'src/lib/frameCompose.ts')], GEN, [
   '--rootDir', path.join(ROOT, 'src'),
 ])
-const C = await import(path.join(GEN, 'tools/video-edit/compose.js'))
+const C = await import(path.join(GEN, 'lib/frameCompose.js'))
 
 let failed = 0
 const check = (ok, what, detail = '') => {

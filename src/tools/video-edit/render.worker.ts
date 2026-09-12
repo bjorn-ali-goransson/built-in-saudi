@@ -26,7 +26,7 @@
 import { demuxMp4, displaySize, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
 import { avcCBox, codecFor, smallest, uprightFrame } from '../../lib/mp4Encode'
-import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from './compose'
+import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from '../../lib/frameCompose'
 
 export interface AudioInfo {
   codec: string

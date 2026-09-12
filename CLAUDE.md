@@ -1649,9 +1649,11 @@ It is a MEASUREMENT, not a gate, and the reason is in its own output: **one
 caller is a question, not a defect.** A format reader used by the one tool that
 reads that format (`pptx`, `vcardRead`) is filed correctly, and
 `relatedPick`/`cvPatch` are in `lib/` precisely so a harness can reach them
-without pulling every React component in. Measured: **76 lib modules, 16 with
+without pulling every React component in. Measured: **83 lib modules, 16 with
 one caller, median 4** — so a lonely module is genuinely unusual rather than the
-norm.
+norm. (It read 76 and 16 before `motion`, `frameScan`, `frameCompose` and
+`captionBitmap` arrived; every one of those was moved into `lib/` BECAUSE it
+gained a second caller, which is the shape this instrument exists to find.)
 
 **Its first run found `lib/inAppBrowser.ts`, and the defect was live.** It
 detects an embedded WebView (LinkedIn, Instagram, Facebook…) and had **one
@@ -2359,7 +2361,9 @@ time you stop moving. What is removed is the difference between where the camera
 went and where it was heading — and **that distinction cost a round of testing**,
 below.
 
-**`motion.ts` is PURE with no runtime imports**, so `evals/shakeprobe.mjs`
+**`lib/motion.ts` is PURE with no runtime imports** (it lived in this tool's
+own folder until `video-edit` needed it to make a censor box follow a face), so
+`evals/shakeprobe.mjs`
 compiles it standalone with tsc and calls the real function — the
 `relatedPick.ts` / `cvPatch.ts` arrangement, for the reason recorded five times
 in this file. Four decisions inside it:
@@ -2673,7 +2677,8 @@ COUNT read from the wrong PLACE.
 was deleted.** The first version was the shape a tool of this size defaults to:
 a small preview, a stack of panels under it, and — after an export — a SECOND
 `<video>` playing the result. That second player is the part worth writing down.
-The whole architecture rests on `compose.ts` being pure so the preview and the
+The whole architecture rests on `lib/frameCompose.ts` (`compose.ts` until
+`image-edit` became its second caller) being pure so the preview and the
 export go through one function; a separate result player is a second opinion
 about what was encoded, and the view that cannot disagree with the export is the
 one that is not there. So the export step is now the same button row turning
@@ -2905,11 +2910,11 @@ is one this file argued the other way about.**
   already refuses.
 
 **A censor is KEYFRAMED now, and the limit this file recorded as "deliberately
-out of v1" is gone.** `Key` and `boxAt` in `compose.ts`; a box holds a list of
+out of v1" is gone.** `Key` and `boxAt` in `lib/frameCompose.ts`; a box holds a list of
 positions sorted by time, and the rectangle at any moment is the tween between
 the two either side of it. Four decisions:
 
-- **Interpolated in `compose.ts`, not in the page.** That module is pure
+- **Interpolated in `lib/frameCompose.ts`, not in the page.** That module is pure
   *because* it is used twice, and a tween computed in the preview against a
   tween computed in the worker is two opinions about where somebody's face was.
   The export followed for free — `render.worker.ts` passes `plan.censors` to
@@ -2992,7 +2997,7 @@ every video tool here shipped with this.
   the DISPLAY size. That one change fixes the preview in both tools, because the
   element was always right and the probe was always wrong.
 - **The frame is turned ONCE, as it leaves the decoder** (`uprightFrame` in
-  `lib/mp4Encode.ts`, used by both workers). `compose.ts` and `motion.ts` stay
+  `lib/mp4Encode.ts`, used by both workers). `frameCompose.ts` and `motion.ts` stay
   orientation-free and go on receiving a source that is already the picture — so
   the preview and the export still run through one function, which is the
   property this whole family rests on.
@@ -3024,7 +3029,7 @@ sound is COPIED rather than re-encoded and therefore loses nothing.
 
 **The PREVIEW deliberately goes on playing**, and that is the one place this
 tool's "the preview is the export" rule does not reach: that rule is a claim
-about the PICTURE — what `compose.ts` draws, once, for the stage and the
+about the PICTURE — what `frameCompose.ts` draws, once, for the stage and the
 encoder alike — and the sound is copied rather than drawn. You still need to
 hear what you are cutting after deciding the file should be silent, and the
 case asserts the element's `muted` stays FALSE, because a case that only
@@ -3222,7 +3227,7 @@ single decision:
   Arabic face is a row of empty boxes.
 - **The preview is not an approximation of the export, it is the export** — the
   same bitmap, positioned by the same `captionAt`, over a frame drawn by the same
-  `drawFrame`. `compose.ts` is pure and takes a `CanvasImageSource`, so the
+  `drawFrame`. `frameCompose.ts` is pure and takes a `CanvasImageSource`, so the
   preview's `<video>` and the exporter's decoded `VideoFrame` go through one
   function. A preview computed its own way is a preview that can lie, and you
   only find out after the encode.
@@ -3441,6 +3446,181 @@ and own-names went 473/474 → **475/476**.
 the frame, so the word described what that tool tolerates rather than what it
 does — the documented rule, and it was taking the query from the tool that crops
 for real.
+
+**A CENSOR BOX FOLLOWS WHAT IS UNDER IT, and the measurement runs on a thread of
+its own.** The limit this file recorded and then half-solved with keyframes is
+gone for the case it was written about: the thing worth hiding is almost always
+the thing that MOVES, and until now the answer was either a box drawn generously
+enough to cover everywhere the subject goes, or a path laid down by hand one
+frame at a time.
+
+**It needed no new algorithm.** `video-stabilize` already had one — a tile
+matcher, a pyramid, a template tracker with a distinctiveness score and a
+measured "lost" threshold, all in `motion.ts`, all guarded by
+`evals/shakeprobe.mjs`. The estimator's median REJECTS the tiles that disagree
+with the frame *because* they are something moving through the shot, and
+following is that same machinery matching that thing on its own instead of
+voting it out. So `motion.ts` moved to **`src/lib/motion.ts`** and the decode
+loop it is driven by moved to **`src/lib/frameScan.ts`** — `scanGrayFrames`,
+`estimateSteps` and `followBox`, which were `scanFrames`/`analyse`/`track`
+inside the stabiliser's worker. Extracted at the second caller, because a second
+copy of them would have given the two tools different decode, backpressure, luma
+conversion and failure handling, and the frames they produce decide where
+somebody's face is hidden. `evals/shakeprobe.mjs` compiles the lib path now and
+reads the same numbers.
+
+Five decisions, and the first two are the ones to carry:
+
+- **IT IS A SECOND WORKER** (`video-edit/motion.worker.ts`), not a message on
+  the render worker. That worker holds a demuxed session per clip and one global
+  cancel flag, and an export is the longest thing this tool does — so sharing it
+  meant either an analysis queued behind an export or the two interleaved on one
+  thread sharing that flag. The editor goes on being an editor while the pass
+  runs: crop, draw, caption, scrub, cut, export. **`setBusy` is never touched**,
+  and there is a case asserting the export overlay never appears for it.
+- **It does NOT retain its demux.** The render worker already keeps every sample
+  per clip for as long as the clip is open — the untested hypothesis behind the
+  intermittent Android preview failure recorded below — and a second permanent
+  copy of a phone recording is the last thing this tool should hold. Each job
+  demuxes, measures and lets go; the price is one extra parse per job against a
+  pass that decodes every frame anyway.
+- **The path is stored in the SOURCE picture's space, not on the screen**
+  (`TrackPath` in `lib/frameCompose.ts`), and `keys` are DERIVED from it through
+  the crop and the cut in force. A hand-drawn censor is a position in the output
+  frame, so re-cropping leaves it exactly where it was on screen and over
+  something else entirely; a followed box is not a position on a screen, it is a
+  claim about where a face IS. Projecting on the way out is the only behaviour
+  that does not quietly uncensor somebody — and because the stored path never
+  changes, a crop dragged back and forth cannot accumulate error into it.
+- **The projection happens ONCE, in a memo the stage and the export plan both
+  read.** The worker is handed the resolved boxes and has no crop-to-source
+  arithmetic of its own to grow. Same property the whole tool rests on: the
+  preview is the export, by construction rather than by care.
+- **Moving or resizing a followed box RE-AIMS the follow** (`shiftPath`,
+  `resizePath`), rather than ending it or fighting it. There is no mode to
+  leave and nothing to re-run: a box drawn slightly off, or slightly too small,
+  is corrected with the gesture that was already there. `resizePath` holds each
+  key's TOP-LEFT rather than its centre, because that is the corner the resize
+  handle anchors on — anything else makes the rectangle under the finger and
+  the rectangle in the export two different shapes.
+
+**THE PASS STARTS AT THE PICK, and that is a decision with a cost worth
+stating.** A clip is measured whether or not anybody ever asks a box to follow —
+which is what makes the control instant when it is wanted, and what makes the
+editor spend a whole extra decode of a ten-minute 4K recording on a feature most
+sessions will not use. The alternative is starting it when Follow is first
+pressed, which spends nothing and makes the one person who wants it wait for
+everything. It is the requested behaviour and the better one for a phone clip;
+if it ever becomes the wrong trade, the honest fix is a size threshold rather
+than a preference, because the number it turns on is the file's, not a taste.
+
+`thinPath` drops the keys a tween would have produced anyway: the tracker
+reports one position per FRAME, which is right for it and wrong to keep, so a
+key survives only if the box has moved by more than a fifth of one per cent
+since the last one kept or half a second has passed. And the keyframe control
+comes off a followed box entirely — its path IS the answer, and a control
+offering to edit a derived list is a control that lies about what it edits.
+
+**Verified to fail:** making the projection a no-op reddens exactly the case
+that exists for it and no other.
+
+**THE FIXTURE HAS TO CONTAIN THE HARD CASE AND MUST NOT CONSIST OF IT, for the
+seventh time in this file.** The first version of the e2e drew a generous box
+around the subject — the kind anybody actually drags — and the tracker ran off
+the picture by the second second, because `startTrack` trims to the middle 72%
+and then blends slowly, so the background a loose box brings with it smears into
+a haze and the match stops being distinctive. **The tool reported that honestly
+as "lost"**; what was wrong was the case, which would otherwise have been
+testing the failure and calling it the feature. The box is the one the
+stabiliser's own suite uses.
+
+**A SECOND CROP DRAG USED TO WEDGE THE EDITOR, and it had been shipped that
+way.** Found while writing the image editor's spec, then reproduced in
+`video-edit` unchanged: a `pointerdown` on a crop segment took the pointer
+capture on the OVERLAY — a different element from the one the event reached — so
+the browser's implicit release at pointerup applied to the wrong thing, and the
+NEXT drag's first `pointermove` never came back. The page froze with the picture
+mid-drag, deterministically, on the second edge somebody pulls. Every other case
+in this suite drags a segment exactly once, which is the whole reason it
+survived five passes of hand testing and 47 green cases. Capture is taken on
+`e.currentTarget` now, in both editors; moves and ups still reach the overlay's
+handlers because they bubble. **Verified to fail** — restoring the old line
+reddens the new case and nothing else. The general form is worth more than the
+fix: **a gesture tested once is a gesture whose second use is untested**, and
+`setPointerCapture` on anything but the event's own target is a way to find that
+out expensively.
+
+## The video editor, for the one-frame case (`image-edit`)
+
+The image family could crop (`image-cropper`), hide (`image-redact`), caption
+(`meme-generator`) and compress — each in its own tool, each a separate upload,
+each a separate download. Doing two of those to one picture meant a round trip
+through a file. `video-edit` had already been rebuilt into a full-screen editor
+where all of that is one session on one stage, and the one-frame case is the
+same product with less machinery.
+
+**It is a separate app that shares the half that is geometry, and the split is
+the useful part.** `lib/frameCompose.ts` (the crop arithmetic, the snapping, the
+censor drawing, the caption placement, the nine-segment table) and
+`lib/captionBitmap.ts` (the text engine) were `video-edit/compose.ts` and a
+private function in its component until this needed them — which is exactly when
+this repo says to move something. What the image editor adds is only what a
+still picture does not share with a clip: no timeline, so a censor is one key
+and has no keyframes; no decoder, so the source is an `ImageBitmap` and the
+export is one `toBlob`; and no encoder to be missing, so it works in every
+browser the site runs in at all — unlike the video editor, which needs WebCodecs
+with H.264 and says so.
+
+`renderCaption` in particular is worth having in `lib/`: it draws on the PAGE,
+so Arabic is shaped and joined by the browser's own text engine rather than by
+whatever fonts a worker happens to have, and the bitmap the preview shows is the
+one that is encoded. Two copies of that would have been two opinions about
+wrapping.
+
+**The preview IS the export**, by the same construction as the video editor:
+`compose` is called with the stage canvas and with the export canvas, and the
+only difference between the two calls is the size of the destination.
+
+**And what it is honest about is DIFFERENT from what the video editor is honest
+about.** `evals/pixelleak.mjs` measured that a mosaic gives back 98.6% of a
+number plate from 64 frames, because the grid stays fixed to the frame while the
+subject moves through it — and it measured, as the control, that ONE frame gives
+back nothing at all. So the warning here is not the video one with the word
+"video" swapped out: a single picture really is much safer, and the copy says
+so, and says the exception — a still taken from a clip somebody else also has.
+**Claiming what was measured, and only that, is the difference between a finding
+and folklore**, and repeating the 98.6% on a page where it was not measured
+would have been the second.
+
+**`ie-tilt` rotates every picture one degree clockwise and is ON by default.**
+It was asked for exactly like that, as a joke, and it is here as a real control
+rather than as a gag in a comment — because a joke that cannot be switched off
+is a defect, and one that does not actually do anything is a lie about what the
+tool exports. So it genuinely tilts, the preview shows it, the settings screen
+says in plain words what it does and how to stop it, and there is a case
+asserting BOTH halves: on by default and square again when it is off. The
+picture is scaled up by `coverScale` while it turns, because rotating a
+rectangle inside its own frame exposes four empty corners — about 2% of the
+edges at one degree, which the copy also states rather than hiding.
+
+**The fixture is generated, and it carries two hard cases for two properties.**
+A crisp vertical edge down the middle, because that is the only observable that
+can tell one degree of tilt from none — a photograph of anything looks tilted to
+a person and identical to an assertion. And a band of grain, because a mosaic of
+flat colour is that same flat colour, so a censor drawn on flat paint is
+undetectable however hard the case looks. The video editor's suite learned that
+second one the expensive way, on a fixture of colour bars.
+
+**Search: it is named for what it IS, not for what it contains.**
+`image-cropper` owns 'crop image' and `image-redact` owns the bare 'blur',
+'redact' and «طمس» for pictures, so the keywords are editor-shaped. One entry
+still cost a bench row — `crop blur and caption` carries the generic word "blur"
+and took `blur part of a picture` off `image-redact`, because the scorer matches
+the words a phrase happens to CONTAIN rather than the phrase. Removed; every one
+of the nine benches is then byte-identical to the baseline taken with the tool
+stashed out of the registry, and own names went 477/478 → 479/480. Sixth
+application of the rule, and the documented fix: **wrapping a generic word in a
+phrase does not remove it.**
 
 ## Taking a still out of a video (`video-frames`)
 

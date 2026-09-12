@@ -3,6 +3,7 @@ import { imageCompressorTool } from './image-compressor/meta'
 import { printSizeTool } from './print-size/meta'
 import { imageFormatConverterTool } from './image-format-converter/meta'
 import { imageCropperTool } from './image-cropper/meta'
+import { imageEditTool } from './image-edit/meta'
 import { imageRearrangeTool } from './image-rearrange/meta'
 import { imagesToPdfTool } from './images-to-pdf/meta'
 import { docScanTool } from './doc-scan/meta'
@@ -379,6 +380,7 @@ export const tools: Tool[] = [
   printSizeTool,
   imageFormatConverterTool,
   imageCropperTool,
+  imageEditTool,
   imageRearrangeTool,
   docScanTool,
   imagesToPdfTool,

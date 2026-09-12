@@ -29,8 +29,8 @@ import { compile } from './lib/tsc.mjs'
 const ROOT = path.join(import.meta.dirname, '..')
 const GEN = path.join(ROOT, 'evals/gen/stab')
 mkdirSync(GEN, { recursive: true })
-compile(ROOT, [path.join(ROOT, 'src/tools/video-stabilize/motion.ts')], GEN, [
-  '--rootDir', path.join(ROOT, 'src/tools/video-stabilize'),
+compile(ROOT, [path.join(ROOT, 'src/lib/motion.ts')], GEN, [
+  '--rootDir', path.join(ROOT, 'src/lib'),
 ])
 const M = await import(path.join(GEN, 'motion.js'))
 
