@@ -1083,17 +1083,27 @@ export default function VideoEditTool() {
   }
 
   /**
-   * A censor's default span is the WHOLE clip, and that is a safety decision
-   * rather than a convenience.
+   * A censor's default span: FROM THE MOMENT ON SCREEN, to the end.
    *
-   * It used to be three seconds from the playhead, so a box drawn over a face
-   * silently STOPPED hiding it partway through — and the failure is invisible
-   * at the moment you make it, because you are looking at the frame where the
-   * box is showing. What a censor does wrong when it disappears is uncensor
-   * something, which is the one mistake this tool must not make quietly. The
-   * span is still editable, behind the box's own cog.
+   * The end half is a safety decision and has not changed. It used to default
+   * to three seconds from the playhead, so a box drawn over a face silently
+   * STOPPED hiding it partway through — and that failure is invisible at the
+   * moment you make it, because you are looking at a frame where the box is
+   * showing. What a censor does wrong when it disappears is uncensor
+   * something, and a box still runs to the end unless somebody says otherwise.
+   *
+   * The START moved to the playhead, which is the same answer following gives:
+   * you scrub to the thing, draw a box on it, and it covers from there. A box
+   * that began at 0:00 whatever moment it was drawn covered frames nobody had
+   * looked at, and on a join it covered a different clip entirely.
+   *
+   * THE COST IS THE MIRROR OF THE OLD BUG — a head that is not covered — so it
+   * is made VISIBLE rather than argued away: the selected box's span is drawn
+   * on the scrubber, so "this starts here" is something you can see instead of
+   * infer. Never the very last instant, or a box drawn at the end would have
+   * nothing to hide and no way to say so.
    */
-  const wholeClip = () => ({ from: 0, to: duration })
+  const fromHere = () => ({ from: Math.min(t, Math.max(0, duration - 0.1)), to: duration })
 
   function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
@@ -1304,7 +1314,7 @@ export default function VideoEditTool() {
       const box = drawingRef.current
       drawingRef.current = null
       if (box && box.w > 0.02 && box.h > 0.02) {
-        const span = wholeClip()
+        const span = fromHere()
         // ONE rectangle. A box is a fixed shape in a fixed place until it is
         // told to follow something — the two keys it used to be drawn with
         // existed so a later drag at a later moment could tween between them,
@@ -1559,6 +1569,33 @@ export default function VideoEditTool() {
   // taken in if it has one, otherwise the clip on screen — which is the clip a
   // follow would be measured in if it were asked for now.
   const measured = analysis[picked?.path?.slot ?? current?.slot ?? -1]
+
+  /**
+   * The selected box's span, on the SCRUBBER's axis, as fractions of it.
+   *
+   * The two clocks disagree and that is the whole of this: a box's span is on
+   * the JOINED timeline — the kept stretches of every clip laid end to end —
+   * while the scrubber is this clip's own raw seconds, cut parts included. So
+   * the span is intersected with the stretch this clip contributes and mapped
+   * back through the cut. A box that covers only some other clip shows nothing
+   * here, which is correct: it hides nothing you are looking at.
+   */
+  // NOT a `useMemo`: this sits below the component's early returns, and a hook
+  // after a conditional return is a hook that is not called on every render —
+  // React throws and the editor never mounts at all, which is exactly what it
+  // did. It is three comparisons and a divide; there was nothing to memoise.
+  const boxSpan = (() => {
+    if (!picked || mode !== 'censor') return null
+    const span = spans[Math.min(sel, Math.max(0, spans.length - 1))]
+    if (!span) return null
+    const from = Math.max(picked.from, span.start)
+    const to = Math.min(picked.to, span.end)
+    if (!(to > from)) return null
+    const toClip = (out: number) => (out - span.start + trim.in) / clipLen
+    const left = clamp01(toClip(from))
+    return { left, width: Math.max(0.004, clamp01(toClip(to)) - left) }
+  })()
+
   const drawingText = textTick >= 0 ? drawingTextRef.current : null
 
   const toolBtn = (m: Mode, label: string, icon: React.ReactNode) => (
@@ -2112,6 +2149,18 @@ export default function VideoEditTool() {
             <div aria-hidden="true"
               style={{ left: `${(trim.in / clipLen) * 100}%`, width: `${((trim.out - trim.in) / clipLen) * 100}%` }}
               className="absolute h-1.5 bg-green-600/45" />
+            {/* WHERE THE SELECTED BOX HIDES, on the line that says where you
+                are. A box starts at the moment it was drawn now, so the stretch
+                BEFORE it is picture nobody has covered — and the whole argument
+                for that default is that the gap is visible rather than
+                something you have to scrub back to discover. Shown only while a
+                box is selected: a permanent band would be a second meaning for
+                a line that already carries the cut. */}
+            {boxSpan && (
+              <div aria-hidden="true" data-testid="ve-box-span"
+                style={{ left: `${boxSpan.left * 100}%`, width: `${boxSpan.width * 100}%` }}
+                className="absolute h-[0.3rem] -bottom-0.5 rounded-full bg-gold-400" />
+            )}
             {/* The control itself, on top and with its track made invisible —
                 the line behind it is the track, because a native one cannot be
                 dimmed in parts. */}
