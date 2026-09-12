@@ -78,7 +78,10 @@ function shownSize(v: DemuxTrack): { width: number; height: number } {
 export async function scanGrayFrames(
   v: DemuxTrack,
   opts: ScanOptions,
-  onFrame: (pyr: Gray[], index: number, prev: Gray[] | null) => void,
+  /** `at` is when this frame is SHOWN, in the clip's own seconds — which a pass
+   *  that starts somewhere other than the beginning needs, and which cannot be
+   *  derived from `index` on a variable-rate recording. */
+  onFrame: (pyr: Gray[], index: number, prev: Gray[] | null, at: number) => void,
 ): Promise<ScanResult> {
   // Display orientation throughout, so every measurement this pass produces is
   // in the space the viewer and the exporter both work in.
@@ -114,9 +117,10 @@ export async function scanGrayFrames(
           // the same way, so the exact weights matter far less than being cheap.
           g[i] = (rgba[p] * 77 + rgba[p + 1] * 150 + rgba[p + 2] * 29) >> 8
         }
-        times.push(frame.timestamp / 1e6 - base)
+        const at = frame.timestamp / 1e6 - base
+        times.push(at)
         const next = pyramid({ data: g, width: aw, height: ah }, 3)
-        onFrame(next, done, prev)
+        onFrame(next, done, prev, at)
         prev = next
         done++
       } catch (e) {
@@ -187,7 +191,7 @@ export interface Track {
 }
 
 /**
- * Follow one subject across the whole clip.
+ * Follow one subject from `startSec` to the end of the clip.
  *
  * A SECOND decode rather than a second thing retained from the first, and that
  * is deliberate: the box cannot be drawn until somebody has SEEN the clip, so
@@ -197,17 +201,37 @@ export interface Track {
  *
  * `box` is in FRACTIONS of the frame, because the stage it was drawn on is a
  * different size from the plane it is matched in.
+ *
+ * `startSec` IS THE WHOLE CORRECTNESS OF THIS FUNCTION, and it was missing.
+ * The template is cut from the frame the box was aimed at, and this used to cut
+ * it from frame 0 whatever moment the box was drawn at — so a box put over a
+ * face five seconds in had its template taken from frame 0 AT THOSE
+ * COORDINATES, which is background, and then followed the background. That
+ * reads as "the blur did not follow", and it is the natural way to work: scrub
+ * to the face, draw a box on it, ask it to follow.
+ *
+ * Frames before `startSec` are still DECODED — they have to be, since the ones
+ * after them are differences from them — and reported at the drawn position, so
+ * the box holds where it was put until the moment it was aimed.
  */
 export async function followBox(
   v: DemuxTrack,
   box: Box,
   steps: Estimate[],
   opts: ScanOptions = {},
+  startSec = 0,
 ): Promise<Track> {
   const points: TrackPoint[] = []
   let tracker: Tracker | null = null
   let refused = false
   let centre = { x: 0, y: 0 }
+  /** The box as drawn, relative to the frame centre — what every frame before
+   *  the start reports, and what the first tracked frame starts from. */
+  const drawn = (w: number, h: number) => ({
+    x: (box.x + box.w / 2 - 0.5) * w,
+    y: (box.y + box.h / 2 - 0.5) * h,
+    score: 1,
+  })
   // The DISPLAY width, not the coded one. `steps` are in source pixels and the
   // tracker matches in the analysis plane, so the factor between them is
   // analysis ÷ picture — and for a phone recording held upright the stored
@@ -215,9 +239,14 @@ export async function followBox(
   // aspect ratio and walk the box off the subject.
   const shownWidth = shownSize(v).width
 
-  const info = await scanGrayFrames(v, opts, (pyr, i) => {
-    if (i === 0) {
-      centre = { x: pyr[0].width / 2, y: pyr[0].height / 2 }
+  const info = await scanGrayFrames(v, opts, (pyr, i, _prev, at) => {
+    centre = { x: pyr[0].width / 2, y: pyr[0].height / 2 }
+    // Not yet at the moment the box was aimed: hold the drawn position. One
+    // point per frame either way, so the indices stay aligned with `times` and
+    // the caller can map a position onto the clip's own clock.
+    if (!tracker && at < startSec - 1e-6) { points.push(drawn(pyr[0].width, pyr[0].height)); return }
+    if (!tracker) {
+      if (refused) { points.push(drawn(pyr[0].width, pyr[0].height)); return }
       tracker = startTrack(pyr, {
         x: box.x * pyr[0].width,
         y: box.y * pyr[0].height,
@@ -225,14 +254,9 @@ export async function followBox(
         h: box.h * pyr[0].height,
       })
       if (!tracker) { refused = true; return }
-      points.push({
-        x: (box.x + box.w / 2 - 0.5) * pyr[0].width,
-        y: (box.y + box.h / 2 - 0.5) * pyr[0].height,
-        score: 1,
-      })
+      points.push(drawn(pyr[0].width, pyr[0].height))
       return
     }
-    if (!tracker) return
     // The camera step for this pair, back in ANALYSIS pixels.
     const hint = steps[i - 1]
       ? scaleMotion(steps[i - 1], pyr[0].width / (shownWidth || pyr[0].width))

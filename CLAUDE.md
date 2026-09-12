@@ -3512,6 +3512,48 @@ Five decisions, and the first two are the ones to carry:
   handle anchors on — anything else makes the rectangle under the finger and
   the rectangle in the export two different shapes.
 
+**IT DID NOT FOLLOW, AND THERE WERE TWO REASONS — one a bug, one a place.**
+Reported in those words after the first version shipped, and both halves are
+worth keeping because they fail the same way from outside.
+
+**The bug: the template was cut from FRAME 0, whatever moment the box was
+aimed at.** `followBox` started its tracker on the first decoded frame, so a
+box put over a face five seconds in took its template from frame 0 AT THOSE
+COORDINATES — background — and then followed the background, perfectly and
+uselessly. It is the natural way to work that breaks it: scrub to the face,
+draw a box on it, ask it to follow. `startSec` is now passed through and the
+tracker starts at the frame the box was aimed at; frames before it are still
+DECODED (the ones after are differences from them) and reported at the drawn
+position, so the box holds where it was put until the moment it was aimed.
+
+**And my own e2e could not see it, which is the transferable half.** Every
+follow case aimed the box at t=0 — the one moment where the bug is invisible,
+because there frame 0 IS the frame the box was aimed at. The new case
+calibrates itself rather than hard-coding where the subject is: it follows from
+the top (the path the earlier case proves), reads the box a second in — which
+IS where the subject is then — hands the box back, and asks it to follow again
+from there. **Verified to fail**: forcing `startSec` back to 0 reddens exactly
+that case and leaves the frame-0 one green, which is the whole point. **A
+feature tested only at the origin of its own coordinate is a feature tested
+where its bugs cannot appear.**
+
+**The place: the switch was three taps down inside a settings sheet.** So a box
+that was never told to follow anything looked identical to one that tried and
+failed — and the measurement it waits for had no visible existence at all. The
+control is now the crosshair on the box's NORTH-WEST corner, where the keyframe
+diamond used to be, and it carries the whole state: a **spinner** while the
+clip is being measured or this box's path is being worked out, a hollow
+crosshair offering to follow from the moment on screen, filled green while it
+is following, gold when it followed and then lost the subject, struck through
+when the clip could not be measured. `data-follow` is the testable contract,
+and the SPINNER is checked as an invariant — present exactly in the busy states
+— rather than by polling for a glimpse of it, which would be a race on how fast
+the pass happens to be. Verified to fail by deleting the spinner.
+
+**The sheet explains and no longer duplicates.** One control, for the reason
+the mute button already cost this tool once: two controls for one setting is
+how somebody ends up muting the preview and shipping a file that talks.
+
 **THE PASS STARTS AT THE PICK, and that is a decision with a cost worth
 stating.** A clip is measured whether or not anybody ever asks a box to follow —
 which is what makes the control instant when it is wanted, and what makes the

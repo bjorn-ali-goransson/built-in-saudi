@@ -590,6 +590,23 @@ export function PauseIcon({ className }: P) {
 }
 
 /**
+ * A crosshair over a ring — "lock on to this".
+ *
+ * It sits on a censor box's free corner and carries the whole state of the
+ * follow: hollow to offer it, filled while it is on. A magnet or an eye were
+ * the other candidates and both say something else — a magnet is attraction
+ * and an eye is visibility, where what this does is aim.
+ */
+export function TargetIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="6" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
+  )
+}
+
+/**
  * A mosaic: four grey tones in a 3x3 grid.
  *
  * The eraser it replaced said "rub something out", which is the wrong promise

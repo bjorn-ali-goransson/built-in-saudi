@@ -144,10 +144,13 @@ progressive MP4.
 - [x] Audio copied when every clip agrees on its format; otherwise the export is
       silent and the page says so BEFORE the encode.
 - [x] A capability gate naming WebCodecs/H.264, routing to `video-trim`.
-- [x] A censor box can FOLLOW what is under it: the clip is measured on its own
-      worker thread from the pick, the control says what it is waiting for until
-      that lands, and the measured path is stored against the picture rather
-      than the screen so a later re-crop takes the box with it.
+- [x] A censor box can FOLLOW what is under it, from the moment on screen: the
+      clip is measured on its own worker thread from the pick, and the control
+      is a crosshair on the box's own corner carrying the whole state — a
+      spinner while the clip is being measured or the path worked out, hollow
+      to offer, filled while following, gold when the subject was lost. The
+      measured path is stored against the picture rather than the screen, so a
+      later re-crop takes the box with it.
 - [x] Censor boxes: drag on the stage to draw one, drag to move it, drag its
       grip to resize it, a delete button on the selected one, each with its own
       time range and mode. **Pixelate by default** (see below); a warning naming
@@ -180,6 +183,9 @@ progressive MP4.
   last saw it and the tool says where that was.
 - **A box that is not following does not move.** One rectangle, in one place,
   for the span you give it — exactly as it was before any of this.
+- **Following goes FORWARD from the moment you aim it**, and holds where you
+  put it before that. Tracking backwards would need a second pass in reverse;
+  scrub to the start of what you want covered and aim it there.
 - **A followed path belongs to ONE clip.** A join is a cut, and a face tracked
   in one clip says nothing about the next, so the path covers the clip it was
   measured in and holds either side of it.
