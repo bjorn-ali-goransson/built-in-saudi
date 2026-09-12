@@ -4,7 +4,7 @@ import { useLocale } from '../../i18n'
 import { Button, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
   BackIcon, CloseIcon, CogIcon, CropIcon, CutHeadIcon, CutTailIcon, DownloadIcon, MosaicIcon,
-  MuteIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon, VolumeIcon,
+  MuteIcon, PauseIcon, PlayIcon, TargetIcon, TextIcon, TrashIcon, VolumeIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
@@ -76,15 +76,16 @@ const STR = {
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
     boxSettings: 'This box',
     follow: 'What it covers',
-    followBtn: 'Follow what is under it',
-    followAgain: 'Follow again from here',
+    followBtn: 'Follow what is under it, from here on',
+    followOff: 'Stop following — leave the box where it is',
+    followBusy: 'Working out where it goes…',
+    followWait: 'Measuring how things move in this clip — following is available when that finishes',
     followRunning: 'Following the subject…',
     measuring: (pct: string) => `Measuring how things move in this clip… ${pct}%`,
     measureWhy: 'A box can only follow once the clip has been measured, and that runs on its own thread in the background. Everything else in the editor — cropping, drawing, captions, scrubbing, exporting — works while it does.',
     measureFailed: 'This clip could not be measured, so a box cannot follow in it. You can still draw, move and resize boxes, and set when each one shows.',
     followWhy: 'The thing worth hiding is almost always the thing that moves, and a box that cannot move has to be drawn big enough to cover everywhere the subject goes. This measures where it actually went and takes the box with it, so the box only has to cover the subject.',
     followOn: 'This box follows what was under it. Moving or resizing it moves the whole path, so the follow is re-aimed rather than thrown away.',
-    followStop: 'Stop following',
     followLost: (at: string) => `The subject was lost at ${at}. From there the box holds where it last saw it — follow again from a clearer moment, or stop following and place it by hand.`,
     followNoSubject: 'There is not enough texture in that box to follow. A plain wall, the sky or a blown-out window has nothing to match from one frame to the next — draw the box around something with detail in it.',
     followFailed: 'The subject could not be followed in this clip.',
@@ -160,15 +161,16 @@ const STR = {
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
     boxSettings: 'هذا المربّع',
     follow: 'ما الذي يغطّيه',
-    followBtn: 'اتبع ما تحته',
-    followAgain: 'اتبع من هنا مرة أخرى',
+    followBtn: 'اتبع ما تحته من هنا',
+    followOff: 'أوقف التتبّع — واترك المربّع في مكانه',
+    followBusy: 'جارٍ تحديد مساره…',
+    followWait: 'جارٍ قياس الحركة في هذا المقطع — ويتاح التتبّع عند انتهائه',
     followRunning: 'جارٍ تتبّع الهدف…',
     measuring: (pct: string) => `جارٍ قياس الحركة في هذا المقطع… ${pct}٪`,
     measureWhy: 'لا يستطيع المربّع أن يتبع شيئًا قبل قياس المقطع، وهذا يجري في خيط مستقل في الخلفية. وكل ما عدا ذلك في المحرّر — الاقتصاص والرسم والنصوص والتنقّل والتصدير — يعمل أثناءه.',
     measureFailed: 'تعذّر قياس هذا المقطع، فلا يمكن للمربّع أن يتبع فيه. ويبقى بإمكانك رسم المربّعات وتحريكها وتغيير حجمها وتحديد وقت ظهورها.',
     followWhy: 'ما يستحق الإخفاء هو غالبًا ما يتحرك، والمربّع الثابت لا بد أن يُرسم كبيرًا بما يغطي كل ما يمرّ به الهدف. وهنا يُقاس أين ذهب فعلًا ويتحرك المربّع معه، فلا يغطي إلا الهدف نفسه.',
     followOn: 'هذا المربّع يتبع ما كان تحته. وتحريكه أو تغيير حجمه يحرّك المسار كله، فيُعاد توجيه التتبّع بدل إلغائه.',
-    followStop: 'أوقف التتبّع',
     followLost: (at: string) => `فُقد الهدف عند ${at}. ومن هناك يثبت المربّع حيث رآه آخر مرة — اتبع من لحظة أوضح، أو أوقف التتبّع وضعه يدويًّا.`,
     followNoSubject: 'لا توجد تفاصيل كافية في هذا المربّع لتتبّعه. فالجدار الخالي أو السماء أو نافذة محترقة الإضاءة لا شيء فيها يُطابَق من إطار إلى آخر — ارسم المربّع حول شيء فيه تفصيل.',
     followFailed: 'تعذّر تتبّع الهدف في هذا المقطع.',
@@ -1003,7 +1005,15 @@ export default function VideoEditTool() {
     setFollowError('')
     setFollowingId(c.id)
     setFollowProgress({ done: 0, total: 0 })
-    const res = await askMotion({ kind: 'track', slot: current.slot, file: current.file, box, steps: a.steps })
+    // FROM THE MOMENT ON SCREEN, in the clip's own seconds. The template is cut
+    // from the frame the box was aimed at — and cutting it from frame 0 instead
+    // is the bug this had: a box put over a face five seconds in took its
+    // template from frame 0 at those coordinates, which is background, and then
+    // followed the background perfectly.
+    const startSec = Math.min(Math.max(pos, trim.in), trim.out)
+    const res = await askMotion({
+      kind: 'track', slot: current.slot, file: current.file, box, steps: a.steps, startSec,
+    })
     setFollowingId('')
     if (res.kind !== 'tracked') {
       setFollowError(res.kind === 'error' && res.message === 'no-subject' ? s.followNoSubject : s.followFailed)
@@ -1608,6 +1618,66 @@ export default function VideoEditTool() {
         placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
   )
 
+  /**
+   * THE FOLLOW CONTROL, on the box's north-west corner — the free one, with the
+   * bin and the cog opposite.
+   *
+   * It is the only control this feature has, and it is ON THE BOX rather than
+   * behind the cog because of what was reported: "the blur didn't follow". Two
+   * separate things were true. The tracker really was broken (it cut its
+   * template from frame 0 whatever moment the box was aimed at — see `follow`),
+   * and the switch was three taps down inside a settings sheet, so a box that
+   * was never told to follow anything is indistinguishable from one that tried
+   * and failed. A capability you have to go looking for is a capability nobody
+   * knows they have.
+   *
+   * It carries the whole state, which is what makes it worth a corner:
+   *
+   *   measuring  a spinner — the clip is still being measured, so following
+   *              cannot start yet, and this says so instead of being a dead
+   *              grey circle for a reason nobody can see
+   *   working    a spinner — this box's own path is being measured now
+   *   off        hollow crosshair — tap to follow from the moment on screen
+   *   on         filled, green — tap to stop and leave the box where it is
+   *   lost       gold — it followed and then lost the subject, which is the one
+   *              thing a follow can get wrong that looks fine on the frame you
+   *              happen to be looking at
+   *   failed     struck through — this clip could not be measured at all
+   *
+   * `data-follow` is the testable contract rather than a colour, for the reason
+   * this repo gives every time: asserting a Tailwind class is testing Tailwind.
+   */
+  const followButton = (c: Censor, i: number) => {
+    const measured = analysis[c.path?.slot ?? current?.slot ?? -1]
+    const working = followingId === c.id
+    const state = working ? 'working'
+      : c.path ? (c.path.lostAt > 0 ? 'lost' : 'on')
+        : measured?.state === 'measuring' ? 'measuring'
+          : measured?.state === 'failed' ? 'failed'
+            : 'off'
+    const busy = state === 'working' || state === 'measuring'
+    const label = state === 'working' ? s.followBusy
+      : state === 'measuring' ? s.followWait
+        : state === 'failed' ? s.measureFailed
+          : state === 'lost' ? s.followLost(fmt(c.path?.lostAt ?? 0))
+            : c.path ? s.followOff : s.followBtn
+    return (
+      <button key="follow" type="button" title={label} aria-label={label}
+        aria-pressed={state === 'on' || state === 'lost'}
+        disabled={busy || state === 'failed'}
+        data-testid={`ve-box-${i}-follow`} data-follow={state}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => { if (c.path) unfollow(c); else void follow(c) }}
+        className={`absolute -top-3 -start-3 grid place-items-center w-7 h-7 rounded-full border cursor-pointer
+          disabled:cursor-default ${
+          state === 'on' ? 'bg-green-500 border-green-200 text-white'
+            : state === 'lost' ? 'bg-gold-500 border-gold-200 text-white'
+              : 'bg-black/80 border-white/40 text-white'}`}>
+        {busy ? <Spinner /> : <TargetIcon className={`w-3.5 h-3.5 ${state === 'on' ? 'fill-current' : 'fill-none'}`} />}
+      </button>
+    )
+  }
+
   /** A box handle on the stage — the same affordance for a censor and a caption. */
   const handle = (
     key: string, testid: string, box: { x: number; y: number; w: number; h: number },
@@ -1797,9 +1867,8 @@ export default function VideoEditTool() {
                   dragRef.current = { kind: 'resize', id: c.id }
                 },
                 () => setBoxPanel(true),
+                followButton(c, boxIndex),
                 undefined,
-                undefined,
-                { 'data-follow': c.path ? 'on' : 'off' },
               ))}
 
               {/* A caption is the same rectangle, and clicking one opens its
@@ -2117,38 +2186,22 @@ export default function VideoEditTool() {
                 {picked.mode === 'solid' ? s.solidWhy : s.censorWhy}
               </p>
 
-              {/* FOLLOWING, in the one place a box's own settings live. The
-                  measurement it needs runs on another thread from the moment
-                  the clip is read, so this is the only control in the editor
-                  that can be waiting for anything — and it says what it is
-                  waiting for and how far it has got, rather than being greyed
-                  out for a reason nobody can see. */}
+              {/* WHAT FOLLOWING IS, and what it is doing — but no BUTTON.
+                  The control is the crosshair on the box's own corner, where
+                  the thing it acts on is. Two controls for one setting is how
+                  somebody ends up muting the preview and shipping a file that
+                  talks, which this tool has already paid for once. What stays
+                  here is what a 28px circle cannot say. */}
               <Field label={s.follow}>
                 <div className="flex flex-col gap-2" data-testid="ve-box-follow"
-                  data-state={picked.path ? 'on' : measured?.state ?? 'none'}>
-                  {picked.path ? (
-                    <>
-                      <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.followOn}</p>
-                      {picked.path.lostAt > 0 && (
-                        <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="ve-follow-lost">
-                          {s.followLost(fmt(picked.path.lostAt))}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        <Button className="px-3 py-1" data-testid="ve-follow-again"
-                          disabled={!!followingId || measured?.state !== 'ready'}
-                          onClick={() => { void follow(picked) }}>{s.followAgain}</Button>
-                        <Button className="px-3 py-1" data-testid="ve-unfollow"
-                          onClick={() => unfollow(picked)}>{s.followStop}</Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.followWhy}</p>
-                      <Button variant="primary" className="px-3 py-1 self-start" data-testid="ve-follow"
-                        disabled={measured?.state !== 'ready' || !!followingId}
-                        onClick={() => { void follow(picked) }}>{s.followBtn}</Button>
-                    </>
+                  data-state={picked.path ? (picked.path.lostAt > 0 ? 'lost' : 'on') : measured?.state ?? 'none'}>
+                  <p className="text-[0.85rem] text-ink-soft rtl:font-ar">
+                    {picked.path ? s.followOn : s.followWhy}
+                  </p>
+                  {picked.path && picked.path.lostAt > 0 && (
+                    <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="ve-follow-lost">
+                      {s.followLost(fmt(picked.path.lostAt))}
+                    </p>
                   )}
                   {followingId === picked.id && (
                     <span className="inline-flex items-center gap-2 text-[0.85rem] text-ink-soft rtl:font-ar"
@@ -2165,8 +2218,8 @@ export default function VideoEditTool() {
                       {/* WHAT IT IS WAITING FOR, and that nothing else is. The
                           one place in this editor where anything waits at all,
                           so it is also the one place that has to explain the
-                          wait — a control greyed out for a reason nobody can
-                          see is a control that looks broken. */}
+                          wait — a spinner with no sentence behind it is a
+                          control that looks broken. */}
                       <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.measureWhy}</p>
                     </>
                   )}

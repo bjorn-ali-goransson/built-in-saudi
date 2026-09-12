@@ -48,14 +48,46 @@ async function pickSubject(page: Page) {
   await page.getByTestId('ve-aspect-source').click()
 }
 
-/** The follow panel's state and whether its button is usable, read in ONE go.
- *  Sampling them separately is how a case about "not available until the
- *  measurement lands" becomes a case about which sample won the race. */
-function followState(page: Page) {
-  return page.getByTestId('ve-box-follow').evaluate((el) => ({
-    state: el.getAttribute('data-state'),
-    disabled: !!el.querySelector('[data-testid="ve-follow"]')?.hasAttribute('disabled'),
+/**
+ * The follow control's state and whether it is usable, read in ONE go.
+ *
+ * Sampling them separately is how a case about "not available until the
+ * measurement lands" becomes a case about which sample won the race. It reads
+ * the crosshair on the box's own corner, which is the only control the feature
+ * has — the settings sheet explains it and no longer duplicates it.
+ */
+function followState(page: Page, i = 0) {
+  return page.getByTestId(`ve-box-${i}-follow`).evaluate((el) => ({
+    state: el.getAttribute('data-follow'),
+    disabled: (el as HTMLButtonElement).disabled,
+    // `role="status"` is what `Spinner` renders, so this asks whether the
+    // control is actually turning rather than whether a class name suggests it.
+    spinner: !!el.querySelector('[role="status"]'),
   }))
+}
+
+/** Is this state one where the control is WAITING for something? */
+const BUSY = ['measuring', 'working']
+
+/**
+ * Turn following on for box `i`, from whatever moment is on screen.
+ *
+ * It checks the control's own contract on every sample while it waits, which is
+ * what gives the spinner a real assertion: a busy state carries one and no
+ * other state does, and the tracking pass reliably produces at least one busy
+ * sample between the click and the answer. Asserting "a spinner appeared" with
+ * a poll of its own would be a race on how fast the pass happens to be.
+ */
+async function startFollowing(page: Page, i = 0) {
+  await expect.poll(async () => (await followState(page, i)).state, { timeout: 120_000 }).toBe('off')
+  await page.getByTestId(`ve-box-${i}-follow`).click()
+  await expect.poll(async () => {
+    const st = await followState(page, i)
+    const busy = BUSY.includes(st.state ?? '')
+    expect(st.spinner, `spinner ${st.spinner ? 'shown' : 'missing'} while ${st.state}`).toBe(busy)
+    expect(st.disabled, `control ${st.disabled ? 'disabled' : 'usable'} while ${st.state}`).toBe(busy)
+    return st.state
+  }, { timeout: 120_000, intervals: [100] }).toMatch(/^(on|lost)$/)
 }
 
 /** Where a censor box sits on the stage right now, in stage fractions — which
@@ -649,29 +681,31 @@ test('the clip is measured in the BACKGROUND — the editor never waits for it',
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
   await expect(page.getByTestId('ve-box-0')).toBeVisible()
-  await page.getByTestId('ve-box-0-settings').click()
 
   // THE ONE THING THAT WAITS is the control that cannot work without the
-  // measurement — and while it is waiting it is unusable AND says what for.
-  // Read as a pair, so the two cannot be sampled either side of the pass
-  // finishing.
+  // measurement — and it is ON the box, so the waiting is visible without
+  // going looking for it. Read as a pair, so the two cannot be sampled either
+  // side of the pass finishing.
   const seen = new Set<string>()
   await expect.poll(async () => {
-    const s = await followState(page)
-    seen.add(s.state ?? '')
-    // The invariant, checked on every sample rather than once: usable exactly
-    // when the clip has been measured.
-    expect(s.disabled, `follow enabled while ${s.state}`).toBe(s.state !== 'ready')
-    return s.state
-  }, { timeout: 120_000, intervals: [200] }).toBe('ready')
+    const st = await followState(page)
+    seen.add(st.state ?? '')
+    // The invariant, checked on every sample rather than once: the control is
+    // unusable and turning exactly while the clip is still being measured.
+    // THE SPINNER IS THE POINT of the state being on the box at all — a grey
+    // circle with no reason on it is a control that looks broken.
+    expect(st.disabled, `follow enabled while ${st.state}`).toBe(st.state === 'measuring')
+    expect(st.spinner, `spinner ${st.spinner ? 'shown' : 'missing'} while ${st.state}`).toBe(st.state === 'measuring')
+    return st.state
+  }, { timeout: 120_000, intervals: [200] }).toBe('off')
 
-  // Only the states this control has. It is deliberately NOT asserted that
-  // 'measuring' was OBSERVED: this fixture is a few seconds of 320×180 and the
-  // pass regularly finishes before the first sample, so requiring it would be a
-  // case that fails on a fast machine. What stops the invariant above being
-  // vacuous is the FOLLOWING case below, which fails outright if the
-  // measurement never happened at all.
-  for (const state of seen) expect(['none', 'measuring', 'ready']).toContain(state)
+  // Only the states this control can be in before anybody presses it. It is
+  // deliberately NOT asserted that 'measuring' was OBSERVED: this fixture is a
+  // few seconds of 320×180 and the pass regularly finishes before the first
+  // sample, so requiring it would be a case that fails on a fast machine. What
+  // stops the invariant above being vacuous is the FOLLOWING case below, which
+  // fails outright if the measurement never happened at all.
+  for (const state of seen) expect(['measuring', 'off']).toContain(state)
 
   // AND NOTHING BLOCKED. The export overlay is the tool's only busy state, and
   // a measurement that had been allowed to use it would have put a percentage
@@ -694,14 +728,10 @@ test('A CENSOR BOX FOLLOWS what is under it, and a plain one does not', async ({
   await seek(page, 2.5)
   const stillLater = await boxAtNow(page)
   expect(Math.abs(stillLater.x - stillStart.x)).toBeLessThan(0.01)
-  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'off')
+  await expect(page.getByTestId('ve-box-0-follow')).toHaveAttribute('data-follow', 'off')
 
   await seek(page, 0)
-  await page.getByTestId('ve-box-0-settings').click()
-  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
-  await page.getByTestId('ve-follow').click()
-  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
-  await page.getByTestId('ve-box-panel-close').click()
+  await startFollowing(page)
 
   // And now it moves with the subject. Measured on the BOX as the stage draws
   // it — `boxAt` is the same function the canvas and the encoder call, so the
@@ -724,26 +754,59 @@ test('a followed box goes back to a plain one, WHERE IT IS rather than where it 
   await pickSubject(page)
   await page.getByTestId('ve-mode-censor').click()
   await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
-  await page.getByTestId('ve-box-0-settings').click()
-  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
-  await page.getByTestId('ve-follow').click()
-  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
-  await page.getByTestId('ve-box-panel-close').click()
+  await startFollowing(page)
 
   await seek(page, 2.5)
   const following = await boxAtNow(page)
 
-  await page.getByTestId('ve-box-0-settings').click()
-  await page.getByTestId('ve-unfollow').click()
-  await page.getByTestId('ve-box-panel-close').click()
+  await page.getByTestId('ve-box-0-follow').click()
 
   // THE POINT: stopping keeps the box where it IS. Dropping the path alone
   // would snap it back to its hand keys, which on a box that has only ever
   // followed is where it was drawn — so the one gesture meant to give control
   // back would move the censor off the thing it is covering.
-  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'off')
+  await expect(page.getByTestId('ve-box-0-follow')).toHaveAttribute('data-follow', 'off')
   const released = await boxAtNow(page)
   expect(Math.abs(released.x - following.x)).toBeLessThan(0.01)
+})
+
+test('FOLLOWING STARTS FROM THE MOMENT ON SCREEN, not from the first frame', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pickSubject(page)
+  await page.getByTestId('ve-mode-censor').click()
+
+  // THE BUG THIS EXISTS FOR, reported as "the blur didn't follow": the template
+  // is cut from the frame the box was AIMED at, and it used to be cut from
+  // frame 0 whatever moment that was. So a box put over a face partway through
+  // took its template from frame 0 AT THOSE COORDINATES — background — and then
+  // followed the background, perfectly and uselessly. It is the natural way to
+  // work: scrub to the face, draw a box on it, ask it to follow.
+  //
+  // The case calibrates itself rather than hard-coding where the subject is at
+  // one second. Follow from the top first (the case above proves that path), and
+  // read the box at 1s — that IS where the subject is then.
+  await seek(page, 0)
+  await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
+  await startFollowing(page)
+  await seek(page, 1)
+  const aimed = await boxAtNow(page, 0)
+
+  // Hand it back — which leaves the box exactly where it is, on the subject at
+  // one second — and then ask it to follow again FROM HERE.
+  await page.getByTestId('ve-box-0-follow').click()
+  await expect(page.getByTestId('ve-box-0-follow')).toHaveAttribute('data-follow', 'off')
+  await startFollowing(page)
+
+  // The subject keeps walking right. The fixture is 60 frames at 24fps and the
+  // subject crosses 140 world px over the whole of it, so a second and a bit
+  // moves it about a quarter of the frame — while a box locked onto the
+  // background moves only by the camera's own sway, which is a few pixels.
+  await seek(page, 2.4)
+  const later = await boxAtNow(page, 0)
+  expect(later.x - aimed.x,
+    `aimed at ${aimed.x.toFixed(3)} and ended at ${later.x.toFixed(3)} — that is the background, not the subject`)
+    .toBeGreaterThan(0.1)
 })
 
 test('a followed box is stored against the PICTURE, so a re-crop takes it with it', async ({ page }) => {
@@ -756,13 +819,9 @@ test('a followed box is stored against the PICTURE, so a re-crop takes it with i
   // the CONTROL — without it this case would pass against a tool that moved
   // every box when the crop changed, which is a different (and wrong) product.
   await drawBox(page, [SUBJECT_AT_0[0] - SUBJECT_BOX[0], SUBJECT_AT_0[1] - SUBJECT_BOX[1]], [SUBJECT_AT_0[0] + SUBJECT_BOX[0], SUBJECT_AT_0[1] + SUBJECT_BOX[1]])
-  await page.getByTestId('ve-box-0-settings').click()
-  await expect.poll(async () => (await followState(page)).state, { timeout: 120_000 }).toBe('ready')
-  await page.getByTestId('ve-follow').click()
-  await expect(page.getByTestId('ve-box-0')).toHaveAttribute('data-follow', 'on', { timeout: 120_000 })
-  await page.getByTestId('ve-box-panel-close').click()
+  await startFollowing(page)
   await drawBox(page, [0.6, 0.7], [0.8, 0.9])
-  await expect(page.getByTestId('ve-box-1')).toHaveAttribute('data-follow', 'off')
+  await expect(page.getByTestId('ve-box-1-follow')).toHaveAttribute('data-follow', 'off')
 
   await seek(page, 0)
   const followedBefore = await boxAtNow(page, 0)

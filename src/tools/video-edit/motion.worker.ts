@@ -25,9 +25,14 @@ import type { Box, Estimate, TrackPoint } from '../../lib/motion'
 
 export type Req =
   | { id: number; kind: 'analyse'; slot: number; file: File }
-  /** `steps` is what `analyse` returned — the camera motion is most of the
-   *  prediction the tracker needs, and it is already paid for. */
-  | { id: number; kind: 'track'; slot: number; file: File; box: Box; steps: Estimate[] }
+  /**
+   * `steps` is what `analyse` returned — the camera motion is most of the
+   * prediction the tracker needs, and it is already paid for. `startSec` is the
+   * moment the box was AIMED at, in the clip's own seconds: the template is cut
+   * from that frame, and cutting it from frame 0 instead is how a box aimed at a
+   * face five seconds in ends up following the background.
+   */
+  | { id: number; kind: 'track'; slot: number; file: File; box: Box; steps: Estimate[]; startSec: number }
   | { id: number; kind: 'cancel' }
 
 export type Res =
@@ -72,7 +77,7 @@ self.onmessage = async (e: MessageEvent<Req>) => {
       return
     }
     if (req.kind === 'track') {
-      const { points, times } = await followBox(await videoOf(req.file), req.box, req.steps, opts(req.id))
+      const { points, times } = await followBox(await videoOf(req.file), req.box, req.steps, opts(req.id), req.startSec)
       postMessage({ id: req.id, kind: 'tracked', slot: req.slot, points, times } satisfies Res)
     }
   } catch (err) {
