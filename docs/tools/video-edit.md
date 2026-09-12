@@ -169,15 +169,17 @@ progressive MP4.
   sample back byte for byte.
 
 ## Known limits (stated in the UI, not implied away)
-- ~~**A censor box does not follow anything.**~~ Gone in two steps. Keyframes
-  came first — a box holds a list of positions and the rectangle at any moment
-  is the tween between the two either side of it — and then FOLLOWING: the clip
-  is measured in the background from the moment it is read, and a box can be
-  told to track whatever is under it, using the same estimator and template
-  tracker as `video-stabilize` (now `lib/motion.ts` + `lib/frameScan.ts`).
-  What remains of the limit is honest and on the panel: a tracker can lose a
-  subject, and when it does the box holds where it last saw it and the tool
-  says where that was.
+- ~~**A censor box does not follow anything.**~~ Gone. The clip is measured in
+  the background from the moment it is read, and a box can be told to track
+  whatever is under it, using the same estimator and template tracker as
+  `video-stabilize` (`lib/motion.ts` + `lib/frameScan.ts`). A keyframe editor
+  was the intermediate step and has been REMOVED again: a measured path is the
+  answer to the question it existed to ask, and two ways to make a box move is
+  one more than the thing needs. What remains of the limit is honest and on the
+  panel: a tracker can lose a subject, and when it does the box holds where it
+  last saw it and the tool says where that was.
+- **A box that is not following does not move.** One rectangle, in one place,
+  for the span you give it — exactly as it was before any of this.
 - **A followed path belongs to ONE clip.** A join is a cut, and a face tracked
   in one clip says nothing about the next, so the path covers the clip it was
   measured in and holds either side of it.

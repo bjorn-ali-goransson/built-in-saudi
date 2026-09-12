@@ -1230,14 +1230,6 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
 })
 
-/** Where a box's handle sits on the stage, in fractions of it. */
-async function boxAtStage(page: Page, i: number) {
-  const stage = await page.getByTestId('ve-stage').boundingBox()
-  const box = await page.getByTestId(`ve-box-${i}`).boundingBox()
-  if (!stage || !box) throw new Error('no stage or box')
-  return { x: (box.x - stage.x) / stage.width, y: (box.y - stage.y) / stage.height }
-}
-
 test('a box hides to the END of the clip unless told otherwise', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
@@ -1261,68 +1253,6 @@ test('a box hides to the END of the clip unless told otherwise', async ({ page }
   // Still typed rather than derived, so the panel's fields still bite.
   await span(page, 0, 0, 1.5)
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
-})
-
-test('a box moved at another time TWEENS between the two', async ({ page }) => {
-  await load(page)
-  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await pick(page)
-  await page.getByTestId('ve-aspect-source').click()
-  await seek(page, 0)
-  await page.getByTestId('ve-mode-censor').click()
-
-  // Drawn once, which lays a key at each end of the clip holding the same
-  // rectangle — so it is a box that does not move until somebody moves it.
-  await drawBox(page, [0.2, 0.3], [0.4, 0.5])
-  const start = await boxAtStage(page, 0)
-  expect(start.x).toBeGreaterThan(0.15)
-  expect(start.x).toBeLessThan(0.25)
-
-  // Move it near the end of the clip. The drag itself writes the key — there
-  // is no mode to be in and nothing to arm first, which is what keeps this
-  // usable on a phone.
-  await seek(page, 5)
-  await drawBox(page, [0.3, 0.4], [0.7, 0.4])
-  const late = await boxAtStage(page, 0)
-  expect(late.x).toBeGreaterThan(start.x + 0.2)
-
-  // And halfway between the two keys the box is halfway between the two
-  // places. This is the property the whole feature is: a fixed box has to be
-  // drawn big enough to cover everywhere the subject goes, which hides most of
-  // the picture to hide one face.
-  await seek(page, 2.5)
-  const mid = await boxAtStage(page, 0)
-  expect(mid.x).toBeGreaterThan(start.x + 0.05)
-  expect(mid.x).toBeLessThan(late.x - 0.05)
-
-  // It HOLDS outside the keys rather than carrying on — a box that extrapolated
-  // would drift off the subject and off the frame, and what it stops hiding is
-  // the thing it was drawn for.
-  await seek(page, 0)
-  const back = await boxAtStage(page, 0)
-  expect(Math.abs(back.x - start.x)).toBeLessThan(0.02)
-})
-
-test('the keyframe button says whether this frame is one you decided', async ({ page }) => {
-  await load(page)
-  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
-  await pick(page)
-  await page.getByTestId('ve-aspect-source').click()
-  await seek(page, 2)
-  await page.getByTestId('ve-mode-censor').click()
-  await drawBox(page, [0.3, 0.3], [0.6, 0.6])
-
-  // A drawn box is keyed at each END, so a frame in the middle is one that was
-  // worked out rather than one somebody chose. That distinction is the only
-  // state this button carries, and it is on the box because on a phone there
-  // is no room for a timeline to put it on.
-  const key = page.getByTestId('ve-box-0-key')
-  await expect(key).toHaveAttribute('data-key', 'off')
-  await key.click()
-  await expect(key).toHaveAttribute('data-key', 'on')
-  // Tapping the lit one takes it away again.
-  await key.click()
-  await expect(key).toHaveAttribute('data-key', 'off')
 })
 
 test('a selected box can be deleted', async ({ page }) => {

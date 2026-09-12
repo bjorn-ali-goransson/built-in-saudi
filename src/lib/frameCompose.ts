@@ -91,11 +91,17 @@ export type CensorMode = 'pixelate' | 'solid' | 'blur'
 /**
  * Where a box IS at one moment, in fractions of the output frame.
  *
- * A censor used to be one fixed rectangle, and the limit that came with it was
- * stated rather than solved: the thing worth hiding is almost always the thing
- * that MOVES, so a fixed box has to be drawn generously enough to cover
- * everywhere the subject goes — which hides most of the picture to hide one
- * face, or does not hide it at the end.
+ * The thing worth hiding is almost always the thing that MOVES, so a box that
+ * cannot move has to be drawn generously enough to cover everywhere the subject
+ * goes — which hides most of the picture to hide one face, or does not hide it
+ * at the end. A list of these, tweened between, is the answer to that.
+ *
+ * NOBODY AUTHORS THEM BY HAND. There was a keyframe editor for a while: a
+ * control on the box's corner, and a drag at a different moment laying down a
+ * key there. It is gone. Following measures the path instead of asking
+ * somebody to type it in a frame at a time, and two ways to make a box move is
+ * one more than the thing needs — the second one being the laborious one that
+ * a phone has no room for.
  */
 export interface Key { t: number; x: number; y: number; w: number; h: number }
 
@@ -103,9 +109,11 @@ export interface Censor {
   id: string
   mode: CensorMode
   /**
-   * Where the box is, at the times it was put there. Sorted by `t` and never
-   * empty; one key is a box that does not move, and two identical ones are the
-   * same thing — which is what a freshly drawn box is.
+   * Where the box is, over time. Sorted by `t` and never empty.
+   *
+   * ONE key is a box in a fixed place, which is every box that has not been
+   * told to follow something. MANY are the projection of a measured `path`
+   * below, and are derived rather than stored — nothing writes them directly.
    */
   keys: Key[]
   /** Seconds on the OUTPUT timeline. */
@@ -117,8 +125,8 @@ export interface Censor {
    *
    * It is kept in the source picture's own space rather than in the output's,
    * and that is the decision worth keeping. A censor is placed in the output
-   * frame, so re-cropping afterwards would leave a hand-drawn box exactly where
-   * it was on screen and over something else entirely. A followed box is not a
+   * frame, so re-cropping afterwards would leave a fixed box exactly where it
+   * was on screen and over something else entirely. A followed box is not a
    * position on a screen, it is a claim about where a face IS — so it is stored
    * against the picture, and the crop is applied on the way out. Change the
    * crop and the box stays on the face, which is the only behaviour that does
