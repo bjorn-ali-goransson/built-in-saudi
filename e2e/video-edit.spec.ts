@@ -1289,6 +1289,45 @@ test('a drawn box censors that part of the picture, and only while it is showing
   await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(before / 2)
 })
 
+test('A BOX STARTS WHERE YOU DREW IT, and the scrubber says so', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(40)
+  const bare = await coloursIn(page, GRAD)
+
+  // Drawn four seconds in, which is the way people work: scrub to the thing,
+  // draw a box on it. It used to cover from 0:00 whatever moment it was drawn
+  // — frames nobody had looked at, and on a join a different clip entirely.
+  await page.getByTestId('ve-mode-censor').click()
+  await seek(page, 4)
+  await drawBox(page, [0.3, 0.72], [0.6, 0.82])
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(bare / 4)
+
+  // Before it, the picture is untouched.
+  await seek(page, 1)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeGreaterThan(bare / 2)
+  // And after it, still hidden — the END half of the default has NOT changed,
+  // because what a censor does wrong when it disappears is uncensor something.
+  await seek(page, 5.5)
+  await expect.poll(() => coloursIn(page, GRAD), { timeout: 15_000 }).toBeLessThan(bare / 4)
+
+  // THE GAP IS VISIBLE, which is the whole argument for starting at the
+  // playhead rather than at zero: the selected box's stretch is drawn on the
+  // scrubber, so "this starts here" is something you can see instead of
+  // something you have to scrub back to discover. Four seconds into a six
+  // second clip is two thirds along, and it runs to the end.
+  const scrub = (await page.getByTestId('ve-scrub').boundingBox())!
+  const band = (await page.getByTestId('ve-box-span').boundingBox())!
+  const left = (band.x - scrub.x) / scrub.width
+  const right = (band.x + band.width - scrub.x) / scrub.width
+  expect(left).toBeGreaterThan(0.55)
+  expect(left).toBeLessThan(0.78)
+  expect(right).toBeGreaterThan(0.96)
+})
+
 test('a box hides to the END of the clip unless told otherwise', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')

@@ -183,6 +183,12 @@ progressive MP4.
   last saw it and the tool says where that was.
 - **A box that is not following does not move.** One rectangle, in one place,
   for the span you give it — exactly as it was before any of this.
+- **A box covers from the moment it was drawn to the end of the film.** The end
+  half is the safety property: what a censor does wrong when it disappears is
+  uncensor something. The start is the playhead, matching what following does,
+  and the stretch it covers is drawn on the scrubber so the uncovered head is
+  visible rather than something to discover by scrubbing back. Both ends stay
+  typed, behind the box's cog.
 - **Following goes FORWARD from the moment you aim it**, and holds where you
   put it before that. Tracking backwards would need a second pass in reverse;
   scrub to the start of what you want covered and aim it there.

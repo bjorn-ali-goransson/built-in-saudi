@@ -2944,15 +2944,46 @@ gone:
 `KeyframeIcon` went with it — it had exactly one caller and is deleted rather
 than left as the dead export this file has twice had to sweep for.
 
-**A CENSOR NOW DEFAULTS TO THE WHOLE CLIP, and that is a safety decision.** It
-defaulted to three seconds from the playhead — so a box drawn over a face
-silently STOPPED hiding it partway through. The failure is invisible at the
-moment you make it, because you are looking at a frame where the box is showing,
-and **what a censor does wrong when it disappears is uncensor something.** The
-span is still typed, behind the cog; what changed is that the default cannot
-quietly do the one thing this tool must not do. A box that ran to the end also
-follows the clip list when a clip is added, for the same reason. Captions were
-already the whole clip.
+**A CENSOR DEFAULTS TO THE MOMENT ON SCREEN, AND RUNS TO THE END** — and the
+two halves of that have different histories, which is why they are worth
+separating.
+
+**The END half is a safety decision and has never changed since.** It defaulted
+to three seconds from the playhead once, so a box drawn over a face silently
+STOPPED hiding it partway through. That failure is invisible at the moment you
+make it, because you are looking at a frame where the box IS showing, and
+**what a censor does wrong when it disappears is uncensor something.** A box
+still runs to the end unless somebody says otherwise, and one that runs to the
+end follows the clip list when a clip is added, for the same reason.
+
+**The START moved from 0:00 to the playhead** once following did the same, and
+for the same reason: you scrub to the thing, draw a box on it, and it covers
+from there. A box that began at 0:00 whatever moment it was drawn covered
+frames nobody had looked at — and on a join it covered a different clip
+entirely, which is not a conservative default, it is a wrong one.
+
+**The cost is the MIRROR of the old bug — a head that is not covered — so it is
+made visible rather than argued away.** The selected box's stretch is drawn on
+the scrubber, in gold, under the line that already carries the cut: "this
+starts here" is something you can see instead of something you have to scrub
+back to discover. Shown only while a box is selected, because a permanent band
+would be a second meaning for one line. **Verified to fail** — restoring the
+0:00 default reddens exactly the case that reads it.
+
+**The two clocks disagree and the band is where that shows.** A box's span is
+on the JOINED timeline and the scrubber is the current clip's own raw seconds,
+cut parts included — so the span is intersected with the stretch this clip
+contributes and mapped back through the cut. A box covering only another clip
+draws nothing here, which is right: it hides nothing you are looking at.
+
+**And it is NOT a `useMemo`.** It sits below the component's early returns, and
+a hook after a conditional return is a hook that is not called on every
+render — React throws and the editor never mounts at all, which is exactly what
+it did. Every case in the suite went red at once, which is the good version of
+that mistake. Three comparisons and a divide need no memo.
+
+Captions were already the whole clip and stay that way: a caption that starts
+partway through is a caption somebody placed, not a safety property.
 
 **A caption is not drawn behind its own field.** The textarea sits exactly over
 the box in the same colour and size — it IS the caption while it is open — so
