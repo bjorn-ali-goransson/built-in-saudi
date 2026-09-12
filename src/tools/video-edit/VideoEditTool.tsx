@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, CutHeadIcon, CutTailIcon, DownloadIcon, KeyframeIcon, MosaicIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, CutHeadIcon, CutTailIcon, DownloadIcon, MosaicIcon,
   MuteIcon, PauseIcon, PlayIcon, TextIcon, TrashIcon, VolumeIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
@@ -81,15 +81,13 @@ const STR = {
     followRunning: 'Following the subject…',
     measuring: (pct: string) => `Measuring how things move in this clip… ${pct}%`,
     measureWhy: 'A box can only follow once the clip has been measured, and that runs on its own thread in the background. Everything else in the editor — cropping, drawing, captions, scrubbing, exporting — works while it does.',
-    measureFailed: 'This clip could not be measured, so a box cannot follow in it. You can still move the box and set keyframes by hand.',
+    measureFailed: 'This clip could not be measured, so a box cannot follow in it. You can still draw, move and resize boxes, and set when each one shows.',
     followWhy: 'The thing worth hiding is almost always the thing that moves, and a box that cannot move has to be drawn big enough to cover everywhere the subject goes. This measures where it actually went and takes the box with it, so the box only has to cover the subject.',
     followOn: 'This box follows what was under it. Moving or resizing it moves the whole path, so the follow is re-aimed rather than thrown away.',
     followStop: 'Stop following',
     followLost: (at: string) => `The subject was lost at ${at}. From there the box holds where it last saw it — follow again from a clearer moment, or stop following and place it by hand.`,
     followNoSubject: 'There is not enough texture in that box to follow. A plain wall, the sky or a blown-out window has nothing to match from one frame to the next — draw the box around something with detail in it.',
     followFailed: 'The subject could not be followed in this clip.',
-    keyAdd: 'Put a keyframe here',
-    keyHere: 'A keyframe is set here — tap to remove it',
     hideWith: 'Hide with',
     modes: { pixelate: 'Pixelate', solid: 'Solid', blur: 'Blur' },
     censorWhy: 'Pixelating and blurring do not remove anything — they throw away resolution, and resolution comes back out of a VIDEO in a way it does not out of a photo: the mosaic grid stays fixed to the frame while your subject moves through it, so every frame samples the same face on a differently aligned grid. Reconstructing a pixelated number plate from 64 frames — 2.1 seconds — recovers 98.6% of it, against nothing at all from a single frame. Solid is the only one of the three that removes anything.',
@@ -167,15 +165,13 @@ const STR = {
     followRunning: 'جارٍ تتبّع الهدف…',
     measuring: (pct: string) => `جارٍ قياس الحركة في هذا المقطع… ${pct}٪`,
     measureWhy: 'لا يستطيع المربّع أن يتبع شيئًا قبل قياس المقطع، وهذا يجري في خيط مستقل في الخلفية. وكل ما عدا ذلك في المحرّر — الاقتصاص والرسم والنصوص والتنقّل والتصدير — يعمل أثناءه.',
-    measureFailed: 'تعذّر قياس هذا المقطع، فلا يمكن للمربّع أن يتبع فيه. ويبقى بإمكانك تحريكه ووضع نقاط المسار يدويًّا.',
+    measureFailed: 'تعذّر قياس هذا المقطع، فلا يمكن للمربّع أن يتبع فيه. ويبقى بإمكانك رسم المربّعات وتحريكها وتغيير حجمها وتحديد وقت ظهورها.',
     followWhy: 'ما يستحق الإخفاء هو غالبًا ما يتحرك، والمربّع الثابت لا بد أن يُرسم كبيرًا بما يغطي كل ما يمرّ به الهدف. وهنا يُقاس أين ذهب فعلًا ويتحرك المربّع معه، فلا يغطي إلا الهدف نفسه.',
     followOn: 'هذا المربّع يتبع ما كان تحته. وتحريكه أو تغيير حجمه يحرّك المسار كله، فيُعاد توجيه التتبّع بدل إلغائه.',
     followStop: 'أوقف التتبّع',
     followLost: (at: string) => `فُقد الهدف عند ${at}. ومن هناك يثبت المربّع حيث رآه آخر مرة — اتبع من لحظة أوضح، أو أوقف التتبّع وضعه يدويًّا.`,
     followNoSubject: 'لا توجد تفاصيل كافية في هذا المربّع لتتبّعه. فالجدار الخالي أو السماء أو نافذة محترقة الإضاءة لا شيء فيها يُطابَق من إطار إلى آخر — ارسم المربّع حول شيء فيه تفصيل.',
     followFailed: 'تعذّر تتبّع الهدف في هذا المقطع.',
-    keyAdd: 'ضع نقطة مسار هنا',
-    keyHere: 'هنا نقطة مسار — اضغط لإزالتها',
     hideWith: 'طريقة الإخفاء',
     modes: { pixelate: 'بكسلة', solid: 'حجب كامل', blur: 'تمويه' },
     censorWhy: 'البكسلة والتمويه لا يزيلان شيئًا — إنما يُسقطان الدقّة، والدقّة تعود من الفيديو بما لا تعود به من الصورة الواحدة: شبكة البكسلة تثبت على الإطار بينما يتحرك من تخفيه خلالها، فيلتقط كل إطار الوجه نفسه على شبكة مختلفة المحاذاة. وإعادة بناء لوحة سيارة مبكسلة من ٦٤ إطارًا — أي ٢٫١ ثانية — تستردّ ٩٨٫٦٪ منها، مقابل لا شيء من إطار واحد. والحجب الكامل وحده من الثلاثة هو ما يزيل شيئًا.',
@@ -802,10 +798,9 @@ export default function VideoEditTool() {
     // VIEW: there is no separate result preview to disagree with it.
     drawFrame(ctx, v, clip, crop, shown)
     const d = drawingRef.current
-    // One key, at the moment on screen: a box being dragged out does not move,
-    // so `boxAt` returns it unchanged whatever `now` is.
+    // One key, like every box that is not following something.
     const inProgress: Censor | null = d
-      ? { id: d.id, mode: d.mode, keys: [{ t: now, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: duration }
+      ? { id: d.id, mode: d.mode, keys: [{ t: 0, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: duration }
       : null
     // THE RESOLVED boxes, so a followed one is drawn where the measurement
     // says it is rather than where it was drawn — and by the same projection
@@ -984,26 +979,6 @@ export default function VideoEditTool() {
     setCensors((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)))
 
   /**
-   * How close the playhead has to be to count as ON a key.
-   *
-   * A tenth of a second, which is the step the span fields use and finer than
-   * anybody can aim a scrubber at. It is what makes a drag REPLACE the key it
-   * is editing instead of laying down one per pointermove — a path made of
-   * three hundred keys is the same path and nothing can be reasoned about it.
-   */
-  const KEY_NEAR = 0.05
-
-  const keyIndexAt = (c: Censor, at: number) => c.keys.findIndex((k) => Math.abs(k.t - at) <= KEY_NEAR)
-
-  /** The box with a key at `at`, replacing one already there. */
-  const keyed = (c: Censor, at: number, rect: { x: number; y: number; w: number; h: number }): Censor => {
-    const keys = c.keys.filter((k) => Math.abs(k.t - at) > KEY_NEAR)
-    keys.push({ t: at, ...rect })
-    keys.sort((a, b) => a.t - b.t)
-    return { ...c, keys }
-  }
-
-  /**
    * Follow whatever is inside this box, for the rest of the clip it sits in.
    *
    * The box is handed over in the SOURCE picture's own fractions, because that
@@ -1057,15 +1032,15 @@ export default function VideoEditTool() {
   /**
    * Stop following, and KEEP where the box is now.
    *
-   * Dropping the path alone would snap the box back to wherever its hand keys
-   * last were, which on a box that has only ever followed is where it was
-   * drawn — so the one gesture meant to give control back would move the censor
-   * off the thing it is covering.
+   * Dropping the path alone would snap the box back to where it was DRAWN,
+   * which on a box that has only ever followed is somewhere the subject left
+   * long ago — so the one gesture meant to give control back would move the
+   * censor off the thing it is covering.
    */
   function unfollow(c: Censor) {
     const b = boxAt(resolveCensor(c).keys, t)
     setCensors((list) => list.map((x) => (x.id === c.id
-      ? { ...x, path: undefined, keys: [{ t: x.from, ...b }, { t: x.to, ...b }] }
+      ? { ...x, path: undefined, keys: [{ t: 0, ...b }] }
       : x)))
   }
 
@@ -1234,9 +1209,13 @@ export default function VideoEditTool() {
       setTextTick((n) => n + 1)
       return
     }
-    // MOVING OR RESIZING A BOX WRITES A KEY AT THE PLAYHEAD. It is the same
-    // gesture it always was — nothing new to learn, no mode to be in — and it
-    // means the path is built out of the frames somebody actually looked at.
+    // A BOX THAT IS NOT FOLLOWING IS ONE RECTANGLE, and moving or resizing it
+    // moves that rectangle. It used to write a KEY at the playhead — a box
+    // could be dragged to a different place at a different moment and the
+    // editor tweened between the two — and that is gone: following measures
+    // the path instead of asking somebody to author it a frame at a time, and
+    // two ways to make a box move is one more than the thing needs.
+    //
     // MOVING OR RESIZING A FOLLOWED BOX RE-AIMS THE FOLLOW, rather than ending
     // it or fighting it. The whole measured path moves with the box, so a box
     // that was drawn a little off, or a little too small, can be corrected
@@ -1252,7 +1231,7 @@ export default function VideoEditTool() {
           const conv = toSource(c.path.slot)
           return { ...c, path: shiftPath(c.path, (x - b.x) * conv.kx, (y - b.y) * conv.ky) }
         }
-        return keyed(c, t, { x, y, w: b.w, h: b.h })
+        return { ...c, keys: [{ t: 0, x, y, w: b.w, h: b.h }] }
       }))
       return
     }
@@ -1266,7 +1245,7 @@ export default function VideoEditTool() {
           const conv = toSource(c.path.slot)
           return { ...c, path: resizePath(c.path, w * conv.kx, h * conv.ky) }
         }
-        return keyed(c, t, { x: b.x, y: b.y, w, h })
+        return { ...c, keys: [{ t: 0, x: b.x, y: b.y, w, h }] }
       }))
       return
     }
@@ -1316,15 +1295,14 @@ export default function VideoEditTool() {
       drawingRef.current = null
       if (box && box.w > 0.02 && box.h > 0.02) {
         const span = wholeClip()
-        const rect = { x: box.x, y: box.y, w: box.w, h: box.h }
-        // A key at each END, which is what makes the first drag anywhere in
-        // between produce a path rather than a jump: with only one key there is
-        // nothing to tween against, and with two the box holds still until
-        // somebody moves it.
+        // ONE rectangle. A box is a fixed shape in a fixed place until it is
+        // told to follow something — the two keys it used to be drawn with
+        // existed so a later drag at a later moment could tween between them,
+        // and that way of making a box move is gone.
         setCensors((list) => [...list, {
           id: box.id,
           mode: box.mode,
-          keys: [{ t: span.from, ...rect }, { t: span.to, ...rect }],
+          keys: [{ t: 0, x: box.x, y: box.y, w: box.w, h: box.h }],
           ...span,
         }])
         setPickedBox(box.id)
@@ -1630,41 +1608,6 @@ export default function VideoEditTool() {
         placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
   )
 
-  /**
-   * The keyframe control, at the box's NW corner — the one free corner, with
-   * the bin and the cog opposite it.
-   *
-   * It carries exactly one piece of state and is the only thing that does:
-   * FILLED when the playhead sits on a key, hollow when it does not. So the
-   * question "is this frame one I decided, or one that was worked out for me?"
-   * is answered by looking at the box rather than at a timeline somewhere else
-   * — and on a phone there is no room for a timeline anyway.
-   *
-   * Tapping it puts a key here, or takes this one away. Removing is refused
-   * while two keys are left, because those two are the ends: a box with one
-   * key cannot move, and a path with no end has nothing to hold at.
-   */
-  const keyButton = (c: Censor, i: number) => {
-    const on = keyIndexAt(c, t) >= 0
-    const label = on ? s.keyHere : s.keyAdd
-    return (
-      <button key="key" type="button" title={label} aria-label={label} aria-pressed={on}
-        data-testid={`ve-box-${i}-key`} data-key={on ? 'on' : 'off'}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => setCensors((list) => list.map((x) => {
-          if (x.id !== c.id) return x
-          const at = keyIndexAt(x, t)
-          if (at < 0) return keyed(x, t, boxAt(x.keys, t))
-          if (x.keys.length <= 2) return x
-          return { ...x, keys: x.keys.filter((_, n) => n !== at) }
-        }))}
-        className={`absolute -top-3 -start-3 grid place-items-center w-7 h-7 rounded-full border cursor-pointer ${
-          on ? 'bg-green-500 border-green-200 text-white' : 'bg-black/80 border-white/40 text-white'}`}>
-        <KeyframeIcon className={`w-3.5 h-3.5 ${on ? 'fill-current' : 'fill-none'}`} />
-      </button>
-    )
-  }
-
   /** A box handle on the stage — the same affordance for a censor and a caption. */
   const handle = (
     key: string, testid: string, box: { x: number; y: number; w: number; h: number },
@@ -1854,10 +1797,7 @@ export default function VideoEditTool() {
                   dragRef.current = { kind: 'resize', id: c.id }
                 },
                 () => setBoxPanel(true),
-                // A followed box has no hand keys to show: its path IS the answer,
-                // and a keyframe control beside it would offer to edit a list that
-                // is derived. Stopping the follow gives the keys back.
-                c.path ? null : keyButton(c, boxIndex),
+                undefined,
                 undefined,
                 { 'data-follow': c.path ? 'on' : 'off' },
               ))}

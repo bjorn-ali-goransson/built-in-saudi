@@ -2909,35 +2909,40 @@ is one this file argued the other way about.**
   paragraph under every censor, which is the caveat-shown-to-everybody this file
   already refuses.
 
-**A censor is KEYFRAMED now, and the limit this file recorded as "deliberately
-out of v1" is gone.** `Key` and `boxAt` in `lib/frameCompose.ts`; a box holds a list of
-positions sorted by time, and the rectangle at any moment is the tween between
-the two either side of it. Four decisions:
+**A censor was KEYFRAMED for a while, and the hand-authoring is GONE.** The
+machinery stays and is load-bearing — `Key`, `boxAt` and the tween in
+`lib/frameCompose.ts` are what a FOLLOWED box's measured path is played back
+through — but nothing writes a key by hand any more. There was a diamond on the
+box's free corner that lit when the playhead sat on one, and a drag at a
+different moment laid another down; the editor tweened between them, and
+outside them it held rather than extrapolating.
 
-- **Interpolated in `lib/frameCompose.ts`, not in the page.** That module is pure
-  *because* it is used twice, and a tween computed in the preview against a
-  tween computed in the worker is two opinions about where somebody's face was.
-  The export followed for free — `render.worker.ts` passes `plan.censors` to
-  `applyCensors` and needed no change at all.
-- **The DRAG writes the key.** There is no mode to enter and nothing to arm:
-  moving or resizing a box at time *t* replaces the key at *t*, which is why it
-  works on a phone. A tolerance of 0.05s is what makes a continuous drag replace
-  one key rather than lay down one per `pointermove` — a path of three hundred
-  keys is the same path with nothing left to reason about.
-- **A drawn box is keyed at BOTH ENDS.** With one key there is nothing to tween
-  against; with two identical ones it holds still until somebody moves it, which
-  is exactly what a box used to be. So nothing about the old behaviour changed
-  for anyone who does not drag.
+It came out when following landed. **Two ways to make a box move is one more
+than the thing needs**, and the one that went is the laborious one: authoring a
+path a frame at a time, on a phone, with no timeline to see it on — against
+measuring where the subject actually went. The keyframe editor was the
+workaround for not having the measurement; keeping it would have left a control
+whose only remaining job was to compete with a better answer.
+
+Three things survive it, and they are worth separating from the control that is
+gone:
+
+- **The interpolation is in `lib/frameCompose.ts`, not in the page.** That
+  module is pure *because* it is used twice, and a tween computed in the preview
+  against a tween computed in the worker is two opinions about where somebody's
+  face was. The export followed for free — `render.worker.ts` passes
+  `plan.censors` to `applyCensors` and has never needed a change for any of it.
 - **Outside the keys it HOLDS rather than extrapolating.** A box that carried on
   moving past its last key drifts off the subject and then off the frame, and
-  what it stops hiding is the thing it was drawn for.
+  what it stops hiding is the thing it was drawn for. That is now the rule for
+  what a follow does at the ends of the clip it was measured in.
+- **A box that is not following is ONE rectangle**, in one place, exactly as it
+  was before any of this. Drawing one lays a single key; moving or resizing it
+  replaces that key. Nothing about a box nobody asked to follow has changed
+  since the day censors shipped.
 
-The state is on the box, at the NW corner — the free one, with the bin and the
-cog opposite: **filled when the playhead is on a key, hollow when it is not**,
-so "is this frame one I decided, or one that was worked out for me?" is answered
-by looking at the box. There is no timeline to put it on, and on a phone there
-is no room for one. Tapping removes a key, refused at two, because those two are
-the ends.
+`KeyframeIcon` went with it — it had exactly one caller and is deleted rather
+than left as the dead export this file has twice had to sweep for.
 
 **A CENSOR NOW DEFAULTS TO THE WHOLE CLIP, and that is a safety decision.** It
 defaulted to three seconds from the playhead — so a box drawn over a face
@@ -3325,10 +3330,12 @@ attack needing no expertise is the one to design against.
 - **It hides the picture, not the sound.** The audio is copied untouched, so a
   spoken name survives a black box over the face saying it. Stated next to the
   boxes, because it is exactly the thing somebody would assume was handled.
-- **The box FOLLOWS now**, by keyframes — see "A censor is KEYFRAMED" above.
+- **The box FOLLOWS now** — see "A censor box follows what is under it" below.
   The limit this line recorded (a fixed rectangle, so a moving subject needs a
   generous box) is gone, and the note is kept as the shape of the decision: it
-  was named as the obvious next step, and it was.
+  was named as the obvious next step, and it was. The intermediate step — a
+  keyframe editor on the box — has been REMOVED again now that the path is
+  measured rather than typed.
 
 **PARKED: a preview that will not play, reported from Android, INTERMITTENT.**
 Parked rather than fixed, and parked rather than deleted — **the instrument is
@@ -3448,8 +3455,9 @@ does — the documented rule, and it was taking the query from the tool that cro
 for real.
 
 **A CENSOR BOX FOLLOWS WHAT IS UNDER IT, and the measurement runs on a thread of
-its own.** The limit this file recorded and then half-solved with keyframes is
-gone for the case it was written about: the thing worth hiding is almost always
+its own.** The limit this file recorded, and then half-solved with a keyframe
+editor that has since been removed again, is gone for the case it was written
+about: the thing worth hiding is almost always
 the thing that MOVES, and until now the answer was either a box drawn generously
 enough to cover everywhere the subject goes, or a path laid down by hand one
 frame at a time.
@@ -3517,9 +3525,10 @@ than a preference, because the number it turns on is the file's, not a taste.
 `thinPath` drops the keys a tween would have produced anyway: the tracker
 reports one position per FRAME, which is right for it and wrong to keep, so a
 key survives only if the box has moved by more than a fifth of one per cent
-since the last one kept or half a second has passed. And the keyframe control
-comes off a followed box entirely — its path IS the answer, and a control
-offering to edit a derived list is a control that lies about what it edits.
+since the last one kept or half a second has passed. And the hand keyframing
+came off ENTIRELY rather than off followed boxes only — a path IS the answer to
+the question that control existed to ask, and keeping a second, laborious way to
+give the same answer would have been keeping the workaround next to the fix.
 
 **Verified to fail:** making the projection a no-op reddens exactly the case
 that exists for it and no other.

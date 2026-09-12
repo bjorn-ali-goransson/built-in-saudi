@@ -10,7 +10,7 @@ import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { renderCaption } from '../../lib/captionBitmap'
 import {
-  ASPECTS, applyCensors, captionRect, cropFromDrag, cropRect, drawFrame, SEGMENTS,
+  ASPECTS, applyCensors, captionRect, cropFromDrag, cropRect, drawFrame, keptShare, SEGMENTS,
   type Caption, type Censor, type CensorMode, type Crop, type Rect,
 } from '../../lib/frameCompose'
 
@@ -264,11 +264,16 @@ export default function ImageEditTool() {
     return { width: Math.max(1, Math.round(r.w * k)), height: Math.max(1, Math.round(r.h * k)) }
   }, [dim, crop, maxSide])
 
-  /** What the crop throws away — the number this family exists to put on screen. */
-  const keptPct = useMemo(() => {
-    const r = cropRect(dim, crop)
-    return (r.w * r.h) / (dim.width * dim.height)
-  }, [dim, crop])
+  /**
+   * What the crop throws away — the number this family exists to put on screen.
+   *
+   * `keptShare` rather than the same two lines again: it was written for the
+   * video editor, which stopped printing the figure on its own bar (the
+   * rectangle over the whole picture already SHOWS it there), and a second copy
+   * of one formula is how the two screens end up quoting different numbers for
+   * the same decision.
+   */
+  const keptPct = useMemo(() => keptShare(dim, crop), [dim, crop])
 
   /**
    * The crop rectangle inside the WHOLE picture, in fractions of it.
