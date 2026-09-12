@@ -5,7 +5,8 @@
 - **Libraries:** WebCodecs (`VideoDecoder`/`VideoEncoder`), `mp4box` for demuxing,
   `src/lib/mp4Writer.ts` for muxing, `src/lib/mp4Encode.ts` for the shared encode
   facts. **No new dependency, and no motion library** — the estimator is a
-  hundred lines of pyramid search in `motion.ts`.
+  hundred lines of pyramid search in `src/lib/motion.ts` — shared with
+  `video-edit`, whose censor boxes follow a subject with the same tracker.
 
 ## Why a separate app
 
@@ -37,7 +38,7 @@ uploaded first.
    frame — not a second decode. That is what lets the trade be shown live
    instead of being a setting you commit to and wait for.
 
-## How the movement is measured (`motion.ts`)
+## How the movement is measured (`src/lib/motion.ts`, `src/lib/frameScan.ts`)
 
 Pure, with **no runtime imports**, so `evals/shakeprobe.mjs` compiles it
 standalone with tsc and calls the real thing — the `relatedPick.ts` /

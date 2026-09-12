@@ -144,6 +144,10 @@ progressive MP4.
 - [x] Audio copied when every clip agrees on its format; otherwise the export is
       silent and the page says so BEFORE the encode.
 - [x] A capability gate naming WebCodecs/H.264, routing to `video-trim`.
+- [x] A censor box can FOLLOW what is under it: the clip is measured on its own
+      worker thread from the pick, the control says what it is waiting for until
+      that lands, and the measured path is stored against the picture rather
+      than the screen so a later re-crop takes the box with it.
 - [x] Censor boxes: drag on the stage to draw one, drag to move it, drag its
       grip to resize it, a delete button on the selected one, each with its own
       time range and mode. **Pixelate by default** (see below); a warning naming
@@ -165,12 +169,22 @@ progressive MP4.
   sample back byte for byte.
 
 ## Known limits (stated in the UI, not implied away)
-- **A censor box does not follow anything.** It is a fixed rectangle for a fixed
-  span, so a moving subject needs a box big enough for the whole path or several
-  boxes in sequence — which the UI says, because a box that is right for one
-  second and wrong for the next has published the thing it was hiding. Keyframed
-  boxes that interpolate between two positions are the obvious next step and are
-  deliberately not in v1.
+- ~~**A censor box does not follow anything.**~~ Gone in two steps. Keyframes
+  came first — a box holds a list of positions and the rectangle at any moment
+  is the tween between the two either side of it — and then FOLLOWING: the clip
+  is measured in the background from the moment it is read, and a box can be
+  told to track whatever is under it, using the same estimator and template
+  tracker as `video-stabilize` (now `lib/motion.ts` + `lib/frameScan.ts`).
+  What remains of the limit is honest and on the panel: a tracker can lose a
+  subject, and when it does the box holds where it last saw it and the tool
+  says where that was.
+- **A followed path belongs to ONE clip.** A join is a cut, and a face tracked
+  in one clip says nothing about the next, so the path covers the clip it was
+  measured in and holds either side of it.
+- **The measurement is a whole extra decode of the clip**, started at the pick
+  whether or not anybody asks a box to follow. That is what makes the control
+  instant when it is wanted and what makes a long 4K recording pay for a
+  feature the session may not use.
 - **A censor box can only be created with a pointer.** Its time range and mode
   are keyboard-reachable, its position is not — unlike the crop, which nudges
   with the arrow keys. Worth fixing; recorded rather than glossed.

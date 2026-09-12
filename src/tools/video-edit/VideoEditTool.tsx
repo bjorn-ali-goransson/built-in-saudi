@@ -8,16 +8,21 @@ import {
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import {
-  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, drawFrame, outputSize, timeline,
+  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, drawFrame, outputSize,
+  projectPath, resizePath, shiftPath, SEGMENTS, thinPath, timeline,
   totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop, type Rect,
-} from './compose'
+} from '../../lib/frameCompose'
+import { TRACK_LOST, type Estimate } from '../../lib/motion'
+import { renderCaption } from '../../lib/captionBitmap'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
+import type { Req as MotionReq, Res as MotionRes } from './motion.worker'
 import { createRecorder, formatReport, heap } from './diagnostics'
 
 const WIP = 'video-edit'
 
 // Omit over a union has to distribute, or neither variant's fields survive.
 type ReqBody = Req extends infer T ? (T extends { id: number } ? Omit<T, 'id'> : never) : never
+type MotionBody = MotionReq extends infer T ? (T extends { id: number } ? Omit<T, 'id'> : never) : never
 
 /**
  * Arabic-Indic digits.
@@ -70,6 +75,19 @@ const STR = {
     previewFailed: (code: number) => `This browser could not play this clip in the preview (media error ${code}), so there is no picture to aim the crop and the boxes at.`,
     previewStillExports: 'The export uses a different decoder, and this browser says it can decode this file — so exporting may still work. Please tell us the error number above if it does not.',
     boxSettings: 'This box',
+    follow: 'What it covers',
+    followBtn: 'Follow what is under it',
+    followAgain: 'Follow again from here',
+    followRunning: 'Following the subject…',
+    measuring: (pct: string) => `Measuring how things move in this clip… ${pct}%`,
+    measureWhy: 'A box can only follow once the clip has been measured, and that runs on its own thread in the background. Everything else in the editor — cropping, drawing, captions, scrubbing, exporting — works while it does.',
+    measureFailed: 'This clip could not be measured, so a box cannot follow in it. You can still move the box and set keyframes by hand.',
+    followWhy: 'The thing worth hiding is almost always the thing that moves, and a box that cannot move has to be drawn big enough to cover everywhere the subject goes. This measures where it actually went and takes the box with it, so the box only has to cover the subject.',
+    followOn: 'This box follows what was under it. Moving or resizing it moves the whole path, so the follow is re-aimed rather than thrown away.',
+    followStop: 'Stop following',
+    followLost: (at: string) => `The subject was lost at ${at}. From there the box holds where it last saw it — follow again from a clearer moment, or stop following and place it by hand.`,
+    followNoSubject: 'There is not enough texture in that box to follow. A plain wall, the sky or a blown-out window has nothing to match from one frame to the next — draw the box around something with detail in it.',
+    followFailed: 'The subject could not be followed in this clip.',
     keyAdd: 'Put a keyframe here',
     keyHere: 'A keyframe is set here — tap to remove it',
     hideWith: 'Hide with',
@@ -143,6 +161,19 @@ const STR = {
     previewFailed: (code: number) => `تعذّر على هذا المتصفح تشغيل المقطع في المعاينة (خطأ وسائط ${code})، فلا صورة يستهدفها الاقتصاص ولا المربّعات.`,
     previewStillExports: 'ويستخدم التصدير فاكّ ترميز آخر، وهذا المتصفح يقول إنه يستطيع فك ترميز هذا الملف — فقد ينجح التصدير رغم ذلك. أخبرنا برقم الخطأ أعلاه إن لم ينجح.',
     boxSettings: 'هذا المربّع',
+    follow: 'ما الذي يغطّيه',
+    followBtn: 'اتبع ما تحته',
+    followAgain: 'اتبع من هنا مرة أخرى',
+    followRunning: 'جارٍ تتبّع الهدف…',
+    measuring: (pct: string) => `جارٍ قياس الحركة في هذا المقطع… ${pct}٪`,
+    measureWhy: 'لا يستطيع المربّع أن يتبع شيئًا قبل قياس المقطع، وهذا يجري في خيط مستقل في الخلفية. وكل ما عدا ذلك في المحرّر — الاقتصاص والرسم والنصوص والتنقّل والتصدير — يعمل أثناءه.',
+    measureFailed: 'تعذّر قياس هذا المقطع، فلا يمكن للمربّع أن يتبع فيه. ويبقى بإمكانك تحريكه ووضع نقاط المسار يدويًّا.',
+    followWhy: 'ما يستحق الإخفاء هو غالبًا ما يتحرك، والمربّع الثابت لا بد أن يُرسم كبيرًا بما يغطي كل ما يمرّ به الهدف. وهنا يُقاس أين ذهب فعلًا ويتحرك المربّع معه، فلا يغطي إلا الهدف نفسه.',
+    followOn: 'هذا المربّع يتبع ما كان تحته. وتحريكه أو تغيير حجمه يحرّك المسار كله، فيُعاد توجيه التتبّع بدل إلغائه.',
+    followStop: 'أوقف التتبّع',
+    followLost: (at: string) => `فُقد الهدف عند ${at}. ومن هناك يثبت المربّع حيث رآه آخر مرة — اتبع من لحظة أوضح، أو أوقف التتبّع وضعه يدويًّا.`,
+    followNoSubject: 'لا توجد تفاصيل كافية في هذا المربّع لتتبّعه. فالجدار الخالي أو السماء أو نافذة محترقة الإضاءة لا شيء فيها يُطابَق من إطار إلى آخر — ارسم المربّع حول شيء فيه تفصيل.',
+    followFailed: 'تعذّر تتبّع الهدف في هذا المقطع.',
     keyAdd: 'ضع نقطة مسار هنا',
     keyHere: 'هنا نقطة مسار — اضغط لإزالتها',
     hideWith: 'طريقة الإخفاء',
@@ -204,135 +235,27 @@ const MIN_CLIP = 0.1
 const QUALITY = [0.05, 0.09, 0.15]
 const HEIGHTS = [480, 720, 1080, 1440]
 
-/**
- * The crop rectangle as NINE SEGMENTS, in reading order.
- *
- * The whole rectangle is the control: the middle cell moves it, an edge cell
- * moves that edge, a corner cell moves both of its edges. There are no handle
- * squares to hit — on a phone a 14px square is smaller than a fingertip, and a
- * third of the rectangle is not.
- *
- * `id` names the edges each cell drags. PHYSICAL, not the logical start/end
- * this repo prefers elsewhere: these sit on a picture, and a picture does not
- * mirror under RTL — a cell that swapped sides in Arabic would drag the
- * opposite edge of the frame from the one under the finger.
- */
-const SEGMENTS = [
-  { id: 'nw', cursor: 'cursor-nwse-resize' },
-  { id: 'n', cursor: 'cursor-ns-resize' },
-  { id: 'ne', cursor: 'cursor-nesw-resize' },
-  { id: 'w', cursor: 'cursor-ew-resize' },
-  { id: 'move', cursor: 'cursor-move' },
-  { id: 'e', cursor: 'cursor-ew-resize' },
-  { id: 'sw', cursor: 'cursor-nesw-resize' },
-  { id: 's', cursor: 'cursor-ns-resize' },
-  { id: 'se', cursor: 'cursor-nwse-resize' },
-] as const
-
 type Mode = 'crop' | 'censor' | 'text' | 'more'
 
 interface Clip { slot: number; file: File; url: string; info: ProbeInfo }
 
+/**
+ * How far the background measurement of one clip has got.
+ *
+ * `steps` is the frame-to-frame camera motion and `times` when each frame is
+ * shown, both of which a follow needs: the camera's own movement is most of the
+ * prediction for free, and a clip recorded on a phone is routinely
+ * variable-rate, so a position placed at `index / fps` drifts against the
+ * picture it was measured in.
+ */
+type Measured =
+  | { state: 'measuring'; done: number; total: number }
+  | { state: 'ready'; steps: Estimate[]; times: number[] }
+  | { state: 'failed' }
+
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const mb = (b: number) => `${(b / 1048576).toFixed(1)} MB`
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
-
-/** Arabic decides the text direction, not the UI locale — somebody writing an
- *  English caption on the Arabic side of the site wants a left-to-right line. */
-const isRtl = (text: string) => /[؀-ۿݐ-ݿ]/.test(text)
-
-/**
- * Draw one caption to a bitmap THE SIZE OF ITS BOX.
- *
- * Everything about the way this text looks is decided here, once, on the page —
- * so the stage and the encoded frame are literally the same pixels.
- *
- * The box is the contract for WRAPPING: the text runs to its width and is
- * centred in its height, so the rectangle somebody dragged is where the
- * caption sits. Wrapping at "90% of the frame" instead, as this did, means the
- * writer sets the middle of something whose extent they cannot see.
- *
- * It is not a crop, though: text that needs more room than the box has spills
- * out of it rather than losing a line, and the returned rect says how far.
- */
-async function renderCaption(
-  c: Caption,
-  out: { width: number; height: number },
-): Promise<{ bitmap: ImageBitmap; rect: Rect } | null> {
-  const text = c.text.trim()
-  if (!text) return null
-  const box = captionRect(c, out)
-  const px = Math.max(8, Math.round(c.size * out.height))
-  const pad = Math.round(px * 0.3)
-  const font = `600 ${px}px "IBM Plex Sans Arabic", "Hanken Grotesk", system-ui, sans-serif`
-
-  const measure = document.createElement('canvas').getContext('2d')
-  if (!measure) return null
-  measure.font = font
-
-  const maxWidth = Math.max(1, box.w - pad * 2)
-  const lines: string[] = []
-  let line = ''
-  for (const word of text.split(/\s+/)) {
-    const next = line ? `${line} ${word}` : word
-    if (measure.measureText(next).width > maxWidth && line) { lines.push(line); line = word }
-    else line = next
-  }
-  if (line) lines.push(line)
-  const lineHeight = Math.round(px * 1.3)
-
-  // THE BOX WRAPS THE TEXT; IT DOES NOT CUT IT. The rectangle is where the
-  // writer put the caption and how wide the lines run, and a canvas sized
-  // exactly to it silently took a chunk off a caption that needed more room —
-  // a word too long to break, or one line more than the height allows. So the
-  // bitmap GROWS past the box when it has to, centred on it, and the rectangle
-  // it is drawn into grows with it. It is one rect, returned with the bitmap
-  // and used by the stage and by the worker alike, so the preview cannot crop
-  // a caption the export keeps or the other way round.
-  const stroke = c.band ? 0 : Math.max(2, px * 0.09)
-  const widest = lines.reduce((m, l) => Math.max(m, measure.measureText(l).width), 0)
-  const width = Math.max(box.w, Math.ceil(widest + pad * 2 + stroke))
-  const height = Math.max(box.h, Math.ceil(lines.length * lineHeight + pad * 2 + stroke))
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  if (c.band) {
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-  }
-  ctx.font = font
-  ctx.fillStyle = c.colour
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.direction = isRtl(text) ? 'rtl' : 'ltr'
-  if (!c.band) {
-    // A white caption on a white shirt is invisible; a thin dark outline is what
-    // every broadcaster does instead of demanding a band.
-    ctx.lineWidth = Math.max(2, px * 0.09)
-    ctx.strokeStyle = 'rgba(0,0,0,0.75)'
-    ctx.lineJoin = 'round'
-  }
-  // Centred in the BOX, top to bottom. A block of lines pinned to the top of a
-  // tall rectangle looks like a mistake rather than a choice.
-  const top = (canvas.height - lines.length * lineHeight) / 2
-  lines.forEach((l, i) => {
-    const y = top + i * lineHeight + lineHeight / 2
-    if (!c.band) ctx.strokeText(l, canvas.width / 2, y)
-    ctx.fillText(l, canvas.width / 2, y)
-  })
-  return {
-    bitmap: await createImageBitmap(canvas),
-    rect: {
-      x: (box.x - (width - box.w) / 2) / out.width,
-      y: (box.y - (height - box.h) / 2) / out.height,
-      w: width / out.width,
-      h: height / out.height,
-    },
-  }
-}
 
 /** What the pointer is doing to the picture right now. */
 type Drag =
@@ -405,10 +328,47 @@ export default function VideoEditTool() {
   const [pos, setPos] = useState(0)
   const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
 
+  /**
+   * What is known about each clip's movement, keyed by slot.
+   *
+   * IT IS NOT `busy`, and that is the whole design. Measuring a phone recording
+   * takes as long as decoding it, and an editor that greyed itself out for that
+   * would be an editor you cannot use for the first minute of every session.
+   * The pass runs on its own thread and this is the only thing that waits for
+   * it — so cropping, drawing, captioning, scrubbing and exporting all carry on,
+   * and the one control that genuinely needs the measurement says so itself.
+   */
+  const [analysis, setAnalysis] = useState<Record<number, Measured>>({})
+  /** The censor whose subject is being followed right now, if any. */
+  const [followingId, setFollowingId] = useState('')
+  const [followProgress, setFollowProgress] = useState({ done: 0, total: 0 })
+  const [followError, setFollowError] = useState('')
+
   /** Is there a clip open? That is what turns this into a full-screen editor. */
   const editing = clips.length > 0
 
   const workerRef = useRef<Worker | null>(null)
+  const motionRef = useRef<Worker | null>(null)
+  const motionPending = useRef(new Map<number, (r: MotionRes) => void>())
+  /**
+   * What the motion worker is doing right now, so a progress message can be
+   * routed to the readout that asked for it.
+   *
+   * Progress carries the request id, and the page holds a resolver per id — but
+   * a resolver is called ONCE, at the end, and progress arrives dozens of times
+   * before that. So the running job is recorded here instead.
+   */
+  const motionJob = useRef<{ kind: 'analyse' | 'track'; slot: number } | null>(null)
+  /**
+   * One motion job at a time.
+   *
+   * Two analyses running concurrently in one worker is two clips' worth of
+   * decoding interleaved on a phone, for no gain at all — the thread is the
+   * bottleneck, not the ordering. Chained here rather than queued in the worker
+   * so the worker stays a function of its messages.
+   */
+  const motionQueue = useRef<Promise<unknown>>(Promise.resolve())
+  const motionId = useRef(0)
   const reqId = useRef(0)
   const slotId = useRef(0)
   const pending = useRef(new Map<number, (r: Res) => void>())
@@ -441,6 +401,33 @@ export default function VideoEditTool() {
       if (fn) { pending.current.delete(e.data.id); fn(e.data) }
     }
     workerRef.current = w
+    return () => { w.terminate() }
+  }, [])
+
+  // A SECOND worker, so measuring a clip never queues behind an export and an
+  // export never waits for a measurement. No dependencies on purpose: a cleanup
+  // keyed on a changing value terminates the worker while it is still in use,
+  // which is the bug `video-stabilize` records having sat on "measuring" for
+  // ever because of.
+  useEffect(() => {
+    const w = new Worker(new URL('./motion.worker.ts', import.meta.url), { type: 'module' })
+    w.onmessage = (e: MessageEvent<MotionRes>) => {
+      if (e.data.kind === 'progress') {
+        const job = motionJob.current
+        if (job?.kind === 'analyse') {
+          const { done, total } = e.data
+          setAnalysis((m) => (m[job.slot]?.state === 'measuring'
+            ? { ...m, [job.slot]: { state: 'measuring', done, total } }
+            : m))
+        } else if (job?.kind === 'track') {
+          setFollowProgress({ done: e.data.done, total: e.data.total })
+        }
+        return
+      }
+      const fn = motionPending.current.get(e.data.id)
+      if (fn) { motionPending.current.delete(e.data.id); fn(e.data) }
+    }
+    motionRef.current = w
     return () => { w.terminate() }
   }, [])
 
@@ -491,6 +478,27 @@ export default function VideoEditTool() {
     pending.current.set(id, resolve)
     workerRef.current?.postMessage({ ...req, id } as Req, transfer)
   }), [])
+
+  /** One motion job at a time, each one recording what it is so its progress
+   *  can be shown against the thing that asked for it. */
+  const askMotion = useCallback((req: MotionBody) => {
+    const run = () => new Promise<MotionRes>((resolve) => {
+      const id = ++motionId.current
+      motionJob.current = req.kind === 'cancel' ? null : { kind: req.kind, slot: req.slot }
+      motionPending.current.set(id, resolve)
+      motionRef.current?.postMessage({ ...req, id } as MotionReq)
+    })
+    // A CANCEL JUMPS THE QUEUE, and has to: putting it behind the job it is
+    // cancelling means waiting for that job to finish, which is the one thing
+    // the word does not mean.
+    if (req.kind === 'cancel') { run(); return Promise.resolve({ id: 0, kind: 'done' } as MotionRes) }
+    // `then(run, run)` rather than `then(run)`: a job that failed must not stop
+    // the queue, or one unreadable clip silently ends measurement for the rest
+    // of the session.
+    const next = motionQueue.current.then(run, run)
+    motionQueue.current = next.catch(() => {})
+    return next
+  }, [])
 
   /**
    * How much of each clip survives, in ITS OWN seconds, keyed by slot.
@@ -551,6 +559,51 @@ export default function VideoEditTool() {
   const size = useMemo(() => outputSize(infos, crop, maxHeight), [infos, crop, maxHeight])
   const spans = useMemo(() => timeline(infos), [infos])
   const duration = useMemo(() => totalDuration(infos), [infos])
+
+  /**
+   * A censor as it actually sits on the output frame right now.
+   *
+   * A followed box stores WHERE THE SUBJECT WAS, in the source picture's own
+   * space, and its `keys` are derived from that through the crop and the cut in
+   * force at this moment. Projecting here — once, in a memo the stage and the
+   * export plan both read — is what stops the two disagreeing about where
+   * somebody's face is, which is the property this whole tool is built on.
+   *
+   * It also means a re-crop moves a followed box WITH the picture instead of
+   * leaving it hanging over whatever now happens to be at those coordinates.
+   */
+  const resolveCensor = useCallback((c: Censor): Censor => {
+    if (!c.path) return c
+    const i = clips.findIndex((x) => x.slot === c.path?.slot)
+    const clip = clips[i]
+    if (!clip) return c
+    const keys = projectPath(
+      c.path,
+      { width: clip.info.width, height: clip.info.height },
+      crop,
+      trimOf(clip),
+      spans[i]?.start ?? 0,
+    )
+    return keys.length ? { ...c, keys } : c
+  }, [clips, crop, trimOf, spans])
+
+  const shownCensors = useMemo(() => censors.map(resolveCensor), [censors, resolveCensor])
+
+  /**
+   * How to turn a length or a position on the OUTPUT frame into one on a clip's
+   * own picture, and back.
+   *
+   * A followed path is stored in source fractions, and everything a finger does
+   * arrives in output fractions, so one of these is needed at every boundary
+   * between the two. `k` is the scale and `o` the origin: `src = out * k + o`.
+   */
+  const toSource = useCallback((slot: number) => {
+    const clip = clips.find((c) => c.slot === slot)
+    if (!clip) return { kx: 1, ky: 1, ox: 0, oy: 0 }
+    const dim = { width: clip.info.width, height: clip.info.height }
+    const r = cropRect(dim, crop)
+    return { kx: r.w / dim.width, ky: r.h / dim.height, ox: r.x / dim.width, oy: r.y / dim.height }
+  }, [clips, crop])
 
   const fps = current ? Math.max(1, Math.min(60, current.info.fps || 30)) : 30
   const bitrate = Math.round(size.width * size.height * fps * QUALITY[quality])
@@ -675,6 +728,21 @@ export default function VideoEditTool() {
     }
   }, [current, crop])
 
+  /**
+   * A DOWNLOAD THAT IS NOT WHAT IS ON SCREEN IS THE ONE LIE THIS TOOL REFUSES.
+   *
+   * The export button turns into a green download, which is a claim that the
+   * file behind it is the video in front of you. Change the crop, a box, a
+   * caption, a cut or the output settings afterwards and it stops being — so
+   * the file goes and the button goes back to offering to make a new one.
+   * Keeping it would hand somebody the previous version of their own clip,
+   * which is exactly the failure the preview-is-the-export arrangement exists
+   * to make impossible everywhere else.
+   */
+  useEffect(() => {
+    setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
+  }, [crop, censors, captions, trims, keepAudio, quality, maxHeight])
+
   const paint = useCallback(() => {
     const v = videoRef.current
     const rc = stageRef.current
@@ -739,7 +807,10 @@ export default function VideoEditTool() {
     const inProgress: Censor | null = d
       ? { id: d.id, mode: d.mode, keys: [{ t: now, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: duration }
       : null
-    applyCensors(ctx, inProgress ? [...censors, inProgress] : censors, now, shown)
+    // THE RESOLVED boxes, so a followed one is drawn where the measurement
+    // says it is rather than where it was drawn — and by the same projection
+    // the export plan uses, so the two cannot differ.
+    applyCensors(ctx, inProgress ? [...shownCensors, inProgress] : shownCensors, now, shown)
     for (const c of activeAt(captions, now)) {
       // The one being edited is ALREADY on screen — the textarea sits exactly
       // over its box in the same colour and size, so drawing the bitmap under
@@ -754,7 +825,7 @@ export default function VideoEditTool() {
       const r = captionRect(drawn.rect, shown)
       ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
-  }, [current, crop, cropBox, mode, size, captions, censors, previewTime, pickedCaption, duration])
+  }, [current, crop, cropBox, mode, size, captions, shownCensors, previewTime, pickedCaption, duration])
 
   /**
    * Ask for the frame BACK when the tab returns.
@@ -839,6 +910,35 @@ export default function VideoEditTool() {
     }
     if (res.kind !== 'probed') { URL.revokeObjectURL(url); return }
     setClips((list) => [...list, { slot, file: f, url, info: res.info }])
+    // AND THE MEASUREMENT STARTS, without being waited for. `setBusy` was
+    // already cleared above, so the editor opens on the picture and this runs
+    // behind it — the only thing that needs the result is a box asking to
+    // follow, and that control says so itself rather than blocking everything.
+    void measure(slot, f)
+  }
+
+  /**
+   * Measure how things move in one clip, in the background.
+   *
+   * Deliberately NOT awaited by the picker: an editor that greys itself out for
+   * as long as it takes to decode a phone recording is an editor nobody can use
+   * for the first minute of every session. The one capability that genuinely
+   * needs this — a box that follows what is under it — is disabled with its
+   * progress on it until this lands, and everything else carries on.
+   */
+  async function measure(slot: number, file: File) {
+    // 0 of 0 until the pass reports its own total. `sampleCount` counts the
+    // AUDIO samples too, and a denominator that is quietly wrong is worse
+    // than one that has not arrived yet.
+    setAnalysis((m) => ({ ...m, [slot]: { state: 'measuring', done: 0, total: 0 } }))
+    const res = await askMotion({ kind: 'analyse', slot, file })
+    if (res.kind === 'analysed') {
+      setAnalysis((m) => ({ ...m, [slot]: { state: 'ready', steps: res.steps, times: res.times } }))
+      return
+    }
+    // A clip that cannot be measured is a nameable state, not a spinner that
+    // never ends. Everything else about the clip still works.
+    setAnalysis((m) => ({ ...m, [slot]: { state: 'failed' } }))
   }
 
   function removeClip(i: number) {
@@ -854,6 +954,14 @@ export default function VideoEditTool() {
     // leftover entry could never be reached again — but a map that only ever
     // grows is a leak with a plausible excuse.
     setTrims((m) => { const next = { ...m }; delete next[gone.slot]; return next })
+    setAnalysis((m) => { const next = { ...m }; delete next[gone.slot]; return next })
+    // A path measured in a clip that is no longer here describes a picture
+    // nobody will see. The box STAYS — deleting somebody's censor because they
+    // reordered their clips would be the worst possible reading of this — but
+    // it goes back to being the plain rectangle it was drawn as.
+    setCensors((list) => list.map((c) => (c.path?.slot === gone.slot
+      ? { ...c, path: undefined, keys: resolveCensor(c).keys }
+      : c)))
     setSel(0)
     setOut(null)
   }
@@ -893,6 +1001,72 @@ export default function VideoEditTool() {
     keys.push({ t: at, ...rect })
     keys.sort((a, b) => a.t - b.t)
     return { ...c, keys }
+  }
+
+  /**
+   * Follow whatever is inside this box, for the rest of the clip it sits in.
+   *
+   * The box is handed over in the SOURCE picture's own fractions, because that
+   * is the plane the tracker matches in — a rectangle in output fractions is a
+   * rectangle in a frame that has already been cropped, and would be wrong by
+   * exactly the crop.
+   */
+  async function follow(c: Censor) {
+    if (!current) return
+    const a = analysis[current.slot]
+    if (a?.state !== 'ready') return
+    const conv = toSource(current.slot)
+    const b = boxAt(resolveCensor(c).keys, t)
+    const box = {
+      x: clamp01(b.x * conv.kx + conv.ox),
+      y: clamp01(b.y * conv.ky + conv.oy),
+      w: b.w * conv.kx,
+      h: b.h * conv.ky,
+    }
+    box.w = Math.min(box.w, 1 - box.x)
+    box.h = Math.min(box.h, 1 - box.y)
+    setFollowError('')
+    setFollowingId(c.id)
+    setFollowProgress({ done: 0, total: 0 })
+    const res = await askMotion({ kind: 'track', slot: current.slot, file: current.file, box, steps: a.steps })
+    setFollowingId('')
+    if (res.kind !== 'tracked') {
+      setFollowError(res.kind === 'error' && res.message === 'no-subject' ? s.followNoSubject : s.followFailed)
+      return
+    }
+    // The tracker reports the subject's CENTRE relative to the frame centre, in
+    // source pixels; a box is stored by its corner. The size is the one that
+    // was drawn and does not change — a censor is a decision about how much to
+    // hide, and letting it breathe frame by frame would make it flicker.
+    const keys = thinPath(res.points.map((pt, i) => ({
+      t: res.times[Math.min(i, res.times.length - 1)] ?? 0,
+      x: 0.5 + pt.x / current.info.width - box.w / 2,
+      y: 0.5 + pt.y / current.info.height - box.h / 2,
+      w: box.w,
+      h: box.h,
+    })))
+    // Where it stopped being sure. `findIndex` from 1, because frame 0 is the
+    // box as drawn and is a 1 by definition — a path that reported itself lost
+    // at its own first frame would be reporting the rectangle somebody drew.
+    const lost = res.points.findIndex((pt, i) => i > 0 && pt.score < TRACK_LOST)
+    setCensor(c.id, {
+      path: { slot: current.slot, keys, lostAt: lost > 0 ? (res.times[lost] ?? 0) : 0 },
+    })
+  }
+
+  /**
+   * Stop following, and KEEP where the box is now.
+   *
+   * Dropping the path alone would snap the box back to wherever its hand keys
+   * last were, which on a box that has only ever followed is where it was
+   * drawn — so the one gesture meant to give control back would move the censor
+   * off the thing it is covering.
+   */
+  function unfollow(c: Censor) {
+    const b = boxAt(resolveCensor(c).keys, t)
+    setCensors((list) => list.map((x) => (x.id === c.id
+      ? { ...x, path: undefined, keys: [{ t: x.from, ...b }, { t: x.to, ...b }] }
+      : x)))
   }
 
   /**
@@ -939,7 +1113,7 @@ export default function VideoEditTool() {
   function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
     const p = at(e)
-    overlayRef.current?.setPointerCapture(e.pointerId)
+    e.currentTarget.setPointerCapture(e.pointerId)
 
     // Censor and caption are the SAME gesture on purpose: drag out a rectangle.
     // A caption used to be a point you dropped and then discovered the extent
@@ -1063,29 +1237,36 @@ export default function VideoEditTool() {
     // MOVING OR RESIZING A BOX WRITES A KEY AT THE PLAYHEAD. It is the same
     // gesture it always was — nothing new to learn, no mode to be in — and it
     // means the path is built out of the frames somebody actually looked at.
+    // MOVING OR RESIZING A FOLLOWED BOX RE-AIMS THE FOLLOW, rather than ending
+    // it or fighting it. The whole measured path moves with the box, so a box
+    // that was drawn a little off, or a little too small, can be corrected
+    // without throwing away the measurement that put it where it is — and there
+    // is no mode to leave and nothing to re-run.
     if (d.kind === 'move') {
       setCensors((list) => list.map((c) => {
         if (c.id !== d.id) return c
-        const b = boxAt(c.keys, t)
-        return keyed(c, t, {
-          x: clamp01(Math.min(1 - b.w, p.x - d.ox)),
-          y: clamp01(Math.min(1 - b.h, p.y - d.oy)),
-          w: b.w,
-          h: b.h,
-        })
+        const b = boxAt(resolveCensor(c).keys, t)
+        const x = clamp01(Math.min(1 - b.w, p.x - d.ox))
+        const y = clamp01(Math.min(1 - b.h, p.y - d.oy))
+        if (c.path) {
+          const conv = toSource(c.path.slot)
+          return { ...c, path: shiftPath(c.path, (x - b.x) * conv.kx, (y - b.y) * conv.ky) }
+        }
+        return keyed(c, t, { x, y, w: b.w, h: b.h })
       }))
       return
     }
     if (d.kind === 'resize') {
       setCensors((list) => list.map((c) => {
         if (c.id !== d.id) return c
-        const b = boxAt(c.keys, t)
-        return keyed(c, t, {
-          x: b.x,
-          y: b.y,
-          w: Math.max(0.02, Math.min(1 - b.x, p.x - b.x)),
-          h: Math.max(0.02, Math.min(1 - b.y, p.y - b.y)),
-        })
+        const b = boxAt(resolveCensor(c).keys, t)
+        const w = Math.max(0.02, Math.min(1 - b.x, p.x - b.x))
+        const h = Math.max(0.02, Math.min(1 - b.y, p.y - b.y))
+        if (c.path) {
+          const conv = toSource(c.path.slot)
+          return { ...c, path: resizePath(c.path, w * conv.kx, h * conv.ky) }
+        }
+        return keyed(c, t, { x: b.x, y: b.y, w, h })
       }))
       return
     }
@@ -1193,6 +1374,10 @@ export default function VideoEditTool() {
     setClips([])
     setCaptions([])
     setCensors([])
+    setAnalysis({})
+    setFollowingId('')
+    setFollowError('')
+    void askMotion({ kind: 'cancel' })
     setSel(0)
     setMode('crop')
     setSettings(false)
@@ -1267,7 +1452,9 @@ export default function VideoEditTool() {
       bitrate,
       keepAudio: keepAudio && audioPlan === 'copy',
       captions: planCaptions,
-      censors,
+      // Resolved, not raw: the worker has no crop-to-source projection of its
+      // own and must not grow one. What the stage drew is what it encodes.
+      censors: shownCensors,
     }
     const res = await ask({ kind: 'render', plan }, planCaptions.map((c) => c.bitmap))
     // Whether the export works while the preview does not is exactly what
@@ -1380,6 +1567,10 @@ export default function VideoEditTool() {
   // "showing now" is still legible.
   const isNow = (c: { from: number; to: number }) => activeAt([c], t).length > 0
   const picked = censors.find((c) => c.id === pickedBox) ?? null
+  // The measurement that matters to the selected box: the clip its path was
+  // taken in if it has one, otherwise the clip on screen — which is the clip a
+  // follow would be measured in if it were asked for now.
+  const measured = analysis[picked?.path?.slot ?? current?.slot ?? -1]
   const drawingText = textTick >= 0 ? drawingTextRef.current : null
 
   const toolBtn = (m: Mode, label: string, icon: React.ReactNode) => (
@@ -1481,8 +1672,11 @@ export default function VideoEditTool() {
     onGrab: (e: React.PointerEvent) => void,
     onDelete: () => void, onResize: (e: React.PointerEvent) => void,
     onInfo?: () => void, corner?: React.ReactNode, inside?: React.ReactNode,
+    /** Extra data attributes — the testable contract for whatever this box is
+     *  doing, since a colour or a border style would be testing Tailwind. */
+    attrs?: Record<string, string>,
   ) => (
-    <div key={key} data-testid={testid} onPointerDown={onGrab}
+    <div key={key} data-testid={testid} onPointerDown={onGrab} {...attrs}
       style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
       className={`absolute cursor-move border-2 ${
         selected ? 'border-green-400' : 'border-white/60 border-dashed'}${dim ? ' opacity-40' : ''}`}>
@@ -1598,6 +1792,17 @@ export default function VideoEditTool() {
                 // Arabic side every cell dragged the opposite edge of the frame
                 // from the one under the finger. The comment on `SEGMENTS` said
                 // the ids must not mirror and the layout mirrored anyway.
+                //
+                // AND CAPTURE ON THE ELEMENT THE POINTERDOWN REACHED, never on
+                // the overlay from a child's handler. That is not a style
+                // preference: capturing on a DIFFERENT element wedged the page
+                // on the SECOND crop drag of a session — the first gesture
+                // worked, the second one's first `pointermove` never came back
+                // and the editor froze mid-drag. Moves and ups reach `moveDrag`
+                // and `up` either way, because they bubble from the child up to
+                // this overlay; what changes is that the browser's own implicit
+                // release at pointerup now applies to the element that took the
+                // capture.
                 <div data-testid="ve-crop-box" dir="ltr"
                   style={{ left: `${cropBox.x * 100}%`, top: `${cropBox.y * 100}%`, width: `${cropBox.w * 100}%`, height: `${cropBox.h * 100}%` }}
                   className="absolute border-2 border-green-400 grid grid-cols-3 grid-rows-3">
@@ -1611,7 +1816,7 @@ export default function VideoEditTool() {
                       className={`${seg.cursor} ${i % 3 !== 2 ? 'border-e' : ''} ${i < 6 ? 'border-b' : ''} border-white/25`}
                       onPointerDown={(e) => {
                         e.stopPropagation()
-                        overlayRef.current?.setPointerCapture(e.pointerId)
+                        e.currentTarget.setPointerCapture(e.pointerId)
                         const q = atRaw(e)
                         dragRef.current = {
                           kind: 'crop-seg',
@@ -1632,24 +1837,29 @@ export default function VideoEditTool() {
                   somewhere between two keys. `boxAt` is the same function the
                   canvas and the encoder call, so the outline cannot sit
                   anywhere but over the region actually being hidden. */}
-              {mode === 'censor' && censors.map((c) => handle(
-                c.id, `ve-box-${censors.indexOf(c)}`, boxAt(c.keys, t), pickedBox === c.id, !isNow(c),
+              {mode === 'censor' && shownCensors.map((c, boxIndex) => handle(
+                c.id, `ve-box-${boxIndex}`, boxAt(c.keys, t), pickedBox === c.id, !isNow(c),
                 (e) => {
                   e.stopPropagation()
                   const p = at(e)
                   const b = boxAt(c.keys, t)
-                  overlayRef.current?.setPointerCapture(e.pointerId)
+                  e.currentTarget.setPointerCapture(e.pointerId)
                   dragRef.current = { kind: 'move', id: c.id, ox: p.x - b.x, oy: p.y - b.y }
                   setPickedBox(c.id)
                 },
                 () => { setCensors((l) => l.filter((x) => x.id !== c.id)); setPickedBox(null) },
                 (e) => {
                   e.stopPropagation()
-                  overlayRef.current?.setPointerCapture(e.pointerId)
+                  e.currentTarget.setPointerCapture(e.pointerId)
                   dragRef.current = { kind: 'resize', id: c.id }
                 },
                 () => setBoxPanel(true),
-                keyButton(c, censors.indexOf(c)),
+                // A followed box has no hand keys to show: its path IS the answer,
+                // and a keyframe control beside it would offer to edit a list that
+                // is derived. Stopping the follow gives the keys back.
+                c.path ? null : keyButton(c, boxIndex),
+                undefined,
+                { 'data-follow': c.path ? 'on' : 'off' },
               ))}
 
               {/* A caption is the same rectangle, and clicking one opens its
@@ -1660,7 +1870,7 @@ export default function VideoEditTool() {
                 (e) => {
                   e.stopPropagation()
                   const p = at(e)
-                  overlayRef.current?.setPointerCapture(e.pointerId)
+                  e.currentTarget.setPointerCapture(e.pointerId)
                   dragRef.current = {
                     kind: 'caption', id: c.id, ox: p.x - c.x, oy: p.y - c.y,
                     was: pickedCaption === c.id, moved: false,
@@ -1670,7 +1880,7 @@ export default function VideoEditTool() {
                 () => { setCaptions((l) => l.filter((x) => x.id !== c.id)); setPickedCaption(null) },
                 (e) => {
                   e.stopPropagation()
-                  overlayRef.current?.setPointerCapture(e.pointerId)
+                  e.currentTarget.setPointerCapture(e.pointerId)
                   dragRef.current = { kind: 'caption-resize', id: c.id }
                 },
                 undefined,
@@ -1966,6 +2176,72 @@ export default function VideoEditTool() {
                 data-testid="ve-box-why">
                 {picked.mode === 'solid' ? s.solidWhy : s.censorWhy}
               </p>
+
+              {/* FOLLOWING, in the one place a box's own settings live. The
+                  measurement it needs runs on another thread from the moment
+                  the clip is read, so this is the only control in the editor
+                  that can be waiting for anything — and it says what it is
+                  waiting for and how far it has got, rather than being greyed
+                  out for a reason nobody can see. */}
+              <Field label={s.follow}>
+                <div className="flex flex-col gap-2" data-testid="ve-box-follow"
+                  data-state={picked.path ? 'on' : measured?.state ?? 'none'}>
+                  {picked.path ? (
+                    <>
+                      <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.followOn}</p>
+                      {picked.path.lostAt > 0 && (
+                        <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="ve-follow-lost">
+                          {s.followLost(fmt(picked.path.lostAt))}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <Button className="px-3 py-1" data-testid="ve-follow-again"
+                          disabled={!!followingId || measured?.state !== 'ready'}
+                          onClick={() => { void follow(picked) }}>{s.followAgain}</Button>
+                        <Button className="px-3 py-1" data-testid="ve-unfollow"
+                          onClick={() => unfollow(picked)}>{s.followStop}</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[0.85rem] text-ink-soft rtl:font-ar">{s.followWhy}</p>
+                      <Button variant="primary" className="px-3 py-1 self-start" data-testid="ve-follow"
+                        disabled={measured?.state !== 'ready' || !!followingId}
+                        onClick={() => { void follow(picked) }}>{s.followBtn}</Button>
+                    </>
+                  )}
+                  {followingId === picked.id && (
+                    <span className="inline-flex items-center gap-2 text-[0.85rem] text-ink-soft rtl:font-ar"
+                      data-testid="ve-follow-progress">
+                      <Spinner /> {s.followRunning} {s.progress(followProgress.done, followProgress.total)}
+                    </span>
+                  )}
+                  {measured?.state === 'measuring' && (
+                    <>
+                      <span className="inline-flex items-center gap-2 text-[0.85rem] text-ink-faint rtl:font-ar"
+                        data-testid="ve-measuring">
+                        <Spinner /> {s.measuring(s.progress(measured.done, measured.total))}
+                      </span>
+                      {/* WHAT IT IS WAITING FOR, and that nothing else is. The
+                          one place in this editor where anything waits at all,
+                          so it is also the one place that has to explain the
+                          wait — a control greyed out for a reason nobody can
+                          see is a control that looks broken. */}
+                      <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.measureWhy}</p>
+                    </>
+                  )}
+                  {measured?.state === 'failed' && (
+                    <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="ve-measure-failed">
+                      {s.measureFailed}
+                    </p>
+                  )}
+                  {followError && (
+                    <p className="text-[0.85rem] text-gold-700 rtl:font-ar" data-testid="ve-follow-error">
+                      {followError}
+                    </p>
+                  )}
+                </div>
+              </Field>
 
               <div className="flex items-end gap-3">
                 <Field label={s.from}>
