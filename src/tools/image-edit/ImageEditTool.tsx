@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, TextIcon, TrashIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, TextIcon, TiltIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { decodeImage } from '../../lib/decodeImage'
@@ -26,10 +26,23 @@ const arNum = (n: number) => n.toLocaleString('ar-SA')
  * It was asked for exactly like that, as a joke, and it is here as a real
  * control rather than as a gag in a comment — because a joke that cannot be
  * switched off is a defect, and one that does not actually do anything is a
- * lie about what the tool exports. So it genuinely tilts the picture, the
- * preview shows it (the preview IS the export here, as everywhere in this
- * family), and the settings screen says in plain words what it does and that
- * turning it off makes the picture square again.
+ * lie about what the tool exports.
+ *
+ * IT IS APPLIED TO THE SOURCE, NOT TO THE OUTPUT FRAME, and that is the whole
+ * correctness of it. It used to be a transform inside `compose`, which draws
+ * the OUTPUT — so every view that goes through `compose` was tilted and the one
+ * that does not was not. That one is crop mode, which draws the whole picture
+ * with the rectangle over it, and crop mode is what you are looking at the
+ * moment a picture opens: measured on the fixture, the edge sat at column 200
+ * on both the top and the bottom row there and at 203/197 everywhere else. So
+ * the opening screen of a tool built entirely on "the preview IS the export"
+ * showed a square picture and exported a tilted one.
+ *
+ * Tilting the SOURCE fixes it everywhere at once and costs no per-view code:
+ * crop mode, the censor and caption stages and the export all take their
+ * picture from `source` below, so none of them can disagree about it again. It
+ * also keeps the crop rectangle honest — the rectangle selects a fraction of
+ * the picture you can see, rather than a fraction of a square one you cannot.
  *
  * The cover scale below is the reason it is not simply a `rotate`: turning a
  * rectangle inside its own frame exposes four empty corners, so the picture is
@@ -86,7 +99,6 @@ const STR = {
     quality: 'Quality',
     lossless: 'PNG is lossless, so there is no quality to choose. It is bigger.',
     tilt: `Tilt it ${TILT_DEG}° clockwise`,
-    tiltWhy: `Exactly one degree, clockwise, always. It is on by default because that is how it was asked for. Nobody has explained what it is for, and the honest answer is that it makes every picture very slightly wrong — which you can see, which is the point. Turn it off and the picture is square again. The ${TILT_DEG}° costs about 2% of the edges, because turning a rectangle inside its own frame exposes the corners and they have to be covered.`,
     exportBtn: 'Export',
     download: 'Download',
     errors: {
@@ -126,7 +138,6 @@ const STR = {
     quality: 'الجودة',
     lossless: 'صيغة PNG بلا فقد، فلا جودة تُختار. وهي أكبر حجمًا.',
     tilt: `أملها ${arNum(TILT_DEG)}° مع عقارب الساعة`,
-    tiltWhy: `درجة واحدة بالضبط، مع عقارب الساعة، دائمًا. وهي مفعّلة تلقائيًّا لأنها طُلبت هكذا. ولم يوضّح أحد ما الغرض منها، والجواب الصادق أنها تجعل كل صورة مائلة قليلًا — وهو أمر تراه بعينك، وهذا هو المقصود. أطفئها تعد الصورة مستوية. وتكلّف الدرجة نحو ٢٪ من الأطراف، لأن إمالة المستطيل داخل إطاره تكشف زواياه فلا بد من تغطيتها.`,
     exportBtn: 'تصدير',
     download: 'تنزيل',
     errors: {
@@ -244,6 +255,39 @@ export default function ImageEditTool() {
   }, [editing])
 
   const dim = useMemo(() => ({ width: img?.width ?? 1, height: img?.height ?? 1 }), [img])
+
+  /**
+   * THE PICTURE EVERY VIEW DRAWS FROM — the decoded bitmap, or a tilted copy of
+   * it at the same size.
+   *
+   * Same size is what makes it a drop-in: `dim`, the crop arithmetic and every
+   * coordinate downstream are untouched, and nothing but this line knows the
+   * tilt exists. The alternative was a transform in each of the two draw paths,
+   * which is exactly how they came to disagree in the first place — and the
+   * export path could not express it anyway, because `drawFrame` samples a
+   * sub-rectangle of its source and a rotated picture is not one until it has
+   * been drawn.
+   *
+   * It costs one canvas the size of the image, which for a phone photo is real
+   * and is the price of `drawFrame` staying the single implementation of the
+   * crop. Rebuilt only when the picture or the switch changes, never per frame.
+   */
+  const source = useMemo<CanvasImageSource | null>(() => {
+    if (!img) return null
+    if (!tilt) return img
+    const c = document.createElement('canvas')
+    c.width = dim.width
+    c.height = dim.height
+    const ctx = c.getContext('2d')
+    if (!ctx) return img
+    const k = coverScale(dim.width, dim.height, TILT)
+    ctx.translate(dim.width / 2, dim.height / 2)
+    ctx.rotate(TILT)
+    ctx.scale(k, k)
+    ctx.translate(-dim.width / 2, -dim.height / 2)
+    ctx.drawImage(img, 0, 0, dim.width, dim.height)
+    return c
+  }, [img, tilt, dim])
   const sourceAspect = dim.width / dim.height
   const aspect = useMemo(() => {
     if (aspectId === 'free' && freeAspect) return freeAspect
@@ -341,24 +385,13 @@ export default function ImageEditTool() {
     o: { width: number; height: number },
     skip?: string | null,
   ) => {
-    if (!img) return
+    if (!source) return
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, o.width, o.height)
-    ctx.save()
-    if (tilt) {
-      // About the middle, and scaled to cover — otherwise one degree of tilt is
-      // four transparent corners rather than a tilted picture.
-      const k = coverScale(o.width, o.height, TILT)
-      ctx.translate(o.width / 2, o.height / 2)
-      ctx.rotate(TILT)
-      ctx.scale(k, k)
-      ctx.translate(-o.width / 2, -o.height / 2)
-    }
-    drawFrame(ctx, img, dim, crop, o)
-    ctx.restore()
-    // Boxes and captions are placed on the OUTPUT frame, so they are drawn
-    // after the transform is put back — somebody aiming a censor is aiming it
-    // at the picture they can see, which is the tilted one.
+    drawFrame(ctx, source, dim, crop, o)
+    // Boxes and captions are placed on the OUTPUT frame, and `source` is
+    // already the tilted picture — so somebody aiming a censor is aiming it at
+    // exactly what they can see, and the box does not turn with the picture.
     const d = drawingRef.current
     const inProgress: Censor | null = d
       ? { id: d.id, mode: d.mode, keys: [{ t: 0, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: 1 }
@@ -371,7 +404,7 @@ export default function ImageEditTool() {
       const r = captionRect(drawn.rect, o)
       ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
-  }, [img, dim, crop, tilt, censors, captions])
+  }, [source, dim, crop, censors, captions])
 
   /**
    * Draw the stage — from an ANIMATION FRAME, not from an effect on the state
@@ -389,7 +422,7 @@ export default function ImageEditTool() {
    */
   const draw = useCallback(() => {
     const rc = stageRef.current
-    if (!rc || !img) return
+    if (!rc || !source) return
     if (mode === 'crop') {
       // The whole picture, at its own shape, with everything outside the crop
       // dimmed rather than gone. The rectangle's outline is the DOM overlay,
@@ -404,7 +437,9 @@ export default function ImageEditTool() {
       const ctx = rc.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, shown.width, shown.height)
-      ctx.drawImage(img, 0, 0, shown.width, shown.height)
+      // `source`, not `img` — this is the branch that used to miss the tilt,
+      // and the rectangle below is dragged over whatever is drawn here.
+      ctx.drawImage(source, 0, 0, shown.width, shown.height)
       const bx = Math.round(cropBox.x * shown.width)
       const by = Math.round(cropBox.y * shown.height)
       const bw = Math.round(cropBox.w * shown.width)
@@ -426,7 +461,7 @@ export default function ImageEditTool() {
     const ctx = rc.getContext('2d')
     if (!ctx) return
     compose(ctx, shown, mode === 'text' ? pickedCaption : null)
-  }, [img, mode, dim, cropBox, size, compose, pickedCaption])
+  }, [source, mode, dim, cropBox, size, compose, pickedCaption])
 
   useEffect(() => {
     let raf = 0
@@ -980,6 +1015,21 @@ export default function ImageEditTool() {
               {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
               {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
               {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+              {/* THE JOKE, AS A REAL CONTROL, and on the frame rather than three
+                  taps down in the settings. It changes what every pixel of the
+                  picture behind it looks like, so it belongs with the other
+                  things that do, and it needs no sentence explaining it: the
+                  picture is visibly off true, which is the entire feature.
+                  `aria-pressed` is the testable contract, since asserting a
+                  background class would be testing Tailwind. */}
+              <button type="button" title={s.tilt} aria-label={s.tilt} aria-pressed={tilt}
+                data-testid="ie-tilt" onClick={() => setTilt((v) => !v)}
+                className={`grid place-items-center w-10 h-10 rounded-md border cursor-pointer transition-colors ${
+                  tilt
+                    ? 'bg-green-600 border-green-700 text-[color:var(--primary-ink)]'
+                    : 'bg-black/55 border-white/25 text-white hover:bg-black/70'}`}>
+                <TiltIcon className="w-5 h-5" />
+              </button>
               <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ie-settings"
                 onClick={() => setSettings(true)}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
@@ -1146,17 +1196,6 @@ export default function ImageEditTool() {
               </p>
             </div>
 
-            {/* THE JOKE, AS A REAL CONTROL. It is on by default because that is
-                how it was asked for; it says exactly what it does, and the one
-                thing it must not be is a surprise you cannot undo. */}
-            <div className="flex flex-col gap-1">
-              <Check>
-                <input type="checkbox" checked={tilt} data-testid="ie-tilt"
-                  onChange={(e) => setTilt(e.target.checked)} />
-                {s.tilt}
-              </Check>
-              <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="ie-tilt-why">{s.tiltWhy}</p>
-            </div>
           </div>
         </div>
       )}

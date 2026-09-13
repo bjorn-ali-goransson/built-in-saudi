@@ -648,6 +648,23 @@ export function CloseIcon({ className }: P) {
   )
 }
 
+/**
+ * A picture frame sitting off true, with the level it is off from.
+ *
+ * It has to read at 20px as "this is not straight", so the frame is drawn at a
+ * visible angle rather than at the one degree it applies — an icon that showed
+ * the real angle would be indistinguishable from a square one, which is the
+ * whole reason the tilt needs a fixture with a crisp edge to be tested at all.
+ */
+export function TiltIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="4.5" y="6.5" width="15" height="11" rx="1.5" transform="rotate(-9 12 12)" />
+      <path d="M2.5 20.5h19" strokeDasharray="3 2.5" />
+    </svg>
+  )
+}
+
 export function CropIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

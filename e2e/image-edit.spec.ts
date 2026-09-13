@@ -189,6 +189,39 @@ async function decodeExport(page: Page): Promise<{ w: number; h: number }> {
   }), href)
 }
 
+/**
+ * How far the fixture's straight vertical boundary leans in the EXPORTED file,
+ * in pixels of that file.
+ *
+ * The stage and the export go through one function, which is the architecture
+ * this tool rests on — but that is the claim, not the evidence, and it is the
+ * claim that broke once already. So this decodes the blob the download button
+ * actually points at.
+ */
+async function exportedLean(page: Page): Promise<number> {
+  const href = await page.getByTestId('ie-download').getAttribute('href')
+  expect(href).toMatch(/^blob:/)
+  return page.evaluate((url) => new Promise<number>((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = i.naturalWidth; c.height = i.naturalHeight
+      const ctx = c.getContext('2d', { willReadFrequently: true })
+      if (!ctx) { reject(new Error('no context')); return }
+      ctx.drawImage(i, 0, 0)
+      const edge = (yFrac: number) => {
+        const row = Math.min(c.height - 1, Math.max(0, Math.round(yFrac * c.height)))
+        const px = ctx.getImageData(0, row, c.width, 1).data
+        for (let x = 0; x < c.width; x++) if (px[x * 4] > 128) return x
+        return -1
+      }
+      resolve(Math.abs(edge(0.05) - edge(0.95)))
+    }
+    i.onerror = () => reject(new Error('the exported file would not decode'))
+    i.src = url!
+  }), href)
+}
+
 /** The region of the fixture's noisy band that the cases draw a box over. */
 const GRAIN: [number, number, number, number] = [0.06, 0.74, 0.44, 0.86]
 
@@ -246,34 +279,66 @@ test('leaving asks first, and cancelling keeps the work', async ({ page }) => {
   await expect(page.getByTestId('ie-file')).toHaveCount(1)
 })
 
-test('THE TILT IS ON BY DEFAULT, and turning it off makes the picture square', async ({ page }) => {
+/** How far the fixture's straight vertical boundary leans across the stage, in
+ *  pixels. Square reads 0; one degree reads several. The ONLY observable that
+ *  can tell a one-degree tilt from none. */
+async function lean(page: Page) {
+  return Math.abs((await edgeAt(page, 0.05)) - (await edgeAt(page, 0.95)))
+}
+
+test('THE TILT IS ON BY DEFAULT, in EVERY mode, and turning it off makes the picture square', async ({ page }) => {
   await load(page)
   await pick(page)
-  // Out of crop mode, so the stage is the OUTPUT — which is the thing the tilt
-  // applies to and the thing that gets exported.
-  await page.getByTestId('ie-mode-censor').click()
-  await expect.poll(() => edgeAt(page, 0.05), { timeout: 15_000 }).toBeGreaterThan(0)
 
-  // Default ON. The fixture's boundary is a straight vertical line, so a tilted
-  // picture puts it at different columns on the top and bottom rows — the only
-  // observable that can tell one degree from none.
-  await page.getByTestId('ie-settings').click()
-  await expect(page.getByTestId('ie-tilt')).toBeChecked()
-  await page.getByTestId('ie-settings-close').click()
-  const topOn = await edgeAt(page, 0.05)
-  const bottomOn = await edgeAt(page, 0.95)
-  expect(Math.abs(topOn - bottomOn),
-    `the picture is not tilted: the edge is at column ${topOn} on the top row and ${bottomOn} on the bottom`)
-    .toBeGreaterThanOrEqual(3)
+  // The control is ON THE FRAME, with the other things that change what the
+  // picture looks like — not three taps down inside the settings screen. And
+  // `aria-pressed` is what says so: colour alone would leave the state
+  // unreadable, and asserting a background class would be testing Tailwind.
+  await expect(page.getByTestId('ie-tools').getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ie-tilt-why')).toHaveCount(0)
 
-  // And off, it is square again — the half that makes the joke a control rather
-  // than a defect. Without it the case would pass against a tool that tilted
-  // the picture and could not stop.
-  await page.getByTestId('ie-settings').click()
-  await page.getByTestId('ie-tilt').uncheck()
-  await page.getByTestId('ie-settings-close').click()
-  await expect.poll(async () => Math.abs((await edgeAt(page, 0.05)) - (await edgeAt(page, 0.95))), { timeout: 15_000 })
-    .toBeLessThanOrEqual(1)
+  // EVERY MODE, and crop first, because crop is the mode a picture OPENS in and
+  // it was the one the tilt missed. It used to be a transform inside `compose`,
+  // which draws the output; crop mode draws the whole picture and never calls
+  // it, so the opening screen of a tool built on "the preview IS the export"
+  // showed a square picture and exported a tilted one. Measured at the time:
+  // the edge sat at column 200 on both rows here and at 203/197 elsewhere.
+  //
+  // A case that checked one mode would have passed against exactly that bug —
+  // as the first version of this one did, by stepping out of crop mode before
+  // measuring. A feature checked only where it works is not checked.
+  for (const mode of ['crop', 'censor', 'text'] as const) {
+    if (mode !== 'crop') await page.getByTestId(`ie-mode-${mode}`).click()
+    await expect.poll(() => lean(page), { timeout: 15_000 }).toBeGreaterThanOrEqual(3)
+  }
+
+  // And off, it is square again — in every mode too, which is the half that
+  // makes the joke a control rather than a defect. Without it the case would
+  // pass against a tool that tilted the picture and could not stop.
+  await page.getByTestId('ie-tilt').click()
+  await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'false')
+  for (const mode of ['crop', 'censor', 'text'] as const) {
+    await page.getByTestId(`ie-mode-${mode}`).click()
+    await expect.poll(() => lean(page), { timeout: 15_000 }).toBeLessThanOrEqual(1)
+  }
+})
+
+test('the tilt reaches the EXPORTED file, not just the stage', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  // The stage and the export go through one function, but that is the claim
+  // rather than the evidence — and it is the claim that broke. So this reads
+  // the bytes a reader actually receives.
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 20_000 })
+  expect(await exportedLean(page), 'the exported file is not tilted').toBeGreaterThanOrEqual(3)
+
+  // And square when it is off, so the case cannot pass against a tool that
+  // tilts everything it writes regardless of the control.
+  await page.getByTestId('ie-tilt').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 20_000 })
+  expect(await exportedLean(page), 'the export is tilted with the tilt off').toBeLessThanOrEqual(1)
 })
 
 test('cropping shows the WHOLE picture; leaving crop mode applies it', async ({ page }) => {

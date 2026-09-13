@@ -3678,12 +3678,60 @@ would have been the second.
 It was asked for exactly like that, as a joke, and it is here as a real control
 rather than as a gag in a comment — because a joke that cannot be switched off
 is a defect, and one that does not actually do anything is a lie about what the
-tool exports. So it genuinely tilts, the preview shows it, the settings screen
-says in plain words what it does and how to stop it, and there is a case
-asserting BOTH halves: on by default and square again when it is off. The
-picture is scaled up by `coverScale` while it turns, because rotating a
-rectangle inside its own frame exposes four empty corners — about 2% of the
-edges at one degree, which the copy also states rather than hiding.
+tool exports. So it genuinely tilts, and there is a case asserting BOTH halves:
+on by default and square again when it is off. The picture is scaled up by
+`coverScale` while it turns, because rotating a rectangle inside its own frame
+exposes four empty corners — about 2% of the edges at one degree.
+
+**It is a button ON THE FRAME with the other tools, and it carries no
+explanatory copy.** It started as a checkbox with a paragraph under it on the
+settings screen, and both halves of that were wrong: it changes what every pixel
+of the picture looks like, so it belongs with the things that do rather than
+three taps down behind a cog, and *the picture is visibly off true*, which is
+the entire feature — a sentence explaining a thing you can see is the
+caveat-nobody-reads failure in a new place. `aria-pressed` is the testable
+contract, since asserting a background class would be testing Tailwind.
+
+**THE TILT WAS APPLIED TO THE OUTPUT FRAME, SO THE DEFAULT SCREEN DID NOT SHOW
+IT**, and that is the finding worth carrying rather than the fix. It was a
+transform inside `compose`, which draws the OUTPUT — and `draw()` has an
+early-return branch for **crop mode** that paints the whole picture with the
+rectangle over it and never calls `compose` at all. Crop mode is the mode a
+picture OPENS in. Measured on the fixture before anything was changed:
+
+| mode | edge, top row | edge, bottom row | tilted |
+|---|---|---|---|
+| **crop** (the default) | 200 | 200 | **no** |
+| censor | 203 | 197 | yes |
+| text | 203 | 197 | yes |
+
+So the opening screen of the one tool built entirely on *the preview IS the
+export* showed a square picture and exported a tilted one.
+
+**The fix is to tilt the SOURCE, not the output**, which costs no per-view code:
+`source` is the decoded bitmap or a tilted copy at the same size, so `dim`, the
+crop arithmetic and every coordinate downstream are untouched, and crop mode,
+both other stages and the export take their picture from one place and cannot
+disagree about it again. It also makes the crop rectangle honest — it selects a
+fraction of the picture you can SEE rather than of a square one you cannot. The
+alternative, a transform in each draw path, is precisely how they came to
+disagree, and the export path could not express it anyway: `drawFrame` samples a
+sub-rectangle of its source, and a rotated picture is not one until it has been
+drawn. The price is one canvas the size of the image, which is what keeps
+`drawFrame` the single implementation of the crop.
+
+**And MY OWN CASE STEPPED AROUND THE BUG.** It opened with
+`await page.getByTestId('ie-mode-censor').click()` and a comment saying "out of
+crop mode, so the stage is the OUTPUT" — so it measured the tilt in both modes
+where it worked and never in the one where it did not, and 14 of the 15 cases
+passed against the defect. Same family as the `startSec` follow bug two sections
+up, and the sharper statement of it: **a feature checked only where it works is
+not checked**, and a case that navigates away from the default screen before
+measuring has chosen the easy case. It now loops over all three modes, crop
+first, in both the on and off directions, and a second case reads the tilt off
+the EXPORTED bytes. **Verified to fail**: restoring the untilted crop draw
+reddens exactly the mode-loop case and leaves the other fourteen green — which
+is the measurement of how little the old suite was covering.
 
 **The fixture is generated, and it carries two hard cases for two properties.**
 A crisp vertical edge down the middle, because that is the only observable that

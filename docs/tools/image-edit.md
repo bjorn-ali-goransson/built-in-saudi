@@ -36,13 +36,17 @@ PNG / JPEG / WebP, produced entirely on the device.
 - [x] Caption: a box drawn with the same gesture, typed onto the picture, with
       its colour on the box and its size set by the box.
 - [x] Output: format, quality, largest side, never upscaled.
-- [x] Tilt one degree clockwise, **on by default**, with a plain explanation
-      and an off switch.
+- [x] Tilt one degree clockwise, **on by default**, as a shortcut button on the
+      frame with the other tools — no explanatory copy, because the picture is
+      visibly off true and that is the whole feature. Applied to the SOURCE, so
+      every mode and the export show it from one place.
 - [x] HEIC via `decodeImage`; no `accept` on the input and no MIME gate; a bad
       pick says why (#225, #226).
 
 ## Acceptance criteria
 - The preview IS the export: one `compose` call for the stage and the file.
+- The tilt shows in EVERY mode, crop included — crop mode draws the whole
+  picture and does not call `compose`, which is how it missed the tilt once.
 - A censor survives into the downloaded picture, measured on the file.
 - The download is thrown away the moment anything under it changes.
 - The crop segments are not mirrored in Arabic.
