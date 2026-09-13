@@ -68,7 +68,7 @@ function coverScale(w: number, h: number, angle: number): number {
 const STR = {
   en: {
     heroTitle: 'Edit a picture without uploading it',
-    heroBody: 'Crop it to the shape a platform wants, hide anything that should not be in it, and put a caption on top — all in your browser, with nothing sent anywhere. The same editor as the video one, for the one frame case.',
+    heroBody: 'Crop it to the shape a platform wants, hide anything that should not be in it, and put a caption on top — all in your browser, with nothing sent anywhere. The same editor as the video one, for the one frame case. It also tilts every picture one degree clockwise: the only feature here nobody asked for, on by default, with a button to turn it off once the novelty wears thin.',
     pick: 'Choose a picture',
     reading: 'Reading the picture…',
     back: 'Back',
@@ -98,7 +98,7 @@ const STR = {
     format: 'Format',
     quality: 'Quality',
     lossless: 'PNG is lossless, so there is no quality to choose. It is bigger.',
-    tilt: `Tilt it ${TILT_DEG}° clockwise`,
+    tilt: `Tilt it ${TILT_DEG}° clockwise — the only correct amount`,
     exportBtn: 'Export',
     download: 'Download',
     errors: {
@@ -107,7 +107,7 @@ const STR = {
   },
   ar: {
     heroTitle: 'حرّر الصورة دون رفعها',
-    heroBody: 'اقتصّها بالشكل الذي تطلبه المنصّة، واحجب ما لا ينبغي أن يظهر فيها، وضع عليها نصًّا — كل ذلك في متصفّحك دون إرسال شيء إلى أي مكان. هو محرّر الفيديو نفسه، لحالة الإطار الواحد.',
+    heroBody: 'اقتصّها بالشكل الذي تطلبه المنصّة، واحجب ما لا ينبغي أن يظهر فيها، وضع عليها نصًّا — كل ذلك في متصفّحك دون إرسال شيء إلى أي مكان. هو محرّر الفيديو نفسه، لحالة الإطار الواحد. وهو يُميل كل صورة درجةً واحدة مع عقارب الساعة: الميزة الوحيدة هنا التي لم يطلبها أحد، مفعَّلة تلقائيًّا، ولها زرّ تُطفئها به متى فترت الطرفة.',
     pick: 'اختر صورة',
     reading: 'جارٍ قراءة الصورة…',
     back: 'رجوع',
@@ -137,7 +137,7 @@ const STR = {
     format: 'الصيغة',
     quality: 'الجودة',
     lossless: 'صيغة PNG بلا فقد، فلا جودة تُختار. وهي أكبر حجمًا.',
-    tilt: `أملها ${arNum(TILT_DEG)}° مع عقارب الساعة`,
+    tilt: `أملها ${arNum(TILT_DEG)}° مع عقارب الساعة — المقدار الصحيح الوحيد`,
     exportBtn: 'تصدير',
     download: 'تنزيل',
     errors: {
