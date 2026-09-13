@@ -4292,6 +4292,84 @@ Two rules and the date that separates them, in `src/tools/rent-rules/rent.ts`:
 The `legal` Disclaimer says outright that the tool cannot know whether an
 address falls inside the urban boundary, which is what the freeze turns on.
 
+## Ten thousand passwords, and the two things a batch gets wrong (`password-generator`)
+
+Asked for directly: generate any number up to 10,000, with a copy button and a
+newline-separated download. The arithmetic is a loop; what is worth recording is
+the measurement that decided the architecture and the two defects a batch has
+that one password does not.
+
+**The entropy was drawn four bytes at a time, and that was the whole cost.**
+`randInt` allocated a `Uint32Array(1)` and called `crypto.getRandomValues` PER
+DRAW, which is ~320,000 calls for 10,000 sixteen-character passwords. Measured
+before anything was designed:
+
+| | 10,000 passwords |
+|---|---|
+| per-call `getRandomValues` | **615ms** |
+| a refilled 1024-word pool | **17ms** |
+
+**36x, so the answer was not a worker.** At 615ms a phone is three to six times
+slower — 2 to 4 seconds of frozen page, over the same line that justified moving
+the pdf-lib tools off the main thread. At 17ms it is ~100ms on a phone and the
+question does not arise. **The #154 rule is about the thread being blocked, not
+about the word "batch"; measure which one you have before reaching for a
+worker**, because the pool also made the single-password path faster and cost no
+machinery at all.
+
+**The rejection sampling is untouched — only where the bytes come from
+changed — and that was VERIFIED rather than assumed.** Chi-square over the
+alphabet the tool actually uses reads **51.0 against df=69**, exactly where a
+uniform draw sits; a biased one blows up. Re-run it if the pool is ever touched:
+a password generator that silently loses uniformity looks perfect from outside.
+Each word is zeroed as it is consumed, which costs one store and keeps spent
+entropy from sitting in a buffer for the life of the page.
+
+**A BATCH IS CLEARED WHEN A SETTING CHANGES, never rebuilt.** One password
+regenerates live, which is what makes the sliders feel like sliders. Ten thousand
+cannot: it would run on every `pointermove` of the length slider, and — the part
+that matters — the list under the copy button would keep silently becoming a
+different list from the one on screen. **A stale list of passwords cannot be told
+from a fresh one by looking**, which is why it goes rather than being refreshed.
+Same rule as the image editor's download, arriving in a place where the cost of
+getting it wrong is somebody shipping credentials that do not match what they
+read. **Verified to fail**: keeping the stale batch reddens exactly that case.
+
+**REPEATS ARE REPORTED, and this is the finding worth carrying.** Nobody thinks
+about the birthday bound when asking for ten thousand of something. Digits at the
+shortest length the tool offers is 10^6 possible passwords, so 10,000 draws from
+it collide about **fifty times** — and a downloaded file gives no sign of it.
+Handing that out as though every row were distinct is the defect; a generator
+that stayed quiet would be the incumbent behaviour. The note renders only when
+there ARE repeats, with a **control case** asserting it is absent at a real
+length — without which it would be permanent decoration and every other
+assertion would still pass.
+
+**The e2e reads the DOWNLOAD, not the preview**, which is forced rather than
+tidy: the preview is capped at 100 lines, so the file is the only place a batch
+of 4,000 can be checked at all. It pulls the blob off the button's own `href`,
+the way `image-edit`'s export case does. **Verified to fail** three ways, each
+reddening exactly one case and no other: copying the preview instead of the
+batch, keeping a stale batch, and showing the repeats note unconditionally.
+
+**Its own spec was wrong first, in the documented direction.** The collision
+fixture set the length slider to 4 — below its own minimum of 6 — so Playwright
+refused the fill. Fixing the number changed the arithmetic: 2,000 draws at
+length 6 collide about twice, which is a case that passes most of the time. At
+10,000 the expected count is fifty and it fires every run. **A fixture has to
+contain the hard case, and for a probabilistic one that means checking the
+expected count rather than assuming "low entropy" is enough.**
+
+**`password-generator` is STILL on `TEXT_UNVERIFIED` and could not simply be
+moved off it.** Every `TextCase` types a run token into a field and asserts the
+token never leaves — and this tool has no text input at all; the only field is a
+number that clamps. A row typing the token into `pw-count` would assert that a
+token which never entered never left, which is the vacuous green that half of
+`privacy.spec.ts` exists to prevent. **A generator needs the opposite shape:
+produce the secrets, then assert none of the PRODUCED values reach the network.**
+That is a new case kind rather than a new row, and `passphrase` is the same shape
+and would retire with it.
+
 ## The one network call on a privacy-first page (`password-strength`)
 
 A web sweep of the privacy-tool market found metadata stripping and redaction

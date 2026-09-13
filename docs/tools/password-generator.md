@@ -16,8 +16,10 @@ Ours is provably local — a real trust win.
 - As a user, I want to copy it in one click and see a strength estimate.
 
 ## Inputs → Outputs
-Length (4–128), toggles (lowercase/UPPERCASE/digits/symbols), "avoid ambiguous
-chars", exclude-similar → generated password + strength meter.
+Length (6–64), toggles (lowercase/UPPERCASE/digits/symbols), "avoid ambiguous
+chars", exclude-similar, **how many (1–10,000)** → one password + strength
+meter, or a batch with a capped preview, Copy all and a newline-separated
+`.txt`.
 
 ## Requirements (v1)
 - [ ] Cryptographically secure randomness (`crypto.getRandomValues`, never `Math.random`).
@@ -26,11 +28,22 @@ chars", exclude-similar → generated password + strength meter.
 - [ ] Strength estimate (entropy bits → Weak/Fair/Strong/Excellent).
 - [ ] Copy button with transient "Copied!" feedback; regenerate button.
 - [ ] Nothing logged, stored, or sent.
+- [x] **Up to 10,000 at once**, as a newline-separated download and a Copy all.
+      The preview is capped at 100 lines; the file carries the batch.
+- [x] **A batch is CLEARED when a setting changes**, never rebuilt — a stale
+      list of passwords cannot be told from a fresh one by looking.
+- [x] **Repeats in a batch are reported.** Digits at length 6 is 10^6 possible
+      passwords, so 10,000 draws collide about fifty times by the birthday
+      bound; handing that out as though every row were distinct is the defect.
 
 ## Acceptance criteria
 - Disabling all character sets is prevented (at least one stays on).
 - Length slider reflects instantly; entropy updates live.
 - Generated output uses only the enabled sets and respects exclusions.
+- The batch is read off the DOWNLOAD, not the preview: the preview is capped,
+  so it is the only place the whole thing can be checked.
+- The repeats note has a CONTROL case asserting it is absent at a real length,
+  without which it would be permanent decoration.
 
 ## Out of scope (v1)
 - Saving/vaulting passwords; breach-check API lookups.
