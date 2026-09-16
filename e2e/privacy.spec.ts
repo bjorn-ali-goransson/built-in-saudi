@@ -243,16 +243,6 @@ ${TOKEN}
   // size without touching twenty product files.
   { id: 'image-compressor', testid: 'imgcomp-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'image-cropper', testid: 'crop-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  // Two intake paths, and the guard drives BOTH: the tool takes a second image
-  // to place on the first, and a path that touches the reader's bytes without
-  // being watched is exactly the gap this file exists to close.
-  { id: 'image-rearrange', testid: 'rearr-drop', within: true, name: 'shot.png', mime: 'image/png',
-    make: () => pngWithToken(TOKEN),
-    act: async (page) => {
-      await page.getByTestId('rearr-add-file')
-        .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: pngWithToken(TOKEN) })
-      await expect(page.getByTestId('rearr-count')).toContainText('Pieces: 1')
-    } },
   { id: 'image-redact', testid: 'redact-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'images-to-pdf', testid: 'i2p-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'image-to-ascii', testid: 'ascii-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },

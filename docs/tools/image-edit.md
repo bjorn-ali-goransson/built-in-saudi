@@ -12,6 +12,12 @@ trip through a file. `video-edit` had already been rebuilt into one full-screen
 editor where all of it is one session on one stage, and a still picture is that
 same product with less machinery: no timeline, no join, no encoder.
 
+`image-rearrange` was folded in here in September 2026 — the scissors that cut
+a piece out of the picture and the plus that lays another picture on it were
+the whole of that tool, and they are two more things you can do in the same
+session as the crop, the boxes and the captions. `/apps/image-rearrange`
+redirects here rather than to the catalogue: the job moved, it did not go away.
+
 ## User stories
 - As someone posting a photo, I want to crop it to the shape a platform wants
   and see what that costs before I commit.

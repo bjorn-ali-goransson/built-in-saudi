@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **240 tools are live.** This
+The backlog, and an honest account of what exists. **239 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,7 +25,7 @@ registry disagree.
 |---|---|---|
 | Saudi / Local | 27 | iqama fees and expiry, GOSI and end of service, exit/re-entry, sponsorship transfer, retirement age, VAT registration and the **e-invoicing waves**, **RETT**, rent rules, **traffic fines**, vehicle and commercial-register renewal, import duty, IBAN, plates, short address, phone, weather |
 | Developer | 26 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers, **AI token counter** |
-| Images | 25 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator, **document-scan correction**, **print sizing**, **stills from video**, **the image editor** |
+| Images | 24 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator, **document-scan correction**, **print sizing**, **stills from video**, **the image editor** |
 | Text | 24 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, on-device **translator, summariser and language detector**, **password strength with the k-anonymous breach check**, to-do and kanban |
 | Generators | 22 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, **word searches**, Arabic handwriting sheets, .ics events, seating charts, attendance sheets, **school timetables** |
 | PDF | 16 | merge/split/compress/sign/fill/edit, →images, →text, **→Word**, booklet imposition, stamping, page organiser, true redaction, OCR, **diffing** |

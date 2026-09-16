@@ -32,6 +32,23 @@ export const imageEditTool: Tool = {
     'محرر الصور', 'تحرير الصور', 'تعديل الصور', 'تحرير صورة', 'تعديل صورة',
     'الكتابة على الصور', 'إضافة نص على صورة', 'نص على الصورة',
     'صورة للنشر', 'مقاس المنشور', 'ستوري', 'إنستغرام',
+    // FROM `image-rearrange`, folded in here with the scissors and the plus.
+    // Its own name first, because somebody who used it will type it — and then
+    // only the phrases that say what this tool DOES. The bare 'crop', 'move',
+    // 'rotate', 'cut' and 'screenshot' it also carried are deliberately left
+    // behind: `image-cropper`, `image-rotate` and `screenshot-frame` own those,
+    // and a merged tool inheriting a generic word is the same defect as a new
+    // tool capturing one. **A MERGE IS NOT A LICENCE TO INHERIT THE LIST.**
+    //
+    // It was `cut out part of an image` for one measurement, and that cost
+    // held-out #2 the same row the note above records: `blur part of a picture`
+    // came HERE, because the phrase carries the generic word "part" — which is
+    // the identical entry `video-edit` had to drop, in the identical query.
+    // `piece` instead, and every one of the nine benches is byte-identical to
+    // the baseline taken before the merge.
+    'rearrange', 'rearrange image', 'collage',
+    'cut a piece out of an image', 'put one image on another', 'place an image on a photo',
+    'إعادة ترتيب الصورة', 'ترتيب الصورة', 'قص جزء من الصورة', 'ضع صورة فوق صورة',
   ],
   // NOT beta, on this repo's own rule: the badge means a figure can go stale
   // WITHOUT anyone touching the code. A crop percentage is arithmetic and an

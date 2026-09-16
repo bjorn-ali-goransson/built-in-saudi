@@ -51,6 +51,13 @@ export const router = createBrowserRouter([
       // Renamed tool: /apps/cv-generator → /apps/ats-cv-optimizer (static, so it
       // outranks the :toolId route below).
       { path: 'apps/cv-generator', element: <RenamedToolRedirect to="ats-cv-optimizer" /> },
+      // MERGED, not withdrawn: `image-rearrange` cut pieces out of a picture
+      // and laid other pictures on it, and `image-edit` does both — the
+      // scissors and the plus — in one session with the crop, the boxes and the
+      // captions. So its links go to the tool that took the job over rather
+      // than to the catalogue: a merge is a rename of where the capability
+      // lives. September 2026.
+      { path: 'apps/image-rearrange', element: <RenamedToolRedirect to="image-edit" /> },
       // Both retirements below are the same rule: every app here must be halal,
       // so a tool whose SUBJECT is impermissible does not belong in the
       // catalogue at all. See docs/ROADMAP.md "Out of scope" — and note these

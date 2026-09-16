@@ -1,4 +1,5 @@
-// A tool that was deliberately WITHDRAWN must not come back by accident.
+// A tool must not take an `apps/<id>` the router already answers — because it
+// was deliberately WITHDRAWN, or because that id was renamed or merged away.
 //
 // `docs/ROADMAP.md` has excluded loan / EMI / interest calculators for Shariah
 // reasons since the beginning. One was built anyway in July 2026, sat live for
@@ -35,10 +36,19 @@ const router = readFileSync(path.join(ROOT, 'src/router.tsx'), 'utf8')
 const retired = [...router.matchAll(/path: 'apps\/([a-z0-9-]+)', element: <RetiredToolRedirect/g)]
   .map((m) => m[1])
 
+// AND a renamed or MERGED id is the same trap one step over. A static
+// `apps/<id>` route outranks `apps/:toolId` whatever the reason it is there, so
+// a tool defining that id would render the redirect and never itself — exactly
+// how the rebuilt loan calculator finally announced itself. `image-rearrange`
+// was folded into `image-edit` in September 2026 and points at it; the rule it
+// breaks is not a subject rule, it is that the route is taken.
+const renamed = [...router.matchAll(/path: 'apps\/([a-z0-9-]+)', element: <RenamedToolRedirect/g)]
+  .map((m) => m[1])
+
 // A regex over source is a guess, so it is CHECKED — otherwise every assertion
 // below is vacuously true and this file is decoration.
-if (!retired.length) {
-  console.error('check-retired: found no retired routes in router.tsx — the sweep is broken')
+if (!retired.length || !renamed.length) {
+  console.error('check-retired: found no retired/renamed routes in router.tsx — the sweep is broken')
   process.exit(1)
 }
 
@@ -55,11 +65,19 @@ for (const dir of readdirSync(path.join(ROOT, 'src/tools'))) {
       + `    change it in the roadmap and delete the RetiredToolRedirect first.`,
     )
   }
+  if (id && renamed.includes(id)) {
+    problems.push(
+      `src/tools/${dir}/ defines '${id}', which is a REDIRECTED route in router.tsx.\n`
+      + `    That id was renamed or merged into another tool, and the static route\n`
+      + `    outranks apps/:toolId — so this tool would never render. Pick another\n`
+      + `    id, or delete the RenamedToolRedirect if the move is being undone.`,
+    )
+  }
 }
 
 if (problems.length) {
-  console.error('check-retired: a withdrawn tool has come back:')
+  console.error('check-retired: a tool has taken an id the router already answers:')
   for (const p of problems) console.error(`  ${p}`)
   process.exit(1)
 }
-console.log(`check-retired: ${retired.length} withdrawn tool(s) still withdrawn.`)
+console.log(`check-retired: ${retired.length} withdrawn and ${renamed.length} redirected id(s) still free.`)

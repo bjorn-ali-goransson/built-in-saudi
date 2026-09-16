@@ -3944,12 +3944,57 @@ bytes, and a path nobody watches is the gap that guard exists to close. The
 added file goes through `decodeImage`/`whyUnreadable` like the first, so a HEIC
 laid on a PNG works.
 
-**The keywords are deliberately UNCHANGED for now.** `image-rearrange` is still
-live, and giving this tool its vocabulary while both exist is a keyword fight
-between two tools that answer the same query. That move belongs with the
-retirement, not before it.
+**AND THEN `image-rearrange` WAS RETIRED INTO IT**, which is what the keywords
+were being held back for: giving this tool that vocabulary while both were live
+would have been a keyword fight between two tools answering the same query.
 
-## A second picture, and the one property that separates it (`image-rearrange`)
+**A MERGE IS A RENAME OF WHERE A CAPABILITY LIVES, NOT A WITHDRAWAL, and the
+difference is testable.** The two withdrawals this site has made were for
+subject — a tool that should not exist — so their links go to the CATALOGUE,
+and `RetiredToolRedirect` is what `check-retired.mjs` reads. Here the job did
+not go away, it moved: `/apps/image-rearrange` is a `RenamedToolRedirect` to
+`image-edit`, the same shape as `cv-generator → ats-cv-optimizer`. There is a
+case for each, distinguished by **where the old link lands**, which is the only
+thing that tells a reader which kind of thing happened.
+
+**`check-retired.mjs` sweeps the renamed routes too now, and that closes a gap
+the loan calculator opened.** Its subject test does not apply to a merge — but
+its MECHANICAL one does, and is the half that actually bit: a static
+`apps/<id>` route outranks `apps/:toolId`, so a tool defining a redirected id
+would render the redirect and never itself, silently, exactly as the rebuilt
+loan calculator did. The gate names either kind now, with its own
+"the sweep found nothing" check extended to both lists so it cannot go
+vacuous.
+
+**The keywords do NOT come across wholesale.** `image-rearrange` carried bare
+`crop`, `move`, `rotate`, `cut` and `screenshot`, and `image-cropper`,
+`image-rotate` and `screenshot-frame` own those — **a merge is not a licence to
+inherit the list**, for the same reason a new tool may not capture a generic
+query. What came over is the old NAME (somebody who used it will type it),
+`collage`, and the phrases that say what this tool does. One of them,
+`cut out part of an image`, cost held-out #2 a row on the first measurement:
+`blur part of a picture` came here over `image-redact`, on the generic word
+**"part"** — the identical entry `video-edit` had to drop, in the identical
+query. With `piece` instead, **all nine benches are byte-identical to the
+baseline taken before the merge**, and own names stay 100% at 477/478.
+
+**The checklist ran backwards and every step was checked rather than
+remembered:** the folder, the registry import and entry, the `added.ts` date,
+the `seo.ts` entry and both sitemap URLs; the e2e block deleted and replaced by
+the two redirect cases; the `privacy.spec.ts` row dropped, with
+`check-privacy-coverage` re-run to confirm the file count fell rather than the
+proof; `deadexports` at **0 dead**, `inbound` at **0 orphans**, `relatedcheck`
+at **0 dead ends** — a tool leaving changes the graph exactly as one arriving
+does. And `check-roadmap-counts` failed the build until the header and the
+Images row came down by one, which is the gate doing its job in the removal
+direction for the first time.
+
+## A second picture, and the one property that separates it (`image-rearrange`, retired)
+
+**Kept because the findings outlived the tool** — the hole, the fit-on-arrival,
+the handle size and the hit-test rules are all in `image-edit` now, and the
+argument for each of them is here. The tool itself was folded in and its route
+redirects.
 
 The tool could cut a rectangle out of the open picture and slide it about, and
 that was all it could ever hold — every piece came from the one bitmap. Adding

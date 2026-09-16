@@ -149,7 +149,6 @@ export const ADDED: Record<string, string> = {
   'pdf-to-images': '2026-08-04',
   'qr-reader': '2026-08-04',
   'hajj-umrah': '2026-07-30',
-  'image-rearrange': '2026-07-28',
   'todo': '2026-07-26',
   'currency-converter': '2026-07-20',
   'svg-editor': '2026-07-20',
