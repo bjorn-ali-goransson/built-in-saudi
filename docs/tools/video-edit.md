@@ -102,6 +102,18 @@ and a *second* player for the result. Five decisions:
   rectangle cannot be judged without the thing it is being taken out of —
   showing the result while cropping makes the picture appear to zoom and puts
   nothing on screen to say what is outside it.
+- **A picture can be laid on the clip** — a logo, a watermark, a still. It
+  shares `text` mode with captions rather than taking a seventh dock button:
+  the dock is full at six (270px of buttons against a 320px stage, and a seventh
+  covers Back's own centre), and both are rectangles you lay on top. The button
+  that adds one is on the **settings screen**, above the clip list — the bar
+  along the bottom of the frame is what a caption is DRAWN on, so a permanent
+  button standing in it is in the way of the gesture. It arrives CENTRED,
+  because every corner of the stage belongs to a control. By the time it reaches
+  the worker it is the SAME type as a caption — a bitmap, a rectangle in output
+  fractions and a span — so one `drawLayers` draws both. It goes on BEFORE the
+  censors, because it is part of the picture: a box drawn over a logo pixelates
+  the logo.
 - **A caption is a drawn RECTANGLE, the same gesture as a censor.** The text is
   centred in it and wraps to its width, so the shape you drew is the shape you
   get; clicking one opens its editor. It used to be a point you dropped, with
@@ -170,6 +182,16 @@ progressive MP4.
   opens.
 - `evals/mp4guard.mjs` re-parses the muxer's output with mp4box and gets every
   sample back byte for byte.
+- An added picture is in the DECODED EXPORT, read off the picture's own
+  rectangle and compared against **the same export made without it** — a fixed
+  sample of the exported frame cannot tell the good reading from the bad one,
+  because the output is a crop and the corner it lands on may already be that
+  colour.
+- The tool dock never begins left of Back's right edge at a 300px viewport,
+  with a hit test on Back itself beside it. The chrome is laid out against the
+  SHELL rather than against the picture, so the screen is the only thing that
+  can be too small for it — inside the stage wrapper a 9:16 crop gave it 134px
+  and it covered the picture.
 
 ## Known limits (stated in the UI, not implied away)
 - ~~**A censor box does not follow anything.**~~ Gone. The clip is measured in

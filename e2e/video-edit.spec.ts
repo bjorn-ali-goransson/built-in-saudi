@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { deflateSync, crc32 } from 'node:zlib'
 
 // The same 6-second 320×240 H.264/AAC fixture the trimmer uses — a real file
 // with a keyframe every second, so the decode side has something honest to
@@ -277,6 +278,39 @@ test('the editor takes the whole screen, chrome included', async ({ page }) => {
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden')
 })
 
+test('ON A NARROW SCREEN THE TOOL DOCK DOES NOT TAKE THE WAY OUT', async ({ page }) => {
+  // The chrome is laid out against the SCREEN, so the screen is what can be
+  // too small for it: six buttons are 260px and Back's corner is 48 more. At
+  // 300px the row would run straight under Back, which is the ONLY way out of
+  // a full-screen editor — so it wraps, and leaves that corner alone.
+  await page.setViewportSize({ width: 300, height: 600 })
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // A hit test rather than an assertion about a class: what matters is whether
+  // the button can be pressed, and only `elementFromPoint` answers that.
+  const hit = await page.evaluate(() => {
+    const b = document.querySelector('[data-testid=ve-back]')
+    if (!b) return 'no back button'
+    const r = b.getBoundingClientRect()
+    let el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+    while (el) {
+      const id = el.getAttribute('data-testid')
+      if (id) return id
+      el = el.parentElement
+    }
+    return 'nothing'
+  })
+  expect(hit, `the dock is covering Back — ${hit} is on top of it`).toBe('ve-back')
+
+  // And it never begins left of Back at all, which is the property the cap
+  // states and the hit test only samples one point of.
+  const tools = (await page.getByTestId('ve-tools').boundingBox())!
+  const back = (await page.getByTestId('ve-back').boundingBox())!
+  expect(tools.x).toBeGreaterThanOrEqual(back.x + back.width - 1)
+})
+
 test('leaving asks first, and only then throws the session away', async ({ page }) => {
   await load(page)
   test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
@@ -316,6 +350,10 @@ test('several clips are picked at once and joined in that order', async ({ page 
   await openClips(page)
   await expect(page.getByTestId('ve-clip-0')).toContainText('one.mp4')
   await expect(page.getByTestId('ve-clip-1')).toContainText('two.mp4')
+  // `ve-add` was the mid-edit add-a-clip button, and it is gone: the join order
+  // is decided at the pick. The picture button is `ve-add-picture`, deliberately
+  // not sharing this name — a prefix is not an identifier, and this case exists
+  // to say a control is ABSENT.
   await expect(page.getByTestId('ve-add')).toHaveCount(0)
 })
 
@@ -1819,4 +1857,248 @@ test('the mute button says when a clip has no sound at all', async ({ page }) =>
   // hard-wired to "none" would pass the case below.
   await expect(page.getByTestId('ve-mute')).toHaveAttribute('data-sound', 'on')
   await expect(page.getByTestId('ve-mute')).toBeEnabled()
+})
+
+// ---------------------------------------------------------------------------
+// A PICTURE LAID ON THE VIDEO — a logo, a watermark, a still.
+//
+// By the time it reaches the worker it is the SAME type as a caption: a bitmap,
+// a rectangle in fractions of the output, and a span. So there is one draw
+// function for both, and the only thing that differs is where the bitmap came
+// from. These cases read the ENCODED FILE rather than the stage, because what
+// is claimed is that the picture is in the video somebody else opens.
+// ---------------------------------------------------------------------------
+
+/** A solid picture of a known colour. Magenta, which the fixture has nowhere:
+ *  measured, its top-left is cyan (36, 180, 180) and its top-right orange
+ *  (164, 91, 15), each with about thirty distinct colours in the sampled box. */
+function solidPng(w: number, h: number, rgb: [number, number, number]): Buffer {
+  const chunk = (t: string, d: Buffer) => {
+    const l = Buffer.alloc(4); l.writeUInt32BE(d.length, 0)
+    const b = Buffer.concat([Buffer.from(t, 'latin1'), d])
+    const c = Buffer.alloc(4); c.writeUInt32BE(crc32(b) >>> 0, 0)
+    return Buffer.concat([l, b, c])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2
+  const raw = Buffer.alloc(h * (w * 3 + 1))
+  for (let y = 0; y < h; y++) {
+    const r = y * (w * 3 + 1)
+    raw[r] = 0
+    for (let x = 0; x < w; x++) {
+      const o = r + 1 + x * 3
+      raw[o] = rgb[0]; raw[o + 1] = rgb[1]; raw[o + 2] = rgb[2]
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ])
+}
+
+/**
+ * Is a region of the stage the added picture's colour?
+ *
+ * A COLOUR PREDICATE rather than a comparison against an earlier reading, and
+ * that is forced: the fixture MOVES, so the corner's brightness is a different
+ * number from one frame to the next and "back to what it was" cannot be pinned
+ * to half a unit. Magenta is red and blue high with green flat, and the fixture
+ * is cyan here — measured (36, 180, 180) — so the two cannot be confused.
+ */
+function isMagenta(page: Page, r: [number, number, number, number]) {
+  return page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement, box) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return false
+    const x = Math.round(box[0] * c.width), y = Math.round(box[1] * c.height)
+    const w = Math.max(1, Math.round((box[2] - box[0]) * c.width))
+    const h = Math.max(1, Math.round((box[3] - box[1]) * c.height))
+    const px = ctx.getImageData(x, y, w, h).data
+    let r0 = 0, g0 = 0, b0 = 0
+    for (let i = 0; i < px.length; i += 4) { r0 += px[i]; g0 += px[i + 1]; b0 += px[i + 2] }
+    const n = px.length / 4
+    return r0 / n > 140 && g0 / n < 110 && b0 / n > 140
+  }, r)
+}
+
+async function addPicture(page: Page) {
+  // A picture shares `text` mode with captions — both are rectangles laid on
+  // top, and the dock has no room for a seventh button.
+  if (await page.getByTestId('ve-mode-text').getAttribute('aria-pressed') !== 'true') {
+    await page.getByTestId('ve-mode-text').click()
+  }
+  await page.getByTestId('ve-add-file')
+    .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: solidPng(64, 64, [255, 0, 255]) })
+  await expect(page.getByTestId('ve-picture-0')).toBeVisible({ timeout: 20_000 })
+}
+
+/** Drag an element by its testid to a fraction of the stage. */
+async function dragTo(page: Page, testid: string, to: [number, number]) {
+  const stage = (await page.getByTestId('ve-stage').boundingBox())!
+  const h = (await page.getByTestId(testid).boundingBox())!
+  // A control behind another control is not a control, and only a hit test says
+  // so — the editor's chrome floats over the stage, so a grab aimed at a corner
+  // can land on a button and the failure reads as an ignored gesture.
+  const hit = await page.evaluate(([x, y]) => {
+    let el = document.elementFromPoint(x, y)
+    while (el) {
+      const id = el.getAttribute('data-testid')
+      if (id) return id
+      el = el.parentElement
+    }
+    return 'nothing'
+  }, [h.x + h.width / 2, h.y + h.height / 2])
+  expect(hit, `the grab would land on ${hit} rather than on ${testid}`).toBe(testid)
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(stage.x + stage.width * to[0], stage.y + stage.height * to[1], { steps: 8 })
+  await page.mouse.up()
+}
+
+/** Where an element sits, in fractions of the stage — the same space the pixel
+ *  readers use. Read rather than assumed: a picture's height as a FRACTION
+ *  depends on the output aspect, so a hard-coded sample box is a case that
+ *  passes or fails on the viewport. */
+async function rectOf(page: Page, testid: string): Promise<[number, number, number, number]> {
+  const stage = (await page.getByTestId('ve-stage').boundingBox())!
+  const b = (await page.getByTestId(testid).boundingBox())!
+  const x = (b.x - stage.x) / stage.width
+  const y = (b.y - stage.y) / stage.height
+  const w = b.width / stage.width
+  const h = b.height / stage.height
+  // The middle half of it, clear of the border the handle draws.
+  return [x + w * 0.25, y + h * 0.25, x + w * 0.75, y + h * 0.75]
+}
+
+test('A PICTURE CAN BE LAID ON THE VIDEO, and moved', async ({ page }) => {
+  await load(page)
+  await pick(page)
+
+  await addPicture(page)
+  // Sampled INSIDE the picture wherever it actually landed. It arrives CENTRED,
+  // because every corner of this stage belongs to a control: Back at the
+  // top-left, the dock at the top-right, the bar along the bottom. All three
+  // were found by a hit test, one after another.
+  const WHERE = await rectOf(page, 've-picture-0')
+  await expect.poll(() => isMagenta(page, WHERE), { timeout: 15_000 }).toBe(true)
+
+  // Moved, and the place it left goes back to being the video — which is the
+  // half that says it MOVED rather than that a second one appeared.
+  // Far enough that the two positions do not overlap: it starts centred, so a
+  // nudge would leave the sampled box still inside it and the case would be
+  // asserting nothing.
+  await dragTo(page, 've-picture-0', [0.75, 0.72])
+  await expect.poll(() => isMagenta(page, WHERE), { timeout: 15_000 }).toBe(false)
+  await expect.poll(async () => isMagenta(page, await rectOf(page, 've-picture-0')), { timeout: 15_000 })
+    .toBe(true)
+})
+
+test('…and taken off again, which puts the picture back', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await addPicture(page)
+  const WHERE = await rectOf(page, 've-picture-0')
+  await expect.poll(() => isMagenta(page, WHERE), { timeout: 15_000 }).toBe(true)
+
+  // Deleted where it landed, in the corner clear of the chrome — the bin sits
+  // on the box's own top-right corner, and anywhere near the top that corner is
+  // under the tool dock, which is a delete button nobody can press.
+  //
+  // The assertion is that the PICTURE comes back, not that a handle vanished: a
+  // delete that only removed the handle would leave the logo burnt into every
+  // frame with nothing left to reach it by.
+  await page.getByTestId('ve-picture-0-delete').click()
+  await expect(page.getByTestId('ve-picture-0')).toHaveCount(0)
+  await expect.poll(() => isMagenta(page, WHERE), { timeout: 15_000 }).toBe(false)
+})
+
+/** Mean colour of a box (in output fractions) of the EXPORTED file, one second in. */
+async function exportedMean(page: Page, box: [number, number, number, number]): Promise<number[]> {
+  const href = await page.getByTestId('ve-download').getAttribute('href')
+  expect(href).toMatch(/^blob:/)
+  return page.evaluate(([url, x0, y0, x1, y1]) => new Promise<number[]>((resolve, reject) => {
+    const v = document.createElement('video')
+    v.preload = 'auto'
+    const read = () => {
+      const c = document.createElement('canvas')
+      c.width = v.videoWidth; c.height = v.videoHeight
+      const ctx = c.getContext('2d')
+      if (!ctx) return reject(new Error('no ctx'))
+      ctx.drawImage(v, 0, 0)
+      const px = ctx.getImageData(
+        Math.round(c.width * Number(x0)), Math.round(c.height * Number(y0)),
+        Math.max(1, Math.round(c.width * (Number(x1) - Number(x0)))),
+        Math.max(1, Math.round(c.height * (Number(y1) - Number(y0)))),
+      ).data
+      let r = 0, g = 0, b = 0
+      for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2] }
+      const n = px.length / 4
+      resolve([Math.round(r / n), Math.round(g / n), Math.round(b / n)])
+    }
+    v.addEventListener('error', () => reject(new Error('the exported file would not decode')), { once: true })
+    v.addEventListener('seeked', read, { once: true })
+    v.addEventListener('loadeddata', () => { v.currentTime = 1 }, { once: true })
+    setTimeout(() => reject(new Error('timeout decoding the exported file')), 30_000)
+    v.src = String(url)
+  }), [href as string, box[0], box[1], box[2], box[3]] as const)
+}
+
+async function exportIt(page: Page) {
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+}
+
+test('the added picture is ENCODED INTO the file, not just drawn on the stage', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+
+  // THE BASELINE IS THE SAME EXPORT WITHOUT THE PICTURE, and it is not
+  // decoration — the first version of this case sampled a fixed corner and
+  // asserted "magenta", and it passed against a worker that drew no overlay at
+  // all. The output is a CROP of the fixture, so a fraction of the exported
+  // frame is not the part of the fixture it looks like, and that corner was
+  // already magenta. A check that cannot tell the good reading from the bad one
+  // is vacuously green.
+  //
+  // So the box is read off the picture itself, and the same box is read from an
+  // export made without it. Nothing here assumes anything about the fixture.
+  await addPicture(page)
+  const WHERE = await rectOf(page, 've-picture-0')
+  await page.getByTestId('ve-picture-0-delete').click()
+  await expect(page.getByTestId('ve-picture-0')).toHaveCount(0)
+
+  await exportIt(page)
+  const before = await exportedMean(page, WHERE)
+
+  await addPicture(page)
+  await exportIt(page)
+  const after = await exportedMean(page, WHERE)
+
+  // Magenta: red and blue high, green flat.
+  expect(after[0], `the added picture is missing from the encoded file (${after})`).toBeGreaterThan(140)
+  expect(after[1]).toBeLessThan(110)
+  expect(after[2]).toBeGreaterThan(140)
+  // And it CHANGED, in the same box of the same export at the same second — the
+  // half that says the picture put it there rather than the fixture.
+  const moved = Math.abs(after[0] - before[0]) + Math.abs(after[1] - before[1]) + Math.abs(after[2] - before[2])
+  expect(moved, `the encoded frame is unchanged (${before} then ${after})`).toBeGreaterThan(60)
+})
+
+test('THE DOWNLOAD GOES when a picture is added under it', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  // From text mode, so the crop chips are not docked over the export button —
+  // the same interception `elementFromPoint` names elsewhere in this suite.
+  await page.getByTestId('ve-mode-text').click()
+  await exportIt(page)
+
+  // The green download is a claim that the file behind it is the video in front
+  // of you. Adding a picture stops it being — and `overlays` was missing from
+  // the dependency list of the effect that exists to say so, so the button went
+  // on offering the previous version of somebody's own clip. Found because the
+  // export case above could not press an export button that was no longer there.
+  await addPicture(page)
+  await expect(page.getByTestId('ve-download')).toHaveCount(0)
+  await expect(page.getByTestId('ve-export')).toBeVisible()
 })

@@ -296,12 +296,35 @@ export default function ImageEditTool() {
   const drawingRef = useRef<{ id: string; mode: CensorMode; x: number; y: number; w: number; h: number } | null>(null)
   const drawingTextRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
   const drawingCutRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
+  /**
+   * How tall the tool dock actually is, so the shapes below it clear it.
+   *
+   * It used to be a hard-coded `top-14`, which assumed the dock was one row of
+   * buttons. It is not any more — it WRAPS, because eight buttons are wider
+   * than a phone — and the chips then sat under the dock's second row, which
+   * `elementFromPoint` reports as the chips intercepting clicks meant for the
+   * export button. Measured rather than guessed: the number depends on how many
+   * buttons there are and how wide the picture is, and both change.
+   */
+  const dockRef = useRef<HTMLDivElement>(null)
+  const [dockH, setDockH] = useState(40)
+
   const addRef = useRef<HTMLInputElement>(null)
   const bitmaps = useRef<Map<string, { bitmap: ImageBitmap; rect: Rect }>>(new Map())
   const [tick, setTick] = useState(0)
   const repaint = useCallback(() => setTick((n) => n + 1), [])
 
   const editing = !!img
+
+  useEffect(() => {
+    const el = dockRef.current
+    if (!el) return
+    const measure = () => setDockH(el.offsetHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
 
   useEffect(() => () => { setWorkInProgress(WIP, false) }, [])
   useEffect(() => { setWorkInProgress(WIP, !!img) }, [img])
@@ -1317,145 +1340,154 @@ export default function ImageEditTool() {
                   className="absolute border-2 border-green-400 border-dashed pointer-events-none" />
               )}
             </div>
+          </div>
 
-            {/* Back, over the top-left. There is no site chrome to leave by, so
-                this is the only way out — and it CONFIRMS, because everything
-                here is unsaved by construction. */}
-            <button type="button" data-testid="ie-back" onClick={() => setConfirmBack(true)}
-              title={s.back} aria-label={s.back}
-              className="absolute top-2 start-2 grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
-              <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
+          {/* THE EDITOR'S CHROME IS ON THE SHELL, NOT ON THE PICTURE. It lived
+              inside the stage wrapper, which shrink-wraps the canvas — and the
+              canvas is the OUTPUT, so a 9:16 crop of a landscape photo is a
+              narrow column and every control was crammed into it. Measured in
+              `video-edit`, where the same arrangement made the eight-button
+              dock 78px wide and 260px TALL, six rows of one button covering the
+              whole picture. The chrome of a full-screen editor belongs to the
+              SCREEN; the overlay that takes the pointer stays on the picture,
+              because every coordinate in this file is a fraction of it. */}
+          {/* Back, over the top-left. There is no site chrome to leave by, so
+              this is the only way out — and it CONFIRMS, because everything
+              here is unsaved by construction. */}
+          <button type="button" data-testid="ie-back" onClick={() => setConfirmBack(true)}
+            title={s.back} aria-label={s.back}
+            className="absolute top-2 start-2 grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
+            <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
+          </button>
+
+          {/* IT WRAPS, AND THAT IS NOT TIDINESS. Eight buttons is 362px, and
+              a phone stage is 355 — measured, after the scissors and the plus
+              took the dock from six: the row ran under the Back button and
+              `elementFromPoint` returned a mode button where Back should have
+              been, so the only way OUT of a full-screen editor was unreachable
+              on the device it is most used from. The cap leaves Back its
+              corner and the overflow falls to a second row. */}
+          <div ref={dockRef} className="absolute top-2 end-2 flex flex-wrap justify-end gap-1.5 max-w-[calc(100%-3.5rem)]"
+            data-testid="ie-tools">
+            {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
+            {toolBtn('cut', s.modeCut, <ScissorsIcon className="w-5 h-5" />)}
+            {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
+            {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+            {/* ADDING A PICTURE IS NOT A MODE, so it is not a mode button: it
+                is one action that happens once and leaves you holding a
+                piece. The scissors is a mode because cutting is something you
+                keep doing. */}
+            <button type="button" title={s.addImage} aria-label={s.addImage} data-testid="ie-add"
+              onClick={() => addRef.current?.click()} disabled={busy !== ''}
+              className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
+              {busy === 'read' ? <Spinner /> : <ImageIcon className="w-5 h-5" />}
             </button>
-
-            {/* IT WRAPS, AND THAT IS NOT TIDINESS. Eight buttons is 362px, and
-                a phone stage is 355 — measured, after the scissors and the plus
-                took the dock from six: the row ran under the Back button and
-                `elementFromPoint` returned a mode button where Back should have
-                been, so the only way OUT of a full-screen editor was unreachable
-                on the device it is most used from. The cap leaves Back its
-                corner and the overflow falls to a second row. */}
-            <div className="absolute top-2 end-2 flex flex-wrap justify-end gap-1.5 max-w-[calc(100%-3.5rem)]"
-              data-testid="ie-tools">
-              {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
-              {toolBtn('cut', s.modeCut, <ScissorsIcon className="w-5 h-5" />)}
-              {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
-              {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
-              {/* ADDING A PICTURE IS NOT A MODE, so it is not a mode button: it
-                  is one action that happens once and leaves you holding a
-                  piece. The scissors is a mode because cutting is something you
-                  keep doing. */}
-              <button type="button" title={s.addImage} aria-label={s.addImage} data-testid="ie-add"
-                onClick={() => addRef.current?.click()} disabled={busy !== ''}
+            {/* No `accept`, for the reason the first input carries none: an
+                image filter hides Downloads on Android (#225). */}
+            <input ref={addRef} type="file" data-testid="ie-add-file" className="absolute w-px h-px opacity-0"
+              onChange={(e) => { void addPicture(e.target.files); e.target.value = '' }} />
+            {/* THE JOKE, AS A REAL CONTROL, and on the frame rather than three
+                taps down in the settings. It changes what every pixel of the
+                picture behind it looks like, so it belongs with the other
+                things that do, and it needs no sentence explaining it: the
+                picture is visibly off true, which is the entire feature.
+                `aria-pressed` is the testable contract, since asserting a
+                background class would be testing Tailwind. */}
+            <button type="button" title={s.tilt} aria-label={s.tilt} aria-pressed={tilt}
+              data-testid="ie-tilt" onClick={() => setTilt((v) => !v)}
+              className={`grid place-items-center w-10 h-10 rounded-md border cursor-pointer transition-colors ${
+                tilt
+                  ? 'bg-green-600 border-green-700 text-[color:var(--primary-ink)]'
+                  : 'bg-black/55 border-white/25 text-white hover:bg-black/70'}`}>
+              <TiltIcon className="w-5 h-5" />
+            </button>
+            <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ie-settings"
+              onClick={() => setSettings(true)}
+              className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
+              <CogIcon className="w-5 h-5" />
+            </button>
+            {/* GREEN ONLY ONCE THERE IS A FILE. Primary colour is a claim
+                that this is the thing to do next, and before an export there
+                is nothing to download. */}
+            {out ? (
+              <a href={out.url} data-testid="ie-download"
+                download={`edited-${name.replace(/\.[^.]+$/, '')}.${FORMATS.find((f) => f.id === format)?.ext ?? 'png'}`}
+                title={`${s.download} · ${mb(out.size)}`} aria-label={s.download}
+                className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
+                <DownloadIcon className="w-5 h-5" />
+              </a>
+            ) : (
+              <button type="button" title={s.exportBtn} aria-label={s.exportBtn} data-testid="ie-export"
+                onClick={() => { void doExport() }} disabled={busy !== ''}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
-                {busy === 'read' ? <Spinner /> : <ImageIcon className="w-5 h-5" />}
+                {busy === 'export' ? <Spinner /> : <DownloadIcon className="w-5 h-5" />}
               </button>
-              {/* No `accept`, for the reason the first input carries none: an
-                  image filter hides Downloads on Android (#225). */}
-              <input ref={addRef} type="file" data-testid="ie-add-file" className="absolute w-px h-px opacity-0"
-                onChange={(e) => { void addPicture(e.target.files); e.target.value = '' }} />
-              {/* THE JOKE, AS A REAL CONTROL, and on the frame rather than three
-                  taps down in the settings. It changes what every pixel of the
-                  picture behind it looks like, so it belongs with the other
-                  things that do, and it needs no sentence explaining it: the
-                  picture is visibly off true, which is the entire feature.
-                  `aria-pressed` is the testable contract, since asserting a
-                  background class would be testing Tailwind. */}
-              <button type="button" title={s.tilt} aria-label={s.tilt} aria-pressed={tilt}
-                data-testid="ie-tilt" onClick={() => setTilt((v) => !v)}
-                className={`grid place-items-center w-10 h-10 rounded-md border cursor-pointer transition-colors ${
-                  tilt
-                    ? 'bg-green-600 border-green-700 text-[color:var(--primary-ink)]'
-                    : 'bg-black/55 border-white/25 text-white hover:bg-black/70'}`}>
-                <TiltIcon className="w-5 h-5" />
-              </button>
-              <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ie-settings"
-                onClick={() => setSettings(true)}
-                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
-                <CogIcon className="w-5 h-5" />
-              </button>
-              {/* GREEN ONLY ONCE THERE IS A FILE. Primary colour is a claim
-                  that this is the thing to do next, and before an export there
-                  is nothing to download. */}
-              {out ? (
-                <a href={out.url} data-testid="ie-download"
-                  download={`edited-${name.replace(/\.[^.]+$/, '')}.${FORMATS.find((f) => f.id === format)?.ext ?? 'png'}`}
-                  title={`${s.download} · ${mb(out.size)}`} aria-label={s.download}
-                  className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
-                  <DownloadIcon className="w-5 h-5" />
-                </a>
-              ) : (
-                <button type="button" title={s.exportBtn} aria-label={s.exportBtn} data-testid="ie-export"
-                  onClick={() => { void doExport() }} disabled={busy !== ''}
-                  className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
-                  {busy === 'export' ? <Spinner /> : <DownloadIcon className="w-5 h-5" />}
-                </button>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* The crop shapes dock UNDER the tools, not along the bottom: a
-                floating bar there covers the lower third of a crop rectangle
-                that starts out filling the frame, so its corner segment would
-                not be draggable at all. */}
-            {mode === 'crop' && (
-              <div className="absolute top-14 inset-x-2 flex justify-center pointer-events-none">
-                <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
-                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ie-crop-bar">
-                    {ASPECTS.map((a) => (
-                      <button key={a.id} type="button" data-testid={`ie-aspect-${a.id}`}
-                        aria-pressed={aspectId === a.id}
-                        onClick={() => setAspectId(a.id)}
-                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
-                          aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
-                        {locale === 'ar' ? a.labelAr : a.label}
-                      </button>
-                    ))}
-                    {/* Free is shown only once a drag has made one. It is a
-                        RESULT, not a mode to switch into. */}
-                    {freeAspect > 0 && (
-                      <button type="button" data-testid="ie-aspect-free"
-                        aria-pressed={aspectId === 'free'} onClick={() => setAspectId('free')}
-                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
-                          aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
-                        {s.free}
-                      </button>
-                    )}
-                  </div>
+          {/* The crop shapes dock UNDER the tools, not along the bottom: a
+              floating bar there covers the lower third of a crop rectangle
+              that starts out filling the frame, so its corner segment would
+              not be draggable at all. */}
+          {mode === 'crop' && (
+            <div style={{ top: dockH + 12 }} className="absolute inset-x-2 flex justify-center pointer-events-none">
+              <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
+                <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ie-crop-bar">
+                  {ASPECTS.map((a) => (
+                    <button key={a.id} type="button" data-testid={`ie-aspect-${a.id}`}
+                      aria-pressed={aspectId === a.id}
+                      onClick={() => setAspectId(a.id)}
+                      className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                        aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                      {locale === 'ar' ? a.labelAr : a.label}
+                    </button>
+                  ))}
+                  {/* Free is shown only once a drag has made one. It is a
+                      RESULT, not a mode to switch into. */}
+                  {freeAspect > 0 && (
+                    <button type="button" data-testid="ie-aspect-free"
+                      aria-pressed={aspectId === 'free'} onClick={() => setAspectId('free')}
+                      className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                        aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                      {s.free}
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
-              <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
-                {mode === 'censor' && !picked && (
-                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-censor-hint">{s.addBox}</span>
-                )}
-                {mode === 'text' && captions.length === 0 && (
-                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-caption-hint">{s.addCaptionBox}</span>
-                )}
-                {mode === 'cut' && !pieces.length && (
-                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-cut-hint">{s.addPieceHint}</span>
-                )}
-                {/* THE FILL SHOWS ONLY ONCE SOMETHING HAS BEEN CUT, because
-                    until then there is no hole for it to be the colour of — and
-                    an added picture leaves none, so a swatch beside one would be
-                    a control with nothing to do. */}
-                {mode === 'cut' && pieces.some((q) => q.cut) && (
-                  <label className="flex items-center gap-2 text-[0.8rem] opacity-85 rtl:font-ar">
-                    {s.fillLeft}
-                    <input type="color" value={fill} data-testid="ie-fill"
-                      onChange={(e) => setFill(e.target.value)}
-                      className="w-8 h-7 rounded border border-white/30 bg-transparent p-0 cursor-pointer" />
-                  </label>
-                )}
-                {/* What the crop costs, where the crop is being decided — the
-                    rectangle over the whole picture already SHOWS it, and this
-                    is the one number that shape cannot say by itself. */}
-                {mode === 'crop' && (
-                  <span className="block text-[0.8rem] opacity-85 font-mono" data-testid="ie-kept">
-                    {s.kept(pct(keptPct))} · {size.width}×{size.height}
-                  </span>
-                )}
-              </div>
+          <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
+              {mode === 'censor' && !picked && (
+                <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-censor-hint">{s.addBox}</span>
+              )}
+              {mode === 'text' && captions.length === 0 && (
+                <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-caption-hint">{s.addCaptionBox}</span>
+              )}
+              {mode === 'cut' && !pieces.length && (
+                <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-cut-hint">{s.addPieceHint}</span>
+              )}
+              {/* THE FILL SHOWS ONLY ONCE SOMETHING HAS BEEN CUT, because
+                  until then there is no hole for it to be the colour of — and
+                  an added picture leaves none, so a swatch beside one would be
+                  a control with nothing to do. */}
+              {mode === 'cut' && pieces.some((q) => q.cut) && (
+                <label className="flex items-center gap-2 text-[0.8rem] opacity-85 rtl:font-ar">
+                  {s.fillLeft}
+                  <input type="color" value={fill} data-testid="ie-fill"
+                    onChange={(e) => setFill(e.target.value)}
+                    className="w-8 h-7 rounded border border-white/30 bg-transparent p-0 cursor-pointer" />
+                </label>
+              )}
+              {/* What the crop costs, where the crop is being decided — the
+                  rectangle over the whole picture already SHOWS it, and this
+                  is the one number that shape cannot say by itself. */}
+              {mode === 'crop' && (
+                <span className="block text-[0.8rem] opacity-85 font-mono" data-testid="ie-kept">
+                  {s.kept(pct(keptPct))} · {size.width}×{size.height}
+                </span>
+              )}
             </div>
           </div>
         </div>

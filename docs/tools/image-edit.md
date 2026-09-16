@@ -35,6 +35,13 @@ PNG / JPEG / WebP, produced entirely on the device.
       costs stated next to it.
 - [x] Caption: a box drawn with the same gesture, typed onto the picture, with
       its colour on the box and its size set by the box.
+- [x] Cut a piece out with the scissors: drag a rectangle, then move, turn or
+      resize it. The hole it leaves takes a fill colour. Cut mode shows the
+      WHOLE picture, like crop mode, because a piece can be dragged in from
+      outside the frame and its hole can be outside it too.
+- [x] Add another picture with the plus: fitted to 40% of the longest side on
+      arrival, never enlarged, then moved/turned/resized like a cut piece. It
+      leaves NO hole — that is the one property separating the two kinds.
 - [x] Output: format, quality, largest side, never upscaled.
 - [x] Tilt one degree clockwise, **on by default**, as a shortcut button on the
       frame with the other tools — no explanatory copy, because the picture is
@@ -48,10 +55,18 @@ PNG / JPEG / WebP, produced entirely on the device.
 - The tilt shows in EVERY mode, crop included — crop mode draws the whole
   picture and does not call `compose`, which is how it missed the tilt once.
 - A censor survives into the downloaded picture, measured on the file.
+- A cut leaves the fill behind and an added picture does not, both measured on
+  the corner pixel, with the cut as the control for the addition.
+- A cut piece and an added picture both reach the exported file.
+- On a phone the tool dock does not cover Back — the only way out — asserted
+  with a hit test rather than a class.
 - The download is thrown away the moment anything under it changes.
 - The crop segments are not mirrored in Arabic.
 
 ## Out of scope (v1)
+- Layer ordering, opacity and blend modes for an added picture. It goes on top
+  of the picture and under the boxes and captions; anything more is a paint
+  program.
 - Drawing, filters, levels, healing — this is the video editor's screen for one
   frame, not a paint program.
 - Automatic subject detection. The video editor follows a box somebody drew;

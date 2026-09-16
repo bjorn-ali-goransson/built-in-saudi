@@ -3752,6 +3752,123 @@ stashed out of the registry, and own names went 477/478 → 479/480. Sixth
 application of the rule, and the documented fix: **wrapping a generic word in a
 phrase does not remove it.**
 
+## A picture laid on the video, and two vacuous greens (`video-edit`)
+
+The second half of the merge: the video editor takes a picture too — a logo, a
+watermark, a still — placed, moved, resized and encoded into every frame.
+
+**BY THE TIME IT REACHES THE WORKER IT IS THE SAME THING AS A CAPTION**: a
+bitmap, a rectangle in fractions of the output, and a span. `PlanCaption` was
+already exactly that shape, so it is `PlanLayer` now and one `drawLayers` draws
+both. A second draw function would have been two implementations of one
+`drawImage`. The difference between them is entirely on the page, where one is
+composed from text and the other is a file somebody picked.
+
+**Order: pictures, then censors, then captions.** An added picture is part of
+the picture, so a box drawn over a logo pixelates the logo — which is what
+anybody who drew it there meant. The page and the worker use the same order,
+which is the property this whole tool rests on.
+
+**IT ARRIVES CENTRED, AND EVERY CORNER WAS TRIED FIRST.** A watermark goes in a
+corner, so it was put in one — and a hit test found it under `ve-back` at the
+top-left, then under the tool dock at the top-right, then under the bar along
+the bottom. **Every corner of this stage belongs to a control**; the middle is
+the only region that does not, and it is one drag from anywhere. Three findings
+from the same instrument, one after another.
+
+**AND THE DOCK IS FULL, WHICH IS A MEASUREMENT.** At the default viewport the
+stage is 320px and six buttons at a 6px gap are 270px — the row already reaches
+to within 6px of Back, and a SEVENTH covers Back's own centre. Back is the only
+way out of a full-screen editor. So the picture shares **`text` mode** with
+captions rather than taking a button, which is not a compromise dressed up:
+they are the same thing by the time they are drawn — a bitmap, a rectangle in
+output fractions and a span, drawn by one function — and both are rectangles
+you lay on top and move. The mode reads "Caption or picture" because that is
+what it is.
+
+**The button that MAKES one is on the settings screen, and that is the third
+corner finding rather than a fourth.** It went on the bar along the bottom of
+the frame first, where the mode's own controls live — and **that bar is the
+thing you draw a caption on**, so a permanent button standing in the middle of
+it reddened three existing cases at once: the gesture landed on the button.
+Drawing a rectangle and adding a file are not the same kind of act, and only
+one of them is a drag.
+
+**AND THAT ARGUMENT WAS RIGHT ABOUT THE DOCK AND WRONG ABOUT WHERE IT LIVES,
+which is the finding worth carrying out of this whole pass.** Both editors put
+Back, the dock, the shapes bar and the bottom bar INSIDE the stage wrapper —
+and that wrapper shrink-wraps the canvas, which is the **output**. A 9:16 crop
+of a 320×240 clip is **134px wide**, so every control was being laid out in
+134px. Measured, with the dock allowed to wrap: **78px wide and 260px TALL** —
+six rows of one button, covering the whole picture and the added picture's own
+handles with it. Measured with it not wrapping: a 260px row over a 134px stage,
+running clean across Back.
+
+**Both readings are the same mistake, which is why neither arrangement could
+win: the chrome of a full-screen editor belongs to the SCREEN.** It is
+positioned against the shell now, in both editors, so it has the viewport to
+lay itself out in and the picture is free to be whatever shape the crop makes
+it. The overlay that takes the pointer stays on the picture, because every
+coordinate in these files is a fraction of it — and that separation is the
+whole change: **what you touch the picture with is the picture's; what you
+leave and export by is the screen's.**
+
+Three things fall out of it at once, none of them designed for. The shapes bar
+is no longer over the crop rectangle at all when the picture is letterboxed, so
+the collision that made the wrap unaffordable simply is not there. The dock has
+one honest constraint left — the viewport — and wraps only when *that* is
+narrower than 260px of buttons plus Back's corner, which the e2e produces with
+a 300px viewport and asserts by hit test AND by the geometric property behind
+it (the dock never begins left of Back's right edge). And the hard-coded
+`top-14` became `dockH + 16` in both, measured by a `ResizeObserver` and chosen
+to give the same number today, so adopting it could not move anything that was
+already right.
+
+**It was found by the picture, not by looking.** The delete button on an added
+picture would not click: Playwright named `ve-tools` as intercepting it, and
+`ve-tools` was a 78×260 column over the middle of a 134px stage. Four cases
+went red at once and the first instinct was to call it flake — the honest read
+was that the dock had been made to wrap the day before and nobody had put a
+9:16 crop under it.
+
+**TWO VACUOUS GREENS, and the second is the one worth carrying.**
+
+- The first: an exported-frame check that counted distinct colours in the
+  overlay region against a control region. The fixture's right side is a flat
+  bar, so it is FLATTER than a codec-noisy magenta patch — the instrument said
+  nothing and was dropped rather than tuned.
+- The second is worse and is the reusable one. The case sampled a fixed corner
+  of the exported frame and asserted "magenta". It **passed against a worker
+  that drew no overlay at all** — because the output is a CROP of the fixture
+  (a 9:16 crop of a 320×240 clip is 135 wide), so a fraction of the exported
+  frame is not the part of the fixture it looks like, and that corner was
+  already magenta. **A check that cannot tell the good reading from the bad one
+  is vacuously green**, and the only reason it was caught is that the
+  verify-to-fail step was actually run.
+
+  The rebuilt case reads the box **off the picture itself** and compares it
+  against **the same export made without the picture**. Nothing in it assumes
+  anything about the fixture, and it is verified to fail: with the overlay draw
+  removed the region reads (125, 102, 236) against a threshold of 140.
+
+**And chasing that found a real defect.** `ve-export` had vanished by the second
+export, because adding a picture did not invalidate the green download — the
+effect that exists to say "this file is no longer the video in front of you" was
+missing `overlays` from its dependency list. So the button went on offering the
+previous version of somebody's own clip, which is precisely the failure that
+effect was written for. It has its own case, **verified to fail**.
+
+**`top-14` WAS A NUMBER THAT ASSUMED A ONE-ROW DOCK**, and the image editor's
+wrap turned it into a collision: the shapes bar sat under the dock's SECOND row
+and intercepted clicks aimed at the export button — `elementFromPoint` saying
+the same thing a fourth time this session. **A hard-coded offset past another
+element is a guess that survives exactly as long as that element's size does.**
+
+**`ve-add` was already taken**, by the mid-edit add-a-clip button that was
+removed — and a case asserts that control is ABSENT, so reusing the name turned
+that case red. The picture button is `ve-add-picture`. **A prefix is not an
+identifier**, and neither is a plausible name.
+
 ## The scissors and the plus, and why they cost the pure module nothing (`image-edit`)
 
 `image-rearrange` is being folded into this editor, and the first half of that
@@ -3807,6 +3924,13 @@ it would have hit — and it immediately paid a second time, refusing the drag
 that MOVES a piece, because that one correctly starts on the piece rather than
 on the stage. **A control that is behind another control is not a control, and
 only a hit test says so.**
+
+**And the chrome moved off the picture and onto the SHELL**, at the same time
+as `video-edit`'s and for the defect measured there: the stage wrapper
+shrink-wraps the canvas, the canvas is the OUTPUT, and a 9:16 crop makes that a
+narrow column with every control crammed into it. The write-up is under the
+video editor, because that is where it was found and where the numbers are. The
+overlay that takes the pointer stays on the picture.
 
 **Verified to fail** three ways: punching a hole for an added picture reddens
 exactly the no-hole case; skipping the fit-on-arrival reddens four (that case

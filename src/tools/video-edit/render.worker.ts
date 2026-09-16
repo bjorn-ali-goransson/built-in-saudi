@@ -73,7 +73,7 @@ export interface ProbeInfo {
  * otherwise be drawing with whatever fonts the worker happens to have, which on
  * a machine with no Arabic face is a row of empty boxes.
  */
-export interface PlanCaption {
+export interface PlanLayer {
   /** The box, in fractions of the output frame — the rectangle that was drawn. */
   x: number
   y: number
@@ -103,7 +103,21 @@ export interface RenderPlan {
   out: { width: number; height: number }
   bitrate: number
   keepAudio: boolean
-  captions: PlanCaption[]
+  captions: PlanLayer[]
+  /**
+   * Pictures laid on the video — a logo, a watermark, a still.
+   *
+   * THE SAME TYPE AS A CAPTION, because by the time it reaches here they are
+   * the same thing: a bitmap, a rectangle in fractions of the output, and a
+   * span. The difference is entirely upstream — one is drawn from text on the
+   * page and the other is a file somebody picked — so giving the worker a
+   * second draw function would be two implementations of one `drawImage`.
+   *
+   * They go on BEFORE the censors, because an added picture is part of the
+   * picture: a box drawn over a logo should pixelate the logo, which is what
+   * somebody who drew it there meant.
+   */
+  overlays: PlanLayer[]
   censors: Censor[]
 }
 
@@ -181,9 +195,9 @@ async function probe(slot: number, file: File): Promise<ProbeInfo> {
   }
 }
 
-function drawCaptions(
+function drawLayers(
   ctx: OffscreenCanvasRenderingContext2D,
-  captions: PlanCaption[],
+  captions: PlanLayer[],
   t: number,
   out: { width: number; height: number },
 ): void {
@@ -302,8 +316,9 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
           // Censors go on the PICTURE, before the captions — a caption is
           // something you chose to show, and hiding it under a black box that
           // was aimed at a face behind it would be the wrong way round.
+          drawLayers(ctx, plan.overlays, tOut, plan.out)
           applyCensors(ctx, plan.censors, tOut, plan.out)
-          drawCaptions(ctx, plan.captions, tOut, plan.out)
+          drawLayers(ctx, plan.captions, tOut, plan.out)
           // Monotonic by construction. A decoder is entitled to hand back two
           // frames a microsecond apart after rounding, and an encoder given a
           // timestamp that does not advance produces a sample table with a

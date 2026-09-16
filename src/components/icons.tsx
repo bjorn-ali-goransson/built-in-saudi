@@ -797,6 +797,19 @@ export function CompressIcon({ className }: P) {
   )
 }
 
+/** A picture with a plus on it: ADD one, rather than the generic plus, which on
+ *  a bar of drawing tools reads as "new layer" or "zoom in". */
+export function AddImageIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M21 13.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8.5" />
+      <path d="M3 16.5l4.5-4.5a2 2 0 0 1 2.8 0l3.7 3.7" />
+      <path d="M15.5 9.5h.01" />
+      <path d="M18 16v6M15 19h6" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

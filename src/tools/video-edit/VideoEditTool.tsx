@@ -4,9 +4,11 @@ import { useLocale } from '../../i18n'
 import { Button, Field, FieldLabel, FileError, Input, Panel, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
   BackIcon, CloseIcon, CogIcon, CropIcon, CutHeadIcon, CutTailIcon, DownloadIcon, MosaicIcon,
-  MuteIcon, PauseIcon, PlayIcon, TargetIcon, TextIcon, TrashIcon, VolumeIcon,
+  AddImageIcon, MuteIcon, PauseIcon, PlayIcon, TargetIcon, TextIcon, TrashIcon, VolumeIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
+import { decodeImage } from '../../lib/decodeImage'
+import { whyUnreadable } from '../../lib/imageInput'
 import {
   ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, drawFrame, outputSize,
   projectPath, resizePath, shiftPath, SEGMENTS, thinPath, timeline,
@@ -52,7 +54,10 @@ const STR = {
     // The three modes, named on their buttons for a screen reader.
     modeCrop: 'Crop',
     modeCensor: 'Hide something',
-    modeText: 'Caption',
+    modeText: 'Caption or picture',
+    modeImage: 'Add a picture',
+    addAnother: 'Add another',
+    deletePicture: 'Remove this picture',
     modeMore: 'Output settings',
     play: 'Play',
     pause: 'Pause',
@@ -137,7 +142,10 @@ const STR = {
     down: 'إلى الخلف',
     modeCrop: 'اقتصاص',
     modeCensor: 'إخفاء جزء',
-    modeText: 'نص',
+    modeText: 'نص أو صورة',
+    modeImage: 'أضِف صورة',
+    addAnother: 'أضِف أخرى',
+    deletePicture: 'احذف هذه الصورة',
     modeMore: 'إعدادات المُخرَج',
     play: 'تشغيل',
     pause: 'إيقاف',
@@ -235,6 +243,25 @@ const HEIGHTS = [480, 720, 1080, 1440]
 
 type Mode = 'crop' | 'censor' | 'text' | 'more'
 
+/**
+ * A picture laid on the video — a logo, a watermark, a still.
+ *
+ * It is the same shape as a caption by the time it is drawn: a bitmap, a
+ * rectangle in fractions of the OUTPUT frame, and a span. That is why the
+ * worker takes one type for both and draws them with one function; the
+ * difference between them is entirely on this side, where one is composed from
+ * text and the other is a file somebody picked.
+ *
+ * It runs the WHOLE video, exactly as a caption does and for the same reason:
+ * a logo that stops halfway is a defect far more often than a choice.
+ */
+interface Overlay {
+  id: string
+  bitmap: ImageBitmap
+  x: number; y: number; w: number; h: number
+  from: number; to: number
+}
+
 interface Clip { slot: number; file: File; url: string; info: ProbeInfo }
 
 /**
@@ -267,6 +294,8 @@ type Drag =
   | { kind: 'crop-seg'; id: string; px: number; py: number; rect: { x0: number; y0: number; x1: number; y1: number } }
   | { kind: 'draw'; fx: number; fy: number }
   | { kind: 'draw-text'; fx: number; fy: number }
+  | { kind: 'overlay'; id: string; ox: number; oy: number }
+  | { kind: 'overlay-resize'; id: string }
   | { kind: 'move'; id: string; ox: number; oy: number }
   | { kind: 'resize'; id: string }
   /**
@@ -299,6 +328,20 @@ export default function VideoEditTool() {
   const [censors, setCensors] = useState<Censor[]>([])
   const [pickedBox, setPickedBox] = useState<string | null>(null)
   const [pickedCaption, setPickedCaption] = useState<string | null>(null)
+  const [overlays, setOverlays] = useState<Overlay[]>([])
+  const [pickedOverlay, setPickedOverlay] = useState<string | null>(null)
+  const addRef = useRef<HTMLInputElement>(null)
+  /**
+   * How tall the tool dock actually is, so the crop shapes below it clear it.
+   *
+   * It is one row of six buttons on any ordinary stage and the chips then land
+   * exactly where the old hard-coded `top-14` put them. It is NOT one row when
+   * the stage is narrow — a tall portrait clip on a wide screen gives a stage
+   * a couple of hundred pixels across — and there the dock wraps rather than
+   * running under Back, which is the only way out of a full-screen editor.
+   */
+  const dockRef = useRef<HTMLDivElement>(null)
+  const [dockH, setDockH] = useState(40)
   /** Is the "what pixelating costs" note open? */
   const [boxPanel, setBoxPanel] = useState(false)
   const [quality, setQuality] = useState(1)
@@ -457,6 +500,16 @@ export default function VideoEditTool() {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
+
+  useEffect(() => {
+    const el = dockRef.current
+    if (!el) return
+    const measure = () => setDockH(el.offsetHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
 
   useEffect(() => () => { setWorkInProgress(WIP, false) }, [])
   useEffect(() => { setWorkInProgress(WIP, clips.length > 0) }, [clips.length])
@@ -662,6 +715,11 @@ export default function VideoEditTool() {
     setCaptions((list) => (list.some((c) => c.from !== 0 || c.to !== duration)
       ? list.map((c) => ({ ...c, from: 0, to: duration }))
       : list))
+    // An added picture runs the whole video for the same reason a caption does,
+    // so it follows the clip list the same way.
+    setOverlays((list) => (list.some((o) => o.from !== 0 || o.to !== duration)
+      ? list.map((o) => ({ ...o, from: 0, to: duration }))
+      : list))
   }, [duration])
 
   /**
@@ -739,7 +797,8 @@ export default function VideoEditTool() {
    */
   useEffect(() => {
     setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
-  }, [crop, censors, captions, trims, keepAudio, quality, maxHeight])
+  }, [crop, censors, captions, overlays, trims, keepAudio, quality, maxHeight])
+
 
   const paint = useCallback(() => {
     const v = videoRef.current
@@ -807,6 +866,14 @@ export default function VideoEditTool() {
     // THE RESOLVED boxes, so a followed one is drawn where the measurement
     // says it is rather than where it was drawn — and by the same projection
     // the export plan uses, so the two cannot differ.
+    // Added pictures go on BEFORE the boxes, because they are part of the
+    // picture: a censor drawn over a logo should hide the logo, which is what
+    // anybody who drew it there meant. Same order as the worker, which is the
+    // property this whole tool rests on.
+    for (const o of activeAt(overlays, now)) {
+      const r = captionRect(o, shown)
+      ctx.drawImage(o.bitmap, r.x, r.y, r.w, r.h)
+    }
     applyCensors(ctx, inProgress ? [...shownCensors, inProgress] : shownCensors, now, shown)
     for (const c of activeAt(captions, now)) {
       // The one being edited is ALREADY on screen — the textarea sits exactly
@@ -822,7 +889,7 @@ export default function VideoEditTool() {
       const r = captionRect(drawn.rect, shown)
       ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
-  }, [current, crop, cropBox, mode, size, captions, shownCensors, previewTime, pickedCaption, duration])
+  }, [current, crop, cropBox, mode, size, captions, overlays, shownCensors, previewTime, pickedCaption, duration])
 
   /**
    * Ask for the frame BACK when the tab returns.
@@ -1269,6 +1336,23 @@ export default function VideoEditTool() {
       }))
       return
     }
+    if (d.kind === 'overlay') {
+      setOverlays((list) => list.map((o) => (o.id === d.id
+        ? { ...o, x: clamp01(Math.min(1 - o.w, p.x - d.ox)), y: clamp01(Math.min(1 - o.h, p.y - d.oy)) }
+        : o)))
+      return
+    }
+    if (d.kind === 'overlay-resize') {
+      setOverlays((list) => list.map((o) => {
+        if (o.id !== d.id) return o
+        // Uniform, from the WIDTH: the proportions of somebody's logo are not
+        // ours to change, and a squashed watermark is worse than a small one.
+        const w = Math.max(0.04, Math.min(1 - o.x, p.x - o.x))
+        const ratio = o.h / o.w
+        return { ...o, w, h: Math.min(1 - o.y, w * ratio) }
+      }))
+      return
+    }
     if (d.kind === 'caption') {
       d.moved = true
       setCaptions((list) => list.map((c) => (c.id === d.id
@@ -1426,6 +1510,41 @@ export default function VideoEditTool() {
     })
   }
 
+  /**
+   * Lay a picture on the video.
+   *
+   * It is FITTED on arrival to a quarter of the frame's width and CENTRED, the
+   * same as the image editor. It is never enlarged: pixels with no detail added
+   * is the honesty `print-size` applies to paper.
+   *
+   * THE MIDDLE, because every corner belongs to the editor. A watermark goes in
+   * a corner, so it was put in one — and a hit test found it under `ve-back`
+   * at the top-left, then under the tool dock at the top-right, then under the
+   * bar along the bottom. The middle is the only region no control occupies,
+   * and it is one drag from wherever it is wanted. A control behind another
+   * control is not a control, and only `elementFromPoint` says so.
+   *
+   * Through `decodeImage`/`whyUnreadable` like every other image intake on this
+   * site, so a HEIC laid on a clip works and a bad pick says why rather than
+   * doing nothing.
+   */
+  async function addPicture(list: FileList | null) {
+    const f = list?.[0]
+    if (!f || !clips.length) return
+    setError('')
+    setBusy('read')
+    const bitmap = await decodeImage(f)
+    setBusy('')
+    if (!bitmap) { setError(await whyUnreadable(f, locale)); return }
+    const w = Math.min(0.25, 1)
+    const h = Math.min(0.9, (w * size.width * (bitmap.height / bitmap.width)) / size.height)
+    const id = `o${Date.now()}`
+    setOverlays((l) => [...l, { id, bitmap, x: (1 - w) / 2, y: Math.max(0, (1 - h) / 2), w, h, from: 0, to: duration }])
+    setPickedOverlay(id)
+    setMode('text')
+    setSettings(false)
+  }
+
   async function doExport() {
     if (!clips.length) return
     setBusy('render')
@@ -1439,6 +1558,13 @@ export default function VideoEditTool() {
       const drawn = await renderCaption(c, size)
       if (drawn) planCaptions.push({ ...drawn.rect, from: c.from, to: c.to, bitmap: drawn.bitmap })
     }
+    const planOverlays: RenderPlan['overlays'] = []
+    for (const o of overlays) {
+      planOverlays.push({
+        x: o.x, y: o.y, w: o.w, h: o.h, from: o.from, to: o.to,
+        bitmap: await createImageBitmap(o.bitmap),
+      })
+    }
     const plan: RenderPlan = {
       slots: clips.map((c) => c.slot),
       // Aligned with `slots`, in each clip's own seconds — the worker decodes
@@ -1450,11 +1576,18 @@ export default function VideoEditTool() {
       bitrate,
       keepAudio: keepAudio && audioPlan === 'copy',
       captions: planCaptions,
+      // COPIES, for the same reason the captions are re-rendered above: an
+      // ImageBitmap in a transfer list is gone from this side, and the stage
+      // still has to draw them after the export.
+      overlays: planOverlays,
       // Resolved, not raw: the worker has no crop-to-source projection of its
       // own and must not grow one. What the stage drew is what it encodes.
       censors: shownCensors,
     }
-    const res = await ask({ kind: 'render', plan }, planCaptions.map((c) => c.bitmap))
+    const res = await ask(
+      { kind: 'render', plan },
+      [...planCaptions.map((c) => c.bitmap), ...planOverlays.map((o) => o.bitmap)],
+    )
     // Whether the export works while the preview does not is exactly what
     // separates "only `<video>` is affected" from "the whole media stack is".
     diag.current.mark(res.kind === 'rendered'
@@ -1949,6 +2082,44 @@ export default function VideoEditTool() {
                 pickedCaption === c.id ? captionField(c) : null,
               ))}
 
+              {mode === 'text' && overlays.map((o, i) => (
+                <div key={o.id} data-testid={`ve-picture-${i}`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    const p = at(e)
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    dragRef.current = { kind: 'overlay', id: o.id, ox: p.x - o.x, oy: p.y - o.y }
+                    setPickedOverlay(o.id)
+                  }}
+                  style={{ left: `${o.x * 100}%`, top: `${o.y * 100}%`, width: `${o.w * 100}%`, height: `${o.h * 100}%` }}
+                  className={`absolute cursor-move border-2 ${
+                    pickedOverlay === o.id ? 'border-green-400' : 'border-white/60 border-dashed'}`}>
+                  {pickedOverlay === o.id && (
+                    <>
+                      <button type="button" title={s.deletePicture} aria-label={s.deletePicture}
+                        data-testid={`ve-picture-${i}-delete`}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          const gone = overlays.find((x) => x.id === o.id)
+                          gone?.bitmap.close()
+                          setOverlays((l) => l.filter((x) => x.id !== o.id))
+                          setPickedOverlay(null)
+                        }}
+                        className="absolute -top-3 -end-3 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer">
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                      <span data-testid={`ve-picture-${i}-resize`}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          e.currentTarget.setPointerCapture(e.pointerId)
+                          dragRef.current = { kind: 'overlay-resize', id: o.id }
+                        }}
+                        className="absolute -bottom-2 -end-2 w-4 h-4 rounded-sm bg-green-400 border border-green-700 cursor-nwse-resize" />
+                    </>
+                  )}
+                </div>
+              ))}
+
               {/* The caption box mid-drag. A censor draws itself on the canvas
                   because it changes the picture; a caption does not exist until
                   it has text, so its outline is all there is to show. */}
@@ -1958,154 +2129,188 @@ export default function VideoEditTool() {
                   className="absolute border-2 border-green-400 border-dashed pointer-events-none" />
               )}
             </div>
+          </div>
 
-            {/* Back, over the top-left. There is no site chrome to leave by any
-                more, so this is the only way out — and it CONFIRMS, because
-                everything in this editor is unsaved by construction and a
-                mis-tap would take a crop, some boxes and a caption with it. */}
-            <button type="button" data-testid="ve-back" onClick={() => setConfirmBack(true)}
-              title={s.back} aria-label={s.back}
-              className="absolute top-2 start-2 grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
-              <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
+          {/* THE EDITOR'S CHROME IS ON THE SHELL, NOT ON THE PICTURE. It used
+              to live inside the stage wrapper, which shrink-wraps the canvas —
+              and the canvas is the OUTPUT, so a 9:16 crop of a 320×240 clip is
+              134px wide. Every control was then crammed into 134px: measured,
+              the tool dock was 78 wide and 260 TALL, six rows of one button
+              covering the whole picture and the added picture's own handles
+              with it. Unwrapped it is no better, just the other way round — a
+              260px row over a 134px stage runs clean across Back, which is the
+              only way out of a full-screen editor.
+
+              Both are the same mistake: the chrome of a full-screen editor
+              belongs to the SCREEN. It is positioned against the shell now, so
+              it has the viewport to lay itself out in and the picture is free
+              to be whatever shape the crop makes it. The overlay that takes the
+              pointer stays on the picture, because every coordinate in this
+              file is a fraction of it. */}
+          {/* Back, over the top-left. There is no site chrome to leave by any
+              more, so this is the only way out — and it CONFIRMS, because
+              everything in this editor is unsaved by construction and a
+              mis-tap would take a crop, some boxes and a caption with it. */}
+          <button type="button" data-testid="ve-back" onClick={() => setConfirmBack(true)}
+            title={s.back} aria-label={s.back}
+            className="absolute top-2 start-2 grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
+            <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
+          </button>
+
+          {/* The context buttons, over the top-right of the picture — and the
+              DOWNLOAD beside them, because exporting is what you came to do
+              and it should not be somewhere you have to scroll to. */}
+          {/* ONE ROW, deliberately, and it does NOT wrap like the image
+              editor's. That was tried: this stage is the clip's own shape, so
+              a 9:16 crop of a 320x240 file is 135px wide, and a wrapped dock
+              is then several rows tall — which pushes the shapes bar below it
+              onto the crop rectangle's own middle segment. The bar cannot go
+              to the bottom either (it covers the rectangle's lower third,
+              recorded above), so a taller dock has nowhere to send it. A row
+              that overflows into the letterbox is the lesser of the two, and
+              it is what this dock has always done. */}
+          {/* IT WRAPS, AND IT LEAVES BACK ITS CORNER. Six buttons at a 4px
+              gap are 260px, so on any ordinary stage this is one row and the
+              shapes below sit exactly where a hard-coded `top-14` used to put
+              them. A narrow stage — a tall portrait clip on a wide screen —
+              is the case that matters: unwrapped, the row runs straight under
+              Back, and Back is the only way out of a full-screen editor.
+              Measured with `elementFromPoint`, which is the only thing that
+              answers whether a button can be pressed. */}
+          <div ref={dockRef} className="absolute top-2 end-2 flex flex-wrap justify-end gap-1 max-w-[calc(100%-3.5rem)]"
+            data-testid="ve-tools">
+            {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
+            {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
+            {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+            {/* No `accept`, for the reason every image intake here carries
+                none: an image filter hides Downloads on Android (#225). */}
+            <input ref={addRef} type="file" data-testid="ve-add-file" className="absolute w-px h-px opacity-0"
+              onChange={(e) => { void addPicture(e.target.files); e.target.value = '' }} />
+            {/* The FILE's sound, not the preview's — up here with the other
+                things that decide what comes out, rather than on the
+                transport where it read as a volume control and changed
+                nothing about the export.
+
+                IT IS ALSO WHAT SAYS THERE IS NO SOUND, and what says a join
+                cannot keep it: both used to be sentences printed under the
+                video at everybody, describing a state a single control can
+                simply show — struck through and unusable, with the reason on
+                it for anyone who asks. */}
+            <button type="button" data-testid="ve-mute"
+              onClick={() => setKeepAudio((k) => !k)} disabled={!canKeepAudio}
+              title={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
+              aria-label={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
+              aria-pressed={!keepAudio}
+              data-sound={!canKeepAudio ? 'none' : keepAudio ? 'on' : 'muted'}
+              className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-45 disabled:cursor-default">
+              {keepAudio && canKeepAudio ? <VolumeIcon className="w-5 h-5" /> : <MuteIcon className="w-5 h-5" />}
             </button>
-
-            {/* The context buttons, over the top-right of the picture — and the
-                DOWNLOAD beside them, because exporting is what you came to do
-                and it should not be somewhere you have to scroll to. */}
-            {/* Wraps rather than running under Back — the same cap the image
-                editor needed once its dock reached eight buttons. Measured
-                there: the row covered Back entirely at 390px, which is the only
-                way out of a full-screen editor. */}
-            <div className="absolute top-2 end-2 flex flex-wrap justify-end gap-1.5 max-w-[calc(100%-3.5rem)]"
-              data-testid="ve-tools">
-              {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
-              {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
-              {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
-              {/* The FILE's sound, not the preview's — up here with the other
-                  things that decide what comes out, rather than on the
-                  transport where it read as a volume control and changed
-                  nothing about the export.
-
-                  IT IS ALSO WHAT SAYS THERE IS NO SOUND, and what says a join
-                  cannot keep it: both used to be sentences printed under the
-                  video at everybody, describing a state a single control can
-                  simply show — struck through and unusable, with the reason on
-                  it for anyone who asks. */}
-              <button type="button" data-testid="ve-mute"
-                onClick={() => setKeepAudio((k) => !k)} disabled={!canKeepAudio}
-                title={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
-                aria-label={audioWhy ?? (keepAudio ? s.mute : s.unmute)}
-                aria-pressed={!keepAudio}
-                data-sound={!canKeepAudio ? 'none' : keepAudio ? 'on' : 'muted'}
-                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-45 disabled:cursor-default">
-                {keepAudio && canKeepAudio ? <VolumeIcon className="w-5 h-5" /> : <MuteIcon className="w-5 h-5" />}
+            <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ve-settings"
+              onClick={() => setSettings(true)}
+              className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
+              <CogIcon className="w-5 h-5" />
+            </button>
+            {/* GREEN ONLY ONCE THERE IS A FILE. Primary colour is a claim
+                that this is the thing to do next, and before an export there
+                is nothing to download — a button that shouts from the moment
+                the editor opens is one more thing shouting, and when the
+                file really is ready nothing distinguishes it. So export
+                wears the same dark chrome as the tools beside it, and the
+                download that replaces it is the only green on the frame. */}
+            {out ? (
+              <a href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download"
+                title={`${s.download} · ${mb(out.size)}`}
+                aria-label={s.download}
+                className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
+                <DownloadIcon className="w-5 h-5" />
+              </a>
+            ) : (
+              <button type="button" title={s.exportBtn} aria-label={s.exportBtn} data-testid="ve-export"
+                onClick={doExport} disabled={busy !== ''}
+                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
+                {busy === 'render'
+                  ? <Spinner />
+                  : <DownloadIcon className="w-5 h-5" />}
               </button>
-              <button type="button" title={s.modeMore} aria-label={s.modeMore} data-testid="ve-settings"
-                onClick={() => setSettings(true)}
-                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70">
-                <CogIcon className="w-5 h-5" />
-              </button>
-              {/* GREEN ONLY ONCE THERE IS A FILE. Primary colour is a claim
-                  that this is the thing to do next, and before an export there
-                  is nothing to download — a button that shouts from the moment
-                  the editor opens is one more thing shouting, and when the
-                  file really is ready nothing distinguishes it. So export
-                  wears the same dark chrome as the tools beside it, and the
-                  download that replaces it is the only green on the frame. */}
-              {out ? (
-                <a href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download"
-                  title={`${s.download} · ${mb(out.size)}`}
-                  aria-label={s.download}
-                  className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
-                  <DownloadIcon className="w-5 h-5" />
-                </a>
-              ) : (
-                <button type="button" title={s.exportBtn} aria-label={s.exportBtn} data-testid="ve-export"
-                  onClick={doExport} disabled={busy !== ''}
-                  className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
-                  {busy === 'render'
-                    ? <Spinner />
-                    : <DownloadIcon className="w-5 h-5" />}
-                </button>
-              )}
-            </div>
-
-            {/* The crop shapes dock UNDER THE TOOLS, not along the bottom.
-                A floating bar there covers the lower third of a crop
-                rectangle that starts out filling the frame — measured with
-                `elementFromPoint`, which returned the bar where the corner
-                segment is — so the segments would not be draggable at all. */}
-            {mode === 'crop' && (
-              <div className="absolute top-14 inset-x-2 flex justify-center pointer-events-none">
-                <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
-                {mode === 'crop' && (
-                  <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-crop-bar">
-                    {/* `aria-pressed` because a DRAG can now change which of
-                        these is selected, and colour was the only thing saying
-                        so — the same gap `SegButton` had. It is also the
-                        testable contract for the snap: asserting a background
-                        class would be testing Tailwind. */}
-                    {ASPECTS.map((a) => (
-                      <button key={a.id} type="button" data-testid={`ve-aspect-${a.id}`}
-                        aria-pressed={aspectId === a.id}
-                        onClick={() => setAspectId(a.id)}
-                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
-                          aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
-                        {locale === 'ar' ? a.labelAr : a.label}
-                      </button>
-                    ))}
-                    {/* Free is shown only once a corner drag has made one. It
-                        is a RESULT, not a mode to switch into — there is
-                        nothing for it to mean before a rectangle exists. */}
-                    {freeAspect > 0 && (
-                      <button type="button" data-testid="ve-aspect-free"
-                        aria-pressed={aspectId === 'free'} onClick={() => setAspectId('free')}
-                        className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
-                          aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
-                        {s.free}
-                      </button>
-                    )}
-                  </div>
-                )}
-                </div>
-              </div>
-            )}
-
-            {/* And the controls for whichever tool is active, along the bottom. */}
-            <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
-              <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
-                {/* Censor mode has no panel either, for the same reason: what a
-                    box is, is a property of the box. What is left is the
-                    GESTURE, once, while there is nothing on screen to touch. */}
-                {mode === 'censor' && !picked && (
-                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-censor-hint">{s.addBox}</span>
-                )}
-
-                {/* Text mode has no panel — everything a caption has is on the
-                    caption. What it still needs is the GESTURE, once, while
-                    there is nothing to look at. */}
-                {mode === 'text' && captions.length === 0 && (
-                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-caption-hint">{s.addCaptionBox}</span>
-                )}
-
-              </div>
-            </div>
-
-            {/* The export's progress, over the picture, because that is where
-                you are looking. There is deliberately no result preview — the
-                stage already showed it frame for frame. */}
-            {busy === 'render' && (
-              <div className="absolute inset-0 grid place-items-center bg-black/60">
-                <div className="flex flex-col items-center gap-3 text-white">
-                  <span className="text-[1.4rem] font-mono" data-testid="ve-progress">
-                    {s.progress(progress.done, progress.total)}
-                  </span>
-                  <Button className="px-3 py-1" data-testid="ve-cancel"
-                    onClick={() => { void ask({ kind: 'cancel' }) }}>{s.cancel}</Button>
-                </div>
-              </div>
             )}
           </div>
+
+          {/* The crop shapes dock UNDER THE TOOLS, not along the bottom.
+              A floating bar there covers the lower third of a crop
+              rectangle that starts out filling the frame — measured with
+              `elementFromPoint`, which returned the bar where the corner
+              segment is — so the segments would not be draggable at all. */}
+          {mode === 'crop' && (
+            <div style={{ top: dockH + 16 }} className="absolute inset-x-2 flex justify-center pointer-events-none">
+              <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
+              {mode === 'crop' && (
+                <div className="flex items-center gap-2 whitespace-nowrap" data-testid="ve-crop-bar">
+                  {/* `aria-pressed` because a DRAG can now change which of
+                      these is selected, and colour was the only thing saying
+                      so — the same gap `SegButton` had. It is also the
+                      testable contract for the snap: asserting a background
+                      class would be testing Tailwind. */}
+                  {ASPECTS.map((a) => (
+                    <button key={a.id} type="button" data-testid={`ve-aspect-${a.id}`}
+                      aria-pressed={aspectId === a.id}
+                      onClick={() => setAspectId(a.id)}
+                      className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                        aspectId === a.id ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                      {locale === 'ar' ? a.labelAr : a.label}
+                    </button>
+                  ))}
+                  {/* Free is shown only once a corner drag has made one. It
+                      is a RESULT, not a mode to switch into — there is
+                      nothing for it to mean before a rectangle exists. */}
+                  {freeAspect > 0 && (
+                    <button type="button" data-testid="ve-aspect-free"
+                      aria-pressed={aspectId === 'free'} onClick={() => setAspectId('free')}
+                      className={`rounded px-2 py-1 text-[0.8rem] border cursor-pointer rtl:font-ar ${
+                        aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
+                      {s.free}
+                    </button>
+                  )}
+                </div>
+              )}
+              </div>
+            </div>
+          )}
+
+          {/* And the controls for whichever tool is active, along the bottom. */}
+          <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto max-w-full overflow-x-auto rounded-md bg-black/70 backdrop-blur-sm border border-white/15 text-white px-2 py-1.5">
+              {/* Censor mode has no panel either, for the same reason: what a
+                  box is, is a property of the box. What is left is the
+                  GESTURE, once, while there is nothing on screen to touch. */}
+              {mode === 'censor' && !picked && (
+                <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-censor-hint">{s.addBox}</span>
+              )}
+
+              {/* Text mode has no panel — everything a caption has is on the
+                  caption. What it still needs is the GESTURE, once, while
+                  there is nothing to look at. */}
+
+              {mode === 'text' && captions.length === 0 && !overlays.length && (
+                <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ve-caption-hint">{s.addCaptionBox}</span>
+              )}
+
+            </div>
+          </div>
+
+          {/* The export's progress, over the picture, because that is where
+              you are looking. There is deliberately no result preview — the
+              stage already showed it frame for frame. */}
+          {busy === 'render' && (
+            <div className="absolute inset-0 grid place-items-center bg-black/60">
+              <div className="flex flex-col items-center gap-3 text-white">
+                <span className="text-[1.4rem] font-mono" data-testid="ve-progress">
+                  {s.progress(progress.done, progress.total)}
+                </span>
+                <Button className="px-3 py-1" data-testid="ve-cancel"
+                  onClick={() => { void ask({ kind: 'cancel' }) }}>{s.cancel}</Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Transport. The native controls are gone with the visible video, and a
@@ -2381,6 +2586,25 @@ export default function VideoEditTool() {
                 {audioPlan === 'mixed' ? s.audioMixed : s.audioMissing}
               </p>
             )}
+
+            {/* ADDING A PICTURE LIVES HERE, with the other power features.
+                Neither of the other two places works: the dock is FULL — six
+                buttons is 270px against a 320px stage, and a seventh covers
+                Back's own centre, which is the only way out of a full-screen
+                editor — and a button on the bar along the bottom sits in the
+                way of the gesture that DRAWS a caption, in the very mode a
+                picture shares with them. Both were found by a hit test rather
+                than by looking.
+
+                It drops you into `text` mode holding the new picture, so the
+                thing you just added is the thing under your finger. */}
+            <div className="flex flex-col gap-1">
+              <Button onClick={() => addRef.current?.click()} disabled={busy !== ''}
+                data-testid="ve-add-picture">
+                {busy === 'read' ? <Spinner /> : <AddImageIcon className="w-4 h-4" />}
+                {overlays.length ? s.addAnother : s.modeImage}
+              </Button>
+            </div>
 
             {/* The clips live HERE now, not on a page under the video — there
                 is no page under the video. Adding one mid-edit is gone with it:
