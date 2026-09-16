@@ -98,6 +98,25 @@ async function drawBox(page: Page, from: [number, number], to: [number, number])
         + 'page.mouse works in viewport coordinates and the event would reach nothing')
     }
   }
+  // A CONTROL THAT IS BEHIND ANOTHER CONTROL IS NOT A CONTROL, and only a hit
+  // test says so. The editor's chrome — Back, the tool dock, the export button
+  // — floats OVER the stage, so a drag aimed near a corner lands on a button
+  // and the failure reads as a tool that ignored the gesture. This cost a
+  // debugging round before it was added.
+  const onStage = await page.evaluate(
+    ([x, y]) => {
+      let el = document.elementFromPoint(x, y)
+      while (el) {
+        const id = el.getAttribute('data-testid')
+        if (id === 'ie-stage') return true
+        if (id) return id
+        el = el.parentElement
+      }
+      return false
+    },
+    [a.x, a.y],
+  )
+  expect(onStage, `the drag would start on ${onStage} rather than on the stage`).toBe(true)
   await page.mouse.move(a.x, a.y)
   await page.mouse.down()
   await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2)
@@ -565,4 +584,200 @@ test('a file that is not a picture is refused WITH A REASON', async ({ page }) =
   })
   await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByTestId('ie-stage')).toHaveCount(0)
+})
+
+// ---------------------------------------------------------------------------
+// THE SCISSORS AND THE PLUS — `image-rearrange` folded into the editor.
+//
+// Both go through `source`, the one picture every view draws from, so the crop,
+// the boxes, the captions and the export inherit them with no code of their
+// own. These cases read PIXELS rather than handles for exactly that reason: a
+// handle proves a rectangle exists on the overlay, and what is being claimed is
+// that the picture underneath changed.
+// ---------------------------------------------------------------------------
+
+/** A solid picture of a known colour — the second file, where the fixture is
+ *  the first. Known colours are what let "a hole was filled" be told apart from
+ *  "the added picture landed here" from "nothing happened". */
+function solidPng(w: number, h: number, rgb: [number, number, number]): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0)
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body) >>> 0, 0)
+    return Buffer.concat([len, body, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8; ihdr[9] = 2
+  const raw = Buffer.alloc(h * (w * 3 + 1))
+  for (let y = 0; y < h; y++) {
+    const row = y * (w * 3 + 1)
+    raw[row] = 0
+    for (let x = 0; x < w; x++) {
+      const o = row + 1 + x * 3
+      raw[o] = rgb[0]; raw[o + 1] = rgb[1]; raw[o + 2] = rgb[2]
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ])
+}
+
+const MAGENTA: [number, number, number] = [255, 0, 255]
+
+/** One pixel of the stage, as [r, g, b]. */
+function pixelAt(page: Page, fx: number, fy: number) {
+  return page.getByTestId('ie-result').evaluate((c: HTMLCanvasElement, f) => {
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !c.width) return [-1, -1, -1]
+    const x = Math.min(c.width - 1, Math.round(f[0] * c.width))
+    const y = Math.min(c.height - 1, Math.round(f[1] * c.height))
+    const d = ctx.getImageData(x, y, 1, 1).data
+    return [d[0], d[1], d[2]]
+  }, [fx, fy])
+}
+
+/** One pixel of the EXPORTED file, decoded from the blob the reader gets. */
+async function exportedPixelAt(page: Page, fx: number, fy: number) {
+  const href = await page.getByTestId('ie-download').getAttribute('href')
+  expect(href).toMatch(/^blob:/)
+  return page.evaluate(([url, x, y]) => new Promise<number[]>((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = i.naturalWidth; c.height = i.naturalHeight
+      const ctx = c.getContext('2d', { willReadFrequently: true })
+      if (!ctx) { reject(new Error('no context')); return }
+      ctx.drawImage(i, 0, 0)
+      const d = ctx.getImageData(
+        Math.min(c.width - 1, Math.round(Number(x) * c.width)),
+        Math.min(c.height - 1, Math.round(Number(y) * c.height)), 1, 1).data
+      resolve([d[0], d[1], d[2]])
+    }
+    i.onerror = () => reject(new Error('the exported file would not decode'))
+    i.src = String(url)
+  }), [href as string, fx, fy] as const)
+}
+
+/** Grab a handle by its testid and drag it to a fraction of the stage. */
+async function dragHandle(page: Page, testid: string, to: [number, number]) {
+  const stage = (await page.getByTestId('ie-stage').boundingBox())!
+  const h = (await page.getByTestId(testid).boundingBox())!
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(stage.x + stage.width * to[0], stage.y + stage.height * to[1], { steps: 8 })
+  await page.mouse.up()
+}
+
+async function addPicture(page: Page) {
+  await page.getByTestId('ie-add-file')
+    .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: solidPng(W, H, MAGENTA) })
+  // Adding one puts you in cut mode holding it — the mode where it can be moved.
+  await expect(page.getByTestId('ie-mode-cut')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('ie-piece-0')).toBeVisible()
+}
+
+test('CUTTING A PIECE MOVES IT AND LEAVES A HOLE', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ie-mode-cut').click()
+
+  // Out of the DARK half, so the white fill left behind is unmistakable and a
+  // hole cannot be confused with the picture that was already there.
+  expect((await pixelAt(page, 0.2, 0.55))[0]).toBeLessThan(80)
+  await drawBox(page, [0.10, 0.45], [0.35, 0.68])
+  await expect(page.getByTestId('ie-piece-0')).toBeVisible()
+
+  // Onto the LIGHT half, dragged by its BODY — `drawBox` would refuse, because
+  // its hit test correctly reports the start point as the piece rather than the
+  // stage, which is exactly the difference between cutting and moving.
+  await dragHandle(page, 'ie-piece-0', [0.725, 0.565])
+
+  expect((await pixelAt(page, 0.2, 0.55))[0], 'the cut left no hole behind').toBeGreaterThan(200)
+  expect((await pixelAt(page, 0.7, 0.55))[0], 'the piece did not move').toBeLessThan(80)
+})
+
+test('…while an ADDED picture leaves none, and is fitted to what it lands on', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await addPicture(page)
+
+  // Fitted to 40% of the longest side and centred, so it spans 0.3 to 0.7.
+  expect(await pixelAt(page, 0.5, 0.5), 'the added picture is not on the stage').toEqual(MAGENTA)
+
+  // THE LOAD-BEARING HALF, and the control for the case above. A cut leaves a
+  // hole because it was lifted OUT of the picture; this came from outside. Get
+  // that wrong and it does not look like a bug in the added picture — it paints
+  // a rectangle of fill through picture nobody asked to remove, at the added
+  // file's own natural size, which here is the whole thing.
+  const corner = await pixelAt(page, 0.05, 0.05)
+  expect(corner, 'adding a picture punched a hole in the one underneath').not.toEqual([255, 255, 255])
+  expect(corner, 'the added picture was placed at full size, covering everything').not.toEqual(MAGENTA)
+  expect(corner[0], 'the picture changed outside where the addition landed').toBeLessThan(80)
+})
+
+test('a piece can be resized, about its own centre', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await addPicture(page)
+  // Spans 0.3–0.7, so this is outside it.
+  expect(await pixelAt(page, 0.2, 0.2)).not.toEqual(MAGENTA)
+
+  // The grip is the piece's bottom-right corner at (0.7, 0.7); pulling it to
+  // (0.9, 0.9) doubles its distance from the centre, so the piece doubles about
+  // that centre and spans 0.1–0.9.
+  await dragHandle(page, 'ie-piece-0-resize', [0.9, 0.9])
+  expect(await pixelAt(page, 0.2, 0.2), 'the piece did not resize').toEqual(MAGENTA)
+  // Uniform: both edges land in the same place. A stretch would have reached
+  // further on one axis than the other.
+  expect(await pixelAt(page, 0.05, 0.5), 'it grew further sideways than down').not.toEqual(MAGENTA)
+  expect(await pixelAt(page, 0.5, 0.05), 'it grew further down than sideways').not.toEqual(MAGENTA)
+})
+
+test('a piece can be turned', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await addPicture(page)
+  // Square, spanning 0.3–0.7, so a point just above its top edge is clear of it.
+  expect(await pixelAt(page, 0.5, 0.26)).not.toEqual(MAGENTA)
+
+  // A quarter of a right angle puts the square's CORNER where its flat edge
+  // was: half-diagonal 0.283 against half-side 0.2, so it reaches 0.217.
+  await dragHandle(page, 'ie-piece-0-rotate', [0.7, 0.3])
+  expect(await pixelAt(page, 0.5, 0.26), 'the piece did not turn').toEqual(MAGENTA)
+})
+
+test('both reach the EXPORTED file, not just the stage', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ie-mode-cut').click()
+  await drawBox(page, [0.10, 0.45], [0.35, 0.68])
+  await dragHandle(page, 'ie-piece-0', [0.725, 0.565])
+  await addPicture(page)
+
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 20_000 })
+
+  // The claim this whole editor rests on is that the preview IS the export,
+  // and it is the claim that broke once already — so it is read off the blob
+  // the download button points at rather than off the canvas.
+  expect(await exportedPixelAt(page, 0.5, 0.5), 'the added picture is missing from the export')
+    .toEqual(MAGENTA)
+  expect((await exportedPixelAt(page, 0.2, 0.55))[0], 'the hole is missing from the export')
+    .toBeGreaterThan(200)
+  expect((await exportedPixelAt(page, 0.7, 0.55))[0], 'the moved piece is missing from the export')
+    .toBeLessThan(80)
+})
+
+test('a file that is not a picture is refused by the ADD input too', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  // Two intake paths means two ways to hand the tool something it cannot read,
+  // and both must say why rather than doing nothing.
+  await page.getByTestId('ie-add-file').setInputFiles({
+    name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('this is not a picture'),
+  })
+  await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('ie-piece-0')).toHaveCount(0)
 })

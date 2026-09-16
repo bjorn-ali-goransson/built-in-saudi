@@ -3752,6 +3752,79 @@ stashed out of the registry, and own names went 477/478 → 479/480. Sixth
 application of the rule, and the documented fix: **wrapping a generic word in a
 phrase does not remove it.**
 
+## The scissors and the plus, and why they cost the pure module nothing (`image-edit`)
+
+`image-rearrange` is being folded into this editor, and the first half of that
+is a **cut** mode and an **add a picture** button. Two pictures in one session,
+cut and composed and cropped and captioned, instead of a round trip through a
+download.
+
+**IT NEEDED NO CHANGE TO `frameCompose.ts` AT ALL, and that is the finding.**
+The obvious build is a new layer in the pure module beside `applyCensors` — one
+the stage draws and the worker draws. It is unnecessary: **`source` is already
+the one picture every view draws from**, proved by the tilt, which is a memo
+producing a canvas of the same size. So the pieces are composited THERE, and
+the crop, the boxes, the captions and the export inherit them without a line:
+they were already drawing from that value, and none of them can disagree about
+what the picture is. The pure module stays about the OUTPUT frame, which is
+what it is for.
+
+**A PIECE LIVES IN THE PICTURE'S SPACE, NOT THE OUTPUT'S.** A censor or a
+caption is placed on the output frame, so it is a position on a screen; a piece
+is a claim about the picture — cut this bit out, put that logo there — so
+re-cropping must leave it where it was on the PICTURE. That is the same
+argument `TrackPath` already records for a followed censor, arriving one
+feature over. It also decides the view: **cut mode shows the whole picture**,
+like crop mode, because a piece can be dragged in from outside the frame and
+its hole can be outside it too. The dim is lighter there, since it is only
+saying where the frame is rather than being the answer.
+
+**The base and the piece layer are two canvases, and they have to be.** A cut
+piece is drawn FROM the base, so punching the holes into the canvas being
+sampled makes every piece a rectangle of fill colour. The base is left intact
+and the layer is built on top of it — one extra canvas, only once a piece
+exists.
+
+**THE HOLE IS THE ONLY THING THAT DIFFERS between the two kinds**, exactly as
+`image-rearrange` records: a cut was lifted OUT of the picture, an added file
+came from outside. Getting it wrong does not look like a bug in the added
+picture — it paints a rectangle of fill through picture nobody asked to remove,
+at the added file's own natural size. There is a case reading the corner pixel
+and a **control** asserting a cut still does leave the fill behind.
+
+**An x-fraction and a y-fraction are different lengths**, and the turn handle is
+where that shows. Hypotenuse-ing them straight makes the handle run ahead of the
+finger on anything but a square picture, and a resize grow faster sideways than
+down; both go through `radius`, which puts them into the picture's own pixel
+proportions — the space the rotation is actually applied in when it is drawn.
+
+**`drawBox` gained the hit test `dragSeg` already had, and it earned its place
+within the hour.** The first cut case dragged from (0.1, 0.1) and created
+nothing: the editor's chrome floats OVER the stage, so the drag started on the
+**Back button** and the overlay received no pointerdown at all. That reads as a
+tool ignoring a gesture. It now walks up from `elementFromPoint` and names what
+it would have hit — and it immediately paid a second time, refusing the drag
+that MOVES a piece, because that one correctly starts on the piece rather than
+on the stage. **A control that is behind another control is not a control, and
+only a hit test says so.**
+
+**Verified to fail** three ways: punching a hole for an added picture reddens
+exactly the no-hole case; skipping the fit-on-arrival reddens four (that case
+plus the three that depend on the piece's known size — honest collateral, since
+the piece then covers the picture); and scaling one axis only reddens
+**exactly** the resize case.
+
+**The privacy case gained an `act` for the second input**, the same shape
+`image-rearrange` got: two intake paths means two ways to reach the reader's
+bytes, and a path nobody watches is the gap that guard exists to close. The
+added file goes through `decodeImage`/`whyUnreadable` like the first, so a HEIC
+laid on a PNG works.
+
+**The keywords are deliberately UNCHANGED for now.** `image-rearrange` is still
+live, and giving this tool its vocabulary while both exist is a keyword fight
+between two tools that answer the same query. That move belongs with the
+retirement, not before it.
+
 ## A second picture, and the one property that separates it (`image-rearrange`)
 
 The tool could cut a rectangle out of the open picture and slide it about, and

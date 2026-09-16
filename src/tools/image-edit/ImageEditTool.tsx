@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
-  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, MosaicIcon, TextIcon, TiltIcon, TrashIcon,
+  BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, ImageIcon, MosaicIcon, ScissorsIcon, TextIcon,
+  TiltIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { decodeImage } from '../../lib/decodeImage'
@@ -68,7 +69,7 @@ function coverScale(w: number, h: number, angle: number): number {
 const STR = {
   en: {
     heroTitle: 'Edit a picture without uploading it',
-    heroBody: 'Crop it to the shape a platform wants, hide anything that should not be in it, and put a caption on top — all in your browser, with nothing sent anywhere. The same editor as the video one, for the one frame case. It also tilts every picture one degree clockwise: the only feature here nobody asked for, on by default, with a button to turn it off once the novelty wears thin.',
+    heroBody: 'Crop it to the shape a platform wants, cut pieces out and slide them about, drop another picture on top of it, hide anything that should not be in it, and write on it — all in your browser, with nothing sent anywhere. The same editor as the video one, for the one frame case. It also tilts every picture one degree clockwise: the only feature here nobody asked for, on by default, with a button to turn it off once the novelty wears thin.',
     pick: 'Choose a picture',
     reading: 'Reading the picture…',
     back: 'Back',
@@ -77,6 +78,12 @@ const STR = {
     keepEditing: 'Keep editing',
     discard: 'Discard and leave',
     modeCrop: 'Crop',
+    modeCut: 'Cut a piece out',
+    addImage: 'Add a picture',
+    deletePiece: 'Remove this piece',
+    turnPiece: 'Turn it',
+    addPieceHint: 'Drag on the picture to cut a piece out, then move, turn or resize it. Or add another picture with the button above.',
+    fillLeft: 'Fill left behind',
     modeCensor: 'Hide something',
     modeText: 'Caption',
     modeMore: 'Output settings',
@@ -107,7 +114,7 @@ const STR = {
   },
   ar: {
     heroTitle: 'حرّر الصورة دون رفعها',
-    heroBody: 'اقتصّها بالشكل الذي تطلبه المنصّة، واحجب ما لا ينبغي أن يظهر فيها، وضع عليها نصًّا — كل ذلك في متصفّحك دون إرسال شيء إلى أي مكان. هو محرّر الفيديو نفسه، لحالة الإطار الواحد. وهو يُميل كل صورة درجةً واحدة مع عقارب الساعة: الميزة الوحيدة هنا التي لم يطلبها أحد، مفعَّلة تلقائيًّا، ولها زرّ تُطفئها به متى فترت الطرفة.',
+    heroBody: 'اقتصّها بالشكل الذي تطلبه المنصّة، واقتطع منها أجزاءً وحرّكها، وأضِف فوقها صورة أخرى، واحجب ما لا ينبغي أن يظهر فيها، واكتب عليها — كل ذلك في متصفّحك دون إرسال شيء إلى أي مكان. هو محرّر الفيديو نفسه، لحالة الإطار الواحد. وهو يُميل كل صورة درجةً واحدة مع عقارب الساعة: الميزة الوحيدة هنا التي لم يطلبها أحد، مفعَّلة تلقائيًّا، ولها زرّ تُطفئها به متى فترت الطرفة.',
     pick: 'اختر صورة',
     reading: 'جارٍ قراءة الصورة…',
     back: 'رجوع',
@@ -116,6 +123,12 @@ const STR = {
     keepEditing: 'متابعة التحرير',
     discard: 'تجاهل واخرج',
     modeCrop: 'اقتصاص',
+    modeCut: 'اقتطاع جزء',
+    addImage: 'أضِف صورة',
+    deletePiece: 'احذف هذا الجزء',
+    turnPiece: 'أدِره',
+    addPieceHint: 'اسحب على الصورة لاقتطاع جزء، ثم حرّكه أو أدِره أو غيّر حجمه. أو أضِف صورة أخرى بالزر أعلاه.',
+    fillLeft: 'لون الفراغ',
     modeCensor: 'إخفاء جزء',
     modeText: 'نص',
     modeMore: 'إعدادات المُخرَج',
@@ -166,7 +179,46 @@ const FORMATS = [
  *  applies to paper and `video-edit` to frames. */
 const SIDES = [0, 4096, 2048, 1600, 1080, 720]
 
-type Mode = 'crop' | 'censor' | 'text'
+type Mode = 'crop' | 'cut' | 'censor' | 'text'
+
+/**
+ * A rectangle lifted out of the picture, or a picture laid on top of it.
+ *
+ * ONE TYPE, because the difference between the two is ONE property: a CUT was
+ * lifted out of the base, so it leaves a hole where it came from; an ADDED
+ * picture came from outside and leaves nothing. Moving, turning, resizing and
+ * exporting are the same code for both.
+ *
+ * IT LIVES IN THE PICTURE'S SPACE, NOT THE OUTPUT'S, and that is the decision
+ * that makes the whole thing cheap. A censor or a caption is placed on the
+ * output frame, so it is a position on a screen; a piece is a claim about the
+ * PICTURE — cut this bit out, put that logo there — so re-cropping afterwards
+ * must leave it exactly where it was on the picture rather than where it was on
+ * the screen. Storing it against the picture and compositing it into `source`
+ * means `drawFrame`, `applyCensors`, the captions and the export all inherit it
+ * with no change at all: they already draw from `source`.
+ */
+interface Piece {
+  id: string
+  /** The bitmap it is drawn from; `null` is the base picture itself. */
+  src: ImageBitmap | null
+  /** The sampled rectangle, in fractions of `src` (or of the base). */
+  sx: number; sy: number; sw: number; sh: number
+  /** Where it is drawn, in fractions of the BASE picture. */
+  x: number; y: number; w: number; h: number
+  rot: number
+  /** Punch the hole? True for a cut, false for a picture from outside. */
+  cut: boolean
+}
+
+/** The smallest a piece may be dragged to, as a fraction of the picture — below
+ *  this it cannot be grabbed again, and a cut this small is a mis-drag. */
+const MIN_PIECE = 0.02
+
+/** An added picture is fitted to at most this share of the longest side. A
+ *  phone photo dropped on a screenshot is several times its size, so at natural
+ *  size it covers the picture and its handles are off the canvas. */
+const FIT = 0.4
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 const mb = (b: number) => (b < 1048576 ? `${Math.round(b / 1024)} KB` : `${(b / 1048576).toFixed(1)} MB`)
@@ -181,6 +233,10 @@ type Drag =
   | { kind: 'resize'; id: string }
   | { kind: 'caption'; id: string; ox: number; oy: number }
   | { kind: 'caption-resize'; id: string }
+  | { kind: 'draw-cut'; fx: number; fy: number }
+  | { kind: 'piece'; id: string; ox: number; oy: number }
+  | { kind: 'piece-resize'; id: string; w0: number; h0: number; d0: number }
+  | { kind: 'piece-rot'; id: string }
 
 /**
  * The image editor — the video editor's screen, for the one-frame case.
@@ -219,8 +275,11 @@ export default function ImageEditTool() {
 
   const [censors, setCensors] = useState<Censor[]>([])
   const [captions, setCaptions] = useState<Caption[]>([])
+  const [pieces, setPieces] = useState<Piece[]>([])
   const [pickedBox, setPickedBox] = useState<string | null>(null)
   const [pickedCaption, setPickedCaption] = useState<string | null>(null)
+  const [pickedPiece, setPickedPiece] = useState<string | null>(null)
+  const [fill, setFill] = useState('#ffffff')
   const [boxPanel, setBoxPanel] = useState(false)
 
   const [format, setFormat] = useState<string>('image/png')
@@ -236,6 +295,8 @@ export default function ImageEditTool() {
   const dragRef = useRef<Drag | null>(null)
   const drawingRef = useRef<{ id: string; mode: CensorMode; x: number; y: number; w: number; h: number } | null>(null)
   const drawingTextRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
+  const drawingCutRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
+  const addRef = useRef<HTMLInputElement>(null)
   const bitmaps = useRef<Map<string, { bitmap: ImageBitmap; rect: Rect }>>(new Map())
   const [tick, setTick] = useState(0)
   const repaint = useCallback(() => setTick((n) => n + 1), [])
@@ -272,7 +333,7 @@ export default function ImageEditTool() {
    * and is the price of `drawFrame` staying the single implementation of the
    * crop. Rebuilt only when the picture or the switch changes, never per frame.
    */
-  const source = useMemo<CanvasImageSource | null>(() => {
+  const base = useMemo<CanvasImageSource | null>(() => {
     if (!img) return null
     if (!tilt) return img
     const c = document.createElement('canvas')
@@ -288,6 +349,58 @@ export default function ImageEditTool() {
     ctx.drawImage(img, 0, 0, dim.width, dim.height)
     return c
   }, [img, tilt, dim])
+
+  /**
+   * THE PICTURE EVERY VIEW DRAWS FROM: the base, plus whatever has been cut out
+   * of it or laid on top of it.
+   *
+   * The pieces are composited HERE rather than in `frameCompose`, and that is
+   * what makes them free. Everything downstream — the crop, the censors, the
+   * captions, the export — already draws from this one value, so none of them
+   * needed a line changed and none of them can disagree about what the picture
+   * is. The pure module stays about the OUTPUT frame, which is what it is for.
+   *
+   * THE HOLES ARE PUNCHED ON A SECOND CANVAS, never on the one being sampled: a
+   * cut piece is drawn FROM the base, so filling the base first would make every
+   * piece a rectangle of fill colour. The base is left intact and this is the
+   * layer built on top of it.
+   */
+  const source = useMemo<CanvasImageSource | null>(() => {
+    if (!base) return null
+    if (!pieces.length) return base
+    const c = document.createElement('canvas')
+    c.width = dim.width
+    c.height = dim.height
+    const ctx = c.getContext('2d')
+    if (!ctx) return base
+    ctx.drawImage(base, 0, 0, dim.width, dim.height)
+    // Holes first, so a piece dropped back over its own origin still covers the
+    // fill. An ADDED picture is skipped: it came from outside, and filling the
+    // rectangle it happens to sit on would punch a hole through picture nobody
+    // asked to remove.
+    ctx.fillStyle = fill
+    for (const p of pieces) {
+      if (!p.cut) continue
+      ctx.fillRect(p.sx * dim.width, p.sy * dim.height, p.sw * dim.width, p.sh * dim.height)
+    }
+    for (const p of pieces) {
+      const src = p.src ?? base
+      const sw = p.src ? p.src.width : dim.width
+      const sh = p.src ? p.src.height : dim.height
+      const w = p.w * dim.width
+      const h = p.h * dim.height
+      ctx.save()
+      ctx.translate((p.x + p.w / 2) * dim.width, (p.y + p.h / 2) * dim.height)
+      ctx.rotate(p.rot)
+      ctx.drawImage(
+        src,
+        p.sx * sw, p.sy * sh, p.sw * sw, p.sh * sh,
+        -w / 2, -h / 2, w, h,
+      )
+      ctx.restore()
+    }
+    return c
+  }, [base, pieces, fill, dim])
   const sourceAspect = dim.width / dim.height
   const aspect = useMemo(() => {
     if (aspectId === 'free' && freeAspect) return freeAspect
@@ -423,7 +536,12 @@ export default function ImageEditTool() {
   const draw = useCallback(() => {
     const rc = stageRef.current
     if (!rc || !source) return
-    if (mode === 'crop') {
+    // CROP AND CUT BOTH SHOW THE WHOLE PICTURE, for the same reason: both are
+    // decisions about the picture rather than about the output frame. A crop
+    // cannot be judged without the thing it is taken out of, and a piece is
+    // placed on the picture — it can be dragged in from outside the frame, and
+    // its hole can be outside it too. The dimming says which part survives.
+    if (mode === 'crop' || mode === 'cut') {
       // The whole picture, at its own shape, with everything outside the crop
       // dimmed rather than gone. The rectangle's outline is the DOM overlay,
       // which is also what you drag.
@@ -444,7 +562,10 @@ export default function ImageEditTool() {
       const by = Math.round(cropBox.y * shown.height)
       const bw = Math.round(cropBox.w * shown.width)
       const bh = Math.round(cropBox.h * shown.height)
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'
+      // Lighter while cutting: there the dim is only saying where the frame is,
+      // and a piece dragged outside it still has to be visible enough to drag
+      // back. In crop mode the dim IS the answer, so it is strong.
+      ctx.fillStyle = mode === 'cut' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.55)'
       ctx.fillRect(0, 0, shown.width, by)
       ctx.fillRect(0, by + bh, shown.width, shown.height - by - bh)
       ctx.fillRect(0, by, bx, bh)
@@ -469,6 +590,13 @@ export default function ImageEditTool() {
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
   }, [draw, tick])
+
+  /** Release the added bitmaps and clear the layer. A state updater must stay
+   *  pure — React may run one twice — so the closing happens here. */
+  function closePieces() {
+    for (const q of pieces) q.src?.close()
+    setPieces([])
+  }
 
   async function pick(list: FileList | null) {
     const f = list?.[0]
@@ -495,13 +623,56 @@ export default function ImageEditTool() {
     setCentre({ x: 0.5, y: 0.5 })
     setCensors([])
     setCaptions([])
+    closePieces()
     setMode('crop')
+  }
+
+  /**
+   * Lay ANOTHER picture on the one that is open.
+   *
+   * It goes through `decodeImage`/`whyUnreadable` exactly as the first file
+   * does, so a HEIC added to a PNG works — the rule is that every path which
+   * touches the reader's bytes must, not just the one that greets them.
+   *
+   * It is FITTED on arrival and never enlarged: a phone photo is several times
+   * the size of the screenshot it is dropped onto, so at natural size it covers
+   * everything and its handles are off the picture; a small icon blown up to
+   * fill the frame is pixels with no detail added, and growing it is one drag
+   * away.
+   */
+  async function addPicture(list: FileList | null) {
+    const f = list?.[0]
+    if (!f || !img) return
+    setError('')
+    setBusy('read')
+    const bitmap = await decodeImage(f)
+    setBusy('')
+    if (!bitmap) { setError(await whyUnreadable(f, locale)); return }
+    const k = Math.min(1, (Math.max(dim.width, dim.height) * FIT) / Math.max(bitmap.width, bitmap.height))
+    const w = Math.max(MIN_PIECE, (bitmap.width * k) / dim.width)
+    const h = Math.max(MIN_PIECE, (bitmap.height * k) / dim.height)
+    const id = `a${Date.now()}`
+    setPieces((l) => [...l, {
+      id,
+      src: bitmap,
+      sx: 0, sy: 0, sw: 1, sh: 1,
+      x: (1 - w) / 2, y: (1 - h) / 2, w, h,
+      rot: 0,
+      cut: false,
+    }])
+    setPickedPiece(id)
+    // Cut mode is where a piece can be moved, and somebody who has just added
+    // one is about to place it. Landing them in a mode with no handles on the
+    // thing they added is the dead-end this editor avoids elsewhere.
+    setMode('cut')
   }
 
   function discard() {
     setImg((old) => { old?.close(); return null })
     setCensors([])
     setCaptions([])
+    closePieces()
+    setPickedPiece(null)
     setPickedBox(null)
     setPickedCaption(null)
     setSettings(false)
@@ -567,6 +738,12 @@ export default function ImageEditTool() {
       setPickedCaption(null)
       return
     }
+    if (mode === 'cut') {
+      dragRef.current = { kind: 'draw-cut', fx: p.x, fy: p.y }
+      drawingCutRef.current = { x: p.x, y: p.y, w: 0, h: 0 }
+      setPickedPiece(null)
+      return
+    }
     const raw = atRaw(e)
     dragRef.current = {
       kind: 'crop-seg',
@@ -576,6 +753,18 @@ export default function ImageEditTool() {
       rect: { x0: cropBox.x, y0: cropBox.y, x1: cropBox.x + cropBox.w, y1: cropBox.y + cropBox.h },
     }
   }
+
+  /**
+   * A distance between two points given as FRACTIONS of the picture.
+   *
+   * An x-fraction and a y-fraction are different lengths on anything but a
+   * square picture, so hypotenuse-ing them straight makes a turn handle run
+   * ahead of the finger and a resize grow faster sideways than down. Both are
+   * put into the same unit — the picture's own pixels, in proportion — which is
+   * also the space the rotation is applied in when it is drawn.
+   */
+  const aspectPx = dim.width / dim.height
+  const radius = (dx: number, dy: number) => Math.hypot(dx * aspectPx, dy)
 
   function moveDrag(e: React.PointerEvent<HTMLDivElement>) {
     const d = dragRef.current
@@ -632,6 +821,54 @@ export default function ImageEditTool() {
       box.w = Math.abs(p.x - d.fx)
       box.h = Math.abs(p.y - d.fy)
       repaint()
+      return
+    }
+    if (d.kind === 'draw-cut') {
+      const box = drawingCutRef.current
+      if (!box) return
+      box.x = Math.min(d.fx, p.x)
+      box.y = Math.min(d.fy, p.y)
+      box.w = Math.abs(p.x - d.fx)
+      box.h = Math.abs(p.y - d.fy)
+      repaint()
+      return
+    }
+    if (d.kind === 'piece') {
+      // A piece may be dragged right off the picture — unlike a censor, which
+      // hides a region OF the output and is clamped into it. Sliding something
+      // out of frame is a thing people do on purpose here, and the export
+      // simply does not contain what is outside the crop.
+      setPieces((list) => list.map((q) => (q.id === d.id
+        ? { ...q, x: p.x - d.ox, y: p.y - d.oy } : q)))
+      return
+    }
+    if (d.kind === 'piece-resize') {
+      setPieces((list) => list.map((q) => {
+        if (q.id !== d.id) return q
+        // Scaled about the CENTRE, from how far the pointer is out of it — the
+        // same anchor the turn handle orbits, so the piece stays where it was
+        // put and only grows. Uniform, because the proportions of a picture are
+        // not ours to change and a stretch is a different tool.
+        const cx = q.x + q.w / 2
+        const cy = q.y + q.h / 2
+        const k = radius(p.x - cx, p.y - cy) / d.d0
+        const w = Math.max(MIN_PIECE, d.w0 * k)
+        const h = Math.max(MIN_PIECE, d.h0 * k)
+        return { ...q, x: cx - w / 2, y: cy - h / 2, w, h }
+      }))
+      return
+    }
+    if (d.kind === 'piece-rot') {
+      setPieces((list) => list.map((q) => {
+        if (q.id !== d.id) return q
+        // The handle sits "up" from the centre, so a quarter turn keeps it
+        // under the finger rather than a quarter turn ahead of it. In PIXEL
+        // proportions, because that is where the rotation is actually applied.
+        return {
+          ...q,
+          rot: Math.atan2(p.y - (q.y + q.h / 2), (p.x - (q.x + q.w / 2)) * aspectPx) + Math.PI / 2,
+        }
+      }))
       return
     }
     if (d.kind === 'move') {
@@ -720,6 +957,25 @@ export default function ImageEditTool() {
       repaint()
       return
     }
+    if (d?.kind === 'draw-cut') {
+      const box = drawingCutRef.current
+      drawingCutRef.current = null
+      repaint()
+      // A tap is not a cut. Below this the piece cannot be grabbed again, so
+      // committing one leaves a speck that has quietly punched a hole.
+      if (!box || box.w < MIN_PIECE || box.h < MIN_PIECE) return
+      const id = `p${Date.now()}${pieces.length}`
+      setPieces((list) => [...list, {
+        id,
+        src: null,
+        sx: box.x, sy: box.y, sw: box.w, sh: box.h,
+        x: box.x, y: box.y, w: box.w, h: box.h,
+        rot: 0,
+        cut: true,
+      }])
+      setPickedPiece(id)
+      return
+    }
     if (d?.kind === 'draw-text') {
       const box = drawingTextRef.current
       drawingTextRef.current = null
@@ -801,6 +1057,7 @@ export default function ImageEditTool() {
   // ------------------------------------------------------------------ edit ---
   const picked = censors.find((c) => c.id === pickedBox) ?? null
   const drawingText = tick >= 0 ? drawingTextRef.current : null
+  const drawingCut = tick >= 0 ? drawingCutRef.current : null
   const pct = (n: number) => (locale === 'ar' ? `${arNum(Math.round(n * 100))}٪` : `${Math.round(n * 100)}%`)
 
   const toolBtn = (m: Mode, label: string, icon: React.ReactNode) => (
@@ -950,6 +1207,65 @@ export default function ImageEditTool() {
                 </div>
               )}
 
+              {mode === 'cut' && pieces.map((q, i) => (
+                <div key={q.id} data-testid={`ie-piece-${i}`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    const pt = at(e)
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    dragRef.current = { kind: 'piece', id: q.id, ox: pt.x - q.x, oy: pt.y - q.y }
+                    setPickedPiece(q.id)
+                  }}
+                  style={{
+                    left: `${q.x * 100}%`, top: `${q.y * 100}%`,
+                    width: `${q.w * 100}%`, height: `${q.h * 100}%`,
+                    transform: `rotate(${q.rot}rad)`,
+                  }}
+                  className={`absolute cursor-move border-2 ${
+                    pickedPiece === q.id ? 'border-green-400' : 'border-white/60 border-dashed'}`}>
+                  {pickedPiece === q.id && (
+                    <>
+                      <button type="button" title={s.deletePiece} aria-label={s.deletePiece}
+                        data-testid={`ie-piece-${i}-delete`}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          setPieces((l) => l.filter((x) => { if (x.id === q.id) x.src?.close(); return x.id !== q.id }))
+                          setPickedPiece(null)
+                        }}
+                        className="absolute -top-3 -end-3 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-pointer">
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                      {/* The turn handle sits ABOVE the piece and orbits its
+                          centre, which is why the drag adds a quarter turn. */}
+                      <span data-testid={`ie-piece-${i}-rotate`} title={s.turnPiece} aria-label={s.turnPiece}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          e.currentTarget.setPointerCapture(e.pointerId)
+                          dragRef.current = { kind: 'piece-rot', id: q.id }
+                        }}
+                        className="absolute -top-8 start-1/2 -ms-2 w-4 h-4 rounded-full bg-green-400 border border-green-700 cursor-grab" />
+                      <span data-testid={`ie-piece-${i}-resize`}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          e.currentTarget.setPointerCapture(e.pointerId)
+                          const pt = at(e)
+                          dragRef.current = {
+                            kind: 'piece-resize', id: q.id, w0: q.w, h0: q.h,
+                            d0: Math.max(1e-4, radius(pt.x - (q.x + q.w / 2), pt.y - (q.y + q.h / 2))),
+                          }
+                        }}
+                        className="absolute -bottom-2 -end-2 w-4 h-4 rounded-sm bg-green-400 border border-green-700 cursor-nwse-resize" />
+                    </>
+                  )}
+                </div>
+              ))}
+
+              {mode === 'cut' && drawingCut && drawingCut.w > 0 && (
+                <div aria-hidden="true"
+                  style={{ left: `${drawingCut.x * 100}%`, top: `${drawingCut.y * 100}%`, width: `${drawingCut.w * 100}%`, height: `${drawingCut.h * 100}%` }}
+                  className="absolute border-2 border-green-400 border-dashed pointer-events-none" />
+              )}
+
               {mode === 'censor' && censors.map((c, i) => handle(
                 c.id, `ie-box-${i}`, c.keys[0], pickedBox === c.id,
                 (e) => {
@@ -1013,8 +1329,22 @@ export default function ImageEditTool() {
 
             <div className="absolute top-2 end-2 flex gap-1.5" data-testid="ie-tools">
               {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
+              {toolBtn('cut', s.modeCut, <ScissorsIcon className="w-5 h-5" />)}
               {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
               {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
+              {/* ADDING A PICTURE IS NOT A MODE, so it is not a mode button: it
+                  is one action that happens once and leaves you holding a
+                  piece. The scissors is a mode because cutting is something you
+                  keep doing. */}
+              <button type="button" title={s.addImage} aria-label={s.addImage} data-testid="ie-add"
+                onClick={() => addRef.current?.click()} disabled={busy !== ''}
+                className="grid place-items-center w-10 h-10 rounded-md border bg-black/55 border-white/25 text-white cursor-pointer hover:bg-black/70 disabled:opacity-60">
+                {busy === 'read' ? <Spinner /> : <ImageIcon className="w-5 h-5" />}
+              </button>
+              {/* No `accept`, for the reason the first input carries none: an
+                  image filter hides Downloads on Android (#225). */}
+              <input ref={addRef} type="file" data-testid="ie-add-file" className="absolute w-px h-px opacity-0"
+                onChange={(e) => { void addPicture(e.target.files); e.target.value = '' }} />
               {/* THE JOKE, AS A REAL CONTROL, and on the frame rather than three
                   taps down in the settings. It changes what every pixel of the
                   picture behind it looks like, so it belongs with the other
@@ -1093,6 +1423,21 @@ export default function ImageEditTool() {
                 )}
                 {mode === 'text' && captions.length === 0 && (
                   <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-caption-hint">{s.addCaptionBox}</span>
+                )}
+                {mode === 'cut' && !pieces.length && (
+                  <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-cut-hint">{s.addPieceHint}</span>
+                )}
+                {/* THE FILL SHOWS ONLY ONCE SOMETHING HAS BEEN CUT, because
+                    until then there is no hole for it to be the colour of — and
+                    an added picture leaves none, so a swatch beside one would be
+                    a control with nothing to do. */}
+                {mode === 'cut' && pieces.some((q) => q.cut) && (
+                  <label className="flex items-center gap-2 text-[0.8rem] opacity-85 rtl:font-ar">
+                    {s.fillLeft}
+                    <input type="color" value={fill} data-testid="ie-fill"
+                      onChange={(e) => setFill(e.target.value)}
+                      className="w-8 h-7 rounded border border-white/30 bg-transparent p-0 cursor-pointer" />
+                  </label>
                 )}
                 {/* What the crop costs, where the crop is being decided — the
                     rectangle over the whole picture already SHOWS it, and this

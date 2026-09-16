@@ -301,7 +301,16 @@ ${TOKEN}
   { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-trim', testid: 'vt-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-edit', testid: 've-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
-  { id: 'image-edit', testid: 'ie-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  // Two intake paths since the scissors and the plus landed: the editor takes a
+  // second picture to lay on the first, and a path that touches the reader's
+  // bytes without being watched is the gap this whole file exists to close.
+  { id: 'image-edit', testid: 'ie-file', name: 'shot.png', mime: 'image/png',
+    make: () => pngWithToken(TOKEN),
+    act: async (page) => {
+      await page.getByTestId('ie-add-file')
+        .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: pngWithToken(TOKEN) })
+      await expect(page.getByTestId('ie-piece-0')).toBeVisible({ timeout: 20_000 })
+    } },
   { id: 'video-stabilize', testid: 'vs-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   // --- The last of the UNVERIFIED list except the two OCR tools, which pull
   // the tesseract models and belong in a slower pass of their own.
