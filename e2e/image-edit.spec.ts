@@ -502,10 +502,12 @@ test('a caption is typed onto the picture and drawn into it', async ({ page }) =
   await page.getByTestId('ie-mode-text').click()
   await expect.poll(() => coloursIn(page, GRAIN), { timeout: 15_000 }).toBeGreaterThan(0)
 
-  // On the DARK half, where white glyphs have somewhere to show.
-  const BAND: [number, number, number, number] = [0.02, 0.1, 0.48, 0.3]
+  // On the DARK half, where white glyphs have somewhere to show — and BELOW the
+  // tool dock, which wraps to two rows on a narrow stage and sits on the LEFT
+  // under RTL, so the top corner is covered in one locale or the other.
+  const BAND: [number, number, number, number] = [0.02, 0.34, 0.48, 0.56]
   const bare = await coloursIn(page, BAND)
-  await drawBox(page, [0.03, 0.12], [0.47, 0.28])
+  await drawBox(page, [0.03, 0.36], [0.47, 0.54])
   const field = page.getByTestId('ie-caption-text-0')
   await expect(field).toBeVisible()
   await field.fill('HELLO')
@@ -522,7 +524,8 @@ test('Arabic in a caption is shaped and joined, not left as separate letters', a
   await pick(page)
   await page.getByTestId('ie-aspect-source').click()
   await page.getByTestId('ie-mode-text').click()
-  await drawBox(page, [0.03, 0.12], [0.47, 0.28])
+  // Clear of the dock, which is on the LEFT in this locale.
+  await drawBox(page, [0.03, 0.36], [0.47, 0.54])
   await page.getByTestId('ie-caption-text-0').fill('سلام')
 
   // The caption is drawn on the PAGE with the page's own fonts, so the browser's
@@ -530,7 +533,7 @@ test('Arabic in a caption is shaped and joined, not left as separate letters', a
   // ink drawn for a shaped word is narrower than for four separate glyphs —
   // measured as the span of columns that changed rather than as a string.
   await page.getByTestId('ie-stage').click({ position: { x: 5, y: 5 } })
-  await expect.poll(() => coloursIn(page, [0.02, 0.1, 0.48, 0.3]), { timeout: 15_000 }).toBeGreaterThan(2)
+  await expect.poll(() => coloursIn(page, [0.02, 0.34, 0.48, 0.56]), { timeout: 15_000 }).toBeGreaterThan(2)
 })
 
 test('the export is the crop, at the cropped size, in the chosen format', async ({ page }) => {
@@ -780,4 +783,32 @@ test('a file that is not a picture is refused by the ADD input too', async ({ pa
   })
   await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByTestId('ie-piece-0')).toHaveCount(0)
+})
+
+test('ON A PHONE THE TOOL DOCK DOES NOT COVER THE WAY OUT', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await load(page)
+  await pick(page)
+  // The dock grew to eight buttons when the scissors and the plus landed —
+  // 362px of them, against a 355px stage — and it ran straight under Back,
+  // which is the ONLY way out of a full-screen editor. Asserted with a hit test
+  // rather than on a class, because what matters is whether the button can be
+  // pressed, and only `elementFromPoint` answers that.
+  const hit = await page.evaluate(() => {
+    const b = document.querySelector('[data-testid=ie-back]')
+    if (!b) return 'no back button'
+    const r = b.getBoundingClientRect()
+    let el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+    while (el) {
+      const id = el.getAttribute('data-testid')
+      if (id) return id
+      el = el.parentElement
+    }
+    return 'nothing'
+  })
+  expect(hit, `the dock is covering Back — ${hit} is on top of it`).toBe('ie-back')
+  // And the dock stays inside the picture rather than off the side of it.
+  const tools = (await page.getByTestId('ie-tools').boundingBox())!
+  const stage = (await page.getByTestId('ie-stage').boundingBox())!
+  expect(tools.x).toBeGreaterThanOrEqual(stage.x - 1)
 })

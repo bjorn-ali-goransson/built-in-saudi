@@ -1327,7 +1327,15 @@ export default function ImageEditTool() {
               <BackIcon className="w-5 h-5 rtl:-scale-x-100" />
             </button>
 
-            <div className="absolute top-2 end-2 flex gap-1.5" data-testid="ie-tools">
+            {/* IT WRAPS, AND THAT IS NOT TIDINESS. Eight buttons is 362px, and
+                a phone stage is 355 — measured, after the scissors and the plus
+                took the dock from six: the row ran under the Back button and
+                `elementFromPoint` returned a mode button where Back should have
+                been, so the only way OUT of a full-screen editor was unreachable
+                on the device it is most used from. The cap leaves Back its
+                corner and the overflow falls to a second row. */}
+            <div className="absolute top-2 end-2 flex flex-wrap justify-end gap-1.5 max-w-[calc(100%-3.5rem)]"
+              data-testid="ie-tools">
               {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
               {toolBtn('cut', s.modeCut, <ScissorsIcon className="w-5 h-5" />)}
               {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}

@@ -1972,7 +1972,12 @@ export default function VideoEditTool() {
             {/* The context buttons, over the top-right of the picture — and the
                 DOWNLOAD beside them, because exporting is what you came to do
                 and it should not be somewhere you have to scroll to. */}
-            <div className="absolute top-2 end-2 flex gap-1.5" data-testid="ve-tools">
+            {/* Wraps rather than running under Back — the same cap the image
+                editor needed once its dock reached eight buttons. Measured
+                there: the row covered Back entirely at 390px, which is the only
+                way out of a full-screen editor. */}
+            <div className="absolute top-2 end-2 flex flex-wrap justify-end gap-1.5 max-w-[calc(100%-3.5rem)]"
+              data-testid="ve-tools">
               {toolBtn('crop', s.modeCrop, <CropIcon className="w-5 h-5" />)}
               {toolBtn('censor', s.modeCensor, <MosaicIcon className="w-5 h-5" />)}
               {toolBtn('text', s.modeText, <TextIcon className="w-5 h-5" />)}
