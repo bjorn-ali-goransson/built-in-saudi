@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { deflateSync, crc32 } from 'node:zlib'
 
 declare global {
   /** Installed by the random-picker sound test: how many sounds the page has played. */
@@ -1467,15 +1468,80 @@ test.describe('rearrange image', () => {
     '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',
     'base64')
 
-  async function load(page: import('@playwright/test').Page) {
+  /**
+   * A solid PNG of a known colour.
+   *
+   * The pixel cases below cannot use IMG: they have to tell "the picture is
+   * untouched here" from "a hole was filled" from "the added image landed here",
+   * and that needs every colour in play to be known rather than whatever a
+   * generated 40x40 happens to contain. 200px so the handles are a comfortable
+   * size — on a 40px picture a handle is a sixth of the whole thing.
+   */
+  function solidPng(w: number, h: number, rgb: [number, number, number]): Buffer {
+    const chunk = (type: string, data: Buffer) => {
+      const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0)
+      const body = Buffer.concat([Buffer.from(type, 'latin1'), data])
+      const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body) >>> 0, 0)
+      return Buffer.concat([len, body, crc])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
+    ihdr[8] = 8; ihdr[9] = 2 // 8-bit truecolour
+    const raw = Buffer.alloc(h * (1 + w * 3))
+    for (let y = 0; y < h; y++) {
+      const row = y * (1 + w * 3)
+      raw[row] = 0 // filter: none
+      for (let x = 0; x < w; x++) {
+        raw[row + 1 + x * 3] = rgb[0]; raw[row + 2 + x * 3] = rgb[1]; raw[row + 3 + x * 3] = rgb[2]
+      }
+    }
+    return Buffer.concat([
+      Buffer.from('89504e470d0a1a0a', 'hex'),
+      chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+    ])
+  }
+
+  const BLUE: [number, number, number] = [0, 0, 255]
+  const MAGENTA: [number, number, number] = [255, 0, 255]
+  const RED: [number, number, number] = [255, 0, 0]
+
+  async function load(page: import('@playwright/test').Page, buf: Buffer = IMG) {
     await page.goto('/en/apps/image-rearrange')
-    await page.locator('input[type=file]').setInputFiles({ name: 'shot.png', mimeType: 'image/png', buffer: IMG })
+    await page.getByTestId('rearr-file').setInputFiles({ name: 'shot.png', mimeType: 'image/png', buffer: buf })
     await expect(page.getByTestId('rearr-canvas')).toBeVisible({ timeout: 15_000 })
+  }
+
+  /** One pixel of the composite, in SOURCE coordinates — the canvas is sized to
+   *  the image, so this is the same space the tool does its arithmetic in. */
+  async function px(page: import('@playwright/test').Page, x: number, y: number) {
+    return page.evaluate(([px, py]) => {
+      const c = document.querySelector('[data-testid=rearr-canvas]') as HTMLCanvasElement
+      const d = c.getContext('2d')!.getImageData(px, py, 1, 1).data
+      return [d[0], d[1], d[2]] as [number, number, number]
+    }, [x, y])
+  }
+
+  /** Drag between two points given in SOURCE pixels. `page.mouse` works in raw
+   *  viewport coordinates, so the canvas is scrolled in first. */
+  async function drag(
+    page: import('@playwright/test').Page,
+    from: [number, number], to: [number, number],
+  ) {
+    const c = page.getByTestId('rearr-canvas')
+    await c.scrollIntoViewIfNeeded()
+    const box = (await c.boundingBox())!
+    const nat = await page.evaluate(() =>
+      (document.querySelector('[data-testid=rearr-canvas]') as HTMLCanvasElement).width)
+    const k = box.width / nat
+    await page.mouse.move(box.x + from[0] * k, box.y + from[1] * k)
+    await page.mouse.down()
+    await page.mouse.move(box.x + to[0] * k, box.y + to[1] * k, { steps: 8 })
+    await page.mouse.up()
   }
 
   test('dragging on the image cuts out a piece', async ({ page }) => {
     await load(page)
-    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing on it yet')
     const box = (await page.getByTestId('rearr-canvas').boundingBox())!
     await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.15)
     await page.mouse.down()
@@ -1485,14 +1551,14 @@ test.describe('rearrange image', () => {
     // A selected piece can be removed again.
     await expect(page.getByTestId('rearr-remove')).toBeVisible()
     await page.getByTestId('rearr-remove').click()
-    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing on it yet')
   })
 
   test('a tiny tap does not create a stray piece', async ({ page }) => {
     await load(page)
     const box = (await page.getByTestId('rearr-canvas').boundingBox())!
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-    await expect(page.getByTestId('rearr-count')).toContainText('Nothing cut out')
+    await expect(page.getByTestId('rearr-count')).toContainText('Nothing on it yet')
   })
 
   test('the result downloads as a PNG', async ({ page }) => {
@@ -1505,6 +1571,87 @@ test.describe('rearrange image', () => {
     const dl = page.waitForEvent('download')
     await page.getByTestId('rearr-save').click()
     expect((await dl).suggestedFilename()).toBe('rearranged.png')
+  })
+
+  // Adding a SECOND image, so two pictures become one.
+  async function addImage(page: import('@playwright/test').Page) {
+    await page.getByTestId('rearr-add-file')
+      .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: solidPng(200, 200, MAGENTA) })
+    await expect(page.getByTestId('rearr-count')).toContainText('Pieces: 1')
+  }
+
+  test('AN ADDED IMAGE LANDS ON TOP AND LEAVES NO HOLE', async ({ page }) => {
+    await load(page, solidPng(200, 200, BLUE))
+    // A colour nothing else in the fixture uses, so "a hole was filled" is
+    // distinguishable from "nothing happened".
+    await page.getByTestId('rearr-fill').fill('#ff0000')
+    await addImage(page)
+
+    expect(await px(page, 100, 100), 'the added image is not on the picture').toEqual(MAGENTA)
+
+    // The load-bearing property. A cut leaves a hole because it was LIFTED OUT
+    // of the base; an added image came from outside, so filling the rectangle
+    // it happens to occupy would punch a hole in picture nobody asked to
+    // remove — and at 200x200 it would be the whole picture.
+    const corner = await px(page, 4, 4)
+    expect(corner, 'adding an image punched a hole in the picture').not.toEqual(RED)
+    expect(corner, 'the added image was placed at full size, covering the picture').not.toEqual(MAGENTA)
+    expect(corner, 'the picture changed outside where the image was placed').toEqual(BLUE)
+  })
+
+  test('…while a CUT still does leave the fill behind', async ({ page }) => {
+    // The control, and without it the case above would pass just as well
+    // against a tool that had stopped filling holes at all.
+    await load(page, solidPng(200, 200, BLUE))
+    await page.getByTestId('rearr-fill').fill('#ff0000')
+    await drag(page, [20, 20], [80, 80])
+    await expect(page.getByTestId('rearr-count')).toContainText('Pieces: 1')
+    // Move it off its own origin, or the piece covers the hole it left.
+    await drag(page, [50, 50], [150, 150])
+    expect(await px(page, 40, 40), 'a cut left no hole behind').toEqual(RED)
+  })
+
+  test('the resize handle grows the selected piece', async ({ page }) => {
+    await load(page, solidPng(200, 200, BLUE))
+    await addImage(page)
+    // Fitted to 40% of the longest side: 80x80, centred, so it spans 60..140
+    // and (30, 30) is well outside it.
+    expect(await px(page, 30, 30)).toEqual(BLUE)
+
+    // The handle is the piece's bottom-right corner, at (140, 140). Pulling it
+    // out to (180, 180) doubles the distance from the centre, so the piece
+    // doubles ABOUT that centre and ends up spanning 20..180.
+    await drag(page, [140, 140], [180, 180])
+    expect(await px(page, 30, 30), 'the piece did not resize').toEqual(MAGENTA)
+    // Both edges land in the same place, which is what "uniform" means here —
+    // the proportions of somebody's picture are not ours to change, and a
+    // stretch would have reached further on one axis than the other. Sampled
+    // ten pixels clear of the edges, since the selected piece is stroked — and
+    // the vertical one is taken OFF the centre line, where the turn handle sits.
+    expect(await px(page, 10, 100), 'the piece grew further left than up').toEqual(BLUE)
+    expect(await px(page, 140, 10), 'the piece grew further up than left').toEqual(BLUE)
+  })
+
+  test('the export carries the added image', async ({ page }) => {
+    await load(page, solidPng(200, 200, BLUE))
+    await addImage(page)
+    const dl = page.waitForEvent('download')
+    await page.getByTestId('rearr-save').click()
+    const path = await (await dl).path()
+    // Read what a reader actually receives rather than the stage — the preview
+    // and the export share `paint`, and this is what says so.
+    const bytes = readFileSync(path!)
+    const mid = await page.evaluate(async (b64) => {
+      const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+      const bmp = await createImageBitmap(new Blob([bin], { type: 'image/png' }))
+      const c = new OffscreenCanvas(bmp.width, bmp.height)
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(bmp, 0, 0)
+      const d = ctx.getImageData(bmp.width / 2, bmp.height / 2, 1, 1).data
+      return { w: bmp.width, h: bmp.height, rgb: [d[0], d[1], d[2]] as [number, number, number] }
+    }, bytes.toString('base64'))
+    expect(mid.w).toBe(200)
+    expect(mid.rgb, 'the added image is missing from the saved PNG').toEqual(MAGENTA)
   })
 })
 

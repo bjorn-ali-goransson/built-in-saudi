@@ -3752,6 +3752,73 @@ stashed out of the registry, and own names went 477/478 → 479/480. Sixth
 application of the rule, and the documented fix: **wrapping a generic word in a
 phrase does not remove it.**
 
+## A second picture, and the one property that separates it (`image-rearrange`)
+
+The tool could cut a rectangle out of the open picture and slide it about, and
+that was all it could ever hold — every piece came from the one bitmap. Adding
+a SECOND image is asked for the moment somebody wants a logo on a screenshot,
+and it needed no new machinery: a `Piece` gained the bitmap it is drawn from,
+and its source rectangle was separated from its drawn rectangle.
+
+**That separation is what made two features possible at once.** `w/h` used to be
+the size of the source rect AND the size on screen, because every piece was a
+1:1 cut. Splitting them into `sx/sy/sw/sh` and `x/y/w/h` is what lets an image of
+any dimensions be placed — and it gave resizing for free, which a cut never had.
+
+**THE HOLE IS THE ONLY THING THAT DIFFERS, and it is the load-bearing property.**
+A cut leaves a hole because it was LIFTED OUT of the base; an added image came
+from outside and leaves nothing. So one boolean decides whether the fill is
+painted, and getting it wrong does not look like a bug in an added image — it
+punches a rectangle of solid colour through picture the reader never asked to
+remove, at the added image's OWN natural size, which on a comparable picture is
+the whole thing. There is a case reading the corner pixel, and a **control** case
+asserting a cut still does leave the fill behind, without which the first would
+pass just as well against a tool that had stopped filling holes at all.
+
+**An added image is FITTED on arrival and never enlarged.** A phone photo is
+several times the size of the screenshot it is being dropped onto, so at natural
+size it covers the picture completely and its handles are off the canvas — the
+tool looks broken on its commonest input. It is capped at 40% of the base's
+longest side. It is not scaled UP, though: a 16px icon blown up to fill the frame
+is pixels with no detail added, the honesty `print-size` already applies to paper,
+and growing it is one drag away.
+
+**The handle size was a real defect, found by needing to drive it.** It was a
+fixed count of SOURCE pixels, which is the same control at two useless extremes:
+~4 screen pixels on a phone photo shown at a third of its size, too small to put
+a finger on, and 40% of the picture on a small screenshot, where the hit radius
+swallows everything under it and a tap anywhere reads as a drag on the handle.
+It is a constant SCREEN size now, converted through the canvas's own scale and
+clamped to at most a sixth of the shorter side. The turn handle had shipped that
+way since the tool was written; it only became visible when a second handle
+doubled the surface.
+
+**Handles are hit-tested only on the SELECTED piece**, because that is the only
+piece they are DRAWN on. They were tested on every piece, so an invisible control
+above an unselected piece could take a drag with nothing on screen to explain it.
+
+**Verified to fail**, three ways: filling the hole for an added image reddens the
+no-hole case (and the resize case with it, since that regression repaints the
+whole canvas — honest collateral rather than one clean case); placing at natural
+size reddens the same two; and scaling one axis only reddens **exactly** the
+resize case and no other.
+
+**Two file inputs means two paths to the reader's bytes, and both are guarded.**
+The added file goes through `decodeImage`/`whyUnreadable` like the first, so a
+HEIC added to a PNG works — the rule this file already records is that every path
+that touches the user's bytes must, not just the one that greets them. And the
+`privacy.spec.ts` case gained an `act` that drives the second input too: a second
+intake nobody watches is the gap that whole guard exists to close.
+
+**Keywords: two phrases only, and `combine` was deliberately NOT one of them.**
+`csv-merge`, `pdf-merge`, `images-to-pdf` and `video-edit` all index
+`combine`/`merge`/«دمج» — `images-to-pdf` owns the literal `merge images` — so
+the obvious word for this feature is the one word it must not have. `put one
+image on another`, `place an image on a photo` and «ضع صورة فوق صورة» instead.
+Measured: every bench number, every top-1 and own-names 479/480 are unchanged,
+and the only movement anywhere is `translate my dog` matching one more tool in
+the RAW count while still showing exactly one row — below the floor, so invisible.
+
 ## Taking a still out of a video (`video-frames`)
 
 No new dependency and no WebCodecs: a `<video>` element, a seek, and

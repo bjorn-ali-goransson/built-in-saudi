@@ -310,8 +310,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'image-rearrange',
-    en: { name: 'Rearrange Image', description: 'Open a screenshot or photo, drag out the parts you want to move, then slide and rotate those pieces anywhere on the image — useful for tidying a screenshot, covering something up, or rearranging a layout before you send it. Runs entirely in your browser: the picture is never uploaded, and you can save the result or share it straight from your device.' },
-    ar: { name: 'إعادة ترتيب الصورة', description: 'افتح لقطة شاشة أو صورة، واسحب لتحديد الأجزاء التي تريد تحريكها، ثم انقلها وأدِرها في أي مكان على الصورة — مفيد لترتيب لقطة شاشة أو تغطية شيء أو إعادة ترتيب تصميم قبل إرساله. يعمل بالكامل في متصفحك: لا تُرفع الصورة أبدًا، ويمكنك حفظ النتيجة أو مشاركتها مباشرة.' },
+    en: { name: 'Rearrange Image', description: 'Open a screenshot or photo, drag out the parts you want to move, then slide, turn and resize those pieces anywhere on the image. You can also drop in another picture — a logo, a photo, a second screenshot — and place it wherever you like, so two images become one. Runs entirely in your browser: nothing is ever uploaded, and you can save the result or share it straight from your device.' },
+    ar: { name: 'إعادة ترتيب الصورة', description: 'افتح لقطة شاشة أو صورة، واسحب لتحديد الأجزاء التي تريد تحريكها، ثم انقلها وأدِرها وغيّر حجمها في أي مكان على الصورة. ويمكنك أيضًا إضافة صورة أخرى — شعار أو صورة أو لقطة ثانية — ووضعها حيث تشاء، فتصير الصورتان واحدة. يعمل بالكامل في متصفحك: لا يُرفع أي شيء أبدًا، ويمكنك حفظ النتيجة أو مشاركتها مباشرة.' },
   },
   {
     id: 'flashcards',
