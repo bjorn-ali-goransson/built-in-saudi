@@ -198,6 +198,7 @@ import { certDecoderTool } from './cert-decoder/meta'
 import { emailHeadersTool } from './email-headers/meta'
 import { seatingChartTool } from './seating-chart/meta'
 import { timetableTool } from './timetable/meta'
+import { activityScheduleTool } from './activity-schedule/meta'
 import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
 import { sheetDiffTool } from './sheet-diff/meta'
@@ -358,6 +359,7 @@ export const tools: Tool[] = [
   labelSheetTool,
   seatingChartTool,
   timetableTool,
+  activityScheduleTool,
   attendanceSheetTool,
   arabicHandwritingTool,
   worksheetsTool,

@@ -12,10 +12,22 @@ const load = async (page: Page, locale = 'en') => {
   await expect(page.getByTestId('timetable')).toBeVisible()
 }
 
-/** The day columns in the order they are actually rendered. */
+/**
+ * The day columns in the order they are actually rendered, LEFT TO RIGHT.
+ *
+ * Read off the geometry, not the DOM. This used to return the DOM order and
+ * that is why it could not see the bug it was written for: under `dir="rtl"` a
+ * table lays its columns out right-to-left, so the source order and the order
+ * on screen are OPPOSITE — and the tool was reversing the array as well, which
+ * reversed twice and put Sunday back on the left. Every expectation below was
+ * already describing the visual order, and passed anyway.
+ */
 const headOrder = async (page: Page) =>
   page.locator('[data-testid^="tt-head-"]').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('data-testid')!.replace('tt-head-', '')),
+    (els) => els
+      .map((e) => ({ d: e.getAttribute('data-testid')!.replace('tt-head-', ''), x: e.getBoundingClientRect().x }))
+      .sort((a, b) => a.x - b.x)
+      .map((o) => o.d),
   )
 
 test('the week starts on Sunday, not Monday', async ({ page }) => {

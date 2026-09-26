@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocale, localePath } from '../../i18n'
 import { Stack, Panel, Field, Input, Check } from '../../components/ui'
 import {
-  DAY_LABEL, SCHOOL_WEEK, WEEK, columnOrder, emptyTimetable, isEmpty,
+  DAY_LABEL, SCHOOL_WEEK, WEEK, emptyTimetable, isEmpty,
   type DayKey, type Timetable,
 } from './timetable'
 
@@ -37,7 +37,6 @@ export default function TimetableTool() {
   const { locale } = useLocale()
   const l = locale === 'ar' ? 'ar' : 'en'
   const s = STR[l]
-  const rtl = l === 'ar'
 
   const [t, setT] = useState<Timetable>(() => {
     try {
@@ -51,7 +50,11 @@ export default function TimetableTool() {
   }, [t])
 
   const [busy, setBusy] = useState(false)
-  const cols = useMemo(() => columnOrder(t.days, rtl), [t.days, rtl])
+  // NOT `columnOrder` — that is for the canvas, which has no reading direction.
+  // A table inside dir="rtl" already lays its columns right-to-left, so
+  // reversing here as well put Sunday back on the LEFT, which is the very
+  // thing this tool exists to get right. See `lib/week.ts`.
+  const cols = t.days
 
   const setCell = (row: number, day: DayKey, v: string) =>
     setT((x) => ({

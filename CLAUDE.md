@@ -2209,6 +2209,158 @@ EASE — is `readability`'s subject, and the new tool won it 330 to 248 on a
 keyword. Removed; the established tool keeps the exact phrase and this one keeps
 «عسر القراءة» and «قراءة مريحة». Fifth time that rule has been applied.
 
+## Both week grids printed Arabic backwards (`lib/week.ts`)
+
+`timetable` was built to fix exactly one thing — "right-to-left means the
+COLUMNS reverse, not just the labels" — and it **had the bug it was written to
+prevent**, for its whole life, with a green spec.
+
+`columnOrder(days, rtl)` reverses the array. That is correct for the CANVAS the
+PDF is painted on, which has no reading direction and walks x from 0 upwards.
+It is wrong for HTML: a table or a grid inside `dir="rtl"` **already** lays its
+columns out right-to-left, so reversing the array as well reverses twice and
+puts Sunday back on the LEFT — where an Arabic reader finishes.
+
+**The spec could not see it because it asserted the DOM order**, which was the
+half that was right. Measured by reading `getBoundingClientRect().x` off a real
+render, both grids read `sun mon tue wed thu` left to right on the Arabic side;
+the reference sheet this was all modelled on has الأحد on the right. The
+expectations in `timetable.spec.ts` were already describing the visual order and
+passed anyway. Both helpers sort by geometry now.
+
+So: **`columnOrder` is for renderers with no reading direction. HTML must not
+use it**, and the function says so. The PDFs were right all along, which is what
+made the disagreement invisible — the printed sheet and the screen said
+different things and nothing compared them.
+
+The three facts (Sunday first, the school week, the Arabic day names) moved to
+`lib/week.ts` on the second week GRID, because two grids must not be able to
+disagree about any of them. `timesheet` keeps a third copy of the day keys and
+labels deliberately: it renders a list of rows, not a grid, so the part with the
+reason attached does not apply to it.
+
+## An illustrated schedule, and a QR that turned out to be a picture (`activity-schedule`)
+
+Built from a real Saudi kindergarten wall chart. `timetable` stays the plain
+grid and keeps `class schedule` / «جدول أسبوعي»; this one is the illustrated
+routine sheet — an icon on every activity, saved sheets, and a link that
+carries the whole schedule. The two link to each other.
+
+**The time lives on the CELL, not the row, and that is the whole design.** The
+sheet it was modelled on had four rows where one day had drifted from the rest
+of its row — `9:30 – 9:30`, `10:00 – 19:30`, a period that lost its end time.
+Nobody proof-reads a wall chart column by column. A single time per row would
+make that disagreement *unrepresentable*, and the chart on the wall says it
+happens anyway, so the check exists precisely because the model allows it.
+
+Four decisions around that:
+
+- **A plurality is not a consensus.** Two days saying one thing and two saying
+  another is a row with no answer, and picking the first would be inventing
+  one. There is a case for the 2-2 split flagging nothing, without which the
+  whole check could be "flag everything".
+- **The malformed ranges are caught WITHOUT a row to compare against** —
+  backwards, and zero-length. A typo can be the only entry in its row, which is
+  the half the row check structurally cannot see.
+- **A time typed once spreads down its row, in either typing order**, while the
+  row still agrees. That is what makes the check rarely fire: people set the
+  period once, and a cell typed later inherits it. The check is for the sheet
+  that has already drifted, not a nag on data entry.
+- **The icon is remembered by folded name across EVERY saved sheet**, guessed
+  from the words second, and a guess never overrules a choice. «قرآن» and
+  «القرآن» are one activity, or the memory is useless in the language the tool
+  is for.
+
+### The QR was a picture of a QR, twice, and only decoding it found out
+
+Worth recording in full, because both failures produce a code that looks
+perfect on the page.
+
+1. **Modules drawn at a rounded SIZE rather than between rounded BOUNDARIES.**
+   `fillRect(c * step, …, ceil(step), ceil(step))` at a fractional step paints
+   every module wider than its own pitch — 21% at 2.48px — compounding until
+   the finder patterns are the wrong shape.
+2. **And then it still failed, because 150dpi is not enough.** A 105-module
+   code in a 44mm square is 2.5 pixels per module in the page raster and a
+   decoder needs about five. Raising the whole page to 300dpi would fix it by
+   making an A4 canvas 35MB to sharpen one square.
+
+`lib/printPdf.ts` gained **`Overlay`**: an image embedded in the PDF at its own
+resolution over the composed raster, with `y` measured from the TOP like the
+canvas. The code goes on at 8px/module. **The spec decodes the QR out of the
+produced PDF with jsQR** — off the raw bytes, finding the square image XObject
+and inflating it — and then drives the URL it recovers in a clean browser. A QR
+nobody has decoded is a picture, and this one was.
+
+The same pass found that the link carried the **no-slash path**, which
+301-redirects. That is fine in a browser and wrong on paper: the QR is the one
+link on the site that cannot be corrected after it is handed out.
+
+### Deflating the payload is what makes the QR printable
+
+Measured before and after (`deflate-raw`, the API `lib/zip.ts` already uses;
+gzip's header and trailer are 18 bytes of nothing when both ends are ours):
+
+| Arabic sheet | plain | deflated | printed |
+|---|---|---|---|
+| 24 rows, one activity per row | 1,674 B | **700 B** | 61mm → **41mm** |
+| 80 rows, one activity per row | 4,068 B | **1,239 B** | past the limit → **52mm** |
+| 40 rows, every cell different | 9,923 B | 2,092 B | still refused |
+
+A schedule is the most compressible thing there is — the same day names, time
+format and handful of activity names over and over. The dictionary in the
+compact form takes out the record-level repetition and deflate takes the rest.
+**The bottom row is the point of the middle one**: no realistic sheet reaches a
+limit any more, and only a sheet where every single cell differs gets near.
+
+Compressing is asynchronous, which moved two things: the shared sheet is read
+from the hash in an **effect** rather than as initial state, and the share link
+is kept in **state** rather than built on click — `clipboard.writeText` after an
+`await` has lost its user activation in Safari, which is the one browser where a
+silent copy failure matters most.
+
+### The refusals have to be REACHABLE
+
+`MAX_SIZE_MM` shipped at 82 for one build. The largest QR there is — version
+40, 177 modules — needs 185 × 0.42 = **77.7mm** at the density floor, so
+`too-dense` could never fire: dead code with a passing test. **It was found
+because injecting a regression into the limit changed nothing**, which is the
+only reason to verify a guard can fail rather than only that it passes. 60mm
+makes both branches reachable and is the right answer anyway on a 210mm page.
+
+### Other things worth keeping
+
+- **A row is a period shared across the week, so the cells of one row must stay
+  in one band.** Each day card stacking its own rows lined up only while every
+  cell was the same height — and a hint grows a cell, sliding every row below
+  it out of step with the other four days. `grid-rows-subgrid` makes the band a
+  property of the sheet rather than of each card.
+- **The illustrations are generated, cropped to their own alpha bounding box,
+  and committed** (`scripts/gen-schedule-art.mjs`, `public/illustrations/`).
+  Cropping to a fixed fraction of the generation is what cost the books their
+  spines and the children their heads: the model puts the subject roughly where
+  it was asked and "roughly" is several percent of 1024 pixels.
+- **A band's height is a fraction of the sheet's WIDTH**, in both renderers,
+  and the art is CONTAINED in it. At its own aspect ratio across A4 landscape
+  the footer alone would be 80mm of a 210mm page.
+- **The spec asserts the illustrations DECODE**, not that they are present: a
+  missing file under `public/` answers 200 with index.html here, so a mistyped
+  path gives an `<img>` that satisfies every other assertion. `naturalWidth`
+  is 0 whatever the server said.
+- **No Saudi flag**, which the reference sheet has. It carries the shahāda and
+  this is a sheet that gets pinned up and thrown away at the end of term.
+  Bunting says the same thing and asks nothing of whoever clears the wall.
+- **No monospace anywhere**, including the printed times: a schedule is not
+  code. IBM Plex Sans Arabic sets Latin and Arabic digits evenly and is loaded
+  in both locales.
+- **The QR ink is deep palm green, not black.** A decoder needs contrast, not
+  black; #0b3d2e on white is about 13:1 against a threshold nearer 3:1.
+  Verified by decoding, not assumed.
+- **`classroom schedule` is deliberately NOT a keyword** — it contains
+  `timetable`'s indexed phrase `class schedule` and took the query 339 to 289.
+  Seventh application of "the established tool keeps the exact phrase". All
+  nine benches unchanged, own names 477/478.
+
 ## A timetable that reads the right way round (`timetable`)
 
 Found by a seasonal sweep in the week the school year starts here. The category
@@ -2230,6 +2382,15 @@ code rather than left to CSS `direction`, because the PDF is drawn on a canvas
 and **a canvas has no reading direction to inherit** — a grid that looked right
 on screen would still come out backwards. That is the same reason
 `lib/printPdf.ts` exists at all, one level down.
+
+**The second bullet was FALSE on screen for this tool's whole life, and the
+correction is above rather than edited away** — see *Both week grids printed
+Arabic backwards*. `columnOrder` was applied to the HTML table as well as to
+the canvas, and a table inside `dir="rtl"` already reverses its own columns, so
+it reversed twice and put Sunday back on the left. The PDF was right throughout,
+which is exactly why nobody noticed: the two halves disagreed and nothing
+compared them. The spec asserted the DOM order, which was the half that was
+right.
 
 **Two guards caught things, and the second is the more embarrassing.**
 `check-orphans` failed the build again — adding this tool displaced `sun-times`

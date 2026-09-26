@@ -13,35 +13,15 @@
 //    alone prints the days backwards — Sunday on the far left, where an Arabic
 //    reader's eye finishes rather than starts. Reversing the column order is
 //    the whole of the fix and almost nobody does it.
+//
+// Both facts now live in `lib/week.ts`, because `activity-schedule` renders a
+// week grid too and the two must not be able to disagree about either.
 
-export type DayKey = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
+export {
+  WEEK, SCHOOL_WEEK, DAY_LABEL, columnOrder, type DayKey,
+} from '../../lib/week'
 
-/** Sunday first, always. The weekend is at the END of the week here. */
-export const WEEK: DayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
-
-/** The school and working week: Sunday to Thursday. */
-export const SCHOOL_WEEK: DayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu']
-
-export const DAY_LABEL: Record<DayKey, { en: string; ar: string }> = {
-  sun: { en: 'Sunday', ar: 'الأحد' },
-  mon: { en: 'Monday', ar: 'الاثنين' },
-  tue: { en: 'Tuesday', ar: 'الثلاثاء' },
-  wed: { en: 'Wednesday', ar: 'الأربعاء' },
-  thu: { en: 'Thursday', ar: 'الخميس' },
-  fri: { en: 'Friday', ar: 'الجمعة' },
-  sat: { en: 'Saturday', ar: 'السبت' },
-}
-
-/**
- * The days in the order the COLUMNS should appear.
- *
- * Sunday is always first in reading order; in an RTL sheet that means the
- * rightmost column. Reversing here rather than relying on CSS `direction`
- * keeps the printed PDF and the on-screen grid in agreement — the canvas the
- * PDF is drawn on has no `direction` of its own to inherit.
- */
-export const columnOrder = (days: DayKey[], rtl: boolean): DayKey[] =>
-  rtl ? [...days].reverse() : days
+import { SCHOOL_WEEK, type DayKey } from '../../lib/week'
 
 export interface Slot {
   /** Label shown in the row header, e.g. a time or a period number. */

@@ -629,6 +629,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },
   },
   {
+    id: 'activity-schedule',
+    en: { name: 'Activity Schedule', description: 'Make an illustrated routine or activity schedule with an icon on every entry, share the whole sheet as one link, and print it as a PDF with a QR code that reopens it for editing. Free, and nothing leaves your browser.' },
+    ar: { name: 'جدول الأنشطة', description: 'اصنع جدول روتين أو أنشطة مزخرفًا بأيقونة لكل خانة، وشارك الورقة كاملة برابط واحد، واطبعها ملف PDF يحمل رمز استجابة يعيد فتحها للتحرير. مجانًا، ولا يغادر شيء متصفحك.' },
+  },
+  {
     id: 'timetable',
     en: { name: 'Weekly Timetable', description: 'Fill in and print a weekly class or work timetable that starts on Sunday — and in Arabic reverses the columns, not just the day names. Free, in your browser.' },
     ar: { name: 'الجدول الأسبوعي', description: 'املأ جدولًا أسبوعيًا للحصص أو الدوام واطبعه، يبدأ بالأحد — وفي العربية تنعكس الأعمدة لا أسماء الأيام وحدها. مجانًا داخل متصفحك.' },

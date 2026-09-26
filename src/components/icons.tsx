@@ -1379,3 +1379,15 @@ export function SteadyIcon({ className }: P) {
   )
 }
 
+/** A day column with an icon beside each activity — the activity schedule. */
+export function ActivityBoardIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 8.5h18" />
+      <circle cx="7" cy="12.5" r="1.4" />
+      <circle cx="7" cy="17" r="1.4" />
+      <path d="M11 12.5h7M11 17h5" />
+    </svg>
+  )
+}

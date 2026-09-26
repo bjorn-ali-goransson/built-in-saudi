@@ -17,3 +17,4 @@ test-results/
 # language models next to it ARE committed — npm has no reliable source for them.
 public/ocr/tesseract-core-*
 public/ocr/worker.min.js
+.art-cache/

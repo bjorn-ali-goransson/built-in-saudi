@@ -9,6 +9,30 @@
 
 export const MM_TO_PT = 72 / 25.4
 
+/**
+ * An image placed on the page at its OWN resolution, over the composed raster.
+ *
+ * The page is one 150dpi bitmap, which is right for a worksheet and wrong for
+ * anything a machine has to read back. A QR code proved it: at 150dpi a
+ * 105-module code in a 44mm square is 2.5 pixels per module, and a decoder
+ * needs about five — so the printed code looked perfect and **could not be
+ * scanned**. Raising the whole page to 300dpi would fix it by making an A4
+ * canvas 35MB, to sharpen one square.
+ *
+ * An overlay is embedded in the PDF as its own image instead, so it can be as
+ * fine as it needs to be while the page stays cheap. `y` is measured from the
+ * TOP, like the canvas, not from the PDF's bottom-left origin — the caller is
+ * already thinking in canvas coordinates and converting in two places is how
+ * they end up disagreeing.
+ */
+export interface Overlay {
+  png: Uint8Array
+  xMm: number
+  yMm: number
+  wMm: number
+  hMm: number
+}
+
 export interface Page {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
@@ -16,6 +40,8 @@ export interface Page {
   px: number
   wMm: number
   hMm: number
+  /** Images drawn over the page raster at their own resolution. */
+  overlays: Overlay[]
 }
 
 export const A4: [number, number] = [210, 297]
@@ -35,7 +61,7 @@ export function newPage([wMm, hMm]: [number, number], dpi = 150): Page {
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.textBaseline = 'top'
-  return { canvas, ctx, px, wMm, hMm }
+  return { canvas, ctx, px, wMm, hMm, overlays: [] }
 }
 
 /** Wrap `pages` into a PDF at their true physical size. */
@@ -46,12 +72,23 @@ export async function pagesToPdf(pages: Page[]): Promise<Blob> {
     const png = await doc.embedPng(await toPng(p.canvas))
     const page = doc.addPage([p.wMm * MM_TO_PT, p.hMm * MM_TO_PT])
     page.drawImage(png, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
+    for (const o of p.overlays) {
+      const img = await doc.embedPng(o.png)
+      page.drawImage(img, {
+        x: o.xMm * MM_TO_PT,
+        // Canvas y runs down from the top; PDF y runs up from the bottom.
+        y: (p.hMm - o.yMm - o.hMm) * MM_TO_PT,
+        width: o.wMm * MM_TO_PT,
+        height: o.hMm * MM_TO_PT,
+      })
+    }
   }
   const bytes = await doc.save()
   return new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
 }
 
-async function toPng(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+/** A canvas as PNG bytes — what an `Overlay` takes. */
+export async function toPng(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'))
   if (!blob) throw new Error('encode failed')
   return new Uint8Array(await blob.arrayBuffer())
