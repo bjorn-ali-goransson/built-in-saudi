@@ -5,12 +5,12 @@ import { Sheet, type SheetStrings } from './Sheet'
 import { STR } from './strings'
 import { iconFor, loadIconMemory, rememberIcon, type IconMemory } from './icons'
 import {
-  SCHOOL_WEEK, WEEK, alignRow, emptySchedule, isBlank, readShareHash, shareLink,
-  troubles, type Cell, type DayKey, type Schedule,
+  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fmt, isBlank, itemsOn,
+  magnets, moveTo, newId, nextSlot, parseTime, readShareHash, resizeTo, shareLink,
+  snap, snapWith, troubles, type DayKey, type Item, type Schedule,
 } from './schedule'
 import {
-  deleteOne, loadAll, loadDraft, saveDraft, saveOne, setCurrentId,
-  timeVocabulary, vocabulary,
+  deleteOne, loadAll, loadDraft, saveDraft, saveOne, setCurrentId, vocabulary,
 } from './store'
 import type { QrPlan } from './qr'
 
@@ -25,6 +25,7 @@ export default function ActivityScheduleTool() {
   const [mem, setMem] = useState<IconMemory>(() => loadIconMemory())
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [note, setNote] = useState('')
   const [qr, setQr] = useState<QrPlan | null>(null)
 
   /**
@@ -52,7 +53,6 @@ export default function ActivityScheduleTool() {
   useEffect(() => { setCopied(false); setQr(null) }, [schedule])
 
   const suggestions = useMemo(() => vocabulary(saved, schedule), [saved, schedule])
-  const times = useMemo(() => timeVocabulary(saved, schedule), [saved, schedule])
   const problems = useMemo(() => troubles(schedule), [schedule])
 
   /**
@@ -71,67 +71,131 @@ export default function ActivityScheduleTool() {
     return () => { live = false }
   }, [schedule])
 
+  /** Replace one activity, leaving everything else alone. */
+  const patch = useCallback((day: DayKey, id: string, fn: (it: Item) => Item) => {
+    setSchedule((prev) => ({
+      ...prev,
+      items: {
+        ...prev.items,
+        [day]: itemsOn(prev, day).map((it) => (it.id === id ? fn(it) : it)),
+      },
+    }))
+  }, [])
+
   /**
-   * Writing one cell.
+   * The icon follows the name until somebody overrules it.
    *
-   * Two rules beyond "store what was typed", and both exist to stop the
-   * harmony check firing on work the tool could have done itself:
-   *
-   * **A time spreads down its row while the row still agrees.** Setting the
-   * period once is the normal case, so typing it into any day fills the rest
-   * — and a cell typed later inherits it too, because people set the times
-   * first as often as they set the activities first. Once a day has been
-   * deliberately given its own time the row is no longer bare and nothing is
-   * overwritten.
-   *
-   * **The icon follows the name until somebody overrules it.** A name used
-   * before brings back the icon it was given, in this schedule or any other.
-   * Choosing by hand is what TEACHES that, so the two directions differ: a
-   * name may replace a suggested icon, and an icon never touches the name.
+   * A name used before brings back the icon it was given, in this schedule or
+   * any other. Choosing by hand is what TEACHES that, so the two directions
+   * differ: a name may replace a suggested icon, and an icon never touches the
+   * name.
    */
-  const setCell = useCallback((row: number, day: DayKey, patch: Partial<Cell>) => {
-    setSchedule((prev) => {
-      const rows = prev.rows.map((r, i) => {
-        if (i !== row) return r
-        const before: Cell = r.cells[day] ?? { name: '', icon: '', time: '' }
-        const next: Cell = { ...before, ...patch }
-
-        if (patch.name !== undefined && patch.icon === undefined) {
-          const wasSuggested = !before.icon || before.icon === iconFor(before.name, mem)
-          if (wasSuggested) next.icon = iconFor(next.name, mem)
-        }
-
-        const cells = { ...r.cells, [day]: next }
-        const others = prev.days.filter((d) => d !== day)
-        const otherTimes = others.map((d) => (cells[d]?.time ?? '').trim()).filter(Boolean)
-
-        if (patch.time !== undefined && next.time.trim() && otherTimes.length === 0) {
-          for (const d of others) {
-            const c = cells[d]
-            if (c && (c.name.trim() || c.icon)) cells[d] = { ...c, time: next.time.trim() }
-          }
-        } else if (patch.name !== undefined && !next.time.trim() && otherTimes.length) {
-          const agreed = otherTimes.every((t) => t === otherTimes[0]) ? otherTimes[0] : ''
-          if (agreed) next.time = agreed
-        }
-
-        return { ...r, cells }
-      })
-      return { ...prev, rows }
+  const onName = useCallback((day: DayKey, id: string, name: string) => {
+    patch(day, id, (it) => {
+      const wasSuggested = !it.icon || it.icon === iconFor(it.name, mem)
+      return { ...it, name, icon: wasSuggested ? iconFor(name, mem) : it.icon }
     })
-  }, [mem])
+  }, [patch, mem])
 
-  /** Choosing an icon by hand is the only thing that writes the memory. */
-  const setIcon = useCallback((row: number, day: DayKey, icon: string, name: string) => {
-    setCell(row, day, { icon })
+  const onIcon = useCallback((day: DayKey, id: string, icon: string, name: string) => {
+    patch(day, id, (it) => ({ ...it, icon }))
     if (name.trim()) setMem(rememberIcon(name, icon))
-  }, [setCell])
+  }, [patch])
 
-  const onAlign = (row: number) =>
-    setSchedule((p) => ({ ...p, rows: p.rows.map((r, i) => (i === row ? alignRow(r, p.days) : r)) }))
+  /**
+   * Moving snaps to a neighbouring day's edge first, and to the quarter hour
+   * otherwise — which is what makes a tidy week the default without locking
+   * the days together. See `magnets` in `schedule.ts`.
+   */
+  const onMove = useCallback((day: DayKey, id: string, start: number, precise?: boolean) => {
+    setSchedule((prev) => {
+      const to = precise ? snap(start) : snapWith(start, magnets(prev, day))
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          [day]: itemsOn(prev, day).map((it) => (it.id === id ? moveTo(prev, it, to) : it)),
+        },
+      }
+    })
+  }, [])
 
-  const alignAll = () =>
-    setSchedule((p) => ({ ...p, rows: p.rows.map((r) => alignRow(r, p.days)) }))
+  const onResize = useCallback((day: DayKey, id: string, end: number, precise?: boolean) => {
+    setSchedule((prev) => {
+      const to = precise ? snap(end) : snapWith(end, magnets(prev, day))
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          [day]: itemsOn(prev, day).map((it) => (it.id === id ? resizeTo(prev, it, to) : it)),
+        },
+      }
+    })
+  }, [])
+
+  const onRemove = useCallback((day: DayKey, id: string) => {
+    setSchedule((prev) => ({
+      ...prev,
+      items: { ...prev.items, [day]: itemsOn(prev, day).filter((it) => it.id !== id) },
+    }))
+  }, [])
+
+  /** `after` is the activity Enter was pressed in; the new one follows it. */
+  const onAdd = useCallback((day: DayKey, after?: Item) => {
+    setSchedule((prev) => {
+      const slot = after
+        ? { start: after.end, end: Math.min(after.end + (after.end - after.start), prev.to) }
+        : nextSlot(prev, day)
+      const start = clamp(slot.start, prev.from, Math.max(prev.from, prev.to - MIN_LEN))
+      const item: Item = {
+        id: newId(), name: '', icon: '',
+        start, end: clamp(Math.max(slot.end, start + MIN_LEN), start + MIN_LEN, prev.to),
+      }
+      return { ...prev, items: { ...prev.items, [day]: [...itemsOn(prev, day), item] } }
+    })
+  }, [])
+
+  /**
+   * Copy one day across the week.
+   *
+   * The ordinary school week is four identical days and one that differs, so
+   * without this the axis would be a worse tool for the common case than the
+   * grid it replaced: you would place the same eight activities five times.
+   * With it, you build one day and then change the day that is different —
+   * which is also the order a timetable is actually written in.
+   */
+  const onCopyDay = useCallback((day: DayKey) => {
+    setSchedule((prev) => {
+      const source = itemsOn(prev, day)
+      const items = { ...prev.items }
+      for (const other of prev.days) {
+        if (other === day) continue
+        items[other] = source.map((it) => ({ ...it, id: newId() }))
+      }
+      return { ...prev, items }
+    })
+    setNote(s.copiedDay)
+  }, [s.copiedDay])
+
+  /** Moving the axis must not strand activities outside it. */
+  const setBounds = (which: 'from' | 'to', raw: string) => {
+    const minutes = parseTime(raw)
+    if (minutes === null) return
+    setSchedule((prev) => {
+      const from = which === 'from' ? snap(minutes) : prev.from
+      const to = which === 'to' ? snap(minutes) : prev.to
+      if (to - from < 60) return prev
+      const items: Schedule['items'] = {}
+      for (const day of prev.days) {
+        items[day] = itemsOn(prev, day).map((it) => {
+          const len = Math.min(it.end - it.start, to - from)
+          const start = clamp(it.start, from, to - len)
+          return { ...it, start, end: start + len }
+        })
+      }
+      return { ...prev, from, to, items }
+    })
+  }
 
   function save() {
     setSaved(saveOne(schedule))
@@ -156,7 +220,7 @@ export default function ActivityScheduleTool() {
     try {
       await navigator.clipboard.writeText(link)
       setCopied(true)
-    } catch { /* the field below is selectable either way */ }
+    } catch { /* the link is still in the QR either way */ }
     const { planQr } = await import('./qr')
     setQr(planQr(link))
   }
@@ -178,7 +242,8 @@ export default function ActivityScheduleTool() {
 
   const sheetStrings: SheetStrings = {
     activity: s.activity, time: s.time, iconLabel: s.iconLabel, clearIcon: s.clearIcon,
-    fix: s.fix, alignRow: s.alignRow, trouble: s.trouble,
+    move: s.move, resize: s.resize, remove: s.remove,
+    addTo: s.addTo, copyDay: s.copyDay, trouble: s.trouble,
   }
 
   return (
@@ -193,13 +258,23 @@ export default function ActivityScheduleTool() {
       )}
 
       <div className="flex flex-wrap items-end gap-4">
-        <Field label={s.titleLabel} className="min-w-[14rem] flex-1">
+        <Field label={s.titleLabel} className="min-w-[12rem] flex-1">
           <Input value={schedule.title} data-testid="as-title"
             onChange={(e) => setSchedule((p) => ({ ...p, title: e.target.value }))} />
         </Field>
-        <Field label={s.noteLabel} className="min-w-[14rem] flex-1">
+        <Field label={s.noteLabel} className="min-w-[12rem] flex-1">
           <Input value={schedule.note} data-testid="as-note"
             onChange={(e) => setSchedule((p) => ({ ...p, note: e.target.value }))} />
+        </Field>
+        <Field label={s.dayStart} className="w-[7rem]">
+          <Input defaultValue={fmt(schedule.from)} dir="ltr" data-testid="as-from"
+            key={`from-${schedule.from}`}
+            onBlur={(e) => setBounds('from', e.target.value)} />
+        </Field>
+        <Field label={s.dayEnd} className="w-[7rem]">
+          <Input defaultValue={fmt(schedule.to)} dir="ltr" data-testid="as-to"
+            key={`to-${schedule.to}`}
+            onBlur={(e) => setBounds('to', e.target.value)} />
         </Field>
         <div className="flex flex-col gap-2">
           <Check>
@@ -216,31 +291,23 @@ export default function ActivityScheduleTool() {
       </div>
 
       {problems.length > 0 && (
-        <Panel data-testid="as-harmony">
-          <h3 className="font-display text-lg">{s.harmonyTitle}</h3>
-          <p className="text-sm text-ink-faint" data-testid="as-harmony-count">
-            {s.harmonyCount(problems.length)}
+        <Panel data-testid="as-clash">
+          <h3 className="font-display text-lg">{s.clashTitle}</h3>
+          <p className="text-sm text-ink-faint" data-testid="as-clash-count">
+            {s.clashCount(problems.length)}
           </p>
-          <div>
-            <Button type="button" data-testid="as-align-all" onClick={alignAll}>{s.alignAll}</Button>
-          </div>
         </Panel>
       )}
 
       <Sheet
-        schedule={schedule} locale={l} mem={mem} suggestions={suggestions} times={times}
-        str={sheetStrings} onCell={setCell} onIcon={setIcon} onAlign={onAlign}
+        schedule={schedule} locale={l} mem={mem} suggestions={suggestions} str={sheetStrings}
+        onName={onName} onIcon={onIcon} onMove={onMove} onResize={onResize}
+        onRemove={onRemove} onAdd={onAdd} onCopyDay={onCopyDay}
       />
 
+      {note && <p className="text-sm text-ink-faint" data-testid="as-note-line">{note}</p>}
+
       <div className="flex flex-wrap gap-3">
-        <Button type="button" data-testid="as-add-row"
-          onClick={() => setSchedule((p) => ({ ...p, rows: [...p.rows, { cells: {} }] }))}>
-          {s.addRow}
-        </Button>
-        <Button type="button" data-testid="as-remove-row" disabled={schedule.rows.length <= 1}
-          onClick={() => setSchedule((p) => ({ ...p, rows: p.rows.slice(0, -1) }))}>
-          {s.removeRow}
-        </Button>
         <Button type="button" data-testid="as-save" onClick={save}>{s.save}</Button>
         <Button type="button" data-testid="as-new" onClick={startNew}>{s.newOne}</Button>
         <Button type="button" data-testid="as-share" onClick={copyLink}>
@@ -285,8 +352,8 @@ export default function ActivityScheduleTool() {
       )}
 
       <Panel>
-        <h3 className="font-display text-lg">{s.whyHarmonyTitle}</h3>
-        <p className="text-sm text-ink-faint" data-testid="as-why-harmony">{s.whyHarmonyBody}</p>
+        <h3 className="font-display text-lg">{s.whyAxisTitle}</h3>
+        <p className="text-sm text-ink-faint" data-testid="as-why-axis">{s.whyAxisBody}</p>
       </Panel>
 
       <Panel>

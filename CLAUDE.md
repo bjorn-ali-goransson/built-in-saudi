@@ -2239,37 +2239,61 @@ disagree about any of them. `timesheet` keeps a third copy of the day keys and
 labels deliberately: it renders a list of rows, not a grid, so the part with the
 reason attached does not apply to it.
 
-## An illustrated schedule, and a QR that turned out to be a picture (`activity-schedule`)
+## An illustrated schedule on a time axis (`activity-schedule`)
 
 Built from a real Saudi kindergarten wall chart. `timetable` stays the plain
 grid and keeps `class schedule` / «جدول أسبوعي»; this one is the illustrated
 routine sheet — an icon on every activity, saved sheets, and a link that
 carries the whole schedule. The two link to each other.
 
-**The time lives on the CELL, not the row, and that is the whole design.** The
-sheet it was modelled on had four rows where one day had drifted from the rest
-of its row — `9:30 – 9:30`, `10:00 – 19:30`, a period that lost its end time.
-Nobody proof-reads a wall chart column by column. A single time per row would
-make that disagreement *unrepresentable*, and the chart on the wall says it
-happens anyway, so the check exists precisely because the model allows it.
+**It is ONE time axis and activities sit on it**, the way a real schedule
+works. The reference sheet repeats a time column inside all five day cards —
+the same value written five times, so five things that can drift apart, and
+they had: `9:30 – 9:30`, `10:00 – 19:30`, a period that lost its end time.
 
-Four decisions around that:
+**The first version put the time on each CELL and DETECTED the disagreement**,
+with a "line up this row" button. That is recorded here rather than edited away
+because the reasoning was sound and the conclusion was still wrong: a check
+tells you afterwards, and the sheet on the wall says the drift happens anyway.
+One axis makes the commonest kind of drift unrepresentable, which is the
+stronger fix, and it is also what anybody means by "a real schedule".
 
-- **A plurality is not a consensus.** Two days saying one thing and two saying
-  another is a row with no answer, and picking the first would be inventing
-  one. There is a case for the 2-2 split flagging nothing, without which the
-  whole check could be "flag everything".
-- **The malformed ranges are caught WITHOUT a row to compare against** —
-  backwards, and zero-length. A typo can be the only entry in its row, which is
-  the half the row check structurally cannot see.
-- **A time typed once spreads down its row, in either typing order**, while the
-  row still agrees. That is what makes the check rarely fire: people set the
-  period once, and a cell typed later inherits it. The check is for the sheet
-  that has already drifted, not a nag on data entry.
-- **The icon is remembered by folded name across EVERY saved sheet**, guessed
-  from the words second, and a guess never overrules a choice. «قرآن» and
-  «القرآن» are one activity, or the memory is useless in the language the tool
-  is for.
+**But the days are NOT locked together, and that is the second decision.** A
+strictly unified row was considered and rejected: assembly only on Sunday and
+an early finish on Thursday are the ordinary shape of a week, and a model that
+cannot express them is tidy and useless. So an activity carries its own start
+and end and moves anywhere on the axis, to the quarter hour.
+
+**What prevents accidental divergence is a MAGNET, not a warning.** A dragged
+activity pulls to any edge another day already uses within 10 minutes, and to
+the raw quarter hour otherwise. Lining up is therefore what happens when you do
+nothing, and differing costs a deliberate few pixels — which is a better trade
+than detecting the mess after it is made. **The keyboard deliberately does NOT
+magnet**: an arrow key means exactly one quarter hour, or the same key moves a
+different distance depending on what the rest of the week happens to contain.
+
+Four more decisions:
+
+- **An overlap is flagged AND packed side by side.** Two things at once is the
+  defect a time axis can see and a grid of boxes cannot, because boxes are the
+  same size whatever they say — but drawing one activity on top of another is
+  worse than the overlap it reports, so a cluster splits the column. It has its
+  own case, split out from the flagging case, because as one assertion inside
+  that test it was MASKED: the test fails at the flag before ever measuring.
+- **A GAP is deliberately not a defect.** On a wall chart the break between two
+  lessons is very often simply not written down, so flagging every gap would
+  fire constantly on correct sheets — the "always show something" move this
+  site refuses.
+- **Copy one day across the week**, because four identical days and one that
+  differs is the ordinary school week. Without it the axis would be a WORSE
+  tool than the grid it replaced for the common case: the same eight activities
+  placed five times. Enter in the name box starting the next activity below it
+  is the other half of that.
+- **The previous shape is read, not discarded** (`migrate`, and a legacy branch
+  in `decodeSchedule`). The tool had already shipped with a time in every cell,
+  so somebody's saved sheet and any link already handed out both carry it. A
+  schedule somebody built and printed is not ours to throw away because we
+  changed our minds about the model. Verified to fail by deleting the branch.
 
 ### The QR was a picture of a QR, twice, and only decoding it found out
 
@@ -2330,11 +2354,10 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
 
 ### Other things worth keeping
 
-- **A row is a period shared across the week, so the cells of one row must stay
-  in one band.** Each day card stacking its own rows lined up only while every
-  cell was the same height — and a hint grows a cell, sliding every row below
-  it out of step with the other four days. `grid-rows-subgrid` makes the band a
-  property of the sheet rather than of each card.
+- **The sheet scrolls sideways on a narrow screen rather than stacking the
+  days.** Five columns of a continuous axis do not stack into anything readable
+  — you would get five full-height axes — so the container scrolls and the page
+  does not, the arrangement `SectionNav` already uses.
 - **The illustrations are generated, cropped to their own alpha bounding box,
   and committed** (`scripts/gen-schedule-art.mjs`, `public/illustrations/`).
   Cropping to a fixed fraction of the generation is what cost the books their

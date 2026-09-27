@@ -1,54 +1,82 @@
 import { FOOTER_BAND, FOOTER_URL, HEADER_BAND, HEADER_URL } from './illustrations'
-import { IconPicker, NameCombo, TimeCombo } from './parts'
+import { Block, type BlockStrings } from './Block'
+import type { IconMemory } from './icons'
 import {
-  DAY_LABEL, DAY_TINT, cellAt, troubleWith,
-  type Cell, type DayKey, type Schedule, type Trouble,
+  DAY_LABEL, DAY_TINT, SNAP, fmt, itemsOn, layoutDay, troubleFor,
+  type DayKey, type Item, type Schedule,
 } from './schedule'
-import { iconFor, type IconMemory } from './icons'
 import type { Suggestion } from './store'
 
-export interface SheetStrings {
-  activity: string
+/**
+ * Pixels per quarter hour.
+ *
+ * A half-hour activity is then 52px: one line of name, its time under it, and
+ * enough left to grab. Much less and the commonest block on a school sheet
+ * stops being usable as a control.
+ */
+const PX = 26
+
+/** How often the axis is labelled, in minutes. */
+const LABEL_EVERY = 30
+
+export interface SheetStrings extends BlockStrings {
   time: string
-  iconLabel: string
-  clearIcon: string
-  fix: string
-  alignRow: string
-  trouble: (t: Trouble) => string
+  addTo: (day: string) => string
+  copyDay: (day: string) => string
 }
 
 /**
- * The schedule itself — real HTML, and editable in place.
+ * The schedule itself — real HTML, editable in place, on one shared axis.
  *
  * It is one rendering rather than an editor plus a preview, because two would
- * drift and because the sheet IS the thing being made: a form that produces a
- * picture of a form is a worse tool than a picture you can type into. The
- * printed PDF is drawn separately on a canvas — pdf-lib cannot shape Arabic —
- * and `schedule.ts` holds everything the two have to agree about.
+ * drift and because the sheet IS the thing being made. The printed PDF is
+ * drawn separately on a canvas — pdf-lib cannot shape Arabic — and
+ * `schedule.ts` holds everything the two have to agree about.
  *
- * A DAY IS A CARD, not a table column. The reference sheet is laid out that
- * way and it is also the only layout that survives a phone: cards stack, where
- * a five-column table becomes a horizontal scroll with the day name off-screen
- * — on the device a parent is most likely to open the link on.
+ * **The axis is a column and the days are columns beside it.** The reference
+ * sheet repeats a time column inside every day card, which is the same value
+ * written five times; one axis is what a real schedule has, and it is what
+ * makes a fifteen-minute difference between two days VISIBLE rather than
+ * something you have to read two columns of text to notice.
+ *
+ * It scrolls sideways on a narrow screen rather than stacking the days. Five
+ * columns of a continuous axis do not stack into anything readable — you would
+ * get five full-height axes — and a horizontal scroll INSIDE the sheet is the
+ * arrangement `SectionNav` already uses: the container scrolls, the page does
+ * not.
  */
 export function Sheet({
-  schedule, locale, mem, suggestions, times, str, onCell, onIcon, onAlign,
+  schedule, locale, mem, suggestions, str,
+  onName, onIcon, onMove, onResize, onRemove, onAdd, onCopyDay,
 }: {
   schedule: Schedule
   locale: 'en' | 'ar'
   mem: IconMemory
   suggestions: Suggestion[]
-  times: string[]
   str: SheetStrings
-  onCell: (row: number, day: DayKey, patch: Partial<Cell>) => void
-  onIcon: (row: number, day: DayKey, icon: string, name: string) => void
-  onAlign: (row: number) => void
+  onName: (day: DayKey, id: string, name: string) => void
+  onIcon: (day: DayKey, id: string, icon: string, name: string) => void
+  onMove: (day: DayKey, id: string, start: number, precise?: boolean) => void
+  onResize: (day: DayKey, id: string, end: number, precise?: boolean) => void
+  onRemove: (day: DayKey, id: string) => void
+  onAdd: (day: DayKey, after?: Item) => void
+  onCopyDay: (day: DayKey) => void
 }) {
-  // The day cards are HTML inside `dir="rtl"`, which already lays them out
+  // The day columns are HTML inside `dir="rtl"`, which already lays them out
   // right-to-left, so the natural order is what puts Sunday where an Arabic
   // reader starts. `columnOrder` is for the canvas the PDF is painted on; see
   // `lib/week.ts`, and `draw.ts`, which does use it.
   const cols = schedule.days
+  const span = Math.max(SNAP, schedule.to - schedule.from)
+  const height = (span / SNAP) * PX
+  const y = (minutes: number) => ((minutes - schedule.from) / SNAP) * PX
+
+  const marks: number[] = []
+  for (
+    let t = Math.ceil(schedule.from / LABEL_EVERY) * LABEL_EVERY;
+    t <= schedule.to;
+    t += LABEL_EVERY
+  ) marks.push(t)
 
   return (
     <article
@@ -73,107 +101,107 @@ export function Sheet({
         )}
       </div>
 
-      {/*
-        One grid for the whole sheet, with each day card taking its rows from
-        it via `subgrid`.
-        A card that stacks its own rows lines up with its neighbours only while
-        every cell is the same height — and the moment a cell carries a hint it
-        grows, so every row below it slips out of step with the other days.
-        That breaks the one idea the sheet is built on: that a ROW is a period
-        shared across the week. Subgrid makes the row band a property of the
-        sheet rather than of each card, so a hint pushes ALL five days down
-        together. Below 720px the container is `block`, the cards stack, and
-        none of it applies — there is only one day on screen to line up with.
-      */}
-      <div
-        className="grid gap-2 px-2 pb-4 max-[720px]:block sm:px-4"
-        style={{
-          gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))`,
-          gridTemplateRows: `auto repeat(${schedule.rows.length}, auto)`,
-        }}
-        data-testid="as-grid"
-      >
-        {cols.map((day) => (
-          <section
-            key={day}
-            data-day={day}
-            data-testid={`as-col-${day}`}
-            className="row-span-full grid min-w-0 grid-rows-subgrid overflow-hidden rounded-md border border-[color:var(--line)] bg-[var(--surface)] max-[720px]:mb-2 max-[720px]:block"
-          >
+      <div className="overflow-x-auto px-2 pb-4 sm:px-4">
+        <div
+          className="grid min-w-[44rem] gap-x-2"
+          style={{ gridTemplateColumns: `3.4rem repeat(${cols.length}, minmax(0, 1fr))` }}
+          data-testid="as-grid"
+        >
+          <div className="pb-1 text-center text-[0.72rem] font-semibold text-ink-faint rtl:font-ar">
+            {str.time}
+          </div>
+          {cols.map((day) => (
             <h3
-              className="px-2 py-1 text-center text-[0.9rem] font-semibold text-ink rtl:font-ar"
+              key={day}
+              className="mb-1 flex items-center justify-between gap-1 rounded-t-md px-2 py-1 text-[0.9rem] font-semibold text-ink rtl:font-ar"
               style={{ background: DAY_TINT[day].head }}
               data-testid={`as-head-${day}`}
             >
-              {DAY_LABEL[day][locale]}
+              <span className="truncate">{DAY_LABEL[day][locale]}</span>
+              <span className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  data-testid={`as-copy-${day}`}
+                  title={str.copyDay(DAY_LABEL[day][locale])}
+                  aria-label={str.copyDay(DAY_LABEL[day][locale])}
+                  onClick={() => onCopyDay(day)}
+                  className="cursor-pointer rounded-sm border-0 bg-transparent px-1 text-[0.8rem] leading-none text-ink-soft"
+                >
+                  ⧉
+                </button>
+                <button
+                  type="button"
+                  data-testid={`as-add-${day}`}
+                  title={str.addTo(DAY_LABEL[day][locale])}
+                  aria-label={str.addTo(DAY_LABEL[day][locale])}
+                  onClick={() => onAdd(day)}
+                  className="cursor-pointer rounded-sm border-0 bg-transparent px-1 text-[0.95rem] leading-none text-ink-soft"
+                >
+                  +
+                </button>
+              </span>
             </h3>
-            {schedule.rows.map((row, r) => {
-                const cell = cellAt(row, day)
-                const trouble = troubleWith(row, day, schedule.days)
-                const suggested = cell.name ? iconFor(cell.name, mem) : ''
-                return (
-                  <div
-                    key={r}
-                    data-testid={`as-cell-${r}-${day}`}
-                    className="border-t border-[color:var(--line-soft)] px-1 py-1 first:border-t-0"
-                    style={{ background: r % 2 ? DAY_TINT[day].band : 'transparent' }}
-                  >
-                    <TimeCombo
-                      value={cell.time}
-                      options={times}
-                      placeholder={str.time}
-                      testId={`as-time-${r}-${day}`}
-                      onChange={(time) => onCell(r, day, { time })}
-                    />
-                    <div className="flex items-center gap-1">
-                      <IconPicker
-                        icon={cell.icon}
-                        suggested={suggested}
-                        label={str.iconLabel}
-                        clearLabel={str.clearIcon}
-                        testId={`as-icon-${r}-${day}`}
-                        onChoose={(icon) => onIcon(r, day, icon, cell.name)}
-                      />
-                      <NameCombo
-                        value={cell.name}
-                        icon={cell.icon}
-                        suggestions={suggestions}
-                        placeholder={str.activity}
-                        testId={`as-name-${r}-${day}`}
-                        onChange={(name) => onCell(r, day, { name })}
-                        onPick={(s) => onCell(r, day, { name: s.name, icon: s.icon })}
-                      />
-                    </div>
-                    {trouble && (
-                      <div
-                        data-testid={`as-hint-${r}-${day}`}
-                        data-trouble={trouble.kind}
-                        className="mt-1 flex items-center gap-1 rounded-sm bg-[color-mix(in_srgb,var(--color-gold-400)_20%,transparent)] px-1 py-[2px]"
-                      >
-                        <span className="min-w-0 flex-1 text-[0.68rem] leading-tight text-ink-soft rtl:font-ar">
-                          {str.trouble(trouble)}
-                        </span>
-                        {(trouble.kind === 'odd' || trouble.kind === 'missing') && (
-                          <button
-                            type="button"
-                            data-testid={`as-fix-${r}-${day}`}
-                            title={str.alignRow}
-                            onClick={() => onCell(r, day, { time: trouble.expected })}
-                            className="shrink-0 rounded-sm border border-[color:var(--line)] bg-[var(--surface)] px-1 text-[0.68rem] text-ink cursor-pointer rtl:font-ar"
-                          >
-                            {str.fix}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-            })}
-          </section>
-        ))}
-      </div>
+          ))}
 
-      <RowAligners schedule={schedule} label={str.alignRow} onAlign={onAlign} />
+          <div className="relative" style={{ height }} data-testid="as-axis">
+            {marks.map((t) => (
+              <div
+                key={t}
+                data-testid={`as-mark-${t}`}
+                dir="ltr"
+                className={`absolute inset-x-0 -translate-y-1/2 pe-1 text-end text-[0.68rem] leading-none
+                  ${t % 60 === 0 ? 'text-ink-soft' : 'text-ink-faint/70'}`}
+                style={{ top: y(t) }}
+              >
+                {fmt(t)}
+              </div>
+            ))}
+          </div>
+
+          {cols.map((day) => {
+            const laid = layoutDay(itemsOn(schedule, day))
+            return (
+              <div
+                key={day}
+                data-day={day}
+                data-testid={`as-col-${day}`}
+                className="relative rounded-b-md border border-[color:var(--line)] bg-[var(--surface)]"
+                style={{ height }}
+              >
+                {marks.map((t) => (
+                  <div
+                    key={t}
+                    className={`pointer-events-none absolute inset-x-0 border-t
+                      ${t % 60 === 0 ? 'border-[color:var(--line)]' : 'border-[color:var(--line-soft)]'}`}
+                    style={{ top: y(t) }}
+                  />
+                ))}
+                {laid.map(({ item, col, cols: n }) => (
+                  <Block
+                    key={item.id}
+                    item={item}
+                    top={y(item.start)}
+                    height={Math.max(PX, ((item.end - item.start) / SNAP) * PX)}
+                    left={(col / n) * 100}
+                    width={100 / n}
+                    mem={mem}
+                    suggestions={suggestions}
+                    str={str}
+                    trouble={troubleFor(schedule, day, item)}
+                    tint={DAY_TINT[day].band}
+                    onName={(name) => onName(day, item.id, name)}
+                    onIcon={(icon, name) => onIcon(day, item.id, icon, name)}
+                    onMove={(start, precise) => onMove(day, item.id, start, precise)}
+                    onResize={(end, precise) => onResize(day, item.id, end, precise)}
+                    onRemove={() => onRemove(day, item.id)}
+                    onEnter={() => onAdd(day, item)}
+                  />
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {schedule.art && (
         <div className="w-full" style={{ aspectRatio: `100 / ${FOOTER_BAND}` }}>
@@ -182,43 +210,5 @@ export function Sheet({
         </div>
       )}
     </article>
-  )
-}
-
-/**
- * One "align this row" per row that needs it.
- *
- * Separate from the per-cell fix because they answer different questions: the
- * cell button fixes the day you are looking at, and this fixes a row where
- * more than one day drifted — which is what happens when a whole period moves
- * and only some of the week was updated.
- */
-function RowAligners({
-  schedule, label, onAlign,
-}: { schedule: Schedule; label: string; onAlign: (row: number) => void }) {
-  const rows = schedule.rows
-    .map((row, r) => ({
-      r,
-      n: schedule.days.filter((d) => {
-        const t = troubleWith(row, d, schedule.days)
-        return t && (t.kind === 'odd' || t.kind === 'missing')
-      }).length,
-    }))
-    .filter((x) => x.n > 1)
-  if (!rows.length) return null
-  return (
-    <div className="flex flex-wrap gap-2 px-2 pb-3 sm:px-4" data-testid="as-row-aligners">
-      {rows.map(({ r, n }) => (
-        <button
-          key={r}
-          type="button"
-          data-testid={`as-align-${r}`}
-          onClick={() => onAlign(r)}
-          className="rounded-sm border border-[color:var(--line)] bg-[var(--surface)] px-2 py-1 text-[0.76rem] text-ink-soft cursor-pointer rtl:font-ar"
-        >
-          {label} {r + 1} ({n})
-        </button>
-      ))}
-    </div>
   )
 }

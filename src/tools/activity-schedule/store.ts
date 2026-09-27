@@ -6,8 +6,7 @@
 // term's sheet from last term's words, and a tool that only remembers within
 // one document makes them type «طابور وأذكار الصباح» from scratch every time.
 
-import { cellAt, hasContent, type Schedule } from './schedule'
-import { nameKey } from './schedule'
+import { itemsOn, migrate, nameKey, type Schedule } from './schedule'
 
 const KEY = 'bis-schedules'
 const CURRENT = 'bis-schedule-current'
@@ -16,7 +15,9 @@ export function loadAll(): Schedule[] {
   try {
     const raw = localStorage.getItem(KEY)
     const v = raw ? JSON.parse(raw) : null
-    return Array.isArray(v) ? (v as Schedule[]).filter((s) => s && s.id) : []
+    // Through `migrate`, because a sheet saved before the axis existed is
+    // still somebody's term plan. See `schedule.ts`.
+    return Array.isArray(v) ? v.map(migrate).filter((x): x is Schedule => !!x) : []
   } catch { return [] }
 }
 
@@ -54,8 +55,7 @@ const DRAFT = 'bis-schedule-draft'
 export function loadDraft(): Schedule | null {
   try {
     const raw = localStorage.getItem(DRAFT)
-    const v = raw ? JSON.parse(raw) : null
-    return v && v.id && Array.isArray(v.rows) ? (v as Schedule) : null
+    return raw ? migrate(JSON.parse(raw)) : null
   } catch { return null }
 }
 
@@ -90,26 +90,9 @@ export function vocabulary(saved: Schedule[], open?: Schedule): Suggestion[] {
     } else by.set(key, { name: name.trim(), icon, count: 1 })
   }
   for (const s of [...(open ? [open] : []), ...saved]) {
-    for (const row of s.rows) {
-      for (const day of s.days) {
-        const c = cellAt(row, day)
-        if (hasContent(c) && c.name.trim()) add(c.name, c.icon)
-      }
+    for (const day of s.days) {
+      for (const it of itemsOn(s, day)) if (it.name.trim()) add(it.name, it.icon)
     }
   }
   return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-}
-
-/** The times already used, so a row can reuse one without retyping it. */
-export function timeVocabulary(saved: Schedule[], open?: Schedule): string[] {
-  const counts = new Map<string, number>()
-  for (const s of [...(open ? [open] : []), ...saved]) {
-    for (const row of s.rows) {
-      for (const day of s.days) {
-        const t = cellAt(row, day).time.trim()
-        if (t) counts.set(t, (counts.get(t) ?? 0) + 1)
-      }
-    }
-  }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
 }

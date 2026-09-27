@@ -14,7 +14,8 @@ import { A4_LANDSCAPE, newPage, pagesToPdf, toPng } from '../../lib/printPdf'
 import { FOOTER_BAND, FOOTER_URL, HEADER_BAND, HEADER_URL } from './illustrations'
 import { planQr, QUIET, type QrPlan } from './qr'
 import {
-  DAY_LABEL, DAY_TINT, cellAt, columnOrder, hasContent, type Schedule,
+  DAY_LABEL, DAY_TINT, SNAP, columnOrder, fmt, fmtSpan, itemsOn, layoutDay,
+  type Schedule,
 } from './schedule'
 
 const INK = '#12211b'
@@ -149,86 +150,114 @@ export async function schedulePdf(
     y += 6 * px
   }
 
-  // The grid.
+  // The grid: one time axis, and the days beside it.
+  //
+  // The axis is on the side the reader starts from — the right in Arabic —
+  // and `columnOrder` reverses the day columns, because a canvas has no
+  // reading direction to inherit. `lib/week.ts` records why that reversal is
+  // for the canvas ONLY and must never be applied to the HTML.
   const days = columnOrder(s.days, rtl)
   const gridTop = y + 2 * px
   const gridBottom = H - footH - 2 * px
-  const gridLeft = margin
   const gridW = W - margin * 2
+  const axisW = 13 * px
   const gap = 1.6 * px
-  const colW = (gridW - gap * (days.length - 1)) / days.length
   const headRow = 7 * px
-  const rowH = Math.max(6 * px, (gridBottom - gridTop - headRow) / Math.max(1, s.rows.length))
+  const bodyTop = gridTop + headRow
+  const bodyH = Math.max(20 * px, gridBottom - bodyTop)
+
+  const span = Math.max(SNAP, s.to - s.from)
+  const perMinute = bodyH / span
+  const at = (minutes: number) => bodyTop + (minutes - s.from) * perMinute
+
+  const colW = (gridW - axisW - gap * days.length) / days.length
+  // Days run left to right from the far edge; the axis takes the near one.
+  const daysLeft = margin + (rtl ? 0 : axisW + gap)
+  const axisLeft = rtl ? margin + gridW - axisW : margin
+
+  // The axis labels, every half hour.
+  const LABEL_EVERY = 30
+  const marks: number[] = []
+  for (let t = Math.ceil(s.from / LABEL_EVERY) * LABEL_EVERY; t <= s.to; t += LABEL_EVERY) marks.push(t)
+
+  ctx.save()
+  ctx.direction = 'ltr'
+  ctx.textAlign = rtl ? 'left' : 'right'
+  ctx.font = `${Math.round(2.9 * px)}px ${TIME_FONT}`
+  for (const t of marks) {
+    ctx.fillStyle = t % 60 === 0 ? SOFT : FAINT
+    ctx.fillText(fmt(t), rtl ? axisLeft + 1.2 * px : axisLeft + axisW - 1.2 * px, at(t))
+  }
+  ctx.restore()
+  ctx.textAlign = 'center'
 
   days.forEach((day, i) => {
-    const x = gridLeft + (colW + gap) * i
+    const x = daysLeft + (colW + gap) * i
     const tint = DAY_TINT[day]
-    const colH = headRow + rowH * s.rows.length
 
     ctx.fillStyle = '#ffffff'
-    roundRect(ctx, x, gridTop, colW, colH, 2.2 * px); ctx.fill()
+    roundRect(ctx, x, gridTop, colW, headRow + bodyH, 2.2 * px); ctx.fill()
 
-    // Day head.
     ctx.save()
-    roundRect(ctx, x, gridTop, colW, colH, 2.2 * px); ctx.clip()
+    roundRect(ctx, x, gridTop, colW, headRow + bodyH, 2.2 * px); ctx.clip()
     ctx.fillStyle = tint.head
     ctx.fillRect(x, gridTop, colW, headRow)
-    s.rows.forEach((_, r) => {
-      if (r % 2) {
-        ctx.fillStyle = tint.band
-        ctx.fillRect(x, gridTop + headRow + rowH * r, colW, rowH)
-      }
-    })
     ctx.restore()
 
     ctx.fillStyle = INK
     ctx.font = `600 ${Math.round(3.8 * px)}px ${font}`
     ctx.fillText(fit(ctx, DAY_LABEL[day][locale], colW - 4 * px), x + colW / 2, gridTop + headRow / 2)
 
-    s.rows.forEach((row, r) => {
-      const cell = cellAt(row, day)
-      if (!hasContent(cell)) return
-      const top = gridTop + headRow + rowH * r
+    // The hour lines, under everything.
+    ctx.lineWidth = Math.max(1, 0.25 * px)
+    for (const t of marks) {
+      ctx.strokeStyle = t % 60 === 0 ? RULE : '#e8e2d6'
+      ctx.beginPath(); ctx.moveTo(x, at(t)); ctx.lineTo(x + colW, at(t)); ctx.stroke()
+    }
 
-      const time = cell.time.trim()
-      const hasTime = !!time
-      if (hasTime) {
-        ctx.save()
-        // A time reads left-to-right in both languages: `7:00 – 7:30` set RTL
-        // puts the end of the period first.
-        ctx.direction = 'ltr'
-        ctx.fillStyle = FAINT
-        ctx.font = `${Math.round(2.9 * px)}px ${TIME_FONT}`
-        ctx.fillText(fit(ctx, time, colW - 3 * px), x + colW / 2, top + rowH * 0.3)
-        ctx.restore()
-      }
+    for (const { item, col, cols } of layoutDay(itemsOn(s, day))) {
+      const top = at(item.start)
+      const h = Math.max(3.5 * px, (item.end - item.start) * perMinute)
+      const w = (colW - 1 * px) / cols
+      const bx = x + 0.5 * px + w * col
+      const pad = 1.2 * px
 
-      const nameY = top + (hasTime ? rowH * 0.68 : rowH / 2)
-      const icon = cell.icon.trim()
-      const iconW = icon ? 4.6 * px : 0
-      const pad = 1.6 * px
+      ctx.fillStyle = tint.band
+      roundRect(ctx, bx, top, w - 0.5 * px, h - 0.4 * px, 1.4 * px); ctx.fill()
+      ctx.strokeStyle = RULE
+      roundRect(ctx, bx, top, w - 0.5 * px, h - 0.4 * px, 1.4 * px); ctx.stroke()
+
+      const icon = item.icon.trim()
+      const iconW = icon ? 4.4 * px : 0
+      const nameY = top + (h >= 8 * px ? 3 * px : h / 2)
       if (icon) {
         ctx.save()
         ctx.direction = 'ltr'
-        ctx.font = `${Math.round(3.6 * px)}px ${EMOJI}`
-        ctx.fillText(icon, rtl ? x + colW - pad - iconW / 2 : x + pad + iconW / 2, nameY)
+        ctx.font = `${Math.round(3.4 * px)}px ${EMOJI}`
+        ctx.fillText(icon, rtl ? bx + w - pad - iconW / 2 : bx + pad + iconW / 2, nameY)
         ctx.restore()
       }
-      const textW = colW - pad * 2 - iconW
-      const textCx = rtl ? x + pad + textW / 2 : x + colW - pad - textW / 2
+      const textW = w - pad * 2 - iconW
+      const textCx = rtl ? bx + pad + textW / 2 : bx + w - pad - textW / 2
       ctx.fillStyle = INK
-      ctx.font = `${Math.round(3.3 * px)}px ${font}`
-      ctx.fillText(fit(ctx, cell.name, textW - 1 * px), textCx, nameY)
-    })
+      ctx.font = `${Math.round(3.1 * px)}px ${font}`
+      ctx.fillText(fit(ctx, item.name, textW - 0.5 * px), textCx, nameY)
 
-    // Rules last, so no text sits on a line.
-    ctx.strokeStyle = RULE
-    ctx.lineWidth = Math.max(1, 0.25 * px)
-    for (let r = 1; r <= s.rows.length; r++) {
-      const ry = gridTop + headRow + rowH * (r - 1)
-      if (r > 1) { ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x + colW, ry); ctx.stroke() }
+      // The times go IN the block, not only on the axis: a printed sheet is
+      // read across a room, and tracing a block back to a label on the far
+      // side of five columns is exactly what nobody does.
+      if (h >= 8 * px) {
+        ctx.save()
+        ctx.direction = 'ltr'
+        ctx.fillStyle = FAINT
+        ctx.font = `${Math.round(2.6 * px)}px ${TIME_FONT}`
+        ctx.fillText(fit(ctx, fmtSpan(item), w - pad * 2), bx + w / 2, nameY + 3.4 * px)
+        ctx.restore()
+      }
     }
-    roundRect(ctx, x, gridTop, colW, colH, 2.2 * px); ctx.stroke()
+
+    ctx.strokeStyle = RULE
+    roundRect(ctx, x, gridTop, colW, headRow + bodyH, 2.2 * px); ctx.stroke()
   })
 
   if (qr.ok) {

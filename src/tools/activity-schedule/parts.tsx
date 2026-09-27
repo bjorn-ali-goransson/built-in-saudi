@@ -25,7 +25,7 @@ const POPOVER =
  * the thing it is about.
  */
 export function NameCombo({
-  value, icon, suggestions, placeholder, testId, onPick, onChange,
+  value, icon, suggestions, placeholder, testId, onPick, onChange, onEnter,
 }: {
   value: string
   icon: string
@@ -34,6 +34,16 @@ export function NameCombo({
   testId: string
   onChange: (name: string) => void
   onPick: (s: Suggestion) => void
+  /**
+   * Enter with no suggestion to take.
+   *
+   * It adds the next activity below this one, which is what makes filling a
+   * day a typing job rather than forty trips to a + button. Enter means "take
+   * the highlighted suggestion" while the list is open, so this only fires
+   * when there is nothing highlighted to take — one key, two meanings, decided
+   * by what is on screen rather than by a modifier nobody would guess.
+   */
+  onEnter?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -80,10 +90,14 @@ export function NameCombo({
         onFocus={() => setOpen(true)}
         onKeyDown={(e) => {
           if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { setOpen(true); return }
-          if (!matches.length) return
+          if (!matches.length) {
+            if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter() }
+            return
+          }
           if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => (i + 1) % matches.length) }
           else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => (i - 1 + matches.length) % matches.length) }
           else if (e.key === 'Enter' && open) { e.preventDefault(); choose(matches[active]) }
+          else if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter() }
           else if (e.key === 'Escape') setOpen(false)
         }}
         className="w-full bg-transparent border-0 p-1 text-[0.86rem] text-ink rtl:font-ar focus:outline-none"
@@ -192,65 +206,6 @@ export function IconPicker({
           >
             {clearLabel}
           </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** The time box, with the times already used in this schedule offered under it. */
-export function TimeCombo({
-  value, options, placeholder, testId, onChange,
-}: {
-  value: string
-  options: string[]
-  placeholder: string
-  testId: string
-  onChange: (v: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const box = useRef<HTMLDivElement>(null)
-  const matches = useMemo(
-    () => options.filter((t) => t !== value.trim()).slice(0, 24),
-    [options, value],
-  )
-
-  useEffect(() => {
-    if (!open) return
-    const away = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', away)
-    return () => document.removeEventListener('mousedown', away)
-  }, [open])
-
-  return (
-    <div className="relative" ref={box}>
-      <input
-        value={value}
-        placeholder={placeholder}
-        data-testid={testId}
-        autoComplete="off"
-        dir="ltr"
-        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
-        className="w-full bg-transparent border-0 p-1 font-ar text-[0.74rem] text-ink-faint focus:outline-none text-center"
-      />
-      {open && matches.length > 0 && (
-        <div className={POPOVER} data-testid={`${testId}-list`}>
-          {matches.map((t) => (
-            <button
-              key={t}
-              type="button"
-              data-testid={`${testId}-opt`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(t); setOpen(false) }}
-              className="block w-full rounded-sm border-0 bg-transparent px-2 py-1 text-start font-ar text-[0.78rem] text-ink cursor-pointer hover:bg-sand-100"
-            >
-              {t}
-            </button>
-          ))}
         </div>
       )}
     </div>

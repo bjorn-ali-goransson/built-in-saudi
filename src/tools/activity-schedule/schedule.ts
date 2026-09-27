@@ -1,35 +1,57 @@
-// An illustrated activity schedule: the model, the share encoding, and the
-// one check that makes it more than a grid of boxes.
+// An illustrated activity schedule on a real time axis.
 //
 // The reference this was built from is the kind of sheet a Saudi kindergarten
 // or a primary class pins on the wall: a time and an activity per day, an icon
 // beside each activity so a child who cannot yet read can still follow the day.
-// What every maker of those sheets leaves you to do by eye is keep the TIMES
-// straight — and the sheet this was modelled on had four rows where one day's
-// time had drifted from the rest of its row (`9:30 – 9:30`, `10:00 – 19:30`,
-// `10:00 – 10:40`). Nobody proof-reads a wall chart column by column, which is
-// exactly why a tool should.
 //
-// So the time lives on the CELL, not on the row. That is the whole reason the
-// check can exist: a single time per row makes disagreement unrepresentable
-// and the sheet pinned to a real wall says it happens anyway.
+// **There is ONE axis and activities sit on it**, the way every real schedule
+// works — not a time written into each cell. The sheet this was modelled on
+// repeats a time column inside all five day cards, which is the same value
+// written five times and therefore five things that can drift apart. They had:
+// `9:30 – 9:30`, `10:00 – 19:30`, a period that lost its end time.
+//
+// **But the days are NOT locked together.** A real week diverges: assembly
+// only on Sunday, an early finish on Thursday, a longer art lesson once. So an
+// activity carries its own start and end and can be moved anywhere on the
+// axis — to a quarter of an hour, which is the granularity a timetable is
+// actually written in. Locking every day to one row would make the common case
+// tidy and the real week unrepresentable.
+//
+// What stops divergence happening by ACCIDENT is not a check after the fact,
+// it is the snapping: a dragged activity pulls to the times its neighbours
+// already use before it pulls to the raw quarter hour. So lining up is what
+// happens when you do nothing, and differing is a deliberate act.
 
 import { foldArabic } from '../../lib/fuzzy'
 import { SCHOOL_WEEK, WEEK, type DayKey } from '../../lib/week'
 
 export { WEEK, SCHOOL_WEEK, DAY_LABEL, columnOrder, type DayKey } from '../../lib/week'
 
-export interface Cell {
-  /** Free text — whatever the activity is called. */
+/**
+ * The grid everything lands on, in minutes.
+ *
+ * Fifteen because that is how a timetable is written — quarter past, half
+ * past — and because it is the coarsest grid that can express every period
+ * anybody actually schedules. Five would let a drag land on 7:03, which is not
+ * a time a lesson starts and is a nuisance to correct.
+ */
+export const SNAP = 15
+
+/** The shortest an activity can be. One snap; anything less is a mis-drag. */
+export const MIN_LEN = 15
+
+/** How near a neighbouring day's edge pulls a drag to it, in minutes. */
+export const MAGNET = 10
+
+export interface Item {
+  /** Stable across edits, so React keys and drags survive a re-sort. */
+  id: string
   name: string
   /** One emoji. Chosen, remembered, or guessed; see `icons.ts`. */
   icon: string
-  /** This cell's own time, e.g. `7:00 – 7:30`. */
-  time: string
-}
-
-export interface Row {
-  cells: Partial<Record<DayKey, Cell>>
+  /** Minutes from midnight. Both are multiples of `SNAP`. */
+  start: number
+  end: number
 }
 
 export interface Schedule {
@@ -39,38 +61,200 @@ export interface Schedule {
   /** A line under the title — the class, the term, whatever it is. */
   note: string
   days: DayKey[]
-  rows: Row[]
+  /** The axis, in minutes from midnight. */
+  from: number
+  to: number
+  items: Partial<Record<DayKey, Item[]>>
   /** Draw the header and footer illustrations on the sheet. */
   art: boolean
   updated: number
 }
 
-export const emptyCell = (): Cell => ({ name: '', icon: '', time: '' })
-
-export const cellAt = (row: Row, day: DayKey): Cell => row.cells[day] ?? emptyCell()
-
-export const hasContent = (c: Cell | undefined) => !!c && (!!c.name.trim() || !!c.time.trim())
-
 export function newId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
-export function emptySchedule(locale: 'en' | 'ar', rows = 8): Schedule {
+export const itemsOn = (s: Schedule, day: DayKey): Item[] => s.items[day] ?? []
+
+export function emptySchedule(locale: 'en' | 'ar'): Schedule {
   return {
     id: newId(),
     title: locale === 'ar' ? 'الجدول الأسبوعي' : 'Weekly schedule',
     note: locale === 'ar' ? 'أيام الدراسة: الأحد إلى الخميس' : 'School days: Sunday to Thursday',
     days: [...SCHOOL_WEEK],
-    rows: Array.from({ length: rows }, () => ({ cells: {} })),
+    from: 7 * 60,
+    to: 12 * 60,
+    items: {},
     art: true,
     updated: Date.now(),
   }
 }
 
-export const isBlank = (s: Schedule) =>
-  s.rows.every((r) => Object.values(r.cells).every((c) => !hasContent(c)))
+export const isBlank = (s: Schedule) => s.days.every((d) => itemsOn(s, d).length === 0)
 
-// --- names -----------------------------------------------------------------
+// --- the axis ---------------------------------------------------------------
+
+export const snap = (minutes: number) => Math.round(minutes / SNAP) * SNAP
+
+export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+
+/**
+ * `7:00`, `13:30` — plain, and in Latin digits in both languages.
+ *
+ * Not `toLocaleTimeString`: on the Arabic side that yields `٧:٠٠ ص`, and every
+ * wall chart of this kind in the country writes the time in Latin digits.
+ * Ours is the one number on the sheet that is NOT ours to localise — it is a
+ * label on a grid, and the grid is read by children learning to tell the time
+ * from a clock face with Latin digits on it.
+ */
+export const fmt = (minutes: number): string => {
+  const m = ((minutes % 1440) + 1440) % 1440
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+}
+
+export const fmtSpan = (i: { start: number; end: number }) => `${fmt(i.start)} – ${fmt(i.end)}`
+
+const TIME = /^\s*(\d{1,2})\s*[:.]\s*(\d{2})\s*$/
+
+/** Read `7:30` back off an input. Returns null rather than guessing. */
+export function parseTime(raw: string): number | null {
+  const latin = raw.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  const m = TIME.exec(latin)
+  if (!m) return null
+  const h = Number(m[1])
+  const min = Number(m[2])
+  if (h > 23 || min > 59) return null
+  return h * 60 + min
+}
+
+/**
+ * The times a drag should pull towards: the quarter hours, plus every edge
+ * the OTHER days already use.
+ *
+ * This is what replaces the old "your rows disagree" warning. A check tells
+ * you afterwards; a magnet means the aligned answer is the one you get for
+ * free, and a different one costs a deliberate extra few pixels.
+ */
+export function magnets(s: Schedule, except: DayKey): number[] {
+  const out = new Set<number>()
+  for (const day of s.days) {
+    if (day === except) continue
+    for (const it of itemsOn(s, day)) { out.add(it.start); out.add(it.end) }
+  }
+  return [...out]
+}
+
+/** Snap to the nearest neighbour edge if one is within `MAGNET`, else to the grid. */
+export function snapWith(minutes: number, pull: number[]): number {
+  let best: number | null = null
+  let bestGap = MAGNET + 1
+  for (const p of pull) {
+    const gap = Math.abs(p - minutes)
+    if (gap < bestGap) { best = p; bestGap = gap }
+  }
+  return best !== null ? best : snap(minutes)
+}
+
+// --- moving and resizing ----------------------------------------------------
+
+/** Move an item, keeping its length and staying inside the axis. */
+export function moveTo(s: Schedule, it: Item, start: number): Item {
+  const len = it.end - it.start
+  const from = clamp(start, s.from, s.to - len)
+  return { ...it, start: from, end: from + len }
+}
+
+/** Resize from the bottom edge, never shorter than one snap. */
+export function resizeTo(s: Schedule, it: Item, end: number): Item {
+  return { ...it, end: clamp(end, it.start + MIN_LEN, s.to) }
+}
+
+/** Where a new activity should go: after the last one on that day, or the top. */
+export function nextSlot(s: Schedule, day: DayKey): { start: number; end: number } {
+  const last = itemsOn(s, day).reduce((a, b) => (b.end > a ? b.end : a), s.from)
+  const start = clamp(last, s.from, Math.max(s.from, s.to - 30))
+  return { start, end: Math.min(start + 30, s.to) }
+}
+
+// --- what is wrong with the day ---------------------------------------------
+
+export type Trouble =
+  /** Two activities on the same day claim the same minutes. */
+  | { kind: 'overlap'; with: string }
+  /** It starts before, or ends after, the axis the sheet declares. */
+  | { kind: 'outside' }
+
+/**
+ * Overlaps, per day.
+ *
+ * This is the check a time axis makes possible and a grid of cells cannot: two
+ * things at once is a real defect on a real schedule, and it is invisible on a
+ * sheet of boxes because the boxes are the same size whatever they say.
+ *
+ * A GAP is deliberately not a defect. On a wall chart the break between two
+ * lessons is very often simply not written down, so flagging every gap would
+ * fire constantly on correct sheets — the "always show something" move this
+ * site refuses.
+ */
+export function troubleFor(s: Schedule, day: DayKey, it: Item): Trouble | null {
+  if (it.start < s.from || it.end > s.to) return { kind: 'outside' }
+  for (const other of itemsOn(s, day)) {
+    if (other.id === it.id) continue
+    if (it.start < other.end && other.start < it.end) {
+      return { kind: 'overlap', with: other.name.trim() || fmtSpan(other) }
+    }
+  }
+  return null
+}
+
+export function troubles(s: Schedule): Array<{ day: DayKey; item: Item; trouble: Trouble }> {
+  const out: Array<{ day: DayKey; item: Item; trouble: Trouble }> = []
+  for (const day of s.days) {
+    for (const item of itemsOn(s, day)) {
+      const trouble = troubleFor(s, day, item)
+      if (trouble) out.push({ day, item, trouble })
+    }
+  }
+  return out
+}
+
+/**
+ * Lay a day's activities out in columns so overlapping ones sit side by side.
+ *
+ * Without it two overlapping activities are drawn on top of each other and the
+ * one underneath is simply gone from the sheet — which is worse than the
+ * overlap it is reporting. Greedy packing over a cluster of mutually
+ * overlapping items, which is what every calendar does and is about as simple
+ * as this gets.
+ */
+export function layoutDay(items: Item[]): Array<{ item: Item; col: number; cols: number }> {
+  const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end)
+  const out: Array<{ item: Item; col: number; cols: number }> = []
+  let cluster: Array<{ item: Item; col: number }> = []
+  let clusterEnd = -1
+
+  const flush = () => {
+    const cols = cluster.reduce((n, c) => Math.max(n, c.col + 1), 0)
+    for (const c of cluster) out.push({ item: c.item, col: c.col, cols })
+    cluster = []
+    clusterEnd = -1
+  }
+
+  for (const item of sorted) {
+    if (cluster.length && item.start >= clusterEnd) flush()
+    const taken = new Set(
+      cluster.filter((c) => c.item.end > item.start).map((c) => c.col),
+    )
+    let col = 0
+    while (taken.has(col)) col++
+    cluster.push({ item, col })
+    clusterEnd = Math.max(clusterEnd, item.end)
+  }
+  flush()
+  return out
+}
+
+// --- names ------------------------------------------------------------------
 
 /**
  * The key two spellings of one activity have to share.
@@ -93,257 +277,222 @@ export function nameKey(raw: string): string {
     .replace(/\s+/g, ' ')
 }
 
-// --- times -----------------------------------------------------------------
-
-export interface Span {
-  /** Minutes from midnight. */
-  from: number
-  to: number
-}
-
-const TIME = /(\d{1,2})\s*[:.]\s*(\d{2})/g
-
-/**
- * Read `7:00 – 7:30` — or `٧:٠٠ - ٧:٣٠`, or `7.00-7.30`.
- *
- * Deliberately forgiving about the separator, because the dash between two
- * times is typed as a hyphen, an en dash, an em dash or an Arabic comma
- * depending on the keyboard, and refusing any of those would turn the harmony
- * check off for exactly the person whose sheet needs it. A single time with no
- * range is legitimate (`11:00`, the end of the day) and yields `to === from`.
- */
-export function parseSpan(raw: string): Span | null {
-  const latin = raw.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-  const found: number[] = []
-  TIME.lastIndex = 0
-  for (let m = TIME.exec(latin); m; m = TIME.exec(latin)) {
-    const h = Number(m[1])
-    const min = Number(m[2])
-    if (h > 23 || min > 59) return null
-    found.push(h * 60 + min)
-  }
-  if (!found.length) return null
-  return { from: found[0], to: found.length > 1 ? found[1] : found[0] }
-}
-
-/** The times in a row, as typed, for the cells that have one. */
-const rowTimes = (row: Row, days: DayKey[]): string[] =>
-  days.map((d) => cellAt(row, d).time.trim()).filter(Boolean)
-
-/**
- * The time the rest of the row agrees on, or null when it does not agree.
- *
- * A plurality is not enough: two days saying one thing and two saying another
- * is a row with no consensus, and picking the first would be inventing one.
- * Suggesting nothing is the honest answer there.
- */
-export function rowConsensus(row: Row, days: DayKey[]): string | null {
-  const times = rowTimes(row, days)
-  if (times.length < 2) return null
-  const counts = new Map<string, number>()
-  for (const t of times) counts.set(t, (counts.get(t) ?? 0) + 1)
-  let best = ''
-  let n = 0
-  let tied = false
-  for (const [t, c] of counts) {
-    if (c > n) { best = t; n = c; tied = false }
-    else if (c === n) tied = true
-  }
-  if (tied || n < 2) return null
-  return best
-}
-
-export type Trouble =
-  /** This cell's time is not the one the rest of the row agrees on. */
-  | { kind: 'odd'; expected: string }
-  /** The range ends before it starts. */
-  | { kind: 'backwards' }
-  /** The range starts and ends at the same minute. */
-  | { kind: 'zero' }
-  /** There is an activity here and no time at all, while the row has one. */
-  | { kind: 'missing'; expected: string }
-
-/**
- * What is wrong with one cell's time, if anything.
- *
- * The three malformed-range cases are cheap to add and were all present on the
- * sheet this tool was modelled on, which is the argument for including them:
- * `9:30 – 9:30` and `10:45 – 10:45` are zero-length, and `10:00 – 19:30` is a
- * typo for 10:00 that reads as a nine-and-a-half-hour art lesson. None of them
- * is catchable by the row check, because a typo can be the only entry in its
- * row — and none of them is visible to a person scanning a wall chart either.
- */
-export function troubleWith(row: Row, day: DayKey, days: DayKey[]): Trouble | null {
-  const cell = cellAt(row, day)
-  if (!hasContent(cell)) return null
-  const expected = rowConsensus(row, days)
-  const time = cell.time.trim()
-
-  if (!time) return expected ? { kind: 'missing', expected } : null
-
-  const span = parseSpan(time)
-  if (span) {
-    if (span.to < span.from) return { kind: 'backwards' }
-    if (span.to === span.from && /[-–—]|إلى/.test(time)) return { kind: 'zero' }
-  }
-  if (expected && time !== expected) return { kind: 'odd', expected }
-  return null
-}
-
-/** Every cell in the schedule with something wrong with its time. */
-export function troubles(s: Schedule): Array<{ row: number; day: DayKey; trouble: Trouble }> {
-  const out: Array<{ row: number; day: DayKey; trouble: Trouble }> = []
-  s.rows.forEach((row, i) => {
-    for (const day of s.days) {
-      const trouble = troubleWith(row, day, s.days)
-      if (trouble) out.push({ row: i, day, trouble })
-    }
-  })
-  return out
-}
-
-/** Give every filled cell in the row the time the row agrees on. */
-export function alignRow(row: Row, days: DayKey[]): Row {
-  const expected = rowConsensus(row, days)
-  if (!expected) return row
-  const cells = { ...row.cells }
-  for (const d of days) {
-    const c = cells[d]
-    if (c && hasContent(c) && c.time.trim() !== expected) cells[d] = { ...c, time: expected }
-  }
-  return { cells }
-}
-
-// --- the share link --------------------------------------------------------
+// --- the share link ---------------------------------------------------------
 
 /**
  * A compact form, because the whole schedule travels in a URL and that URL has
  * to fit in a QR code somebody can print and scan.
  *
- * Three savings, each measured against the reference sheet (5 days, 9 rows):
- * the activity names repeat down every column, so they become a dictionary;
- * the times repeat across every row, so they do too; and a row where every day
- * shares one time — which is the normal case and the one the harmony check
- * pushes towards — stores that time once for the row instead of five times.
- * Together that is roughly 800 bytes for a full week, against about 2,600 for
- * the same thing as plain JSON. The difference is a QR of about 113 modules
- * rather than one too dense to print on a sheet of A4.
+ * The activity names repeat down every column, so they become a dictionary;
+ * the times are minutes rather than text. Then the whole thing is DEFLATED,
+ * which is most of why the QR is a printable size: a schedule is the most
+ * compressible thing there is — the same handful of names and the same
+ * quarter-hour boundaries, over and over.
  */
 interface Compact {
   t: string
   n: string
   /** Day indices into WEEK. */
   d: number[]
+  /** Axis, in minutes. */
+  f: number
+  e: number
   /** Dictionary: [name, icon]. */
   v: Array<[string, string]>
-  /** Dictionary of times. */
-  m: string[]
-  /**
-   * One entry per row: the row's own time index (-1 for none) followed by one
-   * item per day — 0 for an empty cell, `v+1` for a cell on the row's time, or
-   * `[v+1, timeIndex]` for a cell that keeps its own.
-   */
-  r: Array<Array<number | [number, number]>>
+  /** One per activity: [dayIndexIntoD, vocabIndex, start, end]. */
+  i: Array<[number, number, number, number]>
   /** 1 when the illustrations are on. */
   a: number
 }
 
 export async function encodeSchedule(s: Schedule): Promise<string> {
-  const names: string[] = []
+  const keys: string[] = []
   const vocab: Array<[string, string]> = []
-  const times: string[] = []
-  const vIdx = (c: Cell) => {
-    const key = c.name + ' ' + c.icon
-    let i = names.indexOf(key)
-    if (i < 0) { i = names.push(key) - 1; vocab.push([c.name, c.icon]) }
-    return i
-  }
-  const tIdx = (t: string) => {
-    let i = times.indexOf(t)
-    if (i < 0) i = times.push(t) - 1
+  const vIdx = (it: Item) => {
+    const key = `${it.name} ${it.icon}`
+    let i = keys.indexOf(key)
+    if (i < 0) { i = keys.push(key) - 1; vocab.push([it.name, it.icon]) }
     return i
   }
 
-  const rows = s.rows.map((row) => {
-    const common = rowConsensus(row, s.days)
-      ?? (s.days.map((d) => cellAt(row, d).time.trim()).filter(Boolean)[0] ?? '')
-    const out: Array<number | [number, number]> = [common ? tIdx(common) : -1]
-    for (const d of s.days) {
-      const c = row.cells[d]
-      if (!c || !hasContent(c)) { out.push(0); continue }
-      const v = vIdx(c) + 1
-      const t = c.time.trim()
-      out.push(t === common ? v : [v, t ? tIdx(t) : -1])
-    }
-    return out
+  const items: Array<[number, number, number, number]> = []
+  s.days.forEach((day, di) => {
+    for (const it of itemsOn(s, day)) items.push([di, vIdx(it), it.start, it.end])
   })
 
   const c: Compact = {
     t: s.title, n: s.note,
     d: s.days.map((d) => WEEK.indexOf(d)),
-    v: vocab, m: times, r: rows, a: s.art ? 1 : 0,
+    f: s.from, e: s.to,
+    v: vocab, i: items, a: s.art ? 1 : 0,
   }
   return toBase64Url(await deflate(new TextEncoder().encode(JSON.stringify(c))))
 }
 
 export async function decodeSchedule(raw: string): Promise<Schedule | null> {
   try {
-    const c = JSON.parse(await unpack(fromBase64Url(raw))) as Compact
-    if (!c || !Array.isArray(c.r) || !Array.isArray(c.d)) return null
-    const days = c.d.map((i) => WEEK[i]).filter(Boolean)
+    const text = await unpack(fromBase64Url(raw))
+    const parsed = JSON.parse(text) as Compact & LegacyCompact
+    if (!parsed || !Array.isArray(parsed.d)) return null
+    const days = parsed.d.map((i) => WEEK[i]).filter(Boolean)
     if (!days.length) return null
-    const vocab = Array.isArray(c.v) ? c.v : []
-    const times = Array.isArray(c.m) ? c.m : []
 
-    const rows: Row[] = c.r.map((entry) => {
-      const [rowT, ...items] = entry as Array<number | [number, number]>
-      const common = typeof rowT === 'number' && rowT >= 0 ? (times[rowT] ?? '') : ''
-      const cells: Partial<Record<DayKey, Cell>> = {}
-      days.forEach((d, i) => {
-        const item = items[i]
-        if (!item) return
-        const [v, t] = Array.isArray(item) ? item : [item, null]
-        const entryV = vocab[(v as number) - 1]
-        if (!entryV) return
-        cells[d] = {
-          name: String(entryV[0] ?? ''),
-          icon: String(entryV[1] ?? ''),
-          time: t === null || t < 0 ? (Array.isArray(item) ? '' : common) : (times[t] ?? ''),
-        }
+    // A link made before the axis existed carries rows of cells instead.
+    if (!Array.isArray(parsed.i) && Array.isArray(parsed.r)) {
+      return fromLegacy(parsed, days)
+    }
+
+    const vocab = Array.isArray(parsed.v) ? parsed.v : []
+    const items: Partial<Record<DayKey, Item[]>> = {}
+    for (const entry of parsed.i ?? []) {
+      const [di, vi, start, end] = entry
+      const day = days[di]
+      const v = vocab[vi]
+      if (!day || !v) continue
+      ;(items[day] ??= []).push({
+        id: newId(),
+        name: String(v[0] ?? ''),
+        icon: String(v[1] ?? ''),
+        start: Number(start) || 0,
+        end: Number(end) || 0,
       })
-      return { cells }
-    })
+    }
 
     return {
       id: newId(),
-      title: String(c.t ?? ''),
-      note: String(c.n ?? ''),
-      days, rows,
-      art: c.a !== 0,
+      title: String(parsed.t ?? ''),
+      note: String(parsed.n ?? ''),
+      days,
+      from: Number(parsed.f) || 7 * 60,
+      to: Number(parsed.e) || 12 * 60,
+      items,
+      art: parsed.a !== 0,
       updated: Date.now(),
     }
   } catch { return null }
 }
 
+// --- reading what the previous shape wrote ----------------------------------
+//
+// The tool shipped once with a time on every CELL and rows instead of an axis.
+// Both the saved schedules in somebody's browser and any link already handed
+// out carry that shape, so both are read rather than discarded. A schedule
+// somebody built and printed is not ours to throw away because we changed our
+// minds about the model.
+
+interface LegacyCompact {
+  r?: Array<Array<number | [number, number]>>
+  m?: string[]
+}
+
+const LEGACY_TIME = /(\d{1,2})\s*[:.]\s*(\d{2})/g
+
+/** The first two clock times in a free-text label like `7:00 – 7:30`. */
+function legacySpan(raw: string): { start: number; end: number } | null {
+  const latin = String(raw ?? '').replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  const found: number[] = []
+  LEGACY_TIME.lastIndex = 0
+  for (let m = LEGACY_TIME.exec(latin); m; m = LEGACY_TIME.exec(latin)) {
+    const h = Number(m[1])
+    const min = Number(m[2])
+    if (h <= 23 && min <= 59) found.push(h * 60 + min)
+  }
+  if (!found.length) return null
+  return { start: found[0], end: found.length > 1 ? found[1] : found[0] + 30 }
+}
+
+function fromLegacy(c: Compact & LegacyCompact, days: DayKey[]): Schedule {
+  const vocab = Array.isArray(c.v) ? c.v : []
+  const times = Array.isArray(c.m) ? c.m : []
+  const items: Partial<Record<DayKey, Item[]>> = {}
+  let lo = Infinity
+  let hi = -Infinity
+
+  ;(c.r ?? []).forEach((entry, r) => {
+    const [rowT, ...cells] = entry
+    const rowTime = typeof rowT === 'number' && rowT >= 0 ? times[rowT] : ''
+    days.forEach((day, di) => {
+      const cell = cells[di]
+      if (!cell) return
+      const [v, t] = Array.isArray(cell) ? cell : [cell, null]
+      const entryV = vocab[(v as number) - 1]
+      if (!entryV) return
+      const label = t !== null && t >= 0 ? (times[t] ?? '') : rowTime
+      // A row with no readable time still has to land somewhere, so it takes
+      // half an hour at its position in the sheet. Losing the activity would
+      // be worse than placing it approximately.
+      const span = legacySpan(label) ?? { start: 8 * 60 + r * 30, end: 8 * 60 + r * 30 + 30 }
+      lo = Math.min(lo, span.start)
+      hi = Math.max(hi, span.end)
+      ;(items[day] ??= []).push({
+        id: newId(),
+        name: String(entryV[0] ?? ''),
+        icon: String(entryV[1] ?? ''),
+        start: snap(span.start),
+        end: Math.max(snap(span.start) + MIN_LEN, snap(span.end)),
+      })
+    })
+  })
+
+  return {
+    id: newId(),
+    title: String(c.t ?? ''),
+    note: String(c.n ?? ''),
+    days,
+    from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
+    to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
+    items,
+    art: c.a !== 0,
+    updated: Date.now(),
+  }
+}
+
+/** The same upgrade, for a schedule sitting in `localStorage`. */
+export function migrate(raw: unknown): Schedule | null {
+  const v = raw as Partial<Schedule> & { rows?: Array<{ cells?: Record<string, unknown> }> }
+  if (!v || typeof v !== 'object') return null
+  if (Array.isArray(v.rows) && !v.items) {
+    const days = Array.isArray(v.days) ? (v.days as DayKey[]).filter((d) => WEEK.includes(d)) : []
+    const items: Partial<Record<DayKey, Item[]>> = {}
+    let lo = Infinity
+    let hi = -Infinity
+    v.rows.forEach((row, r) => {
+      for (const day of days) {
+        const cell = row?.cells?.[day] as { name?: string; icon?: string; time?: string } | undefined
+        if (!cell || !(cell.name ?? '').trim()) continue
+        const span = legacySpan(cell.time ?? '') ?? { start: 8 * 60 + r * 30, end: 8 * 60 + r * 30 + 30 }
+        lo = Math.min(lo, span.start)
+        hi = Math.max(hi, span.end)
+        ;(items[day] ??= []).push({
+          id: newId(),
+          name: String(cell.name ?? ''),
+          icon: String(cell.icon ?? ''),
+          start: snap(span.start),
+          end: Math.max(snap(span.start) + MIN_LEN, snap(span.end)),
+        })
+      }
+    })
+    return {
+      id: String(v.id ?? newId()),
+      title: String(v.title ?? ''),
+      note: String(v.note ?? ''),
+      days: days.length ? days : [...SCHOOL_WEEK],
+      from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
+      to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
+      items,
+      art: v.art !== false,
+      updated: Number(v.updated) || Date.now(),
+    }
+  }
+  return v.items && Array.isArray(v.days) ? (v as Schedule) : null
+}
+
 /**
- * The payload is DEFLATED before it is base64'd, and that is most of why the
- * QR is a printable size at all.
+ * The payload is DEFLATED before it is base64'd.
  *
- * A schedule is the most compressible thing there is — the same day names,
- * the same time format and the same handful of activity names, over and over.
- * The dictionary in `Compact` takes the repetition out at the record level and
- * deflate takes out what is left. Measured on real-shaped sheets:
- *
- * | sheet | plain | deflated | QR |
- * |---|---|---|---|
- * | 16 rows, one activity per row | 1,323 B | **616 B** | 121 → 85 modules, 54 → 39mm |
- * | 24 rows, every cell different | 5,927 B | **1,407 B** | past the limit → 125 modules, 56mm |
- *
- * So it is not a tidy-up: the bottom row is a sheet that could not have a QR
- * at all and now has one, and every ordinary sheet gets a code a third
- * smaller. `deflate-raw` rather than gzip because the header and trailer are
- * 18 bytes of nothing when both ends are ours — the same choice `lib/zip.ts`
- * makes, and the same API, which this site already requires.
+ * `deflate-raw` rather than gzip because the header and trailer are 18 bytes
+ * of nothing when both ends are ours — the same choice `lib/zip.ts` makes, and
+ * the same API, which this site already requires.
  */
 async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([bytes as BlobPart]).stream()
@@ -354,10 +503,9 @@ async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
 /**
  * Inflate, falling back to reading the bytes as text.
  *
- * The fallback is not for old links — there are none — it is so that a link
- * built by hand, or by anything that does not compress, still opens. A wrong
- * guess costs nothing: JSON.parse rejects it and the caller reports a bad
- * link, which is what it would have done anyway.
+ * The fallback is so a link built by hand, or by anything that does not
+ * compress, still opens. A wrong guess costs nothing: JSON.parse rejects it
+ * and the caller reports a bad link, which is what it would have done anyway.
  */
 async function unpack(bytes: Uint8Array): Promise<string> {
   try {
@@ -407,8 +555,8 @@ export async function readShareHash(hash: string): Promise<Schedule | null> {
 // Defined here rather than in either renderer, because the HTML grid and the
 // canvas the PDF is drawn on have to agree and neither can read the other's
 // stylesheet. Flat and pale on purpose: the sheet is printed, and a saturated
-// column head costs a colour cartridge and makes the text under it harder to
-// read than the white it replaced.
+// column costs a colour cartridge and makes the text on it harder to read than
+// the white it replaced.
 
 export const DAY_TINT: Record<DayKey, { head: string; band: string }> = {
   sun: { head: '#e8b4bc', band: '#fbeff1' },

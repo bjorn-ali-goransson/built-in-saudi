@@ -7,9 +7,9 @@ const jsQR = (jsQRmod as unknown as { default?: typeof jsQRmod }).default ?? jsQ
 
 // Activity Schedule.
 //
-// The illustrated routine sheet: an icon on every activity, a link that
-// carries the whole thing, and the one check the wall charts this was modelled
-// on cannot do for themselves — whether the times in a row actually agree.
+// The illustrated routine sheet, on one time axis: an icon on every activity,
+// activities that can be moved to the quarter hour and are free to differ from
+// day to day, and a link that carries the whole thing.
 
 /**
  * Pull the QR out of the PDF and decode it.
@@ -50,181 +50,299 @@ const load = async (page: Page, locale = 'en') => {
   await expect(page.getByTestId('activity-schedule')).toBeVisible()
 }
 
-const setTime = async (page: Page, r: number, day: string, v: string) => {
-  await page.getByTestId(`as-time-${r}-${day}`).fill(v)
-  await page.getByTestId(`as-time-${r}-${day}`).press('Escape')
+/** Every activity block in one day column, top to bottom. */
+const blocks = (page: Page, day: string) =>
+  page.locator(`[data-testid="as-col-${day}"] [data-testid^="as-item-"]`)
+
+/** The [start, end] a block claims, in minutes from midnight. */
+const spanOf = async (loc: ReturnType<Page['locator']>): Promise<[number, number]> => {
+  const [s, e] = await Promise.all([loc.getAttribute('data-start'), loc.getAttribute('data-end')])
+  return [Number(s), Number(e)]
 }
 
-const setName = async (page: Page, r: number, day: string, v: string) => {
-  await page.getByTestId(`as-name-${r}-${day}`).fill(v)
-  await page.getByTestId(`as-name-${r}-${day}`).press('Escape')
+/**
+ * Add an activity to a day and name it, returning a STABLE locator for it.
+ *
+ * Resolved to its own testid rather than handed back as `.last()`: a locator
+ * is lazy, so two `.last()` handles both point at whatever is last by the time
+ * they are read — which made two different blocks measure as one element and
+ * looked exactly like the side-by-side packing having failed.
+ */
+async function add(page: Page, day: string, name: string) {
+  await page.getByTestId(`as-add-${day}`).click()
+  const fresh = blocks(page, day).last()
+  const box = fresh.locator('[data-testid^="as-name-"]')
+  await box.fill(name)
+  await box.press('Escape')
+  return page.getByTestId((await fresh.getAttribute('data-testid'))!)
 }
 
-/** Sunday, Monday and Tuesday agreeing on one period; Tuesday then moved off it. */
-async function rowWithOneOddDay(page: Page) {
-  await setName(page, 0, 'sun', 'Assembly')
-  await setTime(page, 0, 'sun', '7:00 - 7:30')
-  await setName(page, 0, 'mon', 'Assembly')
-  await setName(page, 0, 'tue', 'Assembly')
-  await setTime(page, 0, 'tue', '9:00 - 9:30')
-}
-
-test('a time that disagrees with the rest of its row is named, and says what the row uses', async ({ page }) => {
-  // The defect this tool exists for. The sheet it was built from had four rows
-  // where one day had drifted, and nobody reads a wall chart column by column.
+test('an activity lands on the axis at a quarter-hour', async ({ page }) => {
   await load(page)
-  await rowWithOneOddDay(page)
-
-  const hint = page.getByTestId('as-hint-0-tue')
-  await expect(hint).toBeVisible()
-  await expect(hint).toHaveAttribute('data-trouble', 'odd')
-  await expect(hint).toContainText('7:00 - 7:30')
-
-  // And the days that agree are NOT flagged — without this the check could be
-  // "flag everything" and the first assertion would still pass.
-  await expect(page.getByTestId('as-hint-0-sun')).toHaveCount(0)
-  await expect(page.getByTestId('as-hint-0-mon')).toHaveCount(0)
+  const block = await add(page, 'sun', 'Assembly')
+  const [start, end] = await spanOf(block)
+  expect(start % 15).toBe(0)
+  expect(end % 15).toBe(0)
+  expect(start).toBe(7 * 60)          // the default day starts at 7:00
+  expect(end - start).toBe(30)
 })
 
-test('the fix button puts the odd day back on the row’s time', async ({ page }) => {
+test('the arrow keys move it by exactly a quarter of an hour', async ({ page }) => {
+  // The keyboard is the accessible path AND the only one a spec can assert
+  // on: a pointer drag cannot be checked to the minute.
   await load(page)
-  await rowWithOneOddDay(page)
-  await page.getByTestId('as-fix-0-tue').click()
-  await expect(page.getByTestId('as-time-0-tue')).toHaveValue('7:00 - 7:30')
-  await expect(page.getByTestId('as-hint-0-tue')).toHaveCount(0)
+  const block = await add(page, 'sun', 'Assembly')
+  const [before] = await spanOf(block)
+
+  await block.press('ArrowDown')
+  expect((await spanOf(block))[0]).toBe(before + 15)
+  await block.press('ArrowDown')
+  expect((await spanOf(block))[0]).toBe(before + 30)
+  await block.press('ArrowUp')
+  expect((await spanOf(block))[0]).toBe(before + 15)
 })
 
-test('a row with no majority suggests nothing', async ({ page }) => {
-  // Two days saying one thing and two saying another is a row with no
-  // consensus. Picking the first would be inventing one — and a check that
-  // did would pass every other case in this file.
+test('moving keeps the length; Shift resizes instead', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'A')
-  await setTime(page, 0, 'sun', '7:00 - 7:30')
-  await setName(page, 0, 'mon', 'B')
-  await setTime(page, 0, 'mon', '7:00 - 7:30')
-  await setName(page, 0, 'tue', 'C')
-  await setTime(page, 0, 'tue', '9:00 - 9:30')
-  await setName(page, 0, 'wed', 'D')
-  await setTime(page, 0, 'wed', '9:00 - 9:30')
+  const block = await add(page, 'sun', 'Quran')
+  const [s0, e0] = await spanOf(block)
 
-  for (const d of ['sun', 'mon', 'tue', 'wed']) {
-    await expect(page.getByTestId(`as-hint-0-${d}`)).toHaveCount(0)
+  await block.press('ArrowDown')
+  const [s1, e1] = await spanOf(block)
+  expect(e1 - s1).toBe(e0 - s0)
+
+  await block.press('Shift+ArrowDown')
+  const [s2, e2] = await spanOf(block)
+  expect(s2).toBe(s1)
+  expect(e2).toBe(e1 + 15)
+})
+
+test('it cannot be pushed off either end of the axis', async ({ page }) => {
+  await load(page)
+  const block = await add(page, 'sun', 'Assembly')
+  for (let i = 0; i < 6; i++) await block.press('ArrowUp')
+  expect((await spanOf(block))[0]).toBe(7 * 60)      // the axis starts here
+
+  for (let i = 0; i < 40; i++) await block.press('ArrowDown')
+  expect((await spanOf(block))[1]).toBeLessThanOrEqual(12 * 60)
+})
+
+test('an activity cannot be shrunk to nothing', async ({ page }) => {
+  await load(page)
+  const block = await add(page, 'sun', 'Snack')
+  for (let i = 0; i < 6; i++) await block.press('Shift+ArrowUp')
+  const [start, end] = await spanOf(block)
+  expect(end - start).toBe(15)
+})
+
+test('the days are free to differ — that is the point of the axis', async ({ page }) => {
+  // The reason the times are not locked to a shared row: assembly only on
+  // Sunday, an early finish on Thursday. A move on one day must not drag the
+  // others with it, and must not be snapped back.
+  await load(page)
+  await add(page, 'sun', 'Quran')
+  await add(page, 'thu', 'Quran')
+
+  const thu = blocks(page, 'thu').first()
+  await thu.press('ArrowDown')
+  await thu.press('ArrowDown')
+
+  const [sunStart] = await spanOf(blocks(page, 'sun').first())
+  const [thuStart] = await spanOf(thu)
+  expect(thuStart).toBe(sunStart + 30)
+})
+
+test('two activities at once on one day are named', async ({ page }) => {
+  // An overlap is the defect a time axis can see and a grid of boxes cannot,
+  // because boxes are the same size whatever they say.
+  await load(page)
+  const first = await add(page, 'sun', 'Quran')
+  const second = await add(page, 'sun', 'Maths')
+  await second.press('ArrowUp')                 // into the first one's half hour
+
+  await expect(second).toHaveAttribute('data-trouble', 'overlap')
+  // BOTH are reported, not the pair: each activity is individually in the
+  // wrong place, and each is individually marked on the sheet.
+  await expect(first).toHaveAttribute('data-trouble', 'overlap')
+  await expect(page.getByTestId('as-clash-count')).toContainText('2')
+})
+
+test('and BOTH of them stay visible, side by side', async ({ page }) => {
+  // Its own case, because drawing one on top of the other would be worse than
+  // the overlap it is reporting — and because as one assertion inside the test
+  // above it was masked: that test fails at the flag before ever measuring.
+  await load(page)
+  const first = await add(page, 'sun', 'Quran')
+  const second = await add(page, 'sun', 'Maths')
+  await second.press('ArrowUp')
+
+  const a = (await first.boundingBox())!
+  const b = (await second.boundingBox())!
+  expect(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1).toBe(true)
+  // And each is half a column, not a full one hiding the other.
+  const col = (await page.getByTestId('as-col-sun').boundingBox())!
+  expect(a.width).toBeLessThan(col.width * 0.6)
+})
+
+test('a day with no overlap reports nothing', async ({ page }) => {
+  // Without this the overlap check could be "always complain" and every other
+  // case in this file would still pass.
+  await load(page)
+  await add(page, 'sun', 'Quran')
+  const second = await add(page, 'sun', 'Maths')
+  await expect(second).not.toHaveAttribute('data-trouble', /.+/)
+  await expect(page.getByTestId('as-clash')).toHaveCount(0)
+})
+
+test('one day can be copied across the week', async ({ page }) => {
+  // The ordinary school week is four identical days and one that differs, so
+  // without this the axis would be worse than the grid it replaced for the
+  // common case: the same eight activities placed five times.
+  await load(page)
+  await add(page, 'sun', 'Quran')
+  await add(page, 'sun', 'Maths')
+  await page.getByTestId('as-copy-sun').click()
+
+  for (const day of ['mon', 'tue', 'wed', 'thu']) {
+    await expect(blocks(page, day)).toHaveCount(2)
+    await expect(blocks(page, day).first().locator('[data-testid^="as-name-"]')).toHaveValue('Quran')
   }
+  expect(await spanOf(blocks(page, 'thu').first()))
+    .toEqual(await spanOf(blocks(page, 'sun').first()))
 })
 
-test('a range that ends where it starts is caught on its own, with no row to compare against', async ({ page }) => {
-  // `9:30 – 9:30` and `10:45 – 10:45` were both on the reference sheet. This
-  // is the half the row check structurally cannot see: the typo can be the
-  // only entry in its row.
+test('Enter in the name box starts the next activity below it', async ({ page }) => {
+  // What makes filling a day a typing job rather than forty trips to a button.
   await load(page)
-  await setName(page, 1, 'sun', 'Snack')
-  await setTime(page, 1, 'sun', '9:30 - 9:30')
-  await expect(page.getByTestId('as-hint-1-sun')).toHaveAttribute('data-trouble', 'zero')
+  const first = await add(page, 'sun', 'Assembly')
+  const [, firstEnd] = await spanOf(first)
 
-  await setTime(page, 1, 'sun', '11:00 - 10:00')
-  await expect(page.getByTestId('as-hint-1-sun')).toHaveAttribute('data-trouble', 'backwards')
-
-  await setTime(page, 1, 'sun', '9:30 - 10:00')
-  await expect(page.getByTestId('as-hint-1-sun')).toHaveCount(0)
+  await first.locator('[data-testid^="as-name-"]').press('Enter')
+  await expect(blocks(page, 'sun')).toHaveCount(2)
+  expect((await spanOf(blocks(page, 'sun').nth(1)))[0]).toBe(firstEnd)
 })
 
-test('one aligning pass fixes a row where several days drifted', async ({ page }) => {
+test('a block is as tall as its activity is long', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'Quran')
-  await setTime(page, 0, 'sun', '8:00 - 8:30')
-  await setName(page, 0, 'mon', 'Quran')
-  await setTime(page, 0, 'mon', '8:00 - 8:30')
-  await setName(page, 0, 'tue', 'Quran')
-  await setTime(page, 0, 'tue', '8:15 - 8:30')
-  await setName(page, 0, 'wed', 'Quran')
-  await setTime(page, 0, 'wed', '8:05 - 8:30')
+  const half = await add(page, 'sun', 'Quran')
+  const hour = await add(page, 'mon', 'Art')
+  await hour.press('Shift+ArrowDown')
+  await hour.press('Shift+ArrowDown')            // 30 -> 60 minutes
 
-  await expect(page.getByTestId('as-harmony-count')).toContainText('2')
-  await page.getByTestId('as-align-all').click()
-  await expect(page.getByTestId('as-time-0-tue')).toHaveValue('8:00 - 8:30')
-  await expect(page.getByTestId('as-time-0-wed')).toHaveValue('8:00 - 8:30')
-  await expect(page.getByTestId('as-harmony')).toHaveCount(0)
+  const a = await half.boundingBox()
+  const b = await hour.boundingBox()
+  expect(b!.height / a!.height).toBeGreaterThan(1.8)
+  expect(b!.height / a!.height).toBeLessThan(2.2)
 })
 
-test('the time set once spreads across the row, in either typing order', async ({ page }) => {
-  // The reason the harmony check is rarely needed in the first place: setting
-  // the period once is the normal case, and a cell typed afterwards inherits
-  // it too — people set the times first as often as the activities first.
+test('the axis is labelled, and the sheet says where the day starts and ends', async ({ page }) => {
   await load(page)
-  await setName(page, 2, 'sun', 'English')
-  await setName(page, 2, 'mon', 'English')
-  await setTime(page, 2, 'sun', '10:00 - 10:30')
-  await expect(page.getByTestId('as-time-2-mon')).toHaveValue('10:00 - 10:30')
+  await expect(page.getByTestId('as-mark-420')).toContainText('7:00')
+  await expect(page.getByTestId('as-mark-720')).toContainText('12:00')
 
-  await setName(page, 2, 'tue', 'English')
-  await expect(page.getByTestId('as-time-2-tue')).toHaveValue('10:00 - 10:30')
+  await page.getByTestId('as-to').fill('10:00')
+  await page.getByTestId('as-to').blur()
+  await expect(page.getByTestId('as-mark-720')).toHaveCount(0)
+  await expect(page.getByTestId('as-mark-600')).toContainText('10:00')
+})
+
+test('shortening the day pulls activities back inside it', async ({ page }) => {
+  // Otherwise the axis and its contents disagree, and the sheet prints an
+  // activity in the margin.
+  await load(page)
+  const block = await add(page, 'sun', 'Home time')
+  for (let i = 0; i < 12; i++) await block.press('ArrowDown')
+  expect((await spanOf(block))[1]).toBeGreaterThan(9 * 60)
+
+  await page.getByTestId('as-to').fill('9:00')
+  await page.getByTestId('as-to').blur()
+  expect((await spanOf(blocks(page, 'sun').first()))[1]).toBeLessThanOrEqual(9 * 60)
 })
 
 test('an icon is guessed from the words in the name', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'قرآن')
-  await expect(page.getByTestId('as-icon-0-sun')).toContainText('📖')
+  const block = await add(page, 'sun', 'قرآن')
+  await expect(block.locator('[data-testid^="as-icon-"]').first()).toContainText('📖')
 })
 
 test('the icon chosen for an activity comes back for the same name — in a LATER schedule', async ({ page }) => {
-  // The headline of the tool: choosing once teaches it, and the memory spans
-  // every sheet rather than the open one.
   await load(page)
-  await setName(page, 0, 'sun', 'Circle time')
-  await page.getByTestId('as-icon-0-sun').click()
-  await page.getByTestId('as-icon-0-sun-pick-🧩').click()
-  await expect(page.getByTestId('as-icon-0-sun')).toContainText('🧩')
+  const block = await add(page, 'sun', 'Circle time')
+  const id = (await block.getAttribute('data-testid'))!.replace('as-item-', '')
+  await page.getByTestId(`as-icon-${id}`).click()
+  await page.getByTestId(`as-icon-${id}-pick-🧩`).click()
+  await expect(page.getByTestId(`as-icon-${id}`)).toContainText('🧩')
 
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
 
-  await setName(page, 3, 'thu', 'Circle time')
-  await expect(page.getByTestId('as-icon-3-thu')).toContainText('🧩')
+  const later = await add(page, 'thu', 'Circle time')
+  await expect(later.locator('[data-testid^="as-icon-"]').first()).toContainText('🧩')
 })
 
 test('a chosen icon outranks the guess', async ({ page }) => {
-  // A guess that overrules a choice is the tool arguing about somebody's own
-  // sheet. «قرآن» would be guessed 📖; it must stay as chosen.
   await load(page)
-  await setName(page, 0, 'sun', 'قرآن')
-  await page.getByTestId('as-icon-0-sun').click()
-  await page.getByTestId('as-icon-0-sun-pick-🎵').click()
-  await setName(page, 1, 'mon', 'قرآن')
-  await expect(page.getByTestId('as-icon-1-mon')).toContainText('🎵')
+  const block = await add(page, 'sun', 'قرآن')
+  const id = (await block.getAttribute('data-testid'))!.replace('as-item-', '')
+  await page.getByTestId(`as-icon-${id}`).click()
+  await page.getByTestId(`as-icon-${id}-pick-🎵`).click()
+
+  const again = await add(page, 'mon', 'قرآن')
+  await expect(again.locator('[data-testid^="as-icon-"]').first()).toContainText('🎵')
 })
 
 test('the suggestions under an activity box come from an earlier SAVED schedule', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'Mathematics')
+  await add(page, 'sun', 'Mathematics')
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
 
-  const box = page.getByTestId('as-name-1-mon')
+  await page.getByTestId('as-add-mon').click()
+  const box = blocks(page, 'mon').last().locator('[data-testid^="as-name-"]')
+  const id = (await box.getAttribute('data-testid'))!
   await box.click()                       // opens on FOCUS, not on the first keystroke
-  const list = page.getByTestId('as-name-1-mon-list')
-  await expect(list).toBeVisible()
-  await expect(list).toContainText('Mathematics')
-  await page.getByTestId('as-name-1-mon-opt-0').click()
+  await expect(page.getByTestId(`${id}-list`)).toContainText('Mathematics')
+  await page.getByTestId(`${id}-opt-0`).click()
   await expect(box).toHaveValue('Mathematics')
 })
 
-test('picking a suggestion brings its icon with it', async ({ page }) => {
+test('an activity can be removed', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'Story')
-  await page.getByTestId('as-icon-0-sun').click()
-  await page.getByTestId('as-icon-0-sun-pick-🧸').click()
+  const block = await add(page, 'sun', 'Assembly')
+  const id = (await block.getAttribute('data-testid'))!.replace('as-item-', '')
+  await page.getByTestId(`as-remove-${id}`).click()
+  await expect(blocks(page, 'sun')).toHaveCount(0)
+})
 
-  await page.getByTestId('as-name-2-wed').click()
-  await page.getByTestId('as-name-2-wed-opt-0').click()
-  await expect(page.getByTestId('as-name-2-wed')).toHaveValue('Story')
-  await expect(page.getByTestId('as-icon-2-wed')).toContainText('🧸')
+test('a sheet saved before the axis existed still opens', async ({ page }) => {
+  // The tool shipped once with a time written into every cell. A schedule
+  // somebody built and printed is not ours to throw away because we changed
+  // our minds about the model, so the old shape is READ rather than discarded.
+  await load(page)
+  await page.evaluate(() => {
+    localStorage.setItem('bis-schedule-draft', JSON.stringify({
+      id: 'old', title: 'Last term', note: '', art: true, updated: Date.now(),
+      days: ['sun', 'mon', 'tue', 'wed', 'thu'],
+      rows: [
+        { cells: { sun: { name: 'Assembly', icon: '🔔', time: '7:00 - 7:30' },
+                   mon: { name: 'Assembly', icon: '🔔', time: '7:00 - 7:30' } } },
+        { cells: { sun: { name: 'Quran', icon: '📖', time: '7:30 - 8:15' } } },
+      ],
+    }))
+  })
+  await page.reload()
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+
+  await expect(page.getByTestId('as-title')).toHaveValue('Last term')
+  await expect(blocks(page, 'sun')).toHaveCount(2)
+  expect(await spanOf(blocks(page, 'sun').first())).toEqual([7 * 60, 7 * 60 + 30])
+  expect(await spanOf(blocks(page, 'sun').nth(1))).toEqual([7 * 60 + 30, 8 * 60 + 15])
+  await expect(blocks(page, 'mon')).toHaveCount(1)
 })
 
 test('the share link carries the whole sheet, and opening it fetches nothing', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'Assembly')
-  await setTime(page, 0, 'sun', '7:00 - 7:30')
+  await add(page, 'sun', 'Assembly')
   await page.getByTestId('as-title').fill('Grade 1B')
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -232,7 +350,6 @@ test('the share link carries the whole sheet, and opening it fetches nothing', a
   const shared = await page.evaluate(() => navigator.clipboard.readText())
   expect(shared).toContain('#s=')
 
-  // A clean context, so nothing can come from localStorage.
   const fresh = await page.context().browser()!.newContext()
   const p2 = await fresh.newPage()
   const bodies: string[] = []
@@ -240,8 +357,8 @@ test('the share link carries the whole sheet, and opening it fetches nothing', a
   await p2.goto(shared)
   await expect(p2.getByTestId('as-from-link')).toBeVisible()
   await expect(p2.getByTestId('as-title')).toHaveValue('Grade 1B')
-  await expect(p2.getByTestId('as-name-0-sun')).toHaveValue('Assembly')
-  await expect(p2.getByTestId('as-time-0-sun')).toHaveValue('7:00 - 7:30')
+  await expect(blocks(p2, 'sun').first().locator('[data-testid^="as-name-"]')).toHaveValue('Assembly')
+  expect(await spanOf(blocks(p2, 'sun').first())).toEqual([7 * 60, 7 * 60 + 30])
   expect(bodies.filter((u) => !/analytics|googletagmanager|google-analytics/.test(u))).toEqual([])
   await fresh.close()
 })
@@ -249,7 +366,7 @@ test('the share link carries the whole sheet, and opening it fetches nothing', a
 test('a saved schedule can be reopened and deleted', async ({ page }) => {
   await load(page)
   await page.getByTestId('as-title').fill('Term one')
-  await setName(page, 0, 'sun', 'Assembly')
+  await add(page, 'sun', 'Assembly')
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
   await expect(page.getByTestId('as-title')).not.toHaveValue('Term one')
@@ -263,15 +380,15 @@ test('a saved schedule can be reopened and deleted', async ({ page }) => {
   await expect(page.getByTestId('as-saved')).toHaveCount(0)
 })
 
-test('what was typed survives a reload without being saved', async ({ page }) => {
+test('what was placed survives a reload without being saved', async ({ page }) => {
   await load(page)
-  await setName(page, 1, 'tue', 'Art')
+  await add(page, 'tue', 'Art')
   await page.reload()
-  await expect(page.getByTestId('as-name-1-tue')).toHaveValue('Art')
+  await expect(blocks(page, 'tue').first().locator('[data-testid^="as-name-"]')).toHaveValue('Art')
 })
 
 /**
- * The day cards LEFT TO RIGHT on screen — geometry, not DOM order.
+ * The day columns LEFT TO RIGHT on screen — geometry, not DOM order.
  *
  * The two are opposite under `dir="rtl"`, which is how both grids on this site
  * shipped with Sunday on the wrong side while their specs stayed green: they
@@ -285,15 +402,23 @@ const cardOrder = async (page: Page) =>
       .map((o) => o.d),
   )
 
-test('in Arabic Sunday is the RIGHTMOST card, where the reader starts', async ({ page }) => {
+test('in Arabic Sunday is the RIGHTMOST column, and the axis is beside it', async ({ page }) => {
   await load(page, 'ar')
   expect(await cardOrder(page)).toEqual(['thu', 'wed', 'tue', 'mon', 'sun'])
   await expect(page.getByTestId('as-head-sun')).toContainText('الأحد')
+
+  // The axis sits on the side the reader starts from, past Sunday.
+  const axis = (await page.getByTestId('as-axis').boundingBox())!
+  const sun = (await page.getByTestId('as-col-sun').boundingBox())!
+  expect(axis.x).toBeGreaterThan(sun.x)
 })
 
-test('in English Sunday is the leftmost card', async ({ page }) => {
+test('in English Sunday is the leftmost column, and the axis is to its left', async ({ page }) => {
   await load(page)
   expect(await cardOrder(page)).toEqual(['sun', 'mon', 'tue', 'wed', 'thu'])
+  const axis = (await page.getByTestId('as-axis').boundingBox())!
+  const sun = (await page.getByTestId('as-col-sun').boundingBox())!
+  expect(axis.x).toBeLessThan(sun.x)
 })
 
 test('the weekend is added at the END of the week', async ({ page }) => {
@@ -303,20 +428,6 @@ test('the weekend is added at the END of the week', async ({ page }) => {
   await load(page, 'ar')
   await page.getByTestId('as-weekend').check()
   expect(await cardOrder(page)).toEqual(['sat', 'fri', 'thu', 'wed', 'tue', 'mon', 'sun'])
-})
-
-test('a hint moves every day in that row down together', async ({ page }) => {
-  // A row is a period shared across the week, so the cells of one row have to
-  // stay in the same band. Before subgrid each card stacked its own rows, so a
-  // hint grew one cell and slid every row below it out of step with the other
-  // four days — which is the sheet contradicting the idea it is built on.
-  await load(page)
-  await rowWithOneOddDay(page)
-  await expect(page.getByTestId('as-hint-0-tue')).toBeVisible()
-
-  const tops = await page.evaluate(() => ['sun', 'mon', 'tue', 'wed', 'thu']
-    .map((d) => Math.round(document.querySelector(`[data-testid="as-cell-1-${d}"]`)!.getBoundingClientRect().top)))
-  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1)
 })
 
 test('the illustrations are on the sheet, and can be turned off', async ({ page }) => {
@@ -334,6 +445,7 @@ test('the illustrations are on the sheet, and can be turned off', async ({ page 
       .poll(() => page.getByTestId(id).evaluate((el) => (el as HTMLImageElement).naturalWidth))
       .toBeGreaterThan(0)
   }
+
   await page.getByTestId('as-art').uncheck()
   await expect(page.getByTestId('as-art-header')).toHaveCount(0)
   await expect(page.getByTestId('as-art-footer')).toHaveCount(0)
@@ -341,8 +453,7 @@ test('the illustrations are on the sheet, and can be turned off', async ({ page 
 
 test('it prints a PDF of what is on screen', async ({ page }) => {
   await load(page)
-  await setName(page, 0, 'sun', 'Assembly')
-  await setTime(page, 0, 'sun', '7:00 - 7:30')
+  await add(page, 'sun', 'Assembly')
   await page.getByTestId('as-title').fill('Grade 1B')
   const dl = page.waitForEvent('download', { timeout: 60_000 })
   await page.getByTestId('as-download').click()
@@ -352,75 +463,10 @@ test('it prints a PDF of what is on screen', async ({ page }) => {
 
 test('the Arabic PDF is produced too', async ({ page }) => {
   await load(page, 'ar')
-  await setName(page, 0, 'sun', 'قرآن')
-  await setTime(page, 0, 'sun', '8:00 - 8:30')
+  await add(page, 'sun', 'قرآن')
   const dl = page.waitForEvent('download', { timeout: 60_000 })
   await page.getByTestId('as-download').click()
   expect((await dl).suggestedFilename()).toMatch(/\.pdf$/)
-})
-
-/**
- * Write a sheet straight into the draft, to reach sizes typing cannot.
- *
- * `distinct` is the whole variable. A real sheet repeats one activity across
- * the week; the dictionary in the encoding collapses that and deflate removes
- * what is left, so an 80-row Arabic schedule is still only 1,239 bytes and a
- * 52mm code. Only a sheet where every single cell differs — which no wall
- * chart is — gets anywhere near the ceiling, and it takes 32 rows of it.
- */
-const seedSheet = async (page: Page, rows: number, distinct: boolean) => {
-  await page.evaluate(({ rows, distinct }) => {
-    const days = ['sun', 'mon', 'tue', 'wed', 'thu']
-    const words = ['طابور وأذكار الصباح', 'قرآن', 'رياضيات', 'إنجليزي', 'وجبة', 'أركان', 'لعب حر', 'انصراف']
-    localStorage.setItem('bis-schedule-draft', JSON.stringify({
-      id: 'big', title: 'الجدول الأسبوعي', note: 'أيام الدراسة', art: true, updated: Date.now(), days,
-      rows: Array.from({ length: rows }, (_, r) => ({
-        cells: Object.fromEntries(days.map((d, i) => [d, {
-          name: distinct ? `${words[(r * 5 + i) % words.length]} ${r * 5 + i}` : words[r % words.length],
-          icon: '📖',
-          time: `${7 + Math.floor(r / 2)}:${r % 2 ? '30' : '00'} - ${8 + Math.floor(r / 2)}:${r % 2 ? '30' : '00'}`,
-        }])),
-      })),
-    }))
-  }, { rows, distinct })
-  await page.reload()
-  await expect(page.getByTestId('activity-schedule')).toBeVisible()
-}
-
-test('a normal sheet, even a very long one, still gets its QR', async ({ page }) => {
-  // The measurement the ceiling is set against: 24 rows of Arabic, one
-  // activity per row, deflates to 700 bytes — an 89-module code, 41mm, well
-  // inside the 60mm the sheet allows. Without this the refusals below could be
-  // satisfied by a tool that never manages a QR at all.
-  await load(page, 'ar')
-  await seedSheet(page, 24, false)
-  const dl = page.waitForEvent('download', { timeout: 60_000 })
-  await page.getByTestId('as-download').click()
-  await dl
-  await expect(page.getByTestId('as-qr-problem')).toHaveCount(0)
-})
-
-test('a sheet whose code would print finer than a camera can read refuses it', async ({ page }) => {
-  // A QR denser than about 0.42mm per module, printed on A4, looks like a
-  // working code and is a picture. The PDF is still produced — the schedule is
-  // the point and the code is the extra — and the reason is named.
-  await load(page, 'ar')
-  await seedSheet(page, 40, true)
-  const dl = page.waitForEvent('download', { timeout: 60_000 })
-  await page.getByTestId('as-download').click()
-  await dl
-  await expect(page.getByTestId('as-qr-problem')).toHaveAttribute('data-why', 'too-dense')
-})
-
-test('a sheet past the 2,953-byte QR limit says THAT instead', async ({ page }) => {
-  // A different refusal with a different remedy, so it gets a different
-  // message: past this there is no code at all, at any size.
-  await load(page, 'ar')
-  await seedSheet(page, 80, true)
-  const dl = page.waitForEvent('download', { timeout: 60_000 })
-  await page.getByTestId('as-download').click()
-  await dl
-  await expect(page.getByTestId('as-qr-problem')).toHaveAttribute('data-why', 'too-long')
 })
 
 test('the QR on the printed sheet decodes, and reopens the same schedule', async ({ page }) => {
@@ -431,9 +477,8 @@ test('the QR on the printed sheet decodes, and reopens the same schedule', async
   // with itself.
   await load(page)
   await page.getByTestId('as-title').fill('Grade 1B')
-  await setName(page, 0, 'sun', 'Assembly')
-  await setTime(page, 0, 'sun', '7:00 - 7:30')
-  await setName(page, 1, 'mon', 'Quran')
+  await add(page, 'sun', 'Assembly')
+  await add(page, 'mon', 'Quran')
 
   const dl = page.waitForEvent('download', { timeout: 60_000 })
   await page.getByTestId('as-download').click()
@@ -448,13 +493,80 @@ test('the QR on the printed sheet decodes, and reopens the same schedule', async
   const p2 = await fresh.newPage()
   await p2.goto(decoded!.replace(/^https?:\/\/[^/]+/, ''))
   await expect(p2.getByTestId('as-title')).toHaveValue('Grade 1B')
-  await expect(p2.getByTestId('as-name-0-sun')).toHaveValue('Assembly')
-  await expect(p2.getByTestId('as-name-1-mon')).toHaveValue('Quran')
+  await expect(blocks(p2, 'sun').first().locator('[data-testid^="as-name-"]')).toHaveValue('Assembly')
+  await expect(blocks(p2, 'mon').first().locator('[data-testid^="as-name-"]')).toHaveValue('Quran')
   await fresh.close()
 })
 
-test('it says why it checks a row, and why the link is large', async ({ page }) => {
+/**
+ * Write a sheet straight into the draft, to reach sizes typing cannot.
+ *
+ * `distinct` is the whole variable. A real sheet repeats one activity across
+ * the week; the dictionary in the encoding collapses that and deflate removes
+ * what is left. Only a sheet where every single cell differs — which no wall
+ * chart is — gets anywhere near the ceiling.
+ */
+const seedSheet = async (page: Page, rows: number, distinct: boolean) => {
+  await page.evaluate(({ rows, distinct }) => {
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu']
+    const words = ['طابور وأذكار الصباح', 'قرآن', 'رياضيات', 'إنجليزي', 'وجبة', 'أركان', 'لعب حر', 'انصراف']
+    const items: Record<string, unknown[]> = {}
+    days.forEach((d, di) => {
+      items[d] = Array.from({ length: rows }, (_, r) => ({
+        id: `${d}${r}`,
+        name: distinct ? `${words[(r * 5 + di) % words.length]} ${r * 5 + di}` : words[r % words.length],
+        icon: '📖',
+        start: 7 * 60 + r * 15,
+        end: 7 * 60 + r * 15 + 15,
+      }))
+    })
+    localStorage.setItem('bis-schedule-draft', JSON.stringify({
+      id: 'big', title: 'الجدول الأسبوعي', note: 'أيام الدراسة', art: true, updated: Date.now(),
+      days, from: 7 * 60, to: 7 * 60 + rows * 15 + 60, items,
+    }))
+  }, { rows, distinct })
+  await page.reload()
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+}
+
+test('a normal sheet, even a very long one, still gets its QR', async ({ page }) => {
+  // Without this the refusals below could be satisfied by a tool that never
+  // manages a QR at all.
+  await load(page, 'ar')
+  await seedSheet(page, 24, false)
+  const dl = page.waitForEvent('download', { timeout: 60_000 })
+  await page.getByTestId('as-download').click()
+  await dl
+  await expect(page.getByTestId('as-qr-problem')).toHaveCount(0)
+})
+
+test('a sheet whose code would print finer than a camera can read refuses it', async ({ page }) => {
+  // A QR denser than about 0.42mm per module, printed on A4, looks like a
+  // working code and is a picture. The PDF is still produced — the schedule is
+  // the point and the code is the extra — and the reason is named.
+  await load(page, 'ar')
+  await seedSheet(page, 46, true)
+  const dl = page.waitForEvent('download', { timeout: 60_000 })
+  await page.getByTestId('as-download').click()
+  await dl
+  await expect(page.getByTestId('as-qr-problem')).toHaveAttribute('data-why', 'too-dense')
+})
+
+test('a sheet past the 2,953-byte QR limit says THAT instead', async ({ page }) => {
+  // A different refusal with a different remedy, so it gets a different
+  // message: past this there is no code at all, at any size.
+  await load(page, 'ar')
+  await seedSheet(page, 90, true)
+  const dl = page.waitForEvent('download', { timeout: 60_000 })
+  await page.getByTestId('as-download').click()
+  await dl
+  await expect(page.getByTestId('as-qr-problem')).toHaveAttribute('data-why', 'too-long')
+})
+
+test('it says why there is one axis, and why the link is large', async ({ page }) => {
   await load(page)
-  await expect(page.getByTestId('as-why-harmony')).toContainText('wall chart')
+  // Aimed at the BODY, not the heading — `free to differ` is the panel's
+  // title, and asserting it here would pass against an empty explanation.
+  await expect(page.getByTestId('as-why-axis')).toContainText('not locked together')
   await expect(page.getByTestId('as-why-share')).toContainText('never sent to a server')
 })
