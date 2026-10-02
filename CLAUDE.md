@@ -2264,15 +2264,42 @@ an early finish on Thursday are the ordinary shape of a week, and a model that
 cannot express them is tidy and useless. So an activity carries its own start
 and end and moves anywhere on the axis, to the quarter hour.
 
-**What prevents accidental divergence is a MAGNET, not a warning.** A dragged
-activity pulls to any edge another day already uses within 10 minutes, and to
-the raw quarter hour otherwise. Lining up is therefore what happens when you do
-nothing, and differing costs a deliberate few pixels — which is a better trade
-than detecting the mess after it is made. **The keyboard deliberately does NOT
-magnet**: an arrow key means exactly one quarter hour, or the same key moves a
-different distance depending on what the rest of the week happens to contain.
+**Within a day the activities are a SEQUENCE, and dragging REORDERS.** A
+school day is an order, not a set of coordinates: the edit people actually make
+is "this lesson goes after that one", and on a free axis that was four separate
+drags — move the one you meant, then shift the three it landed on top of. Drop
+a lesson where you want it and the rest of the day closes up behind it.
 
-Four more decisions:
+**Three things the re-lay preserves, each one something somebody would
+otherwise put back by hand:** where the day STARTS, so reordering never shifts
+the whole morning; each activity's own LENGTH, so a 45-minute أركان stays 45
+minutes wherever it lands; and the gaps BY POSITION, because a break between
+the fourth and fifth lesson is a property of the day's shape rather than of the
+two activities either side of it. Together those mean the day ends exactly
+where it ended — the same durations and gaps in the same places add up to the
+same length — so reordering cannot lengthen a day and **cannot create an
+overlap at all**.
+
+**The magnet is gone with the model that needed it.** It existed to stop a
+free-positioned drag drifting a few minutes off its neighbours; a sequence
+cannot drift. `moveTo`, `snapWith` and `magnets` were deleted rather than left
+exported, since a free-positioning helper nothing calls is the dead code this
+repo sweeps for.
+
+**A drag is measured against the neighbour's MIDPOINT, not its edge**, so a
+block has to pass the middle of the one below before they trade places — which
+is what stops two activities of similar height flickering between two orders
+while a finger rests on the boundary.
+
+**The overlap check survives the model that made it unreachable, and its test
+changed to match.** An overlap can no longer be CREATED — but a link made
+before the sequence existed still carries one, so the check is real and is now
+driven from seeded data rather than from a gesture that cannot produce it. That
+is the opposite call from the QR density limit, which was unreachable and
+therefore wrong to keep: the difference is whether anything can still arrive in
+that state.
+
+Four more decisions:Four more decisions:
 
 - **An overlap is flagged AND packed side by side.** Two things at once is the
   defect a time axis can see and a grid of boxes cannot, because boxes are the

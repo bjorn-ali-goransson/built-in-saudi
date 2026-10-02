@@ -87,19 +87,51 @@ test('an activity lands on the axis at a quarter-hour', async ({ page }) => {
   expect(end - start).toBe(30)
 })
 
-test('the arrow keys move it by exactly a quarter of an hour', async ({ page }) => {
-  // The keyboard is the accessible path AND the only one a spec can assert
-  // on: a pointer drag cannot be checked to the minute.
-  await load(page)
-  const block = await add(page, 'sun', 'Assembly')
-  const [before] = await spanOf(block)
+/** The activity names down one day, in the order they are timetabled. */
+const orderOf = async (page: Page, day: string) =>
+  blocks(page, day).locator('[data-testid^="as-name-"]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))
 
-  await block.press('ArrowDown')
-  expect((await spanOf(block))[0]).toBe(before + 15)
-  await block.press('ArrowDown')
-  expect((await spanOf(block))[0]).toBe(before + 30)
-  await block.press('ArrowUp')
-  expect((await spanOf(block))[0]).toBe(before + 15)
+test('an arrow key moves an activity one PLACE, not one quarter hour', async ({ page }) => {
+  // A school day is an order, not a set of coordinates: the edit people make
+  // is "this lesson goes after that one", and the keyboard says it in whole
+  // places. It is also the only path a spec can assert exactly.
+  await load(page)
+  await add(page, 'sun', 'One')
+  await add(page, 'sun', 'Two')
+  await add(page, 'sun', 'Three')
+  expect(await orderOf(page, 'sun')).toEqual(['One', 'Two', 'Three'])
+
+  await blocks(page, 'sun').nth(2).press('ArrowUp')
+  expect(await orderOf(page, 'sun')).toEqual(['One', 'Three', 'Two'])
+  await blocks(page, 'sun').nth(1).press('ArrowUp')
+  expect(await orderOf(page, 'sun')).toEqual(['Three', 'One', 'Two'])
+})
+
+test('reordering keeps the day the same length, and leaves no hole', async ({ page }) => {
+  // The three things nobody should have to put back by hand: where the day
+  // starts, how long each activity is, and where the breaks are.
+  await load(page)
+  await add(page, 'sun', 'One')
+  const two = await add(page, 'sun', 'Two')
+  await add(page, 'sun', 'Three')
+  await two.press('Shift+ArrowDown')          // make it longer than the others
+
+  const before = await blocks(page, 'sun').evaluateAll(
+    (els) => els.map((e) => [Number(e.getAttribute('data-start')), Number(e.getAttribute('data-end'))]),
+  )
+  const spanBefore = [before[0][0], before[before.length - 1][1]]
+  const lengthsBefore = before.map(([a, b]) => b - a).sort()
+
+  await blocks(page, 'sun').nth(2).press('ArrowUp')
+
+  const after = await blocks(page, 'sun').evaluateAll(
+    (els) => els.map((e) => [Number(e.getAttribute('data-start')), Number(e.getAttribute('data-end'))]),
+  )
+  expect([after[0][0], after[after.length - 1][1]]).toEqual(spanBefore)
+  expect(after.map(([a, b]) => b - a).sort()).toEqual(lengthsBefore)
+  // Nose to tail: each one starts where the last one finished.
+  for (let i = 1; i < after.length; i++) expect(after[i][0]).toBe(after[i - 1][1])
 })
 
 test('moving keeps the length; Shift resizes instead', async ({ page }) => {
@@ -136,34 +168,51 @@ test('an activity cannot be shrunk to nothing', async ({ page }) => {
 })
 
 test('the days are free to differ — that is the point of the axis', async ({ page }) => {
-  // The reason the times are not locked to a shared row: assembly only on
-  // Sunday, an early finish on Thursday. A move on one day must not drag the
-  // others with it, and must not be snapped back.
+  // Reordering is per DAY. Thursday being the review day, or finishing early,
+  // must not drag the rest of the week with it.
   await load(page)
   await add(page, 'sun', 'Quran')
+  await add(page, 'sun', 'Maths')
   await add(page, 'thu', 'Quran')
+  await add(page, 'thu', 'Maths')
 
-  const thu = blocks(page, 'thu').first()
-  await thu.press('ArrowDown')
-  await thu.press('ArrowDown')
+  await blocks(page, 'thu').nth(1).press('ArrowUp')
+  expect(await orderOf(page, 'thu')).toEqual(['Maths', 'Quran'])
+  expect(await orderOf(page, 'sun')).toEqual(['Quran', 'Maths'])
 
-  const [sunStart] = await spanOf(blocks(page, 'sun').first())
-  const [thuStart] = await spanOf(thu)
-  expect(thuStart).toBe(sunStart + 30)
+  // And a longer lesson on one day shifts only that day.
+  await blocks(page, 'thu').first().press('Shift+ArrowDown')
+  const [, sunFirstEnd] = await spanOf(blocks(page, 'sun').first())
+  const [, thuFirstEnd] = await spanOf(blocks(page, 'thu').first())
+  expect(thuFirstEnd).toBeGreaterThan(sunFirstEnd)
 })
 
-test('two activities at once on one day are named', async ({ page }) => {
-  // An overlap is the defect a time axis can see and a grid of boxes cannot,
-  // because boxes are the same size whatever they say.
-  await load(page)
-  const first = await add(page, 'sun', 'Quran')
-  const second = await add(page, 'sun', 'Maths')
-  await second.press('ArrowUp')                 // into the first one's half hour
+/** A day written the way an older, free-positioned link wrote it. */
+const seedOverlap = async (page: Page) => {
+  await page.evaluate(() => {
+    localStorage.setItem('bis-schedule-draft', JSON.stringify({
+      id: 'old', title: 'T', note: '', group: '', art: false, updated: Date.now(),
+      days: ['sun', 'mon', 'tue', 'wed', 'thu'], from: 7 * 60, to: 12 * 60,
+      items: {
+        sun: [
+          { id: 'a', name: 'Quran', icon: '', start: 7 * 60, end: 7 * 60 + 30 },
+          { id: 'b', name: 'Maths', icon: '', start: 7 * 60 + 15, end: 7 * 60 + 45 },
+        ],
+      },
+    }))
+  })
+  await page.reload()
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+}
 
-  await expect(second).toHaveAttribute('data-trouble', 'overlap')
-  // BOTH are reported, not the pair: each activity is individually in the
-  // wrong place, and each is individually marked on the sheet.
-  await expect(first).toHaveAttribute('data-trouble', 'overlap')
+test('two activities at once on one day are named', async ({ page }) => {
+  // Reordering makes an overlap impossible to CREATE — but a link made before
+  // the sequence existed can still carry one, so the check stays and is driven
+  // from that data rather than from a gesture that can no longer produce it.
+  await load(page)
+  await seedOverlap(page)
+  await expect(blocks(page, 'sun').first()).toHaveAttribute('data-trouble', 'overlap')
+  await expect(blocks(page, 'sun').nth(1)).toHaveAttribute('data-trouble', 'overlap')
   await expect(page.getByTestId('as-clash-count')).toContainText('2')
 })
 
@@ -172,16 +221,21 @@ test('and BOTH of them stay visible, side by side', async ({ page }) => {
   // the overlap it is reporting — and because as one assertion inside the test
   // above it was masked: that test fails at the flag before ever measuring.
   await load(page)
-  const first = await add(page, 'sun', 'Quran')
-  const second = await add(page, 'sun', 'Maths')
-  await second.press('ArrowUp')
-
-  const a = (await first.boundingBox())!
-  const b = (await second.boundingBox())!
+  await seedOverlap(page)
+  const a = (await blocks(page, 'sun').first().boundingBox())!
+  const b = (await blocks(page, 'sun').nth(1).boundingBox())!
   expect(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1).toBe(true)
-  // And each is half a column, not a full one hiding the other.
   const col = (await page.getByTestId('as-col-sun').boundingBox())!
   expect(a.width).toBeLessThan(col.width * 0.6)
+})
+
+test('and one reorder tidies it away', async ({ page }) => {
+  // The sequence is also the repair: touching an imported day re-lays it.
+  await load(page)
+  await seedOverlap(page)
+  await blocks(page, 'sun').nth(1).press('ArrowUp')
+  await expect(blocks(page, 'sun').first()).not.toHaveAttribute('data-trouble', 'overlap')
+  await expect(page.getByTestId('as-clash')).toHaveCount(0)
 })
 
 test('a day with no overlap reports nothing', async ({ page }) => {
@@ -265,17 +319,36 @@ test('the axis is labelled, and the sheet says where the day starts and ends', a
   await expect(page.getByTestId('as-mark-600')).toContainText('10:00')
 })
 
-test('shortening the day pulls activities back inside it', async ({ page }) => {
-  // Otherwise the axis and its contents disagree, and the sheet prints an
-  // activity in the margin.
+test('moving the start of the day pushes the whole day down', async ({ page }) => {
+  // Clamping each activity on its own would shove several onto the same
+  // minutes — the one thing the sequence makes impossible everywhere else.
   await load(page)
-  const block = await add(page, 'sun', 'Home time')
-  for (let i = 0; i < 12; i++) await block.press('ArrowDown')
-  expect((await spanOf(block))[1]).toBeGreaterThan(9 * 60)
+  await add(page, 'sun', 'One')
+  await add(page, 'sun', 'Two')
+  await add(page, 'sun', 'Three')
 
-  await page.getByTestId('as-to').fill('9:00')
+  await page.getByTestId('as-from').fill('7:30')
+  await page.getByTestId('as-from').blur()
+
+  const laid = await blocks(page, 'sun').evaluateAll(
+    (els) => els.map((e) => [Number(e.getAttribute('data-start')), Number(e.getAttribute('data-end'))]),
+  )
+  expect(laid[0][0]).toBe(7 * 60 + 30)
+  for (let i = 1; i < laid.length; i++) expect(laid[i][0]).toBe(laid[i - 1][1])
+})
+
+test('a day too long for its axis is FLAGGED, not quietly clipped', async ({ page }) => {
+  // Ninety minutes of lessons cannot be squeezed into an hour, and pretending
+  // otherwise would hide an activity below the edge of its column.
+  await load(page)
+  await add(page, 'sun', 'One')
+  await add(page, 'sun', 'Two')
+  await add(page, 'sun', 'Three')
+
+  await page.getByTestId('as-to').fill('8:00')
   await page.getByTestId('as-to').blur()
-  expect((await spanOf(blocks(page, 'sun').first()))[1]).toBeLessThanOrEqual(9 * 60)
+  await expect(blocks(page, 'sun').last()).toHaveAttribute('data-trouble', 'outside')
+  await expect(page.getByTestId('as-clash')).toBeVisible()
 })
 
 /** A touch press, held for `ms`, then dragged `dy` pixels and released. */
@@ -295,14 +368,15 @@ test('on touch it takes a LONG press to move an activity', async ({ page }) => {
   // a finger anywhere on the schedule would drag a lesson instead of scrolling
   // — so until the press lands the block claims nothing.
   await load(page)
-  const block = await add(page, 'sun', 'Quran')
-  const [before] = await spanOf(block)
+  await add(page, 'sun', 'One')
+  await add(page, 'sun', 'Two')
+  const second = blocks(page, 'sun').nth(1)
 
-  await touchDrag(block, 80, 60)           // a flick: a scroll, not a drag
-  expect((await spanOf(block))[0]).toBe(before)
+  await touchDrag(second, 80, -60)          // a flick: a scroll, not a drag
+  expect(await orderOf(page, 'sun')).toEqual(['One', 'Two'])
 
-  await touchDrag(block, 600, 52)          // held, then dragged
-  expect((await spanOf(block))[0]).toBeGreaterThan(before)
+  await touchDrag(second, 600, -60)         // held, then dragged above the first
+  expect(await orderOf(page, 'sun')).toEqual(['Two', 'One'])
 })
 
 test('a held activity says so, and lets go afterwards', async ({ page }) => {
@@ -326,16 +400,18 @@ test('a mouse still drags straight away', async ({ page }) => {
   // The long press is for touch only: on a pointer, pressing a block IS the
   // gesture and waiting would make the tool feel broken.
   await load(page)
-  const block = await add(page, 'sun', 'Quran')
-  const box = (await block.boundingBox())!
+  await add(page, 'sun', 'One')
+  await add(page, 'sun', 'Two')
+  const second = blocks(page, 'sun').nth(1)
+  const box = (await second.boundingBox())!
   // Below the name row and above the resize edge: the top of a block is the
   // form, and a press there is meant to reach the input rather than drag.
   const grab = box.y + box.height - 14
   await page.mouse.move(box.x + box.width / 2, grab)
   await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2, grab + 60, { steps: 6 })
+  await page.mouse.move(box.x + box.width / 2, grab - 70, { steps: 8 })
   await page.mouse.up()
-  expect((await spanOf(block))[0]).toBeGreaterThan(7 * 60)
+  expect(await orderOf(page, 'sun')).toEqual(['Two', 'One'])
 })
 
 test('the icon palette is not clipped by the column it sits in', async ({ page }) => {
@@ -732,6 +808,6 @@ test('it says why there is one axis, and why the link is large', async ({ page }
   await load(page)
   // Aimed at the BODY, not the heading — `free to differ` is the panel's
   // title, and asserting it here would pass against an empty explanation.
-  await expect(page.getByTestId('as-why-axis')).toContainText('not locked together')
+  await expect(page.getByTestId('as-why-axis')).toContainText('not locked to each other')
   await expect(page.getByTestId('as-why-share')).toContainText('never sent to a server')
 })

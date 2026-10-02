@@ -34,17 +34,21 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 
 ## Requirements (v1)
 
-- [x] One axis; activities carry their own start and end, to 15 minutes.
-- [x] Drag to move, drag the bottom edge to resize, arrow keys for both
-      (Shift resizes) — the keyboard path is exact, the drag is magnetic.
+- [x] One axis; within a day the activities are a SEQUENCE. Dragging one
+      reorders it and the rest of the day closes up behind it, keeping the
+      day's start, each activity's length and the breaks by position — so the
+      day cannot grow a hole, run long, or hold two things at once.
+- [x] Drag to reorder, drag the bottom edge to change the length (everything
+      after it moves out of the way), arrow keys for both — a bare arrow moves
+      one PLACE, Shift changes the length by 15 minutes.
 - [x] On TOUCH it takes a long press (400ms, cancelled by 10px of movement),
       so a finger can still scroll the sheet. A mouse drags at once.
 - [x] Per-block controls are forced visible on a coarse pointer, and the
       resize edge grows to 18px there — hover does not exist on a phone.
 - [x] No dice in the palette: these sheets go on the wall of an Islamic school.
-- [x] A drag pulls to any edge another day already uses within 10 minutes.
-- [x] Overlaps on one day are flagged AND packed side by side, so neither
-      activity is hidden under the other.
+- [x] Overlaps cannot be CREATED any more, but a link made before the sequence
+      existed can carry one: they are still flagged AND packed side by side, so
+      neither activity is hidden under the other, and one reorder tidies it.
 - [x] A gap is deliberately NOT a defect — on a wall chart the break between
       two lessons is very often simply not written down.
 - [x] Copy one day across the week, because four identical days and one that
@@ -71,7 +75,8 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 
 ## Acceptance criteria
 
-- An arrow key moves an activity by exactly 15 minutes and keeps its length.
+- An arrow key moves an activity one place in its day; reordering keeps the
+  day's span and every duration, and leaves the day nose to tail.
 - Two activities at the same time on one day are both flagged and both visible.
 - A day with no overlap reports nothing.
 - Moving Thursday does not move Sunday.

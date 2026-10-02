@@ -5,9 +5,9 @@ import { Sheet, type SheetStrings } from './Sheet'
 import { STR } from './strings'
 import { iconFor, loadIconMemory, rememberIcon, type IconMemory } from './icons'
 import {
-  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fmt, isBlank, itemsOn,
-  magnets, moveTo, newId, nextSlot, parseTime, readShareHash, resizeTo, shareLink,
-  snap, snapWith, troubles, type DayKey, type Item, type Schedule,
+  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fitDay, fmt, indexFor, isBlank,
+  itemsOn, newId, nextSlot, parseTime, readShareHash, reorderDay, sequence,
+  setDuration, shareLink, snap, troubles, type DayKey, type Item, type Schedule,
 } from './schedule'
 import {
   deleteOne, loadAll, loadDraft, saveDraft, saveOne, setCurrentId, vocabulary,
@@ -104,34 +104,37 @@ export default function ActivityScheduleTool() {
   }, [patch])
 
   /**
-   * Moving snaps to a neighbouring day's edge first, and to the quarter hour
-   * otherwise — which is what makes a tidy week the default without locking
-   * the days together. See `magnets` in `schedule.ts`.
+   * Dragging reorders the day; it does not place the activity at a time.
+   *
+   * `start` is where the finger is holding it, which is all the gesture knows.
+   * What it MEANS is a position in the day's order, and the rest of the day
+   * closes up behind it — so a lesson cannot be dropped on top of another and
+   * the day cannot grow a hole where it was lifted from.
    */
-  const onMove = useCallback((day: DayKey, id: string, start: number, precise?: boolean) => {
+  const onMove = useCallback((day: DayKey, id: string, start: number) => {
     setSchedule((prev) => {
-      const to = precise ? snap(start) : snapWith(start, magnets(prev, day))
-      return {
-        ...prev,
-        items: {
-          ...prev.items,
-          [day]: itemsOn(prev, day).map((it) => (it.id === id ? moveTo(prev, it, to) : it)),
-        },
-      }
+      const items = itemsOn(prev, day)
+      const next = reorderDay(items, id, indexFor(items, id, start))
+      return next === items ? prev : { ...prev, items: { ...prev.items, [day]: next } }
     })
   }, [])
 
-  const onResize = useCallback((day: DayKey, id: string, end: number, precise?: boolean) => {
+  /** The keyboard says the same thing in whole places rather than pixels. */
+  const onStep = useCallback((day: DayKey, id: string, delta: -1 | 1) => {
     setSchedule((prev) => {
-      const to = precise ? snap(end) : snapWith(end, magnets(prev, day))
-      return {
-        ...prev,
-        items: {
-          ...prev.items,
-          [day]: itemsOn(prev, day).map((it) => (it.id === id ? resizeTo(prev, it, to) : it)),
-        },
-      }
+      const items = itemsOn(prev, day)
+      const at = sequence(items).findIndex((x) => x.id === id)
+      if (at < 0) return prev
+      const next = reorderDay(items, id, at + delta)
+      return next === items ? prev : { ...prev, items: { ...prev.items, [day]: next } }
     })
+  }, [])
+
+  const onResize = useCallback((day: DayKey, id: string, end: number) => {
+    setSchedule((prev) => ({
+      ...prev,
+      items: { ...prev.items, [day]: setDuration(itemsOn(prev, day), id, end, prev.to) },
+    }))
   }, [])
 
   const onRemove = useCallback((day: DayKey, id: string) => {
@@ -187,13 +190,7 @@ export default function ActivityScheduleTool() {
       const to = which === 'to' ? snap(minutes) : prev.to
       if (to - from < 60) return prev
       const items: Schedule['items'] = {}
-      for (const day of prev.days) {
-        items[day] = itemsOn(prev, day).map((it) => {
-          const len = Math.min(it.end - it.start, to - from)
-          const start = clamp(it.start, from, to - len)
-          return { ...it, start, end: start + len }
-        })
-      }
+      for (const day of prev.days) items[day] = fitDay(itemsOn(prev, day), from, to)
       return { ...prev, from, to, items }
     })
   }
@@ -306,7 +303,7 @@ export default function ActivityScheduleTool() {
 
       <Sheet
         schedule={schedule} locale={l} mem={mem} suggestions={suggestions} str={sheetStrings}
-        onName={onName} onIcon={onIcon} onMove={onMove} onResize={onResize}
+        onName={onName} onIcon={onIcon} onMove={onMove} onStep={onStep} onResize={onResize}
         onRemove={onRemove} onAdd={onAdd} onCopyDay={onCopyDay}
       />
 

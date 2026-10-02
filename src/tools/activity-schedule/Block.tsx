@@ -50,7 +50,7 @@ const TOUCH_SLOP = 10
  */
 export function Block({
   item, top, height, left, width, mem, suggestions, str, trouble, tint, edge,
-  onName, onIcon, onMove, onResize, onRemove, onEnter,
+  onName, onIcon, onMove, onStep, onResize, onRemove, onEnter,
 }: {
   item: Item
   /** All in pixels, already resolved from the axis. */
@@ -69,16 +69,16 @@ export function Block({
   onName: (name: string) => void
   onIcon: (icon: string, name: string) => void
   /**
-   * New start, in minutes; the caller snaps and clamps.
+   * Where the activity is being HELD, in minutes.
    *
-   * `precise` is the keyboard: an arrow key means exactly one quarter hour and
-   * must not be pulled onto a neighbouring day's edge instead, or the same key
-   * moves a different distance depending on what the rest of the week happens
-   * to contain. The magnet is for dragging, where the pointer has already
-   * given an approximate answer.
+   * Not where it lands: the caller turns it into a position in the day's
+   * order, because that is what the gesture means. A pointer can only say
+   * where a finger is.
    */
-  onMove: (start: number, precise?: boolean) => void
-  onResize: (end: number, precise?: boolean) => void
+  onMove: (start: number) => void
+  /** One place earlier or later — the keyboard's version of the same thing. */
+  onStep: (delta: -1 | 1) => void
+  onResize: (end: number) => void
   onRemove: () => void
   onEnter: () => void
 }) {
@@ -176,11 +176,11 @@ export function Block({
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
         if ((e.target as HTMLElement).closest('[data-nodrag]')) return
         e.preventDefault()
-        const step = e.key === 'ArrowUp' ? -SNAP : SNAP
-        // Shift resizes, because the two are the same gesture on a block that
-        // has only one axis to give.
-        if (e.shiftKey) onResize(item.end + step, true)
-        else onMove(item.start + step, true)
+        // Shift changes the LENGTH; a bare arrow changes the PLACE. They are
+        // the same gesture on a block with only one axis to give, and they are
+        // the two things anybody does to a lesson.
+        if (e.shiftKey) onResize(item.end + (e.key === 'ArrowUp' ? -SNAP : SNAP))
+        else onStep(e.key === 'ArrowUp' ? -1 : 1)
       }}
       // `touch-auto` until a press has landed: the blocks are nearly the whole
       // sheet, so claiming touch up front made the schedule unscrollable on a

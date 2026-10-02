@@ -17,10 +17,10 @@
 // actually written in. Locking every day to one row would make the common case
 // tidy and the real week unrepresentable.
 //
-// What stops divergence happening by ACCIDENT is not a check after the fact,
-// it is the snapping: a dragged activity pulls to the times its neighbours
-// already use before it pulls to the raw quarter hour. So lining up is what
-// happens when you do nothing, and differing is a deliberate act.
+// Within a day the activities are a SEQUENCE: dragging one reorders it and the
+// others close up behind, which is the edit a timetable actually gets and which
+// makes two things at once impossible to create. Divergence between days
+// survives it — a day owns its own order, its own lengths and its own start.
 
 import { foldArabic } from '../../lib/fuzzy'
 import { SCHOOL_WEEK, WEEK, type DayKey } from '../../lib/week'
@@ -39,9 +39,6 @@ export const SNAP = 15
 
 /** The shortest an activity can be. One snap; anything less is a mis-drag. */
 export const MIN_LEN = 15
-
-/** How near a neighbouring day's edge pulls a drag to it, in minutes. */
-export const MAGNET = 10
 
 export interface Item {
   /** Stable across edits, so React keys and drags survive a re-sort. */
@@ -136,46 +133,117 @@ export function parseTime(raw: string): number | null {
   return h * 60 + min
 }
 
+// --- the day as a sequence --------------------------------------------------
+//
+// A school day is an ORDER, not a set of coordinates. Moving the third lesson
+// to fifth place is the edit people actually make, and on a free axis that is
+// four separate drags — move the one you meant, then shift the three it landed
+// on top of. So a drag REORDERS: the activity takes its new place and the
+// others close up behind it.
+//
+// Three things are preserved when the day re-lays itself, and each one is a
+// thing somebody would otherwise have to put back by hand:
+//
+//   - **where the day starts**, so reordering never shifts the whole morning;
+//   - **each activity's own length**, so a 45-minute أركان stays 45 minutes
+//     wherever it lands;
+//   - **the gaps, by POSITION.** A break between the fourth and fifth lesson is
+//     a property of the day's shape, not of the two activities that happen to
+//     sit either side of it, so it stays where it is while they move.
+//
+// Together those mean the day ends exactly where it ended: the same durations
+// and the same gaps in the same places add up to the same length. Reordering
+// cannot make a day longer, and it cannot make two things happen at once.
+
+/** A day's activities in time order. */
+export const sequence = (items: Item[]): Item[] =>
+  [...items].sort((a, b) => a.start - b.start || a.end - b.end)
+
+/** The empty minutes between each consecutive pair, by position. */
+const gapsOf = (seq: Item[]): number[] =>
+  seq.slice(1).map((it, i) => Math.max(0, it.start - seq[i].end))
+
+/** Lay a sequence out from `from`, keeping every length and every gap. */
+function relayout(seq: Item[], gaps: number[], from: number): Item[] {
+  let t = from
+  return seq.map((it, i) => {
+    if (i > 0) t += gaps[i - 1] ?? 0
+    const len = Math.max(MIN_LEN, it.end - it.start)
+    const laid = { ...it, start: t, end: t + len }
+    t = laid.end
+    return laid
+  })
+}
+
 /**
- * The times a drag should pull towards: the quarter hours, plus every edge
- * the OTHER days already use.
+ * Where an activity held at `start` wants to sit in its day.
  *
- * This is what replaces the old "your rows disagree" warning. A check tells
- * you afterwards; a magnet means the aligned answer is the one you get for
- * free, and a different one costs a deliberate extra few pixels.
+ * Measured against the MIDPOINT of each neighbour, not its edge: a block has
+ * to be dragged past the middle of the one below before they trade places,
+ * which is what stops two activities of similar height flickering between two
+ * orders while a finger rests on the boundary.
  */
-export function magnets(s: Schedule, except: DayKey): number[] {
-  const out = new Set<number>()
-  for (const day of s.days) {
-    if (day === except) continue
-    for (const it of itemsOn(s, day)) { out.add(it.start); out.add(it.end) }
+export function indexFor(items: Item[], id: string, start: number): number {
+  const held = items.find((x) => x.id === id)
+  const mid = start + (held ? (held.end - held.start) / 2 : 0)
+  let index = 0
+  for (const it of sequence(items)) {
+    if (it.id === id) continue
+    if (mid > (it.start + it.end) / 2) index++
   }
-  return [...out]
+  return index
 }
 
-/** Snap to the nearest neighbour edge if one is within `MAGNET`, else to the grid. */
-export function snapWith(minutes: number, pull: number[]): number {
-  let best: number | null = null
-  let bestGap = MAGNET + 1
-  for (const p of pull) {
-    const gap = Math.abs(p - minutes)
-    if (gap < bestGap) { best = p; bestGap = gap }
-  }
-  return best !== null ? best : snap(minutes)
+/** Move one activity to `index` in its day; everything else closes up. */
+export function reorderDay(items: Item[], id: string, index: number): Item[] {
+  const seq = sequence(items)
+  if (seq.length < 2) return items
+  const at = seq.findIndex((x) => x.id === id)
+  if (at < 0) return items
+  const to = clamp(index, 0, seq.length - 1)
+  if (to === at) return items
+  const moved = [...seq]
+  const [held] = moved.splice(at, 1)
+  moved.splice(to, 0, held)
+  return relayout(moved, gapsOf(seq), seq[0].start)
 }
 
-// --- moving and resizing ----------------------------------------------------
-
-/** Move an item, keeping its length and staying inside the axis. */
-export function moveTo(s: Schedule, it: Item, start: number): Item {
-  const len = it.end - it.start
-  const from = clamp(start, s.from, s.to - len)
-  return { ...it, start: from, end: from + len }
+/**
+ * Change one activity's length; everything after it moves out of the way.
+ *
+ * Bounded so the day still fits the axis. Letting it overflow would push the
+ * last lesson below the column, where it is clipped and invisible — a worse
+ * answer than refusing the last fifteen minutes.
+ */
+export function setDuration(items: Item[], id: string, end: number, axisTo: number): Item[] {
+  const seq = sequence(items)
+  const held = seq.find((x) => x.id === id)
+  if (!held) return items
+  const last = seq[seq.length - 1].end
+  const room = axisTo - last
+  const wanted = snap(end) - held.start
+  const len = clamp(wanted, MIN_LEN, held.end - held.start + Math.max(0, room))
+  const resized = seq.map((it) => (it.id === id ? { ...it, end: it.start + len } : it))
+  return relayout(resized, gapsOf(seq), seq[0].start)
 }
 
-/** Resize from the bottom edge, never shorter than one snap. */
-export function resizeTo(s: Schedule, it: Item, end: number): Item {
-  return { ...it, end: clamp(end, it.start + MIN_LEN, s.to) }
+/**
+ * Keep a day inside the axis after the axis itself has moved.
+ *
+ * Clamping each activity on its own is what a free-positioned model would do,
+ * and here it would shove several onto the same minutes — the one thing the
+ * sequence makes impossible everywhere else. So the day is re-laid as a whole:
+ * pushed down if the morning now starts later, pulled up if the evening no
+ * longer fits.
+ */
+export function fitDay(items: Item[], from: number, to: number): Item[] {
+  const seq = sequence(items)
+  if (!seq.length) return items
+  const gaps = gapsOf(seq)
+  const start = Math.max(from, seq[0].start)
+  const laid = relayout(seq, gaps, start)
+  const over = laid[laid.length - 1].end - to
+  return over > 0 ? relayout(seq, gaps, Math.max(from, start - over)) : laid
 }
 
 /** Where a new activity should go: after the last one on that day, or the top. */

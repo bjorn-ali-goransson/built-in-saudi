@@ -54,7 +54,7 @@ export interface SheetStrings extends BlockStrings {
  */
 export function Sheet({
   schedule, locale, mem, suggestions, str,
-  onName, onIcon, onMove, onResize, onRemove, onAdd, onCopyDay,
+  onName, onIcon, onMove, onStep, onResize, onRemove, onAdd, onCopyDay,
 }: {
   schedule: Schedule
   locale: 'en' | 'ar'
@@ -63,8 +63,9 @@ export function Sheet({
   str: SheetStrings
   onName: (day: DayKey, id: string, name: string) => void
   onIcon: (day: DayKey, id: string, icon: string, name: string) => void
-  onMove: (day: DayKey, id: string, start: number, precise?: boolean) => void
-  onResize: (day: DayKey, id: string, end: number, precise?: boolean) => void
+  onMove: (day: DayKey, id: string, start: number) => void
+  onStep: (day: DayKey, id: string, delta: -1 | 1) => void
+  onResize: (day: DayKey, id: string, end: number) => void
   onRemove: (day: DayKey, id: string) => void
   onAdd: (day: DayKey, after?: Item) => void
   onCopyDay: (day: DayKey) => void
@@ -249,8 +250,9 @@ export function Sheet({
                     edge={DAY_TINT[day].edge}
                     onName={(name) => onName(day, item.id, name)}
                     onIcon={(icon, name) => onIcon(day, item.id, icon, name)}
-                    onMove={(start, precise) => onMove(day, item.id, start, precise)}
-                    onResize={(end, precise) => onResize(day, item.id, end, precise)}
+                    onMove={(start) => onMove(day, item.id, start)}
+                    onStep={(delta) => onStep(day, item.id, delta)}
+                    onResize={(end) => onResize(day, item.id, end)}
                     onRemove={() => onRemove(day, item.id)}
                     onEnter={() => onAdd(day, item)}
                   />
