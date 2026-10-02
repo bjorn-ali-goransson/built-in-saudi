@@ -240,8 +240,8 @@ test('the class goes on the sheet, under the title and the note', async ({ page 
   // is the thing a parent looks for first to know whether the sheet on the
   // wall is their child's.
   await load(page, 'ar')
-  await page.getByTestId('as-group').fill('KG2 - براعم 2')
-  await expect(page.getByTestId('as-sheet-group')).toHaveText('KG2 - براعم 2')
+  await page.getByTestId('as-group').fill('فصل الأول')
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('فصل الأول')
 
   // The title, the note and the class are three LINES. As inline-block
   // siblings in a centred box they flowed together and the note pill sat
@@ -359,20 +359,30 @@ test('a sheet saved before the axis existed still opens', async ({ page }) => {
   await expect(blocks(page, 'mon')).toHaveCount(1)
 })
 
-test('a named sheet opens from a SHORT link', async ({ page }) => {
-  // `#s=` carries the whole schedule, which is what makes a shared link work
-  // with no server — and is also 680 characters of base64. A sheet that ships
-  // with the app needs none of that.
-  await page.goto('/ar/apps/activity-schedule/#t=tamhidi')
+test('the starter opens from a short link, in the language of the page', async ({ page }) => {
+  // `#t=` names a sheet that ships with the app, so the link is sixty
+  // characters. It is FICTIONAL on purpose: a real class timetable belongs to
+  // the school that wrote it and goes stale through the term, so a sheet
+  // somebody made travels in `#s=` instead, carrying its own contents.
+  await page.goto('/ar/apps/activity-schedule/#t=sample')
   await expect(page.getByTestId('activity-schedule')).toBeVisible()
-  await expect(page.getByTestId('as-sheet-group')).toHaveText('تمهيدي')
-  await expect(blocks(page, 'sun')).toHaveCount(9)
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('فصل تجريبي')
+  await expect(blocks(page, 'sun')).toHaveCount(8)
+
+  await page.goto('/en/apps/activity-schedule/#t=sample')
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('Sample class')
   await expect(blocks(page, 'sun').first().locator('[data-testid^="as-name-"]'))
-    .toHaveValue('طابور وأذكار الصباح')
-  // Thursday is the week's revision day on that chart, which is the whole
-  // reason the days are allowed to differ.
-  await expect(blocks(page, 'thu').nth(1).locator('[data-testid^="as-name-"]'))
-    .toHaveValue('مراجعة تبيان')
+    .toHaveValue('Morning assembly')
+})
+
+test('the starter has a day that differs from the other four', async ({ page }) => {
+  // It exists to show the shape of a filled sheet, and the shape worth showing
+  // is the one the axis is for: Thursday is not the other four days.
+  await page.goto('/en/apps/activity-schedule/#t=sample')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  const sun = await blocks(page, 'sun').count()
+  const thu = await blocks(page, 'thu').count()
+  expect(thu).toBeLessThan(sun)
 })
 
 test('the starters are offered on an empty sheet, and only there', async ({ page }) => {
@@ -380,20 +390,19 @@ test('the starters are offered on an empty sheet, and only there', async ({ page
   // But once there is something on the axis, a row of buttons that would
   // replace it is a trap rather than a shortcut.
   await load(page, 'ar')
-  await page.getByTestId('as-sample-kg2').click()
-  await expect(page.getByTestId('as-sheet-group')).toHaveText('KG2 - براعم 2')
-  await expect(blocks(page, 'sun')).toHaveCount(9)
-  await expect(page.getByTestId('as-sample-kg2')).toHaveCount(0)
+  await page.getByTestId('as-sample-sample').click()
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('فصل تجريبي')
+  await expect(page.getByTestId('as-sample-sample')).toHaveCount(0)
 })
 
 test('opening a starter twice gives two sheets, not two handles on one', async ({ page }) => {
   // Without fresh ids, saving the second would overwrite the first.
   await load(page)
-  await page.getByTestId('as-sample-tamhidi').click()
+  await page.getByTestId('as-sample-sample').click()
   await page.getByTestId('as-title').fill('First')
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
-  await page.getByTestId('as-sample-tamhidi').click()
+  await page.getByTestId('as-sample-sample').click()
   await page.getByTestId('as-title').fill('Second')
   await page.getByTestId('as-save').click()
   await expect(page.locator('[data-testid^="as-open-"]')).toHaveCount(2)

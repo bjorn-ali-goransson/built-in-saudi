@@ -61,7 +61,7 @@ export interface Schedule {
   /** A line under the title — the term, the days covered, whatever it is. */
   note: string
   /**
-   * The class this belongs to: «تمهيدي», «KG2 - براعم 2».
+   * The class this belongs to: «تمهيدي», «KG2», «Year 1 Blue».
    *
    * Its own field rather than part of the note, because on every real sheet of
    * this kind it is set apart and emphasised — it is the thing a parent looks
@@ -576,11 +576,13 @@ export async function shareLink(s: Schedule, origin: string, path: string): Prom
  * ships with the app, so the link is sixty characters and never expires. See
  * `samples.ts`.
  */
-export async function readShareHash(hash: string): Promise<Schedule | null> {
+export async function readShareHash(
+  hash: string, locale: 'en' | 'ar' = 'en',
+): Promise<Schedule | null> {
   const named = /[#&]t=([a-z0-9-]+)/i.exec(hash)
   if (named) {
     const { sampleSchedule } = await import('./samples')
-    const found = sampleSchedule(named[1].toLowerCase())
+    const found = sampleSchedule(named[1].toLowerCase(), locale)
     if (found) return found
   }
   const m = /[#&]s=([^&]+)/.exec(hash)

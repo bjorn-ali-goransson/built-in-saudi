@@ -2355,14 +2355,23 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
 ### Other things worth keeping
 
 - **Two link forms, because they answer different questions.** `#s=` carries
-  the whole schedule, which is what makes a shared link work with no server and
-  no account — and is also 680 characters of base64 that nobody wants in a
-  message. `#t=<name>` names a sheet that SHIPS with the app (`samples.ts`), so
-  the link is sixty characters and never expires. The starters are offered on
-  an empty sheet as well as at a URL: a sheet reachable only by typing its name
-  is one nobody finds, which is the collections failure one level down. They
-  disappear once there is anything on the axis, because a button that would
-  replace your work is a trap rather than a shortcut.
+  the whole schedule — that is the SHAREABLE form, the reason the tool needs no
+  server and no account, and what the printed QR points at. `#t=<name>` names a
+  sheet that SHIPS with the app (`samples.ts`), which is only useful for the
+  starter. The starter is offered on an empty sheet as well as at a URL, since
+  a sheet reachable only by typing its name is one nobody finds; it disappears
+  once there is anything on the axis, because a button that would replace your
+  work is a trap rather than a shortcut.
+- **The starter is FICTIONAL, and that was learned by shipping the opposite.**
+  Asked for shareable links to two real nursery timetables, I made the LINK
+  short by turning the sheets into named site content — which published a
+  particular school's week, froze it as of that day, and solved a problem
+  nobody had. A real timetable belongs to whoever wrote it and changes through
+  the term; what makes a link shareable is that it CARRIES the schedule, and
+  the length of a link is irrelevant the moment it is a QR code, which is what
+  the QR was for. The starter exists to show the shape of a filled sheet — the
+  half-hour rhythm, an activity that runs longer, and a day that differs — and
+  a made-up week does that just as well.
 - **The whole sheet is set in IBM Plex Sans Arabic, in BOTH languages** — not
   `rtl:font-ar`, which would give the Arabic sheet one face and the English
   sheet another. It is a printed bilingual artefact whose activity names are

@@ -41,14 +41,14 @@ export default function ActivityScheduleTool() {
   useEffect(() => {
     let live = true
     const read = () => {
-      readShareHash(window.location.hash).then((shared) => {
+      readShareHash(window.location.hash, l).then((shared) => {
         if (live && shared) { setSchedule(shared); setFromLink(true) }
       })
     }
     read()
     window.addEventListener('hashchange', read)
     return () => { live = false; window.removeEventListener('hashchange', read) }
-  }, [])
+  }, [l])
 
   useEffect(() => { saveDraft(schedule) }, [schedule])
   useEffect(() => { setCopied(false); setQr(null) }, [schedule])
@@ -341,7 +341,7 @@ export default function ActivityScheduleTool() {
                 type="button"
                 data-testid={`as-sample-${x.id}`}
                 onClick={() => {
-                  const made = sampleSchedule(x.id)
+                  const made = sampleSchedule(x.id, l)
                   if (!made) return
                   setSchedule(made)
                   setFromLink(false)
