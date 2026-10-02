@@ -56,6 +56,8 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
       the QR is decoded out of the produced PDF by the spec, with jsQR.
 - [x] Both locales, with Sunday the rightmost column in Arabic and the axis
       beside it, on the side the reader starts from.
+- [x] A title banner, a note pill and a class line — the three lines every one
+      of these charts has — and the whole sheet set in IBM Plex Sans Arabic.
 
 ## Acceptance criteria
 

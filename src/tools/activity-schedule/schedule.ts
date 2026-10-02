@@ -58,8 +58,16 @@ export interface Schedule {
   /** Stable id, so saving twice updates rather than duplicates. */
   id: string
   title: string
-  /** A line under the title — the class, the term, whatever it is. */
+  /** A line under the title — the term, the days covered, whatever it is. */
   note: string
+  /**
+   * The class this belongs to: «تمهيدي», «KG2 - براعم 2».
+   *
+   * Its own field rather than part of the note, because on every real sheet of
+   * this kind it is set apart and emphasised — it is the thing a parent looks
+   * for first to know whether the chart on the wall is their child's.
+   */
+  group: string
   days: DayKey[]
   /** The axis, in minutes from midnight. */
   from: number
@@ -81,6 +89,7 @@ export function emptySchedule(locale: 'en' | 'ar'): Schedule {
     id: newId(),
     title: locale === 'ar' ? 'الجدول الأسبوعي' : 'Weekly schedule',
     note: locale === 'ar' ? 'أيام الدراسة: الأحد إلى الخميس' : 'School days: Sunday to Thursday',
+    group: '',
     days: [...SCHOOL_WEEK],
     from: 7 * 60,
     to: 12 * 60,
@@ -292,6 +301,8 @@ export function nameKey(raw: string): string {
 interface Compact {
   t: string
   n: string
+  /** The class. */
+  g?: string
   /** Day indices into WEEK. */
   d: number[]
   /** Axis, in minutes. */
@@ -309,7 +320,12 @@ export async function encodeSchedule(s: Schedule): Promise<string> {
   const keys: string[] = []
   const vocab: Array<[string, string]> = []
   const vIdx = (it: Item) => {
-    const key = `${it.name} ${it.icon}`
+    // JSON rather than a sentinel character. The first version joined on a
+    // literal U+0000, which was duly written as a real NUL byte into the
+    // source - it compiles, it works, and it makes the file BINARY to grep,
+    // which is a landmine for every sweep this repo runs. Same family as the
+    // backspace a heredoc writes: an escape that became a control character.
+    const key = JSON.stringify([it.name, it.icon])
     let i = keys.indexOf(key)
     if (i < 0) { i = keys.push(key) - 1; vocab.push([it.name, it.icon]) }
     return i
@@ -321,7 +337,7 @@ export async function encodeSchedule(s: Schedule): Promise<string> {
   })
 
   const c: Compact = {
-    t: s.title, n: s.note,
+    t: s.title, n: s.note, g: s.group || undefined,
     d: s.days.map((d) => WEEK.indexOf(d)),
     f: s.from, e: s.to,
     v: vocab, i: items, a: s.art ? 1 : 0,
@@ -362,6 +378,7 @@ export async function decodeSchedule(raw: string): Promise<Schedule | null> {
       id: newId(),
       title: String(parsed.t ?? ''),
       note: String(parsed.n ?? ''),
+      group: String(parsed.g ?? ''),
       days,
       from: Number(parsed.f) || 7 * 60,
       to: Number(parsed.e) || 12 * 60,
@@ -438,6 +455,7 @@ function fromLegacy(c: Compact & LegacyCompact, days: DayKey[]): Schedule {
     id: newId(),
     title: String(c.t ?? ''),
     note: String(c.n ?? ''),
+    group: String(c.g ?? ''),
     days,
     from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
     to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
@@ -476,6 +494,7 @@ export function migrate(raw: unknown): Schedule | null {
       id: String(v.id ?? newId()),
       title: String(v.title ?? ''),
       note: String(v.note ?? ''),
+      group: String(v.group ?? ''),
       days: days.length ? days : [...SCHOOL_WEEK],
       from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
       to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
@@ -484,7 +503,10 @@ export function migrate(raw: unknown): Schedule | null {
       updated: Number(v.updated) || Date.now(),
     }
   }
-  return v.items && Array.isArray(v.days) ? (v as Schedule) : null
+  // A sheet from before the class line existed simply has none.
+  return v.items && Array.isArray(v.days)
+    ? ({ ...v, group: String(v.group ?? '') } as Schedule)
+    : null
 }
 
 /**
@@ -558,12 +580,21 @@ export async function readShareHash(hash: string): Promise<Schedule | null> {
 // column costs a colour cartridge and makes the text on it harder to read than
 // the white it replaced.
 
-export const DAY_TINT: Record<DayKey, { head: string; band: string }> = {
-  sun: { head: '#e8b4bc', band: '#fbeff1' },
-  mon: { head: '#f0cf8a', band: '#fdf6e7' },
-  tue: { head: '#a9cc9b', band: '#f0f6ed' },
-  wed: { head: '#b6aedb', band: '#f2f0fa' },
-  thu: { head: '#8fc4cc', band: '#eef6f7' },
-  fri: { head: '#d7bfa6', band: '#f8f2eb' },
-  sat: { head: '#c3c9a8', band: '#f4f6ec' },
+/**
+ * Four tones per day: the head, the alternating half-hour band, the activity
+ * block, and the edge that ties them together.
+ *
+ * Pale on purpose — the sheet gets printed, and a saturated column costs a
+ * colour cartridge and makes the text on it harder to read than the white it
+ * replaced. The `edge` is what makes the head and the body below it read as
+ * ONE card rather than a tinted bar floating above a box.
+ */
+export const DAY_TINT: Record<DayKey, { head: string; band: string; block: string; edge: string }> = {
+  sun: { head: '#f7d3da', band: '#fdf2f4', block: '#fbe7ea', edge: '#eab8c2' },
+  mon: { head: '#fae3b0', band: '#fdf7e8', block: '#fcefd2', edge: '#edc87e' },
+  tue: { head: '#cfe6c3', band: '#f2f8ef', block: '#e4f0dc', edge: '#a8ccA0'.toLowerCase() },
+  wed: { head: '#dcd6f2', band: '#f5f3fb', block: '#eae5f7', edge: '#b7aede' },
+  thu: { head: '#c5e3e8', band: '#eff8f9', block: '#ddeff2', edge: '#95c6d0' },
+  fri: { head: '#ecd9c2', band: '#faf5ee', block: '#f4e8d8', edge: '#d3b48f' },
+  sat: { head: '#dde2c4', band: '#f6f8ee', block: '#ebefdc', edge: '#bcc79a' },
 }

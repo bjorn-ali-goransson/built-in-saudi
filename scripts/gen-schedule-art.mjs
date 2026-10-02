@@ -34,42 +34,59 @@ const env = Object.fromEntries(
 const KEY = env.OPENAI_KEY
 if (!KEY) { console.error('no OPENAI_KEY in .env'); process.exit(1) }
 
-/** The house style, repeated verbatim so the two bands belong together. */
+/**
+ * The house style, repeated verbatim so the two bands belong together.
+ *
+ * The first pass asked for "simple geometric shapes" and "generous gaps" and
+ * got exactly that: six objects on a lot of white, which read as clip-art
+ * spaced out rather than a scene. These sheets go on a nursery wall next to
+ * everything else on a nursery wall. So the brief now asks for a DENSE,
+ * continuous band — overlapping foliage, things tucked behind other things —
+ * and allows soft shading, which the flat-fill brief had forbidden and which
+ * is most of what made it look dry.
+ */
 const STYLE = [
-  'Flat vector illustration, simple geometric shapes, clean even line-free fills,',
-  'NO gradients, NO shadows, NO texture, NO outlines around the whole scene.',
-  'Warm Najdi palette only: sand cream #fbf7ef, soft sky blue #dbe7f2, palm green #4f7d4a and #6ba05f,',
-  'warm gold #f4c95d, dusty rose #e8b4bc, muted lavender #b6aedb, terracotta #d9695f, brown #9a7b4f.',
-  'Cheerful, calm, suitable for a Saudi kindergarten wall.',
-  'ABSOLUTELY NO TEXT, no letters, no numbers, no writing of any kind anywhere in the image.',
-  'Transparent background.',
+  'Charming modern childrens-book illustration, soft rounded shapes with gentle',
+  'shading and soft highlights, warm and cosy, like a high quality kindergarten poster.',
+  'A DENSE, CONTINUOUS, LOW AND WIDE decorative band that fills the strip edge to edge',
+  'with no large empty gaps: elements overlap and tuck behind one another.',
+  'CRITICAL: the band must be SHORT and WIDE — no taller than one fifth of the image height.',
+  'Nothing tall: no full-height trees, no towers. Every object is small, squat and wide,',
+  'arranged in one long low row like a border running along the edge of a page.',
+  'Warm palette: cream #fdf9f0, soft sky blue, fresh leaf greens, warm gold,',
+  'dusty rose, soft lavender, terracotta, warm brown.',
+  'Cheerful, calm, friendly, suitable for a Saudi kindergarten wall.',
+  'ABSOLUTELY NO TEXT, no letters, no numbers, no writing of any kind anywhere.',
+  'No flags of any country. Transparent background.',
 ].join(' ')
 
 const JOBS = [
   {
     name: 'schedule-header',
     edge: 'top',
-    prompt: `A decorative border strip for the TOP of a children's weekly schedule poster.
-All the subject matter sits in a single horizontal row across the very TOP quarter of the image;
-the lower three quarters are completely empty transparent space.
-Along that top row, spread evenly left to right with generous gaps:
-a smiling yellow sun with simple rays, two small white clouds, a neat stack of four coloured books,
-a cup holding three pencils, a string of small triangular bunting flags,
-and two date palm trees with brown trunks at the right end.
-Everything small and evenly spaced, like a decorative border. ${STYLE}`,
+    prompt: `A rich decorative border band for the TOP of a children's weekly schedule poster.
+Everything sits in one dense horizontal row across the TOP THIRD of the image; below it is empty transparent space.
+From left to right, overlapping and tucked together with no big gaps:
+a cheerful smiling sun with soft rays, fluffy clouds, a leafy green bush,
+a tall stack of colourful books with a small apple resting on top,
+a mug crowded with pencils and crayons and a pair of scissors,
+a paper aeroplane, a few floating stars and hearts, a bunting string of little triangular flags,
+a small potted plant, a globe, a couple of SMALL squat potted palms,
+and low leafy foliage filling every remaining gap along the band. ${STYLE}`,
   },
   {
     name: 'schedule-footer',
     edge: 'bottom',
-    prompt: `A decorative border strip for the BOTTOM of a children's weekly schedule poster.
-All the subject matter sits in a single horizontal row across the very BOTTOM quarter of the image;
-the upper three quarters are completely empty transparent space.
-Along that bottom row, standing on a soft pale green grassy strip, spread evenly left to right:
-a date palm tree, three small smiling children standing together in simple robes,
-a stack of three coloured toy blocks, a ball, two more smiling children,
-small simple flowers, and a date palm tree at the right end.
-The children are drawn very simply: round heads, plain rounded bodies, tiny dot eyes and a small smile.
-Everything small and evenly spaced, like a decorative border. ${STYLE}`,
+    prompt: `A rich decorative border band for the BOTTOM of a children's weekly schedule poster.
+Everything sits in one dense horizontal row across the BOTTOM THIRD of the image; above it is empty transparent space.
+A soft green grassy strip runs the full width, with flowers, tufts of grass and small bushes along it.
+Standing on the grass, overlapping and evenly spread with no big gaps:
+low bushes, two smiling children waving, a short stack of toy blocks,
+a beach ball, a small wooden toy wagon, three more smiling children of different skin tones
+holding books and crayons, a friendly cat, a flower bed, a watering can,
+a butterfly, and low bushes filling the far end. NO tall palm trees — keep everything low.
+The children are cheerful and simply drawn, with round faces and warm smiles; some wear
+simple modest clothing. ${STYLE}`,
   },
 ]
 
@@ -93,23 +110,30 @@ async function generate(job) {
 }
 
 /**
- * Crop to what was actually DRAWN, then re-encode as WebP.
+ * Crop to the BAND at the requested edge, and clean the transparency.
  *
- * Not to a fixed fraction of the image, which is what the first version did
- * and why the books lost their spines and the children lost their heads: the
- * model puts the subject roughly where it was asked to and "roughly" is
- * several percent of 1024 pixels. The alpha channel says exactly where the
- * drawing is, so the band is cropped to its bounding box with a little air —
- * the same answer whatever the model decided to do with the margin.
+ * Two things the obvious implementations get wrong, both learned the hard way:
  *
- * Chromium does the decode and the encode, so there is no image dependency to
- * add for a script that runs about once. WebP because these land on every
- * sheet: the raw PNGs are ~1.5MB and the bands are a twentieth of that.
+ * **A fixed fraction of the image is not the band.** The model puts the
+ * subject roughly where it was asked and "roughly" is several percent of 1024
+ * pixels — which is how the first pass cost the books their spines and the
+ * children their heads.
+ *
+ * **Nor is the whole alpha bounding box.** Asked for one band it will often
+ * paint a second, lighter one at the far edge; the bounding box then spans
+ * both and the crop is the entire canvas with a huge empty middle. So this
+ * walks in from the requested edge and stops at the first sustained run of
+ * empty rows — taking the band it was asked for and leaving whatever else the
+ * model decided to add.
+ *
+ * It also drops nearly-transparent pixels. Generations come back speckled with
+ * faint dots that are invisible against the model's own preview and read as
+ * dirt on a cream sheet.
  */
-async function crop(png) {
+async function crop(png, job) {
   const browser = await chromium.launch()
   const page = await browser.newPage()
-  const out = await page.evaluate(async (b64) => {
+  const out = await page.evaluate(async ({ b64, edge }) => {
     const img = new Image()
     await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = 'data:image/png;base64,' + b64 })
     const full = document.createElement('canvas')
@@ -117,28 +141,50 @@ async function crop(png) {
     full.height = img.height
     const fctx = full.getContext('2d')
     fctx.drawImage(img, 0, 0)
-    const { data } = fctx.getImageData(0, 0, img.width, img.height)
+    const image = fctx.getImageData(0, 0, img.width, img.height)
+    const data = image.data
 
-    // Rows that carry any meaningful opacity. A stray nearly-transparent pixel
-    // would otherwise make the bounding box the whole image.
-    let top = -1
-    let bottom = -1
+    // Speckle: anything barely there is not part of the drawing.
+    for (let i = 3; i < data.length; i += 4) if (data[i] < 70) data[i] = 0
+    fctx.putImageData(image, 0, 0)
+
+    const solidPerRow = []
     for (let y = 0; y < img.height; y++) {
-      let solid = 0
-      for (let x = 0; x < img.width; x++) if (data[(y * img.width + x) * 4 + 3] > 24) solid++
-      if (solid > img.width * 0.004) { if (top < 0) top = y; bottom = y }
+      let n = 0
+      for (let x = 0; x < img.width; x++) if (data[(y * img.width + x) * 4 + 3] > 120) n++
+      solidPerRow.push(n / img.width)
     }
-    if (top < 0) return null
 
-    const pad = Math.round(img.height * 0.02)
+    const BUSY = 0.03            // a row that is part of the band
+    const GAP = Math.round(img.height * 0.06)   // how much quiet ends it
+    const order = edge === 'top'
+      ? [...solidPerRow.keys()]
+      : [...solidPerRow.keys()].reverse()
+
+    let first = -1
+    let last = -1
+    let quiet = 0
+    for (const y of order) {
+      if (solidPerRow[y] >= BUSY) {
+        if (first < 0) first = y
+        last = y
+        quiet = 0
+      } else if (first >= 0 && ++quiet > GAP) break
+    }
+    if (first < 0) return null
+
+    const top = Math.min(first, last)
+    const bottom = Math.max(first, last)
+    const pad = Math.round(img.height * 0.015)
     const y0 = Math.max(0, top - pad)
     const y1 = Math.min(img.height, bottom + pad + 1)
+
     const c = document.createElement('canvas')
     c.width = img.width
     c.height = y1 - y0
-    c.getContext('2d').drawImage(img, 0, y0, img.width, c.height, 0, 0, img.width, c.height)
-    return { uri: c.toDataURL('image/webp', 0.9), w: c.width, h: c.height }
-  }, png.toString('base64'))
+    c.getContext('2d').drawImage(full, 0, y0, img.width, c.height, 0, 0, img.width, c.height)
+    return { uri: c.toDataURL('image/webp', 0.92), w: c.width, h: c.height }
+  }, { b64: png.toString('base64'), edge: job.edge })
   await browser.close()
   if (!out) throw new Error('the generated image was blank')
   return { buf: Buffer.from(out.uri.split(',')[1], 'base64'), w: out.w, h: out.h }
@@ -156,7 +202,7 @@ for (const job of JOBS) {
   let png
   if (recrop && existsSync(rawPath)) png = readFileSync(rawPath)
   else { png = await generate(job); writeFileSync(rawPath, png) }
-  const { buf, w, h } = await crop(png)
+  const { buf, w, h } = await crop(png, job)
   writeFileSync(path.join(outDir, `${job.name}.webp`), buf)
   console.log(`${w}x${h}, ${(buf.length / 1024).toFixed(0)}KB  (aspect ${(w / h).toFixed(2)})`)
 }

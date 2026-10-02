@@ -16,6 +16,7 @@ export interface Strings {
   intro: string
   titleLabel: string
   noteLabel: string
+  groupLabel: string
   weekend: string
   art: string
   activity: string
@@ -62,6 +63,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     intro: 'Build a weekly activity schedule with an icon on every activity, keep as many as you like, and share the whole sheet as a link. Everything stays in your browser.',
     titleLabel: 'Title',
     noteLabel: 'Line under the title',
+    groupLabel: 'Class',
     weekend: 'Include Friday and Saturday',
     art: 'Illustrated header and footer',
     activity: 'Activity',
@@ -109,6 +111,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     intro: 'ابنِ جدول أنشطة أسبوعيًا بأيقونة لكل نشاط، واحفظ ما شئت من الجداول، وشارك الورقة كاملة برابط واحد. ويبقى كل شيء داخل متصفحك.',
     titleLabel: 'العنوان',
     noteLabel: 'سطر تحت العنوان',
+    groupLabel: 'الفصل',
     weekend: 'أضف الجمعة والسبت',
     art: 'ترويسة وتذييل مزخرفان',
     activity: 'النشاط',

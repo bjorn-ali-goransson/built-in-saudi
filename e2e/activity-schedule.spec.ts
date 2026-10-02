@@ -235,6 +235,25 @@ test('a block is as tall as its activity is long', async ({ page }) => {
   expect(b!.height / a!.height).toBeLessThan(2.2)
 })
 
+test('the class goes on the sheet, under the title and the note', async ({ page }) => {
+  // Every one of these charts names the class, set apart and emphasised — it
+  // is the thing a parent looks for first to know whether the sheet on the
+  // wall is their child's.
+  await load(page, 'ar')
+  await page.getByTestId('as-group').fill('KG2 - براعم 2')
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('KG2 - براعم 2')
+
+  // The title, the note and the class are three LINES. As inline-block
+  // siblings in a centred box they flowed together and the note pill sat
+  // beside the title banner on one row.
+  const ys = await Promise.all(
+    ['as-sheet-title', 'as-sheet-note', 'as-sheet-group']
+      .map(async (id) => (await page.getByTestId(id).boundingBox())!.y),
+  )
+  expect(ys[1]).toBeGreaterThan(ys[0])
+  expect(ys[2]).toBeGreaterThan(ys[1])
+})
+
 test('the axis is labelled, and the sheet says where the day starts and ends', async ({ page }) => {
   await load(page)
   await expect(page.getByTestId('as-mark-420')).toContainText('7:00')

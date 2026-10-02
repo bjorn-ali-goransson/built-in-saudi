@@ -2354,6 +2354,25 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
 
 ### Other things worth keeping
 
+- **The whole sheet is set in IBM Plex Sans Arabic, in BOTH languages** — not
+  `rtl:font-ar`, which would give the Arabic sheet one face and the English
+  sheet another. It is a printed bilingual artefact whose activity names are
+  routinely Arabic whatever the interface language, and Plex is the one loaded
+  family that sets Latin and Arabic evenly. A sheet in two families is two
+  sheets.
+- **The day head and the column under it are two grid cells and ONE card**: the
+  head carries every border but its bottom, the body every border but its top,
+  and there is no gap. They were a tinted bar floating a pixel above a bordered
+  box, which read as a card that had come apart.
+- **The title, the note and the class are three LINES.** As inline-block
+  siblings in a centred box they flowed together, so the note pill sat beside
+  the title banner on one row. Pinned, because it is invisible until the note
+  is long enough to wrap.
+- **Editor chrome is hidden until you reach for it.** Forty-five little
+  outlined icon buttons and forty-five × buttons read as chrome laid over the
+  schedule rather than as the schedule; the icon is borderless until hover and
+  the delete appears on hover or focus. The sheet IS the editor, so what it
+  looks like at rest is what the tool looks like.
 - **The sheet scrolls sideways on a narrow screen rather than stacking the
   days.** Five columns of a continuous axis do not stack into anything readable
   — you would get five full-height axes — so the container scrolls and the page

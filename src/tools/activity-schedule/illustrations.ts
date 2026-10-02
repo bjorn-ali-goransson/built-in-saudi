@@ -5,6 +5,12 @@
 // They replaced a pair of hand-written SVGs which were legible and looked like
 // what they were.
 //
+// The first generated pair was flat-filled and widely spaced, because the
+// brief asked for "simple geometric shapes" with "generous gaps" — and got
+// exactly that: six objects on a lot of white, which reads as clip-art spaced
+// out rather than a scene. The brief now asks for a dense continuous band and
+// ALLOWS soft shading, which is most of what was missing.
+//
 // One source for both renderers. The grid on screen is HTML and the grid in
 // the PDF is drawn on a canvas — two renderers by necessity, because pdf-lib
 // cannot shape Arabic and a canvas has no reading direction to inherit — but
@@ -23,16 +29,17 @@ export const FOOTER_URL = '/illustrations/schedule-footer.webp'
 /**
  * How tall each band is, as a percentage of the sheet's WIDTH.
  *
- * Not a fixed height in either renderer, and not the image's own aspect
- * ratio. The bands are about 5:1 and 3.7:1, so drawn across the full width of
- * A4 landscape the footer alone would be 80mm of a 210mm page — the
- * illustration eating the schedule. Sizing from the width instead means the
- * artwork is the same size relative to the sheet on screen and on paper,
- * which is the whole reason there is one file rather than two.
+ * Not a fixed height in either renderer, and not the image's own aspect ratio.
+ * The bands come back about 2.7:1 — the model fills its canvas whatever the
+ * brief says about a low strip — so drawn across the full width of A4
+ * landscape the footer alone would be 116mm of a 210mm page: the illustration
+ * eating the schedule. Sizing from the width instead means the artwork is the
+ * same size relative to the sheet on screen and on paper, which is the whole
+ * reason there is one file rather than two.
  *
- * The art is CONTAINED in that band, never cropped to fill it: cropping is
- * what cost the books their spines and the children their heads when the
- * generator's own margin was trimmed by a fixed fraction.
+ * The art is CONTAINED in that band and centred, never cropped to fill it:
+ * cropping is what cost the books their spines and the children their heads
+ * when the generator's own margin was trimmed by a fixed fraction.
  */
-export const HEADER_BAND = 7.5
-export const FOOTER_BAND = 9
+export const HEADER_BAND = 11
+export const FOOTER_BAND = 12

@@ -266,6 +266,10 @@ export default function ActivityScheduleTool() {
           <Input value={schedule.note} data-testid="as-note"
             onChange={(e) => setSchedule((p) => ({ ...p, note: e.target.value }))} />
         </Field>
+        <Field label={s.groupLabel} className="w-[9rem]">
+          <Input value={schedule.group} data-testid="as-group"
+            onChange={(e) => setSchedule((p) => ({ ...p, group: e.target.value }))} />
+        </Field>
         <Field label={s.dayStart} className="w-[7rem]">
           <Input defaultValue={fmt(schedule.from)} dir="ltr" data-testid="as-from"
             key={`from-${schedule.from}`}

@@ -100,7 +100,7 @@ export function NameCombo({
           else if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter() }
           else if (e.key === 'Escape') setOpen(false)
         }}
-        className="w-full bg-transparent border-0 p-1 text-[0.86rem] text-ink rtl:font-ar focus:outline-none"
+        className="w-full bg-transparent border-0 p-1 text-[0.86rem] text-ink focus:outline-none"
       />
       {open && matches.length > 0 && (
         <div className={POPOVER} role="listbox" data-testid={`${testId}-list`}>
@@ -170,8 +170,13 @@ export function IconPicker({
         aria-label={label}
         data-testid={testId}
         onClick={() => setOpen((o) => !o)}
-        className={`grid size-7 place-items-center rounded-sm border border-[color:var(--line)] bg-[var(--surface)] text-[1.05rem] leading-none cursor-pointer
-          ${icon ? '' : 'opacity-60'}`}
+        // Borderless until you reach for it: on a finished sheet the icon is a
+        // picture, not a control, and forty-five little outlined buttons read
+        // as chrome laid over the schedule.
+        className={`grid size-7 place-items-center rounded-sm border border-transparent bg-transparent text-[1.05rem] leading-none cursor-pointer
+          hover:border-[color:var(--line)] hover:bg-[var(--surface)]
+          focus-visible:border-[color:var(--line)] focus-visible:bg-[var(--surface)]
+          ${icon ? '' : 'opacity-50'}`}
       >
         {shown || '+'}
       </button>

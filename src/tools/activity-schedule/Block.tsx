@@ -29,7 +29,7 @@ export interface BlockStrings {
  * for its corner handles.
  */
 export function Block({
-  item, top, height, left, width, mem, suggestions, str, trouble, tint,
+  item, top, height, left, width, mem, suggestions, str, trouble, tint, edge,
   onName, onIcon, onMove, onResize, onRemove, onEnter,
 }: {
   item: Item
@@ -44,6 +44,8 @@ export function Block({
   str: BlockStrings
   trouble: Trouble | null
   tint: string
+  /** The day's own outline, so a block belongs to its column. */
+  edge: string
   onName: (name: string) => void
   onIcon: (icon: string, name: string) => void
   /**
@@ -112,12 +114,13 @@ export function Block({
         if (e.shiftKey) onResize(item.end + step, true)
         else onMove(item.start + step, true)
       }}
-      className={`absolute touch-none select-none overflow-hidden rounded-sm border px-1 pt-[2px] cursor-grab
+      className={`group absolute touch-none select-none overflow-hidden rounded-md border px-1 pt-[2px] cursor-grab
         focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500
         ${trouble ? 'border-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_12%,#fff)]' : 'border-[color:var(--line)]'}`}
       style={{
         top, height, insetInlineStart: `${left}%`, width: `${width}%`,
-        background: trouble ? undefined : tint,
+        background: trouble ? '#fdecea' : tint,
+        borderColor: trouble ? undefined : edge,
       }}
     >
       <div className="flex items-start gap-1">
@@ -150,7 +153,8 @@ export function Block({
           title={str.remove}
           aria-label={str.remove}
           onClick={onRemove}
-          className="shrink-0 cursor-pointer rounded-sm border-0 bg-transparent px-1 text-[0.8rem] leading-none text-ink-faint"
+          className="shrink-0 cursor-pointer rounded-sm border-0 bg-transparent px-1 text-[0.8rem] leading-none text-ink-faint
+            opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
         >
           ×
         </button>
@@ -164,7 +168,7 @@ export function Block({
       {trouble && roomy && (
         <div
           data-testid={`as-hint-${item.id}`}
-          className="px-1 text-[0.66rem] leading-tight text-[color:var(--danger)] rtl:font-ar"
+          className="px-1 text-[0.66rem] leading-tight text-[color:var(--danger)]"
         >
           {str.trouble(trouble)}
         </div>
