@@ -22,7 +22,7 @@ type Row = [string, string, string, number, number, number, number]
 const assembly: Row = ['Morning assembly', 'طابور الصباح', '🔔', 7, 0, 7, 30]
 const snack: Row = ['Snack', 'وجبة', '🍎', 9, 0, 9, 30]
 const centres: Row = ['Learning centres', 'أركان', '🧱', 9, 30, 10, 15]
-const play: Row = ['Free play', 'لعب حر', '🎲', 10, 15, 10, 45]
+const play: Row = ['Free play', 'لعب حر', '⚽', 10, 15, 10, 45]
 const home: Row = ['Home time', 'انصراف', '🏠', 10, 45, 11, 0]
 
 const quran: Row = ['Quran', 'قرآن', '📖', 7, 30, 8, 0]

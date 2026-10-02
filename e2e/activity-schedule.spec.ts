@@ -278,6 +278,103 @@ test('shortening the day pulls activities back inside it', async ({ page }) => {
   expect((await spanOf(blocks(page, 'sun').first()))[1]).toBeLessThanOrEqual(9 * 60)
 })
 
+/** A touch press, held for `ms`, then dragged `dy` pixels and released. */
+async function touchDrag(loc: ReturnType<Page['locator']>, ms: number, dy: number) {
+  const box = (await loc.boundingBox())!
+  const x = box.x + box.width / 2
+  const y = box.y + 8
+  const opts = { pointerType: 'touch', pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }
+  await loc.dispatchEvent('pointerdown', { ...opts, clientX: x, clientY: y })
+  await loc.page().waitForTimeout(ms)
+  await loc.dispatchEvent('pointermove', { ...opts, clientX: x, clientY: y + dy })
+  await loc.dispatchEvent('pointerup', { ...opts, clientX: x, clientY: y + dy })
+}
+
+test('on touch it takes a LONG press to move an activity', async ({ page }) => {
+  // The block is a control and most of the sheet. If a press moved it at once,
+  // a finger anywhere on the schedule would drag a lesson instead of scrolling
+  // — so until the press lands the block claims nothing.
+  await load(page)
+  const block = await add(page, 'sun', 'Quran')
+  const [before] = await spanOf(block)
+
+  await touchDrag(block, 80, 60)           // a flick: a scroll, not a drag
+  expect((await spanOf(block))[0]).toBe(before)
+
+  await touchDrag(block, 600, 52)          // held, then dragged
+  expect((await spanOf(block))[0]).toBeGreaterThan(before)
+})
+
+test('a held activity says so, and lets go afterwards', async ({ page }) => {
+  // `data-held` is the testable contract — asserting a shadow or a ring would
+  // be testing Tailwind. It is also what turns touch-action off, so a block
+  // stuck in the held state would be a block that eats every scroll.
+  await load(page)
+  const block = await add(page, 'sun', 'Quran')
+  const box = (await block.boundingBox())!
+  const opts = { pointerType: 'touch', pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }
+  await block.dispatchEvent('pointerdown', { ...opts, clientX: box.x + 20, clientY: box.y + 8 })
+
+  await expect(block).not.toHaveAttribute('data-held', '')
+  await expect(block).toHaveAttribute('data-held', '', { timeout: 2000 })
+
+  await block.dispatchEvent('pointerup', { ...opts, clientX: box.x + 20, clientY: box.y + 8 })
+  await expect(block).not.toHaveAttribute('data-held', '')
+})
+
+test('a mouse still drags straight away', async ({ page }) => {
+  // The long press is for touch only: on a pointer, pressing a block IS the
+  // gesture and waiting would make the tool feel broken.
+  await load(page)
+  const block = await add(page, 'sun', 'Quran')
+  const box = (await block.boundingBox())!
+  // Below the name row and above the resize edge: the top of a block is the
+  // form, and a press there is meant to reach the input rather than drag.
+  const grab = box.y + box.height - 14
+  await page.mouse.move(box.x + box.width / 2, grab)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, grab + 60, { steps: 6 })
+  await page.mouse.up()
+  expect((await spanOf(block))[0]).toBeGreaterThan(7 * 60)
+})
+
+test('the icon palette is not clipped by the column it sits in', async ({ page }) => {
+  // A day column clips its contents, so an absolutely positioned panel inside
+  // a block was cut off by it — and the palette is wider than a column, so it
+  // was almost entirely invisible while every click on it still "worked".
+  await load(page)
+  const block = await add(page, 'sun', 'Quran')
+  const id = (await block.getAttribute('data-testid'))!.replace('as-item-', '')
+  await page.getByTestId(`as-icon-${id}`).click()
+
+  const palette = page.getByTestId(`as-icon-${id}-palette`)
+  await expect(palette).toBeVisible()
+  const p = (await palette.boundingBox())!
+  const col = (await page.getByTestId('as-col-sun').boundingBox())!
+  expect(p.width).toBeGreaterThan(col.width)          // wider than its column
+  // On screen at BOTH ends. Checking only the bottom edge is how a palette at
+  // y = -288 on a phone passed this.
+  const view = page.viewportSize()!
+  expect(p.x).toBeGreaterThanOrEqual(0)
+  expect(p.y).toBeGreaterThanOrEqual(0)
+  expect(p.x + p.width).toBeLessThanOrEqual(view.width + 1)
+  expect(p.y + p.height).toBeLessThanOrEqual(view.height + 1)
+})
+
+test('there is no dice anywhere in the palette', async ({ page }) => {
+  // These sheets go on the wall of an Islamic school, and a die is the picture
+  // of a gambling game. Free play is a ball — which is also what the charts
+  // this tool was modelled on draw.
+  await load(page)
+  const block = await add(page, 'sun', 'لعب حر')
+  await expect(block.locator('[data-testid^="as-icon-"]').first()).toContainText('⚽')
+
+  const id = (await block.getAttribute('data-testid'))!.replace('as-item-', '')
+  await page.getByTestId(`as-icon-${id}`).click()
+  await expect(page.getByTestId(`as-icon-${id}-palette`)).toBeVisible()
+  await expect(page.getByTestId(`as-icon-${id}-palette`)).not.toContainText('🎲')
+})
+
 test('an icon is guessed from the words in the name', async ({ page }) => {
   await load(page)
   const block = await add(page, 'sun', 'قرآن')

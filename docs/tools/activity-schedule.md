@@ -37,6 +37,11 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 - [x] One axis; activities carry their own start and end, to 15 minutes.
 - [x] Drag to move, drag the bottom edge to resize, arrow keys for both
       (Shift resizes) — the keyboard path is exact, the drag is magnetic.
+- [x] On TOUCH it takes a long press (400ms, cancelled by 10px of movement),
+      so a finger can still scroll the sheet. A mouse drags at once.
+- [x] Per-block controls are forced visible on a coarse pointer, and the
+      resize edge grows to 18px there — hover does not exist on a phone.
+- [x] No dice in the palette: these sheets go on the wall of an Islamic school.
 - [x] A drag pulls to any edge another day already uses within 10 minutes.
 - [x] Overlaps on one day are flagged AND packed side by side, so neither
       activity is hidden under the other.

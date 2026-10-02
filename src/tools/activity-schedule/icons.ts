@@ -33,7 +33,11 @@ export const PALETTE: Array<{ group: string; groupAr: string; icons: string[] }>
   },
   {
     group: 'Play and art', groupAr: 'اللعب والفن',
-    icons: ['🧩', '🧱', '🎨', '🖍️', '✂️', '🎭', '🎵', '🎹', '🥁', '⚽', '🏀', '🏐', '🤸', '🪁', '🧸', '🎲', '🎪'],
+    // NO dice. Free play is a ball, which is also what the charts this was
+    // modelled on draw: 🎲 is the picture of a gambling game, and these sheets
+    // go on the wall of an Islamic school. An icon is not neutral just because
+    // the tool meant it as "a game".
+    icons: ['🧩', '🧱', '🎨', '🖍️', '✂️', '🎭', '🎵', '🎹', '🥁', '⚽', '🏀', '🏐', '🤸', '🪁', '🧸', '🎪'],
   },
   {
     group: 'Day', groupAr: 'اليوم',
@@ -73,7 +77,7 @@ const GUESS: Array<[string, string[]]> = [
   ['🤸', ['exercise', 'حركه', 'تمارين', 'نشاط حركي', 'movement']],
   ['🧩', ['puzzle', 'الغاز', 'تركيب', 'ذكاء']],
   ['🧱', ['blocks', 'اركان', 'مكعبات', 'بناء', 'centres', 'centers', 'corners', 'stations']],
-  ['🎲', ['free play', 'لعب حر', 'لعب', 'play', 'العاب', 'game', 'ترفيه']],
+  ['⚽', ['free play', 'لعب حر', 'لعب', 'play', 'العاب', 'game', 'ترفيه']],
   ['🍎', ['snack', 'وجبه', 'فطور', 'breakfast', 'افطار', 'اكل', 'طعام', 'lunch', 'غداء', 'فاكهه']],
   ['🥛', ['milk', 'حليب', 'عصير', 'juice', 'ماء', 'water', 'شرب']],
   ['🚻', ['toilet', 'دوره المياه', 'حمام', 'bathroom', 'نظافه شخصيه']],

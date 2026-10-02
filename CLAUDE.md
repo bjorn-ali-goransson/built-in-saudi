@@ -2391,6 +2391,49 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
   schedule rather than as the schedule; the icon is borderless until hover and
   the delete appears on hover or focus. The sheet IS the editor, so what it
   looks like at rest is what the tool looks like.
+- **On touch, moving an activity takes a LONG PRESS**, and the block claims no
+  touch until that press lands. The first version set `touch-action: none` so a
+  drag would work — and the blocks are nearly the whole sheet, so a finger
+  anywhere on the schedule could not scroll the page at all. 400ms with no
+  movement is what "I meant this one" looks like; moving more than 10px before
+  it lands cancels, because that was a scroll. A MOUSE still drags at once:
+  pressing a block IS the gesture there, and waiting would feel broken.
+  `data-held` is the testable contract rather than a shadow or a ring.
+- **An icon that is only on hover is an icon a phone cannot reach.** Hiding the
+  per-block controls behind `group-hover` cleaned up the sheet and made delete
+  unreachable on touch; they are forced visible under
+  `@media (pointer: coarse)`, where the resize edge also grows from 7px to
+  18px.
+- **`animate-[fadeUp…_both]` on `.wrap` breaks `position: fixed` for the WHOLE
+  page.** `animation-fill-mode: both` keeps the final keyframe's `transform`
+  applied forever — an identity matrix, but a transform, and a transform makes
+  that element the containing block for every fixed descendant. A panel
+  computing viewport coordinates then sat 288px above the top of a phone
+  screen. This is site-wide, not this tool's: anything using `position: fixed`
+  inside the page wrapper is positioned against the wrapper. The local answer
+  is a PORTAL to `document.body`; the general one would be animating opacity
+  only, and is not done here.
+- **A portal escapes the DOM but NOT the React tree**, and that cost the whole
+  icon palette. A pointerdown inside a portalled panel still bubbles — as a
+  synthetic event — to the block that owns it, whose drag handler calls
+  `preventDefault()`; that suppresses the entire mouse sequence, so the only
+  event a pick button ever saw was `pointerdown`. Every pick and every
+  suggestion silently did nothing while looking perfectly clickable. The guard
+  walks the DOM for `[data-nodrag]`, so the PANEL has to carry it. **Verified
+  to fail**: removing the attribute reddens three cases — all three about the
+  icon memory, which is the only reason it was caught at all.
+- **A panel inside a clipping column has to be `fixed`, not `absolute`.** The
+  day columns clip their contents so blocks stop at the rounded edge — which
+  cut off the icon palette, a panel WIDER than a column, so almost none of it
+  was visible while every click on it still passed. Nothing here establishes a
+  containing block for fixed elements, so it escapes without a portal; it
+  measures itself first, because "does it fit below" cannot be answered by an
+  element that has not been laid out.
+- **No dice in the icon palette.** 🎲 is the picture of a gambling game and
+  these sheets go on the wall of an Islamic school; free play is a ball, which
+  is what the charts this was modelled on draw. An icon is not neutral just
+  because the tool meant it as "a game" — the palette is content, and content
+  has an audience.
 - **The sheet scrolls sideways on a narrow screen rather than stacking the
   days.** Five columns of a continuous axis do not stack into anything readable
   — you would get five full-height axes — so the container scrolls and the page

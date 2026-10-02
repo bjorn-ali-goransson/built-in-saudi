@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { IconPicker, NameCombo } from './parts'
 import { iconFor, type IconMemory } from './icons'
 import { fmtSpan, MIN_LEN, SNAP, type Item, type Trouble } from './schedule'
@@ -15,6 +15,20 @@ export interface BlockStrings {
 }
 
 /**
+ * How long a finger has to rest before it is moving the activity rather than
+ * scrolling the sheet.
+ *
+ * On a pointer, pressing IS the gesture: there is nothing else a press on a
+ * block could mean. On a touch screen it is ambiguous — the same press begins
+ * a scroll — so the block must not claim the gesture until it is clear, and
+ * 400ms with no movement is what "I meant this one" looks like.
+ */
+const LONG_PRESS_MS = 400
+
+/** Move further than this before the press lands and it was a scroll. */
+const TOUCH_SLOP = 10
+
+/**
  * One activity, sitting on the axis.
  *
  * **Dragging is on the block itself, not on a grip**, because a 15-minute
@@ -22,6 +36,12 @@ export interface BlockStrings {
  * interactive inside — the name box, the icon button, delete — carries
  * `data-nodrag`, and the handler walks up from the event target to look for
  * it. That is the only way both things fit: the block is a control AND a form.
+ *
+ * **On touch it takes a LONG PRESS**, and the block does not block scrolling
+ * until that press lands. The first version set `touch-action: none` so a drag
+ * would work, which meant a finger anywhere on the schedule — and the blocks
+ * are nearly all of it — could not scroll the page at all. Waiting for the
+ * press is what lets the same surface be both scrollable and draggable.
  *
  * **Arrow keys move it too**, and that is not only the accessible answer. A
  * pointer drag is almost impossible to assert on, so the keyboard path is what
@@ -62,29 +82,76 @@ export function Block({
   onRemove: () => void
   onEnter: () => void
 }) {
-  const drag = useRef<{ y: number; base: number; mode: 'move' | 'resize' } | null>(null)
+  const drag = useRef<{ y: number; base: number; mode: 'move' | 'resize'; id: number } | null>(null)
+  const pending = useRef<{ timer: number; y: number } | null>(null)
+  const [held, setHeld] = useState(false)
   const pxPerMinute = height / Math.max(MIN_LEN, item.end - item.start)
+
+  useEffect(() => () => { if (pending.current) clearTimeout(pending.current.timer) }, [])
+
+  const cancelPending = () => {
+    if (!pending.current) return
+    clearTimeout(pending.current.timer)
+    pending.current = null
+  }
+
+  const begin = (el: HTMLElement, pointerId: number, mode: 'move' | 'resize') => {
+    drag.current = { y: 0, base: mode === 'move' ? item.start : item.end, mode, id: pointerId }
+    setHeld(true)
+    try { el.setPointerCapture(pointerId) } catch { /* a synthetic pointer has none */ }
+  }
 
   const start = (e: ReactPointerEvent<HTMLElement>, mode: 'move' | 'resize') => {
     // A pointer that landed on a control is operating that control.
     if ((e.target as HTMLElement).closest('[data-nodrag]')) return
+
+    if (e.pointerType === 'touch') {
+      // Claim nothing yet: until the press lands this is probably a scroll.
+      const el = e.currentTarget
+      const pointerId = e.pointerId
+      const y = e.clientY
+      cancelPending()
+      pending.current = {
+        y,
+        timer: window.setTimeout(() => {
+          pending.current = null
+          begin(el, pointerId, mode)
+          drag.current!.y = y
+          // A press that took effect with nothing moving yet needs to say so.
+          try { navigator.vibrate?.(12) } catch { /* not everywhere */ }
+        }, LONG_PRESS_MS),
+      }
+      return
+    }
+
     e.preventDefault()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { y: e.clientY, base: mode === 'move' ? item.start : item.end, mode }
+    begin(e.currentTarget, e.pointerId, mode)
+    drag.current!.y = e.clientY
   }
 
   const moveBy = (e: ReactPointerEvent<HTMLElement>) => {
+    if (pending.current) {
+      // Moved before the press landed, so it was a scroll after all.
+      if (Math.abs(e.clientY - pending.current.y) > TOUCH_SLOP) cancelPending()
+      return
+    }
     const d = drag.current
     if (!d) return
+    // Stop the browser panning the sheet out from under a drag we have taken.
+    if (e.cancelable) e.preventDefault()
     const minutes = d.base + (e.clientY - d.y) / pxPerMinute
     if (d.mode === 'move') onMove(minutes)
     else onResize(minutes)
   }
 
   const end = (e: ReactPointerEvent<HTMLElement>) => {
+    cancelPending()
     if (!drag.current) return
     drag.current = null
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    setHeld(false)
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
   }
 
   // Under about 40px there is room for the name and nothing else.
@@ -96,6 +163,7 @@ export function Block({
       data-start={item.start}
       data-end={item.end}
       data-trouble={trouble ? trouble.kind : undefined}
+      data-held={held ? '' : undefined}
       tabIndex={0}
       role="group"
       aria-label={`${item.name || str.activity} ${fmtSpan(item)}`}
@@ -114,9 +182,13 @@ export function Block({
         if (e.shiftKey) onResize(item.end + step, true)
         else onMove(item.start + step, true)
       }}
-      className={`group absolute touch-none select-none overflow-hidden rounded-md border px-1 pt-[2px] cursor-grab
+      // `touch-auto` until a press has landed: the blocks are nearly the whole
+      // sheet, so claiming touch up front made the schedule unscrollable on a
+      // phone. Once held, it takes the gesture and lifts off the column.
+      className={`group absolute select-none rounded-md border px-1 pt-[2px] cursor-grab
         focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500
-        ${trouble ? 'border-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_12%,#fff)]' : 'border-[color:var(--line)]'}`}
+        ${held ? 'touch-none z-20 shadow-[var(--shadow-lg)] ring-2 ring-green-500' : 'touch-auto overflow-hidden'}
+        ${trouble ? 'border-[color:var(--danger)]' : 'border-[color:var(--line)]'}`}
       style={{
         top, height, insetInlineStart: `${left}%`, width: `${width}%`,
         background: trouble ? '#fdecea' : tint,
@@ -154,7 +226,8 @@ export function Block({
           aria-label={str.remove}
           onClick={onRemove}
           className="shrink-0 cursor-pointer rounded-sm border-0 bg-transparent px-1 text-[0.8rem] leading-none text-ink-faint
-            opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+            opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100
+            [@media(pointer:coarse)]:opacity-100"
         >
           ×
         </button>
@@ -183,7 +256,8 @@ export function Block({
         onPointerMove={(e) => { e.stopPropagation(); moveBy(e) }}
         onPointerUp={(e) => { e.stopPropagation(); end(e) }}
         onPointerCancel={end}
-        className="absolute inset-x-0 bottom-0 h-[7px] cursor-ns-resize touch-none"
+        className="absolute inset-x-0 bottom-0 h-[7px] cursor-ns-resize
+          [@media(pointer:coarse)]:h-[18px]"
       />
     </div>
   )
