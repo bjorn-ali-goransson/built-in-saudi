@@ -52,6 +52,9 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 - [x] Any number of schedules in `localStorage`; draft survives a reload unsaved.
 - [x] A sheet saved in the PREVIOUS shape (a time in every cell) still opens.
 - [x] Share link = deflated, dictionary-compacted JSON, base64url in the hash.
+- [x] Ready-made sheets reachable by NAME (`#t=tamhidi`, `#t=kg2`) — sixty
+      characters instead of 680 — and offered on an empty sheet, because a
+      sheet you can only reach by typing its name is one nobody finds.
 - [x] PDF with illustrated header/footer and a QR that reopens the sheet — and
       the QR is decoded out of the produced PDF by the spec, with jsQR.
 - [x] Both locales, with Sunday the rightmost column in Arabic and the axis

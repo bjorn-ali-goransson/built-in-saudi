@@ -567,7 +567,22 @@ export async function shareLink(s: Schedule, origin: string, path: string): Prom
   return `${origin}${dir}#s=${await encodeSchedule(s)}`
 }
 
+/**
+ * Read a sheet out of the hash: a carried one (`#s=`) or a named one (`#t=`).
+ *
+ * Two forms because they answer different questions. `#s=` carries the whole
+ * schedule, which is what makes a shared link work with no server and no
+ * account — and is also 680 characters of base64. `#t=` names a sheet that
+ * ships with the app, so the link is sixty characters and never expires. See
+ * `samples.ts`.
+ */
 export async function readShareHash(hash: string): Promise<Schedule | null> {
+  const named = /[#&]t=([a-z0-9-]+)/i.exec(hash)
+  if (named) {
+    const { sampleSchedule } = await import('./samples')
+    const found = sampleSchedule(named[1].toLowerCase())
+    if (found) return found
+  }
   const m = /[#&]s=([^&]+)/.exec(hash)
   return m ? decodeSchedule(m[1]) : null
 }

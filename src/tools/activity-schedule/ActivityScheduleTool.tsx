@@ -12,6 +12,7 @@ import {
 import {
   deleteOne, loadAll, loadDraft, saveDraft, saveOne, setCurrentId, vocabulary,
 } from './store'
+import { SAMPLES, sampleSchedule } from './samples'
 import type { QrPlan } from './qr'
 
 export default function ActivityScheduleTool() {
@@ -322,7 +323,40 @@ export default function ActivityScheduleTool() {
         </Button>
       </div>
 
-      {isBlank(schedule) && <p className="text-sm text-ink-faint" data-testid="as-empty">{s.empty}</p>}
+      {isBlank(schedule) && (
+        <div data-testid="as-empty" className="grid gap-2">
+          <p className="text-sm text-ink-faint">{s.empty}</p>
+          {/*
+            The starters are offered HERE and not only at a URL. A sheet you can
+            only reach by typing its name is a sheet nobody finds — the failure
+            this repo records for the collections, one level down. They show on
+            an empty sheet only: once there is something on the axis, a row of
+            buttons that would replace it is a trap rather than a shortcut.
+          */}
+          <p className="text-sm text-ink-faint">{s.starters}</p>
+          <div className="flex flex-wrap gap-2">
+            {SAMPLES.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                data-testid={`as-sample-${x.id}`}
+                onClick={() => {
+                  const made = sampleSchedule(x.id)
+                  if (!made) return
+                  setSchedule(made)
+                  setFromLink(false)
+                  if (window.location.hash) {
+                    window.history.replaceState(null, '', window.location.pathname)
+                  }
+                }}
+                className="cursor-pointer rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-ink rtl:font-ar"
+              >
+                {x.label[l]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {qr && !qr.ok && (
         <Panel data-testid="as-qr-problem" data-why={qr.reason}>

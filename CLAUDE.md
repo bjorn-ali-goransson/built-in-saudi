@@ -2354,6 +2354,15 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
 
 ### Other things worth keeping
 
+- **Two link forms, because they answer different questions.** `#s=` carries
+  the whole schedule, which is what makes a shared link work with no server and
+  no account — and is also 680 characters of base64 that nobody wants in a
+  message. `#t=<name>` names a sheet that SHIPS with the app (`samples.ts`), so
+  the link is sixty characters and never expires. The starters are offered on
+  an empty sheet as well as at a URL: a sheet reachable only by typing its name
+  is one nobody finds, which is the collections failure one level down. They
+  disappear once there is anything on the axis, because a button that would
+  replace your work is a trap rather than a shortcut.
 - **The whole sheet is set in IBM Plex Sans Arabic, in BOTH languages** — not
   `rtl:font-ar`, which would give the Arabic sheet one face and the English
   sheet another. It is a printed bilingual artefact whose activity names are

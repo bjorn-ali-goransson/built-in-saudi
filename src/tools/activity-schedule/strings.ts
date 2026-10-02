@@ -37,6 +37,7 @@ export interface Strings {
   download: string
   working: string
   empty: string
+  starters: string
   mine: string
   untitled: string
   remove: string
@@ -84,6 +85,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     download: 'Download the PDF',
     working: 'Preparing…',
     empty: 'Add an activity to any day with +, then drag it where it belongs.',
+    starters: 'Or start from a ready-made one:',
     mine: 'Your saved schedules',
     untitled: 'Untitled',
     remove: 'Delete',
@@ -132,6 +134,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     download: 'نزّل ملف PDF',
     working: 'جارٍ التجهيز…',
     empty: 'أضف نشاطًا إلى أي يوم بعلامة +، ثم اسحبه إلى موضعه.',
+    starters: 'أو ابدأ من جدول جاهز:',
     mine: 'جداولك المحفوظة',
     untitled: 'بلا عنوان',
     remove: 'احذف',

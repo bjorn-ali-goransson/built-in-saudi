@@ -359,6 +359,46 @@ test('a sheet saved before the axis existed still opens', async ({ page }) => {
   await expect(blocks(page, 'mon')).toHaveCount(1)
 })
 
+test('a named sheet opens from a SHORT link', async ({ page }) => {
+  // `#s=` carries the whole schedule, which is what makes a shared link work
+  // with no server — and is also 680 characters of base64. A sheet that ships
+  // with the app needs none of that.
+  await page.goto('/ar/apps/activity-schedule/#t=tamhidi')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('تمهيدي')
+  await expect(blocks(page, 'sun')).toHaveCount(9)
+  await expect(blocks(page, 'sun').first().locator('[data-testid^="as-name-"]'))
+    .toHaveValue('طابور وأذكار الصباح')
+  // Thursday is the week's revision day on that chart, which is the whole
+  // reason the days are allowed to differ.
+  await expect(blocks(page, 'thu').nth(1).locator('[data-testid^="as-name-"]'))
+    .toHaveValue('مراجعة تبيان')
+})
+
+test('the starters are offered on an empty sheet, and only there', async ({ page }) => {
+  // A sheet you can only reach by typing its name is a sheet nobody finds.
+  // But once there is something on the axis, a row of buttons that would
+  // replace it is a trap rather than a shortcut.
+  await load(page, 'ar')
+  await page.getByTestId('as-sample-kg2').click()
+  await expect(page.getByTestId('as-sheet-group')).toHaveText('KG2 - براعم 2')
+  await expect(blocks(page, 'sun')).toHaveCount(9)
+  await expect(page.getByTestId('as-sample-kg2')).toHaveCount(0)
+})
+
+test('opening a starter twice gives two sheets, not two handles on one', async ({ page }) => {
+  // Without fresh ids, saving the second would overwrite the first.
+  await load(page)
+  await page.getByTestId('as-sample-tamhidi').click()
+  await page.getByTestId('as-title').fill('First')
+  await page.getByTestId('as-save').click()
+  await page.getByTestId('as-new').click()
+  await page.getByTestId('as-sample-tamhidi').click()
+  await page.getByTestId('as-title').fill('Second')
+  await page.getByTestId('as-save').click()
+  await expect(page.locator('[data-testid^="as-open-"]')).toHaveCount(2)
+})
+
 test('the share link carries the whole sheet, and opening it fetches nothing', async ({ page }) => {
   await load(page)
   await add(page, 'sun', 'Assembly')
