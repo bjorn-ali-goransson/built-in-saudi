@@ -222,31 +222,78 @@ test('a drag into ANOTHER day moves the lesson there', async ({ page }) => {
   expect(await orderOf(page, 'mon')).toContain('One')
 })
 
-/** A touch press, held for `ms`, then dragged `dy` pixels and released. */
-async function touchDrag(loc: ReturnType<Page['locator']>, ms: number, dy: number) {
+/**
+ * A REAL touch press, held for `ms`, then dragged `dy` pixels and released.
+ * Returns how far the PAGE scrolled while the finger was down.
+ *
+ * Through CDP, not `dispatchEvent`. Synthetic pointer events never consult
+ * `touch-action` and are never cancelable, so they exercise the handler and
+ * not the gesture — which is how a long press passed here while doing nothing
+ * at all on a phone.
+ *
+ * The scroll distance is the half that matters. A native `touchmove` listener
+ * fires whether or not the scroller also took the gesture, so the reorder can
+ * happen while the sheet slides out from under the finger — which is a drag
+ * nobody can aim. The two gestures are told apart by BOTH numbers: a flick
+ * scrolls and reorders nothing, a held drag reorders and scrolls nothing.
+ */
+async function realTouchDrag(page: Page, loc: ReturnType<Page['locator']>, ms: number, dy: number) {
+  await page.evaluate(() => window.scrollTo(0, 0))
   const box = (await loc.boundingBox())!
   const x = box.x + box.width / 2
   const y = box.y + box.height / 2
-  const opts = { pointerType: 'touch', pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }
-  await loc.dispatchEvent('pointerdown', { ...opts, clientX: x, clientY: y })
-  await loc.page().waitForTimeout(ms)
-  await loc.dispatchEvent('pointermove', { ...opts, clientX: x, clientY: y + dy })
-  await loc.dispatchEvent('pointerup', { ...opts, clientX: x, clientY: y + dy })
+  const cdp = await page.context().newCDPSession(page)
+  const point = (ty: number) => [{ x, y: ty, radiusX: 12, radiusY: 12, force: 1 }]
+
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(y) })
+  await page.waitForTimeout(ms)
+  for (let i = 1; i <= 6; i++) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: point(y + (dy * i) / 6),
+    })
+    await page.waitForTimeout(16)
+  }
+  const scrolled = await page.evaluate(() => Math.abs(window.scrollY))
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await cdp.detach()
+  return scrolled
 }
 
-test('on touch it takes a LONG press to move an activity', async ({ page }) => {
+const touchPhone = { hasTouch: true, viewport: { width: 420, height: 900 } }
+
+test('on touch it takes a LONG press to move an activity', async ({ browser }) => {
   // The blocks are nearly the whole sheet. If a press moved one at once, a
   // finger anywhere on the schedule would drag a lesson instead of scrolling.
-  await load(page)
+  const ctx = await browser.newContext(touchPhone)
+  const page = await ctx.newPage()
+  await page.goto('/en/apps/activity-schedule')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
   await add(page, 'sun', 'One')
   await add(page, 'sun', 'Two')
   const second = blocks(page, 'sun').nth(1)
 
-  await touchDrag(second, 80, -60)          // a flick: a scroll, not a drag
+  // A flick: the finger belongs to the scroller, and the day is untouched.
+  const flick = await realTouchDrag(page, second, 80, -60)
+  expect(flick).toBeGreaterThan(20)
   expect(await orderOf(page, 'sun')).toEqual(['One', 'Two'])
 
-  await touchDrag(second, 600, -60)         // held, then dragged
+  // Held first: the block claims the gesture, so the page must NOT move.
+  const drag = await realTouchDrag(page, second, 600, -60)
   expect(await orderOf(page, 'sun')).toEqual(['Two', 'One'])
+  expect(drag).toBe(0)
+  await ctx.close()
+})
+
+test('a short tap on touch opens the drawer', async ({ browser }) => {
+  const ctx = await browser.newContext(touchPhone)
+  const page = await ctx.newPage()
+  await page.goto('/en/apps/activity-schedule')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  await add(page, 'sun', 'Quran')
+  await blocks(page, 'sun').first().tap()
+  await expect(page.getByTestId('as-drawer')).toBeVisible()
+  await expect(page.getByTestId('as-drawer-name')).toHaveValue('Quran')
+  await ctx.close()
 })
 
 test('the title, the line under it and the class are edited in the drawer', async ({ page }) => {
@@ -352,6 +399,25 @@ test('nothing on the sheet is outlined', async ({ page }) => {
     })
     expect(w).toEqual(['0px', '0px', '0px', '0px'])
   }
+})
+
+test('the day colour shows down both sides of every lesson', async ({ page }) => {
+  // The padding is what makes the white cards read as sitting ON the column
+  // rather than as holes cut out of it — their rounded corners need the day's
+  // colour to blend into on all four sides, not two.
+  //
+  // It is asserted in PIXELS off the live rects, not as a class. A block is
+  // absolutely positioned, and a percentage on one resolves against the
+  // PADDING box of its containing block, so `px-1.5` on the column itself
+  // moved nothing at all and the cards ran edge to edge. Only the geometry can
+  // tell the two arrangements apart.
+  await load(page)
+  const block = await add(page, 'sun', 'Quran')
+  const col = page.getByTestId('as-col-sun')
+  const c = (await col.boundingBox())!
+  const b = (await block.boundingBox())!
+  expect(b.x - c.x).toBeGreaterThanOrEqual(4)
+  expect(c.x + c.width - (b.x + b.width)).toBeGreaterThanOrEqual(4)
 })
 
 test('a schedule opened from a link explains nothing', async ({ page }) => {

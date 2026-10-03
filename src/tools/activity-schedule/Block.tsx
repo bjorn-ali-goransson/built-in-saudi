@@ -62,9 +62,15 @@ export function Block({
   onResize: (end: number) => void
 }) {
   const drag = useRef<{ y: number; base: number; mode: 'move' | 'resize'; moved: boolean } | null>(null)
-  const pending = useRef<{ timer: number; y: number } | null>(null)
+  const pending = useRef<{ timer: number; y: number; mode: 'move' | 'resize' } | null>(null)
   const [held, setHeld] = useState(false)
+  const node = useRef<HTMLDivElement>(null)
   const pxPerMinute = height / Math.max(SNAP, item.end - item.start)
+
+  // Latest handlers, so the native listener below never needs re-binding and
+  // never closes over a stale `onDrag`.
+  const live = useRef({ onDrag, onResize, pxPerMinute })
+  live.current = { onDrag, onResize, pxPerMinute }
 
   useEffect(() => () => { if (pending.current) clearTimeout(pending.current.timer) }, [])
 
@@ -74,50 +80,107 @@ export function Block({
     pending.current = null
   }
 
-  const begin = (el: HTMLElement, pointerId: number, mode: 'move' | 'resize', y: number) => {
+  const begin = (mode: 'move' | 'resize', y: number) => {
     drag.current = { y, base: mode === 'move' ? item.start : item.end, mode, moved: false }
     setHeld(true)
-    try { el.setPointerCapture(pointerId) } catch { /* a synthetic pointer has none */ }
   }
 
-  const start = (e: ReactPointerEvent<HTMLElement>, mode: 'move' | 'resize') => {
-    if (e.pointerType === 'touch') {
-      const el = e.currentTarget
-      const pointerId = e.pointerId
-      const y = e.clientY
-      cancelPending()
-      pending.current = {
-        y,
-        timer: window.setTimeout(() => {
-          pending.current = null
-          begin(el, pointerId, mode, y)
-          try { navigator.vibrate?.(12) } catch { /* not everywhere */ }
-        }, LONG_PRESS_MS),
+  /**
+   * Touch is handled NATIVELY, and that is the whole fix.
+   *
+   * `touch-action` is read when the gesture BEGINS. Flipping it to `none` when
+   * the long press lands is too late — the browser has already decided this
+   * touch belongs to the scroller, so every later move scrolls the page and no
+   * drag ever happens. It looked right in a spec that dispatched synthetic
+   * pointer events, because those never consult `touch-action` at all: the
+   * test proved the handler and not the gesture.
+   *
+   * What actually works is calling `preventDefault()` on `touchmove`, which
+   * takes the gesture back — but only from a listener registered
+   * `{ passive: false }`, and React marks its own touch listeners passive. So
+   * it is bound here by hand. It works because the press landed with no
+   * movement: nothing has started scrolling yet, so there is still a gesture
+   * to claim.
+   */
+  useEffect(() => {
+    const el = node.current
+    if (!el) return
+
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      if (pending.current) {
+        // Moved before the press landed, so it was a scroll after all.
+        if (Math.abs(t.clientY - pending.current.y) > SLOP) cancelPending()
+        return
       }
+      const d = drag.current
+      if (!d) return
+      if (e.cancelable) e.preventDefault()
+      d.moved = true
+      const { onDrag: drag_, onResize: resize_, pxPerMinute: ppm } = live.current
+      const minutes = d.base + (t.clientY - d.y) / ppm
+      if (d.mode === 'move') drag_(t.clientX, t.clientY, minutes)
+      else resize_(minutes)
+    }
+
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
+  }, [])
+
+  const touchStart = (e: React.TouchEvent, mode: 'move' | 'resize') => {
+    const t = e.touches[0]
+    if (!t) return
+    cancelPending()
+    const y = t.clientY
+    pending.current = {
+      y,
+      mode,
+      timer: window.setTimeout(() => {
+        pending.current = null
+        begin(mode, y)
+        // Nothing has moved, so the press needs to say it took effect.
+        try { navigator.vibrate?.(12) } catch { /* not everywhere */ }
+      }, LONG_PRESS_MS),
+    }
+  }
+
+  const touchEnd = (e: React.TouchEvent) => {
+    const wasPending = !!pending.current
+    cancelPending()
+    const d = drag.current
+    drag.current = null
+    if (held) setHeld(false)
+    if (d?.mode === 'move' && d.moved) {
+      // Suppress the compatibility click, or a drag also opens the drawer.
+      if (e.cancelable) e.preventDefault()
+      onDragEnd()
       return
     }
+    if (wasPending || (d && !d.moved)) onOpen()
+  }
+
+  /** The pointer path is MOUSE and pen only; touch is handled above. */
+  const start = (e: ReactPointerEvent<HTMLElement>, mode: 'move' | 'resize') => {
+    if (e.pointerType === 'touch') return
     e.preventDefault()
-    begin(e.currentTarget, e.pointerId, mode, e.clientY)
+    begin(mode, e.clientY)
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* synthetic */ }
   }
 
   const moveBy = (e: ReactPointerEvent<HTMLElement>) => {
-    if (pending.current) {
-      if (Math.abs(e.clientY - pending.current.y) > SLOP) cancelPending()
-      return
-    }
+    if (e.pointerType === 'touch') return
     const d = drag.current
     if (!d) return
     if (Math.abs(e.clientY - d.y) > SLOP) d.moved = true
     if (!d.moved) return
-    if (e.cancelable) e.preventDefault()
     const minutes = d.base + (e.clientY - d.y) / pxPerMinute
     if (d.mode === 'move') onDrag(e.clientX, e.clientY, minutes)
     else onResize(minutes)
   }
 
   const end = (e: ReactPointerEvent<HTMLElement>) => {
-    const wasPending = !!pending.current
-    cancelPending()
+    if (e.pointerType === 'touch') return
     const d = drag.current
     drag.current = null
     if (held) setHeld(false)
@@ -125,8 +188,7 @@ export function Block({
       e.currentTarget.releasePointerCapture(e.pointerId)
     }
     if (d?.mode === 'move' && d.moved) { onDragEnd(); return }
-    // Nothing moved and no long press landed: that was a tap.
-    if (wasPending || (d && !d.moved)) onOpen()
+    if (d && !d.moved) onOpen()
   }
 
   const roomy = height >= 44
@@ -143,10 +205,14 @@ export function Block({
       role="button"
       aria-label={`${item.name || str.activity} ${fmtSpan(item)}`}
       title={str.move}
+      ref={node}
       onPointerDown={(e) => start(e, 'move')}
       onPointerMove={moveBy}
       onPointerUp={end}
       onPointerCancel={end}
+      onTouchStart={(e) => touchStart(e, 'move')}
+      onTouchEnd={touchEnd}
+      onTouchCancel={touchEnd}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); return }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
@@ -187,6 +253,8 @@ export function Block({
         onPointerMove={(e) => { e.stopPropagation(); moveBy(e) }}
         onPointerUp={(e) => { e.stopPropagation(); end(e) }}
         onPointerCancel={end}
+        onTouchStart={(e) => { e.stopPropagation(); touchStart(e, 'resize') }}
+        onTouchEnd={(e) => { e.stopPropagation(); touchEnd(e) }}
         className="absolute inset-x-0 bottom-0 h-[7px] cursor-ns-resize [@media(pointer:coarse)]:h-[16px]"
       />
     </div>

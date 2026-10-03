@@ -229,9 +229,20 @@ export function Sheet({
                   if (el) columns.current.set(day, el)
                   else columns.current.delete(day)
                 }}
-                className="relative rounded-b-lg p-1"
+                className="rounded-b-lg px-1.5"
                 style={{ height: height + 8, background: DAY_TINT[day].solid }}
               >
+                {/*
+                  An inner box, so the padding actually bites. A block is
+                  absolutely positioned, and a percentage on one resolves
+                  against the PADDING box of its containing block — so `p-1` on
+                  the column moved nothing and the white cards ran edge to
+                  edge. This box is the containing block, and the day's colour
+                  shows down both sides like a frame, which is what lets the
+                  rounded corners read as cards sitting ON the column rather
+                  than as holes cut out of it.
+                */}
+                <div className="relative size-full">
                 {layoutDay(items).map(({ item, col, cols: n }) => (
                   <Block
                     key={item.id}
@@ -255,6 +266,7 @@ export function Sheet({
                     onResize={(end) => onResize(day, item.id, end)}
                   />
                 ))}
+                </div>
               </div>
             )
           })}

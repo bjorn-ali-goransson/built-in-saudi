@@ -213,7 +213,9 @@ export async function schedulePdf(
   days.forEach((day, i) => {
     const x = daysLeft + (colW + gap) * i
     const tint = DAY_TINT[day]
-    const pad = 1 * px
+    // The same frame the screen shows: the day's colour down both sides of
+    // every card, proportional to the column so the two agree.
+    const pad = 1.6 * px
 
     // The column is the day's solid colour, and that is the only fill it has:
     // no border, no alternating bands, no hour rules. The white cards on it
