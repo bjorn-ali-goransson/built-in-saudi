@@ -19,6 +19,20 @@ const PX = 26
 /** How often the axis is labelled, in minutes. */
 const LABEL_EVERY = 30
 
+/**
+ * The day colour showing around a lesson, in pixels — on ALL FOUR sides.
+ *
+ * It was 10px at the sides and 4 at the top, which reads as a mistake rather
+ * than as a frame. Because it is the same number in two places that must
+ * agree — the inset of the day column and the offset of the axis labels
+ * beside it — it is a constant rather than a utility class: the lessons and
+ * the times they are read against cannot be allowed to drift apart.
+ */
+const PAD = 10
+
+/** The gap left under a lesson so two in a row do not touch. */
+const GUTTER = 4
+
 export interface SheetStrings extends BlockStrings {
   time: string
   addTo: (day: string) => string
@@ -203,7 +217,7 @@ export function Sheet({
             </h3>
           ))}
 
-          <div className="relative" style={{ height }} data-testid="as-axis">
+          <div className="relative" style={{ height: height + PAD * 2 }} data-testid="as-axis">
             {marks.map((t) => (
               <div
                 key={t}
@@ -211,7 +225,7 @@ export function Sheet({
                 dir="ltr"
                 className={`absolute inset-x-0 -translate-y-1/2 pe-1 text-end text-[0.7rem] leading-none
                   ${t % 60 === 0 ? 'font-semibold text-ink-soft' : 'text-ink-faint/80'}`}
-                style={{ top: y(t) }}
+                style={{ top: y(t) + PAD }}
               >
                 {fmt(t)}
               </div>
@@ -229,8 +243,8 @@ export function Sheet({
                   if (el) columns.current.set(day, el)
                   else columns.current.delete(day)
                 }}
-                className="rounded-b-lg px-2.5"
-                style={{ height: height + 8, background: DAY_TINT[day].solid }}
+                className="rounded-b-lg"
+                style={{ height: height + PAD * 2, padding: PAD, background: DAY_TINT[day].solid }}
               >
                 {/*
                   An inner box, so the padding actually bites. A block is
@@ -244,15 +258,17 @@ export function Sheet({
 
                   10px rather than the 6 it shipped with: at 6 the frame was
                   there and was reported as missing, which for something whose
-                  only job is to be seen is the same as not being there.
+                  only job is to be seen is the same as not being there. The
+                  axis labels beside it carry the same offset, so a lesson
+                  still lines up with the time it starts at.
                 */}
                 <div className="relative size-full">
                 {layoutDay(items).map(({ item, col, cols: n }) => (
                   <Block
                     key={item.id}
                     item={item}
-                    top={y(item.start) + 4}
-                    height={Math.max(PX, ((item.end - item.start) / SNAP) * PX) - 3}
+                    top={y(item.start)}
+                    height={Math.max(PX, ((item.end - item.start) / SNAP) * PX) - GUTTER}
                     left={(col / n) * 100}
                     width={100 / n}
                     mem={mem}

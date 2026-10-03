@@ -172,8 +172,15 @@ export function Block({
       if (d.mode === 'move' && d.moved) onDragEnd()
       return
     }
-    // A tap: down and up again before the press ever landed.
-    if (wasPending) onOpen()
+    // A tap: down and up again before the press ever landed. The compatibility
+    // CLICK is suppressed with it — the tap is fully handled here, and letting
+    // the browser synthesise one lands it on whatever `onOpen` has just put on
+    // the screen. That is not hypothetical: it opened the drawer and the same
+    // click immediately closed it again on the backdrop.
+    if (wasPending) {
+      if (e.cancelable) e.preventDefault()
+      onOpen()
+    }
   }
 
   /**

@@ -62,6 +62,7 @@ function starter(locale: 'en' | 'ar'): Omit<Schedule, 'id' | 'updated'> {
     from: t(7, 0),
     to: t(11, 15),
     items,
+    teachers: {},
     art: true,
   }
 }

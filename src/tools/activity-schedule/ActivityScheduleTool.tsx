@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
-import { Button, Check, Field, Input, Panel, Stack } from '../../components/ui'
-import { CogIcon, KebabIcon } from '../../components/icons'
+import { Button, Check, Input, Panel, Stack } from '../../components/ui'
+import { CogIcon, DownloadIcon, KebabIcon } from '../../components/icons'
 
 /**
  * A quiet icon affordance. No border and no fill: the one filled button in
@@ -16,9 +16,10 @@ import { Drawer, type Editing } from './Drawer'
 import { STR } from './strings'
 import { iconFor, loadIconMemory, rememberIcon, type IconMemory } from './icons'
 import {
-  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fitDay, fmt, isBlank, itemsOn,
-  moveAcross, newId, nextSlot, parseTime, readShareHash, reorderDay, sequence,
-  setDuration, shareLink, snap, troubles, type DayKey, type Item, type Schedule,
+  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, isBlank, itemsOn,
+  moveAcross, newId, nextSlot, readShareHash, reorderDay, sequence, subjectsOf,
+  teacherSheet, withAxis,
+  setDuration, shareLink, troubles, type DayKey, type Item, type Schedule,
 } from './schedule'
 import {
   deleteOne, loadAll, loadDraft, saveDraft, saveOne, setCurrentId, vocabulary,
@@ -31,12 +32,16 @@ export default function ActivityScheduleTool() {
   const l = locale === 'ar' ? 'ar' : 'en'
   const s = STR[l]
 
-  const [schedule, setSchedule] = useState<Schedule>(() => loadDraft() ?? emptySchedule(l))
-  const [fromLink, setFromLink] = useState(false)
+  const [raw, setSchedule] = useState<Schedule>(() => loadDraft() ?? emptySchedule(l))
+  /**
+   * The sheet everything downstream reads: the activities, plus the axis they
+   * imply. Derived in ONE place rather than maintained at every edit, which is
+   * how a start time and the activities under it come to disagree.
+   */
+  const schedule = useMemo(() => withAxis(raw), [raw])
   const [saved, setSaved] = useState<Schedule[]>(() => loadAll())
   const [mem, setMem] = useState<IconMemory>(() => loadIconMemory())
   const [busy, setBusy] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [qr, setQr] = useState<QrPlan | null>(null)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
@@ -53,7 +58,7 @@ export default function ActivityScheduleTool() {
     let live = true
     const read = () => {
       readShareHash(window.location.hash, l).then((shared) => {
-        if (live && shared) { setSchedule(shared); setFromLink(true) }
+        if (live && shared) { setSchedule(shared) }
       })
     }
     read()
@@ -62,7 +67,7 @@ export default function ActivityScheduleTool() {
   }, [l])
 
   useEffect(() => { saveDraft(schedule) }, [schedule])
-  useEffect(() => { setCopied(false); setQr(null) }, [schedule])
+  useEffect(() => { setQr(null) }, [schedule])
 
   const suggestions = useMemo(() => vocabulary(saved, schedule), [saved, schedule])
   const problems = useMemo(() => troubles(schedule), [schedule])
@@ -164,7 +169,7 @@ export default function ActivityScheduleTool() {
   const onAdd = useCallback((day: DayKey) => {
     const id = newId()
     setSchedule((prev) => {
-      const slot = nextSlot(prev, day)
+      const slot = nextSlot(withAxis(prev), day)
       const start = clamp(slot.start, prev.from, Math.max(prev.from, prev.to - MIN_LEN))
       const item: Item = {
         id, name: '', icon: '',
@@ -192,20 +197,6 @@ export default function ActivityScheduleTool() {
     })
   }, [])
 
-  /** Moving the axis must not strand a day outside it. */
-  const setBounds = (which: 'from' | 'to', raw: string) => {
-    const minutes = parseTime(raw)
-    if (minutes === null) return
-    setSchedule((prev) => {
-      const from = which === 'from' ? snap(minutes) : prev.from
-      const to = which === 'to' ? snap(minutes) : prev.to
-      if (to - from < 60) return prev
-      const items: Schedule['items'] = {}
-      for (const day of prev.days) items[day] = fitDay(itemsOn(prev, day), from, to)
-      return { ...prev, from, to, items }
-    })
-  }
-
   const onText = (value: string) => {
     if (editing?.kind !== 'text') return
     setSchedule((p) => ({ ...p, [editing.field]: value }))
@@ -214,30 +205,36 @@ export default function ActivityScheduleTool() {
   function open(x: Schedule) {
     setSchedule(x)
     setCurrentId(x.id)
-    setFromLink(false)
     setEditing(null)
     if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
   }
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopied(true)
-    } catch { /* the link is still in the QR either way */ }
-    const { planQr } = await import('./qr')
-    setQr(planQr(link))
-  }
+  const fileName = (title: string, who?: string) =>
+    `${[title || 'schedule', who].filter(Boolean).join('-').replace(/[^\w؀-ۿ-]+/g, '-').slice(0, 60)}.pdf`
 
-  async function download() {
+  /**
+   * Print a sheet. The whole schedule by default, or one teacher's own.
+   *
+   * A teacher's copy gets its OWN link in its own QR, so scanning it opens
+   * that sheet rather than the full week — the code on a page should go where
+   * the page says it goes.
+   */
+  async function download(who?: string) {
     setBusy(true)
     try {
+      const sheet = who ? teacherSheet(schedule, who) : schedule
+      const href = who
+        ? await shareLink(sheet, window.location.origin, window.location.pathname)
+        : link
       const { schedulePdf } = await import('./draw')
-      const { blob, qr: plan } = await schedulePdf(schedule, l, link, { scanToEdit: s.scanToEdit })
-      setQr(plan)
+      const { blob, qr: plan } = await schedulePdf(
+        sheet, l, href, { scanToEdit: s.scanToEdit }, { plain: !!who },
+      )
+      if (!who) setQr(plan)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${(schedule.title || 'schedule').replace(/[^\w؀-ۿ-]+/g, '-').slice(0, 40)}.pdf`
+      a.download = fileName(schedule.title, who)
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } finally { setBusy(false) }
@@ -249,20 +246,27 @@ export default function ActivityScheduleTool() {
     editGroup: s.groupLabel, hideArt: s.hideArt, untitled: s.untitled,
   }
 
+  const blank = isBlank(schedule)
+  const subjects = useMemo(() => subjectsOf(schedule), [schedule])
   const textValue = editing?.kind === 'text' ? String(schedule[editing.field] ?? '') : ''
 
   return (
     <Stack data-testid="activity-schedule">
-      {/* Somebody who followed a QR code is looking at their own schedule.
-          They do not need to be told what this is, or that they followed a
-          link — they were there. */}
-      {!fromLink && <p data-testid="as-intro" className="text-ink-faint">{s.intro}</p>}
+      {/* The blurb belongs to an EMPTY sheet and to nothing else. Hiding it
+          only for a link was half the rule and missed the commonest case:
+          open a shared sheet, come back later without the hash, and the draft
+          loads with the explanation back on top of it. Once there is a
+          schedule on screen — from a link, a starter, a draft or your own
+          morning's work — a paragraph describing the tool is just something
+          between the reader and the document. */}
+      {blank && <p data-testid="as-intro" className="text-ink-faint">{s.intro}</p>}
 
-      {/* One row: two quiet icon affordances and the one action worth
-          shouting about. A cog holds SETTINGS — things that change how the
-          sheet is shaped — and the kebab holds DOCUMENTS and sharing, which
-          are acts rather than settings. They were one "⋯ Settings" button
-          holding both, which is why saving a schedule lived under a cog. */}
+      {/* Two quiet icon affordances, and nothing else above the sheet. A cog
+          holds SETTINGS — the things that change how the sheet is shaped —
+          and the kebab holds the DOCUMENT. They were one "⋯ Settings" button
+          holding both, which is why saving a schedule lived under a cog. The
+          export is not here: it is the LAST thing you do, so it is at the
+          end, under the thing it prints. */}
       <div className="flex items-center gap-1.5">
         <button
           type="button"
@@ -284,9 +288,6 @@ export default function ActivityScheduleTool() {
         >
           <KebabIcon className="size-5" />
         </button>
-        <Button variant="primary" type="button" data-testid="as-download" disabled={busy} onClick={download}>
-          {busy ? s.working : s.download}
-        </Button>
       </div>
 
       {problems.length > 0 && (
@@ -310,7 +311,7 @@ export default function ActivityScheduleTool() {
         onCopyDay={onCopyDay}
       />
 
-      {isBlank(schedule) && (
+      {blank && (
         <div data-testid="as-empty" className="grid gap-2">
           <p className="text-sm text-ink-faint">{s.empty}</p>
           <p className="text-sm text-ink-faint">{s.starters}</p>
@@ -324,7 +325,6 @@ export default function ActivityScheduleTool() {
                   const made = sampleSchedule(x.id, l)
                   if (!made) return
                   setSchedule(made)
-                  setFromLink(false)
                   if (window.location.hash) {
                     window.history.replaceState(null, '', window.location.pathname)
                   }
@@ -344,6 +344,56 @@ export default function ActivityScheduleTool() {
           </p>
         </Panel>
       )}
+
+      {subjects.length > 0 && (
+        <div data-testid="as-teachers" className="grid gap-2">
+          <div className="text-[0.9rem] font-semibold text-ink">{s.teachers}</div>
+          <p className="text-sm text-ink-faint">{s.teacherHint}</p>
+          <ul className="grid gap-1.5">
+            {subjects.map((name, i) => {
+              const who = (schedule.teachers?.[name] ?? '').trim()
+              return (
+                <li key={name} data-subject={name} className="flex items-center gap-2">
+                  <span className="w-[8rem] shrink-0 truncate text-sm text-ink font-ar">{name}</span>
+                  <Input
+                    value={schedule.teachers?.[name] ?? ''}
+                    placeholder={s.teacherName}
+                    data-testid={`as-teacher-${i}`}
+                    className="font-ar"
+                    onChange={(e) => setSchedule((p) => ({
+                      ...p,
+                      teachers: { ...(p.teachers ?? {}), [name]: e.target.value },
+                    }))}
+                  />
+                  {/* Disabled until somebody is named, because the sheet is
+                      grouped BY the name — with none there is no teacher to
+                      print and nothing to call the file. */}
+                  <button
+                    type="button"
+                    data-testid={`as-teacher-pdf-${i}`}
+                    title={who ? s.teacherPdf(who) : s.teacherHint}
+                    aria-label={who ? s.teacherPdf(who) : s.teacherHint}
+                    disabled={!who || busy}
+                    onClick={() => download(who)}
+                    className={`${ICON_BTN} disabled:cursor-not-allowed disabled:opacity-35`}
+                  >
+                    <DownloadIcon className="size-4" />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* At the END, because printing is what you do once the sheet is right.
+          It is the only filled button in the tool for the same reason: it is
+          the only control that produces a file. */}
+      <div>
+        <Button variant="primary" type="button" data-testid="as-download" disabled={busy} onClick={() => download()}>
+          {busy ? s.working : s.download}
+        </Button>
+      </div>
 
       {editing && (
         <Drawer
@@ -372,17 +422,13 @@ export default function ActivityScheduleTool() {
             {editing.kind === 'menu' ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" data-testid="as-share" onClick={copyLink}>
-                    {copied ? s.copied : s.share}
-                  </Button>
                   <Button type="button" data-testid="as-save"
-                    onClick={() => { setSaved(saveOne(schedule)); setCurrentId(schedule.id); setFromLink(false) }}>
+                    onClick={() => { setSaved(saveOne(schedule)); setCurrentId(schedule.id) }}>
                     {s.save}
                   </Button>
                   <Button type="button" data-testid="as-new"
                     onClick={() => {
                       setSchedule(emptySchedule(l))
-                      setFromLink(false)
                       setEditing(null)
                       if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
                     }}>
@@ -429,16 +475,6 @@ export default function ActivityScheduleTool() {
                 </Button>
               </div>
             )}
-            <div className="flex gap-3">
-              <Field label={s.dayStart} className="w-[7rem]">
-                <Input defaultValue={fmt(schedule.from)} dir="ltr" data-testid="as-from"
-                  key={`from-${schedule.from}`} onBlur={(e) => setBounds('from', e.target.value)} />
-              </Field>
-              <Field label={s.dayEnd} className="w-[7rem]">
-                <Input defaultValue={fmt(schedule.to)} dir="ltr" data-testid="as-to"
-                  key={`to-${schedule.to}`} onBlur={(e) => setBounds('to', e.target.value)} />
-              </Field>
-            </div>
             </>
             )}
           </div>

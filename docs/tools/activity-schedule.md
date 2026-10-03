@@ -51,9 +51,19 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 - [x] The drawer sits above the on-screen keyboard, measured from
       `visualViewport` — a fixed element is laid out against the layout
       viewport, which the keyboard does not shrink.
-- [x] One toolbar row: a COG for settings, a KEBAB for the document (share,
-      save, start new, saved list), and the PDF export as the only filled
-      button.
+- [x] One toolbar row above the sheet: a COG for settings and a KEBAB for the
+      document (save, start new, saved list). The PDF export is at the END,
+      under the sheet it prints, and is the only filled button.
+- [x] The axis is DERIVED from the activities — earliest start to latest end,
+      rounded out to the half hour. Nobody types a day start or a day end.
+- [x] No share button: the PDF's QR carries the whole schedule, and is a link
+      annotation as well as a picture.
+- [x] A list of subjects under the sheet takes a teacher per subject, and
+      prints that teacher's own week — grouped by NAME, so one teacher with two
+      subjects gets one sheet with both. Plain paper, no illustrations, and the
+      whole week's hours kept so the rest shows as gaps.
+- [x] The drawer closes on the dimmed backdrop as well as the X.
+- [x] The blurb shows only while the sheet is empty.
 - [x] **No borders anywhere.** The column is the day's solid colour and each
       lesson is a white card on it, with the colour showing down both sides as a
       frame so the rounded corners blend into it.

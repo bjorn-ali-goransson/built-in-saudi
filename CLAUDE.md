@@ -2452,6 +2452,98 @@ is a filled button, because it is the only control on the row that produces a
 file; the two icon buttons carry no chrome, and the case reads the painted
 background rather than asserting a class.
 
+### The axis derives itself, and one teacher's copy of it
+
+**The day no longer has a start and end somebody types.** It was two text
+fields in the settings — a form asking for something the sheet already knows,
+and wrong in both directions: set it too narrow and activities fell outside the
+axis, too wide and the sheet printed a band of empty morning. `axisOf` takes
+the earliest start and the latest end, rounds OUT to the half hour so the axis
+begins on a time worth printing, and keeps a floor of one hour so a single
+quarter-hour activity still has something to be read against. An empty sheet
+keeps a plausible school morning, because there is nothing to derive from and a
+zero-height column is not a thing to put an "add" button on.
+
+**Two things went with it, and both were the repo's own rule rather than
+tidying.** `fitDay` existed to pull a day back inside a typed window and now
+has no caller, so it is deleted; and `troubleFor`'s `outside` branch became
+genuinely unreachable — the axis is the min and max, so nothing can be outside
+it — which is the QR-density case, not the overlap case. An overlap can still
+arrive from an old link, so that check stays.
+
+**And the verification found a real bug the tests had not.** Injecting "let the
+teacher's sheet derive its own axis" left the case GREEN, which this file says
+means a vacuous test or the wrong target. It was neither: the FIXTURE was
+wrong. `nextSlot` clamped a new activity inside `s.to` — correct while the axis
+was a typed window, and a bug the moment it started deriving itself, because
+`s.to` is now exactly the end of the last activity. So every third activity was
+clamped back on top of the second, the three test subjects overlapped, and the
+full axis happened to equal the teacher's. **A green injection is a question
+about the fixture as well as about the guard.** The day grows to fit what is on
+it now.
+
+**A teacher's own sheet** (`teacherSheet`): the subjects list under the sheet
+takes a name per subject, and the small download beside it prints that person's
+week. Four decisions:
+
+- **It is grouped by the NAME, not by the row.** The teacher is typed per
+  subject, so the same teacher is typed more than once — and somebody teaching
+  Qurʾān and English must get ONE sheet with both on it, from either row.
+  `sameTeacher` folds case and spacing, because "Marwa " and "marwa" are one
+  person. Verified to fail by grouping on the raw string.
+- **The AXIS is kept rather than re-derived**, which is the decision that makes
+  the sheet useful: a teacher reads their morning against everybody else's, so
+  the hours they are not teaching have to show as gaps. It is deliberately the
+  one place the derived axis is overridden, and the case asserts it on the
+  PAYLOAD rather than on the screen — the editable copy re-derives, because
+  that copy is a schedule in its own right.
+- **Plain paper**: greys instead of the day colours, and no illustrations. It
+  is a working document rather than the chart on the wall — photocopied, pinned
+  behind a desk, written on. The structure survives the loss because the
+  contrast that carries it is between the column and the white card, not
+  between the days.
+- **No name, no download.** The sheet is grouped by the name, so with none
+  there is no teacher to print and nothing to call the file.
+
+**There is no share button and no "create a link".** The PDF already carries
+the whole schedule as a QR — which is now **a link annotation as well as a
+picture**, because a printed sheet is read on a screen at least as often as it
+is photographed, and there a camera is the wrong tool. A second control for the
+same thing is a second place for the two to disagree. The "the link is the
+schedule, and opening it fetches nothing" assertion moved onto the QR case,
+which is the one surface that still hands a link out.
+
+**The blurb belongs to an EMPTY sheet and to nothing else.** Hiding it only for
+a link was half the rule and missed the commonest case: open a shared sheet,
+come back later without the hash, and the draft loads with the explanation back
+on top of it. `fromLink` had no other reader and is gone.
+
+**The frame is the same on all four sides, and the axis carries the same
+offset.** It was 10px at the sides and 4 at the top, which reads as a mistake
+rather than as a frame. The number is a constant rather than a utility class
+precisely because it is the same number in two places that must agree — the
+inset of the day column and the offset of the labels beside it — and a lesson
+drifting from the time it starts at is the one thing this layout exists to get
+right. Both are pinned.
+
+**The backdrop closes the drawer, and fixing that broke tapping.** The dim is a
+CHILD painted over the container, so the container's `e.target ===
+e.currentTarget` check never fired for it — the one part of the screen that
+most obviously means "I am done here" was the one part that swallowed the
+click. Giving it its own handler then broke tap-to-open on touch, because the
+browser synthesises a compatibility CLICK after `touchend` and by then the
+drawer it had just opened was under the pointer. The tap is fully handled in
+the touch path, so it now suppresses that click. **Any handler that opens
+something on `touchend` has to suppress the click, or it hands the click to
+whatever it just put on the screen.**
+
+**And `migrate` is the boundary where that field arrives untrusted.** It
+returns `{ ...v }` for a current-shape sheet, so a schedule saved before
+`teachers` existed came back without it and the subject list indexed into an
+undefined. It reads the field now rather than spreading it. The e2e caught it
+immediately — as four unrelated-looking failures, because a throw in render
+takes the whole sheet with it.
+
 ### The QR was a picture of a QR, twice, and only decoding it found out
 
 Worth recording in full, because both failures produce a code that looks

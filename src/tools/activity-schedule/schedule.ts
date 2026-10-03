@@ -70,6 +70,15 @@ export interface Schedule {
   from: number
   to: number
   items: Partial<Record<DayKey, Item[]>>
+  /**
+   * Who teaches each SUBJECT, keyed by the activity's name.
+   *
+   * By name rather than per activity, because «قرآن» on Sunday and «قرآن» on
+   * Tuesday is one subject taught by one person — recording it per block
+   * would be the same fact written five times, which is exactly the drift
+   * the single time axis exists to make impossible.
+   */
+  teachers: Record<string, string>
   /** Draw the header and footer illustrations on the sheet. */
   art: boolean
   updated: number
@@ -91,6 +100,7 @@ export function emptySchedule(locale: 'en' | 'ar'): Schedule {
     from: 7 * 60,
     to: 12 * 60,
     items: {},
+    teachers: {},
     art: true,
     updated: Date.now(),
   }
@@ -120,18 +130,6 @@ export const fmt = (minutes: number): string => {
 
 export const fmtSpan = (i: { start: number; end: number }) => `${fmt(i.start)} – ${fmt(i.end)}`
 
-const TIME = /^\s*(\d{1,2})\s*[:.]\s*(\d{2})\s*$/
-
-/** Read `7:30` back off an input. Returns null rather than guessing. */
-export function parseTime(raw: string): number | null {
-  const latin = raw.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-  const m = TIME.exec(latin)
-  if (!m) return null
-  const h = Number(m[1])
-  const min = Number(m[2])
-  if (h > 23 || min > 59) return null
-  return h * 60 + min
-}
 
 // --- the day as a sequence --------------------------------------------------
 //
@@ -256,30 +254,58 @@ export function setDuration(items: Item[], id: string, end: number, axisTo: numb
   return relayout(resized, gapsOf(seq), seq[0].start)
 }
 
+
+/** Round down / up to the label grid, so the axis starts on a readable time. */
+const GRID = 30
+
 /**
- * Keep a day inside the axis after the axis itself has moved.
+ * The axis is DERIVED: it is whatever the activities occupy, not a window
+ * somebody typed.
  *
- * Clamping each activity on its own is what a free-positioned model would do,
- * and here it would shove several onto the same minutes — the one thing the
- * sequence makes impossible everywhere else. So the day is re-laid as a whole:
- * pushed down if the morning now starts later, pulled up if the evening no
- * longer fits.
+ * It used to be two text fields in the settings — which is a form asking for
+ * something the sheet already knows, and getting it wrong in both directions:
+ * set it too narrow and activities fell outside the axis, too wide and the
+ * sheet printed a band of empty morning. Deriving it makes both states
+ * unrepresentable.
+ *
+ * It rounds OUT to the half hour so the axis begins and ends on a time worth
+ * printing, and keeps a floor of one hour so a sheet with a single
+ * quarter-hour activity still has an axis to read it against.
  */
-export function fitDay(items: Item[], from: number, to: number): Item[] {
-  const seq = sequence(items)
-  if (!seq.length) return items
-  const gaps = gapsOf(seq)
-  const start = Math.max(from, seq[0].start)
-  const laid = relayout(seq, gaps, start)
-  const over = laid[laid.length - 1].end - to
-  return over > 0 ? relayout(seq, gaps, Math.max(from, start - over)) : laid
+export function axisOf(s: Schedule): { from: number; to: number } {
+  let lo = Infinity
+  let hi = -Infinity
+  for (const day of s.days) {
+    for (const it of itemsOn(s, day)) {
+      if (it.start < lo) lo = it.start
+      if (it.end > hi) hi = it.end
+    }
+  }
+  // An empty sheet has nothing to derive from, so it keeps a plausible
+  // school morning — otherwise the grid would have no height and the first
+  // "add" button would be sitting on a zero-pixel column.
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return { from: 7 * 60, to: 12 * 60 }
+  const from = Math.floor(lo / GRID) * GRID
+  return { from, to: Math.max(Math.ceil(hi / GRID) * GRID, from + 60) }
+}
+
+/** The schedule with its axis brought up to date with its activities. */
+export function withAxis(s: Schedule): Schedule {
+  const a = axisOf(s)
+  return a.from === s.from && a.to === s.to ? s : { ...s, ...a }
 }
 
 /** Where a new activity should go: after the last one on that day, or the top. */
 export function nextSlot(s: Schedule, day: DayKey): { start: number; end: number } {
+  // Straight after the last activity of that day, and NOT clamped to the
+  // axis. It used to be squeezed inside `s.to`, which was right while the
+  // axis was a window somebody typed and became a bug the moment the axis
+  // started deriving itself: `s.to` is now exactly the end of the last
+  // activity, so every new one was clamped back on top of the one before it.
+  // The day grows to fit what is on it, rather than the other way round.
   const last = itemsOn(s, day).reduce((a, b) => (b.end > a ? b.end : a), s.from)
-  const start = clamp(last, s.from, Math.max(s.from, s.to - 30))
-  return { start, end: Math.min(start + 30, s.to) }
+  const start = Math.max(s.from, last)
+  return { start, end: start + 30 }
 }
 
 // --- what is wrong with the day ---------------------------------------------
@@ -288,7 +314,6 @@ export type Trouble =
   /** Two activities on the same day claim the same minutes. */
   | { kind: 'overlap'; with: string }
   /** It starts before, or ends after, the axis the sheet declares. */
-  | { kind: 'outside' }
 
 /**
  * Overlaps, per day.
@@ -303,7 +328,6 @@ export type Trouble =
  * site refuses.
  */
 export function troubleFor(s: Schedule, day: DayKey, it: Item): Trouble | null {
-  if (it.start < s.from || it.end > s.to) return { kind: 'outside' }
   for (const other of itemsOn(s, day)) {
     if (other.id === it.id) continue
     if (it.start < other.end && other.start < it.end) {
@@ -425,8 +449,76 @@ interface Compact {
   v: Array<[string, string]>
   /** One per activity: [dayIndexIntoD, vocabIndex, start, end]. */
   i: Array<[number, number, number, number]>
+  /** Teacher per subject name. Absent when nobody has been named. */
+  h?: Record<string, string>
   /** 1 when the illustrations are on. */
   a: number
+}
+
+  /** Whatever came back from a link, reduced to the shape this field promises. */
+function readTeachers(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'string' && v.trim()) out[k] = v.trim()
+  }
+  return out
+}
+
+/** Every distinct activity name on the sheet, in the order it first appears. */
+export function subjectsOf(s: Schedule): string[] {
+  const seen: string[] = []
+  for (const day of s.days) {
+    for (const it of itemsOn(s, day)) {
+      const name = it.name.trim()
+      if (name && !seen.includes(name)) seen.push(name)
+    }
+  }
+  return seen
+}
+
+/**
+ * Two spellings of one person are one person.
+ *
+ * The teacher is typed per subject, so the SAME teacher is typed more than
+ * once — and "Marwa " and "marwa" have to group, or a teacher who teaches two
+ * subjects gets two half sheets, which is the thing this feature exists to
+ * avoid.
+ */
+export const sameTeacher = (a: string, b: string): boolean =>
+  a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase()
+
+/**
+ * One teacher's week: their own activities, in the whole schedule's shape.
+ *
+ * The AXIS is kept rather than re-derived, which is the decision that makes
+ * the sheet useful — a teacher reads their morning against everybody else's,
+ * so the hours they are not teaching have to be visible as gaps rather than
+ * squeezed out. It is deliberately the one place the derived axis is
+ * overridden.
+ */
+export function teacherSheet(s: Schedule, teacher: string): Schedule {
+  const mine = subjectsOf(s).filter((n) => sameTeacher(s.teachers?.[n] ?? '', teacher))
+  const items: Partial<Record<DayKey, Item[]>> = {}
+  for (const day of s.days) {
+    items[day] = itemsOn(s, day).filter((it) => mine.includes(it.name.trim()))
+  }
+  const who = teacher.trim()
+  return {
+    ...s,
+    id: newId(),
+    // Whose sheet this is belongs on the sheet. The note is the subtitle
+    // slot, and on a personal copy that is the most useful thing it can say.
+    note: s.note ? `${s.note} — ${who}` : who,
+    items,
+    // Kept, not recomputed: see above.
+    from: s.from,
+    to: s.to,
+    // Plain paper. A teacher's copy is a working document, not the chart on
+    // the wall, and it is asked to be black and white.
+    art: false,
+    updated: Date.now(),
+  }
 }
 
 export async function encodeSchedule(s: Schedule): Promise<string> {
@@ -454,6 +546,9 @@ export async function encodeSchedule(s: Schedule): Promise<string> {
     d: s.days.map((d) => WEEK.indexOf(d)),
     f: s.from, e: s.to,
     v: vocab, i: items, a: s.art ? 1 : 0,
+    // Omitted entirely when nobody has been named, so a sheet without
+    // teachers costs the QR nothing.
+    h: Object.keys(s.teachers ?? {}).length ? s.teachers : undefined,
   }
   return toBase64Url(await deflate(new TextEncoder().encode(JSON.stringify(c))))
 }
@@ -496,6 +591,7 @@ export async function decodeSchedule(raw: string): Promise<Schedule | null> {
       from: Number(parsed.f) || 7 * 60,
       to: Number(parsed.e) || 12 * 60,
       items,
+      teachers: readTeachers(parsed.h),
       art: parsed.a !== 0,
       updated: Date.now(),
     }
@@ -573,6 +669,7 @@ function fromLegacy(c: Compact & LegacyCompact, days: DayKey[]): Schedule {
     from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
     to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
     items,
+    teachers: {},
     art: c.a !== 0,
     updated: Date.now(),
   }
@@ -612,6 +709,7 @@ export function migrate(raw: unknown): Schedule | null {
       from: Number.isFinite(lo) ? snap(lo) : 7 * 60,
       to: Number.isFinite(hi) ? snap(hi) : 12 * 60,
       items,
+      teachers: {},
       art: v.art !== false,
       updated: Number(v.updated) || Date.now(),
     }
@@ -624,7 +722,15 @@ export function migrate(raw: unknown): Schedule | null {
   for (const day of v.days as DayKey[]) {
     items[day] = (v.items[day] ?? []).map((it) => ({ ...it, icon: retireIcon(it.icon) }))
   }
-  return { ...v, group: String(v.group ?? ''), items } as Schedule
+  // `teachers` arrives from storage, so it is READ rather than trusted: a
+  // sheet saved before the field existed has none, and the spread would
+  // otherwise hand the UI an undefined to index into.
+  return {
+    ...v,
+    group: String(v.group ?? ''),
+    items,
+    teachers: readTeachers((v as { teachers?: unknown }).teachers),
+  } as Schedule
 }
 
 /**

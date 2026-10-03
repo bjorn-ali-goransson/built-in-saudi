@@ -121,7 +121,16 @@ export function Drawer({
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       {/* Dimmed, but not blacked out: the lesson being edited stays legible. */}
-      <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--ink)_28%,transparent)]" />
+      {/* The backdrop CLOSES, and it has to carry the handler itself. The
+          container's `e.target === e.currentTarget` check never fired for it,
+          because the dim is a child painted over the container — so the one
+          part of the screen that most obviously means "I am done here" was
+          the one part that swallowed the click. */}
+      <div
+        data-testid="as-drawer-backdrop"
+        onClick={onClose}
+        className="absolute inset-0 bg-[color-mix(in_srgb,var(--ink)_28%,transparent)]"
+      />
       <div
         className="relative flex w-full max-w-[34rem] flex-col gap-3 rounded-t-xl bg-[var(--surface)] p-4 shadow-[0_-10px_40px_rgba(18,33,27,0.25)] animate-[fadeUp_0.18s_ease_both]"
         data-testid="as-drawer-panel"

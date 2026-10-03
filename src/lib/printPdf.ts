@@ -31,6 +31,15 @@ export interface Overlay {
   yMm: number
   wMm: number
   hMm: number
+  /**
+   * Make the overlay a link to this address.
+   *
+   * A QR code on a printed sheet is for a phone, and the same sheet is read
+   * on a screen at least as often — where a camera is the wrong tool and
+   * there is nothing to tap. The annotation costs a few bytes and makes the
+   * two readings of the page equivalent.
+   */
+  href?: string
 }
 
 export interface Page {
@@ -66,7 +75,7 @@ export function newPage([wMm, hMm]: [number, number], dpi = 150): Page {
 
 /** Wrap `pages` into a PDF at their true physical size. */
 export async function pagesToPdf(pages: Page[]): Promise<Blob> {
-  const { PDFDocument } = await import('pdf-lib')
+  const { PDFDocument, PDFString } = await import('pdf-lib')
   const doc = await PDFDocument.create()
   for (const p of pages) {
     const png = await doc.embedPng(await toPng(p.canvas))
@@ -74,13 +83,24 @@ export async function pagesToPdf(pages: Page[]): Promise<Blob> {
     page.drawImage(png, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
     for (const o of p.overlays) {
       const img = await doc.embedPng(o.png)
-      page.drawImage(img, {
-        x: o.xMm * MM_TO_PT,
-        // Canvas y runs down from the top; PDF y runs up from the bottom.
-        y: (p.hMm - o.yMm - o.hMm) * MM_TO_PT,
-        width: o.wMm * MM_TO_PT,
-        height: o.hMm * MM_TO_PT,
-      })
+      const x = o.xMm * MM_TO_PT
+      // Canvas y runs down from the top; PDF y runs up from the bottom.
+      const y = (p.hMm - o.yMm - o.hMm) * MM_TO_PT
+      const w = o.wMm * MM_TO_PT
+      const h = o.hMm * MM_TO_PT
+      page.drawImage(img, { x, y, width: w, height: h })
+      if (o.href) {
+        // `Border: [0, 0, 0]` or the reader rings the QR in blue, which is
+        // noise over a code a camera has to read.
+        const annot = doc.context.obj({
+          Type: 'Annot',
+          Subtype: 'Link',
+          Rect: [x, y, x + w, y + h],
+          Border: [0, 0, 0],
+          A: { Type: 'Action', S: 'URI', URI: PDFString.of(o.href) },
+        })
+        page.node.addAnnot(doc.context.register(annot))
+      }
     }
   }
   const bytes = await doc.save()

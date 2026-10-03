@@ -14,7 +14,7 @@ import { A4_LANDSCAPE, newPage, pagesToPdf, toPng } from '../../lib/printPdf'
 import { FOOTER_BAND, FOOTER_URL, HEADER_BAND, HEADER_URL } from './illustrations'
 import { planQr, QUIET, type QrPlan } from './qr'
 import {
-  DAY_LABEL, DAY_TINT, SNAP, columnOrder, fmt, fmtSpan, itemsOn, layoutDay,
+  DAY_LABEL, DAY_TINT, SNAP, columnOrder, fmt, fmtSpan, itemsOn, layoutDay, type DayKey,
   type Schedule,
 } from './schedule'
 
@@ -100,7 +100,21 @@ export interface SheetPdf {
  */
 export async function schedulePdf(
   s: Schedule, locale: 'en' | 'ar', link: string, str: DrawStrings,
+  opts: { plain?: boolean } = {},
 ): Promise<SheetPdf> {
+  /**
+   * A teacher's copy is PLAIN: greys instead of the day colours, and no
+   * illustrations.
+   *
+   * It is a working document rather than the chart on the wall — it gets
+   * photocopied, pinned behind a desk and written on, and a colour laser is
+   * not what any of that happens on. The structure still has to survive the
+   * loss, which it does: the column is a tint and the lesson is white, so the
+   * contrast that carries the layout is between those two and not between the
+   * days.
+   */
+  const tintFor = (day: DayKey) =>
+    opts.plain ? { solid: '#e7e5e0', head: '#d6d3cc' } : DAY_TINT[day]
   const rtl = locale === 'ar'
   const page = newPage(A4_LANDSCAPE)
   const { ctx, px } = page
@@ -212,7 +226,7 @@ export async function schedulePdf(
 
   days.forEach((day, i) => {
     const x = daysLeft + (colW + gap) * i
-    const tint = DAY_TINT[day]
+    const tint = tintFor(day)
     // The same frame the screen shows: the day's colour down both sides of
     // every card, proportional to the column so the two agree.
     const pad = 1.6 * px
@@ -297,6 +311,7 @@ export async function schedulePdf(
     // with jsQR against the composed page, which is the only way to find it.
     page.overlays.push({
       png: await qrPng(qr.matrix),
+      href: link,
       xMm: (cx + pad) / px, yMm: (cy + pad) / px,
       wMm: qrSide / px, hMm: qrSide / px,
     })

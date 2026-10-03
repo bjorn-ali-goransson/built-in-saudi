@@ -26,6 +26,10 @@ export interface Strings {
   move: string
   settings: string
   menu: string
+  teachers: string
+  teacherName: string
+  teacherPdf: (who: string) => string
+  teacherHint: string
   hideArt: string
   longer: string
   shorter: string
@@ -34,12 +38,8 @@ export interface Strings {
   addTo: (day: string) => string
   copyDay: (day: string) => string
   copiedDay: string
-  dayStart: string
-  dayEnd: string
   save: string
   newOne: string
-  share: string
-  copied: string
   download: string
   working: string
   empty: string
@@ -69,6 +69,10 @@ export const STR: Record<'en' | 'ar', Strings> = {
     move: 'Tap to edit. Drag to reorder — the rest of the day moves to make room, and another day will take it. Arrow keys do the same; hold Shift to change the length.',
     settings: 'Settings',
     menu: 'Schedules',
+    teachers: 'Who teaches what',
+    teacherName: 'Teacher',
+    teacherPdf: (who) => `Download ${who}'s own schedule`,
+    teacherHint: 'Name a teacher to get a plain sheet of just their lessons.',
     hideArt: 'Remove the illustrations',
     longer: 'Fifteen minutes longer',
     shorter: 'Fifteen minutes shorter',
@@ -77,12 +81,8 @@ export const STR: Record<'en' | 'ar', Strings> = {
     addTo: (d) => `Add an activity to ${d}`,
     copyDay: (d) => `Copy ${d} to every other day`,
     copiedDay: 'Copied to the rest of the week.',
-    dayStart: 'Day starts',
-    dayEnd: 'Day ends',
     save: 'Save this schedule',
     newOne: 'Start a new one',
-    share: 'Copy the share link',
-    copied: 'Link copied',
     download: 'Download the PDF',
     working: 'Preparing…',
     empty: 'Add an activity to any day with +, then drag it where it belongs.',
@@ -113,6 +113,10 @@ export const STR: Record<'en' | 'ar', Strings> = {
     move: 'انقر للتحرير. واسحب لتغيير ترتيبه — فتتزحزح بقية اليوم لتفسح له، ويستقبله يوم آخر. والأسهم تفعل الشيء نفسه؛ واضغط Shift لتغيير مدته.',
     settings: 'الإعدادات',
     menu: 'الجداول',
+    teachers: 'من يُدرّس ماذا',
+    teacherName: 'المعلّمة',
+    teacherPdf: (who) => `تنزيل جدول ${who}`,
+    teacherHint: 'اكتب اسم المعلّمة لتحصل على ورقة مبسّطة بحصصها وحدها.',
     hideArt: 'أزل الزخارف',
     longer: 'أطول بربع ساعة',
     shorter: 'أقصر بربع ساعة',
@@ -121,12 +125,8 @@ export const STR: Record<'en' | 'ar', Strings> = {
     addTo: (d) => `أضف نشاطًا إلى ${d}`,
     copyDay: (d) => `انسخ ${d} إلى بقية الأيام`,
     copiedDay: 'نُسخ إلى بقية الأسبوع.',
-    dayStart: 'يبدأ اليوم',
-    dayEnd: 'ينتهي اليوم',
     save: 'احفظ هذا الجدول',
     newOne: 'ابدأ جدولًا جديدًا',
-    share: 'انسخ رابط المشاركة',
-    copied: 'تم نسخ الرابط',
     download: 'نزّل ملف PDF',
     working: 'جارٍ التجهيز…',
     empty: 'أضف نشاطًا إلى أي يوم بعلامة +، ثم اسحبه إلى موضعه.',
