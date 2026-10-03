@@ -22,7 +22,6 @@ const INK = '#12211b'
 const TITLE_INK = '#2f4f3e'
 const SOFT = '#40514a'
 const FAINT = '#6b7a72'
-const RULE = '#cfc7b6'
 const PAPER = '#fbf7ef'
 
 const EMOJI = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
@@ -148,9 +147,6 @@ export async function schedulePdf(
   const titleH = 11 * px
   ctx.fillStyle = '#fdf3de'
   roundRect(ctx, (W - titleW) / 2, y, titleW, titleH, 3 * px); ctx.fill()
-  ctx.strokeStyle = '#e4d5b4'
-  ctx.lineWidth = Math.max(1, 0.5 * px)
-  roundRect(ctx, (W - titleW) / 2, y, titleW, titleH, 3 * px); ctx.stroke()
   ctx.fillStyle = TITLE_INK
   ctx.fillText(title, W / 2, y + titleH / 2)
   y += titleH + 2.5 * px
@@ -217,69 +213,59 @@ export async function schedulePdf(
   days.forEach((day, i) => {
     const x = daysLeft + (colW + gap) * i
     const tint = DAY_TINT[day]
+    const pad = 1 * px
 
-    ctx.fillStyle = '#ffffff'
+    // The column is the day's solid colour, and that is the only fill it has:
+    // no border, no alternating bands, no hour rules. The white cards on it
+    // are the structure.
+    ctx.fillStyle = tint.solid
     roundRect(ctx, x, gridTop, colW, headRow + bodyH, 3 * px); ctx.fill()
 
     ctx.save()
     roundRect(ctx, x, gridTop, colW, headRow + bodyH, 3 * px); ctx.clip()
     ctx.fillStyle = tint.head
     ctx.fillRect(x, gridTop, colW, headRow)
-    // Alternating half-hour bands, the way every one of these sheets tints its
-    // rows: on a continuous axis they are what carries a time across five days.
-    let band = 0
-    for (let t = s.from; t < s.to; t += 30, band++) {
-      if (band % 2 === 0) continue
-      ctx.fillStyle = tint.band
-      ctx.fillRect(x, at(t), colW, at(Math.min(t + 30, s.to)) - at(t))
-    }
     ctx.restore()
 
     ctx.fillStyle = TITLE_INK
     ctx.font = `700 ${Math.round(3.8 * px)}px ${font}`
     ctx.fillText(fit(ctx, DAY_LABEL[day][locale], colW - 4 * px), x + colW / 2, gridTop + headRow / 2)
 
-    // The hour lines, under everything.
-    ctx.lineWidth = Math.max(1, 0.25 * px)
-    for (const t of marks) {
-      if (t % 60 !== 0) continue
-      ctx.strokeStyle = tint.edge
-      ctx.beginPath(); ctx.moveTo(x, at(t)); ctx.lineTo(x + colW, at(t)); ctx.stroke()
-    }
-
     for (const { item, col, cols } of layoutDay(itemsOn(s, day))) {
-      const top = at(item.start)
-      const h = Math.max(3.5 * px, (item.end - item.start) * perMinute)
-      const w = (colW - 1 * px) / cols
-      const bx = x + 0.5 * px + w * col
-      const pad = 1.2 * px
+      const top = at(item.start) + 0.6 * px
+      const h = Math.max(3.5 * px, (item.end - item.start) * perMinute) - 0.8 * px
+      const w = (colW - pad * 2) / cols
+      const bx = x + pad + w * col
 
-      ctx.fillStyle = tint.block
-      roundRect(ctx, bx, top, w - 0.5 * px, h - 0.4 * px, 1.8 * px); ctx.fill()
-      ctx.strokeStyle = tint.edge
-      ctx.lineWidth = Math.max(1, 0.3 * px)
-      roundRect(ctx, bx, top, w - 0.5 * px, h - 0.4 * px, 1.8 * px); ctx.stroke()
+      ctx.fillStyle = '#ffffff'
+      roundRect(ctx, bx + 0.3 * px, top, w - 0.6 * px, h, 2 * px); ctx.fill()
 
       const icon = item.icon.trim()
+      const tall = h >= 8 * px
+      const nameY = top + (tall ? h / 2 - 1.6 * px : h / 2)
+
+      // Icon and name read as one line, centred together — the sheet is seen
+      // from across a room, where a name pinned to one edge is harder to find.
+      ctx.font = `600 ${Math.round(3.1 * px)}px ${font}`
+      const name = fit(ctx, item.name, w - pad * 2 - (icon ? 5 * px : 0))
+      const nameW = ctx.measureText(name).width
       const iconW = icon ? 4.4 * px : 0
-      const nameY = top + (h >= 8 * px ? 3 * px : h / 2)
+      const total = nameW + iconW
+      const startX = bx + w / 2 - total / 2
+
       if (icon) {
         ctx.save()
         ctx.direction = 'ltr'
-        ctx.font = `${Math.round(3.4 * px)}px ${EMOJI}`
-        ctx.fillText(icon, rtl ? bx + w - pad - iconW / 2 : bx + pad + iconW / 2, nameY)
+        ctx.textAlign = 'center'
+        ctx.font = `${Math.round(3.3 * px)}px ${EMOJI}`
+        ctx.fillText(icon, rtl ? startX + total - iconW / 2 : startX + iconW / 2, nameY)
         ctx.restore()
       }
-      const textW = w - pad * 2 - iconW
-      const textCx = rtl ? bx + pad + textW / 2 : bx + w - pad - textW / 2
       ctx.fillStyle = INK
-      ctx.font = `${Math.round(3.1 * px)}px ${font}`
-      ctx.fillText(fit(ctx, item.name, textW - 0.5 * px), textCx, nameY)
+      ctx.font = `600 ${Math.round(3.1 * px)}px ${font}`
+      ctx.fillText(name, rtl ? startX + nameW / 2 : startX + iconW + nameW / 2, nameY)
 
-      // The times go IN the block, not only on the axis: a printed sheet is
-      // read across a room, and tracing a block back to a label on the far
-      // side of five columns is exactly what nobody does.
-      if (h >= 8 * px) {
+      if (tall) {
         ctx.save()
         ctx.direction = 'ltr'
         ctx.fillStyle = FAINT
@@ -288,14 +274,6 @@ export async function schedulePdf(
         ctx.restore()
       }
     }
-
-    ctx.strokeStyle = tint.edge
-    ctx.lineWidth = Math.max(1, 0.45 * px)
-    roundRect(ctx, x, gridTop, colW, headRow + bodyH, 3 * px); ctx.stroke()
-    // The head is part of the card, so the line under it is a divider rather
-    // than the top of a second box.
-    ctx.beginPath()
-    ctx.moveTo(x, gridTop + headRow); ctx.lineTo(x + colW, gridTop + headRow); ctx.stroke()
   })
 
   if (qr.ok) {
@@ -310,9 +288,6 @@ export async function schedulePdf(
     const cy = H - cardH - 2 * px
     ctx.fillStyle = '#ffffff'
     roundRect(ctx, cx, cy, cardW, cardH, 2.4 * px); ctx.fill()
-    ctx.strokeStyle = RULE
-    ctx.lineWidth = Math.max(1, 0.25 * px)
-    roundRect(ctx, cx, cy, cardW, cardH, 2.4 * px); ctx.stroke()
 
     // The code goes on as its OWN image, not into the page raster: at 150dpi a
     // module here is 2.5 pixels and a decoder needs about five, so the version

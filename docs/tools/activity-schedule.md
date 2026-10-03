@@ -36,42 +36,36 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 
 - [x] One axis; within a day the activities are a SEQUENCE. Dragging one
       reorders it and the rest of the day closes up behind it, keeping the
-      day's start, each activity's length and the breaks by position — so the
-      day cannot grow a hole, run long, or hold two things at once.
-- [x] Drag to reorder, drag the bottom edge to change the length (everything
-      after it moves out of the way), arrow keys for both — a bare arrow moves
-      one PLACE, Shift changes the length by 15 minutes.
-- [x] On TOUCH it takes a long press (400ms, cancelled by 10px of movement),
-      so a finger can still scroll the sheet. A mouse drags at once.
-- [x] Per-block controls are forced visible on a coarse pointer, and the
-      resize edge grows to 18px there — hover does not exist on a phone.
-- [x] No dice in the palette: these sheets go on the wall of an Islamic school.
-- [x] Overlaps cannot be CREATED any more, but a link made before the sequence
-      existed can carry one: they are still flagged AND packed side by side, so
-      neither activity is hidden under the other, and one reorder tidies it.
-- [x] A gap is deliberately NOT a defect — on a wall chart the break between
-      two lessons is very often simply not written down.
-- [x] Copy one day across the week, because four identical days and one that
-      differs is the ordinary school week.
-- [x] Enter in the name box starts the next activity below it.
-- [x] Shortening the day pulls activities back inside the axis.
-- [x] Icon: remembered by folded name first, guessed from the words second,
-      never guessed over a choice.
-- [x] Activity box opens its suggestions on FOCUS, drawn from every saved sheet.
-- [x] Any number of schedules in `localStorage`; draft survives a reload unsaved.
-- [x] A sheet saved in the PREVIOUS shape (a time in every cell) still opens.
-- [x] Share link = deflated, dictionary-compacted JSON, base64url in the hash.
-- [x] A FICTIONAL starter sheet, reachable by name (`#t=sample`) and offered
-      on an empty sheet. A real class timetable is never shipped: it belongs to
-      the school that wrote it and goes stale through the term. A sheet
-      somebody made travels in `#s=`, which carries its own contents — that is
-      the shareable form, and the one the printed QR points at.
+      day's start, each activity's length and the breaks by position.
+- [x] A drag into another day's column MOVES it there — one edit applied to
+      both days, so the sheet never holds the lesson twice or not at all.
+- [x] On TOUCH it takes a long press (400ms, cancelled by 8px of movement), so
+      a finger can still scroll the sheet. A mouse drags at once.
+- [x] **Nothing is edited on the sheet.** Tapping a lesson, the title, the line
+      under it or the class opens a bottom DRAWER — the one place anything is
+      edited. A block carries no inputs at all.
+- [x] Name suggestions are fuzzy and ranked: the whole name, then its start,
+      then a word inside it, then the letters in order, then a one-letter slip.
+- [x] **No borders anywhere.** The column is the day's solid colour and each
+      lesson is a white card on it.
+- [x] Clicking the illustrations removes them; the settings drawer offers them
+      back as a BUTTON, because a checkbox that vanishes when ticked is an
+      action pretending to be a setting.
+- [x] Every other setting — the weekend, the day's start and end, saving,
+      starting a new sheet, the saved list — is behind the ⋯ button.
+- [x] A sheet opened from a link or a QR explains nothing: no intro, no
+      "opened from a link" panel. They were there.
+- [x] An icon withdrawn from the palette is RETIRED wherever a schedule is read
+      — the icon lives on the activity, so a palette change cannot reach a
+      sheet already saved or a link already handed out.
+- [x] Any number of schedules in `localStorage`; draft survives a reload.
+- [x] A sheet saved in either PREVIOUS shape still opens.
+- [x] Share link = deflated, dictionary-compacted JSON, base64url in the hash;
+      a fictional starter at `#t=sample`.
 - [x] PDF with illustrated header/footer and a QR that reopens the sheet — and
       the QR is decoded out of the produced PDF by the spec, with jsQR.
-- [x] Both locales, with Sunday the rightmost column in Arabic and the axis
-      beside it, on the side the reader starts from.
-- [x] A title banner, a note pill and a class line — the three lines every one
-      of these charts has — and the whole sheet set in IBM Plex Sans Arabic.
+- [x] Both locales, Sunday rightmost in Arabic with the axis beside it, and the
+      whole sheet set in IBM Plex Sans Arabic.
 
 ## Acceptance criteria
 

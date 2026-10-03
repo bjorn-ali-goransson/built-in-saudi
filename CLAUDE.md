@@ -7405,6 +7405,12 @@ the way "a file converter belongs in Converters" settled the last one.
 
 ## Conventions
 
+- **A known backlog is not a stopping point.** If a turn would end with "still
+  to do: …" and nothing is actually blocked on a decision, start a loop
+  (`/loop 1m …`) and finish the work. Waiting to be told "continue" buys
+  nothing, and it is how one piece of work gets fragmented across turns and
+  half-finished UI gets pushed. A question that genuinely needs the owner's
+  judgement is different — ask that, and stop.
 - TypeScript strict; run `npm run typecheck` before pushing.
 - No heavy deps without reason — leanness is on-brand. Prefer platform APIs
   (`crypto`, `Intl`, Canvas) over libraries.

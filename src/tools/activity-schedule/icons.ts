@@ -19,7 +19,9 @@
 // is a tool arguing with somebody about their own wall chart, and a tool that
 // forgets what you picked last week makes you pick it again every week.
 
-import { nameKey } from './schedule'
+import { editDistance } from '../../lib/fuzzy'
+import { nameKey, retireIcon } from './schedule'
+import type { Suggestion } from './store'
 
 /** The palette offered in the picker, grouped so it can be scanned. */
 export const PALETTE: Array<{ group: string; groupAr: string; icons: string[] }> = [
@@ -50,6 +52,8 @@ export const PALETTE: Array<{ group: string; groupAr: string; icons: string[] }>
 ]
 
 export const ALL_ICONS: string[] = PALETTE.flatMap((g) => g.icons)
+
+
 
 /**
  * Words that suggest a picture, in both languages.
@@ -152,5 +156,44 @@ export function rememberIcon(name: string, icon: string): IconMemory {
  * arguing about their own sheet.
  */
 export function iconFor(name: string, mem: IconMemory): string {
-  return mem[nameKey(name)] || guessIcon(name)
+  return retireIcon(mem[nameKey(name)] || guessIcon(name))
+}
+
+/**
+ * Rank remembered names against what has been typed, best first.
+ *
+ * Fuzzy rather than a prefix filter, because the names people reuse are long
+ * — «طابور وأذكار الصباح» — and nobody types them from the beginning to find
+ * them. Four tiers, each a genuinely different kind of match: the whole thing,
+ * the start of it, a word inside it, and the letters in order with anything
+ * between. A one-letter slip still lands, through the same capped
+ * Damerau-Levenshtein the site's search uses, because `مراجعه` for `مراجعة` is
+ * a slip and not a different lesson.
+ */
+export function rankNames(query: string, names: Suggestion[]): Suggestion[] {
+  const q = nameKey(query)
+  if (!q) return [...names].sort((a, b) => b.count - a.count)
+  const scored = names.map((s) => ({ s, score: scoreName(q, nameKey(s.name)) }))
+  return scored
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || b.s.count - a.s.count)
+    .map((x) => x.s)
+}
+
+function scoreName(q: string, key: string): number {
+  if (!key) return 0
+  if (key === q) return 1000
+  if (key.startsWith(q)) return 800 - key.length
+  if (key.split(/\s+/).some((w) => w.startsWith(q))) return 600 - key.length
+  if (key.includes(q)) return 400 - key.length
+  if (subsequence(q, key)) return 200 - key.length
+  // A single slip, measured on the whole name rather than a window of it.
+  if (q.length >= 4 && editDistance(q, key, 1) <= 1) return 150
+  return 0
+}
+
+const subsequence = (q: string, key: string): boolean => {
+  let i = 0
+  for (const ch of key) if (ch === q[i] && ++i === q.length) return true
+  return false
 }

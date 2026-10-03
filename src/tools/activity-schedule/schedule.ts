@@ -209,6 +209,35 @@ export function reorderDay(items: Item[], id: string, index: number): Item[] {
 }
 
 /**
+ * Move one activity into ANOTHER day, at `index`.
+ *
+ * Both days are re-laid: the one it left closes up behind it, and the one it
+ * joins opens to take it. A day that was empty starts at `axisFrom`, since it
+ * has no first activity to anchor on.
+ *
+ * Returns both lists, because a move is one edit to two days and applying it
+ * as two separate ones is how the sheet ends up briefly holding the lesson
+ * twice — or not at all.
+ */
+export function moveAcross(
+  fromItems: Item[], toItems: Item[], id: string, index: number, axisFrom: number,
+): { from: Item[]; to: Item[] } | null {
+  const seq = sequence(fromItems)
+  const held = seq.find((x) => x.id === id)
+  if (!held) return null
+
+  const left = seq.filter((x) => x.id !== id)
+  const target = sequence(toItems)
+  const at = clamp(index, 0, target.length)
+  const joined = [...target.slice(0, at), held, ...target.slice(at)]
+
+  return {
+    from: left.length ? relayout(left, gapsOf(seq).slice(0, Math.max(0, left.length - 1)), seq[0].start) : [],
+    to: relayout(joined, gapsOf(target), target.length ? target[0].start : axisFrom),
+  }
+}
+
+/**
  * Change one activity's length; everything after it moves out of the way.
  *
  * Bounded so the day still fits the axis. Letting it overflow would push the
@@ -331,6 +360,22 @@ export function layoutDay(items: Item[]): Array<{ item: Item; col: number; cols:
   return out
 }
 
+/**
+ * Icons withdrawn from the palette, and what replaces them.
+ *
+ * Taking one out of the palette is not enough: the icon is stored ON each
+ * activity, so every sheet already saved, and every link already handed out,
+ * still carries it. The dice was removed and kept turning up for exactly that
+ * reason. So a withdrawn icon is retired wherever a schedule is READ — from
+ * storage, from a link, from the old shape — and the sheets somebody already
+ * has are fixed rather than only the ones they make next.
+ */
+const RETIRED: Record<string, string> = {
+  '🎲': '⚽',
+}
+
+export const retireIcon = (icon: string): string => RETIRED[icon] ?? icon
+
 // --- names ------------------------------------------------------------------
 
 /**
@@ -436,7 +481,7 @@ export async function decodeSchedule(raw: string): Promise<Schedule | null> {
       ;(items[day] ??= []).push({
         id: newId(),
         name: String(v[0] ?? ''),
-        icon: String(v[1] ?? ''),
+        icon: retireIcon(String(v[1] ?? '')),
         start: Number(start) || 0,
         end: Number(end) || 0,
       })
@@ -552,7 +597,7 @@ export function migrate(raw: unknown): Schedule | null {
         ;(items[day] ??= []).push({
           id: newId(),
           name: String(cell.name ?? ''),
-          icon: String(cell.icon ?? ''),
+          icon: retireIcon(String(cell.icon ?? '')),
           start: snap(span.start),
           end: Math.max(snap(span.start) + MIN_LEN, snap(span.end)),
         })
@@ -571,10 +616,15 @@ export function migrate(raw: unknown): Schedule | null {
       updated: Number(v.updated) || Date.now(),
     }
   }
-  // A sheet from before the class line existed simply has none.
-  return v.items && Array.isArray(v.days)
-    ? ({ ...v, group: String(v.group ?? '') } as Schedule)
-    : null
+  if (!v.items || !Array.isArray(v.days)) return null
+  // A sheet from before the class line existed simply has none — and any icon
+  // since withdrawn from the palette is retired here, because the icon lives
+  // on the activity and a palette change cannot reach a sheet already saved.
+  const items: Partial<Record<DayKey, Item[]>> = {}
+  for (const day of v.days as DayKey[]) {
+    items[day] = (v.items[day] ?? []).map((it) => ({ ...it, icon: retireIcon(it.icon) }))
+  }
+  return { ...v, group: String(v.group ?? ''), items } as Schedule
 }
 
 /**
@@ -657,13 +707,21 @@ export async function readShareHash(
   return m ? decodeSchedule(m[1]) : null
 }
 
-// --- the colours the day columns are tinted with ----------------------------
+// --- the colour each day is ------------------------------------------------
 //
 // Defined here rather than in either renderer, because the HTML grid and the
 // canvas the PDF is drawn on have to agree and neither can read the other's
-// stylesheet. Flat and pale on purpose: the sheet is printed, and a saturated
-// column costs a colour cartridge and makes the text on it harder to read than
-// the white it replaced.
+// stylesheet.
+//
+// **Two tones and NO border anywhere.** The column is the day's solid colour
+// and every lesson on it is white, so the structure is carried by the shapes
+// themselves — a white card on colour needs no outline to be a card, and an
+// outline around every lesson on an outlined column inside an outlined sheet
+// is three lines doing one job. `head` is the same colour a shade deeper, so
+// the day's name reads as part of its column rather than as a separate bar.
+//
+// Mid-pastel rather than pale: the lessons are white now, so the colour has to
+// carry the separation that the alternating bands and rules used to.
 
 /**
  * Four tones per day: the head, the alternating half-hour band, the activity
@@ -674,12 +732,12 @@ export async function readShareHash(
  * replaced. The `edge` is what makes the head and the body below it read as
  * ONE card rather than a tinted bar floating above a box.
  */
-export const DAY_TINT: Record<DayKey, { head: string; band: string; block: string; edge: string }> = {
-  sun: { head: '#f7d3da', band: '#fdf2f4', block: '#fbe7ea', edge: '#eab8c2' },
-  mon: { head: '#fae3b0', band: '#fdf7e8', block: '#fcefd2', edge: '#edc87e' },
-  tue: { head: '#cfe6c3', band: '#f2f8ef', block: '#e4f0dc', edge: '#a8ccA0'.toLowerCase() },
-  wed: { head: '#dcd6f2', band: '#f5f3fb', block: '#eae5f7', edge: '#b7aede' },
-  thu: { head: '#c5e3e8', band: '#eff8f9', block: '#ddeff2', edge: '#95c6d0' },
-  fri: { head: '#ecd9c2', band: '#faf5ee', block: '#f4e8d8', edge: '#d3b48f' },
-  sat: { head: '#dde2c4', band: '#f6f8ee', block: '#ebefdc', edge: '#bcc79a' },
+export const DAY_TINT: Record<DayKey, { solid: string; head: string }> = {
+  sun: { solid: '#f3bfc8', head: '#e9a6b2' },
+  mon: { solid: '#f7d58f', head: '#efc368' },
+  tue: { solid: '#bcdcac', head: '#a3cd90' },
+  wed: { solid: '#cdc4ea', head: '#b6aadd' },
+  thu: { solid: '#aed8e0', head: '#92c7d2' },
+  fri: { solid: '#e4ccae', head: '#d6b88f' },
+  sat: { solid: '#d2dab0', head: '#bfc994' },
 }

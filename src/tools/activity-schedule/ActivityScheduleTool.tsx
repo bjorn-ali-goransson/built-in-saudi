@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocale, localePath } from '../../i18n'
+import { useLocale } from '../../i18n'
 import { Button, Check, Field, Input, Panel, Stack } from '../../components/ui'
 import { Sheet, type SheetStrings } from './Sheet'
+import { Drawer, type Editing } from './Drawer'
 import { STR } from './strings'
 import { iconFor, loadIconMemory, rememberIcon, type IconMemory } from './icons'
 import {
-  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fitDay, fmt, indexFor, isBlank,
-  itemsOn, newId, nextSlot, parseTime, readShareHash, reorderDay, sequence,
+  MIN_LEN, SCHOOL_WEEK, WEEK, clamp, emptySchedule, fitDay, fmt, isBlank, itemsOn,
+  moveAcross, newId, nextSlot, parseTime, readShareHash, reorderDay, sequence,
   setDuration, shareLink, snap, troubles, type DayKey, type Item, type Schedule,
 } from './schedule'
 import {
@@ -26,8 +27,9 @@ export default function ActivityScheduleTool() {
   const [mem, setMem] = useState<IconMemory>(() => loadIconMemory())
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [note, setNote] = useState('')
   const [qr, setQr] = useState<QrPlan | null>(null)
+  const [editing, setEditing] = useState<Editing | null>(null)
+  const [dragging, setDragging] = useState<string | null>(null)
 
   /**
    * Read a shared sheet out of the hash — on arrival AND on `hashchange`.
@@ -35,8 +37,7 @@ export default function ActivityScheduleTool() {
    * Decoding is asynchronous now that the payload is deflated, so it cannot be
    * the initial state and has to land in an effect. `hashchange` matters as
    * much as the first read: without it the QR is a link that works everywhere
-   * except in the tab that already has the editor open, which is exactly where
-   * somebody testing their own sheet will try it.
+   * except in the tab that already has the editor open.
    */
   useEffect(() => {
     let live = true
@@ -61,8 +62,7 @@ export default function ActivityScheduleTool() {
    *
    * Compressing is asynchronous, and `navigator.clipboard.writeText` after an
    * `await` has lost its user activation in Safari — the copy silently fails
-   * on the one browser where people share links most. Having the link ready
-   * means the click does nothing but write.
+   * on the one browser where people share links most.
    */
   const [link, setLink] = useState('')
   useEffect(() => {
@@ -72,54 +72,57 @@ export default function ActivityScheduleTool() {
     return () => { live = false }
   }, [schedule])
 
-  /** Replace one activity, leaving everything else alone. */
+  const edited = editing?.kind === 'item'
+    ? itemsOn(schedule, editing.day as DayKey).find((x) => x.id === editing.id) ?? null
+    : null
+
   const patch = useCallback((day: DayKey, id: string, fn: (it: Item) => Item) => {
     setSchedule((prev) => ({
       ...prev,
-      items: {
-        ...prev.items,
-        [day]: itemsOn(prev, day).map((it) => (it.id === id ? fn(it) : it)),
-      },
+      items: { ...prev.items, [day]: itemsOn(prev, day).map((it) => (it.id === id ? fn(it) : it)) },
     }))
   }, [])
 
   /**
-   * The icon follows the name until somebody overrules it.
-   *
-   * A name used before brings back the icon it was given, in this schedule or
-   * any other. Choosing by hand is what TEACHES that, so the two directions
-   * differ: a name may replace a suggested icon, and an icon never touches the
-   * name.
+   * The icon follows the name until somebody overrules it. Choosing by hand is
+   * what TEACHES that, so the two directions differ: a name may replace a
+   * suggested icon, and an icon never touches the name.
    */
-  const onName = useCallback((day: DayKey, id: string, name: string) => {
-    patch(day, id, (it) => {
+  const onName = useCallback((name: string) => {
+    if (editing?.kind !== 'item') return
+    patch(editing.day as DayKey, editing.id, (it) => {
       const wasSuggested = !it.icon || it.icon === iconFor(it.name, mem)
       return { ...it, name, icon: wasSuggested ? iconFor(name, mem) : it.icon }
     })
-  }, [patch, mem])
+  }, [editing, patch, mem])
 
-  const onIcon = useCallback((day: DayKey, id: string, icon: string, name: string) => {
-    patch(day, id, (it) => ({ ...it, icon }))
+  const onIcon = useCallback((icon: string) => {
+    if (editing?.kind !== 'item') return
+    patch(editing.day as DayKey, editing.id, (it) => ({ ...it, icon }))
+    const name = edited?.name ?? ''
     if (name.trim()) setMem(rememberIcon(name, icon))
-  }, [patch])
+  }, [editing, patch, edited])
 
   /**
-   * Dragging reorders the day; it does not place the activity at a time.
+   * Dragging reorders, and may carry the lesson into another day.
    *
-   * `start` is where the finger is holding it, which is all the gesture knows.
-   * What it MEANS is a position in the day's order, and the rest of the day
-   * closes up behind it — so a lesson cannot be dropped on top of another and
-   * the day cannot grow a hole where it was lifted from.
+   * `start` is only where the finger is; what it MEANS is a place in a day's
+   * order. A cross-day move is one edit to two days, so it is applied as one.
    */
-  const onMove = useCallback((day: DayKey, id: string, start: number) => {
+  const onDrag = useCallback((from: DayKey, id: string, to: DayKey, index: number) => {
+    setDragging(id)
     setSchedule((prev) => {
-      const items = itemsOn(prev, day)
-      const next = reorderDay(items, id, indexFor(items, id, start))
-      return next === items ? prev : { ...prev, items: { ...prev.items, [day]: next } }
+      if (from === to) {
+        const items = itemsOn(prev, from)
+        const next = reorderDay(items, id, index)
+        return next === items ? prev : { ...prev, items: { ...prev.items, [from]: next } }
+      }
+      const moved = moveAcross(itemsOn(prev, from), itemsOn(prev, to), id, index, prev.from)
+      if (!moved) return prev
+      return { ...prev, items: { ...prev.items, [from]: moved.from, [to]: moved.to } }
     })
   }, [])
 
-  /** The keyboard says the same thing in whole places rather than pixels. */
   const onStep = useCallback((day: DayKey, id: string, delta: -1 | 1) => {
     setSchedule((prev) => {
       const items = itemsOn(prev, day)
@@ -137,36 +140,35 @@ export default function ActivityScheduleTool() {
     }))
   }, [])
 
-  const onRemove = useCallback((day: DayKey, id: string) => {
+  const onRemove = useCallback(() => {
+    if (editing?.kind !== 'item') return
+    const { day, id } = editing
     setSchedule((prev) => ({
       ...prev,
-      items: { ...prev.items, [day]: itemsOn(prev, day).filter((it) => it.id !== id) },
+      items: { ...prev.items, [day]: itemsOn(prev, day as DayKey).filter((it) => it.id !== id) },
     }))
-  }, [])
+    setEditing(null)
+  }, [editing])
 
-  /** `after` is the activity Enter was pressed in; the new one follows it. */
-  const onAdd = useCallback((day: DayKey, after?: Item) => {
+  /** A new activity opens its drawer: an unnamed block is not an edit yet. */
+  const onAdd = useCallback((day: DayKey) => {
+    const id = newId()
     setSchedule((prev) => {
-      const slot = after
-        ? { start: after.end, end: Math.min(after.end + (after.end - after.start), prev.to) }
-        : nextSlot(prev, day)
+      const slot = nextSlot(prev, day)
       const start = clamp(slot.start, prev.from, Math.max(prev.from, prev.to - MIN_LEN))
       const item: Item = {
-        id: newId(), name: '', icon: '',
+        id, name: '', icon: '',
         start, end: clamp(Math.max(slot.end, start + MIN_LEN), start + MIN_LEN, prev.to),
       }
       return { ...prev, items: { ...prev.items, [day]: [...itemsOn(prev, day), item] } }
     })
+    setEditing({ kind: 'item', day, id })
   }, [])
 
   /**
-   * Copy one day across the week.
-   *
-   * The ordinary school week is four identical days and one that differs, so
-   * without this the axis would be a worse tool for the common case than the
-   * grid it replaced: you would place the same eight activities five times.
-   * With it, you build one day and then change the day that is different —
-   * which is also the order a timetable is actually written in.
+   * Copy one day across the week — four identical days and one that differs is
+   * the ordinary school week, and without this the same eight activities get
+   * placed five times.
    */
   const onCopyDay = useCallback((day: DayKey) => {
     setSchedule((prev) => {
@@ -178,10 +180,9 @@ export default function ActivityScheduleTool() {
       }
       return { ...prev, items }
     })
-    setNote(s.copiedDay)
-  }, [s.copiedDay])
+  }, [])
 
-  /** Moving the axis must not strand activities outside it. */
+  /** Moving the axis must not strand a day outside it. */
   const setBounds = (which: 'from' | 'to', raw: string) => {
     const minutes = parseTime(raw)
     if (minutes === null) return
@@ -195,22 +196,16 @@ export default function ActivityScheduleTool() {
     })
   }
 
-  function save() {
-    setSaved(saveOne(schedule))
-    setCurrentId(schedule.id)
-    setFromLink(false)
+  const onText = (value: string) => {
+    if (editing?.kind !== 'text') return
+    setSchedule((p) => ({ ...p, [editing.field]: value }))
   }
 
   function open(x: Schedule) {
     setSchedule(x)
     setCurrentId(x.id)
     setFromLink(false)
-    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
-  }
-
-  function startNew() {
-    setSchedule(emptySchedule(l))
-    setFromLink(false)
+    setEditing(null)
     if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
   }
 
@@ -239,79 +234,24 @@ export default function ActivityScheduleTool() {
   }
 
   const sheetStrings: SheetStrings = {
-    activity: s.activity, time: s.time, iconLabel: s.iconLabel, clearIcon: s.clearIcon,
-    move: s.move, resize: s.resize, remove: s.remove,
-    addTo: s.addTo, copyDay: s.copyDay, trouble: s.trouble,
+    activity: s.activity, time: s.time, move: s.move, trouble: s.trouble,
+    addTo: s.addTo, copyDay: s.copyDay, editTitle: s.titleLabel, editNote: s.noteLabel,
+    editGroup: s.groupLabel, hideArt: s.hideArt, untitled: s.untitled,
   }
+
+  const textValue = editing?.kind === 'text' ? String(schedule[editing.field] ?? '') : ''
 
   return (
     <Stack data-testid="activity-schedule">
-      <p className="text-ink-faint">{s.intro}</p>
+      {/* Somebody who followed a QR code is looking at their own schedule.
+          They do not need to be told what this is, or that they followed a
+          link — they were there. */}
+      {!fromLink && <p data-testid="as-intro" className="text-ink-faint">{s.intro}</p>}
 
-      {fromLink && (
-        <Panel data-testid="as-from-link">
-          <h3 className="font-display text-lg">{s.fromLinkTitle}</h3>
-          <p className="text-sm text-ink-faint">{s.fromLinkBody}</p>
-        </Panel>
-      )}
-
-      <div className="flex flex-wrap items-end gap-4">
-        <Field label={s.titleLabel} className="min-w-[12rem] flex-1">
-          <Input value={schedule.title} data-testid="as-title"
-            onChange={(e) => setSchedule((p) => ({ ...p, title: e.target.value }))} />
-        </Field>
-        <Field label={s.noteLabel} className="min-w-[12rem] flex-1">
-          <Input value={schedule.note} data-testid="as-note"
-            onChange={(e) => setSchedule((p) => ({ ...p, note: e.target.value }))} />
-        </Field>
-        <Field label={s.groupLabel} className="w-[9rem]">
-          <Input value={schedule.group} data-testid="as-group"
-            onChange={(e) => setSchedule((p) => ({ ...p, group: e.target.value }))} />
-        </Field>
-        <Field label={s.dayStart} className="w-[7rem]">
-          <Input defaultValue={fmt(schedule.from)} dir="ltr" data-testid="as-from"
-            key={`from-${schedule.from}`}
-            onBlur={(e) => setBounds('from', e.target.value)} />
-        </Field>
-        <Field label={s.dayEnd} className="w-[7rem]">
-          <Input defaultValue={fmt(schedule.to)} dir="ltr" data-testid="as-to"
-            key={`to-${schedule.to}`}
-            onBlur={(e) => setBounds('to', e.target.value)} />
-        </Field>
-        <div className="flex flex-col gap-2">
-          <Check>
-            <input type="checkbox" data-testid="as-weekend" checked={schedule.days.length === 7}
-              onChange={(e) => setSchedule((p) => ({ ...p, days: e.target.checked ? [...WEEK] : [...SCHOOL_WEEK] }))} />
-            {s.weekend}
-          </Check>
-          <Check>
-            <input type="checkbox" data-testid="as-art" checked={schedule.art}
-              onChange={(e) => setSchedule((p) => ({ ...p, art: e.target.checked }))} />
-            {s.art}
-          </Check>
-        </div>
-      </div>
-
-      {problems.length > 0 && (
-        <Panel data-testid="as-clash">
-          <h3 className="font-display text-lg">{s.clashTitle}</h3>
-          <p className="text-sm text-ink-faint" data-testid="as-clash-count">
-            {s.clashCount(problems.length)}
-          </p>
-        </Panel>
-      )}
-
-      <Sheet
-        schedule={schedule} locale={l} mem={mem} suggestions={suggestions} str={sheetStrings}
-        onName={onName} onIcon={onIcon} onMove={onMove} onStep={onStep} onResize={onResize}
-        onRemove={onRemove} onAdd={onAdd} onCopyDay={onCopyDay}
-      />
-
-      {note && <p className="text-sm text-ink-faint" data-testid="as-note-line">{note}</p>}
-
-      <div className="flex flex-wrap gap-3">
-        <Button type="button" data-testid="as-save" onClick={save}>{s.save}</Button>
-        <Button type="button" data-testid="as-new" onClick={startNew}>{s.newOne}</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" data-testid="as-settings" onClick={() => setEditing({ kind: 'settings' })}>
+          ⋯ {s.settings}
+        </Button>
         <Button type="button" data-testid="as-share" onClick={copyLink}>
           {copied ? s.copied : s.share}
         </Button>
@@ -320,20 +260,34 @@ export default function ActivityScheduleTool() {
         </Button>
       </div>
 
+      {problems.length > 0 && (
+        <Panel data-testid="as-clash">
+          <p className="text-sm text-ink-faint" data-testid="as-clash-count">
+            {s.clashCount(problems.length)}
+          </p>
+        </Panel>
+      )}
+
+      <Sheet
+        schedule={schedule} locale={l} mem={mem} str={sheetStrings} dragging={dragging}
+        onOpen={(day, id) => setEditing({ kind: 'item', day, id })}
+        onEditText={(field) => setEditing({ kind: 'text', field })}
+        onHideArt={() => setSchedule((p) => ({ ...p, art: false }))}
+        onDrag={onDrag}
+        onDragEnd={() => setDragging(null)}
+        onStep={onStep}
+        onResize={onResize}
+        onAdd={onAdd}
+        onCopyDay={onCopyDay}
+      />
+
       {isBlank(schedule) && (
         <div data-testid="as-empty" className="grid gap-2">
           <p className="text-sm text-ink-faint">{s.empty}</p>
-          {/*
-            The starters are offered HERE and not only at a URL. A sheet you can
-            only reach by typing its name is a sheet nobody finds — the failure
-            this repo records for the collections, one level down. They show on
-            an empty sheet only: once there is something on the axis, a row of
-            buttons that would replace it is a trap rather than a shortcut.
-          */}
           <p className="text-sm text-ink-faint">{s.starters}</p>
           <div className="flex flex-wrap gap-2">
             {SAMPLES.map((x) => (
-              <button
+              <Button
                 key={x.id}
                 type="button"
                 data-testid={`as-sample-${x.id}`}
@@ -346,10 +300,9 @@ export default function ActivityScheduleTool() {
                     window.history.replaceState(null, '', window.location.pathname)
                   }
                 }}
-                className="cursor-pointer rounded-md border border-[color:var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-ink rtl:font-ar"
               >
                 {x.label[l]}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -357,53 +310,101 @@ export default function ActivityScheduleTool() {
 
       {qr && !qr.ok && (
         <Panel data-testid="as-qr-problem" data-why={qr.reason}>
-          <h3 className="font-display text-lg">{s.qrProblemTitle}</h3>
           <p className="text-sm text-ink-faint">
             {qr.reason === 'too-long' ? s.qrTooLong(qr.bytes) : s.qrTooDense(qr.modules)}
           </p>
         </Panel>
       )}
 
-      {saved.length > 0 && (
-        <Panel data-testid="as-saved">
-          <h3 className="font-display text-lg">{s.mine}</h3>
-          <ul className="grid gap-1">
-            {saved.map((x) => (
-              <li key={x.id} className="flex items-center gap-2 text-sm">
-                <button type="button" data-testid={`as-open-${x.id}`} onClick={() => open(x)}
-                  className="flex-1 cursor-pointer border-0 bg-transparent text-start text-ink underline rtl:font-ar">
-                  {x.title || s.untitled}
-                </button>
-                <span className="text-ink-faint">{new Date(x.updated).toLocaleDateString(l === 'ar' ? 'ar-SA' : 'en-GB')}</span>
-                <button type="button" data-testid={`as-delete-${x.id}`}
-                  onClick={() => setSaved(deleteOne(x.id))}
-                  className="cursor-pointer rounded-sm border border-[color:var(--line)] bg-transparent px-2 py-[2px] text-[0.76rem] text-ink-soft rtl:font-ar">
-                  {s.remove}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
+      {editing && (
+        <Drawer
+          editing={editing}
+          item={edited}
+          text={textValue}
+          mem={mem}
+          suggestions={suggestions}
+          str={{
+            activity: s.activity, iconLabel: s.iconLabel, clearIcon: s.clearIcon,
+            remove: s.remove, longer: s.longer, shorter: s.shorter, done: s.done,
+            suggestions: s.suggestionsLabel, titleLabel: s.titleLabel,
+            noteLabel: s.noteLabel, groupLabel: s.groupLabel, settings: s.settings,
+            groupName: (g) => (l === 'ar' ? g.groupAr : g.group),
+          }}
+          onName={onName}
+          onIcon={onIcon}
+          onText={onText}
+          onResize={(end) => {
+            if (editing.kind === 'item') onResize(editing.day as DayKey, editing.id, end)
+          }}
+          onRemove={onRemove}
+          onClose={() => setEditing(null)}
+        >
+          <div className="grid gap-3">
+            <Check>
+              <input type="checkbox" data-testid="as-weekend" checked={schedule.days.length === 7}
+                onChange={(e) => setSchedule((p) => ({ ...p, days: e.target.checked ? [...WEEK] : [...SCHOOL_WEEK] }))} />
+              {s.weekend}
+            </Check>
+            {/* A BUTTON, not a checkbox: ticking a box that then disappears
+                is not a setting, it is an action pretending to be one. The
+                illustrations are removed by clicking them, so bringing them
+                back is the one thing this has to offer. */}
+            {!schedule.art && (
+              <div>
+                <Button type="button" data-testid="as-show-art"
+                  onClick={() => setSchedule((p) => ({ ...p, art: true }))}>
+                  {s.art}
+                </Button>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Field label={s.dayStart} className="w-[7rem]">
+                <Input defaultValue={fmt(schedule.from)} dir="ltr" data-testid="as-from"
+                  key={`from-${schedule.from}`} onBlur={(e) => setBounds('from', e.target.value)} />
+              </Field>
+              <Field label={s.dayEnd} className="w-[7rem]">
+                <Input defaultValue={fmt(schedule.to)} dir="ltr" data-testid="as-to"
+                  key={`to-${schedule.to}`} onBlur={(e) => setBounds('to', e.target.value)} />
+              </Field>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" data-testid="as-save"
+                onClick={() => { setSaved(saveOne(schedule)); setCurrentId(schedule.id); setFromLink(false) }}>
+                {s.save}
+              </Button>
+              <Button type="button" data-testid="as-new"
+                onClick={() => {
+                  setSchedule(emptySchedule(l))
+                  setFromLink(false)
+                  setEditing(null)
+                  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
+                }}>
+                {s.newOne}
+              </Button>
+            </div>
+            {saved.length > 0 && (
+              <div data-testid="as-saved" className="grid gap-1">
+                <div className="text-[0.74rem] font-semibold text-ink-faint">{s.mine}</div>
+                <ul className="grid gap-1">
+                  {saved.map((x) => (
+                    <li key={x.id} className="flex items-center gap-2 text-sm">
+                      <button type="button" data-testid={`as-open-${x.id}`} onClick={() => open(x)}
+                        className="flex-1 cursor-pointer border-0 bg-transparent text-start text-ink underline rtl:font-ar">
+                        {x.title || s.untitled}
+                      </button>
+                      <button type="button" data-testid={`as-delete-${x.id}`}
+                        onClick={() => setSaved(deleteOne(x.id))}
+                        className="cursor-pointer rounded-sm border-0 bg-sand-100 px-2 py-[2px] text-[0.76rem] text-ink-soft rtl:font-ar">
+                        {s.remove}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Drawer>
       )}
-
-      <Panel>
-        <h3 className="font-display text-lg">{s.whyAxisTitle}</h3>
-        <p className="text-sm text-ink-faint" data-testid="as-why-axis">{s.whyAxisBody}</p>
-      </Panel>
-
-      <Panel>
-        <h3 className="font-display text-lg">{s.whyIconTitle}</h3>
-        <p className="text-sm text-ink-faint" data-testid="as-why-icon">{s.whyIconBody}</p>
-      </Panel>
-
-      <Panel>
-        <h3 className="font-display text-lg">{s.whyShareTitle}</h3>
-        <p className="text-sm text-ink-faint" data-testid="as-why-share">{s.whyShareBody}</p>
-      </Panel>
-
-      <p className="text-sm">
-        <a href={localePath(locale, '/apps/timetable')}>{s.related}</a>
-      </p>
     </Stack>
   )
 }

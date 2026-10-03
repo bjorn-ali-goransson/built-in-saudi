@@ -1,11 +1,11 @@
+import { useRef } from 'react'
 import { FOOTER_BAND, FOOTER_URL, HEADER_BAND, HEADER_URL } from './illustrations'
 import { Block, type BlockStrings } from './Block'
 import type { IconMemory } from './icons'
 import {
-  DAY_LABEL, DAY_TINT, SNAP, fmt, itemsOn, layoutDay, troubleFor,
+  DAY_LABEL, DAY_TINT, SNAP, fmt, indexFor, itemsOn, layoutDay, troubleFor,
   type DayKey, type Item, type Schedule,
 } from './schedule'
-import type { Suggestion } from './store'
 
 /**
  * Pixels per quarter hour.
@@ -23,50 +23,53 @@ export interface SheetStrings extends BlockStrings {
   time: string
   addTo: (day: string) => string
   copyDay: (day: string) => string
+  editTitle: string
+  editNote: string
+  editGroup: string
+  hideArt: string
+  untitled: string
 }
 
 /**
- * The schedule itself — real HTML, editable in place, on one shared axis.
+ * The schedule itself — real HTML, and the only thing on the page.
  *
- * It is one rendering rather than an editor plus a preview, because two would
- * drift and because the sheet IS the thing being made. The printed PDF is
- * drawn separately on a canvas — pdf-lib cannot shape Arabic — and
- * `schedule.ts` holds everything the two have to agree about.
+ * **Everything on it is clicked, nothing beside it is a form.** The title, the
+ * line under it, the class and every lesson open the drawer; the illustrations
+ * are removed by clicking them. A sheet with a form above it is two documents
+ * pretending to be one, and the form always wins the attention it does not
+ * deserve.
  *
- * **The axis is a column and the days are columns beside it.** The reference
- * sheets repeat a time column inside every day card, which is the same value
- * written five times; one axis is what a real schedule has, and it is what
- * makes a fifteen-minute difference between two days VISIBLE rather than
- * something you have to read two columns of text to notice.
+ * **No borders anywhere.** Each day column is that day's solid colour and each
+ * lesson is a white card on it, so the shapes carry the structure — an outline
+ * round every lesson on an outlined column inside an outlined sheet is three
+ * lines doing one job.
  *
- * **The WHOLE sheet is set in IBM Plex Sans Arabic, in both languages** —
- * not `rtl:font-ar`, which would give the Arabic sheet one face and the
- * English sheet another. This is a printed bilingual artefact whose activity
- * names are routinely Arabic whatever the interface language, and Plex is the
- * one loaded family that sets Latin and Arabic evenly, which is also why the
- * times already used it. A sheet in two families is two sheets.
- *
- * It scrolls sideways on a narrow screen rather than stacking the days. Five
- * columns of a continuous axis do not stack into anything readable — you would
- * get five full-height axes — and a horizontal scroll INSIDE the sheet is the
- * arrangement `SectionNav` already uses: the container scrolls, the page does
- * not.
+ * **The axis is a column and the days are columns beside it**, which is what
+ * makes a fifteen-minute difference between two days visible rather than
+ * something you have to read two columns of text to notice. It scrolls
+ * sideways on a narrow screen rather than stacking the days: five columns of a
+ * continuous axis do not stack into anything readable, and a horizontal scroll
+ * INSIDE the sheet is the arrangement `SectionNav` already uses — the
+ * container scrolls, the page does not.
  */
 export function Sheet({
-  schedule, locale, mem, suggestions, str,
-  onName, onIcon, onMove, onStep, onResize, onRemove, onAdd, onCopyDay,
+  schedule, locale, mem, str, dragging,
+  onOpen, onEditText, onHideArt, onDrag, onDragEnd, onStep, onResize, onAdd, onCopyDay,
 }: {
   schedule: Schedule
   locale: 'en' | 'ar'
   mem: IconMemory
-  suggestions: Suggestion[]
   str: SheetStrings
-  onName: (day: DayKey, id: string, name: string) => void
-  onIcon: (day: DayKey, id: string, icon: string, name: string) => void
-  onMove: (day: DayKey, id: string, start: number) => void
+  /** The id of the activity being dragged, if any. */
+  dragging: string | null
+  onOpen: (day: DayKey, id: string) => void
+  onEditText: (field: 'title' | 'note' | 'group') => void
+  onHideArt: () => void
+  /** Day and index the held activity currently wants. */
+  onDrag: (from: DayKey, id: string, to: DayKey, index: number) => void
+  onDragEnd: () => void
   onStep: (day: DayKey, id: string, delta: -1 | 1) => void
   onResize: (day: DayKey, id: string, end: number) => void
-  onRemove: (day: DayKey, id: string) => void
   onAdd: (day: DayKey, after?: Item) => void
   onCopyDay: (day: DayKey) => void
 }) {
@@ -86,54 +89,73 @@ export function Sheet({
     t += LABEL_EVERY
   ) marks.push(t)
 
-  // The half-hour bands, alternating, the way every one of these sheets tints
-  // its rows. On a continuous axis they do more than decorate: they are what
-  // lets the eye carry a time from the column on the side across five days.
-  const bands: Array<{ top: number; height: number; odd: boolean }> = []
-  for (let i = 0, t = schedule.from; t < schedule.to; i++, t += LABEL_EVERY) {
-    const end = Math.min(t + LABEL_EVERY, schedule.to)
-    bands.push({ top: y(t), height: y(end) - y(t), odd: i % 2 === 1 })
+  /**
+   * The day column under a pointer, so a lesson can be dragged into another
+   * day. Measured from the live rects rather than from the pointer's own
+   * target, which during a capture is always the block being dragged.
+   */
+  const columns = useRef(new Map<DayKey, HTMLDivElement>())
+  const dayAt = (clientX: number): DayKey | null => {
+    for (const [day, el] of columns.current) {
+      const r = el.getBoundingClientRect()
+      if (clientX >= r.left && clientX <= r.right) return day
+    }
+    return null
   }
 
   return (
     <article
       data-testid="as-sheet"
-      className="overflow-hidden rounded-lg border border-[color:var(--line)] bg-[#fdf9f0] font-ar"
+      className="overflow-hidden rounded-xl bg-[#fdf9f0] font-ar"
     >
       {schedule.art && (
-        <div className="w-full" style={{ aspectRatio: `100 / ${HEADER_BAND}` }}>
-          <img src={HEADER_URL} alt="" data-testid="as-art-header"
-            className="block size-full object-contain" />
-        </div>
+        <button
+          type="button"
+          data-testid="as-art-header"
+          title={str.hideArt}
+          aria-label={str.hideArt}
+          onClick={onHideArt}
+          className="block w-full cursor-pointer border-0 bg-transparent p-0"
+          style={{ aspectRatio: `100 / ${HEADER_BAND}` }}
+        >
+          <img src={HEADER_URL} alt="" className="block size-full object-contain" />
+        </button>
       )}
 
       <div className="px-3 pb-3 pt-2 text-center sm:px-5">
-        {/* Each on its OWN line: as inline-block siblings in a centred box
-            they flowed together, so the title banner and the note pill sat
-            side by side on one row. */}
         <div>
-          <h2
+          <button
+            type="button"
             data-testid="as-sheet-title"
-            className="inline-block rounded-lg border-2 border-[#e4d5b4] bg-[#fdf3de] px-6 py-1.5 text-[1.55rem] font-bold leading-tight text-[#2f4f3e] shadow-[0_2px_0_#e4d5b4]"
+            title={str.editTitle}
+            onClick={() => onEditText('title')}
+            className="inline-block cursor-pointer rounded-lg border-0 bg-[#fdf3de] px-6 py-1.5 font-ar text-[1.55rem] font-bold leading-tight text-[#2f4f3e]"
           >
-            {schedule.title}
-          </h2>
+            {schedule.title || str.untitled}
+          </button>
         </div>
-        {schedule.note.trim() && (
-          <div className="mt-2">
-            <p
-              data-testid="as-sheet-note"
-              className="inline-block rounded-full bg-[#fdf3de] px-4 py-1 text-[0.86rem] text-[#5a6a5d]"
-            >
-              {schedule.note}
-            </p>
-          </div>
-        )}
-        {schedule.group.trim() && (
-          <p data-testid="as-sheet-group" className="mt-1.5 text-[1rem] font-bold text-[#2f4f3e]">
-            {schedule.group}
-          </p>
-        )}
+        <div className="mt-2">
+          <button
+            type="button"
+            data-testid="as-sheet-note"
+            title={str.editNote}
+            onClick={() => onEditText('note')}
+            className="inline-block cursor-pointer rounded-full border-0 bg-[#fdf3de] px-4 py-1 font-ar text-[0.86rem] text-[#5a6a5d]"
+          >
+            {schedule.note || str.editNote}
+          </button>
+        </div>
+        <div className="mt-1.5">
+          <button
+            type="button"
+            data-testid="as-sheet-group"
+            title={str.editGroup}
+            onClick={() => onEditText('group')}
+            className="cursor-pointer border-0 bg-transparent font-ar text-[1rem] font-bold text-[#2f4f3e]"
+          >
+            {schedule.group || str.editGroup}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto px-2 pb-4 sm:px-4">
@@ -145,22 +167,15 @@ export function Sheet({
           <div className="pb-1 text-center text-[0.72rem] font-semibold text-ink-faint">
             {str.time}
           </div>
-          {/*
-            The head and the body below are two grid cells and ONE card: the
-            head carries every border but its bottom, the body every border but
-            its top, and there is no gap between them. They used to be a tinted
-            bar floating a pixel above a bordered box, which read as a card
-            that had come apart.
-          */}
           {cols.map((day) => (
             <h3
               key={day}
-              className="flex items-center justify-between gap-1 rounded-t-lg border-2 border-b-0 px-2 py-1 text-[0.92rem] font-bold text-[#2f4f3e]"
-              style={{ background: DAY_TINT[day].head, borderColor: DAY_TINT[day].edge }}
+              className="flex items-center justify-between gap-1 rounded-t-lg px-2 py-1 text-[0.92rem] font-bold text-[#2f4f3e]"
+              style={{ background: DAY_TINT[day].head }}
               data-testid={`as-head-${day}`}
             >
               <span className="flex min-w-0 items-center gap-1">
-                <span aria-hidden className="text-[0.8rem] text-[#f0b429]">★</span>
+                <span aria-hidden className="text-[0.8rem] text-[#8a6a1f]">★</span>
                 <span className="truncate">{DAY_LABEL[day][locale]}</span>
               </span>
               <span className="flex shrink-0 items-center gap-1">
@@ -204,57 +219,40 @@ export function Sheet({
           </div>
 
           {cols.map((day) => {
-            const laid = layoutDay(itemsOn(schedule, day))
+            const items = itemsOn(schedule, day)
             return (
               <div
                 key={day}
                 data-day={day}
                 data-testid={`as-col-${day}`}
-                className="relative overflow-hidden rounded-b-lg border-2 border-t-0 bg-white"
-                style={{ height, borderColor: DAY_TINT[day].edge }}
+                ref={(el) => {
+                  if (el) columns.current.set(day, el)
+                  else columns.current.delete(day)
+                }}
+                className="relative rounded-b-lg p-1"
+                style={{ height: height + 8, background: DAY_TINT[day].solid }}
               >
-                {bands.map((b, i) => (
-                  <div
-                    key={i}
-                    className="pointer-events-none absolute inset-x-0"
-                    style={{
-                      top: b.top,
-                      height: b.height,
-                      background: b.odd ? DAY_TINT[day].band : 'transparent',
-                    }}
-                  />
-                ))}
-                {marks.map((t) => (
-                  <div
-                    key={t}
-                    className="pointer-events-none absolute inset-x-0 border-t"
-                    style={{
-                      top: y(t),
-                      borderColor: t % 60 === 0 ? DAY_TINT[day].edge : 'transparent',
-                    }}
-                  />
-                ))}
-                {laid.map(({ item, col, cols: n }) => (
+                {layoutDay(items).map(({ item, col, cols: n }) => (
                   <Block
                     key={item.id}
                     item={item}
-                    top={y(item.start)}
-                    height={Math.max(PX, ((item.end - item.start) / SNAP) * PX)}
+                    top={y(item.start) + 4}
+                    height={Math.max(PX, ((item.end - item.start) / SNAP) * PX) - 3}
                     left={(col / n) * 100}
                     width={100 / n}
                     mem={mem}
-                    suggestions={suggestions}
                     str={str}
                     trouble={troubleFor(schedule, day, item)}
-                    tint={DAY_TINT[day].block}
-                    edge={DAY_TINT[day].edge}
-                    onName={(name) => onName(day, item.id, name)}
-                    onIcon={(icon, name) => onIcon(day, item.id, icon, name)}
-                    onMove={(start) => onMove(day, item.id, start)}
+                    dim={!!dragging && dragging !== item.id}
+                    onOpen={() => onOpen(day, item.id)}
+                    onDrag={(clientX, _clientY, start) => {
+                      const target = dayAt(clientX) ?? day
+                      const into = target === day ? items : itemsOn(schedule, target)
+                      onDrag(day, item.id, target, indexFor(into, item.id, start))
+                    }}
+                    onDragEnd={onDragEnd}
                     onStep={(delta) => onStep(day, item.id, delta)}
                     onResize={(end) => onResize(day, item.id, end)}
-                    onRemove={() => onRemove(day, item.id)}
-                    onEnter={() => onAdd(day, item)}
                   />
                 ))}
               </div>
@@ -264,10 +262,17 @@ export function Sheet({
       </div>
 
       {schedule.art && (
-        <div className="w-full" style={{ aspectRatio: `100 / ${FOOTER_BAND}` }}>
-          <img src={FOOTER_URL} alt="" data-testid="as-art-footer"
-            className="block size-full object-contain" />
-        </div>
+        <button
+          type="button"
+          data-testid="as-art-footer"
+          title={str.hideArt}
+          aria-label={str.hideArt}
+          onClick={onHideArt}
+          className="block w-full cursor-pointer border-0 bg-transparent p-0"
+          style={{ aspectRatio: `100 / ${FOOTER_BAND}` }}
+        >
+          <img src={FOOTER_URL} alt="" className="block size-full object-contain" />
+        </button>
       )}
     </article>
   )
