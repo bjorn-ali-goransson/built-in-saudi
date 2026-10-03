@@ -2264,6 +2264,11 @@ an early finish on Thursday are the ordinary shape of a week, and a model that
 cannot express them is tidy and useless. So an activity carries its own start
 and end and moves anywhere on the axis, to the quarter hour.
 
+**A drag into another day's column MOVES the lesson there**, applied as one
+edit to two days — `moveAcross` returns both lists, because applying it as two
+separate edits is how the sheet ends up briefly holding the lesson twice, or
+not at all.
+
 **Within a day the activities are a SEQUENCE, and dragging REORDERS.** A
 school day is an order, not a set of coordinates: the edit people actually make
 is "this lesson goes after that one", and on a free axis that was four separate
@@ -2428,9 +2433,8 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
   `data-held` is the testable contract rather than a shadow or a ring.
 - **An icon that is only on hover is an icon a phone cannot reach.** Hiding the
   per-block controls behind `group-hover` cleaned up the sheet and made delete
-  unreachable on touch; they are forced visible under
-  `@media (pointer: coarse)`, where the resize edge also grows from 7px to
-  18px.
+  unreachable on touch. The controls are gone entirely now — see the drawer
+  below — but the rule stands for anything that keeps them.
 - **`animate-[fadeUp…_both]` on `.wrap` breaks `position: fixed` for the WHOLE
   page.** `animation-fill-mode: both` keeps the final keyframe's `transform`
   applied forever — an identity matrix, but a transform, and a transform makes
@@ -2449,6 +2453,8 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
   walks the DOM for `[data-nodrag]`, so the PANEL has to carry it. **Verified
   to fail**: removing the attribute reddens three cases — all three about the
   icon memory, which is the only reason it was caught at all.
+- *(Both of the notes above are about popovers the DRAWER replaced. They are
+  kept because the traps are the codebase's, not that component's.)*
 - **A panel inside a clipping column has to be `fixed`, not `absolute`.** The
   day columns clip their contents so blocks stop at the rounded edge — which
   cut off the icon palette, a panel WIDER than a column, so almost none of it
@@ -2461,6 +2467,41 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
   is what the charts this was modelled on draw. An icon is not neutral just
   because the tool meant it as "a game" — the palette is content, and content
   has an audience.
+- **And taking it out of the palette did not take it off the sheets**, which
+  is the part worth carrying. The icon is stored ON each activity, so every
+  schedule already saved and every link already handed out still carried the
+  dice; it was reported as "still there" twice while the source was clean. A
+  withdrawn icon is now RETIRED wherever a schedule is read — from storage,
+  from a link, from either older shape (`RETIRED` in `schedule.ts`). **A
+  palette is code; what people have is data, and only the second one is what
+  they see.**
+- **The sheet is the document, and nothing is edited on it.** A block carried a
+  name box, an icon picker and a delete button, which made every lesson a
+  cluster of controls and the schedule a wall of chrome rather than a
+  schedule. Tapping anything — a lesson, the title, the line under it, the
+  class — opens one bottom DRAWER. The form that used to sit above the sheet is
+  gone with it: a sheet with a form beside it is two documents pretending to be
+  one, and the form always wins the attention it does not deserve.
+- **No borders anywhere.** The column is the day's solid colour and each lesson
+  is a white card on it, so the shapes carry the structure. An outline round
+  every lesson on an outlined column inside an outlined sheet is three lines
+  doing one job, and the alternating bands and hour rules went with them.
+- **The illustrations are removed by clicking them**, and brought back by a
+  BUTTON in the settings drawer rather than a checkbox. A box that disappears
+  the moment you tick it is an action pretending to be a setting — and
+  Playwright's `check()` can never confirm it, so it times out, which is how
+  the smell was found.
+- **A sheet opened from a link or a QR explains nothing.** No intro paragraph,
+  no "opened from a link" panel: they followed the link, they were there. The
+  explanatory panels under the PDF button went at the same time — a tool that
+  has to justify itself underneath itself is a tool whose sheet is not doing
+  the talking.
+- **Name suggestions are FUZZY and ranked** — the whole name, then its start,
+  then a word inside it, then the letters in order, then a one-letter slip
+  through the same capped Damerau-Levenshtein the site's search uses. The names
+  people reuse are long («طابور وأذكار الصباح») and nobody types one from the
+  beginning to find it, so a prefix filter offers nothing for the word they
+  actually remember.
 - **The sheet scrolls sideways on a narrow screen rather than stacking the
   days.** Five columns of a continuous axis do not stack into anything readable
   — you would get five full-height axes — so the container scrolls and the page
