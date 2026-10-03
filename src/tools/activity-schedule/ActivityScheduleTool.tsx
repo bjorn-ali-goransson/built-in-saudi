@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Button, Check, Field, Input, Panel, Stack } from '../../components/ui'
+import { CogIcon, KebabIcon } from '../../components/icons'
+
+/**
+ * A quiet icon affordance. No border and no fill: the one filled button in
+ * the row is the export, so anything else wearing chrome would compete with
+ * the only thing on the row that produces a file.
+ */
+const ICON_BTN = 'grid size-10 shrink-0 cursor-pointer place-items-center rounded-md '
+  + 'border-0 bg-transparent text-ink-soft hover:bg-sand-100 '
+  + 'focus-visible:outline-2 focus-visible:outline-green-600'
 import { Sheet, type SheetStrings } from './Sheet'
 import { Drawer, type Editing } from './Drawer'
 import { STR } from './strings'
@@ -248,13 +258,32 @@ export default function ActivityScheduleTool() {
           link — they were there. */}
       {!fromLink && <p data-testid="as-intro" className="text-ink-faint">{s.intro}</p>}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" data-testid="as-settings" onClick={() => setEditing({ kind: 'settings' })}>
-          ⋯ {s.settings}
-        </Button>
-        <Button type="button" data-testid="as-share" onClick={copyLink}>
-          {copied ? s.copied : s.share}
-        </Button>
+      {/* One row: two quiet icon affordances and the one action worth
+          shouting about. A cog holds SETTINGS — things that change how the
+          sheet is shaped — and the kebab holds DOCUMENTS and sharing, which
+          are acts rather than settings. They were one "⋯ Settings" button
+          holding both, which is why saving a schedule lived under a cog. */}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          data-testid="as-settings"
+          title={s.settings}
+          aria-label={s.settings}
+          onClick={() => setEditing({ kind: 'settings' })}
+          className={ICON_BTN}
+        >
+          <CogIcon className="size-5" />
+        </button>
+        <button
+          type="button"
+          data-testid="as-menu"
+          title={s.menu}
+          aria-label={s.menu}
+          onClick={() => setEditing({ kind: 'menu' })}
+          className={ICON_BTN}
+        >
+          <KebabIcon className="size-5" />
+        </button>
         <Button variant="primary" type="button" data-testid="as-download" disabled={busy} onClick={download}>
           {busy ? s.working : s.download}
         </Button>
@@ -327,7 +356,7 @@ export default function ActivityScheduleTool() {
             activity: s.activity, iconLabel: s.iconLabel, clearIcon: s.clearIcon,
             remove: s.remove, longer: s.longer, shorter: s.shorter, done: s.done,
             suggestions: s.suggestionsLabel, titleLabel: s.titleLabel,
-            noteLabel: s.noteLabel, groupLabel: s.groupLabel, settings: s.settings,
+            noteLabel: s.noteLabel, groupLabel: s.groupLabel, settings: s.settings, menu: s.menu,
             groupName: (g) => (l === 'ar' ? g.groupAr : g.group),
           }}
           onName={onName}
@@ -340,6 +369,49 @@ export default function ActivityScheduleTool() {
           onClose={() => setEditing(null)}
         >
           <div className="grid gap-3">
+            {editing.kind === 'menu' ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" data-testid="as-share" onClick={copyLink}>
+                    {copied ? s.copied : s.share}
+                  </Button>
+                  <Button type="button" data-testid="as-save"
+                    onClick={() => { setSaved(saveOne(schedule)); setCurrentId(schedule.id); setFromLink(false) }}>
+                    {s.save}
+                  </Button>
+                  <Button type="button" data-testid="as-new"
+                    onClick={() => {
+                      setSchedule(emptySchedule(l))
+                      setFromLink(false)
+                      setEditing(null)
+                      if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
+                    }}>
+                    {s.newOne}
+                  </Button>
+                </div>
+                {saved.length > 0 && (
+                  <div data-testid="as-saved" className="grid gap-1">
+                    <div className="text-[0.74rem] font-semibold text-ink-faint">{s.mine}</div>
+                    <ul className="grid gap-1">
+                      {saved.map((x) => (
+                        <li key={x.id} className="flex items-center gap-2 text-sm">
+                          <button type="button" data-testid={`as-open-${x.id}`} onClick={() => open(x)}
+                            className="flex-1 cursor-pointer border-0 bg-transparent text-start text-ink underline rtl:font-ar">
+                            {x.title || s.untitled}
+                          </button>
+                          <button type="button" data-testid={`as-delete-${x.id}`}
+                            onClick={() => setSaved(deleteOne(x.id))}
+                            className="cursor-pointer rounded-sm border-0 bg-sand-100 px-2 py-[2px] text-[0.76rem] text-ink-soft rtl:font-ar">
+                            {s.remove}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+            <>
             <Check>
               <input type="checkbox" data-testid="as-weekend" checked={schedule.days.length === 7}
                 onChange={(e) => setSchedule((p) => ({ ...p, days: e.target.checked ? [...WEEK] : [...SCHOOL_WEEK] }))} />
@@ -367,40 +439,7 @@ export default function ActivityScheduleTool() {
                   key={`to-${schedule.to}`} onBlur={(e) => setBounds('to', e.target.value)} />
               </Field>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" data-testid="as-save"
-                onClick={() => { setSaved(saveOne(schedule)); setCurrentId(schedule.id); setFromLink(false) }}>
-                {s.save}
-              </Button>
-              <Button type="button" data-testid="as-new"
-                onClick={() => {
-                  setSchedule(emptySchedule(l))
-                  setFromLink(false)
-                  setEditing(null)
-                  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
-                }}>
-                {s.newOne}
-              </Button>
-            </div>
-            {saved.length > 0 && (
-              <div data-testid="as-saved" className="grid gap-1">
-                <div className="text-[0.74rem] font-semibold text-ink-faint">{s.mine}</div>
-                <ul className="grid gap-1">
-                  {saved.map((x) => (
-                    <li key={x.id} className="flex items-center gap-2 text-sm">
-                      <button type="button" data-testid={`as-open-${x.id}`} onClick={() => open(x)}
-                        className="flex-1 cursor-pointer border-0 bg-transparent text-start text-ink underline rtl:font-ar">
-                        {x.title || s.untitled}
-                      </button>
-                      <button type="button" data-testid={`as-delete-${x.id}`}
-                        onClick={() => setSaved(deleteOne(x.id))}
-                        className="cursor-pointer rounded-sm border-0 bg-sand-100 px-2 py-[2px] text-[0.76rem] text-ink-soft rtl:font-ar">
-                        {s.remove}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            </>
             )}
           </div>
         </Drawer>

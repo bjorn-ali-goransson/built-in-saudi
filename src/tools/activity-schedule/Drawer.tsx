@@ -9,6 +9,7 @@ export type Editing =
   | { kind: 'item'; day: string; id: string }
   | { kind: 'text'; field: 'title' | 'note' | 'group' }
   | { kind: 'settings' }
+  | { kind: 'menu' }
 
 export interface DrawerStrings {
   activity: string
@@ -23,6 +24,7 @@ export interface DrawerStrings {
   noteLabel: string
   groupLabel: string
   settings: string
+  menu: string
   groupName: (g: { group: string; groupAr: string }) => string
 }
 
@@ -50,7 +52,7 @@ export function Drawer({
   mem: IconMemory
   suggestions: Suggestion[]
   str: DrawerStrings
-  /** The settings body, which the tool owns. */
+  /** The settings or menu body, which the tool owns. */
   children?: React.ReactNode
   onName: (name: string) => void
   onIcon: (icon: string) => void
@@ -60,6 +62,35 @@ export function Drawer({
   onClose: () => void
 }) {
   const [showIcons, setShowIcons] = useState(false)
+
+  /**
+   * How much of the screen the on-screen keyboard is covering.
+   *
+   * A `position: fixed` element is laid out against the LAYOUT viewport, and
+   * the keyboard does not change that — it only shrinks the VISUAL one. So a
+   * drawer docked to the bottom of the screen sits underneath the keyboard,
+   * and on a phone that meant the drawer, its name box and the suggestions
+   * were all off-screen the moment the field it had just focused summoned the
+   * keyboard. The control that opened the keyboard was invisible because of
+   * it.
+   *
+   * `visualViewport` is the only thing that reports the inset. Every browser
+   * this site runs on has it; where it is missing the drawer behaves exactly
+   * as it did before.
+   */
+  const [keyboard, setKeyboard] = useState(0)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const read = () => setKeyboard(Math.max(0, window.innerHeight - vv.height - vv.offsetTop))
+    read()
+    vv.addEventListener('resize', read)
+    vv.addEventListener('scroll', read)
+    return () => {
+      vv.removeEventListener('resize', read)
+      vv.removeEventListener('scroll', read)
+    }
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -76,7 +107,8 @@ export function Drawer({
 
   const label = editing.kind === 'text'
     ? (editing.field === 'title' ? str.titleLabel : editing.field === 'note' ? str.noteLabel : str.groupLabel)
-    : editing.kind === 'settings' ? str.settings : (item?.name || str.activity)
+    : editing.kind === 'settings' ? str.settings
+    : editing.kind === 'menu' ? str.menu : (item?.name || str.activity)
 
   return createPortal(
     <div
@@ -84,11 +116,24 @@ export function Drawer({
       role="dialog"
       aria-modal="true"
       data-testid="as-drawer"
+      data-keyboard={keyboard || undefined}
+      style={{ bottom: keyboard }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       {/* Dimmed, but not blacked out: the lesson being edited stays legible. */}
       <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--ink)_28%,transparent)]" />
-      <div className="relative flex max-h-[80dvh] w-full max-w-[34rem] flex-col gap-3 rounded-t-xl bg-[var(--surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-10px_40px_rgba(18,33,27,0.25)] animate-[fadeUp_0.18s_ease_both]">
+      <div
+        className="relative flex w-full max-w-[34rem] flex-col gap-3 rounded-t-xl bg-[var(--surface)] p-4 shadow-[0_-10px_40px_rgba(18,33,27,0.25)] animate-[fadeUp_0.18s_ease_both]"
+        data-testid="as-drawer-panel"
+        style={{
+          // Above the keyboard there is far less room, so the panel has to be
+          // allowed to use most of what is left rather than a fixed 80%.
+          maxHeight: keyboard ? `calc(100dvh - ${keyboard}px - 1rem)` : '80dvh',
+          // The home-indicator inset is under the keyboard when one is up, so
+          // padding for it there would be padding against nothing.
+          paddingBottom: keyboard ? '1rem' : 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         <div className="flex items-center justify-between gap-3">
           <h3 className="truncate font-ar text-[1.05rem] font-bold text-ink">{label}</h3>
           <button
@@ -103,7 +148,7 @@ export function Drawer({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
-          {editing.kind === 'settings' && children}
+          {(editing.kind === 'settings' || editing.kind === 'menu') && children}
 
           {editing.kind === 'text' && (
             <Input

@@ -23,6 +23,18 @@ const LONG_PRESS_MS = 400
 const SLOP = 8
 
 /**
+ * How far a finger may wander WHILE waiting for the press to land.
+ *
+ * Deliberately larger than `SLOP`. A finger resting on glass is never still —
+ * a thumb drifts several pixels over 400ms without its owner intending
+ * anything — so the tolerance that decides "this was a scroll after all" has
+ * to be looser than the one that decides "this was a drag, not a tap". At 8px
+ * the long press simply never landed for a real hand, and it looked exactly
+ * like a gesture that was not implemented.
+ */
+const HOLD_SLOP = 16
+
+/**
  * One activity on the axis — a white card on its day's colour.
  *
  * **It holds no form.** Earlier it carried the name box, the icon picker and a
@@ -111,7 +123,7 @@ export function Block({
       if (!t) return
       if (pending.current) {
         // Moved before the press landed, so it was a scroll after all.
-        if (Math.abs(t.clientY - pending.current.y) > SLOP) cancelPending()
+        if (Math.abs(t.clientY - pending.current.y) > HOLD_SLOP) cancelPending()
         return
       }
       const d = drag.current
@@ -151,13 +163,40 @@ export function Block({
     const d = drag.current
     drag.current = null
     if (held) setHeld(false)
-    if (d?.mode === 'move' && d.moved) {
-      // Suppress the compatibility click, or a drag also opens the drawer.
+    if (d) {
+      // The press had landed, so this finger was moving an activity — even if
+      // it never actually moved one. Opening the drawer here would mean a
+      // long press ends in an editor, which is the one thing a long press is
+      // not for.
       if (e.cancelable) e.preventDefault()
-      onDragEnd()
+      if (d.mode === 'move' && d.moved) onDragEnd()
       return
     }
-    if (wasPending || (d && !d.moved)) onOpen()
+    // A tap: down and up again before the press ever landed.
+    if (wasPending) onOpen()
+  }
+
+  /**
+   * A cancel is the browser TAKING the gesture, and it is never a tap.
+   *
+   * This was the whole bug, and it reported itself as two unrelated ones. A
+   * long press on Android raises the context menu at around 500ms, which
+   * cancels the touch — and `touchcancel` was wired straight to `touchEnd`,
+   * so the cancel was read as a release and opened the drawer. From outside
+   * that is "the drawer expands on press" and "dragging does not work",
+   * which sound like two defects and are one line.
+   *
+   * Preventing the context menu (below) stops most of these from happening at
+   * all; this makes the rest harmless rather than actively wrong.
+   */
+  const touchCancel = () => {
+    cancelPending()
+    const d = drag.current
+    drag.current = null
+    if (held) setHeld(false)
+    // The day re-lays itself live during a drag, so whatever was moved has
+    // already moved. There is nothing to roll back — only state to clear.
+    if (d?.mode === 'move' && d.moved) onDragEnd()
   }
 
   /** The pointer path is MOUSE and pen only; touch is handled above. */
@@ -212,7 +251,8 @@ export function Block({
       onPointerCancel={end}
       onTouchStart={(e) => touchStart(e, 'move')}
       onTouchEnd={touchEnd}
-      onTouchCancel={touchEnd}
+      onTouchCancel={touchCancel}
+      onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); return }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
@@ -228,7 +268,12 @@ export function Block({
         ${held ? 'touch-none z-20 scale-[1.02] shadow-[0_8px_24px_rgba(18,33,27,0.22)]' : 'touch-auto'}
         ${dim && !held ? 'opacity-70' : ''}
         ${trouble ? 'text-[color:var(--danger)]' : ''}`}
-      style={{ top, height, insetInlineStart: `${left}%`, width: `${width}%` }}
+      style={{
+        top, height, insetInlineStart: `${left}%`, width: `${width}%`,
+        // Safari's own long-press menu, which cancels the touch exactly as
+        // Android's context menu does.
+        WebkitTouchCallout: 'none',
+      }}
     >
       <div className="flex items-center justify-center gap-1.5">
         {icon && <span aria-hidden className="shrink-0 text-[1rem] leading-none">{icon}</span>}
@@ -255,6 +300,8 @@ export function Block({
         onPointerCancel={end}
         onTouchStart={(e) => { e.stopPropagation(); touchStart(e, 'resize') }}
         onTouchEnd={(e) => { e.stopPropagation(); touchEnd(e) }}
+        onTouchCancel={(e) => { e.stopPropagation(); touchCancel() }}
+        onContextMenu={(e) => e.preventDefault()}
         className="absolute inset-x-0 bottom-0 h-[7px] cursor-ns-resize [@media(pointer:coarse)]:h-[16px]"
       />
     </div>

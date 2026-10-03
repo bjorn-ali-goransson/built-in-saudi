@@ -25,6 +25,7 @@ export interface Strings {
   clearIcon: string
   move: string
   settings: string
+  menu: string
   hideArt: string
   longer: string
   shorter: string
@@ -67,6 +68,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     clearIcon: 'No icon',
     move: 'Tap to edit. Drag to reorder — the rest of the day moves to make room, and another day will take it. Arrow keys do the same; hold Shift to change the length.',
     settings: 'Settings',
+    menu: 'Schedules',
     hideArt: 'Remove the illustrations',
     longer: 'Fifteen minutes longer',
     shorter: 'Fifteen minutes shorter',
@@ -110,6 +112,7 @@ export const STR: Record<'en' | 'ar', Strings> = {
     clearIcon: 'بلا أيقونة',
     move: 'انقر للتحرير. واسحب لتغيير ترتيبه — فتتزحزح بقية اليوم لتفسح له، ويستقبله يوم آخر. والأسهم تفعل الشيء نفسه؛ واضغط Shift لتغيير مدته.',
     settings: 'الإعدادات',
+    menu: 'الجداول',
     hideArt: 'أزل الزخارف',
     longer: 'أطول بربع ساعة',
     shorter: 'أقصر بربع ساعة',

@@ -122,7 +122,7 @@ test('an icon chosen once comes back for the same name, in a LATER schedule', as
   await page.getByTestId('as-drawer-pick-🧩').click()
   await page.getByTestId('as-drawer-done').click()
 
-  await page.getByTestId('as-settings').click()
+  await page.getByTestId('as-menu').click()
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
 
@@ -237,26 +237,76 @@ test('a drag into ANOTHER day moves the lesson there', async ({ page }) => {
  * nobody can aim. The two gestures are told apart by BOTH numbers: a flick
  * scrolls and reorders nothing, a held drag reorders and scrolls nothing.
  */
-async function realTouchDrag(page: Page, loc: ReturnType<Page['locator']>, ms: number, dy: number) {
+async function realTouchDrag(
+  page: Page, loc: ReturnType<Page['locator']>, hold: boolean, dy: number,
+) {
+  // Back to the top, and WAIT for it. The previous gesture in this case is a
+  // flick that deliberately scrolls the page, and measuring the block before
+  // the scroll has settled yields stale coordinates — so the touch lands
+  // somewhere that is not the block, no press ever lands, and it reads as a
+  // long press that does not work. Which is, of course, the exact thing under
+  // test.
   await page.evaluate(() => window.scrollTo(0, 0))
+  await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0)
   const box = (await loc.boundingBox())!
   const x = box.x + box.width / 2
   const y = box.y + box.height / 2
   const cdp = await page.context().newCDPSession(page)
   const point = (ty: number) => [{ x, y: ty, radiusX: 12, radiusY: 12, force: 1 }]
 
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(y) })
-  await page.waitForTimeout(ms)
-  for (let i = 1; i <= 6; i++) {
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchMove', touchPoints: point(y + (dy * i) / 6),
-    })
-    await page.waitForTimeout(16)
+  // Resolved ONCE, before anything moves. `loc` is lazy, so after a reorder
+  // `nth(1)` is a different block and reading `data-held` off it would report
+  // the one that got out of the way — the same trap this suite already hit
+  // with a `.last()` locator.
+  const node = (await loc.elementHandle())!
+
+  // A CONTROLLED clock was tried here and is the wrong tool: React's scheduler
+  // is driven by timers, so freezing time stops `setHeld` ever flushing and
+  // the block reports itself unheld while dragging perfectly. Real time it is
+  // — but the whole gesture goes out in ONE round trip rather than five, so it
+  // cannot drift into the 400ms press window under a loaded suite. CDP keeps
+  // ordering on a session, so these are sent together and awaited once.
+  const began = Date.now()
+  const sent = [cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(y) })]
+  if (hold) {
+    await sent[0]
+    // A RETRYING assertion, not a sampled read. `getAttribute` has no
+    // auto-wait — the `allInnerTexts()` trap in a new place — so sampling it
+    // reported the block unheld whenever React had not yet flushed the state
+    // the press timer set. This is also the last moment `loc` is safe to use:
+    // nothing has reordered yet, so it still resolves to the block under the
+    // finger.
+    await expect(loc).toHaveAttribute('data-held', '', { timeout: 4000 })
   }
-  const scrolled = await page.evaluate(() => Math.abs(window.scrollY))
+  // Each step must clear the hold tolerance, or a real drag reads as finger
+  // tremor — which is the failure this gesture actually had on a phone.
+  for (let i = 1; i <= 4; i++) {
+    sent.push(cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: point(y + (dy * i) / 4),
+    }))
+  }
+  await Promise.all(sent)
+  const moving = Date.now() - began
+  // Absence is the stable state here and cannot flake into presence, so the
+  // negative case is a plain read off the node pinned before the reorder.
+  const held = (await node.getAttribute('data-held')) !== null
+
+  // Waiting for the scroll to SETTLE is free, and it has to be done: a CDP
+  // command is acknowledged before the compositor has moved anything, so
+  // reading immediately reported 0 under load. It cannot affect the outcome,
+  // because by now the moves have either exceeded the hold tolerance (so the
+  // press is already cancelled and can never land) or the press has already
+  // landed and taken the gesture.
+  let scrolled = -1
+  for (let i = 0; i < 20; i++) {
+    const now = await page.evaluate(() => Math.abs(window.scrollY))
+    if (now === scrolled) break
+    scrolled = now
+    await page.waitForTimeout(50)
+  }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await cdp.detach()
-  return scrolled
+  return { scrolled, held, moving }
 }
 
 const touchPhone = { hasTouch: true, viewport: { width: 420, height: 900 } }
@@ -272,15 +322,98 @@ test('on touch it takes a LONG press to move an activity', async ({ browser }) =
   await add(page, 'sun', 'Two')
   const second = blocks(page, 'sun').nth(1)
 
-  // A flick: the finger belongs to the scroller, and the day is untouched.
-  const flick = await realTouchDrag(page, second, 80, -60)
-  expect(flick).toBeGreaterThan(20)
+  // A flick: the clock never advances, so the press cannot land, and the
+  // finger belongs to the scroller.
+  const flick = await realTouchDrag(page, second, false, -60)
+  // If the machine was so slow that the press could have landed, say THAT
+  // rather than reporting a broken gesture.
+  expect(flick.moving, 'the flick must finish before the press could land').toBeLessThan(400)
+  expect(flick.held).toBe(false)
+  expect(flick.scrolled).toBeGreaterThan(20)
   expect(await orderOf(page, 'sun')).toEqual(['One', 'Two'])
 
   // Held first: the block claims the gesture, so the page must NOT move.
-  const drag = await realTouchDrag(page, second, 600, -60)
+  const drag = await realTouchDrag(page, second, true, -60)
+  expect(drag.held).toBe(true)
   expect(await orderOf(page, 'sun')).toEqual(['Two', 'One'])
-  expect(drag).toBe(0)
+  expect(drag.scrolled).toBe(0)
+  await ctx.close()
+})
+
+test('a cancelled touch is not a tap, and a long press never opens the drawer', async ({ browser }) => {
+  // This was ONE bug reported as two. A long press on Android raises the
+  // context menu at around 500ms, which cancels the touch — and `touchcancel`
+  // was wired to the same handler as `touchend`, so the cancel read as a
+  // release and opened the drawer. From outside that is "the drawer expands
+  // on press" and "dragging does not work".
+  const ctx = await browser.newContext(touchPhone)
+  const page = await ctx.newPage()
+  await page.goto('/en/apps/activity-schedule')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  await add(page, 'sun', 'Quran')
+  const block = blocks(page, 'sun').first()
+  const box = (await block.boundingBox())!
+  const cdp = await page.context().newCDPSession(page)
+  const pt = [{ x: box.x + box.width / 2, y: box.y + box.height / 2, radiusX: 12, radiusY: 12, force: 1 }]
+
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
+  await expect(page.getByTestId('as-drawer')).toHaveCount(0)
+
+  // And a press that landed and was then released without moving is a drag
+  // somebody thought better of, not a request to edit.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt })
+  await page.waitForTimeout(600)
+  await expect(block).toHaveAttribute('data-held', '')
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await expect(page.getByTestId('as-drawer')).toHaveCount(0)
+  await cdp.detach()
+  await ctx.close()
+})
+
+test('a long press raises no context menu, which is what cancels the touch', async ({ browser }) => {
+  const ctx = await browser.newContext(touchPhone)
+  const page = await ctx.newPage()
+  await page.goto('/en/apps/activity-schedule')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  await add(page, 'sun', 'Quran')
+  const prevented = await blocks(page, 'sun').first().evaluate((el) => {
+    const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    el.dispatchEvent(e)
+    return e.defaultPrevented
+  })
+  expect(prevented).toBe(true)
+  await ctx.close()
+})
+
+test('the drawer sits above the on-screen keyboard', async ({ browser }) => {
+  // A fixed element is laid out against the LAYOUT viewport, which the
+  // keyboard does not change — it only shrinks the VISUAL one. So a drawer
+  // docked to the bottom of the screen sits underneath the keyboard, and the
+  // field it has just focused is off-screen along with it.
+  const ctx = await browser.newContext(touchPhone)
+  const page = await ctx.newPage()
+  await page.goto('/en/apps/activity-schedule')
+  await expect(page.getByTestId('activity-schedule')).toBeVisible()
+  await add(page, 'sun', 'Quran')
+  await blocks(page, 'sun').first().tap()
+  await expect(page.getByTestId('as-drawer')).toBeVisible()
+
+  const panel = page.getByTestId('as-drawer-panel')
+  const before = (await panel.boundingBox())!
+  const KB = 320
+  await page.evaluate((kb) => {
+    // Stand in for the keyboard: shrink the visual viewport the way one does.
+    const vv = window.visualViewport!
+    Object.defineProperty(vv, 'height', { value: window.innerHeight - kb, configurable: true })
+    vv.dispatchEvent(new Event('resize'))
+  }, KB)
+
+  const after = (await panel.boundingBox())!
+  expect(after.y + after.height).toBeLessThanOrEqual(before.y + before.height - KB + 1)
+  // And the field it focused has to be somewhere a person can actually see.
+  const field = (await page.getByTestId('as-drawer-name').boundingBox())!
+  expect(field.y + field.height).toBeLessThan(900 - KB)
   await ctx.close()
 })
 
@@ -337,14 +470,52 @@ test('the illustrations are removed by clicking them', async ({ page }) => {
   await expect(page.getByTestId('as-art-header')).toBeVisible()
 })
 
-test('every other setting is behind the ⋯, not beside the sheet', async ({ page }) => {
+test('a cog holds the settings and a kebab holds the schedules', async ({ page }) => {
+  // One row, and the split is the point: a cog is for things that change how
+  // the sheet is SHAPED, a kebab for acts on the document. They were one
+  // button holding both, which is how saving a schedule came to live under a
+  // cog. The export is the only filled button, because it is the only one
+  // that produces a file.
   await load(page)
-  for (const id of ['as-weekend', 'as-from', 'as-to', 'as-save', 'as-new']) {
+  for (const id of ['as-weekend', 'as-from', 'as-to', 'as-save', 'as-new', 'as-share']) {
     await expect(page.getByTestId(id)).toHaveCount(0)
   }
+
   await page.getByTestId('as-settings').click()
-  for (const id of ['as-weekend', 'as-from', 'as-to', 'as-save', 'as-new']) {
+  for (const id of ['as-weekend', 'as-from', 'as-to']) {
     await expect(page.getByTestId(id)).toBeVisible()
+  }
+  for (const id of ['as-save', 'as-new', 'as-share']) {
+    await expect(page.getByTestId(id)).toHaveCount(0)
+  }
+  await page.getByTestId('as-drawer-done').click()
+
+  await page.getByTestId('as-menu').click()
+  for (const id of ['as-save', 'as-new', 'as-share']) {
+    await expect(page.getByTestId(id)).toBeVisible()
+  }
+  await expect(page.getByTestId('as-weekend')).toHaveCount(0)
+})
+
+test('the three controls are one row, and only the export is filled', async ({ page }) => {
+  await load(page)
+  // Their CENTRES, not their tops: the row is vertically centred and the
+  // three controls are different heights, so equal tops would be the wrong
+  // property and would fail against a row that is perfectly fine.
+  const mids = await Promise.all(
+    ['as-settings', 'as-menu', 'as-download'].map(async (id) => {
+      const b = (await page.getByTestId(id).boundingBox())!
+      return { mid: b.y + b.height / 2, x: b.x }
+    }),
+  )
+  for (const m of mids) expect(Math.abs(m.mid - mids[0].mid)).toBeLessThan(2)
+  expect(mids[0].x).not.toBe(mids[1].x)
+
+  // The icon buttons carry no chrome of their own; asserting the class would
+  // be testing Tailwind, so this reads what the browser actually painted.
+  for (const id of ['as-settings', 'as-menu']) {
+    const bg = await page.getByTestId(id).evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(bg).toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
   }
 })
 
@@ -526,6 +697,7 @@ test('the share link carries the whole sheet, and opening it fetches nothing', a
   await page.getByTestId('as-drawer-done').click()
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByTestId('as-menu').click()
   await page.getByTestId('as-share').click()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
   expect(shared).toContain('#s=')
@@ -555,12 +727,12 @@ test('a saved schedule can be reopened and deleted', async ({ page }) => {
   await page.getByTestId('as-drawer-done').click()
   await add(page, 'sun', 'Assembly')
 
-  await page.getByTestId('as-settings').click()
+  await page.getByTestId('as-menu').click()
   await page.getByTestId('as-save').click()
   await page.getByTestId('as-new').click()
   await expect(page.getByTestId('as-sheet-title')).not.toHaveText('Term one')
 
-  await page.getByTestId('as-settings').click()
+  await page.getByTestId('as-menu').click()
   const open = page.locator('[data-testid^="as-open-"]').first()
   await expect(open).toContainText('Term one')
   await open.click()

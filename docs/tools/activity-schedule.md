@@ -39,12 +39,21 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
       day's start, each activity's length and the breaks by position.
 - [x] A drag into another day's column MOVES it there — one edit applied to
       both days, so the sheet never holds the lesson twice or not at all.
-- [x] On TOUCH it takes a long press (400ms, cancelled by 8px of movement), so
-      a finger can still scroll the sheet. A mouse drags at once. Touch runs on
-      a NATIVE `{ passive: false }` listener that calls `preventDefault()`, so
-      the held block takes the gesture back from the scroller — `touch-action`
-      is read when the gesture begins, so setting it on the long press is too
-      late, and React's own touch listeners are passive.
+- [x] On TOUCH it takes a long press (400ms, cancelled by 16px of movement —
+      looser than the drag tolerance, because a resting finger drifts), so a
+      finger can still scroll the sheet. A mouse drags at once. Touch runs on a
+      NATIVE `{ passive: false }` listener that calls `preventDefault()`, so the
+      held block takes the gesture back from the scroller.
+- [x] A `touchcancel` is NEVER a tap, and the long press raises no context menu.
+      The two together were the whole reason dragging did nothing on a phone.
+- [x] A press that LANDED and is then released does not open the drawer; only a
+      release before it lands is a tap.
+- [x] The drawer sits above the on-screen keyboard, measured from
+      `visualViewport` — a fixed element is laid out against the layout
+      viewport, which the keyboard does not shrink.
+- [x] One toolbar row: a COG for settings, a KEBAB for the document (share,
+      save, start new, saved list), and the PDF export as the only filled
+      button.
 - [x] **No borders anywhere.** The column is the day's solid colour and each
       lesson is a white card on it, with the colour showing down both sides as a
       frame so the rounded corners blend into it.

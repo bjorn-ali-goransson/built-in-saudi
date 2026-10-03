@@ -493,6 +493,16 @@ export function RefreshIcon({ className }: P) {
   )
 }
 
+export function KebabIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function CogIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

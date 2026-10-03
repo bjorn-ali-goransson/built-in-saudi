@@ -2329,43 +2329,128 @@ Four more decisions:
 
 ### A long press on touch, and the test that proved nothing
 
-The user reported it twice: **"I can actually still not drag and drop the
-lessons on mobile."** The gesture was written, it had a passing spec, and it did
-nothing on a phone. Two separate mistakes, and the second is the reusable one.
+Reported three times — **"I can actually still not drag and drop the lessons on
+mobile"** — and the write-up below was once a confident account of a fix that
+did not work on a phone. It is corrected here rather than edited away, because
+the sequence is the lesson: two real platform traps were found and fixed, the
+gesture still did nothing, and the thing actually breaking it was one line of
+our own event wiring.
 
-- **`touch-action` is read when the gesture BEGINS.** The block flipped itself
-  to `touch-none` when the 400ms press landed, which is too late: the browser
-  had already assigned that touch to the scroller, so every subsequent move
-  scrolled the page and the drag handler was never reached. **A property latched
-  at gesture start cannot be set in response to the gesture.**
+**A CANCEL IS THE BROWSER TAKING THE GESTURE, AND IT IS NEVER A TAP.** That was
+the bug. `onTouchCancel` was wired to the same handler as `onTouchEnd`, and
+that handler ends with "if nothing moved, open the drawer". A long press on
+Android raises the context menu at around 500ms, which **cancels the touch** —
+so the cancel was read as a release, the drawer opened, and the drag was over
+before it began. It has its own handler now, which clears the drag and opens
+nothing.
+
+**It reported itself as two unrelated defects, which is why it took three
+rounds.** "Dragging does not work" and "the drawer expands on mouse down" sound
+like a gesture bug and a click-target bug; they are one line. **When two
+reports arrive together, try to make one cause produce both before treating
+them as two.**
+
+Three more things were wrong, each real and none of them sufficient:
+
+- **`touch-action` is read when the gesture BEGINS.** Flipping the block to
+  `touch-none` when the press lands is too late — the browser has already given
+  that touch to the scroller. **A property latched at gesture start cannot be
+  set in response to the gesture.**
 - **React marks its own touch listeners PASSIVE**, so `preventDefault()` inside
-  `onTouchMove` is a no-op. Reclaiming the gesture needs a native listener
+  `onTouchMove` is a no-op. Reclaiming a touch needs a native listener
   registered `{ passive: false }`, bound by hand in an effect. It works because
-  the press landed with no movement — nothing has started scrolling yet, so
-  there is still a gesture to claim. The pointer handlers all return early on
-  `pointerType === 'touch'`, because two paths for one finger is how a tap ends
-  up opening the drawer in the middle of a drag.
+  the press landed with no movement: nothing has begun scrolling, so there is
+  still a gesture to claim.
+- **A finger is never still.** The hold tolerance was the same 8px used to tell
+  a drag from a tap, and a thumb drifts further than that in 400ms without its
+  owner intending anything — so for a real hand the press often never landed at
+  all. `HOLD_SLOP` is 16 and is deliberately looser than `SLOP`: they answer
+  different questions.
 
-**The test is the part worth carrying.** It dispatched **synthetic pointer
-events**, which never consult `touch-action` and are never cancelable — so it
-exercised the handler and not the gesture, and passed against a tool that could
-not be used. It drives real touch through CDP `Input.dispatchTouchEvent` now.
+**The context menu is prevented at the source** (`onContextMenu` on the block,
+plus `-webkit-touch-callout: none` for Safari's equivalent), so most cancels no
+longer happen; handling the cancel correctly makes the rest harmless instead of
+actively wrong.
 
-**And one assertion was not enough, which the verification found.** With the
-listener made passive again the case still PASSED: a native `touchmove` fires
-whether or not the scroller also took the gesture, so the reorder happened while
-the sheet slid out from under the finger — a drag nobody can aim. The case
-asserts **both numbers**: a flick scrolls the page (>20px) and reorders nothing,
-a held drag reorders and scrolls **exactly 0**. Verified to fail three ways — a
-passive listener reddens the scroll assertion, and a no-op listener and the
-original pointer path each redden the reorder.
+**And a press that LANDED and is then released no longer opens the drawer.**
+Holding until the block lifts and letting go is a drag somebody thought better
+of, not a request to edit. Only a release before the press lands is a tap.
 
-**The column padding is asserted in PIXELS, not as a class**, for a related
-reason. A block is absolutely positioned, and a percentage on one resolves
-against the **padding box** of its containing block — so `p-1` on the column
-itself moved nothing at all and the white cards ran edge to edge. It needs an
-inner positioning box, and only the geometry can tell the two arrangements
-apart, which is why the case reads the live rects.
+**The test is the part worth carrying.** It began by dispatching **synthetic
+pointer events**, which never consult `touch-action` and are never cancelable —
+so it exercised the handler and not the gesture, and passed against a tool that
+could not be used. It drives real touch through CDP `Input.dispatchTouchEvent`
+now, and three cases are **verified to fail**: wiring the cancel back to
+`touchEnd`, removing the context-menu prevention, and ignoring the keyboard
+inset each redden exactly one.
+
+**One assertion was still not enough, twice over.** With the native listener
+made passive again the drag case still PASSED, because a native `touchmove`
+fires whether or not the scroller also took the gesture — the reorder happened
+while the sheet slid out from under the finger, which is a drag nobody can aim.
+It asserts **both numbers**: a flick scrolls the page and reorders nothing, a
+held drag reorders and scrolls **exactly 0**.
+
+**And the lazy-locator trap caught it reading `data-held` off the wrong
+block.** `nth(1)` re-resolves after the reorder, so it reported the block that
+had got out of the way. The element is pinned with `elementHandle()` before
+anything moves — the same trap this file already records for `.last()`.
+
+**Making that one case stable took four attempts, and three of them are
+reusable.** It is a test of a DURATION, so it leaned on wall-clock slack: it
+held 80ms and paused 16ms between moves, comfortably inside the 400ms press in
+isolation and not under two workers — green alone, red under load, the
+documented signature.
+
+- **A CONTROLLED clock is the wrong tool here, which is worth knowing before
+  reaching for it.** `page.clock.install()` plus `runFor(600)` is the obvious
+  fix and it made the case fail *every* time: **React's scheduler is driven by
+  timers**, so freezing time stops `setHeld` ever flushing, and the block
+  reports itself unheld while dragging perfectly. Faking time breaks anything
+  that uses time to do its work, and React is one of those things.
+- **The gesture goes out in ONE round trip.** CDP preserves ordering on a
+  session, so the moves are sent together and awaited once rather than five
+  times — which is what keeps the flick inside the press window without hoping.
+  It then **waits for the scroll to SETTLE**, because a CDP command is
+  acknowledged before the compositor has moved anything; that wait is free,
+  since by then the press has either been cancelled or already landed.
+- **`getAttribute` has no auto-wait** — the `allInnerTexts()` trap in a new
+  place. The held state is now a retrying `toHaveAttribute`, taken at the last
+  moment the lazy locator is still safe to use.
+- **And the real cause of the last 75% of failures was the case's own previous
+  gesture.** The flick deliberately scrolls the page; the next drag scrolled
+  back to the top and measured the block immediately, so under load it took
+  STALE coordinates, the touch landed somewhere that was not the block, and no
+  press ever landed. It read as "the long press does not work" — which is
+  exactly the thing under test, and the most expensive kind of false failure
+  there is. **After scrolling a page, wait for it before measuring anything on
+  it.**
+
+**The keyboard covered the drawer, which is the other half of the same
+screen.** A `position: fixed` element is laid out against the LAYOUT viewport,
+and an on-screen keyboard does not change that — it only shrinks the VISUAL
+one. So the drawer docked to the bottom of the screen sat underneath the
+keyboard, taking the name box and the suggestions with it: **the field the
+drawer had just focused was off-screen because it had focused it.**
+`visualViewport` is the only thing that reports the inset, and the panel's
+maximum height is recomputed from it, because above a keyboard there is far
+less room than 80% of the screen.
+
+**The column padding is asserted in PIXELS, not as a class.** A block is
+absolutely positioned, and a percentage on one resolves against the **padding
+box** of its containing block — so `p-1` on the column itself moved nothing and
+the white cards ran edge to edge. It needs an inner positioning box, and only
+the geometry can tell the two arrangements apart. It shipped at 6px and was
+reported as missing; for something whose only job is to be seen, that is the
+same as not being there, so it is **10px**.
+
+**One row: a cog, a kebab and the export.** The cog holds SETTINGS — the things
+that change how the sheet is shaped — and the kebab holds the DOCUMENT: share,
+save, start new, and the saved list. They were one "⋯ Settings" button holding
+both, which is how saving a schedule came to live under a cog. Only the export
+is a filled button, because it is the only control on the row that produces a
+file; the two icon buttons carry no chrome, and the case reads the painted
+background rather than asserting a class.
 
 ### The QR was a picture of a QR, twice, and only decoding it found out
 

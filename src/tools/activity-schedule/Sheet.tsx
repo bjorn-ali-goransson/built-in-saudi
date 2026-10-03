@@ -229,7 +229,7 @@ export function Sheet({
                   if (el) columns.current.set(day, el)
                   else columns.current.delete(day)
                 }}
-                className="rounded-b-lg px-1.5"
+                className="rounded-b-lg px-2.5"
                 style={{ height: height + 8, background: DAY_TINT[day].solid }}
               >
                 {/*
@@ -241,6 +241,10 @@ export function Sheet({
                   shows down both sides like a frame, which is what lets the
                   rounded corners read as cards sitting ON the column rather
                   than as holes cut out of it.
+
+                  10px rather than the 6 it shipped with: at 6 the frame was
+                  there and was reported as missing, which for something whose
+                  only job is to be seen is the same as not being there.
                 */}
                 <div className="relative size-full">
                 {layoutDay(items).map(({ item, col, cols: n }) => (
