@@ -2304,7 +2304,7 @@ is the opposite call from the QR density limit, which was unreachable and
 therefore wrong to keep: the difference is whether anything can still arrive in
 that state.
 
-Four more decisions:Four more decisions:
+Four more decisions:
 
 - **An overlap is flagged AND packed side by side.** Two things at once is the
   defect a time axis can see and a grid of boxes cannot, because boxes are the
@@ -2326,6 +2326,46 @@ Four more decisions:Four more decisions:
   so somebody's saved sheet and any link already handed out both carry it. A
   schedule somebody built and printed is not ours to throw away because we
   changed our minds about the model. Verified to fail by deleting the branch.
+
+### A long press on touch, and the test that proved nothing
+
+The user reported it twice: **"I can actually still not drag and drop the
+lessons on mobile."** The gesture was written, it had a passing spec, and it did
+nothing on a phone. Two separate mistakes, and the second is the reusable one.
+
+- **`touch-action` is read when the gesture BEGINS.** The block flipped itself
+  to `touch-none` when the 400ms press landed, which is too late: the browser
+  had already assigned that touch to the scroller, so every subsequent move
+  scrolled the page and the drag handler was never reached. **A property latched
+  at gesture start cannot be set in response to the gesture.**
+- **React marks its own touch listeners PASSIVE**, so `preventDefault()` inside
+  `onTouchMove` is a no-op. Reclaiming the gesture needs a native listener
+  registered `{ passive: false }`, bound by hand in an effect. It works because
+  the press landed with no movement — nothing has started scrolling yet, so
+  there is still a gesture to claim. The pointer handlers all return early on
+  `pointerType === 'touch'`, because two paths for one finger is how a tap ends
+  up opening the drawer in the middle of a drag.
+
+**The test is the part worth carrying.** It dispatched **synthetic pointer
+events**, which never consult `touch-action` and are never cancelable — so it
+exercised the handler and not the gesture, and passed against a tool that could
+not be used. It drives real touch through CDP `Input.dispatchTouchEvent` now.
+
+**And one assertion was not enough, which the verification found.** With the
+listener made passive again the case still PASSED: a native `touchmove` fires
+whether or not the scroller also took the gesture, so the reorder happened while
+the sheet slid out from under the finger — a drag nobody can aim. The case
+asserts **both numbers**: a flick scrolls the page (>20px) and reorders nothing,
+a held drag reorders and scrolls **exactly 0**. Verified to fail three ways — a
+passive listener reddens the scroll assertion, and a no-op listener and the
+original pointer path each redden the reorder.
+
+**The column padding is asserted in PIXELS, not as a class**, for a related
+reason. A block is absolutely positioned, and a percentage on one resolves
+against the **padding box** of its containing block — so `p-1` on the column
+itself moved nothing at all and the white cards ran edge to edge. It needs an
+inner positioning box, and only the geometry can tell the two arrangements
+apart, which is why the case reads the live rects.
 
 ### The QR was a picture of a QR, twice, and only decoding it found out
 

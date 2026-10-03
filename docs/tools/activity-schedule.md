@@ -40,14 +40,19 @@ placed on the axis → an HTML sheet, a share link, and an A4-landscape PDF.
 - [x] A drag into another day's column MOVES it there — one edit applied to
       both days, so the sheet never holds the lesson twice or not at all.
 - [x] On TOUCH it takes a long press (400ms, cancelled by 8px of movement), so
-      a finger can still scroll the sheet. A mouse drags at once.
+      a finger can still scroll the sheet. A mouse drags at once. Touch runs on
+      a NATIVE `{ passive: false }` listener that calls `preventDefault()`, so
+      the held block takes the gesture back from the scroller — `touch-action`
+      is read when the gesture begins, so setting it on the long press is too
+      late, and React's own touch listeners are passive.
+- [x] **No borders anywhere.** The column is the day's solid colour and each
+      lesson is a white card on it, with the colour showing down both sides as a
+      frame so the rounded corners blend into it.
 - [x] **Nothing is edited on the sheet.** Tapping a lesson, the title, the line
       under it or the class opens a bottom DRAWER — the one place anything is
       edited. A block carries no inputs at all.
 - [x] Name suggestions are fuzzy and ranked: the whole name, then its start,
       then a word inside it, then the letters in order, then a one-letter slip.
-- [x] **No borders anywhere.** The column is the day's solid colour and each
-      lesson is a white card on it.
 - [x] Clicking the illustrations removes them; the settings drawer offers them
       back as a BUTTON, because a checkbox that vanishes when ticked is an
       action pretending to be a setting.
