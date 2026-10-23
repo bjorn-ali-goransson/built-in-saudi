@@ -5,6 +5,11 @@
 // A data-only connection forms first (no camera/mic); media is added lazily via
 // renegotiation once the host admits a guest, so un-admitted guests never see or
 // send any media, and their names are exchanged peer-to-peer, not via the relay.
+import {
+  LADDER, QualityController, bucketFor, encodeFor,
+  type PeerStats, type QualityLimit, type QualitySummary,
+} from '../../lib/videoQuality'
+
 const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGNAL?: string }).__CALL_SIGNAL) || 'https://us-central1-blitz-ksa.cloudfunctions.net/call-signal'
 
 // One lightweight probe of the relay before showing a guest the join controls:
@@ -38,9 +43,10 @@ const CAM: MediaTrackConstraints = {
   width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 },
 }
 
-// Roughly what a given encoded width is worth, in kbps. A 160px thumbnail is ~36x
-// fewer pixels than 960px, so it has no business carrying a 700 kbps stream.
-const bitrateFor = (w: number) => (w <= 160 ? 60 : w <= 240 ? 100 : w <= 320 ? 160 : w <= 480 ? 300 : w <= 640 ? 450 : 700)
+// How often the send-side stats are read. Fast enough that a link going bad is
+// caught in seconds, slow enough that `getStats()` over a mesh is not itself a
+// cost — it is one call per peer per tick.
+const QUALITY_POLL_MS = 2000
 
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
@@ -50,8 +56,8 @@ const ICE: RTCIceServer[] = [
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
-export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string }
-export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; peers: DiagPeer[] }
+export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string; rung: number; fps: number | null; verdict: string }
+export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; peers: DiagPeer[]; quality: QualitySummary }
 
 // A whiteboard object (a pen/eraser stroke or a text label). Coords are in the
 // centred, aspect-preserving board space; width/size are fractions of the board.
@@ -134,6 +140,10 @@ export interface CallHandlers {
   /** Fired each poll cycle with the delay (ms) until the next relay poll — the UI
    *  uses it to show a "checking again" spinner partway through the wait. */
   onPollCycle?(delayMs: number): void
+  /** Video was turned off (or brought back) because of measured performance, not
+   *  because anybody pressed anything. Fired ONLY on the flip, so the banner is
+   *  an event rather than a standing caveat; the live numbers are in `diag()`. */
+  onVideoOff?(off: boolean, reason: QualitySummary['reason']): void
 }
 
 interface Peer {
@@ -150,6 +160,11 @@ interface Peer {
   wantW?: number // device px this peer says it renders OUR video at (0 = not on screen)
   videoPaused?: boolean // they told us they aren't rendering us — we send them NO video
   sentWantW?: number // the last width WE asked this peer for (dedupes the control msg)
+  // The frame rate we last FED this peer's encoder, capped by what the camera
+  // actually delivers — so an achieved rate can be judged against what was
+  // asked rather than against a constant. 0 means "don't judge it": nothing is
+  // being sent, or it is a screen share, which legitimately emits few frames.
+  askedFps?: number
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -182,6 +197,12 @@ export class CallRoom {
   // when a device is already live, switched immediately via switchMic/switchCamera.
   private micId: string | undefined
   private camId: string | undefined
+  // Adaptive quality: the coordinator the mesh needs ABOVE its connections,
+  // because each RTCPeerConnection estimates the shared uplink as though it
+  // owned the whole thing. See src/lib/videoQuality.ts.
+  private quality = new QualityController()
+  private qTimer: number | undefined
+  private captureFps = 0 // the frame rate last applied to the camera itself
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
@@ -208,6 +229,7 @@ export class CallRoom {
     this.emitPreview()
     for (const p of this.peers.values()) this.linkMedia(p)
     this.broadcastInfo()
+    if (!this.qTimer) this.qTimer = window.setInterval(() => { void this.pollQuality() }, QUALITY_POLL_MS)
   }
 
   // Hand the UI a FRESH MediaStream of the current local tracks for the self-view.
@@ -324,9 +346,20 @@ export class CallRoom {
     this.applyVideo(peer)
   }
 
-  /** The video track we'd be sending right now, if anyone wanted it. */
+  /** The video track we'd be sending right now, if anyone wanted it.
+   *
+   *  A SCREEN SHARE IS EXEMPT from the performance cut, which is why it is
+   *  tested first: sharing a screen is something a person is actively doing,
+   *  where a camera is ambient, and soft text is not a worse version of the
+   *  content but none of it. A bad link costs a share frame rate and bitrate.
+   *
+   *  The camera TRACK is deliberately left running when quality turns video
+   *  off — only the sending stops. Stopping it would blank the person's own
+   *  self-preview, which reads as the camera breaking rather than as the call
+   *  protecting itself; the capture rate drops instead (`applyCaptureRate`). */
   private wantedVideoTrack(): MediaStreamTrack | null {
     if (this.screenOn) return this.screen?.getVideoTracks()[0] || null
+    if (this.quality.videoOff) return null
     return this.cam ? this.videoTrack : null
   }
 
@@ -369,7 +402,10 @@ export class CallRoom {
     // Width we're actually capturing, so the scale factor is honest even when the
     // camera ignored our ideal constraint.
     const capW = this.videoTrack?.getSettings().width || 960
-    for (const p of this.peers.values()) {
+    // And the rate it's actually DELIVERING, for the same reason: a 15fps webcam
+    // in poor light must not be read as a congested link.
+    const capFps = Math.max(1, Math.round(this.videoTrack?.getSettings().frameRate || 30))
+    for (const [id, p] of this.peers) {
       const s = p.vSender
       if (!s) continue
       // Receiver-driven: encode for the box THIS peer is painting us into. A tile in
@@ -377,20 +413,115 @@ export class CallRoom {
       // show. Falls back to a mesh-size guess until they've told us (or if they're
       // on an old build that never will).
       const want = p.wantW && p.wantW > 0 ? p.wantW : n <= 1 ? 640 : n === 2 ? 480 : 320
-      const target = this.screenOn ? capW : Math.min(capW, Math.max(160, want))
-      const kbps = this.screenOn ? 1200 : bitrateFor(target)
+      // …and performance-driven on top of it: what that peer can SHOW and what
+      // this link can CARRY are different questions, so the lower of the two wins.
+      const enc = encodeFor(this.quality.levelFor(id), capW, want, this.screenOn)
+      p.askedFps = enc && !this.screenOn ? Math.min(enc.fps, capFps) : 0
+      if (!enc) continue // video off — applyVideo has already released the track
       try {
         const params = s.getParameters()
         if (!params.encodings || params.encodings.length === 0) params.encodings = [{}]
-        params.encodings[0].maxBitrate = kbps * 1000
-        params.encodings[0].maxFramerate = this.screenOn ? 15 : 24
+        params.encodings[0].maxBitrate = enc.kbps * 1000
+        params.encodings[0].maxFramerate = enc.fps
         // Screen-share must stay sharp (text); a camera tile can shrink to fit.
-        params.encodings[0].scaleResolutionDownBy = this.screenOn ? 1 : Math.min(16, Math.max(1, capW / target))
+        params.encodings[0].scaleResolutionDownBy = enc.scale
         params.degradationPreference = this.screenOn ? 'maintain-resolution' : 'balanced'
         s.setParameters(params).catch(() => {})
       } catch { /* older browsers: no encoding params — the capture cap still applies */ }
     }
   }
+
+  /** Drop the CAMERA's own frame rate, not just each encoder's.
+   *
+   *  In a mesh this is the one lever that pays ONCE rather than per peer: a frame
+   *  never captured is a frame no connection has to encode, so on a CPU-bound
+   *  phone it is worth more than every encoder cap put together. The capture has
+   *  to serve the LEAST degraded peer, which is the shared level — a per-peer
+   *  penalty only ever subtracts from it. */
+  private async applyCaptureRate(): Promise<void> {
+    const t = this.videoTrack
+    if (!t || this.screenOn) return
+    const fps = LADDER[this.quality.captureLevel].fps
+    if (fps === this.captureFps) return
+    this.captureFps = fps
+    try { await t.applyConstraints({ ...CAM, frameRate: { ideal: fps, max: fps } }) } catch { /* the encoder cap still applies */ }
+  }
+
+  /** Read one peer's send-side stats.
+   *
+   *  `qualityLimitationReason` is the encoder's OWN verdict — worth more than
+   *  anything we could infer, because it is the encoder saying it is already
+   *  degrading and why. Loss and round trip come from `remote-inbound-rtp`,
+   *  which is the RECEIVER's report of what actually arrived rather than our
+   *  hope about what we sent.
+   *
+   *  With video off there is no video report at all, so the audio one is the
+   *  only evidence left to recover on — without that fallback, video would stay
+   *  off for the rest of the call. */
+  private async sample(p: Peer, at: number): Promise<PeerStats | null> {
+    let rep: RTCStatsReport
+    try { rep = await p.pc.getStats() } catch { return null }
+    type Row = Record<string, unknown>
+    let vOut: Row | undefined, rv: Row | undefined, ra: Row | undefined, pair: Row | undefined
+    rep.forEach((r) => {
+      const row = r as Row
+      const type = String(row.type)
+      if (type === 'outbound-rtp' && row.kind === 'video') vOut = row
+      else if (type === 'remote-inbound-rtp') { if (row.kind === 'video') rv = row; else if (row.kind === 'audio') ra = row }
+      else if (type === 'candidate-pair' && (row.selected || row.nominated)) pair = row
+    })
+    const remote = rv || ra
+    if (!vOut && !remote) return null
+    const sending = !!(vOut && p.vSender?.track)
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+    return {
+      at,
+      framesEncoded: num(vOut?.framesEncoded),
+      limit: sending ? ((vOut?.qualityLimitationReason as QualityLimit) || 'none') : 'none',
+      loss: Math.max(0, Math.min(1, num(remote?.fractionLost))),
+      rtt: num(remote?.roundTripTime) || num(pair?.currentRoundTripTime),
+      wantFps: sending ? (p.askedFps || 0) : 0,
+    }
+  }
+
+  /** One adaptation cycle: measure every in-call peer, let the controller decide,
+   *  then re-tune. Only the on/off FLIP is reported to the UI — a rung given up
+   *  is invisible and helpful, and a standing "your quality is reduced" notice is
+   *  the caveat nobody reads. */
+  private async pollQuality(): Promise<void> {
+    if (!this.inCall) return
+    const at = Date.now()
+    const stats = new Map<string, PeerStats>()
+    for (const [id, p] of this.peers) {
+      if (!p.info?.inCall) continue
+      const s = await this.sample(p, at)
+      if (s) stats.set(id, s)
+    }
+    if (!stats.size) return
+    const was = this.quality.videoOff
+    this.quality.step(stats)
+    if (this.quality.videoOff !== was) {
+      this.applyVideoAll()
+      this.broadcastInfo() // our `cam` flag is unchanged, but peers re-read state
+      this.h.onVideoOff?.(this.quality.videoOff, this.quality.summary().reason)
+    }
+    this.tuneVideo()
+    await this.applyCaptureRate()
+  }
+
+  /** The person overruled us and asked for their camera back after we turned it
+   *  off. It returns at the bottom rung — the link is still the link — and we
+   *  never take it away again: doing that twice to somebody who has just said
+   *  they want video is the app arguing with them. */
+  pinVideo(): void {
+    this.quality.pin()
+    this.applyVideoAll()
+    this.tuneVideo()
+    void this.applyCaptureRate()
+    this.h.onVideoOff?.(false, 'none')
+  }
+  /** Whether video is currently off because of measured performance. */
+  get autoVideoOff(): boolean { return this.quality.videoOff }
 
   /** Receiver side: tell `id` how wide we're painting their video, so they can stop
    *  encoding pixels we'll only throw away. Quantised into buckets so a few pixels
@@ -402,7 +533,7 @@ export class CallRoom {
     const px = Math.round(cssPx * dpr)
     // 0 means "you're not on my screen at all" — the sender stops sending video
     // entirely. Otherwise snap onto the ladder the sender scales down to.
-    const bucket = px <= 0 ? 0 : px <= 160 ? 160 : px <= 240 ? 240 : px <= 320 ? 320 : px <= 480 ? 480 : px <= 640 ? 640 : 960
+    const bucket = bucketFor(px)
     if (peer.sentWantW === bucket) return
     peer.sentWantW = bucket
     peer.dc.send(JSON.stringify({ c: 'want', w: bucket } as Ctrl))
@@ -502,6 +633,7 @@ export class CallRoom {
         this.local?.addTrack(this.videoTrack)
       }
       this.cam = true
+      this.captureFps = 0 // a fresh track starts at the CAM ceiling
       this.emitPreview()
       if (!this.screenOn) this.applyVideoAll()
     } else {
@@ -531,7 +663,7 @@ export class CallRoom {
     let track: MediaStreamTrack
     try { track = (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, ...CAM } })).getVideoTracks()[0] } catch { return }
     this.local?.removeTrack(this.videoTrack); this.videoTrack.stop()
-    this.videoTrack = track; this.local?.addTrack(track); this.emitPreview()
+    this.videoTrack = track; this.captureFps = 0; this.local?.addTrack(track); this.emitPreview()
     if (!this.screenOn) this.setVideoWire()
   }
   /** Ask another participant's client to mute itself; everyone is notified. */
@@ -555,24 +687,28 @@ export class CallRoom {
   /** A snapshot of live connection + media state, for the on-screen debug panel. */
   diag(): DiagSnapshot {
     const t = (tr?: MediaStreamTrack | null) => (tr ? `${tr.readyState}${tr.enabled ? '' : ' off'}${tr.muted ? ' muted' : ''}` : '—')
+    const q = this.quality.summary()
+    const byId = new Map(q.peers.map((x) => [x.id, x]))
     return {
       me: this.me.slice(0, 5), role: this.role, inCall: this.inCall, muted: this.muted,
-      mic: t(this.audioTrack), cam: t(this.videoTrack),
+      mic: t(this.audioTrack), cam: t(this.videoTrack), quality: q,
       peers: [...this.peers.entries()].map(([id, p]) => ({
         id: id.slice(0, 5), name: p.info?.name || '?', theirInCall: !!p.info?.inCall,
         conn: p.pc.connectionState, ice: p.pc.iceConnectionState, dc: p.dc?.readyState || '—',
         sendMic: t(p.aSender?.track), sendCam: t(p.vSender?.track),
         recvAudio: (p.stream?.getAudioTracks() || []).map(t).join(',') || '—',
         recvVideo: (p.stream?.getVideoTracks() || []).map(t).join(',') || '—',
+        rung: this.quality.levelFor(id), fps: byId.get(id)?.fps ?? null, verdict: byId.get(id)?.verdict || '—',
       })),
     }
   }
 
-  private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
+  private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.quality.forget(id); this.tuneVideo(); this.h.onLeave?.(id) }
   leave() {
     if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false
     window.clearInterval(this.heartbeat)
+    window.clearInterval(this.qTimer); this.qTimer = undefined
     this.stopScreen()
     this.peers.forEach((p) => { try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())

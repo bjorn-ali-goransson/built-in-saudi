@@ -62,6 +62,13 @@ export const STR = {
     rotate: 'Rotate (snaps to 45°)', moveText: 'Move', widthText: 'Drag to set width', smaller: 'Smaller', bigger: 'Bigger',
     privacy: 'All data is peer-to-peer, only the handshake uses the server.',
     // Live location sharing (#235).
+    // Video turned itself off because the link or the device could not carry it.
+    // Said plainly and with a way out: a silent black tile is indistinguishable
+    // from the app being broken, which is the failure this copy exists for.
+    videoOffTitle: 'Your video is off',
+    videoOffLink: 'Your connection couldn\u2019t carry it \u2014 audio is unaffected.',
+    videoOffCpu: 'This device couldn\u2019t keep up \u2014 audio is unaffected.',
+    videoOffAnyway: 'Turn it back on anyway',
     location: 'Location', locShare: 'Share my location', locStop: 'Stop sharing location',
     locPinHint: 'Tap the map to drop a pin', locOpenMaps: 'Open in maps',
     locNobody: 'No one is sharing a location yet. Tap “Share my location” — or drop a pin anywhere on the map.',
@@ -121,6 +128,10 @@ export const STR = {
     connectFail: 'تعذّر الاتصال بـ', waitSlow: 'ما زلنا نحاول الاتصال — إن طال ذلك، فقد يكون المضيف غير متصل أو الشبكة تمنع المكالمة.',
     rotate: 'تدوير (يثبُت على ٤٥°)', moveText: 'تحريك', widthText: 'اسحب لتحديد العرض', smaller: 'أصغر', bigger: 'أكبر',
     privacy: 'كل البيانات مباشرة بين الأجهزة، فقط المصافحة تستخدم الخادم.',
+    videoOffTitle: 'كاميرتك متوقفة',
+    videoOffLink: 'اتصالك لم يتحملها — الصوت لم يتأثر.',
+    videoOffCpu: 'هذا الجهاز لم يواكبها — الصوت لم يتأثر.',
+    videoOffAnyway: 'أعد تشغيلها على أي حال',
     location: 'الموقع', locShare: 'شارك موقعي', locStop: 'إيقاف مشاركة الموقع',
     locPinHint: 'اضغط على الخريطة لإضافة دبوس', locOpenMaps: 'افتح في الخرائط',
     locNobody: 'لا أحد يشارك موقعه بعد. اضغط «شارك موقعي» — أو أضِف دبوسًا في أي مكان على الخريطة.',

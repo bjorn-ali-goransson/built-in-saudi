@@ -3139,6 +3139,150 @@ carries a measured lesson (the level table, the box header, the `RangeError` a
 ten-minute clip hits, the chroma rounding), and a copy loses the comment along
 with the code.
 
+## A mesh cannot divide its own uplink (`lib/videoQuality.ts`, `calls`)
+
+#214 made the encoder answer to the RECEIVER — encode for the box the other
+side is painting you into. This is the other half: answer to the **link and the
+device**, and stop sending video when neither can carry it.
+
+**The browser already adapts, and in a mesh it adapts in the wrong unit.** Every
+`RTCPeerConnection` runs its own send-side bandwidth estimator, and each one
+measures the path to ITS peer as though it owned the whole uplink. Four peers on
+one 2 Mbps link means four estimators each probing toward 2 Mbps — so they
+converge by **saturating the uplink and reading back the loss that causes**,
+which is exactly the stuttering, lossy call this is meant to prevent.
+Per-connection congestion control cannot divide a shared uplink; something above
+the connections has to. That is the whole reason the module exists, and it is
+why the controller is not "per peer, like everything else here".
+
+What the browser does well is kept rather than replaced: inside the ceiling we
+set, `degradationPreference` picks resolution against frame rate frame by frame,
+which nothing here could do better.
+
+**What is measured is the encoder's own verdict, not a guess.**
+`qualityLimitationReason` on `outbound-rtp` is the encoder saying it is ALREADY
+degrading and why (`cpu` / `bandwidth`); loss and round trip come from
+`remote-inbound-rtp`, which is the **receiver's report of what actually
+arrived** rather than our hope about what we sent.
+
+**Frame rate goes first, and that is the one choice in the ladder worth
+arguing about.** At a fixed bitrate, halving the frame rate nearly doubles the
+bits available per frame — so a talking head at 15fps is *sharper* than the same
+head at 30, and a face you can read matters more in a call than motion that is
+smooth. Rung 1 costs frame rate and **leaves the picture untouched**; resolution
+only starts going at rung 2. Six rungs (24 → 18 → 15 → 12 → 10 → 7 fps, 960 →
+160px), then off.
+
+**TWO LEVELS, because a bad peer and a bad uplink are different facts.** This is
+the design decision the gate exists to protect, and the alternative is
+measurably worse:
+
+| | one level | two levels |
+|---|---|---|
+| one peer of three on a lossy path | **all three** dropped to video-off | that peer on rung 5, the others on rung 0 |
+
+Degrading everybody because one person is on hotel wifi punishes two people for
+the third's connection; degrading only the peer who happened to complain fixes
+nothing when it IS our uplink, because every other connection keeps its ceiling.
+So a global level moves on evidence shared across peers — **`cpu` anywhere (one
+encoder budget however many connections spend it), or a majority of paths in
+trouble** — and a per-peer penalty adds to it for one peer alone. With a single
+peer there is no way to tell our uplink from their path and the action is the
+same either way, so one troubled peer IS the majority.
+
+**Only the global level may reach off.** A per-peer penalty stops at the bottom
+rung that still sends, because "your video is off" is something a person can be
+told and act on, where "your video is off for Omar only" is a sentence nobody
+can do anything with.
+
+**Severity is what answers "disable it if performance is very bad".** Merely bad
+descends one rung per two consecutive bad polls; **severe** (≥20% loss, or an
+encoder achieving under a quarter of what it was fed) descends two. Measured:
+**24s to off on a congested link, 12s on a severe one.** Without the escalation
+both read 24s, which is the same ladder twice.
+
+**Drop fast, recover slowly** — two bad polls give up a rung, **five** clean ones
+take one back. A marginal link otherwise oscillates: degrade, link frees up,
+re-raise, congest again. And `ok` (ambiguous evidence) clears the GOOD run but
+deliberately **not** the bad one, or a link that is troubled every other poll
+holds full quality for ever by being ambiguous in between.
+
+**Four traps, each of which silently wrecks the feature:**
+
+- **A throttled tab is not a bad link.** A backgrounded tab's encoder all but
+  stops, so `framesEncoded` becomes evidence about the TAB. Without the
+  poll-gap guard, **minimising your window turns your camera off** — verified by
+  removing it. Loss and round trip stay valid throughout (they are the
+  receiver's report), so only the frame-rate test is withheld.
+- **A slow camera is not a slow link.** A 15fps webcam in poor light achieves
+  15 of the rung's 24, which reads as 0.63 and descends for ever. The encoder is
+  judged against **what it was fed** — `min(rung.fps, track.getSettings().frameRate)`
+  — not against the rung.
+- **With video off there are no video stats to recover on.** `framesEncoded`
+  stops advancing, so a controller that kept judging frame rate would read 0fps
+  as catastrophic and **stay off for the rest of the call**. `wantFps: 0` means
+  "don't judge it", and loss/rtt fall back to the **audio** report, which is the
+  only evidence still flowing.
+- **`framesEncoded` is cumulative.** The delta is the measurement; reading it as
+  a rate gives 0 or noise. It is deltaed inside the tested module rather than at
+  the call site, so the trap sits in the code the gate drives.
+
+**The capture frame rate drops too, and in a mesh that is the lever that pays
+once rather than per peer:** a frame never captured is a frame no connection has
+to encode, which on a CPU-bound phone is worth more than every encoder cap put
+together (`applyConstraints`, not a re-acquire). Capture serves the **least**
+degraded peer, since a per-peer penalty only subtracts from it.
+
+**A screen share is never switched off and never gives up resolution.** Sharing
+a screen is something a person is actively doing where a camera is ambient, and
+soft text is not a worse version of the content but **none of it**. A bad link
+costs a share frame rate and bitrate, and that is all.
+
+**The camera track keeps running when video goes off** — only the sending stops.
+Stopping it would blank the person's own self-preview, which reads as the camera
+breaking rather than as the call protecting itself.
+
+**Only the on/off FLIP gets a banner; every rung below it is silent.** A rung
+given up is invisible and helpful, and a standing "your quality is reduced"
+notice is the caveat nobody reads — the live rungs go in the **debug panel**,
+where this file already puts diagnostics. The banner shows only while the person
+actually wants video (`videoOff && cam`): it is noise to somebody who turned
+their camera off themselves, and it is exactly the explanation they need the
+instant they press the camera button and nothing happens. A black tile with no
+explanation is indistinguishable from the app being broken.
+
+**And the person can overrule us, once.** Pinning brings video back at the
+**bottom rung** rather than at full quality — the link is still the link — and we
+then never take it away again. Turning somebody's video off twice after they
+have said they want it is the app arguing with them, which is the
+`correctQuery` rule one level over; quality degradation below that point is
+invisible and helpful, so it keeps running.
+
+**`node evals/videoquality.mjs` is the gate** (in `evals/check.mjs`). The module
+is pure and imports nothing, so it compiles standalone with tsc and the harness
+drives the REAL controller over synthetic traces — the `relatedPick.ts` /
+`motion.ts` arrangement. A browser cannot hold one peer of four on a lossy path
+for thirty seconds, throttle a tab, or replay a trace to see whether the
+controller oscillates.
+
+**Two controls carry it, and they rule out the two ways this could have been
+fake:** a clean link held for 40 polls must stay on rung 0 (without it the sweep
+passes against a controller that degrades unconditionally, which is no
+adaptation at all), and one bad peer among three must not move the other two
+(without it, against a controller that drags everybody down). **Verified to
+fail** — removing the gap guard reddens exactly the throttled-tab case, the
+one-level design reddens exactly the per-peer cases, and dropping the severity
+step reddens exactly the speed cases.
+
+`e2e/calls.spec.ts` proves the **wiring** the eval cannot: a forged `getStats()`
+(a loopback connection between two tabs has no loss to measure) drives the real
+engine until the **sender's track actually goes null** — asserted on the sender,
+not on the banner, since a notice over a stream still being sent is a lie and so
+is the reverse — then the banner, then the override. **Verified to fail** both
+ways: making the verdict not stop the bytes reddens exactly the off case and
+leaves the frame-rate case green, and rendering the banner unconditionally
+reddens both new cases and leaves #214's own case green.
+
 ## Crop, join, caption and censor a video (`video-edit`)
 
 The video family could trim, take a still, pull the sound out and make a GIF, and
@@ -8243,7 +8387,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   only when both are gone. All video routing goes through `applyVideo()` so
   cam/screen toggles never resurrect a paused sender. Screen-share opts out of
   scaling (`scaleResolutionDownBy: 1`, 1200 kbps, 15fps, `maintain-resolution`) since
-  text must stay legible. Verified end-to-end by reading the real `getParameters()`
+  text must stay legible. **The performance-driven half of #214 is a separate
+  section** — see *A mesh cannot divide its own uplink*: the receiver-driven cap
+  above says what a peer can SHOW, and `lib/videoQuality.ts` says what this link
+  and this device can CARRY, down to turning video off. Verified end-to-end by reading the real `getParameters()`
   in `e2e/calls.spec.ts` (scale > 1, and the track drops then returns on dock toggle).
   **Answering a ring (#219):** answering puts you in the room BEFORE the caller's
   connection is up, which used to look like an empty meeting. `awaitingCaller` holds a

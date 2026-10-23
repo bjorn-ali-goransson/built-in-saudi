@@ -252,6 +252,13 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
         <>
           <p className={line}>me {diag.me} · {diag.role} · inCall {String(diag.inCall)} · muted {String(diag.muted)}</p>
           <p className={line}>myMic [{diag.mic}] · myCam [{diag.cam}]</p>
+          {/* The adaptive-quality state. It lives HERE and not on the call screen:
+              a rung given up is invisible and helpful, and a standing "quality
+              reduced" notice is the caveat nobody reads — only the on/off flip
+              earns a banner. */}
+          <p className={line} data-testid="call-debug-quality">
+            rung {diag.quality.level}/{diag.quality.pinned ? 'pinned' : diag.quality.reason} · videoOff {String(diag.quality.videoOff)}
+          </p>
           {diag.peers.length === 0 && <p className={line}>no peers connected</p>}
           {diag.peers.map((p) => (
             <div key={p.id} className={`${line} border-t border-[color:var(--line-soft)] pt-1`}>
@@ -259,6 +266,7 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
               <div>conn <b>{p.conn}</b> · ice {p.ice} · dc {p.dc}</div>
               <div>sendMic [{p.sendMic}] · sendCam [{p.sendCam}]</div>
               <div>recvAudio [{p.recvAudio}] · recvVideo [{p.recvVideo}]</div>
+              <div>rung {p.rung} · {p.verdict} · {p.fps === null ? 'fps —' : `${p.fps.toFixed(1)}fps`}</div>
             </div>
           ))}
         </>

@@ -132,6 +132,10 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  // Video the ENGINE turned off on measured performance — not the cam button.
+  // `reason` words the explanation; a bad link and a struggling device are two
+  // different facts and only one of them is about the network.
+  const [videoOff, setVideoOff] = useState<'cpu' | 'uplink' | null>(null)
   // Input/output device selection (camera, mic, speaker). Labels only populate once
   // permission is granted, so we re-enumerate whenever the cam/mic turn on.
   const [mediaDevices, setMediaDevices] = useState<MediaDeviceInfo[]>([])
@@ -487,6 +491,9 @@ export default function CallsTool() {
       onRedirect: (dest) => { try { window.location.assign(`${localePath(locale, '/apps/calls')}?code=${dest}&knock=1`) } catch { /* */ } },
       // Waiting caller: the owner declined us, optionally with a note to show.
       onDeclined: (message) => { rtc.current?.close(); rtc.current = null; setEnded({ reason: 'declined', count: 0, message }); setPhase('ended') },
+      // Performance took the camera away (or gave it back). Only the flip arrives
+      // here, so this is an event rather than a standing notice.
+      onVideoOff: (off, reason) => setVideoOff(off ? (reason === 'cpu' ? 'cpu' : 'uplink') : null),
       onPollCycle: (delayMs) => {
         // A poll just finished → hide the spinner, then re-show it once half the
         // wait has passed, so it signals "checking again" only while lobby-waiting.
@@ -820,6 +827,9 @@ export default function CallsTool() {
   const speakingIds = useSpeakingSet([...peers])
   const speakingNames = inCallPeers.filter(([id]) => speakingIds.has(id)).map(([, i]) => i.name || '•')
   async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
+  /** They want their camera back despite the link. Pinning returns it at the
+   *  bottom rung and stops us ever taking it away again. */
+  function unpauseVideo() { rtc.current?.pinVideo(); setVideoOff(null) }
   function screenToast(msg: string) { setToast(msg); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
   async function toggleScreen() {
     if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null); return }
@@ -1525,6 +1535,23 @@ export default function CallsTool() {
             <button onClick={() => pickPanel('p')} data-testid="call-knock-open"
               className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.participants}</button>
           )}
+        </div>
+      )}
+      {/* Performance took the camera away. Shown only while the person actually
+          WANTS video — "your video is off" is noise to somebody who turned it off
+          themselves, and it is the explanation they need the instant they press
+          the camera button and nothing happens. */}
+      {videoOff && cam && (
+        <div className="w-full bg-[var(--ink)] text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-videooff-banner">
+          <span className="shrink-0" aria-hidden="true"><CamOffIcon className="w-5 h-5 text-[var(--gold-400)]" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.92rem] font-semibold leading-tight truncate">{s.videoOffTitle}</p>
+            <p className="text-[0.75rem] text-sand-100/70" data-testid="call-videooff-why">
+              {videoOff === 'cpu' ? s.videoOffCpu : s.videoOffLink}
+            </p>
+          </div>
+          <button onClick={unpauseVideo} data-testid="call-videooff-anyway"
+            className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.videoOffAnyway}</button>
         </div>
       )}
       {/* We lost someone who publishes a call-me link — ring them back in rather

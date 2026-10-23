@@ -32,6 +32,7 @@ const GATES = [
   ['mp4guard.mjs', 'the MP4 we write re-parses, with every sample byte for byte, in mp4box'],
   ['shakeprobe.mjs', 'the stabiliser recovers a known camera path, and is not dragged by a moving subject'],
   ['cropsnap.mjs', 'the crop rectangle snaps to the offered formats, and lets go again between them'],
+  ['videoquality.mjs', 'a mesh call gives up the right things in the right order, and comes back'],
 ]
 
 /** Numbers a person reads. No pass/fail, and some need the real corpus. */

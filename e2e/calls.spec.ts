@@ -1147,3 +1147,140 @@ test('a DM message can be reacted to, and the reaction is sent and toggles', asy
   await expect(p.getByTestId('dm-reaction')).toHaveCount(0)
   await c.close()
 })
+
+// Adaptive quality: a link that cannot carry video gives up rungs and finally the
+// camera itself. `evals/videoquality.mjs` sweeps the LADDER over synthetic traces
+// — many links, many peers, thirty-second runs — which no browser test can do.
+// What only a browser can prove is the WIRING: that a verdict actually stops the
+// bytes, raises the explanation, and lets the person overrule it.
+//
+// The link is forged by stubbing `getStats()`, because a loopback connection
+// between two tabs on one machine has no loss to measure. The real counters are
+// read first and passed through, so the frame-rate test sees a plausible encoder
+// rather than a frozen one.
+const BAD_STATS = `
+  window.__badStats = false
+  const orig = RTCPeerConnection.prototype.getStats
+  RTCPeerConnection.prototype.getStats = async function () {
+    const real = await orig.call(this)
+    if (!window.__badStats) return real
+    let frames = 0
+    real.forEach((r) => { if (r.type === 'outbound-rtp' && r.kind === 'video') frames = r.framesEncoded || 0 })
+    // A catastrophic path: a third of our packets never arrived. 'severe', so it
+    // reaches off in about a dozen seconds rather than half a minute.
+    const m = new Map()
+    m.set('o', { type: 'outbound-rtp', kind: 'video', framesEncoded: frames, qualityLimitationReason: 'bandwidth' })
+    m.set('r', { type: 'remote-inbound-rtp', kind: 'video', fractionLost: 0.35, roundTripTime: 0.9 })
+    return m
+  }
+`
+
+/** The host's video encoder state, found by transceiver so it survives the pause. */
+async function encoder(p: import('@playwright/test').Page) {
+  return p.evaluate(() => {
+    const pcs = (window as never as { __pcs: RTCPeerConnection[] }).__pcs || []
+    for (const pc of pcs) {
+      for (const t of pc.getTransceivers()) {
+        if (t.receiver?.track?.kind !== 'video') continue
+        const e = (t.sender.getParameters().encodings || [{}])[0]
+        return { hasTrack: !!t.sender.track, kbps: e.maxBitrate ? e.maxBitrate / 1000 : null, fps: e.maxFramerate ?? null }
+      }
+    }
+    return null
+  })
+}
+
+/** Host + guest in a call, with the host's peer connections and getStats hooked. */
+async function pair(browser: Browser) {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  await a.addInitScript(`
+    const orig = window.RTCPeerConnection
+    const all = []; window.__pcs = all
+    window.RTCPeerConnection = function (...x) { const pc = new orig(...x); all.push(pc); return pc }
+    window.RTCPeerConnection.prototype = orig.prototype
+  `)
+  await a.addInitScript(BAD_STATS)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Guest')
+  await pb.getByTestId('call-join').click()
+  await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+  await pa.getByTestId('call-cam').click() // a video sender to inspect
+  await expect.poll(async () => (await encoder(pa))?.hasTrack, { timeout: 20_000 }).toBe(true)
+  return { a, b, pa, pb }
+}
+
+test('a link that cannot carry video gives up the camera, and says so (#214)', async ({ browser }) => {
+  const { a, b, pa } = await pair(browser)
+
+  // THE CONTROL, and it has to come first: on a link with nothing wrong with it,
+  // nothing is given up and nothing is announced. Without it the whole feature
+  // could have been "always warn and always degrade", which is no adaptation at
+  // all — and it is the half a forged-stats test cannot otherwise reach.
+  await expect(pa.getByTestId('call-videooff-banner')).toHaveCount(0)
+  const clean = await encoder(pa)
+  expect(clean!.fps).toBe(24) // full rung
+
+  await pa.evaluate(() => { (window as never as { __badStats: boolean }).__badStats = true })
+
+  // The bytes actually stop — asserted on the SENDER, not on the banner. A notice
+  // over a stream that is still being sent would be a lie, and vice versa.
+  await expect.poll(async () => (await encoder(pa))?.hasTrack, { timeout: 30_000 }).toBe(false)
+  // And the person is told, with the reason. A black tile and no explanation is
+  // indistinguishable from the app being broken.
+  await expect(pa.getByTestId('call-videooff-banner')).toBeVisible()
+  await expect(pa.getByTestId('call-videooff-why')).toContainText('connection')
+
+  // Overruling us brings video back and keeps it back, however bad the link stays.
+  await pa.getByTestId('call-videooff-anyway').click()
+  await expect(pa.getByTestId('call-videooff-banner')).toHaveCount(0)
+  await expect.poll(async () => (await encoder(pa))?.hasTrack, { timeout: 20_000 }).toBe(true)
+  // …at the bottom rung rather than at full quality: the link is still the link.
+  const pinned = await encoder(pa)
+  expect(pinned!.fps).toBeLessThan(clean!.fps)
+  // Twelve more seconds of the same awful link would have reached off twice over.
+  await pa.waitForTimeout(14_000)
+  expect((await encoder(pa))?.hasTrack).toBe(true)
+  await expect(pa.getByTestId('call-videooff-banner')).toHaveCount(0)
+  await a.close(); await b.close()
+})
+
+test('a degraded link costs frame rate before it costs the camera (#214)', async ({ browser }) => {
+  const { a, b, pa } = await pair(browser)
+  const clean = await encoder(pa)
+  expect(clean!.fps).toBe(24)
+
+  // Merely congested, not severe: loss over the 5% line but well under the 20%
+  // that escalates, so this descends one rung at a time.
+  await pa.evaluate(() => {
+    const w = window as never as { __badStats: boolean }
+    const orig = RTCPeerConnection.prototype.getStats
+    RTCPeerConnection.prototype.getStats = async function () {
+      const real = await orig.call(this)
+      let frames = 0
+      real.forEach((r: { type: string; kind?: string; framesEncoded?: number }) => {
+        if (r.type === 'outbound-rtp' && r.kind === 'video') frames = r.framesEncoded || 0
+      })
+      const m = new Map()
+      m.set('o', { type: 'outbound-rtp', kind: 'video', framesEncoded: frames, qualityLimitationReason: 'bandwidth' })
+      m.set('r', { type: 'remote-inbound-rtp', kind: 'video', fractionLost: 0.08, roundTripTime: 0.45 })
+      return m
+    }
+    w.__badStats = false // the replacement above is unconditional
+  })
+
+  // The first thing to go is motion, and the camera is still sending — which is
+  // the ladder's whole argument: at a fixed bitrate fewer frames are sharper
+  // frames, so a readable face survives a link that smooth motion cannot.
+  await expect.poll(async () => (await encoder(pa))?.fps ?? 24, { timeout: 20_000 }).toBeLessThan(24)
+  expect((await encoder(pa))?.hasTrack).toBe(true)
+  await expect(pa.getByTestId('call-videooff-banner')).toHaveCount(0)
+  await a.close(); await b.close()
+})
