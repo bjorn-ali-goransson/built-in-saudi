@@ -45,7 +45,6 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'admission-score', kind: 'official' },
   // Found by scripts/check-disclaimers.mjs: each of these had a guarded twin
   // carrying the same class of caveat while it carried none.
-  { id: 'prayer-times', kind: 'religious' },
   { id: 'invoice-generator', kind: 'legal' },
   { id: 'currency-converter', kind: 'financial' },
   { id: 'vat-calculator', kind: 'financial' },
