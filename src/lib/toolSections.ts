@@ -1,5 +1,6 @@
 import { liveTools } from '../tools'
 import { ADDED } from '../tools/added'
+import { VIEWS, MEASURED } from '../tools/popularity'
 import type { Tool } from '../tools/types'
 import { categoryLabel, type Locale } from '../i18n'
 
@@ -43,6 +44,81 @@ export interface ToolSection {
   key: string
   title: string
   tools: Tool[]
+  /** Demoted: on the page behind a "more" toggle rather than in the grid. */
+  more?: Tool[]
+}
+
+/**
+ * Demoting the tools nobody opens, by MEASUREMENT rather than by taste.
+ *
+ * `tools/popularity.ts` is generated from the site's own analytics. Within each
+ * category the tiles are ordered by how often the tool's page was viewed, and a
+ * tool viewed `DEMOTE_AT` times or fewer goes behind a "N more" toggle at the
+ * foot of its section. Measured over Aug–Oct 2026: 2,664 tool pageviews, and
+ * **101 of 240 tools had two or fewer** — so the catalogue spent most of its
+ * screens on tiles almost nobody chose, and pushed the ones people do choose
+ * further down.
+ *
+ * Three things a tool is NEVER demoted for:
+ *
+ * - **It could not have been measured.** A tool with no row was added after the
+ *   counting ended, and one added within `FAIR_CHANCE_DAYS` of its end had too
+ *   little time on the site for its count to mean anything. "Nobody opened it"
+ *   and "nobody could have" are different statements.
+ * - **It is essential** (`ESSENTIAL`, each with its reason). Some tools are the
+ *   site's reason to exist or are what a visitor checks a toolbox for, and
+ *   their traffic says more about a young site's audience than about them.
+ * - **It would empty its section.** At least `MIN_VISIBLE` tiles stay up, or a
+ *   category heading sits over a lone "more" button — a section that exists to
+ *   be skipped.
+ *
+ * This is the HOME catalogue and the launcher only. Search ranks over the
+ * registry, untouched, so a demoted tool is exactly as findable by name as it
+ * was; its category page still lists it; and the registry order — which breaks
+ * search ties by design — is not changed by any of this.
+ */
+const DEMOTE_AT = 2
+const FAIR_CHANCE_DAYS = 30
+const MIN_VISIBLE = 3
+const ESSENTIAL = new Set([
+  // The Saudi tax wedge: 15% VAT is a weekly question here, and whether to
+  // register is the one every new business gets wrong.
+  'vat-calculator', 'vat-registration',
+  // The printable month of prayer times — the Islamic core, on paper.
+  'prayer-timetable',
+  // The staples a visitor checks a toolbox for before trusting it with
+  // anything else; missing them reads as a site that is not finished.
+  'pdf-split', 'pdf-to-text', 'json-formatter', 'text-counter', 'text-diff',
+  'percentage-calculator', 'image-cropper', 'image-format-converter',
+])
+
+const DAY = 86400000
+const measuredUntil = Date.parse(MEASURED.to)
+
+/** True when a tool's count is a fair measurement of interest in it. */
+function measurable(id: string): boolean {
+  if (VIEWS[id] === undefined) return false
+  const added = Date.parse(ADDED[id] ?? '')
+  return Number.isFinite(added) && measuredUntil - added >= FAIR_CHANCE_DAYS * DAY
+}
+
+/** Popular first; an unmeasured tool leads, since leading is how it gets a chance. Ties keep catalogue order. */
+function byViews(tools: Tool[]): Tool[] {
+  const key = (t: Tool) => (VIEWS[t.id] === undefined ? Infinity : VIEWS[t.id])
+  return tools.map((t, i) => ({ t, i })).sort((a, b) => key(b.t) - key(a.t) || a.i - b.i).map((x) => x.t)
+}
+
+/** Split a section into what shows and what waits behind "more". */
+export function demote(tools: Tool[]): { tools: Tool[]; more: Tool[] } {
+  const sorted = byViews(tools)
+  const shown: Tool[] = []
+  const more: Tool[] = []
+  for (const t of sorted) {
+    const low = measurable(t.id) && VIEWS[t.id] <= DEMOTE_AT && !ESSENTIAL.has(t.id)
+    ;(low ? more : shown).push(t)
+  }
+  while (shown.length < MIN_VISIBLE && more.length) shown.push(more.shift()!)
+  return { tools: shown, more }
 }
 
 /**
@@ -113,8 +189,14 @@ export function buildToolSections(locale: Locale, recentIds: string[] = []): Too
     catSections.push({ key: cat, title: categoryLabel(cat, locale), tools: inCat })
   }
   // A category with a single app doesn't earn its own heading — pool into "Other".
-  out.push(...catSections.filter((s) => s.tools.length > 1))
+  const grouped = catSections.filter((s) => s.tools.length > 1)
   const singles = catSections.filter((s) => s.tools.length === 1).flatMap((s) => s.tools)
-  if (singles.length) out.push({ key: '__other', title: locale === 'ar' ? 'أخرى' : 'Other', tools: singles })
+  if (singles.length) grouped.push({ key: '__other', title: locale === 'ar' ? 'أخرى' : 'Other', tools: singles })
+  // Only the CATEGORY sections are demoted. The curated rows above are short
+  // and hand-picked, and Recently used is the visitor's own history.
+  for (const sec of grouped) {
+    const { tools, more } = demote(sec.tools)
+    out.push(more.length ? { ...sec, tools, more } : { ...sec, tools })
+  }
   return out.filter((s) => s.tools.length)
 }

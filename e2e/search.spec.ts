@@ -128,10 +128,18 @@ test('the new file tools are reachable by their plain names', async ({ page }) =
 // the one place you would not find it. Two of its three were VALUE converters
 // (units, currency), which is a different job entirely.
 
+// Filing is about which section a tool is IN, not whether it is above the
+// fold of it: a tool the analytics demote waits behind its section's "more".
+async function expandSection(page: import('@playwright/test').Page, key: string) {
+  const more = page.getByTestId(`section-more-${key}`)
+  if (await more.count()) await more.click()
+}
+
 test('the section named for converting holds the file converters', async ({ page }) => {
   await page.goto('/en')
   const converters = page.getByTestId('section-Converters')
   await expect(converters).toBeVisible()
+  await expandSection(page, 'Converters')
   for (const id of ['docx-to-text', 'pptx-to-text', 'csv-to-xlsx', 'xlsx-convert', 'vcard-to-csv', 'epub-text']) {
     await expect(converters.getByTestId(`tool-${id}`)).toBeVisible()
   }
@@ -159,6 +167,8 @@ test('the tools about a website live under Web, not buried in Developer', async 
   await page.goto('/en')
   const web = page.getByTestId('section-Web')
   await expect(web).toBeVisible()
+  await expandSection(page, 'Web')
+  await expandSection(page, 'Developer')
   for (const id of ['meta-tags', 'robots-txt', 'link-preview', 'url-parser', 'user-agent']) {
     await expect(web.getByTestId(`tool-${id}`)).toBeVisible()
   }

@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import type { Tool } from '../tools/types'
 import type { ToolSection } from '../lib/toolSections'
@@ -106,6 +106,34 @@ function CompactToolGrid({ tools, onNavigate }: { tools: Tool[]; onNavigate?: ()
   )
 }
 
+/**
+ * The demoted half of a section: tools the analytics say almost nobody opens
+ * (see `demote` in lib/toolSections). They are one tap away rather than gone —
+ * the button names how many, and once opened they sit in the same grid, so a
+ * reader who expands a section sees it whole rather than in two styles.
+ */
+function SectionMore({ sec, onNavigate }: { sec: ToolSection; onNavigate?: () => void }) {
+  const { locale } = useLocale()
+  const [open, setOpen] = useState(false)
+  const more = sec.more ?? []
+  if (!more.length) return <CompactToolGrid tools={sec.tools} onNavigate={onNavigate} />
+  const n = more.length.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en')
+  return (
+    <>
+      <CompactToolGrid tools={open ? [...sec.tools, ...more] : sec.tools} onNavigate={onNavigate} />
+      <button
+        type="button"
+        data-testid={`section-more-${sec.key}`}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="mt-[0.6rem] text-[0.78rem] text-ink-faint hover:text-ink border border-[color:var(--line-soft)] rounded-sm px-2.5 py-[0.2rem] bg-transparent rtl:font-ar"
+      >{open
+        ? (locale === 'ar' ? 'عرض أقل' : 'Show fewer')
+        : (locale === 'ar' ? `${n} أخرى` : `${n} more`)}</button>
+    </>
+  )
+}
+
 /** The default catalog view: the Recommended section keeps full cards; every
  *  other section renders as a denser grid of compact tiles. */
 export function CategorySections({ sections, indexOf, onNavigate }: { sections: ToolSection[]; indexOf: (id: string) => number; onNavigate?: () => void }) {
@@ -153,7 +181,7 @@ export function CategorySections({ sections, indexOf, onNavigate }: { sections: 
           </div>
           {sec.key === '__rec'
             ? <ToolGrid tools={sec.tools} indexOf={indexOf} onNavigate={onNavigate} />
-            : <CompactToolGrid tools={sec.tools} onNavigate={onNavigate} />}
+            : <SectionMore sec={sec} onNavigate={onNavigate} />}
         </div>
       ))}
     </>
