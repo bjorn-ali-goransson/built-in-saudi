@@ -20,6 +20,9 @@ export function Contacts({ s, contacts, onRemove, myName }: { s: Str; contacts: 
     <div className="w-full rounded-md border border-sand-100/25 bg-white/10 p-3 flex flex-col gap-2" data-testid="call-contacts">
       <p className="text-[0.82rem] font-semibold text-sand-100 flex items-center gap-1.5">
         <PhoneIcon className="w-4 h-4" /> {s.contacts} · {contacts.length}
+        {/* The full chat app is Messages; the in-Calls thread stays for a quick note. */}
+        <a href={`${location.pathname.startsWith('/ar') ? '/ar' : '/en'}/apps/messages`} data-testid="call-open-messages"
+          className="ms-auto inline-flex items-center gap-1 text-[0.75rem] font-semibold text-sand-100/85 hover:text-sand-100 no-underline [&_svg]:w-3.5 [&_svg]:h-3.5"><ChatIcon /> {s.openMessages}</a>
       </p>
       <ul className="flex flex-col gap-1 list-none p-0 m-0">
         {contacts.map((c) => (
