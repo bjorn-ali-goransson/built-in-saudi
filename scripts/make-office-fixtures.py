@@ -247,8 +247,84 @@ def word_libreoffice():
             shutil.copy(os.path.join(t, 'lo-source.' + fmt), os.path.join(WD, name))
 
 
+def pptx_python():
+    """A deck from python-pptx's default template: real masters, layouts, theme and placeholders."""
+    from pptx import Presentation
+    from pptx.util import Pt, Emu, Inches
+    from pptx.dml.color import RGBColor
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.enum.text import PP_ALIGN
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
+    prs.core_properties.title = 'Product launch'
+    s1 = prs.slides.add_slide(prs.slide_layouts[0])
+    s1.shapes.title.text = 'Product launch'
+    s1.placeholders[1].text = 'Riyadh, 2026'
+    s1.notes_slide.notes_text_frame.text = 'Welcome everyone.'
+    s2 = prs.slides.add_slide(prs.slide_layouts[1])
+    s2.shapes.title.text = 'Agenda'
+    tf = s2.placeholders[1].text_frame
+    tf.text = 'Where we are'
+    p = tf.add_paragraph(); p.text = 'The numbers'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'Next steps'
+    r = p.runs[0]; r.font.bold = True; r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
+    p = tf.add_paragraph(); r = p.add_run(); r.text = 'Our site'; r.hyperlink.address = 'https://example.com/'
+    s3 = prs.slides.add_slide(prs.slide_layouts[5])
+    s3.shapes.title.text = 'Shapes and a table'
+    box = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(1.8), Inches(3), Inches(1.5))
+    box.fill.solid(); box.fill.fore_color.rgb = RGBColor(0x0B, 0x6E, 0x4F)
+    box.line.color.rgb = RGBColor(0x00, 0x00, 0x00); box.line.width = Pt(2)
+    box.text_frame.text = 'Rounded'
+    box.rotation = 15
+    arr = s3.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(4), Inches(2), Inches(2), Inches(1))
+    tb = s3.shapes.add_textbox(Inches(0.5), Inches(4), Inches(5), Inches(1))
+    tb.text_frame.text = 'مرحبا بكم في الرياض'
+    tb.text_frame.paragraphs[0].alignment = PP_ALIGN.RIGHT
+    grp = s3.shapes.add_group_shape()
+    grp.shapes.add_shape(MSO_SHAPE.OVAL, Inches(7), Inches(5.5), Inches(1), Inches(1))
+    grp.shapes.add_shape(MSO_SHAPE.OVAL, Inches(8.5), Inches(5.5), Inches(1), Inches(1))
+    rows, cols = 3, 3
+    tbl = s3.shapes.add_table(rows, cols, Inches(7), Inches(1.8), Inches(5), Inches(1.5)).table
+    for c, t in enumerate(['Region', 'Q1', 'Q2']):
+        tbl.cell(0, c).text = t
+    tbl.cell(1, 0).text = 'Riyadh'; tbl.cell(1, 1).text = '120'; tbl.cell(1, 2).text = '135'
+    tbl.cell(2, 0).merge(tbl.cell(2, 1)); tbl.cell(2, 0).text = 'Merged'; tbl.cell(2, 2).text = '9'
+    s4 = prs.slides.add_slide(prs.slide_layouts[6])
+    import io as _io
+    s4.shapes.add_picture(_io.BytesIO(png(8, 6, (200, 30, 30))), Inches(1), Inches(1), Inches(4), Inches(3))
+    cd = CategoryChartData(); cd.categories = ['A', 'B']; cd.add_series('S', (1, 2))
+    s4.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(6), Inches(1), Inches(5), Inches(4), cd)
+    s5 = prs.slides.add_slide(prs.slide_layouts[1])
+    s5.shapes.title.text = 'Hidden slide'
+    s5._element.set('show', '0')
+    prs.save(os.path.join(PP, 'python-pptx.pptx'))
+
+
+def pptx_libreoffice():
+    """The same deck written back by LibreOffice Impress: a different producer's idea of every part."""
+    with tempfile.TemporaryDirectory() as t:
+        src = os.path.join(t, 'lo.pptx')
+        shutil.copy(os.path.join(PP, 'python-pptx.pptx'), src)
+        out = os.path.join(t, 'out')
+        os.makedirs(out)
+        subprocess.run(['soffice', '--headless', '--convert-to', 'odp', '--outdir', out, src], check=True, capture_output=True, timeout=180)
+        odp = os.path.join(out, 'lo.odp')
+        shutil.copy(odp, os.path.join(PP, 'libreoffice.odp'))
+        out2 = os.path.join(t, 'out2')
+        os.makedirs(out2)
+        subprocess.run(['soffice', '--headless', '--convert-to', 'pptx:Impress MS PowerPoint 2007 XML', '--outdir', out2, odp], check=True, capture_output=True, timeout=180)
+        shutil.copy(os.path.join(out2, 'lo.pptx'), os.path.join(PP, 'libreoffice.pptx'))
+
+
 def main():
     docx_python()
+    pptx_python()
+    try:
+        pptx_libreoffice()
+    except Exception as e:  # noqa
+        print('LibreOffice slides fixtures skipped:', e, file=sys.stderr)
     try:
         word_libreoffice()
     except Exception as e:  # noqa

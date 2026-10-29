@@ -50,6 +50,8 @@ async function run(op: string, buf: ArrayBuffer | undefined, data: unknown, opts
     case 'md-write': return (await import('../../tools/word-editor/io/text-formats')).toMarkdown((data as { doc: never }).doc)
     case 'txt-write': return (await import('../../tools/word-editor/io/text-formats')).toText((data as { doc: never }).doc)
     case 'html-write': return (await import('../../tools/word-editor/io/text-formats')).toHtml(data as never, String(opts.title || ''))
+    case 'pptx-read': return (await import('../../tools/powerpoint-editor/io/pptx-read')).readPptx(buf!)
+    case 'pptx-write': return (await import('../../tools/powerpoint-editor/io/pptx-write')).writePptx(data as never, opts as never)
     case 'csv-write': return (await import('../../tools/excel-editor/io/csv-io')).writeCsv(data as never, String(opts.sheet), (opts.delimiter as ',') || ',')
   }
   throw Object.assign(new Error('unknown op ' + op), { code: 'unknown-op' })
