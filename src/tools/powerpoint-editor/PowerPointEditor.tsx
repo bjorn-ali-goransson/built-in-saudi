@@ -510,6 +510,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
       status={persist.status} fileName={persist.fileName} needsPermission={persist.needsPermission}
       onBack={() => { void persist.flush().then(onBack) }}
       onSave={() => void persist.save()} onLink={() => void persist.link()} onUnlink={() => void persist.unlink()}
+      exportBlob={persist.exportBlob}
       onExport={async (ext) => { setBusy(OFFICE_STR[locale].exporting); try { const l = await persist.exportDownload(ext); if (l.length) setLoss({ items: l, dir: 'export' }) } finally { setBusy('') } }}
       onPrint={print}
       onUndo={doUndo} onRedo={doRedo} canUndo={undo.current.length > 0} canRedo={redo.current.length > 0}

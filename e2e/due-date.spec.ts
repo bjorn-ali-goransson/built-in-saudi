@@ -89,6 +89,10 @@ test('it refuses to pretend the date is an appointment', async ({ page }) => {
 })
 
 test('works in Arabic, including the numbers', async ({ page }) => {
+  // A fixed last period with a REAL today was a time bomb: it read "after week 42"
+  // from October 2026 on. The case means a pregnancy in progress, so pin "today"
+  // to week 17 of it.
+  await page.clock.setFixedTime(new Date('2026-05-01T10:00:00'))
   await page.goto('/ar/apps/due-date')
   await set(page, '2026-01-01')
   await expect(page.getByTestId('dd-trimester')).toContainText('الثلث')

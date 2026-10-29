@@ -270,7 +270,10 @@ test('the picture is up before the measuring is finished', async ({ page }) => {
   await expect(page.getByTestId('vs-stage')).toBeVisible()
   // PAINTED, not merely present — a canvas that exists and is black is the
   // failure this is about, and asserting the element would pass against it.
-  expect(await stageColours(page)).toBeGreaterThan(8)
+  // Polled: a canvas read has no auto-wait, and under load the first frame lands
+  // a moment after the element does. The claim is BEFORE the analysis, which the
+  // next line still holds it to.
+  await expect.poll(() => stageColours(page), { timeout: 10_000 }).toBeGreaterThan(8)
   // The panel is what the analysis produces, and it is not here yet.
   await expect(page.getByTestId('vs-panel')).toHaveCount(0)
 

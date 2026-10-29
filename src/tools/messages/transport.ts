@@ -45,12 +45,25 @@ const PUSHABLE = new Set(['msg', 'edit', 'del', 'react', 'vote', 'poll-close', '
 const PUSH_AFTER_MS = 5000
 const PUSH_MAX = 3000
 
+/**
+ * Two authenticated links to one person: does the NEW one replace the one we
+ * already chose? Both ends must answer the same way whichever finished first, so
+ * the answer depends only on the rooms: keep the link in the inbox of the smaller
+ * address. Pure, so the agreement is tested over every ordering.
+ */
+export function keepNewLink(me: Code, them: Code, prevRoom: string, newRoom: string): boolean {
+  const keep = inboxRoom(me < them ? me : them)
+  return newRoom === keep && prevRoom !== keep
+}
+
 export class MessageTransport {
   private inbox: Mesh | null = null
   private visiting = new Map<Code, { mesh: Mesh; since: number; lastWanted: number }>()
   private links = new Map<Code, Link>()
   /** peerId -> link-in-progress (before hello/auth) */
   private pending = new Map<string, Link>()
+  /** Authenticated links that lost the one-link-per-person choice. Still LISTENED to — see `proof`. */
+  private spare = new Set<Link>()
   private timer: ReturnType<typeof setInterval> | null = null
   private wantVisit = new Map<Code, number>()
   private wantFiles = new Map<string, number>()
@@ -82,6 +95,7 @@ export class MessageTransport {
     this.visiting.clear()
     this.links.clear()
     this.pending.clear()
+    this.spare.clear()
     this.store.online.clear()
   }
   /** After our address changes (offline delivery enabled), move to the new inbox. */
@@ -139,7 +153,16 @@ export class MessageTransport {
     }
     // Stop visiting rooms nobody needs; a link we no longer need can drop too.
     for (const [code, v] of this.visiting) {
-      if (!wanted.has(code) && now - v.lastWanted > 60_000) { v.mesh.stop(); this.visiting.delete(code); const l = this.links.get(code); if (l && l.mesh === v.mesh) this.closeLink(code) }
+      if (!wanted.has(code) && now - v.lastWanted > 60_000) {
+        v.mesh.stop()
+        this.visiting.delete(code)
+        for (const x of this.spare) if (x.mesh === v.mesh) this.spare.delete(x)
+        const l = this.links.get(code)
+        if (l && l.mesh === v.mesh) {
+          const spare = [...this.spare].find((x) => x.code === code)
+          if (spare) { this.spare.delete(spare); this.links.set(code, spare) } else this.closeLink(code)
+        }
+      }
     }
     // Push what could not go peer-to-peer.
     for (const code of wanted) {
@@ -164,7 +187,13 @@ export class MessageTransport {
       if (ownInbox) this.hello(mesh, id)
     } else if (s === 'closed') {
       this.pending.delete(id)
-      for (const [code, l] of this.links) if (l.peer === id && l.mesh === mesh) this.closeLink(code)
+      for (const l of this.spare) if (l.peer === id && l.mesh === mesh) this.spare.delete(l)
+      for (const [code, l] of this.links) {
+        if (l.peer !== id || l.mesh !== mesh) continue
+        // The chosen link went; a spare to the same person takes over rather than going offline.
+        const spare = [...this.spare].find((x) => x.code === code)
+        if (spare) { this.spare.delete(spare); this.links.set(code, spare); this.flush(code) } else this.closeLink(code)
+      }
     }
   }
   private hello(mesh: Mesh, id: string) {
@@ -179,7 +208,7 @@ export class MessageTransport {
 
   private async onWire(mesh: Mesh, id: string, m: Wire) {
     if (!m || typeof m !== 'object') return
-    const link = this.pending.get(id) || [...this.links.values()].find((l) => l.peer === id && l.mesh === mesh)
+    const link = this.linkOn(mesh, id)
     if (!link) return
     if (m.t === 'hello') {
       if (typeof m.code !== 'string' || !m.code || typeof m.pub !== 'string') return
@@ -208,9 +237,14 @@ export class MessageTransport {
       link.authed = true
       this.pending.delete(id)
       const prev = this.links.get(link.code)
-      if (prev && prev.mesh !== mesh && prev.authed) {
-        // Two links to the same person (we visit theirs while they visit ours): keep one.
-        if (this.store.me < link.code) { /* keep prev */ } else this.links.set(link.code, link)
+      if (prev && prev !== link && prev.authed) {
+        // Two links to the same person — we visit theirs while they visit ours. Both
+        // ends must keep the SAME one, so the choice cannot depend on which finished
+        // first here: keep the one in the inbox of the smaller address, which both
+        // can work out. Deciding on "whichever came first" let each side keep a
+        // different connection, send on it, and drop what arrived on the other —
+        // unacknowledged, re-sent on the same dead end for ever.
+        if (keepNewLink(this.store.me, link.code, prev.mesh.room, link.mesh.room)) { this.spare.add(prev); this.links.set(link.code, link) } else this.spare.add(link)
       } else this.links.set(link.code, link)
       this.store.online.add(link.code)
       this.store.changed()
@@ -245,12 +279,20 @@ export class MessageTransport {
   }
 
   private async onBlob(mesh: Mesh, id: string, meta: BlobMeta, blob: Blob) {
-    const link = [...this.links.values()].find((l) => l.peer === id && l.mesh === mesh)
+    const link = this.linkOn(mesh, id)
     if (!link?.authed) return
     // Only accept a file we actually asked for — otherwise any contact could fill our disk.
     if (!(await this.store.expectsFile(meta.id))) return
     await this.store.storeBlob(meta.id, blob)
     this.wantFiles.delete(meta.id)
+  }
+
+  /** The link a message arrived on — pending, chosen, or spare. A spare one is still
+   *  listened to: delivery is idempotent, so hearing a message twice costs nothing and
+   *  missing one is the bug the one-link choice once caused. */
+  private linkOn(mesh: Mesh, id: string): Link | undefined {
+    const same = (l: Link) => l.peer === id && l.mesh === mesh
+    return this.pending.get(id) || [...this.links.values()].find(same) || [...this.spare].find(same)
   }
 
   private sendTo(code: Code, m: Wire): boolean {

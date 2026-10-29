@@ -7687,6 +7687,18 @@ opens Calls; Calls' contact list links to Messages, which takes `?to=<code>`.
   call-me code is public by design, so **both ends prove they hold the private
   key behind the public key they presented** before anything is revealed — a
   peer that knows the code and not the key gets a connection and nothing over it.
+- **Two people reaching for each other at once get TWO links, and both ends
+  must keep the same one.** Each visits the other's inbox, both connections
+  authenticate, and each side keeps one. The old rule decided on "whichever
+  finished first here", so the two sides could keep different connections — each
+  sent on its own, and each dropped what arrived on the other with no ack, re-sent
+  on the same dead end for ever. Found because a three-person group lost a
+  message one run in three under four workers and never alone; the order two
+  links finish in is exactly what load changes. Now both keep the link in the
+  smaller address's inbox (`keepNewLink`, a pure function whose agreement over
+  every ordering is unit-tested and **verified to fail** against the old rule),
+  and a spare link is still LISTENED to, since delivery is idempotent. **A rare
+  P2P failure under load is a race until proven otherwise.**
 - **What goes THROUGH our server is sealed end to end** (`crypto.ts`): ECDH
   P-256 with a NON-EXTRACTABLE private key, HKDF bound to both addresses,
   AES-GCM, and a safety number to compare out of band. It does not hide that a
@@ -7696,6 +7708,17 @@ opens Calls; Calls' contact list links to Messages, which takes `?to=<code>`.
   identity key and contacts' public keys to decrypt a push for the notification,
   and never writes, so adding a store here cannot bump a version the worker does
   not know — the trap `localQueue.ts` records for Calls.
+
+- **The editors hand documents to Messages** (`lib/shareIntent.ts`): File →
+  "Send a copy in Messages" sends the exported file, and the live-session panel
+  sends the session link as a card. `store.sendDoc` had been written for the
+  card and NOTHING called it — the half-built-feature shape. Three details carry
+  it: Messages opens in a **new tab**, because navigating away would end the
+  session the owner is hosting; the tab is opened **before** the async export,
+  inside the click, or a popup blocker eats it; and the payload waits in its own
+  IndexedDB under an id in the URL (`?share=`), **taken** on arrival so a reload
+  cannot send it twice. A card's link is a **path**, because a bubble only offers
+  to open links to this site.
 
 ## The office suite (`excel-editor`, `word-editor`, `powerpoint-editor`)
 

@@ -14,6 +14,7 @@ import type { SaveStatus, Collab, EditorKit } from './hooks'
 import { CollabPanel } from './CollabPanel'
 import { Sheet, SheetTitle, SheetActions, Button } from '../ui'
 import { canLinkFiles } from '../../lib/docStore'
+import { sendToMessages } from '../../lib/shareIntent'
 
 export function EditorShell<D>(props: {
   locale: 'en' | 'ar'
@@ -29,6 +30,8 @@ export function EditorShell<D>(props: {
   onUnlink: () => void
   onExport: (ext: string) => void
   onPrint?: () => void
+  /** The document as a file, for 'Send a copy in Messages'. */
+  exportBlob?: (ext: string) => Promise<{ blob: Blob; name: string }>
   onUndo?: () => void
   onRedo?: () => void
   canUndo?: boolean
@@ -77,6 +80,13 @@ export function EditorShell<D>(props: {
               {props.kit.formats.map((f) => (
                 <RItem key={f.ext} testid={`office-export-${f.ext.slice(1)}`} onClick={() => { close(); props.onExport(f.ext) }}>{f.label} <span className="text-ink-faint">{f.ext}</span></RItem>
               ))}
+              {props.exportBlob && !collab.isGuest && (
+                <RItem testid="office-send-messages" onClick={() => {
+                  close()
+                  const ext = props.kit.formats[0].ext
+                  if (!sendToMessages(props.locale, async () => { const r = await props.exportBlob!(ext); return { kind: 'file', name: r.name, blob: r.blob } })) alert(s.popupBlocked)
+                }}>{s.sendCopyMessages}</RItem>
+              )}
               {props.onPrint && <RItem testid="office-print" hint="Ctrl+P" onClick={() => { close(); props.onPrint!() }}>{s.print}</RItem>}
               {collab.isGuest && props.onSaveCopy && <RItem testid="office-save-copy" onClick={() => { close(); props.onSaveCopy!() }}>{s.saveCopy}</RItem>}
             </div>
@@ -132,7 +142,7 @@ export function EditorShell<D>(props: {
           <div className="px-4 py-3 rounded-md bg-[var(--surface)] shadow-[var(--shadow-md)] text-[0.95rem]">{props.busy}</div>
         </div>
       )}
-      {shareOpen && <CollabPanel locale={props.locale} collab={collab} tool={props.kit.tool} onClose={() => setShareOpen(false)} />}
+      {shareOpen && <CollabPanel locale={props.locale} collab={collab} tool={props.kit.tool} title={props.title} onClose={() => setShareOpen(false)} />}
     </div>,
     document.body,
   )

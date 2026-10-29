@@ -421,6 +421,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
       onSave={() => void persist.save()}
       onLink={() => void persist.link()}
       onUnlink={() => void persist.unlink()}
+      exportBlob={persist.exportBlob}
       onExport={async (ext) => { setBusy(OFFICE_STR[locale].exporting); try { const l = await persist.exportDownload(ext); if (l.length) setLoss({ items: l, dir: 'export' }) } finally { setBusy('') } }}
       onPrint={() => void print()}
       onUndo={() => { const v = viewRef.current; if (v) { undo(v.state, v.dispatch); v.focus() } }}

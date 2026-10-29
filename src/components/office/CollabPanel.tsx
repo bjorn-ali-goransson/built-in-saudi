@@ -7,8 +7,9 @@ import { OFFICE_STR } from './strings'
 import { inviteUrl, type Collab } from './hooks'
 import { initials } from './EditorShell'
 import type { Role } from '../../lib/collab/session'
+import { sendToMessages } from '../../lib/shareIntent'
 
-export function CollabPanel({ locale, collab, tool, onClose }: { locale: 'en' | 'ar'; collab: Collab; tool: string; onClose: () => void }) {
+export function CollabPanel({ locale, collab, tool, title, onClose }: { locale: 'en' | 'ar'; collab: Collab; tool: string; title: string; onClose: () => void }) {
   const s = OFFICE_STR[locale]
   const [role, setRole] = useState<Role>('edit')
   const [copied, setCopied] = useState(false)
@@ -49,6 +50,12 @@ export function CollabPanel({ locale, collab, tool, onClose }: { locale: 'en' | 
             <Input readOnly value={link} data-testid="collab-link" dir="ltr" onFocus={(e) => e.currentTarget.select()} className="flex-1 min-w-0 text-[0.8rem]" />
             <Button onClick={copy} data-testid="collab-copy">{copied ? s.copied : s.copyLink}</Button>
           </div>
+          {/* The link as a card in a conversation, opening straight into the session. A
+              path, not the full URL: Messages only offers to open links to this site. */}
+          <Button data-testid="collab-send-messages" onClick={() => {
+            const url = new URL(link)
+            if (!sendToMessages(locale, async () => ({ kind: 'doc', doc: { kind: tool, title: title || s.untitled, url: url.pathname + url.search } }))) alert(s.popupBlocked)
+          }}>{s.sendLinkMessages}</Button>
         </div>
       )}
       {on && (

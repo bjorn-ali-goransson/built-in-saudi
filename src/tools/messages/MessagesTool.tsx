@@ -18,6 +18,7 @@ import { plain } from './format'
 import { Button, Input } from '../../components/ui'
 import { SearchIcon, CogIcon, EditIcon, PhoneIcon, VideoCallIcon, BackIcon, InfoIcon, ArchiveIcon, BookmarkIcon, LockIcon, CloseIcon } from '../../components/icons'
 import { newCallCode } from '../../lib/callLink'
+import { takeIntent, type ShareIntent } from '../../lib/shareIntent'
 
 let transport: MessageTransport | null = null
 function useMessages(): { store: MessageStore; transport: MessageTransport; v: number } {
@@ -53,6 +54,7 @@ export default function MessagesTool() {
   const [starredView, setStarredView] = useState(false)
   const [sheet, setSheet] = useState<'' | 'new' | 'group' | 'editGroup' | 'info' | 'settings' | 'poll' | 'forward' | 'contact' | 'msgInfo' | 'invite'>('')
   const [toast, setToast] = useState('')
+  const [shareIntent, setShareIntent] = useState<ShareIntent | null>(null)
   const [needName, setNeedName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
 
@@ -74,6 +76,13 @@ export default function MessagesTool() {
         setOpen(c.id)
         setToast(s.addedFromLink(n))
         history.replaceState(null, '', location.pathname)
+      }
+      // Something handed over by another tool (a document, or a live session's link).
+      const share = p.get('share')
+      if (share) {
+        const intent = await takeIntent(share)
+        history.replaceState(null, '', location.pathname)
+        if (intent) { store.ensureDm(store.me); setShareIntent(intent) } else setToast(s.shareGone)
       }
       const c = p.get('c') || p.get('to')
       if (c) {
@@ -209,6 +218,17 @@ export default function MessagesTool() {
         )}
       </main>
 
+      {shareIntent && (
+        <PickConvSheet store={store} s={s} title={s.sendTo} onClose={() => setShareIntent(null)} onPick={(id) => {
+          const it = shareIntent
+          setShareIntent(null)
+          if (it.kind === 'doc') store.sendDoc(id, it.doc)
+          else void store.sendFile(id, new File([it.blob], it.name, { type: it.blob.type }))
+          const c = store.convs.get(id)
+          setToast(s.shareSent(c ? store.titleOf(c) || s.noteToSelf : ''))
+          setOpen(id)
+        }} />
+      )}
       {sheet === 'new' && <NewChatSheet store={store} s={s} onClose={() => setSheet('')} onOpen={(id) => { setSheet(''); setOpen(id) }} onGroup={() => setSheet('group')} onInvite={() => setSheet('settings')} />}
       {sheet === 'group' && <GroupSheet store={store} s={s} onClose={() => setSheet('')} onDone={(id) => { setSheet(''); setOpen(id) }} />}
       {sheet === 'editGroup' && conv && <GroupSheet store={store} s={s} conv={conv} onClose={() => setSheet('')} onDone={() => setSheet('info')} />}

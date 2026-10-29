@@ -119,6 +119,9 @@ test('a table: inserted from the grid picker, typed into, grown from the Table t
 test('links: Ctrl+K on a selection, kept as a link mark; a javascript: address is refused', async ({ page: p }) => {
   await newBlank(p)
   await p.keyboard.type('see the site')
+  // The editor reads typed text from the page on its own schedule; select only once
+  // the last letter is in it, as a person (who is never that fast) always would.
+  await expect(editor(p)).toHaveText('see the site')
   await p.keyboard.down('Shift')
   for (let i = 0; i < 4; i++) await p.keyboard.press('ArrowLeft')
   await p.keyboard.up('Shift')

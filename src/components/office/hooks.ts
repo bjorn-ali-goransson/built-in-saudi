@@ -156,7 +156,14 @@ export function usePersistence<D>(opts: {
     return loss
   }, [getData, kit])
 
-  return { status, fileName, needsPermission, save, link, unlink, exportDownload, flush: writeIdb }
+  /** The document as a file, for handing to another tool rather than downloading. */
+  const exportBlob = useCallback(async (ext: string): Promise<{ blob: Blob; name: string; loss: string[] }> => {
+    const title = docRef.current?.title || 'document'
+    const { blob, loss } = await kit.exportAs(getData(), ext, title)
+    return { blob, name: ensureExt(title, ext), loss }
+  }, [getData, kit])
+
+  return { status, fileName, needsPermission, save, link, unlink, exportDownload, exportBlob, flush: writeIdb }
 }
 
 // ---- collaboration -------------------------------------------------------------

@@ -594,6 +594,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
       onSave={() => void persist.save()}
       onLink={() => void persist.link()}
       onUnlink={() => void persist.unlink()}
+      exportBlob={persist.exportBlob}
       onExport={async (ext) => { setBusy(OFFICE_STR[locale].exporting); try { const l = await persist.exportDownload(ext); if (l.length) setLoss({ items: l, dir: 'export' }) } finally { setBusy('') } }}
       onPrint={act.print}
       onUndo={doUndo}
