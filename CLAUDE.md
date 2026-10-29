@@ -7735,6 +7735,14 @@ Word "found unreadable content in". Theme colours with tints go through one
 resolver (`color.ts`): an importer that ignores the theme paints every heading
 black.
 
+**OpenDocument is read by all three** (`.ods`, `.odt`, `.odp`), because it is
+what LibreOffice, many government machines and Google's exports hand over. The
+trap specific to `.odp`: a rotated shape has no x/y, only
+`draw:transform="rotate (θ) translate (x y)"` — counter-clockwise, in radians,
+about the TOP-LEFT corner — while the model turns clockwise in degrees about the
+centre. `odp.test.ts` holds the converted box against what the `.pptx` reader
+gets for the same deck, and flipping one sign in the conversion reddens it.
+
 **Import says what did not come across.** Each reader keeps a loss ledger
 (charts, SmartArt, macros, animations, an unsupported function) and the editor
 opens on a `LossDialog` listing it. A legacy binary `.doc`/`.xls`/`.ppt`

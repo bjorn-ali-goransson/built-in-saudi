@@ -24,7 +24,7 @@ export function slidesKit(locale: 'en' | 'ar'): EditorKit<DeckData> {
     kind: 'powerpoint',
     tool: 'powerpoint-editor',
     formats: [{ ext: '.pptx', label: s.pptx }, { ext: '.md', label: s.markdown }],
-    accepts: ['.pptx', '.pptm', '.potx', '.ppsx', '.md', '.markdown', '.txt'],
+    accepts: ['.pptx', '.pptm', '.potx', '.ppsx', '.odp', '.md', '.markdown', '.txt'],
     blank: () => blankDeck(locale === 'ar'),
     async exportAs(deck, ext, title) {
       if (ext === '.md') {
@@ -38,7 +38,7 @@ export function slidesKit(locale: 'en' | 'ar'): EditorKit<DeckData> {
     async importFile(file) {
       const buf = await file.arrayBuffer()
       const ext = extOf(file.name)
-      const op = ext === '.md' || ext === '.markdown' || ext === '.txt' ? 'outline-read' : 'pptx-read'
+      const op = ext === '.md' || ext === '.markdown' || ext === '.txt' ? 'outline-read' : ext === '.odp' ? 'odp-read' : 'pptx-read'
       const r = await office<{ data: DeckData; loss: Loss[]; title: string }>(op, { buf })
       return { data: r.data, loss: L(r.loss), title: r.title || slideTitle(r.data.slides[0] || { id: '', elements: [] }) || undefined }
     },

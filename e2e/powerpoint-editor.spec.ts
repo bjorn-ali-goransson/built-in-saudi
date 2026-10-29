@@ -291,6 +291,19 @@ test('opening a .pptx written by LibreOffice', async ({ page: p }) => {
   expect((await p.getByTestId('sl-thumb').count())).toBeGreaterThanOrEqual(4)
 })
 
+test('opening an .odp from LibreOffice Impress: the same deck, notes, the hidden slide, and the chart named', async ({ page: p }) => {
+  await p.goto('/en/apps/powerpoint-editor/')
+  await p.getByTestId('office-file-input').setInputFiles(FIX + 'libreoffice.odp')
+  await expect(p.getByTestId('office-loss-list')).toContainText(/chart/i)
+  await p.getByTestId('office-loss-ok').click()
+  await expect(p.getByTestId('sl-thumb')).toHaveCount(5)
+  await expect(p.getByTestId('sl-thumb').nth(4).getByTestId('sl-thumb-hidden')).toBeVisible()
+  await expect(p.getByTestId('sl-notes')).toHaveValue('Welcome everyone.')
+  const d = await storedDeck(p)
+  expect(byOrd(d).map((s) => txt(ph(s, 'title')))).toEqual(['Product launch', 'Agenda', 'Shapes and a table', '', 'Hidden slide'])
+  expect(Object.values(d.media).map((m) => m.mime)).toEqual(['image/png'])
+})
+
 test('a legacy .ppt is named, not opened as junk', async ({ page: p }) => {
   await p.goto('/en/apps/powerpoint-editor/')
   await p.getByTestId('office-file-input').setInputFiles({ name: 'old.ppt', mimeType: 'application/octet-stream', buffer: Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]) })
