@@ -42,6 +42,14 @@ async function run(op: string, buf: ArrayBuffer | undefined, data: unknown, opts
       const m = await import('../../tools/excel-editor/io/csv-io')
       return { book: { sheets: [m.readCsv(new TextDecoder().decode(buf!), String(opts.name || 'Sheet1'))] }, loss: [] }
     }
+    case 'docx-read': return (await import('../../tools/word-editor/io/docx-read')).readDocx(buf!)
+    case 'docx-write': return (await import('../../tools/word-editor/io/docx-write')).writeDocx(data as never, opts as never)
+    case 'odt-read': return (await import('../../tools/word-editor/io/odt-read')).readOdt(buf!)
+    case 'md-read': return { data: (await import('../../tools/word-editor/io/text-formats')).fromMarkdown(new TextDecoder().decode(buf!)), loss: [], title: '' }
+    case 'txt-read': return { data: (await import('../../tools/word-editor/io/text-formats')).fromText(new TextDecoder().decode(buf!)), loss: [], title: '' }
+    case 'md-write': return (await import('../../tools/word-editor/io/text-formats')).toMarkdown((data as { doc: never }).doc)
+    case 'txt-write': return (await import('../../tools/word-editor/io/text-formats')).toText((data as { doc: never }).doc)
+    case 'html-write': return (await import('../../tools/word-editor/io/text-formats')).toHtml(data as never, String(opts.title || ''))
     case 'csv-write': return (await import('../../tools/excel-editor/io/csv-io')).writeCsv(data as never, String(opts.sheet), (opts.delimiter as ',') || ',')
   }
   throw Object.assign(new Error('unknown op ' + op), { code: 'unknown-op' })
