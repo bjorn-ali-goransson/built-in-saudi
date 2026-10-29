@@ -200,7 +200,12 @@ export function ensureExt(name: string, ext: string): string {
   const clean = (name || 'Untitled').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Untitled'
   return clean.toLowerCase().endsWith(ext) ? clean : clean + ext
 }
-export function stripExt(name: string): string { return name.replace(/\.(docx|xlsx|xlsm|pptx|csv|tsv|txt|md|html?|json)$/i, '') }
+/**
+ * A file's name as a document title. Every extension the editors open is listed:
+ * an .ods opened with a shorter list became a sheet titled "budget.ods", which
+ * downloads as "budget.ods.xlsx".
+ */
+export function stripExt(name: string): string { return name.replace(/\.(docx|docm|dotx|odt|xlsx|xlsm|ods|pptx|pptm|potx|ppsx|odp|csv|tsv|txt|md|markdown|html?|json)$/i, '') }
 
 /** Plain download — the fallback where files cannot be linked. */
 export function download(blob: Blob, name: string): void {

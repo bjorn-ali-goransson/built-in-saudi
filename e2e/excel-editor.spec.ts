@@ -431,6 +431,28 @@ test('Download as .xlsx: the file holds the formula and its cached value', async
   expect(sheet).toMatch(/<f>A1\*7<\/f><v>42<\/v>/)
 })
 
+test('Download as .ods: OpenFormula with its value, and the file opens again as the same sheet', async ({ page: p }) => {
+  await newBlank(p)
+  await typeIn(p, 'A1', '6')
+  await typeIn(p, 'A2', '=SUM(A1,2)*$A$1')
+  await p.getByTestId('office-file').click()
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.getByTestId('office-export-ods').click()])
+  expect(dl.suggestedFilename()).toMatch(/\.ods$/)
+  const buf = readFileSync(await dl.path())
+  // The first entry, stored, names the format — how a reader identifies the package.
+  expect(buf.subarray(30, 38).toString()).toBe('mimetype')
+  const content = zipPart(buf, 'content.xml')
+  expect(content).toContain('table:formula="of:=SUM([.A1];2)*[.$A$1]" office:value-type="float" office:value="48"')
+  // Read back the other way: open the downloaded file as a new document.
+  await p.getByTestId('office-back').click()
+  await p.getByTestId('office-file-input').setInputFiles({ name: 'back.ods', mimeType: 'application/vnd.oasis.opendocument.spreadsheet', buffer: buf })
+  await expect(cell(p, 'A2')).toHaveText('48')
+  await saved(p)
+  const books = await storedBook(p)
+  const back = books.find((b) => b.title === 'back')!
+  expect(back.data.sheets[0].cells['1,0'].input).toBe('=SUM(A1,2)*$A$1')
+})
+
 test('Save to a file on this device writes the workbook back to it on every save', async ({ page: p }) => {
   // The picker is a dialog no test can drive, so it is replaced — by a REAL file
   // handle from the origin-private file system, which is writable, survives

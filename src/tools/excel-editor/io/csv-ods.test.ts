@@ -60,7 +60,12 @@ describe('ODS (LibreOffice)', () => {
     expect(wb.value('Data', parseA1('A6')!)).toBe(dateToSerial(2026, 9, 7))
     expect(wb.value('Other Sheet', parseA1('A1')!)).toBe(3501.5)
     expect(wb.value('Other Sheet', parseA1('A2')!)).toBe('big')
-    expect(loss.length).toBeGreaterThan(0)
+    // The base style a file inherits from (Calibri 11, bottom-aligned, 64px columns
+    // in a file that began as .xlsx) is the sheet's baseline, not formatting.
+    expect(book.sheets[0].cells['5,0'].fmt).toEqual({ numFmt: 'date' })
+    expect(book.sheets[0].cells['7,0'].fmt).toBeUndefined()
+    expect(book.sheets[0].colWidths).toBeUndefined()
+    expect(loss).toEqual([])
   })
   it('converts OpenFormula syntax', () => {
     expect(fromOpenFormula('of:=SUM([.A1:.B3])')).toBe('SUM(A1:B3)')

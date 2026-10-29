@@ -101,7 +101,7 @@ export function filteredCount(hidden: Set<number>): number {
 }
 
 /** The key a person's filters are remembered under — per document AND per sheet. */
-export const filterStoreKey = (docId: string, sheet: string): string => `kafani:tables-filter:${docId}:${sheet}`
+export const filterStoreKey = (docId: string, sheet: string): string => `bis-sheet-filter:${docId}:${sheet}`
 
 /** Read a remembered filter, tolerating anything at all in the store. */
 export function readFilters(raw: string | null): SheetFilters {

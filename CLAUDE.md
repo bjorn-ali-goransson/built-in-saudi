@@ -7766,6 +7766,31 @@ about the TOP-LEFT corner — while the model turns clockwise in degrees about t
 centre. `odp.test.ts` holds the converted box against what the `.pptx` reader
 gets for the same deck, and flipping one sign in the conversion reddens it.
 
+**The spreadsheet WRITES `.ods` too** (`io/ods-write.ts`), and the `.ods`
+reader keeps styles now — it used to keep values and formulas only, and said so.
+Three things worth carrying:
+
+- **Formulas are translated on their TEXT, not the engine's parse tree**
+  (`io/openformula.ts`, both directions in one module). The tree keeps neither
+  `$` nor `%`, so a formula written from it computes the same value and stops
+  being the formula — `$A$1` would copy as `A1` in Calc. The syntax was taken
+  from what LibreOffice 24 writes for each case rather than from memory, and two
+  traps came out of it: an array constant changes BOTH separators
+  (`{1,2;3,4}` → `{1;2|3;4}`), and the old reader never turned `|` back.
+- **The round trip through our own reader could not catch a separator bug.**
+  Writing `,` instead of `;` left it green, because the reader passes a comma
+  through untouched. What catches it is LibreOffice opening our file and
+  openpyxl reading its conversion — two programs we did not write, which also
+  agree on its recalculated values, bold, fills, merges, the note and the link.
+  The independent check is the evidence; ours agreeing with ours is not.
+- **A base style is a baseline, not formatting.** A file that began as `.xlsx`
+  gives every cell Calibri 11, bottom-aligned, through `Default`, and declares a
+  64px width on 200 repeated columns; read naively, every cell is "formatted"
+  and every column "sized". The chain stops at `Default`, and a width over a
+  long run is the sheet's default column. Frozen panes are written and read
+  back, but NOT confirmed against Calc: headless LibreOffice has no view to
+  apply view settings to, and says nothing either way.
+
 **Import says what did not come across.** Each reader keeps a loss ledger
 (charts, SmartArt, macros, animations, an unsupported function) and the editor
 opens on a `LossDialog` listing it. A legacy binary `.doc`/`.xls`/`.ppt`

@@ -37,6 +37,7 @@ async function run(op: string, buf: ArrayBuffer | undefined, data: unknown, opts
   switch (op) {
     case 'xlsx-read': return (await import('../../tools/excel-editor/io/xlsx-read')).readXlsx(buf!)
     case 'xlsx-write': return (await import('../../tools/excel-editor/io/xlsx-write')).writeXlsx(data as never, opts as never)
+    case 'ods-write': return (await import('../../tools/excel-editor/io/ods-write')).writeOds(data as never, opts as never)
     case 'ods-read': return (await import('../../tools/excel-editor/io/ods-read')).readOds(buf!)
     case 'csv-read': {
       const m = await import('../../tools/excel-editor/io/csv-io')

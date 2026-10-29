@@ -121,6 +121,11 @@ const ar: XlStr = {
 export const XL_STR: Record<'en' | 'ar', XlStr> = { en, ar }
 
 const LOSS_AR: Record<string, string> = {
+  charts: 'المخططات البيانية', 'conditional formatting': 'التنسيق الشرطي', pictures: 'الصور', 'pictures and drawings': 'الصور والرسومات',
+  'drop-down lists and validation rules': 'القوائم المنسدلة وقواعد التحقق', 'what-if tables (their values are kept)': 'جداول ماذا لو (بقيت قيمها)',
+  'number formats this file cannot describe (shown as plain numbers)': 'تنسيقات أرقام لا يصفها هذا الملف (عُرضت أرقامًا عادية)',
+  'sheet names with characters a reference cannot hold (renamed)': 'أسماء أوراق بأحرف لا يقبلها المرجع (أُعيدت تسميتها)',
+  'names limited to one sheet (made workbook-wide)': 'أسماء محصورة في ورقة واحدة (صارت على مستوى المصنف)', 'very long repeated rows (capped)': 'صفوف مكررة طويلة جدًا (قُصّت)',
   'macros (VBA)': 'وحدات الماكرو (VBA)', 'pivot tables': 'الجداول المحورية', 'links to other workbooks': 'روابط إلى مصنفات أخرى', slicers: 'مقسّمات البيانات',
   'workbook protection': 'حماية المصنف', 'print areas': 'نطاقات الطباعة', 'chart sheets': 'أوراق المخططات', 'sheet protection': 'حماية الورقة',
   comments: 'التعليقات', shapes: 'الأشكال', sparklines: 'خطوط المؤشرات', 'data tables': 'جداول البيانات', 'array formulas': 'صيغ المصفوفات',

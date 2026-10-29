@@ -17,7 +17,7 @@ export function excelKit(locale: 'en' | 'ar'): EditorKit<WorkbookData> {
   return {
     kind: 'excel',
     tool: 'excel-editor',
-    formats: [{ ext: '.xlsx', label: s.xlsx }, { ext: '.csv', label: s.csvSheet }],
+    formats: [{ ext: '.xlsx', label: s.xlsx }, { ext: '.ods', label: s.ods }, { ext: '.csv', label: s.csvSheet }],
     accepts: ['.xlsx', '.xlsm', '.ods', '.csv', '.tsv', '.txt'],
     blank: () => ({ sheets: [blankSheet(s.sheetN(1))], names: [] }),
     async exportAs(book, ext, title) {
@@ -27,7 +27,7 @@ export function excelKit(locale: 'en' | 'ar'): EditorKit<WorkbookData> {
         // A byte-order mark, so Excel opens Arabic as Arabic rather than mojibake.
         return { blob: new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }), loss: book.sheets.length > 1 ? [locale === 'ar' ? 'الأوراق الأخرى (CSV يحمل ورقة واحدة)' : 'the other sheets (a CSV holds one sheet)'] : [] }
       }
-      const r = await office<{ blob: Blob; loss: Loss[] }>('xlsx-write', { data: book, opts: { title } })
+      const r = await office<{ blob: Blob; loss: Loss[] }>(ext === '.ods' ? 'ods-write' : 'xlsx-write', { data: book, opts: { title } })
       return { blob: r.blob, loss: r.loss.map((l) => lossText(l, locale)) }
     },
     async importFile(file) {
