@@ -161,7 +161,34 @@ def xlsx_excel_shared():
         z.writestr('xl/worksheets/sheet1.xml', sheet)
 
 
+def ods_libreoffice():
+    # A real .ods from LibreOffice: merged cells, a cross-sheet formula, a date.
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Data'
+    ws['A1'] = 'Name'; ws['B1'] = 'Amount'
+    ws['A2'] = 'نورة'; ws['B2'] = 1500
+    ws['A3'] = 'Omar'; ws['B3'] = 250.75
+    ws['B4'] = '=SUM(B2:B3)'
+    ws['A6'] = datetime.date(2026, 9, 7)
+    ws.merge_cells('A8:C8'); ws['A8'] = 'Merged'
+    ws['C2'] = '0501234567'
+    s2 = wb.create_sheet('Other Sheet')
+    s2['A1'] = '=Data!B4*2'
+    s2['A2'] = '=IF(Data!B2>1000;"big";"small")'.replace(';', ',')
+    with tempfile.TemporaryDirectory() as t:
+        src = os.path.join(t, 'ods-source.xlsx')
+        wb.save(src)
+        soffice(src, 'ods', t)
+        shutil.copy(os.path.join(t, 'ods-source.ods'), os.path.join(XL, 'libreoffice.ods'))
+
+
 def main():
+    try:
+        ods_libreoffice()
+    except Exception as e:  # noqa
+        print('ODS fixture skipped:', e, file=sys.stderr)
     xlsx_excel_shared()
     xlsx_openpyxl()
     xlsx_xlsxwriter()

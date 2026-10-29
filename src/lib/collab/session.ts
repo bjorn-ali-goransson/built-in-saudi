@@ -158,6 +158,11 @@ export class CollabSession {
     if (this.isOwner) this.tx.broadcast({ t: 'c-commit', p: c } satisfies Msg)
   }
 
+  /** Guest: ask the owner for a fresh snapshot (after something we could not reconcile). */
+  requestResync(): void {
+    if (!this.isOwner && this.ownerId) this.tx.send(this.ownerId, { t: 'c-resync' } satisfies Msg)
+  }
+
   presence(d: unknown): void { this.tx.broadcast({ t: 'c-presence', d } satisfies Msg) }
   chat(text: string): void {
     const at = Date.now()
