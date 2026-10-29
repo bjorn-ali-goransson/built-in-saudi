@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import { readDocx } from './docx-read'
 import { writeDocx, splitBidi, hex, imageSize } from './docx-write'
 import { schema } from '../schema'
 import { plainText, emptyDoc, type PMNode, type WordData } from '../model'
 
+const hasPy = (() => { try { execFileSync('python3', ['-c', 'import docx'], { stdio: 'ignore' }); return true } catch { return false } })()
 const FIX = new URL('./__fixtures__/', import.meta.url)
 const load = (n: string) => { const b = readFileSync(new URL(n, FIX)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer }
 
@@ -166,6 +170,26 @@ describe('writing .docx', () => {
     expect(doc.slice(doc.indexOf('Riyadh') - 120, doc.indexOf('Riyadh'))).not.toContain('<w:rtl/>')
     expect(zipPart(b, 'word/header1.xml')).toContain('PAGE')
     expect(zipPart(b, 'word/header1.xml')).toContain('NUMPAGES')
+  })
+
+  // Somebody else's reader is the evidence — ours agreeing with our writer proves little.
+  it.skipIf(!hasPy)('python-docx reads the export: headings by style name, the table, bold and Arabic', async () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'wd-')), 'out.docx')
+    writeFileSync(f, await bytesOf(rich))
+    const py = [
+      'import docx, json, sys',
+      'd = docx.Document(sys.argv[1])',
+      'paras = [(p.style.name, p.text, any(r.bold for r in p.runs)) for p in d.paragraphs]',
+      't = d.tables[0]',
+      'print(json.dumps({"paras": paras, "cells": [c.text for c in t.rows[2].cells], "rows": len(t.rows)}))',
+    ].join('\n')
+    const out = JSON.parse(execFileSync('python3', ['-c', py, f]).toString()) as { paras: [string, string, boolean][]; cells: string[]; rows: number }
+    expect(out.paras.find((p) => p[1] === 'Section')![0]).toBe('Heading 2')
+    expect(out.paras.find((p) => p[1] === 'bold and plain')![2]).toBe(true)
+    expect(out.paras.some((p) => p[1] === 'مرحبا Riyadh')).toBe(true)
+    expect(out.rows).toBe(3)
+    // A two-column merge is ONE cell that python-docx reports in both grid positions.
+    expect(out.cells).toEqual(['wide', 'wide'])
   })
 
   it('gives every list its own numbering instance, so the second does not continue the first', async () => {
