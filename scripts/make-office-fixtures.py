@@ -184,7 +184,75 @@ def ods_libreoffice():
         shutil.copy(os.path.join(t, 'ods-source.ods'), os.path.join(XL, 'libreoffice.ods'))
 
 
+def docx_python():
+    # python-docx: built-in heading and list styles, a merged table, a picture,
+    # an Arabic right-to-left paragraph, a page break and direct formatting.
+    import docx
+    from docx.shared import Pt, RGBColor, Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    d = docx.Document()
+    d.core_properties.title = 'Quarterly report'
+    d.add_heading('Quarterly report', level=1)
+    p = d.add_paragraph('Revenue rose by ')
+    r = p.add_run('twelve percent'); r.bold = True
+    p.add_run(' in ')
+    r = p.add_run('Riyadh'); r.italic = True; r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
+    p.add_run(' and ')
+    r = p.add_run('Jeddah'); r.underline = True; r.font.size = Pt(14)
+    p.add_run('.')
+    d.add_heading('Highlights', level=2)
+    for t in ['First point', 'Second point']:
+        d.add_paragraph(t, style='List Bullet')
+    for t in ['Step one', 'Step two', 'Step three']:
+        d.add_paragraph(t, style='List Number')
+    c = d.add_paragraph('Centred line'); c.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    ar = d.add_paragraph('نمت الإيرادات بنسبة اثني عشر بالمئة')
+    pPr = ar._p.get_or_add_pPr(); bidi = OxmlElement('w:bidi'); pPr.append(bidi)
+    for run in ar.runs:
+        rpr = run._r.get_or_add_rPr(); rtl = OxmlElement('w:rtl'); rpr.append(rtl)
+    t = d.add_table(rows=3, cols=3); t.style = 'Table Grid'
+    for i in range(3):
+        for j in range(3):
+            t.cell(i, j).text = f'r{i}c{j}'
+    t.cell(0, 0).merge(t.cell(0, 1))
+    t.cell(1, 2).merge(t.cell(2, 2))
+    d.add_paragraph().add_run().add_picture(io.BytesIO(png(8, 6)), width=Inches(1))
+    br = d.add_paragraph().add_run(); br.add_break(WD_BREAK.PAGE)
+    d.add_paragraph('After the break')
+    sec = d.sections[0]
+    sec.header.paragraphs[0].text = 'Confidential'
+    d.save(os.path.join(WD, 'python-docx.docx'))
+
+
+LO_HTML = """<!doctype html><html><head><meta charset="utf-8"><title>LibreOffice fixture</title></head><body>
+<h1>Annual plan</h1>
+<p>A paragraph with <b>bold</b>, <i>italic</i>, <a href="https://built-in-saudi.com">a link</a> and a note<a class="sdfootnoteanc" name="sdfootnote1anc" href="#sdfootnote1sym"><sup>1</sup></a>.</p>
+<ol start="3"><li>Third</li><li>Fourth<ul><li>Nested bullet</li></ul></li></ol>
+<p>Between the lists.</p>
+<ol><li>Again one</li></ol>
+<table border="1"><tr><td rowspan="2">Tall</td><td>B1</td></tr><tr><td>B2</td></tr><tr><td colspan="2">Wide</td></tr></table>
+<p dir="rtl">فقرة عربية من اليمين إلى اليسار.</p>
+<div id="sdfootnote1"><p><a class="sdfootnotesym" name="sdfootnote1sym" href="#sdfootnote1anc">1</a>The footnote text.</p></div>
+</body></html>"""
+
+
+def word_libreoffice():
+    with tempfile.TemporaryDirectory() as t:
+        src = os.path.join(t, 'lo-source.html')
+        open(src, 'w', encoding='utf-8').write(LO_HTML)
+        for fmt, filt, name in (('docx', 'docx:MS Word 2007 XML', 'libreoffice.docx'), ('odt', 'odt:writer8', 'libreoffice.odt')):
+            subprocess.run(['soffice', '--headless', '--infilter=HTML (StarWriter)', '--convert-to', filt, '--outdir', t, src], check=True, capture_output=True, timeout=120)
+            shutil.copy(os.path.join(t, 'lo-source.' + fmt), os.path.join(WD, name))
+
+
 def main():
+    docx_python()
+    try:
+        word_libreoffice()
+    except Exception as e:  # noqa
+        print('LibreOffice word fixtures skipped:', e, file=sys.stderr)
     try:
         ods_libreoffice()
     except Exception as e:  # noqa
