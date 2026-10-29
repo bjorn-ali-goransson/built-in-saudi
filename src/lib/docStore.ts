@@ -170,6 +170,11 @@ type PermHandle = FileSystemFileHandle & {
   queryPermission?: (o: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>
   requestPermission?: (o: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>
 }
+/** True when we may write to the file now, without asking (no user gesture needed). */
+export async function hasWriteAccess(h: FileSystemFileHandle): Promise<boolean> {
+  const ph = h as PermHandle
+  try { return !ph.queryPermission || (await ph.queryPermission({ mode: 'readwrite' })) === 'granted' } catch { return false }
+}
 /** Browsers grant write access per session: re-ask, which needs a user gesture. */
 export async function ensureWritable(h: FileSystemFileHandle): Promise<boolean> {
   const ph = h as PermHandle
