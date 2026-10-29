@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node scripts/e2e-preflight.mjs",
     "predev": "node scripts/copy-ocr-core.mjs",
-    "prebuild": "node scripts/copy-ocr-core.mjs && node scripts/check-disclaimers.mjs && node scripts/check-tool-docs.mjs && node scripts/check-roadmap-counts.mjs && node scripts/check-tool-registry.mjs && node scripts/check-ats-dims.mjs && node scripts/check-privacy-coverage.mjs && node scripts/check-saudi-beta.mjs && node scripts/check-collections.mjs && node scripts/check-retired.mjs && node scripts/check-inverses.mjs && node scripts/check-orphans.mjs"
+    "prebuild": "node scripts/copy-ocr-core.mjs && node scripts/check-disclaimers.mjs && node scripts/check-tool-docs.mjs && node scripts/check-roadmap-counts.mjs && node scripts/check-tool-registry.mjs && node scripts/check-ats-dims.mjs && node scripts/check-privacy-coverage.mjs && node scripts/check-saudi-beta.mjs && node scripts/check-collections.mjs && node scripts/check-retired.mjs && node scripts/check-inverses.mjs && node scripts/check-orphans.mjs",
+    "test:unit": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
@@ -37,8 +39,10 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
+    "@vitest/coverage-v8": "^2.1.9",
     "tailwindcss": "^4.3.2",
     "typescript": "^5.6.3",
-    "vite": "^5.4.9"
+    "vite": "^5.4.9",
+    "vitest": "^2.1.9"
   }
 }
