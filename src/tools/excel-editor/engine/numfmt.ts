@@ -5,6 +5,7 @@
  */
 import { displayValue } from './engine'
 import { formatSerial } from './dates'
+import { formatCode, formatCodeColor } from './fmtcode'
 import { isError, type CellValue } from './model'
 
 export type NumFmtId = 'general' | 'number' | 'thousands' | 'percent' | 'currency' | 'date'
@@ -149,11 +150,19 @@ export function formatValue(
  * renders with the default places and the person's choice is simply ignored on that one surface.
  */
 export function formatCell(v: CellValue, fmt: CellFmtish | undefined): string {
+  // An Excel format code (from an imported file, or chosen as "custom") wins: it is the exact
+  // instruction the author gave, and the presets are an approximation of a handful of them.
+  if (fmt?.numCode && !isError(v) && v !== '') return formatCode(v, fmt.numCode)
   return formatValue(v, fmt?.numFmt as NumFmtId | undefined, fmt?.currency, fmt?.decimals)
 }
+/** The colour a format code asks for (`[Red]` on negatives), if any. */
+export function formatColor(v: CellValue, fmt: CellFmtish | undefined): string | undefined {
+  if (!fmt?.numCode || isError(v) || typeof v !== 'number') return undefined
+  return formatCodeColor(v, fmt.numCode).color
+}
 
-/** The three fields formatting reads — narrower than `CellFormat`, so this module stays leaf-ish. */
-export type CellFmtish = { numFmt?: string; currency?: string; decimals?: number }
+/** The fields formatting reads — narrower than `CellFormat`, so this module stays leaf-ish. */
+export type CellFmtish = { numFmt?: string; currency?: string; decimals?: number; numCode?: string }
 
 /** Map our preset to an Excel number-format code for export. */
 export function toExcelNumFmt(

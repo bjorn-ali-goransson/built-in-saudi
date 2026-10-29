@@ -121,7 +121,7 @@ export type ScaleRule = { box: { r0: number; c0: number; r1: number; c1: number 
  * conditional formats. Kept deliberately small: three business chart types over a
  * rectangular range, first column = category labels, remaining columns = series.
  */
-export type ChartKind = 'bar' | 'line' | 'pie'
+export type ChartKind = 'bar' | 'column' | 'line' | 'pie' | 'area' | 'scatter' | 'doughnut'
 export type ChartSpec = {
   /** Stable id (assigned on insert) so a chart can be re-typed/removed without reordering. */
   id: string
@@ -135,6 +135,14 @@ export type ChartSpec = {
   anchor?: { row: number; col: number }
   /** Chart box size in BASE pixels (at zoom 1); rendered scaled by the live zoom. Absent → default. */
   size?: { w: number; h: number }
+  /**
+   * Explicit series, as an imported chart states them (each its own category and value range,
+   * possibly on another sheet). Absent → derived from `range`: first column categories, the rest
+   * series.
+   */
+  series?: { name?: string; cat?: string; val: string; color?: string }[]
+  stacked?: boolean
+  legend?: boolean
 }
 
 /** Default on-sheet chart box (base px) — ~3 columns wide, a readable aspect. */

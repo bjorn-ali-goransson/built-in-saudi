@@ -33,6 +33,8 @@ export const NS = {
   xsi: 'http://www.w3.org/2001/XMLSchema-instance',
   ep: 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties',
   v: 'urn:schemas-microsoft-com:vml',
+  x14: 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main',
+  x14ac: 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac',
   xml: 'http://www.w3.org/XML/1998/namespace',
   // Strict OOXML (ISO 29500 strict) uses different URIs for the same vocabulary.
   wStrict: 'http://purl.oclc.org/ooxml/wordprocessingml/main',
