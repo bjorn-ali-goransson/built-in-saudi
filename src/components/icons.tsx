@@ -1401,3 +1401,31 @@ export function ActivityBoardIcon({ className }: P) {
     </svg>
   )
 }
+
+export function SpreadsheetIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M3 15h18M9 3v18" />
+      <path d="M12.5 11.5l3 3M15.5 11.5l-3 3" />
+    </svg>
+  )
+}
+
+export function DocumentEditIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 3h8l5 5v13H6z" />
+      <path d="M14 3v5h5M9 12h7M9 15.5h7M9 19h4" />
+    </svg>
+  )
+}
+
+export function SlidesIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="12" rx="1.5" />
+      <path d="M12 16v4M8 20h8M7 8h6M7 11h10" />
+    </svg>
+  )
+}

@@ -27,7 +27,9 @@ export const UNTUNED4 = [
   ['the photo is too heavy to upload', 'image-compressor'],
   ['my video file is too long to send', 'video-trim'],
   ['the scan has no selectable text', 'pdf-ocr'],
-  ['someone sent me a spreadsheet i cannot open', 'xlsx-convert'],
+  // Two right answers since the spreadsheet editor shipped (Oct 2026): it OPENS the file;
+  // xlsx-convert gets the data out. Neither is a wrong reading of the symptom.
+  ['someone sent me a spreadsheet i cannot open', ['xlsx-convert', 'excel-editor']],
   ['my phone photos are heic and will not open', 'image-format-converter'],
   ['the pdf pages are in the wrong order', 'pdf-organise'],
   ['i need to sign this without printing it', 'pdf-sign'],

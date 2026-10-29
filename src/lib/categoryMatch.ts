@@ -63,6 +63,7 @@ const CATEGORY_TERMS: Record<string, string[]> = {
   Files: ['file', 'ملف', 'ملفات'],
   Business: ['business', 'accounting', 'أعمال', 'محاسبة'],
   Communication: ['communication', 'تواصل', 'اتصال'],
+  Office: ['office', 'office suite', 'office apps', 'أوفيس', 'مكتبية', 'تطبيقات مكتبية', 'أدوات مكتبية'],
   Utilities: ['utility', 'أداة'],
 }
 

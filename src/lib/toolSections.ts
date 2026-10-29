@@ -36,7 +36,7 @@ import { categoryLabel, type Locale } from '../i18n'
 const RECOMMENDED = ['ats-cv-optimizer', 'prayer-times', 'pdf-to-word', 'image-compressor',
   'gosi-salary', 'qr-code', 'translate', 'calls']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
-const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Text', 'Converters', 'Calculators', 'Health', 'Time & Date',
+const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Office', 'Text', 'Converters', 'Calculators', 'Health', 'Time & Date',
   'Images', 'PDF', 'Files', 'Developer', 'Web', 'Generators', 'Design', 'Business', 'Communication']
 
 export interface ToolSection {

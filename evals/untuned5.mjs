@@ -79,7 +79,8 @@ export const UNTUNED5 = [
 
   // --- Arabic, same axis -----------------------------------------------------
   ['تحويل jpg إلى png', 'image-format-converter'],
-  ['فتح ملف xlsx', 'xlsx-convert'],
+  // «open an xlsx file» — the spreadsheet editor opens it, xlsx-convert reads it out.
+  ['فتح ملف xlsx', ['xlsx-convert', 'excel-editor']],
   ['تحويل pdf إلى صور', 'pdf-to-images'],
   ['ملف vcf', 'vcard-to-csv'],
   ['تحويل mp4 إلى mp3', 'video-audio'],

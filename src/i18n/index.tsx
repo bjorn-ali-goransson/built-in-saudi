@@ -77,6 +77,7 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   PDF: { en: 'PDF', ar: 'PDF' },
   Business: { en: 'Business', ar: 'أعمال' },
   Communication: { en: 'Communication', ar: 'تواصل' },
+  Office: { en: 'Office', ar: 'مكتبية' },
   Files: { en: 'Files', ar: 'ملفات' },
   // Kept though no tool uses it today: a category label with no mapping
   // renders its raw English string on the Arabic side, and that is a silent

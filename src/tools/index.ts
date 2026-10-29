@@ -58,6 +58,7 @@ import { cvGeneratorTool } from './cv-generator/meta'
 import { linkShortenerTool } from './link-shortener/meta'
 import { callsTool } from './calls/meta'
 import { messagesTool } from './messages/meta'
+import { excelEditorTool } from './excel-editor/meta'
 import { promptAnalyzerTool } from './prompt-analyzer/meta'
 import { regexTesterTool } from './regex-tester/meta'
 import { jwtDecoderTool } from './jwt-decoder/meta'
@@ -251,6 +252,7 @@ export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
   messagesTool,
+  excelEditorTool,
   removeBackgroundTool,
   passportPhotoTool,
   screenshotFrameTool,

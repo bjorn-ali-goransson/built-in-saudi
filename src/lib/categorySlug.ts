@@ -29,6 +29,7 @@ export const CATEGORY_SLUGS: Record<string, string> = {
   Design: 'design',
   Business: 'business',
   Communication: 'communication',
+  Office: 'office',
   Utilities: 'utilities',
 }
 

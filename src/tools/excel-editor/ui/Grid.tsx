@@ -44,6 +44,7 @@ export interface GridCtl {
   moveObject(kind: 'chart' | 'image', id: string, patch: { anchor?: { row: number; col: number }; size?: { w: number; h: number } }): void
   selectObject(o: { kind: 'chart' | 'image'; id: string } | null): void
   shortcut(e: KeyboardEvent): boolean
+  openFilter(col: number, x: number, y: number): void
 }
 
 const MOVE: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
@@ -66,6 +67,8 @@ interface Props {
   focusTick: number
   /** Copy marquee: the box last copied, dashed until something else happens. */
   marquee?: Box | null
+  /** The auto-filter's header row, which carries a drop-down on each column. */
+  filterRow?: { row: number; c0: number; c1: number; active: number[] }
 }
 
 export function Grid(p: Props) {
@@ -588,6 +591,18 @@ export function Grid(p: Props) {
     if (!p.readOnly && !edit) out.push(<div key="fill" data-fill-handle="1" data-testid={tid('xl-fill-handle', selPane)} style={{ position: 'absolute', insetInlineStart: selRect.x + selRect.w - 5, top: selRect.y + selRect.h - 5, width: 9, height: 9, background: 'var(--color-green-700)', border: '1.5px solid var(--surface)', cursor: 'crosshair', touchAction: 'none', zIndex: 5 }} />)
     if (fillTarget) { const f = boxRect(fillTarget); out.push(<div key="ft" data-testid={tid('xl-fill-target', paneOf(fillTarget.r0, fillTarget.c0))} style={{ position: 'absolute', insetInlineStart: f.x, top: f.y, width: f.w, height: f.h, border: '1.5px dashed var(--color-green-700)', pointerEvents: 'none' }} />) }
     if (p.marquee) { const m = boxRect(p.marquee); out.push(<div key="mq" data-testid={tid('xl-marquee', paneOf(p.marquee.r0, p.marquee.c0))} style={{ position: 'absolute', insetInlineStart: m.x, top: m.y, width: m.w, height: m.h, border: '2px dashed var(--color-green-600)', pointerEvents: 'none' }} />) }
+    const fr0 = p.filterRow
+    if (fr0) for (let c = Math.max(fr0.c0, q.c[0]); c <= Math.min(fr0.c1, q.c[1]); c++) {
+      if (paneOf(fr0.row, c) !== q.id || hiddenC.has(c)) continue
+      const h = rows.size(fr0.row)
+      const on = fr0.active.includes(c)
+      out.push(
+        <button key={'f' + c} type="button" data-grid-ui="1" data-testid="xl-filter-btn" data-col={colToLetters(c)} data-active={on ? '1' : '0'} aria-label="Filter"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); ctl.openFilter(c, r.left, r.bottom + 2) }}
+          style={{ position: 'absolute', insetInlineStart: xOf(c + 1) - Math.min(18, h) * 1 - 2, top: yOf(fr0.row) + 2, width: Math.min(18, h - 4), height: Math.min(18, h - 4), zIndex: 6, fontSize: 9, lineHeight: 1, padding: 0, cursor: 'pointer', borderRadius: 3, border: '1px solid var(--line)', background: on ? 'var(--color-green-600)' : 'var(--surface)', color: on ? '#fff' : 'var(--ink-soft)' }}>{on ? '⏷' : '▾'}</button>,
+      )
+    }
     for (const pe of peers) {
       const pb = expandForMerges(normBox(pe.sel.a, pe.sel.f), merges)
       const b = boxRect(pb)

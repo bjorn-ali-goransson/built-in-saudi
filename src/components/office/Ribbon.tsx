@@ -37,7 +37,7 @@ export function Ribbon({ tabs, active, onTab, children, end }: { tabs: RibbonTab
 export function RGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex-none flex flex-col items-center gap-0.5 pe-2 me-1 border-e border-[color:var(--line-soft)] last:border-e-0" role="group" aria-label={label}>
-      <div className="flex items-center gap-0.5 flex-wrap max-w-[420px]">{children}</div>
+      <div className="flex items-center gap-0.5">{children}</div>
       <span className="text-[0.66rem] text-ink-faint leading-none max-[640px]:hidden">{label}</span>
     </div>
   )

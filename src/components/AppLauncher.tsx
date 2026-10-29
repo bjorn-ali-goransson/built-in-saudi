@@ -38,6 +38,9 @@ export function AppLauncher() {
       // key off it would break the tool to speed up leaving it.
       const el = e.target as HTMLElement | null
       if (el?.isContentEditable) return
+      // The office editors bind Ctrl+K to "insert link" too, from a textarea
+      // (the spreadsheet's key sink) that contentEditable does not describe.
+      if (e.defaultPrevented || el?.closest?.('[data-testid="office-shell"]')) return
       e.preventDefault()
       setOpen((o) => !o)
     }

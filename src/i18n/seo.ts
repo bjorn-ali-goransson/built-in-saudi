@@ -104,6 +104,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'الرسائل', description: 'مراسلة خاصة للفرق، فردية وفي مجموعات، تنتقل مباشرة بين المتصفحات. ردود وتفاعلات وتصويتات ورسائل صوتية وملفات بأي حجم ورسائل مجدولة ومؤقتة وإشعارات قراءة — محفوظة في متصفحك فقط، ومختومة من طرف إلى طرف عندما تنتظر الرسالة شخصًا غير متصل.' },
   },
   {
+    id: 'excel-editor',
+    en: { name: 'Spreadsheet Editor — open and edit Excel files free', description: 'Open, edit and save Excel (.xlsx), ODS and CSV spreadsheets in your browser: formulas, charts, filters, drop-downs and live co-editing. Nothing is uploaded.' },
+    ar: { name: 'محرر الجداول — افتح ملفات إكسل وعدّلها مجانًا', description: 'افتح جداول إكسل ‎(.xlsx)‎ وODS وCSV وعدّلها واحفظها في متصفحك: صيغ ومخططات وتصفية وقوائم منسدلة وتحرير مشترك مباشر. لا يُرفع شيء.' },
+  },
+  {
     id: 'prompt-analyzer',
     en: { name: 'Prompt Analyzer', description: 'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, framing, an escape hatch and downstream stakes — as a heatmap spider chart, with concrete issues listed. Then answer the gaps and get a rewritten, stronger prompt. Three analyses per 24 hours.' },
     ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي بألوان حرارية مع سرد المشكلات. ثم أجب عن الثغرات لتحصل على موجّه مُعاد صياغته أقوى. ثلاثة تحاليل كل ٢٤ ساعة.' },
@@ -1423,6 +1428,11 @@ export const categorySeo: CategorySeo[] = [
     slug: 'business', category: 'Business',
     en: { name: 'Free business tools', description: 'Invoices and quotations that print properly, and a scheduling page people can book you on. Free, and with no sign-up for the tools that need none.' },
     ar: { name: 'أدوات أعمال مجانية', description: 'فواتير وعروض أسعار تُطبع كما ينبغي، وصفحة حجز يحجز عليها الناس موعدًا معك. مجانًا، وبلا تسجيل فيما لا يحتاج إليه.' },
+  },
+  {
+    slug: 'office', category: 'Office',
+    en: { name: 'Free office apps in your browser', description: 'Edit Excel spreadsheets, Word documents and PowerPoint decks without installing anything or uploading a file. Everything stays in your browser, and you can edit live with others.' },
+    ar: { name: 'تطبيقات مكتبية مجانية في متصفحك', description: 'عدّل جداول إكسل ومستندات وورد وعروض باوربوينت دون تثبيت شيء أو رفع أي ملف. يبقى كل شيء في متصفحك، ويمكنك التحرير مباشرة مع الآخرين.' },
   },
   {
     slug: 'communication', category: 'Communication',
