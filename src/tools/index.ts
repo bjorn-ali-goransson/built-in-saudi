@@ -59,6 +59,7 @@ import { linkShortenerTool } from './link-shortener/meta'
 import { callsTool } from './calls/meta'
 import { messagesTool } from './messages/meta'
 import { excelEditorTool } from './excel-editor/meta'
+import { wordEditorTool } from './word-editor/meta'
 import { promptAnalyzerTool } from './prompt-analyzer/meta'
 import { regexTesterTool } from './regex-tester/meta'
 import { jwtDecoderTool } from './jwt-decoder/meta'
@@ -253,6 +254,7 @@ export const tools: Tool[] = [
   callsTool,
   messagesTool,
   excelEditorTool,
+  wordEditorTool,
   removeBackgroundTool,
   passportPhotoTool,
   screenshotFrameTool,

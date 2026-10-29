@@ -65,7 +65,11 @@ interface Peer {
   open: boolean
   frags: Map<string, string[]>
   blobs: Map<string, { meta: BlobMeta; parts: ArrayBuffer[]; got: number }>
+  born: number
 }
+
+/** A peer that has not opened in this long is torn down and greeted again. */
+const STALL_MS = 9000
 
 /** Split a JSON string into fragment envelopes when it is too big for one message. */
 export function fragment(json: string, id = randomId(8)): string[] {
@@ -114,6 +118,15 @@ export class Mesh {
   private active = false
   private h: MeshHandlers
   private kick: (() => void) | null = null
+  /**
+   * Candidates for a peer that does not exist YET. Every signal is its own fetch,
+   * so they can reach the relay in any order — an ICE candidate can arrive before
+   * the hello or offer that creates its peer, and dropping it can leave the pair
+   * with nothing to try.
+   */
+  private orphans = new Map<string, RTCIceCandidateInit[]>()
+  private started = 0
+  private hellos = 0
 
   constructor(room: string, handlers: MeshHandlers, me = randomId()) {
     this.room = roomName(room)
@@ -127,6 +140,7 @@ export class Mesh {
   start(): void {
     if (this.active) return
     this.active = true
+    this.started = Date.now()
     this.signal('hello', 'all')
     void this.pollLoop()
   }
@@ -207,11 +221,30 @@ export class Mesh {
       // Fast while anything is forming; slow once everyone is connected, slower
       // still the longer nothing happens — a room can be open for hours and the
       // relay is a billed function.
+      this.unstick()
       const settling = [...this.peers.values()].some((p) => !p.open)
       idle = got ? 0 : idle + 1
       const delay = got ? 100 : settling ? 400 : this.peers.size === 0 ? Math.min(1000 + idle * 150, 4000) : Math.min(2000 + idle * 200, 8000)
       await new Promise<void>((r) => { const t = setTimeout(r, delay); this.kick = () => { clearTimeout(t); r() } })
       this.kick = null
+    }
+  }
+
+  /**
+   * A hello can be lost (a fetch that failed) and a pair can stall half-formed.
+   * Neither ever recovers on its own, so: a peer that has not opened within
+   * STALL_MS is dropped and greeted again, and a mesh that has met nobody at all
+   * says hello a few more times early on — bounded, because a room can sit open
+   * for hours and the relay is billed per call.
+   */
+  private unstick() {
+    const now = Date.now()
+    for (const [id, p] of this.peers) {
+      if (!p.open && now - p.born > STALL_MS) { this.drop(id); this.signal('hello', id) }
+    }
+    if (!this.peers.size && this.hellos < 4 && now - this.started > [3000, 8000, 20000, 45000][this.hellos]) {
+      this.hellos++
+      this.signal('hello', 'all')
     }
   }
 
@@ -225,7 +258,8 @@ export class Mesh {
       const c = payload as RTCIceCandidateInit
       const p = this.peers.get(from)
       if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {})
-      else p?.pending.push(c)
+      else if (p) p.pending.push(c)
+      else { const o = this.orphans.get(from) || []; if (o.length < 64) o.push(c); this.orphans.set(from, o) }
     } else if (type === 'leave') {
       this.drop(from)
     }
@@ -233,7 +267,8 @@ export class Mesh {
 
   private mkPeer(id: string, initiator: boolean): Peer {
     const pc = new RTCPeerConnection({ iceServers: ICE })
-    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, open: false, frags: new Map(), blobs: new Map() }
+    const peer: Peer = { pc, pending: this.orphans.get(id) || [], polite: this.me < id, makingOffer: false, open: false, frags: new Map(), blobs: new Map(), born: Date.now() }
+    this.orphans.delete(id)
     pc.onnegotiationneeded = async () => {
       try { peer.makingOffer = true; await pc.setLocalDescription(); this.signal('offer', id, pc.localDescription) }
       catch { /* */ } finally { peer.makingOffer = false }

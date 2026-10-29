@@ -1,0 +1,102 @@
+// The document editor's own words. The shared shell's are in components/office/strings.
+const en = {
+  blurb: 'A word processor that runs in your browser. Open Word, OpenDocument, Markdown and text files, write with headings, lists, tables, pictures and footnotes, then save back to the same file or download it as Word. Documents stay in this browser — nothing is uploaded — and you can invite others to write with you live.',
+  home: 'Home', insert: 'Insert', layout: 'Layout', view: 'View', tableTab: 'Table', pictureTab: 'Picture',
+  font: 'Font', paragraph: 'Paragraph', styles: 'Styles', editing: 'Editing', pages: 'Pages', links: 'Links', illustrations: 'Illustrations', tables: 'Tables', setup: 'Page setup', headerFooter: 'Header & footer', show: 'Show', rows: 'Rows', columns: 'Columns', merge: 'Merge', cell: 'Cell',
+  bold: 'Bold', italic: 'Italic', underline: 'Underline', strike: 'Strikethrough', sup: 'Superscript', sub: 'Subscript', code: 'Inline code',
+  fontFamily: 'Font', fontSize: 'Font size', textColor: 'Text colour', highlight: 'Highlight', clearFmt: 'Clear formatting',
+  normal: 'Normal', h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', h4: 'Heading 4', quote: 'Quote', codeBlock: 'Code',
+  bullets: 'Bullets', numbering: 'Numbering', checklist: 'Checklist', indentMore: 'Increase indent', indentLess: 'Decrease indent',
+  alignStart: 'Align to start', alignCenter: 'Centre', alignEnd: 'Align to end', justify: 'Justify',
+  ltr: 'Left to right', rtl: 'Right to left', lineSpacing: 'Line spacing', spacingAfter: 'Space after paragraph',
+  numKind: 'Number style', kinds: { decimal: '1, 2, 3', 'lower-alpha': 'a, b, c', 'upper-alpha': 'A, B, C', 'lower-roman': 'i, ii, iii', 'upper-roman': 'I, II, III', 'arabic-indic': '١، ٢، ٣', 'arabic-abjad': 'أ، ب، ج' } as Record<string, string>,
+  table: 'Table', picture: 'Picture', link: 'Link', pageBreak: 'Page break', rule: 'Horizontal line', footnote: 'Footnote', symbol: 'Symbol', date: 'Date',
+  insertTable: (r: number, c: number) => `${r} × ${c} table`,
+  pageSize: 'Size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNormal: 'Normal (2.54 cm)', marginNarrow: 'Narrow (1.27 cm)', marginWide: 'Wide (3.8 cm)',
+  header: 'Header', footer: 'Footer', headerPh: 'Header — appears on every page', footerPh: 'Footer — {page} of {pages}', pageField: 'Page number',
+  docDirection: 'Document direction',
+  find: 'Find', replace: 'Replace', zoom: 'Zoom', outline: 'Outline', ruler: 'Page view', webView: 'Web view', wordCount: 'Word count',
+  findPh: 'Find in document', replacePh: 'Replace with', matchCase: 'Match case', wholeWord: 'Whole words', replaceOne: 'Replace', replaceAll: 'Replace all', noMatch: 'No matches', nOfM: (n: number, m: number) => `${n} of ${m}`, replacedN: (n: number) => `Replaced ${n}`,
+  linkUrl: 'Address (https://…)', linkText: 'Text to show', removeLink: 'Remove link', openLink: 'Open link',
+  footnoteText: 'Footnote text', altText: 'Alt text (what the picture shows)', width: 'Width', deletePicture: 'Delete picture', resetSize: 'Original size',
+  addRowAbove: 'Row above', addRowBelow: 'Row below', addColBefore: 'Column before', addColAfter: 'Column after', deleteRow: 'Delete row', deleteCol: 'Delete column', deleteTable: 'Delete table', mergeCells: 'Merge cells', splitCell: 'Split cell', headerRow: 'Header row', cellShade: 'Cell shading',
+  words: (n: number) => `${n.toLocaleString('en')} ${n === 1 ? 'word' : 'words'}`,
+  chars: (n: number) => `${n.toLocaleString('en')} characters`,
+  pageN: (n: number, m: number) => `Page ${n} of ${m}`,
+  outlineEmpty: 'Headings you add appear here.',
+  placeholder: 'Start writing…',
+  ok: 'OK', cancel: 'Cancel', apply: 'Apply', remove: 'Remove', close: 'Close',
+  html: 'Web page', markdown: 'Markdown', text: 'Plain text', docx: 'Word document',
+  importInto: 'Insert a file into this document…',
+  pictureBad: 'That picture could not be read.',
+  templates: { blank: 'Blank document', letter: 'Letter', report: 'Report', meeting: 'Meeting notes', cv: 'CV' },
+}
+
+type Str = typeof en
+
+const ar: Str = {
+  blurb: 'معالج نصوص يعمل في متصفحك. افتح ملفات وورد وOpenDocument وMarkdown والنصوص، واكتب بعناوين وقوائم وجداول وصور وحواشٍ، ثم احفظ في الملف نفسه أو نزّله بصيغة وورد. تبقى المستندات في هذا المتصفح ولا يُرفع شيء، ويمكنك دعوة آخرين للكتابة معك مباشرة.',
+  home: 'الرئيسية', insert: 'إدراج', layout: 'التخطيط', view: 'عرض', tableTab: 'الجدول', pictureTab: 'الصورة',
+  font: 'الخط', paragraph: 'الفقرة', styles: 'الأنماط', editing: 'التحرير', pages: 'الصفحات', links: 'الروابط', illustrations: 'الرسوم', tables: 'الجداول', setup: 'إعداد الصفحة', headerFooter: 'الرأس والتذييل', show: 'إظهار', rows: 'الصفوف', columns: 'الأعمدة', merge: 'الدمج', cell: 'الخلية',
+  bold: 'غامق', italic: 'مائل', underline: 'تسطير', strike: 'يتوسطه خط', sup: 'مرتفع', sub: 'منخفض', code: 'شيفرة',
+  fontFamily: 'الخط', fontSize: 'حجم الخط', textColor: 'لون النص', highlight: 'تظليل', clearFmt: 'مسح التنسيق',
+  normal: 'عادي', h1: 'عنوان ١', h2: 'عنوان ٢', h3: 'عنوان ٣', h4: 'عنوان ٤', quote: 'اقتباس', codeBlock: 'شيفرة',
+  bullets: 'تعداد نقطي', numbering: 'ترقيم', checklist: 'قائمة مهام', indentMore: 'زيادة المسافة البادئة', indentLess: 'إنقاص المسافة البادئة',
+  alignStart: 'محاذاة للبداية', alignCenter: 'توسيط', alignEnd: 'محاذاة للنهاية', justify: 'ضبط',
+  ltr: 'من اليسار لليمين', rtl: 'من اليمين لليسار', lineSpacing: 'تباعد الأسطر', spacingAfter: 'مسافة بعد الفقرة',
+  numKind: 'نمط الترقيم', kinds: en.kinds,
+  table: 'جدول', picture: 'صورة', link: 'رابط', pageBreak: 'فاصل صفحة', rule: 'خط أفقي', footnote: 'حاشية', symbol: 'رمز', date: 'التاريخ',
+  insertTable: (r, c) => `جدول ${c} × ${r}`,
+  pageSize: 'الحجم', orientation: 'الاتجاه', portrait: 'عمودي', landscape: 'أفقي', margins: 'الهوامش', marginNormal: 'عادية (٢٫٥٤ سم)', marginNarrow: 'ضيقة (١٫٢٧ سم)', marginWide: 'عريضة (٣٫٨ سم)',
+  header: 'الرأس', footer: 'التذييل', headerPh: 'الرأس — يظهر في كل صفحة', footerPh: 'التذييل — {page} من {pages}', pageField: 'رقم الصفحة',
+  docDirection: 'اتجاه المستند',
+  find: 'بحث', replace: 'استبدال', zoom: 'تكبير', outline: 'المخطط', ruler: 'عرض الصفحة', webView: 'عرض ويب', wordCount: 'عدد الكلمات',
+  findPh: 'ابحث في المستند', replacePh: 'استبدل بـ', matchCase: 'مطابقة حالة الأحرف', wholeWord: 'كلمات كاملة', replaceOne: 'استبدال', replaceAll: 'استبدال الكل', noMatch: 'لا نتائج', nOfM: (n, m) => `${n.toLocaleString('ar-SA')} من ${m.toLocaleString('ar-SA')}`, replacedN: (n) => `استُبدل ${n.toLocaleString('ar-SA')}`,
+  linkUrl: 'العنوان (https://…)', linkText: 'النص الظاهر', removeLink: 'إزالة الرابط', openLink: 'فتح الرابط',
+  footnoteText: 'نص الحاشية', altText: 'نص بديل (ما تُظهره الصورة)', width: 'العرض', deletePicture: 'حذف الصورة', resetSize: 'الحجم الأصلي',
+  addRowAbove: 'صف أعلى', addRowBelow: 'صف أسفل', addColBefore: 'عمود قبل', addColAfter: 'عمود بعد', deleteRow: 'حذف الصف', deleteCol: 'حذف العمود', deleteTable: 'حذف الجدول', mergeCells: 'دمج الخلايا', splitCell: 'تقسيم الخلية', headerRow: 'صف العناوين', cellShade: 'تظليل الخلية',
+  words: (n) => `${n.toLocaleString('ar-SA')} كلمة`,
+  chars: (n) => `${n.toLocaleString('ar-SA')} حرفًا`,
+  pageN: (n, m) => `صفحة ${n.toLocaleString('ar-SA')} من ${m.toLocaleString('ar-SA')}`,
+  outlineEmpty: 'تظهر العناوين التي تضيفها هنا.',
+  placeholder: 'ابدأ الكتابة…',
+  ok: 'موافق', cancel: 'إلغاء', apply: 'تطبيق', remove: 'إزالة', close: 'إغلاق',
+  html: 'صفحة ويب', markdown: 'Markdown', text: 'نص عادي', docx: 'مستند وورد',
+  importInto: 'إدراج ملف في هذا المستند…',
+  pictureBad: 'تعذّرت قراءة تلك الصورة.',
+  templates: { blank: 'مستند فارغ', letter: 'خطاب', report: 'تقرير', meeting: 'محضر اجتماع', cv: 'سيرة ذاتية' },
+}
+
+export const WD_STR = { en, ar }
+export type WdStr = Str
+
+const LOSS_AR: Record<string, string> = {
+  'SmartArt diagrams': 'مخططات SmartArt',
+  charts: 'المخططات البيانية',
+  'checklist boxes (written as ☐ and ☑)': 'مربعات قائمة المهام (كُتبت ☐ و☑)',
+  'column breaks': 'فواصل الأعمدة',
+  comments: 'التعليقات',
+  'drawings and shapes': 'الرسومات والأشكال',
+  'embedded objects and charts': 'الكائنات المضمّنة والمخططات',
+  'embedded objects': 'الكائنات المضمّنة',
+  'equations (kept as plain text)': 'المعادلات (بقيت نصًا عاديًا)',
+  'floating pictures (placed in the text)': 'الصور العائمة (وُضعت داخل النص)',
+  'linked (not embedded) pictures': 'الصور المرتبطة (غير المضمّنة)',
+  'multiple text columns': 'الأعمدة النصية المتعددة',
+  'pictures beyond 60MB in total': 'الصور التي تتجاوز ٦٠ ميغابايت إجمالًا',
+  'pictures in a format Word cannot read': 'صور بصيغة لا يقرؤها وورد',
+  'pictures in a format browsers cannot show (EMF, WMF, TIFF)': 'صور بصيغة لا تعرضها المتصفحات (EMF وWMF وTIFF)',
+  'pictures in the header or footer': 'الصور في الرأس أو التذييل',
+  'pictures linked from the web (not embedded)': 'صور مرتبطة من الويب (غير مضمّنة)',
+  'section breaks (the first page setup is kept)': 'فواصل المقاطع (بقي إعداد الصفحة الأول)',
+  'text boxes and shapes (their text is kept)': 'مربعات النص والأشكال (بقي نصها)',
+  'tracked changes (accepted as they stand)': 'تعقب التغييرات (قُبلت كما هي)',
+  'formatting (Markdown carries headings, lists, links, tables and emphasis only)': 'التنسيق (يحمل Markdown العناوين والقوائم والروابط والجداول والتوكيد فقط)',
+  'all formatting, pictures and tables (plain text)': 'كل التنسيق والصور والجداول (نص عادي)',
+  'page setup, header and footer': 'إعداد الصفحة والرأس والتذييل',
+}
+
+export function lossText(l: { what: string; count: number }, locale: 'en' | 'ar'): string {
+  const label = locale === 'ar' ? LOSS_AR[l.what] || l.what : l.what
+  return l.count > 1 ? `${label} (${new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en').format(l.count)})` : label
+}

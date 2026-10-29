@@ -57,7 +57,7 @@ export async function startRelay(): Promise<Relay> {
   await new Promise<void>((ok) => server.listen(0, () => ok()))
   const addr = server.address()
   const base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`
-  return { base, bodies, pushes, links, close: () => new Promise((ok) => server.close(() => ok())) }
+  return { base, bodies, pushes, links, close: () => new Promise((ok) => { server.close(() => ok()); server.closeAllConnections() }) }
 }
 
 /** A browser context pointed at the relay, with the media flags WebRTC needs headless. */

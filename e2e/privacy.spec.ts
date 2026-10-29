@@ -234,6 +234,7 @@ ${TOKEN}
   // documented failure mode of a guard scoped to whatever was written most
   // recently — grep src/tools for a file input, do not rely on memory.
   { id: 'excel-editor', testid: 'office-file-input', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
+  { id: 'word-editor', testid: 'office-file-input', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Notes\n\n${TOKEN}\n`) },
   { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'audio-spectrum', testid: 'as-file', name: 'clip.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },

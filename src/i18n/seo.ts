@@ -109,6 +109,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محرر الجداول — افتح ملفات إكسل وعدّلها مجانًا', description: 'افتح جداول إكسل ‎(.xlsx)‎ وODS وCSV وعدّلها واحفظها في متصفحك: صيغ ومخططات وتصفية وقوائم منسدلة وتحرير مشترك مباشر. لا يُرفع شيء.' },
   },
   {
+    id: 'word-editor',
+    en: { name: 'Document Editor — open and edit Word files free', description: 'Open, edit and save Word (.docx), ODT and Markdown documents in your browser: styles, lists, tables, pictures, footnotes and live co-writing, Arabic and English. Nothing is uploaded.' },
+    ar: { name: 'محرر المستندات — افتح ملفات وورد وعدّلها مجانًا', description: 'افتح مستندات وورد ‎(.docx)‎ وODT وMarkdown وعدّلها واحفظها في متصفحك: أنماط وقوائم وجداول وصور وحواشٍ وكتابة مشتركة مباشرة، بالعربية والإنجليزية. لا يُرفع شيء.' },
+  },
+  {
     id: 'prompt-analyzer',
     en: { name: 'Prompt Analyzer', description: 'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, framing, an escape hatch and downstream stakes — as a heatmap spider chart, with concrete issues listed. Then answer the gaps and get a rewritten, stronger prompt. Three analyses per 24 hours.' },
     ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي بألوان حرارية مع سرد المشكلات. ثم أجب عن الثغرات لتحصل على موجّه مُعاد صياغته أقوى. ثلاثة تحاليل كل ٢٤ ساعة.' },
