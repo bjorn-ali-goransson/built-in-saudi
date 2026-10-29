@@ -9,6 +9,7 @@
 export const ADDED: Record<string, string> = {
   'excel-editor': '2026-10-29',
   'word-editor': '2026-10-29',
+  'powerpoint-editor': '2026-10-29',
   'messages': '2026-10-29',
   'activity-schedule': '2026-09-26',
   'image-edit': '2026-09-12',

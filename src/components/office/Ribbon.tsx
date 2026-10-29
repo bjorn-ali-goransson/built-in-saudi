@@ -9,7 +9,7 @@ export interface RibbonTab { id: string; label: string; contextual?: boolean }
 
 export function Ribbon({ tabs, active, onTab, children, end }: { tabs: RibbonTab[]; active: string; onTab: (id: string) => void; children: ReactNode; end?: ReactNode }) {
   return (
-    <div className="flex-none border-b border-[color:var(--line-soft)] bg-[var(--surface)]" data-testid="ribbon">
+    <div className="flex-none border-b border-[color:var(--line-soft)] bg-[var(--surface)]" data-testid="ribbon" data-ribbon="">
       <div role="tablist" className="flex items-end gap-0.5 px-2 pt-1 overflow-x-auto [scrollbar-width:none]">
         {tabs.map((t) => (
           <button
@@ -137,7 +137,7 @@ export function RPopover({ label, trigger, testid, children, wide }: { label: st
         <span className="flex items-center gap-1 [&_svg]:size-[17px]">{trigger}</span>
       </button>
       {open && createPortal(
-        <div ref={panel} data-testid={`${testid}-panel`} style={{ top: pos.top, left: pos.left }} className="fixed z-[90] max-h-[70dvh] overflow-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[0_10px_30px_rgba(18,33,27,0.18)]">
+        <div ref={panel} data-ribbon="" data-testid={`${testid}-panel`} style={{ top: pos.top, left: pos.left }} className="fixed z-[90] max-h-[70dvh] overflow-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[0_10px_30px_rgba(18,33,27,0.18)]">
           {children(() => setOpen(false))}
         </div>,
         document.body,

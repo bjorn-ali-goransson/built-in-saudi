@@ -94,6 +94,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/word-editor"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/powerpoint-editor/</loc>
+    <lastmod>2026-10-29</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/powerpoint-editor"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/powerpoint-editor"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/powerpoint-editor"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/powerpoint-editor/</loc>
+    <lastmod>2026-10-29</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/powerpoint-editor"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/powerpoint-editor"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/powerpoint-editor"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/screen-recorder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>
