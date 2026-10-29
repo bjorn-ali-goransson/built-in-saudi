@@ -80,6 +80,7 @@ jobs:
           gcloud functions deploy call-delete             "${common[@]}" --entry-point=callDelete
           gcloud functions deploy call-missed             "${common[@]}" --entry-point=callMissed
           gcloud functions deploy call-dm                 "${common[@]}" --entry-point=callDm
+          gcloud functions deploy call-msg                "${common[@]}" --entry-point=callMsg
 
           gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
           gcloud functions deploy improve-prompt          "${common[@]}" --entry-point=improvePrompt

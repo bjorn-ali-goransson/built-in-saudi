@@ -57,6 +57,7 @@ import { bookWithMeTool } from './book-with-me/meta'
 import { cvGeneratorTool } from './cv-generator/meta'
 import { linkShortenerTool } from './link-shortener/meta'
 import { callsTool } from './calls/meta'
+import { messagesTool } from './messages/meta'
 import { promptAnalyzerTool } from './prompt-analyzer/meta'
 import { regexTesterTool } from './regex-tester/meta'
 import { jwtDecoderTool } from './jwt-decoder/meta'
@@ -249,6 +250,7 @@ import { gpaCalculatorTool } from './gpa-calculator/meta'
 export const tools: Tool[] = [
   bookWithMeTool,
   callsTool,
+  messagesTool,
   removeBackgroundTool,
   passportPhotoTool,
   screenshotFrameTool,

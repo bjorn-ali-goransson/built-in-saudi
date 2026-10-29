@@ -9,8 +9,8 @@
 // place and leave the other throwing VersionError. `public/sw.js` opens the same
 // name/version and creates the same stores.
 const DB = 'bis-calls'
-const VERSION = 2
-const STORES = ['missed', 'dms'] as const
+const VERSION = 3
+const STORES = ['missed', 'dms', 'msgs'] as const
 
 export type QueueStore = (typeof STORES)[number]
 

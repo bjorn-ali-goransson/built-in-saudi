@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **240 tools are live.** This
+The backlog, and an honest account of what exists. **241 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -39,7 +39,7 @@ registry disagree.
 | Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
 | Health | 7 | **due date**, **ovulation**, calories, water intake, sleep cycles, glucose units, medicine schedule |
 | Business | 6 | invoice, quotation/receipt, certificates, CV optimizer, Book Me, **pricing and margin** |
-| Communication | 1 | Calls — P2P video, whiteboard, direct messages |
+| Communication | 2 | Calls — P2P video, whiteboard; Messages — P2P team chat |
 
 **Three of those categories did not exist in the August 2026 table**, and the
 splits are recorded in CLAUDE.md rather than here: `Calculators` was several

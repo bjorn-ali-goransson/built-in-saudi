@@ -52,6 +52,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/calls"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/messages/</loc>
+    <lastmod>2026-10-29</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/messages"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/messages"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/messages"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/messages/</loc>
+    <lastmod>2026-10-29</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/messages"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/messages"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/messages"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/screen-recorder/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/screen-recorder"/>

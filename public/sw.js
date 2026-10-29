@@ -75,17 +75,19 @@ async function messageVisibleClients(msg) {
 // in IndexedDB so it survives with no tab open; the app drains the queue into
 // localStorage (src/lib/missedCalls.ts). Never rejects — a lost record must not
 // break the notification.
-// Version 2 adds the `dms` store alongside `missed`. Both are drained by the app.
+// Version 2 adds the `dms` store alongside `missed`; version 3 adds `msgs` for
+// Messages. All are drained by the app. MUST match src/lib/localQueue.ts.
 function queueLocal(store, entry) {
   return new Promise((resolve) => {
     let settled = false
     const done = () => { if (!settled) { settled = true; resolve() } }
     try {
-      const open = indexedDB.open('bis-calls', 2)
+      const open = indexedDB.open('bis-calls', 3)
       open.onupgradeneeded = () => {
         const db = open.result
         if (!db.objectStoreNames.contains('missed')) db.createObjectStore('missed', { keyPath: 'id' })
         if (!db.objectStoreNames.contains('dms')) db.createObjectStore('dms', { keyPath: 'id' })
+        if (!db.objectStoreNames.contains('msgs')) db.createObjectStore('msgs', { keyPath: 'id' })
       }
       open.onerror = done
       open.onsuccess = () => {
@@ -97,6 +99,90 @@ function queueLocal(store, entry) {
       }
     } catch (e) { done() }
   })
+}
+
+// Messages (src/tools/messages): an envelope sealed end to end with a key only
+// the two devices hold. The relay could not read it; this worker CAN, because
+// the device's private key is in IndexedDB — so the notification shows the
+// actual message instead of "New message". Read-only: if the Messages database
+// does not exist yet, opening it must not create an empty one (that would leave
+// the app with a version-1 database and no stores), so the upgrade is aborted.
+function readMessagesKv(keys) {
+  return new Promise((resolve) => {
+    try {
+      const open = indexedDB.open('bis-messages', 1)
+      open.onupgradeneeded = () => { try { open.transaction.abort() } catch (e) { /* */ } }
+      open.onerror = () => resolve({})
+      open.onsuccess = () => {
+        try {
+          const db = open.result
+          if (!db.objectStoreNames.contains('kv')) { db.close(); return resolve({}) }
+          const os = db.transaction('kv').objectStore('kv')
+          const out = {}
+          let left = keys.length
+          for (const k of keys) {
+            const r = os.get(k)
+            r.onsuccess = () => { out[k] = r.result ? r.result.v : undefined; if (--left === 0) { db.close(); resolve(out) } }
+            r.onerror = () => { if (--left === 0) { db.close(); resolve(out) } }
+          }
+        } catch (e) { resolve({}) }
+      }
+    } catch (e) { resolve({}) }
+  })
+}
+function b64uDec(s) {
+  const t = s.replace(/-/g, '+').replace(/_/g, '/')
+  const bin = atob(t + '==='.slice((t.length + 3) % 4))
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+// Mirrors sharedKey/open in src/tools/messages/crypto.ts — keep them identical.
+async function openSealed(from, sealed) {
+  const kv = await readMessagesKv(['identity', 'peerPub', 'me'])
+  const pub = kv.peerPub && kv.peerPub[from]
+  if (!kv.identity || !pub || !kv.me) return null
+  const theirs = await crypto.subtle.importKey('raw', b64uDec(pub), { name: 'ECDH', namedCurve: 'P-256' }, true, [])
+  const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: theirs }, kv.identity.privateKey, 256)
+  const hk = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey'])
+  const info = new TextEncoder().encode('bis-messages-v1:' + [kv.me, from].sort().join(':'))
+  const key = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info }, hk, { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
+  const b = b64uDec(sealed)
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12), additionalData: new TextEncoder().encode(from) }, key, b.subarray(12))
+  return new TextDecoder().decode(pt)
+}
+function msgPreview(env) {
+  try {
+    if (!env || env.type !== 'msg' || !env.msg) {
+      if (env && env.type === 'react') return env.emoji || ''
+      return ''
+    }
+    const m = env.msg
+    if (m.kind === 'file') return '📎 ' + ((m.file && m.file.name) || '')
+    if (m.kind === 'voice') return '🎤'
+    if (m.kind === 'poll') return '📊 ' + ((m.poll && m.poll.q) || '')
+    if (m.kind === 'location') return '📍'
+    if (m.kind === 'call') return '📞'
+    if (m.kind === 'doc') return '📄 ' + ((m.doc && m.doc.title) || '')
+    return String(m.text || '').slice(0, 140)
+  } catch (e) { return '' }
+}
+async function messageNotification(data, msg) {
+  let body = ''
+  let title = data.title || msg.name || 'Built in Saudi'
+  let conv = ''
+  try {
+    const text = msg.sealed ? await openSealed(msg.from, msg.env) : msg.env
+    const env = text ? JSON.parse(text) : null
+    if (env) {
+      body = msgPreview(env)
+      conv = env.conv && String(env.conv).indexOf('g:') === 0 ? env.conv : ''
+      if (conv && env.title) title = (msg.name || '') + ' · ' + env.title
+      // Receipts, typing and edits are not worth waking somebody for.
+      if (env.type !== 'msg' && env.type !== 'react') return null
+    }
+  } catch (e) { /* could not decrypt — say only that something arrived */ }
+  return { title, body: body || data.body || 'New message', tag: 'msg-' + (conv || msg.from), url: '/apps/messages?c=' + encodeURIComponent(conv || msg.from) }
 }
 
 // Push notifications (prayer times, and "call me" rings / missed calls).
@@ -128,6 +214,21 @@ self.addEventListener('push', (event) => {
     // A voice note (#232): metadata only — the audio arrives peer-to-peer, not here.
     voice: m2.voice && typeof m2.voice === 'object' ? { dur: Number(m2.voice.dur) || 0, mime: String(m2.voice.mime || 'audio/webm'), pending: true } : null,
   } : null
+  const m3 = data.msg && typeof data.msg === 'object' ? data.msg : null
+  if (m3) {
+    const entry = { id: String(m3.id || Date.now()), from: String(m3.from || ''), name: String(m3.name || ''), env: String(m3.env || ''), sealed: !!m3.sealed }
+    event.waitUntil((async () => {
+      await queueLocal('msgs', entry)
+      await messageVisibleClients({ type: 'bis-msg' })
+      const n = await messageNotification(data, entry)
+      // A visible Messages tab shows it itself; don't double up with a system banner.
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const showing = all.some((c) => c.visibilityState === 'visible' && c.url.indexOf('/apps/messages') !== -1)
+      if (n && !showing) await self.registration.showNotification(n.title, { body: n.body, icon: '/icon.svg', badge: '/icon.svg', tag: n.tag, dir: 'auto', data: { url: n.url } })
+      await touch()
+    })())
+    return
+  }
   event.waitUntil(Promise.all([
     missed ? queueLocal('missed', missed) : Promise.resolve(),
     // A visible tab records it right away (and leaves a now-pointless ringing screen).

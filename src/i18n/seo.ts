@@ -99,6 +99,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مكالمات', description: 'مكالمات صوت وفيديو وفرق آمنة بين المتصفحات مباشرةً — لا تمر أي بيانات بخوادمنا. شارك رابط دعوة واحدًا واسمح للناس بالدخول من غرفة انتظار؛ الفيديو ومشاركة الشاشة والسبورة والدردشة وإرسال الملفات تنتقل مباشرة عبر WebRTC، وفقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك.' },
   },
   {
+    id: 'messages',
+    en: { name: 'Messages', description: 'Private team messaging, one-to-one and in groups, that goes straight between browsers. Replies, reactions, polls, voice notes, files of any size, scheduled and disappearing messages, read receipts — stored only in your browser, and sealed end to end when a message has to wait for someone who is away.' },
+    ar: { name: 'الرسائل', description: 'مراسلة خاصة للفرق، فردية وفي مجموعات، تنتقل مباشرة بين المتصفحات. ردود وتفاعلات وتصويتات ورسائل صوتية وملفات بأي حجم ورسائل مجدولة ومؤقتة وإشعارات قراءة — محفوظة في متصفحك فقط، ومختومة من طرف إلى طرف عندما تنتظر الرسالة شخصًا غير متصل.' },
+  },
+  {
     id: 'prompt-analyzer',
     en: { name: 'Prompt Analyzer', description: 'Paste an LLM system prompt and one AI pass scores it 1–5 across eight dimensions — purpose coherence, context-vs-instruction harmony, spikiness, shoutiness, contradictions, framing, an escape hatch and downstream stakes — as a heatmap spider chart, with concrete issues listed. Then answer the gaps and get a rewritten, stronger prompt. Three analyses per 24 hours.' },
     ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي بألوان حرارية مع سرد المشكلات. ثم أجب عن الثغرات لتحصل على موجّه مُعاد صياغته أقوى. ثلاثة تحاليل كل ٢٤ ساعة.' },

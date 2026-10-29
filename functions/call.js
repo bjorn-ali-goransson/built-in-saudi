@@ -310,6 +310,48 @@ http('callDm', async (req, res) => {
   }
 })
 
+// POST { code, from, name, env, sealed, id } → wake the owner of `code` with an
+// envelope from the Messages app. `env` is OPAQUE to this function: when the two
+// devices have exchanged keys it is sealed end to end (AES-GCM, key derived on
+// the devices by ECDH) and this server cannot read it; the recipient's service
+// worker decrypts it to show the notification. Like everything else in this file
+// it is relayed and forgotten — nothing is stored. A JSON 404 means the address
+// has no device registered for offline delivery; the sender keeps the message
+// and delivers it peer-to-peer when both are online.
+const MAX_ENV = 3200 // a Web Push payload is ~4KB once encrypted for transport
+http('callMsg', async (req, res) => {
+  cors(req, res)
+  if (req.method === 'OPTIONS') return res.status(204).send('')
+  if (req.method !== 'POST') return res.status(405).send('POST only')
+  if (rateLimited(req)) return res.status(429).json({ error: 'rate limited' })
+  try {
+    const b = req.body || {}
+    const code = codeOf(b.code)
+    const from = codeOf(b.from)
+    const name = clean(b.name, 40) || 'Someone'
+    const env = typeof b.env === 'string' ? b.env : ''
+    if (!code || !from || !env) return res.status(400).json({ error: 'code, from and env required' })
+    if (env.length > MAX_ENV) return res.status(413).json({ error: 'envelope too large' })
+    const sealed = !!b.sealed
+    const id = clean(b.id, 40).replace(/[^a-zA-Z0-9_-]/g, '') || `m${Date.now()}`
+    const ref = db.collection(LINKS).doc(code)
+    const d = await liveLink(ref)
+    if (!d) return res.status(404).json({ ok: false, error: 'no such link' })
+    const payload = JSON.stringify({
+      title: name,
+      // The worker replaces this with the decrypted text when it can.
+      body: 'New message',
+      tag: `msg-${from}`,
+      url: `${SITE}/apps/messages?c=${from}`,
+      msg: { id, from, name, env, sealed },
+    })
+    const delivered = await pushLink(ref, Array.isArray(d.subs) ? d.subs : [], payload)
+    res.json({ ok: true, delivered })
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) })
+  }
+})
+
 // POST { code, endpoint? } → remove one device (endpoint) or the whole link.
 http('callDelete', async (req, res) => {
   cors(req, res)

@@ -28,6 +28,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs'
 const SENDS_DATA = new Set([
   'ats-cv-optimizer', // uploads the CV to our backend for the OpenAI pass
   'calls',            // P2P, but the handshake goes through the relay
+  'messages',         // P2P like Calls; e2e/messages.spec.ts asserts no file or text reaches the relay
 ])
 
 /**
