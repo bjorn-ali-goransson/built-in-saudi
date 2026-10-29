@@ -7661,6 +7661,167 @@ Splitting the remaining 25 further (data vs security vs project scaffolding) is
 still open, and deliberately so: there is no single principle that settles it
 the way "a file converter belongs in Converters" settled the last one.
 
+## Messages (`messages`), the companion to Calls
+
+Team messaging that keeps everything **in this browser** and moves it **browser
+to browser**: one-to-one and groups, replies, reactions, polls, voice notes,
+files of any size, scheduled and disappearing messages, read receipts. Calls and
+Messages share one identity, and **a Messages address IS the Calls "call me"
+code**, so a contact in one is a contact in the other. A call card in a thread
+opens Calls; Calls' contact list links to Messages, which takes `?to=<code>`.
+
+- **Every change is an EVENT, applied by one function** (`model.ts`
+  `applyEvent`): a message, an edit, a reaction, a vote, a receipt, a rename.
+  It is idempotent by event id AND message id, because one event can legitimately
+  arrive twice: once as a push while the app was closed, then again peer to peer.
+  An edit that arrives before its message is held, not dropped. There is no
+  server ordering anything, so a thread is ordered by the sender's timestamp,
+  tie-broken by id, and two devices that saw events in different orders render
+  the same thread.
+- **A push is a heads-up, not a delivery.** The outbox keeps one entry per
+  (event, recipient) until THAT recipient acks it over a peer link. A pushed
+  event is offered again the next time both are online, and deduped. That is what
+  makes the ticks honest: queued, pushed, delivered, read are four different facts.
+- **The relay sees peer ids and SDP, never a message.** Each device listens in
+  its own inbox room (`in_<code>`); to reach somebody you visit theirs. A
+  call-me code is public by design, so **both ends prove they hold the private
+  key behind the public key they presented** before anything is revealed — a
+  peer that knows the code and not the key gets a connection and nothing over it.
+- **What goes THROUGH our server is sealed end to end** (`crypto.ts`): ECDH
+  P-256 with a NON-EXTRACTABLE private key, HKDF bound to both addresses,
+  AES-GCM, and a safety number to compare out of band. It does not hide that a
+  push was sent, when, or to which address — the relay needs that to deliver,
+  and the copy says so.
+- **Its IndexedDB is not the service worker's** (`idb.ts`). The worker READS the
+  identity key and contacts' public keys to decrypt a push for the notification,
+  and never writes, so adding a store here cannot bump a version the worker does
+  not know — the trap `localQueue.ts` records for Calls.
+
+## The office suite (`excel-editor`, `word-editor`, `powerpoint-editor`)
+
+Three editors for the files people actually send — `.xlsx`, `.docx`, `.pptx` —
+that run in the browser, keep documents in the browser, and edit live with others
+**with the document's owner as the truth**. They share everything that is not the
+document itself, so they look and behave as one suite.
+
+**The shared frame** (`components/office/`): `OfficeApp` is the library and
+routes by `?doc=` (so Back closes the editor and a reload reopens it) and
+`?join=` (somebody else's live document); `EditorShell` is the full-screen frame,
+**portalled to `<body>`** for the same fixed-inside-a-transform reason as the
+video editor; `usePersistence`, `useCollab`, the `Ribbon` primitives and the
+`LossDialog`. An editor is a component taking `EditorProps<D>` plus an
+`EditorKit<D>` saying what it reads, what it writes and how.
+
+**Two kinds of save, never blurred** (`lib/docStore.ts`). Every edit is written
+to IndexedDB in the editor's OWN model (JSON), because converting to OOXML on
+every keystroke would be slow and lossy. Separately, where the File System Access
+API exists, a document can be linked to a real file the way draw.io does it: the
+HANDLE is stored, Ctrl+S writes back to the same `.xlsx` on disk, and permission
+is re-asked after a reload because browsers never grant it for ever.
+
+**Every import and export runs in ONE worker** (`lib/office/office.worker.ts`,
+called through `officeClient.ts`), each format imported on first use so opening a
+spreadsheet never loads the word processor's converter. It answers every request
+still in flight on `error` and `unhandledrejection` — a hung editor is worse than
+an error, the `pdf-booklet` lesson.
+
+**OPC is solved once** (`lib/office/opc.ts`). Relationship targets are resolved
+to absolute part names in ONE place, because `../media/image1.png` relative to
+`ppt/slides/_rels/slide3.xml.rels` is exactly the arithmetic every hand-written
+importer gets subtly wrong. On the way out, `[Content_Types].xml` and every
+`_rels` part are GENERATED from what was written, so a part cannot exist without
+its type or a relationship point at nothing — the two ways a package becomes one
+Word "found unreadable content in". Theme colours with tints go through one
+resolver (`color.ts`): an importer that ignores the theme paints every heading
+black.
+
+**Import says what did not come across.** Each reader keeps a loss ledger
+(charts, SmartArt, macros, animations, an unsupported function) and the editor
+opens on a `LossDialog` listing it. A legacy binary `.doc`/`.xls`/`.ppt`
+(`D0CF11E0`) is NAMED and refused, never opened as junk.
+
+### Owner is truth, and three ways of being it
+
+There is no server, so somebody's copy has to count, and it is the owner's: the
+document lives in their browser, they open the session, it ends when they leave.
+That makes the problem far smaller than a CRDT solves — one ordering of edits, the
+owner's — and it lets the owner REFUSE an edit (a viewer's, or one that no longer
+applies). `lib/collab/session.ts` owns who the owner is (a guest accepts a welcome
+from exactly one peer and ignores commits from anyone else, or any peer could
+rewrite everybody's view), roles, presence and the chat. The document half is an
+adapter, and each editor needs a different one:
+
+- **Word: `prosemirror-collab`**, which IS this model — one authority keeps the
+  step list, a stale submission gets the missed steps, rebases and resends.
+  Nothing is merged by guesswork. Page setup, header and footer are not steps;
+  they ride the same channel as last-writer-wins `meta`.
+- **Sheet and deck: `lib/collab/seqDoc.ts`.** Copying a 50,000-cell workbook per
+  keystroke is not an option, so it mutates in place and leans on a property of
+  the ops: an IDEMPOTENT op ("set B7 to 42", "move s3 to 10,20") is applied
+  optimistically and simply re-applied on top of anybody else's commit, which
+  reproduces the owner's order exactly; everything else ("insert a row at 5") is
+  sent and waits for the owner.
+- **Undo is by inverse op**, computed against the state before the op applies.
+  In a shared document undo must take back MY last change without rewinding a
+  colleague's, and only an inverse op does that.
+
+**The deck made every op idempotent, and a fuzz is why.** Its first ops placed a
+slide or a shape relative to an ANCHOR ("after s3") or at an index. The
+convergence fuzz in `powerpoint-editor/doc.test.ts` — random concurrent edits
+from three clients, checked for identical decks — **diverged on every seed**:
+"after s3" means something different once somebody else has inserted after s3.
+Order is now a **fractional key** (`order.ts`): a move is "set my key to k",
+which is idempotent, and two clients inserting into the same gap get distinct
+keys because `keyBetween` adds a short random tail. **Verified to fail**:
+restoring the anchor ops reddens every seed.
+
+**A field removal travels as `unset`, because `undefined` does not survive
+JSON.** `{ hidden: undefined }` arrives as `{}` and the receiver keeps the old
+value, so "show this slide again" silently did nothing for a guest. `wire(op)`
+moves undefined keys into an `unset` list before anything is sent.
+
+### The mesh dropped one join in twelve
+
+`lib/p2p/mesh.ts` is the Calls engine with media and lobbies removed: a data-only
+room you can stay in for hours. Fragmentation past the SCTP ceiling,
+backpressure on `bufferedAmount`, and exactly-one-side-creates-the-channel are in
+its header. The finding worth keeping is the race that cost real debugging:
+**about one guest in twelve sat at "Connecting to the owner" for ever.** An ICE
+candidate can arrive BEFORE the offer that creates its peer connection, and it
+was being dropped — so a connection that needed that candidate never formed, and
+nothing retried. Three fixes, each necessary: candidates for a peer that does not
+exist yet are HELD (an orphan map) and replayed when it does; a peer stuck
+unconnected for 9 seconds is dropped and greeted afresh; and a lonely peer says
+hello again at 3, 8, 20 and 45 seconds. A rare race is a reliability bug, not
+flake — it was found only by repeating the join test many times.
+
+### Testing the editors
+
+- **Read it back another way.** The stored document is read straight from
+  IndexedDB, the exported file by unzipping it in Node, a live edit from the
+  OTHER browser — never from the screen that made it.
+- **Somebody else's reader is the evidence.** The unit tests open our exports
+  with python-docx, openpyxl and python-pptx, and LibreOffice where present. CI
+  installs the Python readers so those cases run in the gate instead of
+  skipping.
+- **Real fixtures, from real writers**: python-docx/-pptx, openpyxl and
+  LibreOffice (`scripts/make-office-fixtures.py`, run once, committed), because
+  each writes OOXML its own way and an importer tuned on one fails on another.
+- **A collaborator's caret label is not document text.** The word spec's
+  `docText` strips `.wd-caret`; reading `innerText` reported the other person's
+  NAME inside the paragraph.
+- **A blank slide's placeholders are rectangles.** "Some rect exists" is true on
+  an empty slide, so the first undo case passed against nothing and failed
+  against working undo. Assert on the element you created, by id.
+- **Pointer capture retargets the double-click.** The canvas captures the
+  pointer on press in case it is a drag, so the `dblclick` that follows targets
+  the CANVAS and `closest('[data-el]')` finds nothing. Editing a shape or a table
+  cell by double-click was dead while every single-click case passed. It now asks
+  `elementsFromPoint`. **Verified to fail**: restoring `e.target` reddens exactly
+  the shape and table cases.
+- **Leaving a show lands on the slide it reached**, as every presentation app
+  does; the case drives the show past a hidden slide and back before Escape.
+
 ## Conventions
 
 - **A known backlog is not a stopping point.** If a turn would end with "still
