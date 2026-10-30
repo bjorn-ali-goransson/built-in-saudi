@@ -10,7 +10,7 @@ import { undo, redo, history } from 'prosemirror-history'
 import { goToNextCell, tableEditing, columnResizing, TableView } from 'prosemirror-tables'
 import { dropCursor } from 'prosemirror-dropcursor'
 import { gapCursor } from 'prosemirror-gapcursor'
-import { schema } from './schema'
+import { schema, tablePadAttrs } from './schema'
 import { layoutTabs } from './tabLayout'
 import { indent, insertBlock, setBlockAttr, setStyle, toggleList, toggleChecked } from './commands'
 
@@ -312,7 +312,12 @@ function zoomOf(el: HTMLElement): number {
 class GridTableView extends TableView {
   constructor(node: import('prosemirror-model').Node, minWidth: number) { super(node, minWidth); this.mark(node) }
   override update(node: import('prosemirror-model').Node) { const ok = super.update(node); if (ok) this.mark(node); return ok }
-  private mark(node: import('prosemirror-model').Node) { this.table.classList.toggle('wd-nogrid', node.attrs.grid === false) }
+  private mark(node: import('prosemirror-model').Node) {
+    this.table.classList.toggle('wd-nogrid', node.attrs.grid === false)
+    const pad = tablePadAttrs(node.attrs.pad)
+    if (pad.style) this.table.style.setProperty('--wd-cp', pad.style.slice('--wd-cp:'.length))
+    else this.table.style.removeProperty('--wd-cp')
+  }
 }
 
 export const corePlugins = () => [history(), dropCursor({ color: '#0b6e4f' }), gapCursor(), columnResizing({ View: GridTableView }), tableEditing()]

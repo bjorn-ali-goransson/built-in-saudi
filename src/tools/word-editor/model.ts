@@ -18,6 +18,9 @@ export interface PageSetup {
   height: number
   margins: { top: number; right: number; bottom: number; left: number }
   landscape?: boolean
+  /** How far the header sits from the top edge and the footer from the bottom, in mm (Word's 12.5 by default). */
+  headerAt?: number
+  footerAt?: number
 }
 
 export interface WordData {
@@ -29,6 +32,12 @@ export interface WordData {
   /** The direction new paragraphs take, and the document's language. */
   rtl?: boolean
   lang?: string
+  /** The document's body face (and its face for Arabic and other complex scripts) and size in points. */
+  font?: string
+  fontCs?: string
+  size?: number
+  /** Space after and space before ADD between paragraphs (Word's "Don't use HTML paragraph auto spacing"); the larger of the two otherwise. */
+  spaceSum?: boolean
 }
 
 export const A4: PageSetup = { width: 210, height: 297, margins: { top: 25.4, right: 25.4, bottom: 25.4, left: 25.4 } }

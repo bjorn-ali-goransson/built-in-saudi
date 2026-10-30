@@ -31,13 +31,14 @@ import { WD_STR } from './strings'
 import { WordRibbon, type WdActions, type WdFormat } from './ui/WordRibbon'
 import { LinkDialog, FootnoteDialog, FindBar, type FindState } from './ui/Dialogs'
 import { WD_CSS } from './ui/docCss'
+import { faceVars, lineFactor, facesIn, faceLineVars } from './docFont'
 
 const S = schema
 type Meta = Omit<WordData, 'doc'>
 type Dialog = { k: 'link'; url: string; text: string; edit: boolean } | { k: 'footnote' } | null
 
 const MM = 96 / 25.4
-const metaOf = (d: WordData): Meta => ({ page: d.page, header: d.header, footer: d.footer, rtl: d.rtl, lang: d.lang })
+const metaOf = (d: WordData): Meta => ({ page: d.page, header: d.header, footer: d.footer, rtl: d.rtl, lang: d.lang, font: d.font, fontCs: d.fontCs, size: d.size, spaceSum: d.spaceSum })
 
 function safeDoc(j: PMNode | undefined, rtl: boolean): Node {
   try { const n = S.nodeFromJSON(j); n.check(); return n } catch { return S.nodeFromJSON(emptyDoc(rtl).doc) }
@@ -45,7 +46,9 @@ function safeDoc(j: PMNode | undefined, rtl: boolean): Node {
 function validMeta(m: unknown): Meta | null {
   const x = m as Meta
   if (!x || typeof x !== 'object' || !x.page || typeof x.page.width !== 'number' || typeof x.page.height !== 'number' || !x.page.margins) return null
-  return { page: x.page, header: typeof x.header === 'string' ? x.header : undefined, footer: typeof x.footer === 'string' ? x.footer : undefined, rtl: !!x.rtl, lang: typeof x.lang === 'string' ? x.lang : undefined }
+  const str = (v: unknown) => (typeof v === 'string' && v.length < 80 ? v : undefined)
+  return { page: x.page, header: typeof x.header === 'string' ? x.header : undefined, footer: typeof x.footer === 'string' ? x.footer : undefined, rtl: !!x.rtl, lang: typeof x.lang === 'string' ? x.lang : undefined,
+    font: str(x.font), fontCs: str(x.fontCs), size: typeof x.size === 'number' && x.size > 2 && x.size < 100 ? x.size : undefined, spaceSum: x.spaceSum === true ? true : undefined }
 }
 
 export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveCopy, importLoss }: EditorProps<WordData>) {
@@ -363,6 +366,25 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
 
   // Page count: measured, not paginated. The page view draws a boundary every page-height.
   const page = meta.page
+  // The faces the runs use, re-read shortly after an edit (a face is applied far more rarely than a
+  // key is pressed), so each has its own measured single line.
+  const [faces, setFaces] = useState<string[]>(() => [...facesIn(initial.doc)].sort())
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const v = viewRef.current
+      if (!v) return
+      const set = new Set<string>()
+      v.state.doc.descendants((n) => {
+        for (const m of n.marks) if (m.type.name === 'textStyle' && m.attrs.font) set.add(String(m.attrs.font))
+        if (n.attrs?.paraFont) set.add(String(n.attrs.paraFont))
+      })
+      const next = [...set].sort()
+      setFaces((p) => (p.join('|') === next.join('|') ? p : next))
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [rev])
+  // The document's own face and size, and its single line measured in that face.
+  const face = useMemo(() => { const v = faceVars(meta); return { ...v, '--wd-lh': String(lineFactor(v['--wd-font'])), ...faceLineVars(faces) } as Record<string, string> }, [meta.font, meta.fontCs, meta.size, meta.rtl, faces]) // eslint-disable-line react-hooks/exhaustive-deps
   const pageHpx = page.height * MM
   const pageWpx = (page.landscape ? Math.max(page.width, page.height) : page.width) * MM
   useEffect(() => {
@@ -471,12 +493,13 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
               data-testid="wd-page"
               data-pages={totalPages}
               data-paged={pageView ? '' : undefined}
+              data-wd-sum={meta.spaceSum ? '' : undefined}
               dir={meta.rtl ? 'rtl' : 'ltr'}
               lang={meta.lang || (meta.rtl ? 'ar' : 'en')}
               className={`relative mx-auto bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_6px_24px_rgba(0,0,0,0.08)]${pageView ? '' : ' max-[560px]:shadow-none'}`}
-              style={pageView
+              style={{ ...face, ...(pageView
                 ? { width: `${page.width}mm`, minHeight: `${page.height}mm`, padding: `${page.margins.top}mm ${page.margins.right}mm ${page.margins.bottom}mm ${page.margins.left}mm`, boxSizing: 'border-box' }
-                : { maxWidth: '52em', padding: '2.5em 3em', boxSizing: 'border-box' }}
+                : { maxWidth: '52em', padding: '2.5em 3em', boxSizing: 'border-box' }) } as React.CSSProperties}
               onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); const v = viewRef.current; if (v) { v.dispatch(v.state.tr.setSelection(TextSelection.atEnd(v.state.doc))); v.focus() } } }}
             >
               {pageView && Array.from({ length: pages - 1 }, (_, i) => (
@@ -492,6 +515,9 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
                 placeholder={readOnly ? '' : s.headerPh}
                 readOnly={readOnly}
                 onChange={(e) => updateMeta({ header: e.target.value })}
+                // On the page it sits IN the top margin, where Word puts it, so the text below starts
+                // exactly at the margin; in the flowing view it sits above the text.
+                style={pageView ? { position: 'absolute', top: `${page.headerAt ?? 12.5}mm`, insetInlineStart: `${page.margins.left}mm`, insetInlineEnd: `${page.margins.right}mm`, width: 'auto', margin: 0 } : undefined}
                 className="block w-full mb-4 -mt-2 px-1 py-0.5 text-[9pt] text-[#5f6b65] bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#d7ddd9] focus:border-green-600 outline-none placeholder:text-[#c2c9c5]"
               />
               <div ref={mount} />

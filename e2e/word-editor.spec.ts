@@ -570,6 +570,9 @@ test('layout from the file: a right tab stop puts the date at the margin, on scr
   // The heading rule is drawn, and the bare table's lines are only guides.
   expect(await ed.locator('p', { hasText: 'Experience' }).evaluate((el) => getComputedStyle(el).borderBottomStyle)).toBe('solid')
   expect(await ed.locator('table.wd-nogrid td').first().evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe('dashed')
+  // Cells are padded as Word pads them — nothing above or below, 5.4pt at the sides — not with ours.
+  const pad = (el: Element) => { const c = getComputedStyle(el); return [c.paddingTop, c.paddingLeft].join(' ') }
+  expect(await ed.locator('table.wd-nogrid td').first().evaluate(pad)).toBe('0px 7.2px')
   // The section bar is a filled box.
   expect(await ed.locator('.wd-textbox').first().evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(127, 127, 127)')
   // In print: the same date at the same margin, and no lines on the bare table.
@@ -579,4 +582,5 @@ test('layout from the file: a right tab stop puts the date at the margin, on scr
   await expect(f.locator('.pv-pg').first()).toBeVisible({ timeout: 20_000 })
   expect(await gap(f.locator('.pv-pg').first())).toBeLessThan(0.02)
   expect(await f.locator('table.nogrid td').first().evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe('none')
+  expect(await f.locator('table.nogrid td').first().evaluate(pad)).toBe('0px 7.2px')
 })

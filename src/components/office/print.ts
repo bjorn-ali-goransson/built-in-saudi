@@ -30,6 +30,9 @@ export interface FlowInput {
   /** Running header and footer; `{page}` and `{pages}` are filled in per page. Three parts sit left, centre and right. */
   header?: Running
   footer?: Running
+  /** Where the header's top and the footer's bottom sit, in mm from the page edge; half the margin when not given. */
+  headerAt?: number
+  footerAt?: number
   /** A fixed print scale (Excel's "Adjust to n%"), applied before fitting the width. */
   scale?: number
   /**
@@ -37,6 +40,8 @@ export interface FlowInput {
    * measured and cut; its result is what every page shows.
    */
   prepare?: (root: HTMLElement) => void
+  /** Allow a page to end between the lines of a paragraph (widow and orphan control: two lines kept together at each end). */
+  lineBreaks?: boolean
 }
 /** Pages already made (a slide each): placed one per sheet, scaled to fit it. */
 export interface FixedInput { title: string; css?: string; pages: string[]; page: { width: number; height: number }; dir?: 'ltr' | 'rtl' }
@@ -54,16 +59,18 @@ export function pageSize(p: PageSpec): { width: number; height: number } {
   return p.landscape ? { width: b, height: a } : { width: a, height: b }
 }
 
+// \`contain: strict\` on a page: printed, a tall absolutely placed flow is otherwise split across the
+// sheets, and a page's own slice landed in a part that was cut away — blank pages in the PDF.
 function shell(title: string, dir: string, lang: string | undefined, css: string, page: { width: number; height: number }, body: string): string {
   const w = page.width * MM
   const h = page.height * MM
   return `<!doctype html><html dir="${dir}"${lang ? ` lang="${esc(lang)}"` : ''}><head><meta charset="utf-8"><title>${esc(title)}</title><style>${css}
 html,body{margin:0;padding:0;max-width:none}
 body{background:#d9dedb;padding:16px 0}
-.pv-pg{position:relative;width:${w}px;height:${h}px;margin:0 auto 16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 20px rgba(0,0,0,.10);overflow:hidden;box-sizing:border-box}
+.pv-pg{position:relative;width:${w}px;height:${h}px;margin:0 auto 16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 20px rgba(0,0,0,.10);overflow:hidden;box-sizing:border-box;contain:strict}
 .pv-area{position:absolute;overflow:hidden}
-.pv-flow{transform-origin:0 0;position:absolute;top:0}
-.pv-run{position:absolute;inset-inline:0;font:9pt/1.3 "IBM Plex Sans Arabic",Calibri,Arial,sans-serif;color:#555;text-align:center;white-space:pre-wrap;box-sizing:border-box}
+.pv-flow{transform-origin:0 0;position:absolute;top:0}.pv-flow [data-pv-hide]{visibility:hidden}
+.pv-run{position:absolute;inset-inline:0;font-family:var(--wd-font,"IBM Plex Sans Arabic",Calibri,Arial,sans-serif);font-size:var(--wd-size,9pt);line-height:normal;color:#555;text-align:center;white-space:pre-wrap;box-sizing:border-box}
 .pv-run.pv-3{display:flex;justify-content:space-between;gap:1em}.pv-run.pv-3>span{flex:1}.pv-run.pv-3>span:nth-child(1){text-align:left}.pv-run.pv-3>span:nth-child(3){text-align:right}
 @page{size:${page.width}mm ${page.height}mm;margin:0}
 @media print{body{background:none;padding:0}.pv-pg{margin:0;box-shadow:none;break-after:page;page-break-after:always}.pv-pg:last-child{break-after:auto;page-break-after:auto}}
@@ -87,6 +94,29 @@ async function settled(d: Document): Promise<void> {
 }
 
 const BREAKABLE = new Set(['block', 'list-item', 'table', 'table-row', 'flex', 'grid', 'flow-root'])
+
+/**
+ * Where a paragraph may be cut between its lines, as Word does with widow and orphan control on:
+ * never leaving one line of it alone at the foot of a page or the head of the next. Only text
+ * blocks with no blocks inside them, and only once they have four lines or more.
+ */
+function lineCuts(el: HTMLElement, d: Document): number[] {
+  if (!/^(P|LI)$/.test(el.tagName) || el.querySelector('p,li,div,table,aside,img')) return []
+  const r = d.createRange()
+  r.selectNodeContents(el)
+  const lines: { top: number; bottom: number }[] = []
+  for (const rect of r.getClientRects()) {
+    if (rect.height <= 0) continue
+    const same = lines.find((l) => rect.top < l.bottom - 1 && rect.bottom > l.top + 1)
+    if (same) { same.top = Math.min(same.top, rect.top); same.bottom = Math.max(same.bottom, rect.bottom) } else lines.push({ top: rect.top, bottom: rect.bottom })
+  }
+  lines.sort((a, b) => a.top - b.top)
+  if (lines.length < 4) return []
+  // Between two lines' text, halfway through the leading — never through a letter.
+  const out: number[] = []
+  for (let i = 1; i < lines.length - 2; i++) out.push((lines[i].bottom + lines[i + 1].top) / 2)
+  return out
+}
 
 /** Lay the flow out, cut it into pages, and return the paged document. */
 export async function paginate(input: FlowInput): Promise<Printable> {
@@ -128,6 +158,7 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
       const r = el.getBoundingClientRect()
       if (r.height <= 0) continue
       cuts.push(r.bottom - top)
+      if (input.lineBreaks) for (const y of lineCuts(el, d)) cuts.push(y - top)
     }
     cuts.sort((a, b) => a - b)
     forced.sort((a, b) => a - b)
@@ -155,14 +186,24 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
     // Left, centre and right parts sit at the page's own left, centre and right — physical, as a printed page is.
     const run = (t: Running | undefined, i: number) => (!t ? '' : typeof t === 'string' ? fill(t, i) : t.l || t.c || t.r ? `\u0000${['l', 'c', 'r'].map((k) => `<span dir="auto">${fill((t as Record<string, string | undefined>)[k], i)}</span>`).join('')}` : '')
     const runDiv = (html: string, pos: string) => (html ? `<div class="pv-run${html.startsWith('\u0000') ? ' pv-3' : ''}" style="${pos};padding:0 ${m.left * MM}px"${html.startsWith('\u0000') ? ' dir="ltr"' : ' dir="auto"'}>${html.replace('\u0000', '')}</div>` : '')
+    // Each page shows a SLICE of the whole flow, and drawing the whole flow on every page put every
+    // page's text into every page of a printed PDF — clipped from view, and still there to select,
+    // search and copy, once per page. Blocks wholly outside a page's slice are hidden on that page:
+    // the same layout, nothing drawn.
+    const blocks = [...root.children].map((el) => { const r = el.getBoundingClientRect(); return { el, a: r.top - top, b: r.bottom - top } })
+    const bodyFor = (sl: { start: number; end: number }) => {
+      if (blocks.length < 2) return body
+      for (const k of blocks) { if (k.b <= sl.start + 0.5 || k.a >= sl.end - 0.5) k.el.setAttribute('data-pv-hide', ''); else k.el.removeAttribute('data-pv-hide') }
+      return root.innerHTML
+    }
     const pages = slices.map((sl, i) => {
       const hdr = run(input.header, i)
       const ftr = run(input.footer, i)
       return `<div class="pv-pg" data-page="${i + 1}">`
-        + runDiv(hdr, `top:${(m.top * MM) / 2 - 8}px`)
+        + runDiv(hdr, `top:${input.headerAt != null ? input.headerAt * MM : (m.top * MM) / 2 - 8}px`)
         + `<div class="pv-area" style="left:${m.left * MM}px;top:${m.top * MM}px;width:${cw}px;height:${Math.ceil((sl.end - sl.start) * scale)}px">`
-        + `<div class="pv-flow" dir="${input.dir}" style="width:${scale === 1 ? cw : natural}px;transform:scale(${scale}) translateY(${-sl.start}px)">${body}</div></div>`
-        + runDiv(ftr, `bottom:${(m.bottom * MM) / 2 - 8}px`)
+        + `<div class="pv-flow" dir="${input.dir}" style="width:${scale === 1 ? cw : natural}px;transform:scale(${scale}) translateY(${-sl.start}px)">${bodyFor(sl)}</div></div>`
+        + runDiv(ftr, `bottom:${input.footerAt != null ? input.footerAt * MM : (m.bottom * MM) / 2 - 8}px`)
         + '</div>'
     })
     return { html: shell(input.title, input.dir, input.lang, input.css, page, pages.join('')), pages: n, page }

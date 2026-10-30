@@ -4,7 +4,7 @@
 //
 // Scoped under [data-wd-page] so none of it can leak into the rest of the site.
 export const WD_CSS = `
-[data-wd-page] .ProseMirror{outline:none;white-space:pre-wrap;word-wrap:break-word;font-family:"IBM Plex Sans Arabic",Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;color:#1b1b1b;font-variant-ligatures:none;min-height:4em;caret-color:#0b6e4f}
+[data-wd-page] .ProseMirror{outline:none;white-space:pre-wrap;word-wrap:break-word;font-family:var(--wd-font,"IBM Plex Sans Arabic",Calibri,Arial,sans-serif);font-size:var(--wd-size,11pt);line-height:1.5;color:#1b1b1b;font-variant-ligatures:none;min-height:4em;caret-color:#0b6e4f}
 [data-wd-page] .ProseMirror p{margin:0 0 6pt}
 [data-wd-page] .ProseMirror h1,[data-wd-page] .ProseMirror h2,[data-wd-page] .ProseMirror h3,[data-wd-page] .ProseMirror h4,[data-wd-page] .ProseMirror h5,[data-wd-page] .ProseMirror h6{color:#0b4f3a;line-height:1.25;margin:12pt 0 6pt;font-weight:700}
 [data-wd-page] .ProseMirror h1{font-size:20pt}[data-wd-page] .ProseMirror h2{font-size:16pt}[data-wd-page] .ProseMirror h3{font-size:13pt}[data-wd-page] .ProseMirror h4{font-size:12pt}[data-wd-page] .ProseMirror h5,[data-wd-page] .ProseMirror h6{font-size:11pt}
@@ -13,6 +13,10 @@ export const WD_CSS = `
 [data-wd-page] .ProseMirror code{background:#f0f0ec;padding:0 .25em;border-radius:3px;font-family:"JetBrains Mono",monospace;font-size:.92em}
 [data-wd-page] .ProseMirror ul,[data-wd-page] .ProseMirror ol{margin:0 0 6pt;padding-inline-start:1.8em}
 [data-wd-page] .ProseMirror li>p{margin:0 0 2pt}
+[data-wd-page] .ProseMirror h1[style*="--wd-sb"],[data-wd-page] .ProseMirror h2[style*="--wd-sb"],[data-wd-page] .ProseMirror h3[style*="--wd-sb"],[data-wd-page] .ProseMirror h4[style*="--wd-sb"],[data-wd-page] .ProseMirror h5[style*="--wd-sb"],[data-wd-page] .ProseMirror h6[style*="--wd-sb"]{font-size:var(--wd-size,11pt);font-weight:inherit;color:inherit}
+[data-wd-page] .ProseMirror [style*="--wd-m:"] [style*="--wd-lhf"],[data-wd-page] .ProseMirror [style*="--wd-m:"][style*="--wd-lhf"]{line-height:calc(var(--wd-lhf) * var(--wd-m))}
+[data-wd-page][data-wd-sum] .ProseMirror [style*="--wd-sb"]{padding-top:var(--wd-sb);margin-top:0!important}
+[data-wd-page] .ProseMirror ul:has(>li>p[style*="margin-bottom"]),[data-wd-page] .ProseMirror ol:has(>li>p[style*="margin-bottom"]){margin-block:0}
 [data-wd-page] .ProseMirror ul[data-checklist]{list-style:none;padding-inline-start:.4em}
 [data-wd-page] .ProseMirror li.wd-check>p{display:flex;gap:.5em;align-items:baseline}
 [data-wd-page] .ProseMirror li.wd-done>p{color:#7a7a7a;text-decoration:line-through}
@@ -30,7 +34,7 @@ export const WD_CSS = `
 [data-wd-page] .ProseMirror{counter-reset:wdfn}
 [data-wd-page] .ProseMirror .tableWrapper{overflow-x:auto;margin:6pt 0}
 [data-wd-page] .ProseMirror table{border-collapse:collapse;table-layout:fixed;width:100%;overflow:hidden}
-[data-wd-page] .ProseMirror td,[data-wd-page] .ProseMirror th{border:1px solid #9aa;padding:3pt 6pt;vertical-align:top;position:relative;box-sizing:border-box;min-width:2em}
+[data-wd-page] .ProseMirror td,[data-wd-page] .ProseMirror th{border:1px solid #9aa;padding:var(--wd-cp,3pt 6pt);vertical-align:top;position:relative;box-sizing:border-box;min-width:2em}
 [data-wd-page] .ProseMirror th{background:#f2f2ee;font-weight:700;text-align:start}
 [data-wd-page] .ProseMirror table.wd-nogrid td,[data-wd-page] .ProseMirror table.wd-nogrid th{border:1px dashed #dde3df;background:none}
 [data-wd-page] .ProseMirror td p,[data-wd-page] .ProseMirror th p{margin:0}

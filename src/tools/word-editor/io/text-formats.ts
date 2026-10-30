@@ -2,8 +2,11 @@
 // text out. Pure string work on the document JSON, so it runs in the worker
 // and in tests alike.
 import { parseMarkdown, type Inline, type Block } from '../../../lib/markdown'
-import { borderCss, type Borders } from '../schema'
+import { blockCss, itemCss, padCss, tablePadAttrs } from '../schema'
+import { faceVars, varsCss, runFaceCss } from '../docFont'
 import { emptyDoc, isRtlText, plainText, type PMNode, type PMMark, type WordData } from '../model'
+
+const tablePadHtml = (pad: unknown) => { const a = tablePadAttrs(pad); return a.style ? ` data-pad="${a['data-pad']}" style="${a.style}"` : '' }
 
 const inlineNodes = (inl: Inline[]): PMNode[] => inl.filter((n) => n.v).map((n): PMNode => {
   const marks: PMMark[] = n.t === 'strong' ? [{ type: 'bold' }] : n.t === 'em' ? [{ type: 'italic' }] : n.t === 'strike' ? [{ type: 'strike' }] : n.t === 'code' ? [{ type: 'code' }] : n.t === 'link' ? [{ type: 'link', attrs: { href: n.href, title: null } }] : []
@@ -186,7 +189,7 @@ export function htmlInline(nodes: PMNode[] | undefined, notes: string[]): string
       else if (m.type === 'sub') t = `<sub>${t}</sub>`
       else if (m.type === 'textStyle') {
         const a = m.attrs || {}
-        const st = [a.color && `color:${a.color}`, a.highlight && `background-color:${a.highlight}`, a.font && `font-family:'${String(a.font).replace(/'/g, '')}'`, a.size && `font-size:${a.size}pt`].filter(Boolean).join(';')
+        const st = [a.color && `color:${a.color}`, a.highlight && `background-color:${a.highlight}`, ...(a.font ? runFaceCss(String(a.font)) : []), a.size && `font-size:${a.size}pt`].filter(Boolean).join(';')
         if (st) t = `<span style="${esc(st)}">${t}</span>`
       }
     }
@@ -199,14 +202,7 @@ export function htmlInline(nodes: PMNode[] | undefined, notes: string[]): string
 }
 
 function blockAttr(a: Record<string, unknown> | undefined): string {
-  const st: string[] = []
-  if (a?.align) st.push(`text-align:${a.align === 'left' ? 'start' : a.align === 'right' ? 'end' : a.align}`)
-  if (a?.indent) st.push(`margin-inline-start:${+(Number(a.indent) * 36).toFixed(2)}pt`)
-  if (a?.lineHeight) st.push(`line-height:${a.lineHeight}`)
-  if (a?.spaceBefore != null) st.push(`margin-top:${a.spaceBefore}pt`)
-  if (a?.spaceAfter != null) st.push(`margin-bottom:${a.spaceAfter}pt`)
-  if (a?.firstLine) st.push(`text-indent:${a.firstLine}pt`)
-  st.push(...borderCss(a?.borders as Borders | null | undefined))
+  const st = blockCss(a)
   const tabs = a?.tabs as unknown[] | null | undefined
   return ` dir="${a?.dir || 'auto'}"${tabs?.length ? ` data-tabs="${esc(JSON.stringify(tabs))}"` : ''}${st.length ? ` style="${st.join(';')}"` : ''}`
 }
@@ -220,21 +216,23 @@ export function htmlBody(doc: PMNode, notes: string[] = []): string {
       case 'code_block': return `<pre dir="ltr"><code>${esc(plainText(n))}</code></pre>`
       case 'horizontal_rule': return '<hr>'
       case 'page_break': return '<div class="page-break"></div>'
-      case 'bullet_list': return `<ul${n.attrs?.checklist ? ' class="checklist"' : ''}>${(n.content || []).map(block).join('')}</ul>`
-      case 'ordered_list': return `<ol${Number(n.attrs?.order) !== 1 && n.attrs?.order ? ` start="${Number(n.attrs.order)}"` : ''} style="list-style-type:${esc(String(n.attrs?.kind || 'decimal'))}">${(n.content || []).map(block).join('')}</ol>`
-      case 'list_item': return `<li${n.attrs?.checked != null ? ` data-checked="${n.attrs.checked}"` : ''}>${n.attrs?.checked != null ? (n.attrs.checked ? '☑ ' : '☐ ') : ''}${(n.content || []).map((c, i) => (i === 0 && c.type === 'paragraph' ? htmlInline(c.content, notes) : block(c))).join('')}</li>`
+      case 'bullet_list': return `<ul${n.attrs?.checklist ? ' class="checklist"' : ''}${n.attrs?.pad != null ? ` style="padding-inline-start:${Number(n.attrs.pad)}pt"` : ''}>${(n.content || []).map(block).join('')}</ul>`
+      case 'ordered_list': return `<ol${Number(n.attrs?.order) !== 1 && n.attrs?.order ? ` start="${Number(n.attrs.order)}"` : ''} style="list-style-type:${esc(String(n.attrs?.kind || 'decimal'))}${n.attrs?.pad != null ? `;padding-inline-start:${Number(n.attrs.pad)}pt` : ''}">${(n.content || []).map(block).join('')}</ol>`
+      // The item's paragraph keeps its own spacing, as it does in the editor: dropping it printed
+      // every list at the default spacing whatever the document said.
+      case 'list_item': { const ist = itemCss(n.content?.[0]?.attrs); return `<li${n.attrs?.checked != null ? ` data-checked="${n.attrs.checked}"` : ''}${ist ? ` style="${ist}"` : ''}>${(n.content || []).map((c, i) => (i === 0 && c.type === 'paragraph' ? `<p${blockAttr(c.attrs)}>${n.attrs?.checked != null ? (n.attrs.checked ? '☑ ' : '☐ ') : ''}${htmlInline(c.content, notes) || '<br>'}</p>` : block(c))).join('')}</li>` }
       case 'text_box': {
         const f = n.attrs?.float
         const st = [n.attrs?.width ? `width:${Number(n.attrs.width)}px` : '', f === 'left' || f === 'right' ? `float:${f}` : f === 'center' ? 'margin:0 auto' : '', /^#[0-9a-f]{3,8}$/i.test(String(n.attrs?.fill || '')) ? `background:${n.attrs!.fill}` : '', n.attrs?.border === false ? '' : 'border:1px solid #7a8a81', 'padding:4pt 6pt'].filter(Boolean).join(';')
         return `<aside style="${st}">${(n.content || []).map(block).join('')}</aside>`
       }
-      case 'table': return `<table${n.attrs?.grid === false ? ' class="nogrid"' : ''}>${(n.content || []).map(block).join('')}</table>`
+      case 'table': return `<table${n.attrs?.grid === false ? ' class="nogrid"' : ''}${tablePadHtml(n.attrs?.pad)}>${(n.content || []).map(block).join('')}</table>`
       case 'table_row': return `<tr>${(n.content || []).map(block).join('')}</tr>`
       case 'table_cell': case 'table_header': {
         const tag = n.type === 'table_header' ? 'th' : 'td'
         const a = n.attrs || {}
         const span = `${Number(a.colspan) > 1 ? ` colspan="${a.colspan}"` : ''}${Number(a.rowspan) > 1 ? ` rowspan="${a.rowspan}"` : ''}`
-        const st = [a.background && `background-color:${a.background}`, a.valign && `vertical-align:${a.valign}`].filter(Boolean).join(';')
+        const st = [a.background && `background-color:${a.background}`, a.valign && `vertical-align:${a.valign}`, padCss(a.pad) && `padding:${padCss(a.pad)}`].filter(Boolean).join(';')
         return `<${tag}${span}${st ? ` style="${esc(st)}"` : ''}>${(n.content || []).map(block).join('')}</${tag}>`
       }
       default: return ''
@@ -243,10 +241,16 @@ export function htmlBody(doc: PMNode, notes: string[] = []): string {
   return (doc.content || []).map(block).join('\n')
 }
 
-export const DOC_CSS = `body{font-family:"IBM Plex Sans Arabic",Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;color:#1b1b1b;max-width:46em;margin:2em auto;padding:0 1em}
+/** Space before as padding, which never collapses, for a document whose paragraph spacing adds up. */
+export const SUM_CSS = '[style*="--wd-sb"]{padding-top:var(--wd-sb);margin-top:0!important}'
+
+export const DOC_CSS = `body{font-family:var(--wd-font,"IBM Plex Sans Arabic",Calibri,Arial,sans-serif);font-size:var(--wd-size,11pt);line-height:1.5;color:#1b1b1b;max-width:46em;margin:2em auto;padding:0 1em}
 h1{font-size:20pt}h2{font-size:16pt}h3{font-size:14pt}h1,h2,h3,h4{color:#0b4f3a;line-height:1.25}
-table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #999;padding:4px 8px;vertical-align:top}th{background:#f2f2ee}table.nogrid td,table.nogrid th{border:0;background:none}
+table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #999;padding:var(--wd-cp,4px 8px);vertical-align:top}th{background:#f2f2ee}table.nogrid td,table.nogrid th{border:0;background:none}
 blockquote{border-inline-start:3px solid #0b6e4f;margin-inline:0;padding-inline-start:1em;color:#444}
+h1[style*="--wd-sb"],h2[style*="--wd-sb"],h3[style*="--wd-sb"],h4[style*="--wd-sb"],h5[style*="--wd-sb"],h6[style*="--wd-sb"]{font-size:var(--wd-size,11pt);font-weight:inherit;color:inherit}
+[style*="--wd-m:"] [style*="--wd-lhf"],[style*="--wd-m:"][style*="--wd-lhf"]{line-height:calc(var(--wd-lhf) * var(--wd-m))}
+li>p{margin:0}ul:has(>li>p[style*="margin-bottom"]),ol:has(>li>p[style*="margin-bottom"]){margin-block:0}
 pre{background:#f3f3f0;padding:.6em .8em;overflow:auto}img{max-width:100%;height:auto}
 .page-break{page-break-after:always;break-after:page}ul.checklist{list-style:none;padding-inline-start:1em}
 .fn a{text-decoration:none}.footnotes{font-size:9pt;border-top:1px solid #ccc;margin-top:2em}
@@ -256,5 +260,5 @@ export function toHtml(data: WordData, title: string): string {
   const notes: string[] = []
   const body = htmlBody(data.doc, notes)
   const fn = notes.length ? `<ol class="footnotes">${notes.map((t, i) => `<li id="fn${i + 1}">${esc(t)} <a href="#fnref${i + 1}">↩</a></li>`).join('')}</ol>` : ''
-  return `<!doctype html>\n<html lang="${esc(data.lang || (data.rtl ? 'ar' : 'en'))}" dir="${data.rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>${DOC_CSS}</style></head><body>\n${body}\n${fn}</body></html>\n`
+  return `<!doctype html>\n<html lang="${esc(data.lang || (data.rtl ? 'ar' : 'en'))}" dir="${data.rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>:root{${varsCss(faceVars(data))}}${DOC_CSS}${data.spaceSum ? SUM_CSS : ''}</style></head><body>\n${body}\n${fn}</body></html>\n`
 }

@@ -4,12 +4,21 @@
 // character formatting people actually use.
 import { Schema, type NodeSpec, type MarkSpec, type DOMOutputSpec } from 'prosemirror-model'
 import { tableNodes } from 'prosemirror-tables'
+import { runFaceCss } from './docFont'
 
 const blockAttrs = {
   align: { default: null as string | null },
   dir: { default: null as string | null },
   indent: { default: 0 },
   lineHeight: { default: null as number | null },
+  // Word's two fixed line rules, in points: EXACT is the line pitch whatever the font, AT LEAST
+  // is a floor under the font's own single line. Either one replaces lineHeight's multiple.
+  lineExact: { default: null as number | null },
+  lineMin: { default: null as number | null },
+  // An EMPTY paragraph is as tall as its paragraph mark's face and size in Word, not the document's —
+  // a CV's blank spacer lines are usually set smaller than the body. Kept as the paragraph's own face.
+  paraSize: { default: null as number | null },
+  paraFont: { default: null as string | null },
   spaceBefore: { default: null as number | null },
   spaceAfter: { default: null as number | null },
   firstLine: { default: null as number | null },
@@ -23,7 +32,7 @@ export interface Borders { t?: BorderSide; b?: BorderSide; l?: BorderSide; r?: B
 /** A tab stop, its position in points from the paragraph's start. */
 export interface TabStop { pos: number; align: 'left' | 'right' | 'center' | 'decimal'; leader?: 'dot' | 'hyphen' | 'line' }
 
-type BAttrs = { align: string | null; dir: string | null; indent: number; lineHeight: number | null; spaceBefore: number | null; spaceAfter: number | null; firstLine: number | null; borders?: Borders | null; tabs?: TabStop[] | null }
+type BAttrs = { align: string | null; dir: string | null; indent: number; lineHeight: number | null; lineExact?: number | null; lineMin?: number | null; paraSize?: number | null; paraFont?: string | null; spaceBefore: number | null; spaceAfter: number | null; firstLine: number | null; borders?: Borders | null; tabs?: TabStop[] | null }
 
 /** A paragraph border as CSS: the line, and Word's "space" as padding between it and the text. Physical sides, as Word's are. */
 export function borderCss(b: Borders | null | undefined): string[] {
@@ -37,17 +46,46 @@ export function borderCss(b: Borders | null | undefined): string[] {
   return out
 }
 
-function blockStyle(a: BAttrs): string {
+/**
+ * A paragraph's spacing and layout as CSS, for the editor AND the exported/printed HTML — one
+ * function, so the screen and the paper cannot disagree about where a line sits.
+ *
+ * Two properties of Word that CSS does not have by default, and both moved every line of every
+ * imported document:
+ *  - SINGLE spacing is the font's own line (ascent + descent + gap: 1.22 em for Calibri) — not
+ *    `1`, which is the font size and a fifth tighter. It is written as --wd-lh times m (the
+ *    document face's single line, measured once at a large size), NOT as `normal`: the browser
+ *    rounds a face's ascent and descent to whole pixels at each size, so `normal` at 10pt made
+ *    every line 17px where Word's is 16.3 — four per cent, on every line of every page.
+ *  - Between two paragraphs Word keeps the LARGER of the space after and the space before, which
+ *    is CSS margin collapsing. A document that turns on "Don't use HTML paragraph auto spacing"
+ *    asks for the SUM instead; --wd-sb carries the space before so that mode (`data-wd-sum`) can
+ *    turn it into padding, which never collapses.
+ */
+export function blockCss(a: Partial<BAttrs> | Record<string, unknown> | undefined): string[] {
+  const b = (a || {}) as Partial<BAttrs>
   const s: string[] = []
-  if (a.align) s.push(`text-align:${a.align === 'left' ? 'start' : a.align === 'right' ? 'end' : a.align}`)
+  if (b.align) s.push(`text-align:${b.align === 'left' ? 'start' : b.align === 'right' ? 'end' : b.align}`)
   // One step is Word's half inch, 36pt, so a document indented here is indented the same in Word.
-  if (a.indent) s.push(`margin-inline-start:${+(a.indent * 36).toFixed(2)}pt`)
-  if (a.lineHeight) s.push(`line-height:${a.lineHeight}`)
-  if (a.spaceBefore != null) s.push(`margin-top:${a.spaceBefore}pt`)
-  if (a.spaceAfter != null) s.push(`margin-bottom:${a.spaceAfter}pt`)
-  if (a.firstLine) s.push(`text-indent:${a.firstLine}pt`)
-  s.push(...borderCss(a.borders))
-  return s.join(';')
+  if (b.indent) s.push(`margin-inline-start:${+(Number(b.indent) * 36).toFixed(2)}pt`)
+  if (b.lineExact) s.push(`line-height:${b.lineExact}pt`)
+  else if (b.lineMin) s.push(`line-height:max(${b.lineMin}pt,calc(var(--wd-lh,1.2) * 1em))`)
+  else if (b.lineHeight) s.push(`--wd-m:${b.lineHeight}`, `line-height:calc(var(--wd-lh,1.2) * ${b.lineHeight})`)
+  if (b.spaceBefore != null) s.push(`margin-top:${b.spaceBefore}pt`, `--wd-sb:${b.spaceBefore}pt`)
+  if (b.spaceAfter != null) s.push(`margin-bottom:${b.spaceAfter}pt`)
+  if (b.firstLine) s.push(`text-indent:${b.firstLine}pt`)
+  if (b.paraSize) s.push(`font-size:${b.paraSize}pt`)
+  if (b.paraFont) s.push(...runFaceCss(String(b.paraFont)))
+  s.push(...borderCss(b.borders))
+  return s
+}
+function blockStyle(a: BAttrs): string { return blockCss(a).join(';') }
+/**
+ * A list item is spaced as its paragraph: the marker sits in the item's own line box, so an item
+ * at the page's 1.5 made every first line taller than the paragraph beside it said.
+ */
+export function itemCss(a: Record<string, unknown> | undefined): string {
+  return blockCss(a).filter((x) => /^(line-height|--wd-m|font-size)/.test(x)).join(';')
 }
 function blockDom(tag: string, a: BAttrs): Record<string, string> {
   const out: Record<string, string> = {}
@@ -98,20 +136,25 @@ const nodes: Record<string, NodeSpec> = {
     parseDOM: [{ tag: 'div.page-break' }, { tag: 'hr.page-break', priority: 60 }],
     toDOM: () => ['div', { class: 'page-break', 'data-page-break': '1' }],
   },
+  // `pad`: the list's text indent in points, from the document's numbering (relative to the list it
+  // sits in); null is the editor's own.
   bullet_list: {
-    content: 'list_item+', group: 'block', attrs: { checklist: { default: false } },
+    content: 'list_item+', group: 'block', attrs: { checklist: { default: false }, pad: { default: null as number | null } },
     parseDOM: [{ tag: 'ul', getAttrs: (d) => ({ checklist: (d as HTMLElement).dataset.checklist === '1' }) }],
-    toDOM: (n) => ['ul', n.attrs.checklist ? { 'data-checklist': '1' } : {}, 0],
+    toDOM: (n) => ['ul', { ...(n.attrs.checklist ? { 'data-checklist': '1' } : {}), ...(n.attrs.pad != null ? { style: `padding-inline-start:${n.attrs.pad}pt` } : {}) }, 0],
   },
   ordered_list: {
-    content: 'list_item+', group: 'block', attrs: { order: { default: 1 }, kind: { default: 'decimal' } },
+    content: 'list_item+', group: 'block', attrs: { order: { default: 1 }, kind: { default: 'decimal' }, pad: { default: null as number | null } },
     parseDOM: [{ tag: 'ol', getAttrs: (d) => { const el = d as HTMLElement; return { order: el.hasAttribute('start') ? +el.getAttribute('start')! : 1, kind: TYPE_KIND[el.getAttribute('type') || ''] || el.dataset.kind || 'decimal' } } }],
-    toDOM: (n) => ['ol', { ...(n.attrs.order === 1 ? {} : { start: String(n.attrs.order) }), 'data-kind': n.attrs.kind, style: `list-style-type:${n.attrs.kind}` }, 0],
+    toDOM: (n) => ['ol', { ...(n.attrs.order === 1 ? {} : { start: String(n.attrs.order) }), 'data-kind': n.attrs.kind, style: `list-style-type:${n.attrs.kind}${n.attrs.pad != null ? `;padding-inline-start:${n.attrs.pad}pt` : ''}` }, 0],
   },
   list_item: {
     content: 'paragraph block*', defining: true, attrs: { checked: { default: null as boolean | null } },
     parseDOM: [{ tag: 'li', getAttrs: (d) => { const c = (d as HTMLElement).dataset.checked; return { checked: c === 'true' ? true : c === 'false' ? false : null } } }],
-    toDOM: (n) => ['li', n.attrs.checked === null ? {} : { 'data-checked': String(n.attrs.checked) }, 0],
+    toDOM: (n) => {
+      const st = itemCss(n.firstChild?.attrs)
+      return ['li', { ...(n.attrs.checked === null ? {} : { 'data-checked': String(n.attrs.checked) }), ...(st ? { style: st } : {}) }, 0]
+    },
   },
   text: { group: 'inline' },
   image: {
@@ -159,10 +202,22 @@ const nodes: Record<string, NodeSpec> = {
         getFromDOM: (d) => (d as HTMLElement).style.verticalAlign || null,
         setDOMAttr: (v, attrs) => { if (v) attrs.style = (attrs.style || '') + `vertical-align:${v};` },
       },
+      // A cell's own padding (Word's tcMar), "top right bottom left" in points, over the table's.
+      pad: {
+        default: null,
+        getFromDOM: (d) => (d as HTMLElement).dataset.pad || null,
+        setDOMAttr: (v, attrs) => { const css = padCss(v); if (css) { attrs['data-pad'] = v; attrs.style = (attrs.style || '') + `padding:${css};` } },
+      },
     },
   }),
 }
 
+
+/** A padding attribute ("top right bottom left", points) as CSS; null for anything else. */
+export function padCss(pad: unknown): string | null {
+  if (typeof pad !== 'string' || !/^[\d.]+( [\d.]+){3}$/.test(pad)) return null
+  return pad.split(' ').map((v) => v + 'pt').join(' ')
+}
 export type Float = 'left' | 'right' | 'center' | null
 export const floatOf = (v: unknown): Float => (v === 'left' || v === 'right' || v === 'center' ? v : null)
 
@@ -201,7 +256,7 @@ const marks: Record<string, MarkSpec> = {
       const s: string[] = []
       if (m.attrs.color) s.push(`color:${m.attrs.color}`)
       if (m.attrs.highlight) s.push(`background-color:${m.attrs.highlight}`)
-      if (m.attrs.font) s.push(`font-family:"${m.attrs.font}"`)
+      if (m.attrs.font) s.push(...runFaceCss(String(m.attrs.font)))
       if (m.attrs.size) s.push(`font-size:${m.attrs.size}pt`)
       return ['span', { style: s.join(';') }, 0]
     },
@@ -211,11 +266,17 @@ const marks: Record<string, MarkSpec> = {
 // A table either draws its lines or does not — a CV's layout table has none, and drawing a grid
 // on it was the commonest visible difference from the original. No lines is shown in the editor
 // as faint guides (Word's "View Gridlines") and prints as nothing.
+/** A table's own cell padding, as a variable its cells read; the attribute keeps it through a parse. */
+export function tablePadAttrs(pad: unknown): Record<string, string> {
+  const css = padCss(pad)
+  return css ? { 'data-pad': pad as string, style: `--wd-cp:${css}` } : {}
+}
 nodes.table = {
   ...nodes.table,
-  attrs: { grid: { default: true } },
-  parseDOM: [{ tag: 'table', getAttrs: (d) => ({ grid: !(d as HTMLElement).classList.contains('wd-nogrid') }) }],
-  toDOM: (n) => ['table', n.attrs.grid === false ? { class: 'wd-nogrid' } : {}, ['tbody', 0]],
+  // pad: the cell padding "top right bottom left" in points, as the document set it; null is ours.
+  attrs: { grid: { default: true }, pad: { default: null } },
+  parseDOM: [{ tag: 'table', getAttrs: (d) => ({ grid: !(d as HTMLElement).classList.contains('wd-nogrid'), pad: (d as HTMLElement).dataset.pad || null }) }],
+  toDOM: (n) => ['table', { ...(n.attrs.grid === false ? { class: 'wd-nogrid' } : {}), ...tablePadAttrs(n.attrs.pad) }, ['tbody', 0]],
 }
 
 export const schema = new Schema({ nodes, marks })

@@ -25,11 +25,18 @@ interface RunProps {
 }
 interface ParaProps {
   align?: string; bidi?: boolean; left?: number; firstLine?: number; before?: number; after?: number; line?: number
+  /** A fixed line rule and its pitch in points; set together with `line` so one level overrides the other. */
+  lineRule?: 'exact' | 'atLeast'; linePt?: number
+  /** Word's "don't add space between paragraphs of the same style". */
+  contextual?: boolean
+  /** The space before is HTML auto spacing, which the first paragraph of a container does not get. */
+  autoBefore?: boolean
   numId?: string; ilvl?: number; pageBreakBefore?: boolean; outline?: number
   borders?: Borders; tabs?: TabStop[]
 }
-interface Style { id: string; name: string; type: string; basedOn?: string; run: RunProps; para: ParaProps; grid?: boolean }
-interface Level { fmt: string; start: number; text: string }
+interface Style { id: string; name: string; type: string; basedOn?: string; run: RunProps; para: ParaProps; grid?: boolean; cellMar?: (number | undefined)[] }
+/** `left` is the level's text indent in twips, from the numbering definition. */
+interface Level { fmt: string; start: number; text: string; left?: number }
 interface Numbering { abstracts: Map<string, Level[]>; nums: Map<string, { abs: string; starts: Map<number, number> }> }
 
 const HIGHLIGHT: Record<string, string> = {
@@ -48,6 +55,19 @@ class Reader {
   styles = new Map<string, Style>()
   defaultRun: RunProps = {}
   defaultPara: ParaProps = {}
+  /** The style a paragraph with no pStyle has: the one marked w:default, "Normal" in practice. */
+  defaultStyle: string | undefined
+  defaultTable: string | undefined
+  /** The run properties body text has with no formatting of its own — the document's font and size. */
+  baseRun: RunProps = {}
+  /** Theme fonts, for runs that name `minorHAnsi` rather than a face. */
+  theme: { major?: string; minor?: string; majorCs?: string; minorCs?: string } = {}
+  /** Whether there was a styles part: with none, the face is Calibri; with one that names none, Times New Roman. */
+  hasStyles = false
+  /** Automatic space before is not applied to the first paragraph of a document, cell or box. */
+  firstInContainer = false
+  /** The previous paragraph in this container, for contextual spacing. */
+  lastPara: { node: PMNode; style: string; ctx: boolean } | null = null
   numbering: Numbering = { abstracts: new Map(), nums: new Map() }
   loss = new Map<string, number>()
   footnotes = new Map<string, string>()
@@ -98,8 +118,10 @@ class Reader {
     if (szCs) p.sizeCs = szCs / 2
     const f = this.w(rPr, 'rFonts')
     if (f) {
-      const ascii = attr(f, 'ascii', this.W) || attr(f, 'hAnsi', this.W)
-      const cs = attr(f, 'cs', this.W)
+      const th = (v: string | undefined) => (!v ? undefined : /^major/.test(v) ? (/Bidi$/.test(v) ? this.theme.majorCs : this.theme.major) : /^minor/.test(v) ? (/Bidi$/.test(v) ? this.theme.minorCs : this.theme.minor) : undefined)
+      // A named face wins over a theme reference, as in Word; a theme reference is resolved to its face.
+      const ascii = attr(f, 'ascii', this.W) || attr(f, 'hAnsi', this.W) || th(attr(f, 'asciiTheme', this.W) || attr(f, 'hAnsiTheme', this.W))
+      const cs = attr(f, 'cs', this.W) || th(attr(f, 'cstheme', this.W))
       if (ascii) p.font = ascii
       if (cs) p.fontCs = cs
     }
@@ -130,8 +152,20 @@ class Reader {
       const rule = attr(sp, 'lineRule', this.W)
       if (b !== undefined) p.before = Number(b) / 20
       if (a !== undefined) p.after = Number(a) / 20
-      if (line !== undefined && (!rule || rule === 'auto')) p.line = Math.round((Number(line) / 240) * 100) / 100
+      // A rule with no value (Google Docs writes `lineRule="auto"` alone) is single spacing, as
+      // LibreOffice reads it — not the inherited multiple.
+      if (line === undefined && rule) { p.line = 1; p.lineRule = undefined; p.linePt = undefined }
+      if (line !== undefined) {
+        // All three are written, so a paragraph's own rule replaces its style's rather than mixing with it.
+        if (rule === 'exact' || rule === 'atLeast') { p.line = undefined; p.lineRule = rule; p.linePt = Math.round((Math.abs(Number(line)) / 20) * 100) / 100 }
+        else { p.line = Math.round((Number(line) / 240) * 1000) / 1000; p.lineRule = undefined; p.linePt = undefined }
+      }
+      // "Auto" spacing is Word's HTML spacing: 14pt, whatever the number beside it says.
+      if (attr(sp, 'beforeAutospacing', this.W) && /^(1|true|on)$/.test(attr(sp, 'beforeAutospacing', this.W)!)) { p.before = 14; p.autoBefore = true }
+      if (attr(sp, 'afterAutospacing', this.W) && /^(1|true|on)$/.test(attr(sp, 'afterAutospacing', this.W)!)) p.after = 14
     }
+    const ctx = this.on(this.w(pPr, 'contextualSpacing'))
+    if (ctx !== undefined) p.contextual = ctx
     const num = this.w(pPr, 'numPr')
     if (num) {
       const id = this.val(this.w(num, 'numId'))
@@ -191,6 +225,44 @@ class Reader {
     // A style named like Word's own grid, missing from styles.xml, still means lines.
     return !!st && /grid/i.test(st)
   }
+  /** A tblCellMar as [top, right, bottom, left] in points, a side left undefined where it says nothing. */
+  cellMar(el: XEl | null): (number | undefined)[] | undefined {
+    if (!el) return undefined
+    const side = (...names: string[]) => {
+      for (const n of names) {
+        const e = this.w(el, n)
+        if (!e) continue
+        const t = attr(e, 'type', this.W)
+        const v = Number(attr(e, 'w', this.W))
+        if (Number.isFinite(v) && (!t || t === 'dxa')) return v / 20
+      }
+      return undefined
+    }
+    return [side('top'), side('right', 'end'), side('bottom'), side('left', 'start')]
+  }
+  /**
+   * The cell padding a table draws with: its own tblCellMar, else its style's, else Word's — 0 above
+   * and below, 5.4pt at the sides. Padding the editor's own 3pt above and below made every row of a
+   * real table six points taller than Word lays it, which on a long table is pages.
+   */
+  tablePad(tblPr: XEl | null): string {
+    const out: (number | undefined)[] = [undefined, undefined, undefined, undefined]
+    const fill = (m: (number | undefined)[] | undefined) => m?.forEach((v, i) => { if (out[i] === undefined && v !== undefined) out[i] = v })
+    fill(this.cellMar(this.w(tblPr, 'tblCellMar')))
+    let cur = this.val(this.w(tblPr, 'tblStyle'))
+    const seen = new Set<string>()
+    while (cur && !seen.has(cur)) {
+      seen.add(cur)
+      const s = this.styles.get(cur)
+      if (!s) break
+      fill(s.cellMar)
+      cur = s.basedOn
+    }
+    // The default table style (Normal Table) carries Word's defaults when nothing above did.
+    if (this.defaultTable) fill(this.styles.get(this.defaultTable)?.cellMar)
+    fill([0, 5.4, 0, 5.4])
+    return out.map((v) => +(v as number).toFixed(2)).join(' ')
+  }
   anyBorder(el: XEl): boolean {
     return kids(el).some((e) => e.ns === this.W && (() => { const v = attr(e, 'val', this.W); return !!v && v !== 'none' && v !== 'nil' })())
   }
@@ -198,6 +270,8 @@ class Reader {
     const rel = (await this.pkg.relsOfType(this.main, REL.styles))[0]
     const root = rel ? await this.pkg.tryXml(rel.target) : null
     if (!root) return
+    this.hasStyles = true
+    await this.readTheme()
     const dd = this.w(root, 'docDefaults')
     this.defaultRun = this.runProps(this.w(this.w(dd, 'rPrDefault'), 'rPr'))
     this.defaultPara = this.paraProps(this.w(this.w(dd, 'pPrDefault'), 'pPr'))
@@ -212,8 +286,19 @@ class Reader {
         run: this.runProps(this.w(s, 'rPr')),
         para: this.paraProps(this.w(s, 'pPr')),
         grid: (() => { const b = this.w(this.w(s, 'tblPr'), 'tblBorders'); return b ? this.anyBorder(b) : undefined })(),
+        cellMar: this.cellMar(this.w(this.w(s, 'tblPr'), 'tblCellMar')),
       })
+      if (attr(s, 'type', this.W) === 'paragraph' && /^(1|true|on)$/.test(attr(s, 'default', this.W) || '')) this.defaultStyle = id
+      if (attr(s, 'type', this.W) === 'table' && /^(1|true|on)$/.test(attr(s, 'default', this.W) || '')) this.defaultTable = id
     }
+    this.baseRun = { ...this.defaultRun, ...this.chain(this.defaultStyle).run }
+  }
+  async readTheme() {
+    const rel = (await this.pkg.relsOfType(this.main, REL.theme))[0]
+    const root = rel ? await this.pkg.tryXml(rel.target) : null
+    if (!root) return
+    const face = (local: string, script: string) => { const f = findLocal(root, local); const e = f ? kids(f).find((k) => k.local === script) : undefined; const t = e ? attr(e, 'typeface') : undefined; return t || undefined }
+    this.theme = { major: face('majorFont', 'latin'), minor: face('minorFont', 'latin'), majorCs: face('majorFont', 'cs'), minorCs: face('minorFont', 'cs') }
   }
   /** A style's properties with everything it is based on underneath. */
   chain(id: string | undefined): { run: RunProps; para: ParaProps; names: string[] } {
@@ -263,7 +348,9 @@ class Reader {
       for (const l of this.ws(a, 'lvl')) {
         const i = Number(attr(l, 'ilvl', this.W) || 0)
         if (i < 0 || i > 8) continue
-        levels[i] = { fmt: this.val(this.w(l, 'numFmt')) || 'decimal', start: Number(this.val(this.w(l, 'start')) || 1), text: this.val(this.w(l, 'lvlText')) || '' }
+        const ind = this.w(this.w(l, 'pPr'), 'ind')
+        const left = attr(ind, 'start', this.W) ?? attr(ind, 'left', this.W)
+        levels[i] = { fmt: this.val(this.w(l, 'numFmt')) || 'decimal', start: Number(this.val(this.w(l, 'start')) || 1), text: this.val(this.w(l, 'lvlText')) || '', ...(left !== undefined ? { left: Number(left) || 0 } : {}) }
       }
       this.numbering.abstracts.set(id, levels)
       const link = this.val(this.w(a, 'numStyleLink'))
@@ -327,15 +414,23 @@ class Reader {
   // ---- blocks -----------------------------------------------------------------------
   async blocks(parent: XEl, partPath: string): Promise<PMNode[]> {
     const out: PMNode[] = []
-    const items: { node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[] = []
+    const items: { node: PMNode; list?: { numId: string; ilvl: number; level: Level; left?: number } }[] = []
     const children = this.flatten(parent)
+    // Contextual spacing looks at the paragraph before, in THIS container: a cell's first
+    // paragraph has none, and neither has the paragraph after a table.
+    const outer = this.lastPara
+    const outerFirst = this.firstInContainer
+    this.lastPara = null
+    this.firstInContainer = true
     for (const c of children) {
       if (c.ns !== this.W) continue
       if (c.local === 'p') {
         for (const it of await this.paragraph(c, partPath)) items.push(it)
-      } else if (c.local === 'tbl') items.push({ node: await this.table(c, partPath) })
+      } else if (c.local === 'tbl') { items.push({ node: await this.table(c, partPath) }); this.lastPara = null }
       else if (c.local === 'sectPr') continue
     }
+    this.lastPara = outer
+    this.firstInContainer = outerFirst
     this.nestLists(items, out)
     return out
   }
@@ -352,8 +447,8 @@ class Reader {
     return out
   }
 
-  nestLists(items: { node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[], out: PMNode[]) {
-    type Open = { level: number; list: PMNode; numId: string }
+  nestLists(items: { node: PMNode; list?: { numId: string; ilvl: number; level: Level; left?: number } }[], out: PMNode[]) {
+    type Open = { level: number; list: PMNode; numId: string; left: number }
     const stack: Open[] = []
     for (const it of items) {
       if (!it.list) { stack.length = 0; out.push(it.node); continue }
@@ -372,12 +467,16 @@ class Reader {
         const attrs: Record<string, unknown> = bullet ? {} : { order: counts[ilvl], kind: FMT_KIND[level.fmt] || 'decimal' }
         const checklist = bullet && /^[☐☑☒]/.test(firstText(it.node))
         if (checklist) attrs.checklist = true
+        // The text indent the numbering gives this level (or the paragraph's own, which wins), as
+        // padding relative to the list it sits in: lists here nest inside the item above them.
+        const left = it.list.left ?? level.left
+        if (left !== undefined) attrs.pad = Math.max(0, Math.round(((left - (top?.left ?? 0)) / 20) * 100) / 100)
         const list: PMNode = { type, attrs, content: [] }
         if (top) {
           const parentItem = top.list.content![top.list.content!.length - 1]
           parentItem.content!.push(list)
         } else out.push(list)
-        stack.push({ level: ilvl, list, numId })
+        stack.push({ level: ilvl, list, numId, left: it.list.left ?? level.left ?? (top?.left ?? 0) + 720 })
         top = stack[stack.length - 1]
       }
       const item: PMNode = { type: 'list_item', attrs: {}, content: [toParagraph(it.node)] }
@@ -390,9 +489,11 @@ class Reader {
     }
   }
 
-  async paragraph(p: XEl, partPath: string): Promise<{ node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[]> {
+  async paragraph(p: XEl, partPath: string): Promise<{ node: PMNode; list?: { numId: string; ilvl: number; level: Level; left?: number } }[]> {
     const pPr = this.w(p, 'pPr')
-    const styleId = this.val(this.w(pPr, 'pStyle'))
+    // A paragraph with no style of its own has the default one — and the default paragraph style
+    // carries most documents' body spacing and face, which were being dropped on every such paragraph.
+    const styleId = this.val(this.w(pPr, 'pStyle')) ?? this.defaultStyle
     const own = this.paraProps(pPr)
     const st = this.chain(styleId)
     const pp: ParaProps = { ...this.defaultPara, ...st.para, ...own }
@@ -430,12 +531,49 @@ class Reader {
     // Every imported paragraph says what its spacing IS. Where the file says nothing, Word's own
     // default applies — single, nothing before or after — and leaving it unset handed the
     // paragraph to OUR default instead (1.15 lines, 8pt after), loosening every such document.
-    attrs.spaceBefore = pp.before ?? 0
+    attrs.spaceBefore = pp.autoBefore && this.firstInContainer ? 0 : pp.before ?? 0
+    this.firstInContainer = false
     attrs.spaceAfter = pp.after ?? 0
-    attrs.lineHeight = pp.line || 1
+    if (pp.lineRule === 'exact' && pp.linePt) attrs.lineExact = pp.linePt
+    else if (pp.lineRule === 'atLeast' && pp.linePt) attrs.lineMin = pp.linePt
+    else attrs.lineHeight = pp.line || 1
+    // Contextual spacing: no space between two paragraphs of the same style when either asks.
+    // Each flag drops ITS OWN side — the previous paragraph's after, this one's before.
+    const last = this.lastPara
+    if (last && last.style === (styleId || '')) {
+      if (pp.contextual) attrs.spaceBefore = 0
+      if (last.ctx) (last.node.attrs as Record<string, unknown>).spaceAfter = 0
+    }
+    const docSize = this.baseRun.size || 10
+    if (!inlines.some((n) => n.text || n.type === 'image')) {
+      const mark = { ...this.defaultRun, ...st.run, ...this.runProps(this.w(pPr, 'rPr')) }
+      if (mark.size && mark.size !== docSize) attrs.paraSize = mark.size
+      if (mark.font && mark.font !== this.baseRun.font && !/^\+/.test(mark.font)) attrs.paraFont = mark.font
+    } else {
+      // A line is as tall as the runs ON it in Word; in CSS it is never shorter than the paragraph
+      // element's own size (its strut). A paragraph whose text is all smaller than the document's
+      // size would have every line pushed up to the document's — so the paragraph takes the size of
+      // its smallest run, and every run is marked relative to that.
+      const sizeOf = (n: PMNode) => (n.marks?.find((m) => m.type === 'textStyle')?.attrs?.size as number | null | undefined) ?? docSize
+      const texts = inlines.filter((n) => n.text && n.text.trim())
+      const min = texts.length ? Math.min(...texts.map(sizeOf)) : docSize
+      if (min < docSize) {
+        attrs.paraSize = min
+        for (const n of inlines) {
+          if (!n.text) continue
+          const size = sizeOf(n)
+          const marks = (n.marks || []).filter((m) => m.type !== 'textStyle')
+          const ts = n.marks?.find((m) => m.type === 'textStyle')
+          const at = { color: null, highlight: null, font: null, ...(ts?.attrs || {}), size: size === min ? null : size }
+          if (at.color || at.highlight || at.font || at.size) marks.push({ type: 'textStyle', attrs: at })
+          if (marks.length) n.marks = marks
+          else delete n.marks
+        }
+      }
+    }
     if (pp.borders && Object.keys(pp.borders).length) attrs.borders = pp.borders
     if (pp.tabs?.length) attrs.tabs = pp.tabs
-    const out: { node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[] = []
+    const out: { node: PMNode; list?: { numId: string; ilvl: number; level: Level; left?: number } }[] = []
     for (const b of boxes) out.push({ node: b })
     if (pp.pageBreakBefore) out.push({ node: { type: 'page_break' } })
     const isCode = !heading && this.styleNameIs(styleId, /code|source|preformatted|html pre/i)
@@ -450,9 +588,11 @@ class Reader {
       if (isQuote && i === 0) node = { type: 'blockquote', content: [node] }
       if (!node.content?.length) delete node.content
       const lv = pp.numId && pp.numId !== '0' && i === 0 && !heading ? this.level(pp.numId, pp.ilvl ?? 0) : null
-      out.push(lv ? { node, list: { numId: pp.numId!, ilvl: pp.ilvl ?? 0, level: lv } } : { node })
+      out.push(lv ? { node, list: { numId: pp.numId!, ilvl: pp.ilvl ?? 0, level: lv, left: own.left ?? st.para.left } } : { node })
     })
     void breaks
+    const lastNode = [...out].reverse().find((o) => o.node.type === 'paragraph' || o.node.type === 'heading')?.node
+    this.lastPara = lastNode?.attrs ? { node: lastNode, style: styleId || '', ctx: !!pp.contextual } : null
     return out
   }
 
@@ -519,9 +659,9 @@ class Reader {
     if (r.sup) marks.push({ type: 'sup' })
     else if (r.sub) marks.push({ type: 'sub' })
     const size = rtl ? r.sizeCs ?? r.size : r.size
-    const baseSize = rtl ? this.defaultRun.sizeCs ?? this.defaultRun.size : this.defaultRun.size
+    const baseSize = rtl ? this.baseRun.sizeCs ?? this.baseRun.size : this.baseRun.size
     const font = rtl ? r.fontCs ?? r.font : r.font
-    const baseFont = rtl ? this.defaultRun.fontCs ?? this.defaultRun.font : this.defaultRun.font
+    const baseFont = rtl ? this.baseRun.fontCs ?? this.baseRun.font : this.baseRun.font
     const ts = {
       color: r.color && r.color !== '#000000' ? r.color : null,
       highlight: r.highlight || null,
@@ -732,6 +872,7 @@ class Reader {
     // columns made a table a sliver nobody could read; the page width is the honest answer.
     const tw = this.w(this.w(t, 'tblPr'), 'tblW')
     if ((attr(tw, 'type', this.W) === 'pct' || /%$/.test(attr(tw, 'w', this.W) || '')) && grid.reduce((a, b) => a + b, 0) < 96) grid = []
+    const tablePad = this.tablePad(this.w(t, 'tblPr'))
     const rows: PMNode[] = []
     // Per grid column, the cell a vertical merge started in.
     const origin = new Map<number, PMNode>()
@@ -760,6 +901,12 @@ class Reader {
             colwidth: widths.length === span && widths.every((x) => x > 0) ? widths : null,
             background: fill && fill !== 'auto' && /^[0-9a-f]{6}$/i.test(fill) ? '#' + fill.toLowerCase() : null,
             valign: va === 'center' ? 'middle' : va === 'bottom' ? 'bottom' : null,
+            pad: (() => {
+              const own = this.cellMar(this.w(tcPr, 'tcMar'))
+              if (!own || own.every((v) => v === undefined)) return null
+              const base = tablePad.split(' ').map(Number)
+              return own.map((v, i) => +(v ?? base[i]).toFixed(2)).join(' ')
+            })(),
           },
           content: content.length ? content : [{ type: 'paragraph' }],
         }
@@ -771,7 +918,7 @@ class Reader {
       if (cells.length) rows.push({ type: 'table_row', content: cells })
     }
     if (!rows.length) return { type: 'paragraph' }
-    return { type: 'table', attrs: { grid: this.tableHasGrid(this.w(t, 'tblPr')) }, content: rows }
+    return { type: 'table', attrs: { grid: this.tableHasGrid(this.w(t, 'tblPr')), pad: tablePad }, content: rows }
   }
 
   pageSetup(sect: XEl | null): PageSetup {
@@ -784,7 +931,14 @@ class Reader {
     if (attr(sz, 'orient', this.W) === 'landscape' || (w && h && w > h)) page.landscape = true
     const m = this.w(sect, 'pgMar')
     const mm = (k: string, d: number) => { const v = attr(m, k, this.W); return v === undefined ? d : round1(Math.abs(Number(v)) / TWIP_PER_MM) }
-    if (m) page.margins = { top: mm('top', 25.4), right: mm('right', 25.4), bottom: mm('bottom', 25.4), left: mm('left', 25.4) }
+    if (m) {
+      page.margins = { top: mm('top', 25.4), right: mm('right', 25.4), bottom: mm('bottom', 25.4), left: mm('left', 25.4) }
+      if (attr(m, 'header', this.W) !== undefined) page.headerAt = mm('header', 12.5)
+      if (attr(m, 'footer', this.W) !== undefined) page.footerAt = mm('footer', 12.5)
+      // A binding gutter is extra space on the inner edge; on a single-sided page that is the left.
+      const gutter = mm('gutter', 0)
+      if (gutter) page.margins.left = round1(page.margins.left + gutter)
+    }
     const cols = Number(attr(this.w(sect, 'cols'), 'num', this.W) || 1)
     if (cols > 1) this.lose('multiple text columns')
     return page
@@ -888,6 +1042,11 @@ export async function readDocx(buf: ArrayBuffer): Promise<DocxImport> {
   const content = await r.blocks(body, main)
   const sections = findAllLocal(body, 'sectPr').length
   if (sections > 1) r.lose('section breaks (the first page setup is kept)', sections - 1)
+  const settingsRel = (await pkg.relsOfType(main, REL.settings))[0]
+  const settings = settingsRel ? await pkg.tryXml(settingsRel.target) : null
+  // Adding the two spaces is what the compat flag asks for — and what LibreOffice does for a
+  // package with no settings part at all, which the generators that write no styles also omit.
+  const spaceSum = !settings || !!findLocal(settings, 'doNotUseHTMLParagraphAutoSpacing')
   const header = await r.headerFooter(sect, 'headerReference')
   const footer = await r.headerFooter(sect, 'footerReference')
   const paras = content.filter((n) => n.type === 'paragraph' || n.type === 'heading')
@@ -895,10 +1054,23 @@ export async function readDocx(buf: ArrayBuffer): Promise<DocxImport> {
   const doc: PMNode = { type: 'doc', content: content.length ? content : [{ type: 'paragraph' }] }
   void relIs
   return {
-    data: { doc, page, header, footer, rtl, lang: rtl ? 'ar-SA' : 'en-US' },
+    // The document's own face and size: body text carries no mark for them, so without these it
+    // was drawn in the editor's face at 11pt — a Times 12 document reflowed on every line.
+    data: { doc, page, header, footer, rtl, lang: rtl ? 'ar-SA' : 'en-US', ...defaultsOf(r.baseRun, r.hasStyles), ...(spaceSum ? { spaceSum } : {}) },
     loss: [...r.loss].map(([what, count]) => ({ what, count })),
     title: await readTitle(pkg),
   }
+}
+
+function defaultsOf(b: RunProps, hasStyles: boolean): Pick<WordData, 'font' | 'fontCs' | 'size'> {
+  const out: Pick<WordData, 'font' | 'fontCs' | 'size'> = {}
+  // A document that names no face is never drawn in the editor's own face. With no styles part at
+  // all (generators write none) LibreOffice draws Calibri; with one that names no face, Word's and
+  // LibreOffice's own default — Times New Roman.
+  out.font = b.font && !/^\+/.test(b.font) ? b.font : hasStyles ? 'Times New Roman' : 'Calibri'
+  if (b.fontCs && !/^\+/.test(b.fontCs)) out.fontCs = b.fontCs
+  out.size = b.size || 10
+  return out
 }
 
 function findAllLocal(e: XEl, local: string, out: XEl[] = []): XEl[] {

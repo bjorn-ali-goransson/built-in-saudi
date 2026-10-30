@@ -8078,6 +8078,40 @@ profile of the round trip. Each fix is the removal of per-item work repeated:
 Result: read 515 → 165ms, write 213 → 120ms; slide switch on that deck 300 → 222ms.
 **What is left in that profile is React drawing 260 shapes**, which is the work.
 
+### Word spacing is Word's, measured against LibreOffice's render
+
+Measured on 40 real documents against LibreOffice's PDF of each: page-count mismatches **10 → 7**,
+and the first twelve lines of every CV now land **within ~1pt** where they drifted 26pt. The rules,
+each a wrong guess that cost lines:
+
+- **Space after and space before do NOT add.** Word keeps the larger, as CSS margins collapse; they
+  add only under `doNotUseHTMLParagraphAutoSpacing` or with no settings part (`WordData.spaceSum`,
+  `data-wd-sum` turns `--wd-sb` into padding).
+- **"Single" is the FONT's line** — Calibri 1.22em, Times 1.15 — not 1.0, and not CSS `normal`,
+  which rounds ascent and descent to whole pixels (10pt → 17px for 16.3). `lineFactor` measures it
+  at 1000px **in the document being drawn**: the print frame lacks the site's web fonts, so a
+  factor measured on the page is a different face's. Each run in a face of its own carries that
+  face's line (`--wd-lhf`); the paragraph carries the multiple (`--wd-m`).
+- **A CSS line is never shorter than its paragraph's own font size**, so a paragraph whose every run
+  is smaller than the document carries the smaller size (`paraSize`), and an empty one takes its
+  paragraph mark's size. Exact and at-least rules are `lineExact`/`lineMin`, in points.
+- **The document's face and size are read, not assumed**: docDefaults, the default paragraph style
+  (which a paragraph with no `pStyle` uses), theme fonts. No styles part means Calibri; a styles
+  part that names no face means Times New Roman.
+- **Table cells are padded as the file says** (`tblCellMar`, the style chain, a cell's `tcMar`),
+  else Word's 0 above and below and 5.4pt at the sides. Our own 3pt above and below made every row
+  six points taller than Word's.
+- **Duplicate style ids: the LAST wins**, and that is a decision against the reference renderer:
+  LibreOffice takes the first. Nothing documents Word; the one spec that does (WordPad's) says last.
+  A file with two `Heading1`s therefore differs from LibreOffice's render on purpose.
+- **Print cuts inside a paragraph, between lines** (`lineBreaks`, two lines kept each side), and a
+  block outside a page's slice is `visibility:hidden` rather than drawn and clipped, or its text is
+  in the PDF twice. `.pv-pg` needs `contain:strict`, or Chrome splits the absolutely positioned
+  flow across printed sheets and prints blank pages.
+
+The harness is a scratch spec plus a Python compare against `soffice`; the corpus is real people's
+files and never in the repo. `io/spacing.test.ts` pins each rule on hand-written parts.
+
 ### Printing: the preview IS the printout (`components/office/print.ts`)
 
 The flow is laid out once, at the page's text width, in a hidden frame; cut

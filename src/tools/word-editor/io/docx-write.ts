@@ -72,6 +72,8 @@ class Writer {
   numbers: { num: number; abs: number; start: number }[] = []
   abstracts: { id: number; levels: string[] }[] = []
   footnotes: Xml[] = []
+  /** The size and face of the paragraph being written: its runs carry no mark for them, and Word needs one. */
+  paraDefault: { size?: number; font?: string } = {}
   images = 0
   drawId = 1
   bookmark = 0
@@ -85,13 +87,15 @@ class Writer {
     const link = has('link')
     const kids: XChild[] = [...extra]
     if (link) kids.unshift(x('w:rStyle', { 'w:val': 'Hyperlink' }))
-    if (ts?.font) kids.push(x('w:rFonts', { 'w:ascii': ts.font, 'w:hAnsi': ts.font, 'w:cs': ts.font }))
+    const font = ts?.font || this.paraDefault.font
+    const size = ts?.size || this.paraDefault.size
+    if (font) kids.push(x('w:rFonts', { 'w:ascii': font, 'w:hAnsi': font, 'w:cs': font }))
     if (has('bold')) { kids.push(x('w:b')); kids.push(x('w:bCs')) }
     if (has('italic')) { kids.push(x('w:i')); kids.push(x('w:iCs')) }
     if (has('strike')) kids.push(x('w:strike'))
     if (ts?.color) kids.push(x('w:color', { 'w:val': hex(ts.color) }))
     if (has('code')) kids.push(x('w:rFonts', { 'w:ascii': 'Courier New', 'w:hAnsi': 'Courier New', 'w:cs': 'Courier New' }))
-    if (ts?.size) { const hp = Math.round(Number(ts.size) * 2); kids.push(x('w:sz', { 'w:val': hp })); kids.push(x('w:szCs', { 'w:val': hp })) }
+    if (size) { const hp = Math.round(Number(size) * 2); kids.push(x('w:sz', { 'w:val': hp })); kids.push(x('w:szCs', { 'w:val': hp })) }
     if (has('underline')) kids.push(x('w:u', { 'w:val': 'single' }))
     if (ts?.highlight) kids.push(x('w:shd', { 'w:val': 'clear', 'w:color': 'auto', 'w:fill': hex(ts.highlight) }))
     if (has('sup')) kids.push(x('w:vertAlign', { 'w:val': 'superscript' }))
@@ -265,6 +269,7 @@ class Writer {
   // ---- blocks -------------------------------------------------------------------------
   pPr(style: string | null, a: Record<string, unknown> | undefined, extra: { numId?: number; ilvl?: number; border?: boolean; rtlDefault?: boolean } = {}): Xml | null {
     const kids: XChild[] = []
+    this.paraDefault = { size: (a?.paraSize as number | null) || undefined, font: (a?.paraFont as string | null) || undefined }
     if (style) kids.push(x('w:pStyle', { 'w:val': style }))
     if (extra.numId) kids.push(x('w:numPr', null, x('w:ilvl', { 'w:val': extra.ilvl || 0 }), x('w:numId', { 'w:val': extra.numId })))
     const bd = a?.borders as Borders | null | undefined
@@ -281,7 +286,10 @@ class Writer {
     const sb = a?.spaceBefore as number | null | undefined
     const sa = a?.spaceAfter as number | null | undefined
     const lh = a?.lineHeight as number | null | undefined
-    if (sb != null || sa != null || lh) kids.push(x('w:spacing', { 'w:before': sb != null ? Math.round(sb * 20) : undefined, 'w:after': sa != null ? Math.round(sa * 20) : undefined, 'w:line': lh ? Math.round(lh * 240) : undefined, 'w:lineRule': lh ? 'auto' : undefined }))
+    const le = a?.lineExact as number | null | undefined
+    const lm = a?.lineMin as number | null | undefined
+    const line = le ? { 'w:line': Math.round(le * 20), 'w:lineRule': 'exact' } : lm ? { 'w:line': Math.round(lm * 20), 'w:lineRule': 'atLeast' } : lh ? { 'w:line': Math.round(lh * 240), 'w:lineRule': 'auto' } : {}
+    if (sb != null || sa != null || lh || le || lm) kids.push(x('w:spacing', { 'w:before': sb != null ? Math.round(sb * 20) : undefined, 'w:after': sa != null ? Math.round(sa * 20) : undefined, ...line }))
     const indent = Number(a?.indent || 0)
     const first = a?.firstLine as number | null | undefined
     if (indent || first) kids.push(x('w:ind', { 'w:start': indent ? Math.round(indent * 720) : undefined, 'w:firstLine': first && first > 0 ? Math.round(first * 20) : undefined, 'w:hanging': first && first < 0 ? Math.round(-first * 20) : undefined }))
@@ -289,6 +297,10 @@ class Writer {
     // Logical alignment, written the way Word reads it: in a right-to-left
     // paragraph `left` and `right` are the start and the end.
     if (al) kids.push(x('w:jc', { 'w:val': al === 'justify' ? 'both' : al === 'center' ? 'center' : al === 'right' ? 'right' : 'left' }))
+    // The paragraph mark's own face and size, last in pPr as the schema orders it.
+    const mf = a?.paraFont as string | null | undefined
+    const ms = a?.paraSize as number | null | undefined
+    if (mf || ms) kids.push(x('w:rPr', null, mf ? x('w:rFonts', { 'w:ascii': mf, 'w:hAnsi': mf, 'w:cs': mf }) : null, ms ? x('w:sz', { 'w:val': Math.round(ms * 2) }) : null, ms ? x('w:szCs', { 'w:val': Math.round(ms * 2) }) : null))
     return kids.length ? x('w:pPr', null, kids) : null
   }
 
@@ -312,6 +324,7 @@ class Writer {
 
   async block(n: PMNode, ctx: { ilvl?: number; numId?: number } = {}): Promise<XChild[]> {
     const rtlDefault = !!this.data.rtl
+    this.paraDefault = {}
     switch (n.type) {
       case 'paragraph': return [x('w:p', null, this.pPr(null, n.attrs, { rtlDefault }), await this.inline(n.content))]
       case 'heading': return [x('w:p', null, this.pPr(`Heading${Math.min(6, Math.max(1, Number(n.attrs?.level) || 1))}`, n.attrs, { rtlDefault }), await this.inline(n.content))]
@@ -416,7 +429,7 @@ class Writer {
         if (!inner.length || last?.type === 'table') inner.push(x('w:p'))
         tcs.push(x('w:tc', null,
           x('w:tcPr', null, x('w:tcW', { 'w:w': sum(colTw, col, cs), 'w:type': 'dxa' }), cs > 1 ? x('w:gridSpan', { 'w:val': cs }) : null, rs > 1 ? x('w:vMerge', { 'w:val': 'restart' }) : null,
-            bg ? x('w:shd', { 'w:val': 'clear', 'w:color': 'auto', 'w:fill': hex(bg) }) : null, va ? x('w:vAlign', { 'w:val': va === 'middle' ? 'center' : va }) : null),
+            bg ? x('w:shd', { 'w:val': 'clear', 'w:color': 'auto', 'w:fill': hex(bg) }) : null, cellMarXml(cell.attrs?.pad, 'w:tcMar'), va ? x('w:vAlign', { 'w:val': va === 'middle' ? 'center' : va }) : null),
           inner))
         col += cs
       }
@@ -426,7 +439,7 @@ class Writer {
     // A table with no lines is written with none: without the grid style Word draws a table bare.
     const grid = (t.attrs?.grid as boolean | undefined) !== false
     return x('w:tbl', null,
-      x('w:tblPr', null, grid ? x('w:tblStyle', { 'w:val': 'TableGrid' }) : null, rtl ? x('w:bidiVisual') : null, x('w:tblW', { 'w:w': 0, 'w:type': 'auto' }), x('w:tblLook', { 'w:val': '04A0', 'w:firstRow': 1, 'w:lastRow': 0, 'w:firstColumn': 1, 'w:lastColumn': 0, 'w:noHBand': 0, 'w:noVBand': 1 })),
+      x('w:tblPr', null, grid ? x('w:tblStyle', { 'w:val': 'TableGrid' }) : null, rtl ? x('w:bidiVisual') : null, x('w:tblW', { 'w:w': 0, 'w:type': 'auto' }), cellMarXml(t.attrs?.pad), x('w:tblLook', { 'w:val': '04A0', 'w:firstRow': 1, 'w:lastRow': 0, 'w:firstColumn': 1, 'w:lastColumn': 0, 'w:noHBand': 0, 'w:noVBand': 1 })),
       x('w:tblGrid', null, colTw.map((v) => x('w:gridCol', { 'w:w': v }))),
       trs)
   }
@@ -514,7 +527,9 @@ async function toPng(bytes: Uint8Array, mime: string): Promise<Uint8Array | null
   } catch { return null }
 }
 
-function stylesXml(rtl: boolean, lang: string): string {
+function stylesXml(rtl: boolean, lang: string, face: { font?: string; fontCs?: string; size?: number } = {}): string {
+  const f = face.font || 'Calibri'
+  const hp = Math.round((face.size || 11) * 2)
   const hd = (n: number, size: number) => x('w:style', { 'w:type': 'paragraph', 'w:styleId': `Heading${n}` },
     x('w:name', { 'w:val': `heading ${n}` }), x('w:basedOn', { 'w:val': 'Normal' }), x('w:next', { 'w:val': 'Normal' }), x('w:uiPriority', { 'w:val': 9 }), x('w:qFormat'),
     x('w:pPr', null, x('w:keepNext'), x('w:keepLines'), x('w:spacing', { 'w:before': n === 1 ? 360 : 240, 'w:after': 80 }), x('w:outlineLvl', { 'w:val': n - 1 })),
@@ -522,8 +537,8 @@ function stylesXml(rtl: boolean, lang: string): string {
   return xmlDoc(x('w:styles', { 'xmlns:w': NS.w },
     x('w:docDefaults', null,
       x('w:rPrDefault', null, x('w:rPr', null,
-        x('w:rFonts', { 'w:ascii': 'Calibri', 'w:hAnsi': 'Calibri', 'w:eastAsia': 'Calibri', 'w:cs': 'Arial' }),
-        x('w:sz', { 'w:val': 22 }), x('w:szCs', { 'w:val': 22 }),
+        x('w:rFonts', { 'w:ascii': f, 'w:hAnsi': f, 'w:eastAsia': f, 'w:cs': face.fontCs || 'Arial' }),
+        x('w:sz', { 'w:val': hp }), x('w:szCs', { 'w:val': hp }),
         x('w:lang', { 'w:val': rtl ? 'ar-SA' : lang || 'en-US', 'w:bidi': 'ar-SA' }))),
       x('w:pPrDefault', null, x('w:pPr', null, x('w:spacing', { 'w:after': 160, 'w:line': 276, 'w:lineRule': 'auto' })))),
     x('w:style', { 'w:type': 'paragraph', 'w:default': 1, 'w:styleId': 'Normal' }, x('w:name', { 'w:val': 'Normal' }), x('w:qFormat'), rtl ? x('w:pPr', null, x('w:bidi')) : null),
@@ -547,6 +562,13 @@ function stylesXml(rtl: boolean, lang: string): string {
   ))
 }
 
+/** A table's own cell padding, back as the tblCellMar it came from; nothing when the table has ours. */
+function cellMarXml(pad: unknown, tag = 'w:tblCellMar'): Xml | null {
+  if (typeof pad !== 'string' || !/^[\d.]+( [\d.]+){3}$/.test(pad)) return null
+  const [t, r, b, l] = pad.split(' ').map((v) => Math.round(Number(v) * 20))
+  return x(tag, null, x('w:top', { 'w:w': t, 'w:type': 'dxa' }), x('w:left', { 'w:w': l, 'w:type': 'dxa' }), x('w:bottom', { 'w:w': b, 'w:type': 'dxa' }), x('w:right', { 'w:w': r, 'w:type': 'dxa' }))
+}
+
 export async function writeDocx(data: WordData, meta: { title?: string } = {}): Promise<DocxExport> {
   const wr = new Writer(data)
   const body = await wr.blocks(data.doc.content)
@@ -565,11 +587,11 @@ export async function writeDocx(data: WordData, meta: { title?: string } = {}): 
   }
   const mm = (v: number) => Math.round(v * TWIP_PER_MM)
   sect.push(x('w:pgSz', { 'w:w': pw, 'w:h': ph, 'w:orient': page.landscape ? 'landscape' : undefined }))
-  sect.push(x('w:pgMar', { 'w:top': mm(page.margins.top), 'w:right': mm(page.margins.right), 'w:bottom': mm(page.margins.bottom), 'w:left': mm(page.margins.left), 'w:header': 709, 'w:footer': 709, 'w:gutter': 0 }))
+  sect.push(x('w:pgMar', { 'w:top': mm(page.margins.top), 'w:right': mm(page.margins.right), 'w:bottom': mm(page.margins.bottom), 'w:left': mm(page.margins.left), 'w:header': page.headerAt != null ? mm(page.headerAt) : 709, 'w:footer': page.footerAt != null ? mm(page.footerAt) : 709, 'w:gutter': 0 }))
   if (data.rtl) sect.push(x('w:bidi'))
   w.add('word/document.xml', xmlDoc(x('w:document', W_ATTRS, x('w:body', null, body, x('w:sectPr', null, sect)))), CT.doc)
   w.rel('', { type: REL.officeDocument, target: 'word/document.xml' })
-  w.add('word/styles.xml', stylesXml(!!data.rtl, data.lang || 'en-US'), CT.styles)
+  w.add('word/styles.xml', stylesXml(!!data.rtl, data.lang || 'en-US', data), CT.styles)
   w.rel('word/document.xml', { type: REL.styles, target: 'word/styles.xml' })
   if (wr.numbers.length) {
     w.add('word/numbering.xml', wr.numberingXml(), CT.numbering)
@@ -583,7 +605,7 @@ export async function writeDocx(data: WordData, meta: { title?: string } = {}): 
   w.add('word/settings.xml', xmlDoc(x('w:settings', { 'xmlns:w': NS.w },
     x('w:defaultTabStop', { 'w:val': 720 }),
     wr.footnotes.length ? x('w:footnotePr', null, x('w:footnote', { 'w:id': -1 }), x('w:footnote', { 'w:id': 0 })) : null,
-    x('w:compat', null, x('w:compatSetting', { 'w:name': 'compatibilityMode', 'w:uri': 'http://schemas.microsoft.com/office/word', 'w:val': 15 })),
+    x('w:compat', null, data.spaceSum ? x('w:doNotUseHTMLParagraphAutoSpacing') : null, x('w:compatSetting', { 'w:name': 'compatibilityMode', 'w:uri': 'http://schemas.microsoft.com/office/word', 'w:val': 15 })),
     x('w:themeFontLang', { 'w:val': 'en-US', 'w:bidi': 'ar-SA' }))), CT.settings)
   w.rel('word/document.xml', { type: REL.settings, target: 'word/settings.xml' })
   writeDocProps(w, { title: meta.title, app: 'Built in Saudi — Document Editor' })

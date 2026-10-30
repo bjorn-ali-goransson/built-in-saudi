@@ -88,7 +88,10 @@ export function setBlockAttr(attr: string, value: unknown): Command {
     if (!blocks.length) return false
     if (dispatch) {
       const tr = state.tr
-      for (const b of blocks) tr.setNodeMarkup(b.pos, undefined, { ...b.node.attrs, [attr]: value })
+      // Choosing a line spacing replaces a fixed rule the document came with, or the menu would
+      // say 1.5 over a paragraph still drawn at exactly 12pt.
+      const also = attr === 'lineHeight' ? { lineExact: null, lineMin: null } : {}
+      for (const b of blocks) tr.setNodeMarkup(b.pos, undefined, { ...b.node.attrs, ...also, [attr]: value })
       dispatch(tr)
     }
     return true
@@ -98,7 +101,7 @@ export function blockAttr(state: EditorState, attr: string): unknown {
   return state.selection.$from.parent.attrs[attr]
 }
 
-const CARRY = ['align', 'dir', 'indent', 'lineHeight', 'spaceBefore', 'spaceAfter', 'firstLine', 'borders', 'tabs']
+const CARRY = ['align', 'dir', 'indent', 'lineHeight', 'lineExact', 'lineMin', 'paraSize', 'paraFont', 'spaceBefore', 'spaceAfter', 'firstLine', 'borders', 'tabs']
 /** Change the block type keeping its direction and alignment (a heading in Arabic stays right to left). */
 export function setStyle(style: string): Command {
   return (state, dispatch) => {
