@@ -89,7 +89,7 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
   const textOk = sel === 'shape' || sel === 'text' || sel === 'table' || sel === 'multi'
   const fontLabel = (f: string) => (f === 'major' ? `${theme.fonts.major} (${s.themeFonts})` : f === 'minor' ? `${theme.fonts.minor} (${s.text})` : f)
   return (
-    <Ribbon tabs={tabs} active={t} onTab={onTab} end={<RBtn label={s.fromStart} testid="sl-present-start" wide icon={<PlayIcon />} onClick={() => act.present('start')} />}>
+    <Ribbon tabs={tabs} active={t} onTab={onTab}>
       {t === 'home' && (
         <>
           <RGroup label={s.slides}>

@@ -5,6 +5,7 @@
 // colleague's alone.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { PlayIcon } from '../../components/icons'
 import { EditorShell, LossDialog } from '../../components/office/EditorShell'
 import { usePersistence, useCollab } from '../../components/office/hooks'
 import type { EditorProps } from '../../components/office/OfficeApp'
@@ -519,6 +520,12 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
       collab={collab}
       onSaveCopy={() => void onSaveCopy(pruned(clone(model.deck)), title || s.templates.blank)}
       busy={busy}
+      headerExtra={
+        <button type="button" data-testid="sl-present-start" onClick={() => startShow('start')} title={`${s.fromStart} (F5)`}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-green-700 bg-green-600 text-[color:var(--primary-ink)] text-[0.85rem] font-semibold cursor-pointer hover:bg-green-700 [&_svg]:size-4 rtl:[&_svg]:-scale-x-100">
+          <PlayIcon /><span className="max-[400px]:hidden">{s.presentNow}</span>
+        </button>
+      }
       fileExtra={(close) => <RItem testid="sl-import-into" onClick={() => { close(); importInput.current?.click() }}>{locale === 'ar' ? 'إدراج شرائح من ملف…' : 'Insert slides from a file…'}</RItem>}
     >
       <SlidesRibbon s={s} tab={tab} onTab={setTab} fmt={fmt} act={act} readOnly={readOnly} sel={selKind} theme={deck.theme} deckSize={deck.size}

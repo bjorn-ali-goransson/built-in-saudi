@@ -611,6 +611,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
 
   return (
     <EditorShell
+      ctaClear={34}
       locale={locale}
       kit={kit}
       title={title}

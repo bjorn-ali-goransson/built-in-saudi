@@ -194,3 +194,35 @@ test('a card drawn at the old low resolution is redrawn sharp', async ({ page: p
   await p.reload()
   await expect.poll(() => store('measure'), { timeout: 20_000 }).toBeGreaterThanOrEqual(500)
 })
+
+test.describe('the download button and the navbar', () => {
+  for (const [tool, ext, ready] of [['word-editor', '.docx', 'wd-editor'], ['excel-editor', '.xlsx', 'xl-grid'], ['powerpoint-editor', '.pptx', 'sl-canvas']] as const) {
+    for (const locale of ['en', 'ar'] as const) {
+      test(`${tool} (${locale}): one tap downloads the ${ext}, from the inline-end corner`, async ({ page: p }) => {
+        await p.goto(`/${locale}/apps/${tool}/`)
+        await p.getByTestId('office-new').click()
+        await expect(p.getByTestId(ready)).toBeVisible()
+        const btn = p.getByTestId('office-download')
+        const b = (await btn.boundingBox())!
+        const vw = p.viewportSize()!.width
+        if (locale === 'en') expect(vw - (b.x + b.width)).toBeLessThan(40)
+        else expect(b.x).toBeLessThan(40)
+        expect(p.viewportSize()!.height - (b.y + b.height)).toBeLessThan(80)
+        if (tool === 'excel-editor') {
+          const tabs = (await p.getByTestId('xl-tabs').boundingBox())!
+          expect(b.y + b.height).toBeLessThanOrEqual(tabs.y)
+        }
+        const [dl] = await Promise.all([p.waitForEvent('download'), btn.click()])
+        expect(dl.suggestedFilename()).toMatch(new RegExp(`\\${ext}$`))
+      })
+    }
+  }
+
+  test('Present is in the navbar, not the ribbon', async ({ page: p }) => {
+    await p.goto('/en/apps/powerpoint-editor/')
+    await p.getByTestId('office-new').click()
+    await expect(p.locator('[data-testid="office-shell"] header [data-testid="sl-present-start"]')).toBeVisible()
+    await p.getByTestId('sl-present-start').click()
+    await expect(p.getByTestId('sl-show')).toBeVisible()
+  })
+})

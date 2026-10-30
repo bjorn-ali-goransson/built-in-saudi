@@ -7,7 +7,7 @@
 // content column instead of the screen (the video editor learned this first).
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { BackIcon, UsersIcon, UndoIcon, CheckIcon } from '../icons'
+import { BackIcon, UsersIcon, UndoIcon, CheckIcon, DownloadIcon } from '../icons'
 import { RPopover, RItem } from './Ribbon'
 import { OFFICE_STR, type OfficeStr } from './strings'
 import type { SaveStatus, Collab, EditorKit } from './hooks'
@@ -42,6 +42,10 @@ export function EditorShell<D>(props: {
   fileExtra?: (close: () => void) => ReactNode
   children: ReactNode
   busy?: string
+  /** An editor's own button in the bar, before Share (the deck's Present). */
+  headerExtra?: ReactNode
+  /** Pixels to keep clear under the download button (a sheet's tab strip). */
+  ctaClear?: number
 }) {
   const s = OFFICE_STR[props.locale]
   const { collab } = props
@@ -116,6 +120,7 @@ export function EditorShell<D>(props: {
             ))}
           </div>
         )}
+        {props.headerExtra}
         <button
           type="button"
           data-testid="office-share"
@@ -148,6 +153,19 @@ export function EditorShell<D>(props: {
           <div className="px-4 py-3 rounded-md bg-[var(--surface)] shadow-[var(--shadow-md)] text-[0.95rem]">{props.busy}</div>
         </div>
       )}
+      {/* The document, as a file, one tap away. Floating at the inline end: bottom-right in
+          English, bottom-left in Arabic, the corner a thumb and a reader both arrive at last. */}
+      <button
+        type="button"
+        data-testid="office-download"
+        onClick={() => props.onExport(props.kit.formats[0].ext)}
+        disabled={!!props.busy}
+        title={`${s.downloadFile} ${props.kit.formats[0].ext}`}
+        style={{ bottom: `calc(${(props.ctaClear || 0) + 18}px + env(safe-area-inset-bottom, 0px))` }}
+        className="absolute end-4 z-[6] inline-flex items-center gap-2 h-12 ps-4 pe-5 rounded-full border border-green-700 bg-green-600 text-[color:var(--primary-ink)] text-[0.95rem] font-semibold shadow-[var(--shadow-lg)] cursor-pointer hover:bg-green-700 disabled:opacity-60 [&_svg]:size-5"
+      >
+        <DownloadIcon />{s.downloadFile}<span className="font-normal opacity-80 text-[0.8rem]">{props.kit.formats[0].ext}</span>
+      </button>
       {shareOpen && <CollabPanel locale={props.locale} collab={collab} tool={props.kit.tool} title={props.title} onClose={() => setShareOpen(false)} />}
     </div>,
     document.body,

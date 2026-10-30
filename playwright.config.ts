@@ -82,6 +82,10 @@ export default defineConfig({
           // are on different machines and meet through STUN, so nothing a user
           // relies on is switched off.
           args: ['--disable-features=WebRtcHideLocalIpsWithMdns'],
+          // Chromium on Linux converts a download's name to the PROCESS locale, and under
+          // a bare C locale (a container with no LANG) any Arabic name fails that and
+          // becomes "download". Desktops and CI runners are UTF-8; so is the browser here.
+          env: { ...process.env, LANG: process.env.LANG || 'C.UTF-8', LC_ALL: process.env.LC_ALL || 'C.UTF-8' },
         },
       },
     },

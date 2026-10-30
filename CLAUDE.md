@@ -8018,6 +8018,42 @@ did, so any re-render reset the record to the one opened, and the next
 thumbnail write stored that stale copy over the edit just saved — twelve
 editor specs went red, each reading an empty document back from IndexedDB.
 
+### The library takes many files, and says what each is doing
+
+`OfficeApp` is the ONE library all three editors share, so the upload flow is
+written once. Picking or dropping files puts a card on screen for each at once
+(`office-job`, `data-state` queued → converting → preview, or error with the
+reason), and they convert **one at a time** through the worker — a batch of large
+files at once would hold them all in memory and finish no sooner. **A batch opens
+nothing**; a single file still opens straight into the editor. What an import lost
+rides on the record (`importLoss`) and is shown once, on first open.
+
+- **A document nobody opened still gets a real page thumbnail**: each kit has
+  `renderThumb`, and the library draws it after converting. It writes through
+  `patchDoc`, one transaction that changes only the thumbnail — the editor may have
+  saved the document meanwhile, and a get-then-put would put back the older copy.
+- **Thumbnails carry 560 pixels on the SHORT side** (`THUMB_MIN_SIDE`). A card is
+  ~190pt wide on a phone at three pixels to the point, cropped to 4:3, so 240 wide
+  was a quarter of what it needed. Older cards are redrawn once, in the background.
+- **Download is a floating button at the inline end** (`office-download`): bottom
+  right in English, bottom left in Arabic, kept clear of the sheet's tab strip
+  (`ctaClear`). The deck's **Present** is in the navbar (`headerExtra`), not at the
+  end of a ribbon that scrolls it off a phone.
+- **Under a bare C locale, Chromium names an Arabic download "download".** It
+  converts the name to the process locale, which a container with no LANG cannot
+  hold. Desktops and CI are UTF-8, and `playwright.config.ts` sets it for the
+  browser; a test asserting the name was the first to see it.
+
+### The spreadsheet's headers and handles, on a phone
+
+Column and row borders carry **real grip elements** (`data-resize`, 16px under a
+coarse pointer) that claim their touch. Resizing was a ±4px band inside a container
+that pans, so on a phone the browser always took the gesture as a scroll. A long
+press on a grip or the fill handle opens **no context menu** — the browser fires
+`contextmenu` mid-gesture. Selecting a whole column no longer follows its last row
+down to row 4,000: an axis the selection spans end to end does not scroll.
+The touch case drives real CDP touch events and is verified to fail without the fix.
+
 ### Profiled, and the N+1s that were in it
 
 Measured on the real decks with the CDP profiler before anything changed: a 5.6MB
