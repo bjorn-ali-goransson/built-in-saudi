@@ -97,7 +97,7 @@ export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture
           <RGroup label={s.paragraph}>
             <RBtn label={s.bullets} testid="wd-bullets" active={fmt.list === 'bullet'} disabled={dis} onClick={() => act.list('bullet')}><ListGlyph k="bullet" /></RBtn>
             <RBtn label={s.numbering} testid="wd-numbering" active={fmt.list === 'ordered'} disabled={dis} onClick={() => act.list('ordered')}><ListGlyph k="ordered" /></RBtn>
-            <RPopover label={s.numKind} testid="wd-numkind" trigger={<span className="text-[0.7rem]">▾</span>}>
+            <RPopover label={s.numKind} short="" testid="wd-numkind" trigger={<span className="text-[0.7rem]">▾</span>}>
               {(close) => <div className="py-1 w-[180px]">{Object.entries(s.kinds).map(([k, l]) => <RItem key={k} testid={`wd-numkind-${k}`} onClick={() => { close(); act.list('ordered', k) }}>{l}</RItem>)}</div>}
             </RPopover>
             <RBtn label={s.checklist} testid="wd-checklist" active={fmt.list === 'check'} disabled={dis} onClick={() => act.list('check')}><span>☑</span></RBtn>
@@ -128,7 +128,7 @@ export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture
       {t === 'insert' && (
         <>
           <RGroup label={s.tables}>
-            <RPopover label={s.table} testid="wd-insert-table" trigger={<span className="flex items-center gap-1.5"><TableIcon /><span className="max-[640px]:hidden">{s.table}</span></span>}>
+            <RPopover label={s.table} testid="wd-insert-table" trigger={<TableIcon />}>
               {(close) => <TablePicker s={s} onPick={(r, c) => { close(); act.table(r, c) }} />}
             </RPopover>
           </RGroup>

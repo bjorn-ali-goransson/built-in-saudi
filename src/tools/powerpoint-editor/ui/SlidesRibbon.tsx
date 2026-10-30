@@ -93,10 +93,10 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
       {t === 'home' && (
         <>
           <RGroup label={s.slides}>
-            <RPopover label={s.newSlide} testid="sl-new-slide" wide trigger={<span className="flex items-center gap-1 text-[0.82rem] font-semibold">＋ <span className="max-[640px]:hidden">{s.newSlide}</span></span>}>
+            <RPopover label={s.newSlide} testid="sl-new-slide" wide trigger={<span className="text-[1rem] font-semibold">＋</span>}>
               {(close) => <LayoutGrid s={s} theme={theme} onPick={(k) => { close(); act.newSlide(k) }} testid="sl-layout" />}
             </RPopover>
-            <RPopover label={s.layout} testid="sl-change-layout" wide trigger={<span className="text-[0.82rem]">{s.layout} ▾</span>}>
+            <RPopover label={s.layout} testid="sl-change-layout" wide trigger={<span className="text-[0.9rem]">▤</span>}>
               {(close) => <LayoutGrid s={s} theme={theme} onPick={(k) => { close(); act.layout(k) }} testid="sl-relayout" />}
             </RPopover>
             <RBtn label={s.duplicate} testid="sl-duplicate" disabled={dis} onClick={act.duplicate}><CopyIcon /></RBtn>
@@ -104,7 +104,7 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
           <RGroup label={s.editing}>
             <RBtn label={s.cut} testid="sl-cut" icon={<ScissorsIcon />} disabled={dis || sel === 'none'} onClick={act.cut} />
             <RBtn label={s.copy} testid="sl-copy" icon={<CopyIcon />} disabled={sel === 'none'} onClick={act.copy} />
-            <RBtn label={s.paste} testid="sl-paste" disabled={dis} onClick={act.paste}><span className="text-[0.8rem] font-semibold">{s.paste}</span></RBtn>
+            <RBtn label={s.paste} testid="sl-paste" disabled={dis} onClick={act.paste}><span className="text-[1rem]">⎘</span></RBtn>
           </RGroup>
           <RGroup label={s.font}>
             <RSelect label={s.fontFamily} testid="sl-font" width={140} value={fmt.font || 'minor'} options={FONTS.map((f) => ({ v: f, l: fontLabel(f) }))} onChange={(v) => act.run({ font: v === 'minor' ? null : v })} />
@@ -129,10 +129,10 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
             <RSelect label={s.anchorMiddle} testid="sl-anchor" width={72} value={fmt.anchor || 't'} onChange={(v) => act.anchor(v as 't')} options={[{ v: 't', l: s.anchorTop }, { v: 'ctr', l: s.anchorMiddle }, { v: 'b', l: s.anchorBottom }]} />
           </RGroup>
           <RGroup label={s.drawing}>
-            <RPopover label={s.shapes} testid="sl-shapes-home" wide trigger={<span className="text-[0.82rem]">◇ ▾</span>}>{(close) => <ShapeGallery s={s} onPick={(g) => { close(); act.tool(g) }} />}</RPopover>
+            <RPopover label={s.shapes} testid="sl-shapes-home" wide trigger={<span className="text-[0.95rem]">◇</span>}>{(close) => <ShapeGallery s={s} onPick={(g) => { close(); act.tool(g) }} />}</RPopover>
             <ThemeColor s={s} theme={theme} label={s.fill} testid="sl-fill" value={fmt.fill || undefined} glyph={<span className="inline-block w-3.5 h-3.5 rounded-sm border border-current" />} allowNone noneLabel={s.noFill} onPick={(c) => act.fill(c)} disabled={sel === 'none' || sel === 'image' || sel === 'table'} />
             <ThemeColor s={s} theme={theme} label={s.outline} testid="sl-outline" value={fmt.line || undefined} glyph={<span className="inline-block w-3.5 h-3.5 rounded-sm border-2 border-current" />} allowNone noneLabel={s.noOutline} onPick={(c) => act.line({ color: c })} disabled={sel === 'none' || sel === 'table'} />
-            <RPopover label={s.arrange} testid="sl-arrange" trigger={<span className="text-[0.82rem]">{s.arrange} ▾</span>}>{(close) => <ArrangeMenu s={s} onPick={(c) => { close(); act.arrange(c) }} />}</RPopover>
+            <RPopover label={s.arrange} testid="sl-arrange" trigger={<span className="text-[0.9rem]">⧉</span>}>{(close) => <ArrangeMenu s={s} onPick={(c) => { close(); act.arrange(c) }} />}</RPopover>
           </RGroup>
           <RGroup label={s.editing}>
             <RBtn label={s.find} icon={<SearchIcon />} testid="sl-find" onClick={act.find} />
@@ -142,11 +142,11 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
       {t === 'insert' && (
         <>
           <RGroup label={s.slides}>
-            <RPopover label={s.newSlide} testid="sl-new-slide-insert" wide trigger={<span className="text-[0.82rem] font-semibold">＋ {s.newSlide}</span>}>{(close) => <LayoutGrid s={s} theme={theme} onPick={(k) => { close(); act.newSlide(k) }} testid="sl-layout2" />}</RPopover>
+            <RPopover label={s.newSlide} testid="sl-new-slide-insert" wide trigger={<span className="text-[1rem] font-semibold">＋</span>}>{(close) => <LayoutGrid s={s} theme={theme} onPick={(k) => { close(); act.newSlide(k) }} testid="sl-layout2" />}</RPopover>
           </RGroup>
           <RGroup label={s.illustrations}>
             <RBtn label={s.picture} wide icon={<ImageIcon />} testid="sl-insert-picture" disabled={dis} onClick={act.picture} />
-            <RPopover label={s.shapes} testid="sl-insert-shape" wide trigger={<span className="flex items-center gap-1.5"><span>◇</span><span className="max-[640px]:hidden">{s.shapes}</span></span>}>{(close) => <ShapeGallery s={s} onPick={(g) => { close(); act.tool(g) }} />}</RPopover>
+            <RPopover label={s.shapes} testid="sl-insert-shape" wide trigger={<span className="text-[0.95rem]">◇</span>}>{(close) => <ShapeGallery s={s} onPick={(g) => { close(); act.tool(g) }} />}</RPopover>
             <RPopover label={s.table} testid="sl-insert-table" trigger={<span className="flex items-center gap-1.5"><TableIcon /><span className="max-[640px]:hidden">{s.table}</span></span>}>{(close) => <TablePicker onPick={(r, c) => { close(); act.table(r, c) }} />}</RPopover>
           </RGroup>
           <RGroup label={s.text}>
@@ -184,7 +184,7 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
             <RSelect label={s.slideSize} testid="sl-slide-size" width={150} value={Math.abs(deckSize.w / deckSize.h - 4 / 3) < 0.02 ? '43' : '169'} onChange={(v) => act.slideSize(v === '43' ? 720 : 960, 540)} options={[{ v: '169', l: s.wide }, { v: '43', l: s.standard }]} />
             <ThemeColor s={s} theme={theme} label={s.background} testid="sl-bg" glyph={<span className="text-[0.8rem]">{s.background}</span>} allowNone noneLabel={s.bgReset} onPick={(c) => act.background(c)} />
             <RBtn label={s.bgPicture} testid="sl-bg-picture" disabled={dis} onClick={act.bgPicture}><ImageIcon /></RBtn>
-            <RBtn label={s.applyAll} testid="sl-bg-all" disabled={dis} onClick={act.bgAll}><span className="text-[0.78rem]">{s.applyAll}</span></RBtn>
+            <RBtn label={s.applyAll} testid="sl-bg-all" disabled={dis} onClick={act.bgAll}><span className="text-[0.95rem]">⧉</span></RBtn>
             <RBtn label={rtl ? s.ltr : s.rtl} testid="sl-deck-rtl" active={rtl} disabled={dis} onClick={act.rtl}><span className="text-[0.74rem] font-semibold">RTL</span></RBtn>
           </RGroup>
         </>
@@ -214,8 +214,8 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
             <RBtn label={s.notes} wide testid="sl-toggle-notes" active={notes} onClick={act.notes} icon={<span>✎</span>} />
           </RGroup>
           <RGroup label={s.zoomFit}>
-            <RBtn label={s.zoomFit} testid="sl-zoom-fit" active={zoom === null} onClick={() => act.zoom(null)}><span className="text-[0.78rem]">{s.zoomFit}</span></RBtn>
-            {[0.5, 1, 1.5, 2].map((z) => <RBtn key={z} label={`${z * 100}%`} testid={`sl-zoom-${z * 100}`} active={zoom === z} onClick={() => act.zoom(z)}><span className="text-[0.78rem]">{z * 100}%</span></RBtn>)}
+            <RBtn label={s.zoomFit} testid="sl-zoom-fit" active={zoom === null} onClick={() => act.zoom(null)}><span className="text-[0.95rem]">⤢</span></RBtn>
+            {[0.5, 1, 1.5, 2].map((z) => <RBtn key={z} label={`${z * 100}%`} short="" testid={`sl-zoom-${z * 100}`} active={zoom === z} onClick={() => act.zoom(z)}><span className="text-[0.78rem]">{z * 100}%</span></RBtn>)}
           </RGroup>
         </>
       )}
@@ -248,7 +248,7 @@ export function SlidesRibbon({ s, tab, onTab, fmt, act, readOnly, sel, theme, de
               className="h-8 w-[220px] px-2 rounded-sm border border-[color:var(--line)] bg-[var(--surface)] text-[0.84rem]" />
           </RGroup>
           <RGroup label={s.crop}>
-            <RBtn label={s.resetCrop} testid="sl-crop-reset" disabled={dis} onClick={act.cropReset}><span className="text-[0.78rem]">{s.resetCrop}</span></RBtn>
+            <RBtn label={s.resetCrop} testid="sl-crop-reset" disabled={dis} onClick={act.cropReset}><span className="text-[0.95rem]">↺</span></RBtn>
             <RSelect label={s.shapes} testid="sl-picture-shape" width={110} value="rect" onChange={(v) => act.pictureShape(v)} options={['rect', 'roundRect', 'ellipse', 'hexagon', 'star5', 'heart'].map((g) => ({ v: g, l: g }))} />
             <RBtn label={s.replacePicture} testid="sl-picture-replace" disabled={dis} onClick={act.replacePicture}><ImageIcon /></RBtn>
           </RGroup>

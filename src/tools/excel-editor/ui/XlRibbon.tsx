@@ -71,8 +71,8 @@ export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGri
       {t === 'home' && (
         <>
           <RGroup label={s.clipboard}>
-            <RBtn label={s.paste} testid="xl-paste" disabled={dis} onClick={() => act.paste()}><span className="text-[0.82rem] font-semibold">{s.paste}</span></RBtn>
-            <RPopover label={s.paste} testid="xl-paste-more" trigger={<span>▾</span>}>
+            <RBtn label={s.paste} testid="xl-paste" disabled={dis} onClick={() => act.paste()}><span className="text-[1rem]">⎘</span></RBtn>
+            <RPopover label={s.paste} short="" testid="xl-paste-more" trigger={<span>▾</span>}>
               {(close) => <div className="py-1 w-[200px]">
                 <RItem testid="xl-paste-values" onClick={() => { close(); act.paste('values') }}>{s.pasteValues}</RItem>
                 <RItem testid="xl-paste-formats" onClick={() => { close(); act.paste('formats') }}>{s.pasteFormats}</RItem>
@@ -195,7 +195,7 @@ export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGri
             <RPopover label={s.autosum} testid="xl-autosum-menu" trigger={<span>Σ ▾</span>}>
               {(close) => <div className="py-1 w-[160px]">{['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'].map((f) => <RItem key={f} testid={`xl-autosum-${f}`} onClick={() => { close(); act.autosum(f) }}>{f}</RItem>)}</div>}
             </RPopover>
-            {FNS.slice(5, 12).map((f) => <RBtn key={f} label={f} testid={`xl-fn-${f}`} disabled={dis} onClick={() => act.autosum('=' + f)}><span className="text-[0.74rem] font-mono">{f}</span></RBtn>)}
+            {FNS.slice(5, 12).map((f) => <RBtn key={f} label={f} short="" testid={`xl-fn-${f}`} disabled={dis} onClick={() => act.autosum('=' + f)}><span className="text-[0.74rem] font-mono">{f}</span></RBtn>)}
           </RGroup>
           <RGroup label={s.names}>
             <RBtn label={s.names} wide testid="xl-names" icon={<span>⟨a⟩</span>} onClick={act.names} />

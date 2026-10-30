@@ -2,6 +2,10 @@
 // like one suite. Tabs mean something: Home is what you reach for while typing,
 // Insert is what you add, and a contextual tab appears only when its object is
 // selected.
+//
+// Every control carries a CAPTION under its icon. A phone has no hover, so a
+// ribbon of bare glyphs was a ribbon of guesses there; the full label (with its
+// shortcut) stays the accessible name and the desktop tooltip.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -29,7 +33,7 @@ export function Ribbon({ tabs, active, onTab, children, end }: { tabs: RibbonTab
         <div className="flex-1" />
         {end}
       </div>
-      <div role="tabpanel" className="flex items-stretch gap-1 px-2 py-1.5 overflow-x-auto [scrollbar-width:thin] min-h-[52px]">{children}</div>
+      <div role="tabpanel" className="flex items-stretch gap-1 px-2 py-1 overflow-x-auto [scrollbar-width:thin] min-h-[58px]">{children}</div>
     </div>
   )
 }
@@ -38,18 +42,26 @@ export function RGroup({ label, children }: { label: string; children: ReactNode
   return (
     <div className="flex-none flex flex-col items-center gap-0.5 pe-2 me-1 border-e border-[color:var(--line-soft)] last:border-e-0" role="group" aria-label={label}>
       <div className="flex items-center gap-0.5">{children}</div>
-      <span className="text-[0.66rem] text-ink-faint leading-none max-[640px]:hidden">{label}</span>
+      <span className="text-[0.6rem] uppercase tracking-[0.04em] text-ink-faint leading-none mt-0.5 max-[640px]:hidden">{label}</span>
     </div>
   )
 }
 
+/** "Bold (Ctrl+B)" → "Bold": the shortcut belongs in the tooltip, not under the icon. */
+export const caption = (label: string) => label.replace(/\s*\([^)]*\)\s*$/, '')
+
+/** The caption under a control. Truncated, never wrapped: the ribbon is one row tall. */
+export function Cap({ children }: { children: ReactNode }) {
+  return <span aria-hidden className="block max-w-[76px] truncate text-[0.64rem] leading-[1.1] text-ink-soft font-normal">{children}</span>
+}
+
 export function rbtn(active?: boolean): string {
-  return `inline-grid place-items-center min-w-8 h-8 px-1.5 rounded-sm border-0 cursor-pointer text-[0.85rem] whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
+  return `inline-flex flex-col items-center justify-center gap-0.5 min-w-10 min-h-11 px-1.5 py-0.5 rounded-sm border-0 cursor-pointer text-[0.85rem] whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
     active ? 'bg-[color-mix(in_srgb,var(--color-green-600)_16%,transparent)] text-green-700' : 'bg-transparent text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]'
   }`
 }
 
-export function RBtn({ label, icon, active, onClick, testid, disabled, wide, children }: { label: string; icon?: ReactNode; active?: boolean; onClick?: () => void; testid?: string; disabled?: boolean; wide?: boolean; children?: ReactNode }) {
+export function RBtn({ label, short, icon, active, onClick, testid, disabled, wide, children }: { label: string; short?: string; icon?: ReactNode; active?: boolean; onClick?: () => void; testid?: string; disabled?: boolean; wide?: boolean; children?: ReactNode }) {
   return (
     <button
       type="button"
@@ -61,15 +73,17 @@ export function RBtn({ label, icon, active, onClick, testid, disabled, wide, chi
       // Keep the document's selection: a ribbon click must not steal focus from the text.
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={rbtn(active) + (wide ? ' px-2.5' : '')}
+      className={rbtn(active) + (wide ? ' px-2' : '')}
     >
-      {icon ? <span className="flex items-center gap-1.5 [&_svg]:size-[17px]">{icon}{wide && <span className="max-[640px]:hidden">{label}</span>}</span> : children ?? label}
+      <span className="flex h-[18px] items-center [&_svg]:size-[17px]">{icon ?? children ?? null}</span>
+      {(short ?? caption(label)) && <Cap>{short ?? caption(label)}</Cap>}
     </button>
   )
 }
 
-export function RSelect({ label, value, options, onChange, testid, width = 110 }: { label: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void; testid?: string; width?: number }) {
+export function RSelect({ label, short, value, options, onChange, testid, width = 110 }: { label: string; short?: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void; testid?: string; width?: number }) {
   return (
+    <span className="inline-flex flex-col items-center justify-center gap-0.5 min-h-11">
     <select
       aria-label={label}
       title={label}
@@ -77,20 +91,22 @@ export function RSelect({ label, value, options, onChange, testid, width = 110 }
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{ width }}
-      className="h-8 rounded-sm border border-[color:var(--line)] bg-[var(--surface)] text-ink text-[0.82rem] px-1"
+      className="h-7 rounded-sm border border-[color:var(--line)] bg-[var(--surface)] text-ink text-[0.82rem] px-1"
     >
       {!options.some((o) => o.v === value) && <option value={value}>{value}</option>}
       {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
+    <Cap>{short ?? caption(label)}</Cap>
+    </span>
   )
 }
 
 export const SWATCHES = ['#000000', '#434343', '#666666', '#999999', '#cccccc', '#ffffff', '#c0392b', '#e67e22', '#f1c40f', '#27ae60', '#16a085', '#2980b9', '#8e44ad', '#0b6e4f', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#cfe2f3', '#d9d2e9', '#ead1dc']
 
 /** A colour button with a swatch strip under its glyph and a palette popover. */
-export function RColor({ label, value, onPick, glyph, testid, allowNone }: { label: string; value?: string; onPick: (c: string | null) => void; glyph: ReactNode; testid: string; allowNone?: boolean }) {
+export function RColor({ label, short, value, onPick, glyph, testid, allowNone }: { label: string; short?: string; value?: string; onPick: (c: string | null) => void; glyph: ReactNode; testid: string; allowNone?: boolean }) {
   return (
-    <RPopover label={label} testid={testid} trigger={<span className="flex flex-col items-center leading-none">{glyph}<span className="block w-4 h-[3px] mt-0.5 rounded-sm" style={{ background: value || 'transparent', outline: value ? undefined : '1px solid var(--line)' }} /></span>}>
+    <RPopover label={label} short={short} testid={testid} trigger={<span className="flex flex-col items-center leading-none">{glyph}<span className="block w-4 h-[3px] mt-0.5 rounded-sm" style={{ background: value || 'transparent', outline: value ? undefined : '1px solid var(--line)' }} /></span>}>
       {(close) => (
         <div className="p-2 w-[208px]">
           <div className="grid grid-cols-6 gap-1">
@@ -109,7 +125,7 @@ export function RColor({ label, value, onPick, glyph, testid, allowNone }: { lab
 }
 
 /** A ribbon button that opens a panel. Portaled so a scrolling ribbon cannot clip it. */
-export function RPopover({ label, trigger, testid, children, wide }: { label: string; trigger: ReactNode; testid: string; children: (close: () => void) => ReactNode; wide?: boolean }) {
+export function RPopover({ label, short, trigger, testid, children, wide }: { label: string; short?: string; trigger: ReactNode; testid: string; children: (close: () => void) => ReactNode; wide?: boolean }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const btn = useRef<HTMLButtonElement>(null)
@@ -134,7 +150,8 @@ export function RPopover({ label, trigger, testid, children, wide }: { label: st
   return (
     <>
       <button ref={btn} type="button" title={label} aria-label={label} aria-haspopup="dialog" aria-expanded={open} data-testid={testid} onMouseDown={(e) => e.preventDefault()} onClick={toggle} className={rbtn(open)}>
-        <span className="flex items-center gap-1 [&_svg]:size-[17px]">{trigger}</span>
+        <span className="flex h-[18px] items-center gap-1 [&_svg]:size-[17px]">{trigger}</span>
+        {(short ?? caption(label)) && <Cap>{short ?? caption(label)}</Cap>}
       </button>
       {open && createPortal(
         <div ref={panel} data-ribbon="" data-testid={`${testid}-panel`} style={{ top: pos.top, left: pos.left }} className="fixed z-[90] max-h-[70dvh] overflow-auto rounded-md border border-[color:var(--line)] bg-[var(--surface)] shadow-[0_10px_30px_rgba(18,33,27,0.18)]">
