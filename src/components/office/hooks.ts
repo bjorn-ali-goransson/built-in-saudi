@@ -62,8 +62,12 @@ export function usePersistence<D>(opts: {
   renderThumb?: () => Promise<string | undefined>
 }) {
   const { kit, getData, rev, disabled } = opts
+  // Adopt the doc only when the PROP changes. Re-adopting it on every render put
+  // back the record as it was opened whenever the editor re-rendered, so the next
+  // thumbnail write stored that stale copy over the edits just saved.
   const docRef = useRef(opts.doc)
-  docRef.current = opts.doc
+  const docProp = useRef(opts.doc)
+  if (docProp.current !== opts.doc) { docProp.current = opts.doc; docRef.current = opts.doc }
   const [status, setStatus] = useState<SaveStatus>('saved')
   const [fileName, setFileName] = useState<string | undefined>(opts.doc?.fileName)
   const [needsPermission, setNeedsPermission] = useState(false)
