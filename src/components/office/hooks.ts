@@ -69,6 +69,13 @@ export function usePersistence<D>(opts: {
   const docProp = useRef(opts.doc)
   if (docProp.current !== opts.doc) { docProp.current = opts.doc; docRef.current = opts.doc }
   const [status, setStatus] = useState<SaveStatus>('saved')
+  // Which revision is in storage. The status SHOWN is derived from it during render, so an edit
+  // reads as unsaved in the same commit that shows it, and "saved" is never claimed for a newer
+  // revision than the one a finished write held — a write that began before the last keystroke
+  // used to set "saved" while that keystroke still waited for its own write.
+  const revRef = useRef(rev)
+  revRef.current = rev
+  const [savedRev, setSavedRev] = useState(rev)
   const [fileName, setFileName] = useState<string | undefined>(opts.doc?.fileName)
   const [needsPermission, setNeedsPermission] = useState(false)
   const handleRef = useRef<FileSystemFileHandle | undefined>(opts.doc?.handle)
@@ -93,7 +100,9 @@ export function usePersistence<D>(opts: {
     const thumb = isRendered(d.thumb) ? d.thumb : kit.thumb?.(data) ?? d.thumb
     const next: StoredDoc = { ...d, data, updatedAt: Date.now(), bytes: estimateBytes(data), thumb, handle: handleRef.current, fileName: handleRef.current?.name }
     docRef.current = next
+    const at = revRef.current
     await putDoc(next)
+    setSavedRev(at)
   }, [disabled, getData, kit])
 
   const makeThumb = useCallback(async (force = false) => {
@@ -142,6 +151,7 @@ export function usePersistence<D>(opts: {
     window.clearTimeout(idbTimer.current)
     idbTimer.current = window.setTimeout(async () => {
       setStatus('saving')
+      const at = revRef.current
       try {
         await writeIdb()
         const h = handleRef.current
@@ -150,7 +160,7 @@ export function usePersistence<D>(opts: {
           fileTimer.current = window.setTimeout(() => { void writeFile(h, false) }, 1500)
         }
         setStatus('saved')
-        setWorkInProgress(key, false)
+        if (at === revRef.current) setWorkInProgress(key, false)
         void makeThumb()
       } catch { setStatus('error') }
     }, 600)
@@ -223,7 +233,8 @@ export function usePersistence<D>(opts: {
     if (job) await Promise.race([job, new Promise((r) => setTimeout(r, 3000))])
   }, [writeIdb, makeThumb, rev])
 
-  return { status, fileName, needsPermission, save, link, unlink, exportDownload, exportBlob, flush }
+  const shown: SaveStatus = !disabled && rev !== savedRev && rev !== firstRev.current && status === 'saved' ? 'unsaved' : status
+  return { status: shown, fileName, needsPermission, save, link, unlink, exportDownload, exportBlob, flush }
 }
 
 // ---- collaboration -------------------------------------------------------------

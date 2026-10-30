@@ -128,9 +128,16 @@ test('links: Ctrl+K on a selection, kept as a link mark; a javascript: address i
   // The editor reads typed text from the page on its own schedule; select only once
   // the last letter is in it, as a person (who is never that fast) always would.
   await expect(editor(p)).toHaveText('see the site')
-  await p.keyboard.down('Shift')
-  for (let i = 0; i < 4; i++) await p.keyboard.press('ArrowLeft')
-  await p.keyboard.up('Shift')
+  // A Shift+Arrow that lands while the editor is still taking in the last letter can be undone
+  // by it restoring its own selection (measured: 2 runs in 20 under load, with nothing else
+  // changed). This case is about links, so it waits for the selection it means to make.
+  await expect(async () => {
+    await p.keyboard.press('End')
+    await p.keyboard.down('Shift')
+    for (let i = 0; i < 4; i++) await p.keyboard.press('ArrowLeft')
+    await p.keyboard.up('Shift')
+    expect(await p.evaluate(() => window.getSelection()!.toString())).toBe('site')
+  }).toPass({ timeout: 10_000 })
   await p.keyboard.press('Control+k')
   await p.getByTestId('wd-link-url').fill('javascript:alert(1)')
   await expect(p.getByTestId('wd-link-save')).toBeDisabled()

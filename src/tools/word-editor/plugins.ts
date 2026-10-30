@@ -215,6 +215,9 @@ export function tabStops(): Plugin {
       const run = () => {
         cancelAnimationFrame(frame)
         frame = requestAnimationFrame(() => {
+          // Nothing to lay out: leave the observer alone. Pausing it costs the selection events
+          // that arrive meanwhile, which lost a character of a Shift+Arrow selection.
+          if (!view.dom.querySelector('[data-tabs] .wd-tab')) return
           const obs = (view as unknown as { domObserver?: { stop(): void; start(): void } }).domObserver
           obs?.stop()
           try { layoutTabs(view.dom) } finally { obs?.start() }
