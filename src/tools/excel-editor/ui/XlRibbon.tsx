@@ -1,6 +1,7 @@
 // The spreadsheet's ribbon. Home is what you reach for while typing; Insert is
 // what you add; Data is what you do to a table; View is how you look at it. The
 // Chart and Picture tabs appear only while one is selected.
+import { memo } from 'react'
 import { Ribbon, RGroup, RBtn, RSelect, RColor, RPopover, RItem } from '../../../components/office/Ribbon'
 import { CopyIcon, ScissorsIcon, PaletteIcon, LinkIcon, ImageIcon, TableIcon, SearchIcon, CalcIcon, ListIcon, TrashIcon, GridIcon, EditIcon } from '../../../components/icons'
 import type { XlStr } from '../strings'
@@ -57,7 +58,7 @@ const FONTS = ['IBM Plex Sans Arabic', 'Arial', 'Calibri', 'Times New Roman', 'C
 const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72]
 const FNS = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN', 'COUNTIF', 'SUMIF', 'IF', 'VLOOKUP', 'XLOOKUP', 'INDEX', 'MATCH', 'ROUND', 'TODAY', 'TEXT', 'CONCAT']
 
-export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGrid, rtl, zoom, showFormulas, chart, picture, readOnly, protectedSheet = false, protectedBook = false }: {
+export const XlRibbon = memo(function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGrid, rtl, zoom, showFormulas, chart, picture, readOnly, protectedSheet = false, protectedBook = false }: {
   s: XlStr; tab: string; onTab: (t: string) => void; fmt: CellFormat; act: XlActions; merged: boolean
   sheetFreeze: boolean; showGrid: boolean; rtl: boolean; zoom: number; showFormulas: boolean
   chart: ChartSpec | null; picture: SheetImage | null; readOnly: boolean; protectedSheet?: boolean; protectedBook?: boolean
@@ -256,7 +257,7 @@ export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGri
       )}
     </Ribbon>
   )
-}
+})
 
 function AlignGlyph({ k }: { k: 'start' | 'center' | 'end' }) {
   const lines = [16, 10, 16, 12]

@@ -79,6 +79,9 @@ export function Grid(p: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const keyRef = useRef<HTMLTextAreaElement>(null)
   const [view, setView] = useState({ w: 800, h: 500, sx: 0, sy: 0 })
+  const viewRef = useRef(view)
+  const winRef = useRef<{ r0: number; r1: number; c0: number; c1: number; key: string } | null>(null)
+  viewRef.current = view
   const [extra, setExtra] = useState({ rows: 0, cols: 0 })
   const rtl = !!sheet.rtl
   const name = sheet.name
@@ -99,7 +102,14 @@ export function Grid(p: Props) {
   const frozenW = cols.offset(fc)
   const merges = useMemo(() => (sheet.merges || []).map((m) => parseRange(m)).filter((b): b is Box => !!b), [sheet.merges])
   const tables = useMemo(() => tableBoxes(sheet.tables, parseRange), [sheet.tables])
-  const mergeOf = useCallback((r: number, c: number) => merges.find((m) => inBox(m, r, c)) || null, [merges])
+  // Merges by row: asked for every cell drawn, so a scan of every merge on the sheet per cell
+  // was what a selection change spent its time on in a heavily merged form.
+  const mergesByRow = useMemo(() => {
+    const m = new Map<number, Box[]>()
+    for (const b of merges) for (let r = b.r0; r <= Math.min(b.r1, b.r0 + 100_000); r++) { const l = m.get(r); if (l) l.push(b); else m.set(r, [b]) }
+    return m
+  }, [merges])
+  const mergeOf = useCallback((r: number, c: number) => mergesByRow.get(r)?.find((m) => c >= m.c0 && c <= m.c1) || null, [mergesByRow])
 
   useLayoutEffect(() => {
     const el = scrollRef.current
@@ -146,10 +156,12 @@ export function Grid(p: Props) {
   const scrollIntoView = useCallback((a: Addr) => {
     const el = scrollRef.current
     if (!el) return
-    const bodyW = el.clientWidth - hW - frozenW
-    const bodyH = el.clientHeight - hH - frozenH
-    let sx = Math.abs(el.scrollLeft)
-    let sy = el.scrollTop
+    // From the tracked view, not the element: reading clientWidth or scrollTop forces a
+    // synchronous layout, and this runs on every selection change.
+    const bodyW = viewRef.current.w - hW - frozenW
+    const bodyH = viewRef.current.h - hH - frozenH
+    let sx = viewRef.current.sx
+    let sy = viewRef.current.sy
     if (a.col >= fc) {
       const x0 = cols.offset(a.col) - frozenW
       const x1 = cols.offset(a.col + 1) - frozenW
@@ -162,8 +174,12 @@ export function Grid(p: Props) {
       if (y0 < sy) sy = y0
       else if (y1 > sy + bodyH) sy = y1 - bodyH
     }
-    el.scrollTop = Math.max(0, sy)
-    el.scrollLeft = rtl ? -Math.max(0, sx) : Math.max(0, sx)
+    // Only when it moves: an assignment fires a scroll event, and the grid then renders
+    // twice for every arrow key that did not need to scroll at all.
+    const top = Math.max(0, sy)
+    const left = rtl ? -Math.max(0, sx) : Math.max(0, sx)
+    if (Math.abs(viewRef.current.sy - top) > 0.5) el.scrollTop = top
+    if (Math.abs(viewRef.current.sx - Math.abs(left)) > 0.5) el.scrollLeft = left
   }, [cols, rows, fc, fr, frozenW, frozenH, hW, hH, rtl])
 
   useEffect(() => { scrollIntoView(sel.f) }, [sel.f.row, sel.f.col]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -473,6 +489,7 @@ export function Grid(p: Props) {
   const vr1 = Math.min(nRows - 1, rows.at(view.sy + frozenH + Math.max(0, view.h - hH - frozenH)) + 1)
   const vc0 = Math.max(fc, cols.at(view.sx + frozenW))
   const vc1 = Math.min(nCols - 1, cols.at(view.sx + frozenW + Math.max(0, view.w - hW - frozenW)) + 1)
+  const layoutKey = `${z}|${fr}|${fc}|${nRows}|${nCols}`
   type PaneDef = { id: 'corner' | 'top' | 'left' | 'body'; r: [number, number]; c: [number, number]; x: number; y: number; w: number; h: number }
   const panes: PaneDef[] = ([
     { id: 'corner', r: [0, fr - 1], c: [0, fc - 1], x: hW, y: hH, w: frozenW, h: frozenH },
@@ -588,6 +605,38 @@ export function Grid(p: Props) {
     return out
   }
 
+  // The cells do not depend on the selection, so a selection change must not redraw them.
+  // Memoised as element objects: React skips a subtree whose element is the same object as
+  // last time, which is what keeps an arrow key or a click from re-rendering every cell in
+  // view (measured: most of a selection change's time on a phone).
+  //
+  // Scrolling is the other half. Cells are positioned against the scroll offset, so a layer
+  // keyed on it re-rendered every cell for every pixel scrolled. Instead the layer covers a
+  // WINDOW wider than the screen, is drawn once for it, and is moved by a transform as the
+  // view scrolls within it; it is drawn again only when the view leaves the window.
+  const win = winRef.current
+  if (!win || vr0 < win.r0 || vr1 > win.r1 || vc0 < win.c0 || vc1 > win.c1 || win.key !== layoutKey) {
+    const pr = Math.max(10, vr1 - vr0)
+    const pc = Math.max(4, vc1 - vc0)
+    winRef.current = { r0: Math.max(fr, vr0 - pr), r1: Math.min(nRows - 1, vr1 + pr), c0: Math.max(fc, vc0 - pc), c1: Math.min(nCols - 1, vc1 + pc), key: layoutKey }
+  }
+  const w0 = winRef.current!
+  const cellLayer = useMemo(() => {
+    const wide = (q: PaneDef): PaneDef => ({
+      ...q,
+      r: q.id === 'body' || q.id === 'left' ? [w0.r0, w0.r1] : q.r,
+      c: q.id === 'body' || q.id === 'top' ? [w0.c0, w0.c1] : q.c,
+    })
+    return { sx: view.sx, sy: view.sy, nodes: new Map(panes.map((q) => [q.id, paneContent(wide(q))] as const)) }
+  }, [p.rev, sheet, w0.r0, w0.r1, w0.c0, w0.c1, view.w, view.h, z, p.showFormulas, hiddenR, hiddenC, rows, cols, fr, fc, tables, merges, scaleStats, nRows, nCols, showGrid]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** The layer as drawn, moved to where the view is now. Frozen panes do not move on their frozen axis. */
+  const layerAt = (id: PaneDef['id']) => {
+    const dx = id === 'body' || id === 'top' ? view.sx - cellLayer.sx : 0
+    const dy = id === 'body' || id === 'left' ? view.sy - cellLayer.sy : 0
+    // Always the same wrapper, so its contents are never remounted when the offset reaches zero.
+    return <div style={{ position: 'absolute', top: 0, insetInlineStart: 0, transform: dx || dy ? `translate(${rtl ? dx : -dx}px, ${-dy}px)` : undefined }}>{cellLayer.nodes.get(id)}</div>
+  }
+
   const selRect = boxRect(selBox)
   const active = mergeOf(sel.a.row, sel.a.col) || { r0: sel.a.row, c0: sel.a.col, r1: sel.a.row, c1: sel.a.col }
   const activeRect = boxRect(active)
@@ -687,7 +736,7 @@ export function Grid(p: Props) {
           {panes.map((q) => (
             <Clip key={q.id} x={q.x} y={q.y} w={q.w} h={q.h} testid={`xl-pane-${q.id}`}>
               <Shift dx={-q.x} dy={-q.y}>
-                {paneContent(q)}
+                {layerAt(q.id)}
                 {overlays(q)}
                 {q.id === 'body' && objects}
               </Shift>

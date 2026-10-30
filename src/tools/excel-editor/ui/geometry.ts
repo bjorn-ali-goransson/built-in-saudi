@@ -11,6 +11,10 @@ const BLOCK = 256
 
 export class Axis {
   private blocks: number[] = [0] // offset at the start of each block
+  // Every line's offset within a block, built the first time the block is touched. Without it
+  // an offset walked line by line from the block's start — up to 255 size lookups for EACH
+  // cell drawn, which is what a selection change on a phone was spending its time on.
+  private prefix = new Map<number, Float64Array>()
   constructor(
     readonly count: number,
     private sizeOf: (i: number) => number,
@@ -18,20 +22,32 @@ export class Axis {
 
   size(i: number): number { return this.sizeOf(i) }
 
-  /** Offset of the start of line `i` (0 ≤ i ≤ count). */
-  offset(i: number): number {
-    if (i <= 0) return 0
-    const n = Math.min(i, this.count)
-    const b = Math.floor(n / BLOCK)
+  private block(b: number): Float64Array {
+    let p = this.prefix.get(b)
+    if (p) return p
     while (this.blocks.length <= b) {
       const k = this.blocks.length - 1
       let o = this.blocks[k]
       for (let j = k * BLOCK; j < (k + 1) * BLOCK && j < this.count; j++) o += this.sizeOf(j)
       this.blocks.push(o)
     }
-    let o = this.blocks[b]
-    for (let j = b * BLOCK; j < n; j++) o += this.sizeOf(j)
-    return o
+    const start = b * BLOCK
+    const n = Math.max(0, Math.min(BLOCK, this.count - start))
+    p = new Float64Array(n + 1)
+    p[0] = this.blocks[b]
+    for (let j = 0; j < n; j++) p[j + 1] = p[j] + this.sizeOf(start + j)
+    this.prefix.set(b, p)
+    return p
+  }
+
+  /** Offset of the start of line `i` (0 ≤ i ≤ count). */
+  offset(i: number): number {
+    if (i <= 0) return 0
+    const n = Math.min(i, this.count)
+    const b = Math.floor(n / BLOCK)
+    // The first line of a block starts where the previous (necessarily full) block ends.
+    if (n === b * BLOCK) return this.block(b - 1)[BLOCK]
+    return this.block(b)[n - b * BLOCK]
   }
 
   get total(): number { return this.offset(this.count) }
@@ -42,7 +58,7 @@ export class Axis {
     px = Math.max(0, px)
     const total = this.total
     if (px >= total) return Math.max(0, this.count - 1)
-    // Binary search over blocks, then a walk.
+    // Binary search over blocks, then within the block's own offsets.
     let lo = 0
     let hi = this.blocks.length - 1
     while (lo < hi) {
@@ -50,15 +66,17 @@ export class Axis {
       if (this.blocks[mid] <= px) lo = mid
       else hi = mid - 1
     }
-    let i = lo * BLOCK
-    let o = this.blocks[lo]
-    while (i < this.count) {
-      const s = this.sizeOf(i)
-      if (o + s > px) return i
-      o += s
-      i++
+    const p = this.block(lo)
+    // The last k with p[k] <= px and a line that has pixels: p[k + 1] > px.
+    let a = 0
+    let z = p.length - 2
+    while (a < z) {
+      const mid = (a + z + 1) >> 1
+      if (p[mid] <= px) a = mid
+      else z = mid - 1
     }
-    return this.count - 1
+    while (a < p.length - 2 && p[a + 1] <= px) a++
+    return Math.min(this.count - 1, lo * BLOCK + a)
   }
 
   /** Visible lines between two pixel offsets, inclusive, with overscan. */

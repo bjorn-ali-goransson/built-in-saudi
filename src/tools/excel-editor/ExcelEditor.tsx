@@ -163,7 +163,10 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
   const used = model.engine.extent(name)
   const workBox = clampToUsed(selBox, { rows: Math.max(used.rows, selBox.r0 + 1), cols: Math.max(used.cols, selBox.c0 + 1) })
   const activeCell = sheet.cells[cellKey(sel.a.row, sel.a.col)]
-  const fmt: CellFormat = activeCell?.fmt || {}
+  // The same object while the formatting is the same, so the ribbon can skip a render
+  // when only the selection moved — which is most selection changes.
+  const fmtKey = JSON.stringify(activeCell?.fmt || {})
+  const fmt: CellFormat = useMemo(() => JSON.parse(fmtKey) as CellFormat, [fmtKey])
   const value = useCallback((r: number, c: number) => model.engine.value(name, { row: r, col: c }), [model, name, rev]) // eslint-disable-line react-hooks/exhaustive-deps
   const filled = (r: number, c: number) => { const x = sheet.cells[cellKey(r, c)]; return !!x && x.input !== '' }
   const region = () => (boxArea(selBox) > 1 ? workBox : currentRegion(filled, sel.a.row, sel.a.col, Math.max(used.rows + 1, 10), Math.max(used.cols + 1, 10)))
@@ -467,7 +470,12 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
     picturePatch: (p) => { if (obj?.kind !== 'image') return; dispatch({ k: 'props', sheet: name, patch: { images: (sheet.images || []).map((c) => (c.id === obj.id ? { ...c, ...p } : c)) } }) },
     pictureDelete: () => { if (obj?.kind !== 'image') return; dispatch({ k: 'props', sheet: name, patch: { images: (sheet.images || []).filter((c) => c.id !== obj.id) } }); setObj(null) },
     print: () => setPreview(true),
-  }
+  }  // One object for the life of the editor, calling whatever the latest actions are: the
+  // ribbon is memoised, and a fresh object every render would defeat that.
+  const actRef = useRef(act)
+  actRef.current = act
+  const stableAct = useMemo(() => new Proxy({} as XlActions, { get: (_t, k) => (...a: unknown[]) => (actRef.current as unknown as Record<string, (...x: unknown[]) => unknown>)[k as string](...a) }), [])
+
 
   const measure = useMemo(() => {
     const c = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null
@@ -626,7 +634,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
       busy={busy}
       fileExtra={(close) => <RItem testid="xl-import-sheet" onClick={() => { close(); importInput.current?.click() }}>{s.importInto}</RItem>}
     >
-      <XlRibbon s={s} tab={tab} onTab={setTab} fmt={fmt} act={act} merged={merges.some((m) => inBox(m, sel.a.row, sel.a.col))}
+      <XlRibbon s={s} tab={tab} onTab={setTab} fmt={fmt} act={stableAct} merged={merges.some((m) => inBox(m, sel.a.row, sel.a.col))}
         sheetFreeze={!!(sheet.freeze?.rows || sheet.freeze?.cols)} showGrid={sheet.showGrid !== false} rtl={!!sheet.rtl} zoom={zoom} showFormulas={showFormulas}
         chart={chart} picture={picture} readOnly={readOnly} protectedSheet={!!sheet.protect} protectedBook={!!model.book.protect} />
       <div className="flex-none flex items-stretch gap-1 px-2 py-1 border-b border-[color:var(--line-soft)] bg-[var(--surface)] relative" data-testid="xl-formula-bar">

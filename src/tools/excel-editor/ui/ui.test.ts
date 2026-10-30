@@ -134,3 +134,21 @@ describe('fill series', () => {
   it('anything else repeats', () => expect(extendSeries(['x', 'y'], 3, S)).toEqual(['x', 'y', 'x']))
   it('nothing to extend', () => { expect(extendSeries([], 3, S)).toEqual([]); expect(extendSeries(['1'], 0, S)).toEqual([]) })
 })
+
+describe('Axis offsets, against a plain running sum', () => {
+  it('agree for every line, with hidden lines and odd sizes, across block boundaries', () => {
+    const size = (i: number) => (i % 7 === 3 ? 0 : 10 + (i % 5))
+    const a = new Axis(1000, size)
+    let o = 0
+    for (let i = 0; i <= 1000; i++) {
+      expect(a.offset(i)).toBe(o)
+      if (i < 1000) {
+        // Every pixel inside a visible line maps back to that line.
+        if (size(i) > 0) { expect(a.at(o)).toBe(i); expect(a.at(o + size(i) - 1)).toBe(i) }
+        o += size(i)
+      }
+    }
+    expect(a.total).toBe(o)
+    expect(a.at(o + 50)).toBe(999)
+  })
+})
