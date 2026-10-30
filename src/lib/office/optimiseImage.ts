@@ -1,5 +1,8 @@
 // Pictures, made modern and small: every raster picture an editor takes in is
-// re-encoded as WebP and kept at or under MAX_IMAGE_BYTES.
+// re-encoded as WebP, to a budget for the size it is SHOWN at — MAX_IMAGE_BYTES
+// for a picture covering a whole A4 page, proportionally less for less, and no
+// more pixels than about twice its displayed size. A logo shown at 60px does not
+// need 800KB or 3000 pixels, whatever the file it arrived in carried.
 //
 // Why both: documents live in this browser's storage and travel peer-to-peer in
 // a live session, and a deck that arrives with forty camera photos at 5MB each
@@ -26,6 +29,30 @@
 export const MAX_IMAGE_BYTES = 800 * 1024
 /** Longest side, in pixels: more than any page or slide shows at any zoom. */
 export const MAX_IMAGE_SIDE = 3200
+/** The smallest budget: below this a picture's bytes are mostly header, and quality falls off a cliff. */
+export const MIN_IMAGE_BYTES = 24 * 1024
+/** An A4 page in CSS pixels (96 per inch): the area that gets the whole MAX_IMAGE_BYTES. */
+const A4_PX = 794 * 1123
+/** Pixels kept per displayed CSS pixel: enough for a high-density screen and for print at ~190dpi. */
+const DENSITY = 2
+
+/** How big a picture is shown, in CSS pixels — the largest place it appears, when it appears twice. */
+export interface Shown { w: number; h: number }
+export interface Budget { bytes: number; side: number }
+
+/**
+ * What a picture shown at this size may cost: bytes in proportion to its share of an A4 page
+ * (800KB for a full page, less for less, never under MIN_IMAGE_BYTES), and pixels at DENSITY
+ * times its displayed size. Unknown size: the full-page budget.
+ */
+export function budgetFor(shown?: Shown | null): Budget {
+  if (!shown || !(shown.w > 0) || !(shown.h > 0)) return { bytes: MAX_IMAGE_BYTES, side: MAX_IMAGE_SIDE }
+  const share = Math.min(1, (shown.w * shown.h) / A4_PX)
+  return {
+    bytes: Math.round(Math.max(MIN_IMAGE_BYTES, MAX_IMAGE_BYTES * share)),
+    side: Math.round(Math.min(MAX_IMAGE_SIDE, Math.max(64, Math.max(shown.w, shown.h) * DENSITY))),
+  }
+}
 
 export interface Optimised { bytes: Uint8Array; mime: string; changed: boolean }
 
@@ -48,33 +75,35 @@ function animatedGif(b: Uint8Array): boolean {
   return frames > 1
 }
 
-export async function optimiseImage(bytes: Uint8Array, mimeHint = ''): Promise<Optimised> {
+export async function optimiseImage(bytes: Uint8Array, mimeHint = '', budget: Budget = budgetFor()): Promise<Optimised> {
   const same: Optimised = { bytes, mime: mimeHint, changed: false }
   const mime = sniff(bytes)
   if (!mime || !canRun()) return same
-  // Already modern and already small: nothing to gain.
-  if ((mime === 'image/webp' || mime === 'image/avif') && bytes.length <= MAX_IMAGE_BYTES) return { ...same, mime }
   if (mime === 'image/gif' && animatedGif(bytes)) return { ...same, mime }
   let bmp: ImageBitmap
   try { bmp = await createImageBitmap(new Blob([bytes as BlobPart], { type: mime })) } catch { return same }
   try {
+    const fitsSide = Math.max(bmp.width, bmp.height) <= budget.side
+    // Already modern, small enough and no bigger than it is shown: nothing to gain.
+    if ((mime === 'image/webp' || mime === 'image/avif') && bytes.length <= budget.bytes && fitsSide) return { ...same, mime }
     const lossless = mime === 'image/png' || mime === 'image/gif' || mime === 'image/bmp'
-    let scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bmp.width, bmp.height))
-    for (let round = 0; round < 8; round++) {
+    let scale = Math.min(1, budget.side / Math.max(bmp.width, bmp.height))
+    for (let round = 0; round < 10; round++) {
       const w = Math.max(1, Math.round(bmp.width * scale))
       const h = Math.max(1, Math.round(bmp.height * scale))
       const c = new OffscreenCanvas(w, h)
       const g = c.getContext('2d')!
       g.imageSmoothingQuality = 'high'
       g.drawImage(bmp, 0, 0, w, h)
-      const qualities = lossless && round === 0 && scale === 1 ? [1, 0.9, 0.82, 0.72, 0.6] : [0.86, 0.78, 0.7, 0.6]
+      const qualities = lossless && round === 0 ? [1, 0.9, 0.82, 0.72, 0.6] : [0.86, 0.78, 0.7, 0.6]
       for (const q of qualities) {
         const blob = await c.convertToBlob({ type: 'image/webp', quality: q })
         // A browser that cannot encode WebP hands back a PNG instead: stop rather than bloat.
         if (blob.type !== 'image/webp') return same
-        if (blob.size > MAX_IMAGE_BYTES) continue
+        if (blob.size > budget.bytes) continue
         const out = new Uint8Array(await blob.arrayBuffer())
-        if (out.length >= bytes.length && bytes.length <= MAX_IMAGE_BYTES) return { ...same, mime }
+        // Never larger: an original that already fits keeps its bytes.
+        if (out.length >= bytes.length && bytes.length <= budget.bytes && fitsSide) return { ...same, mime }
         return { bytes: out, mime: 'image/webp', changed: true }
       }
       scale *= 0.75
@@ -90,29 +119,81 @@ const DATA_URL = /^data:(image\/[a-z0-9.+-]+);base64,/i
 function b64ToBytes(s: string): Uint8Array { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u }
 function bytesToB64(u: Uint8Array): string { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s) }
 
-export async function optimiseDataUrl(url: string): Promise<string> {
+export async function optimiseDataUrl(url: string, shown?: Shown | null): Promise<string> {
   const m = DATA_URL.exec(url)
   if (!m || m[1].toLowerCase() === 'image/svg+xml') return url
-  const r = await optimiseImage(b64ToBytes(url.slice(m[0].length)), m[1])
+  const r = await optimiseImage(b64ToBytes(url.slice(m[0].length)), m[1], budgetFor(shown))
   return r.changed ? `data:${r.mime};base64,${bytesToB64(r.bytes)}` : url
+}
+
+const PT = 4 / 3
+const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0
+
+/**
+ * How big each picture in a document is shown, by its data: URL, in CSS pixels. Read by SHAPE, not
+ * per editor: a Word image node ({src, width, height}, pixels), a sheet picture ({src, size}, pixels),
+ * and a deck, whose pictures live once in a media table and are placed by id ({media, w, h} or a
+ * picture fill, in points, through any crop). A picture used twice is budgeted for its biggest use.
+ */
+export function shownSizes(doc: unknown): Map<string, Shown> {
+  const out = new Map<string, Shown>()
+  const keep = (url: unknown, w: number, h: number) => {
+    if (typeof url !== 'string' || !(w > 0) || !(h > 0)) return
+    const was = out.get(url)
+    if (!was || w * h > was.w * was.h) out.set(url, { w, h })
+  }
+  const byId = new Map<string, Shown>()
+  const keepId = (id: unknown, w: number, h: number) => {
+    if (typeof id !== 'string' || !(w > 0) || !(h > 0)) return
+    const was = byId.get(id)
+    if (!was || w * h > was.w * was.h) byId.set(id, { w, h })
+  }
+  const deck = doc as { media?: Record<string, { data?: string }>; size?: { w: number; h: number }; slides?: { bg?: { type?: string; media?: string } }[]; masters?: { bg?: { type?: string; media?: string } }[] } | null
+  const seen = new Set<object>()
+  const walk = (v: unknown) => {
+    if (!v || typeof v !== 'object' || seen.has(v)) return
+    seen.add(v)
+    if (Array.isArray(v)) { for (const x of v) walk(x); return }
+    const o = v as Record<string, unknown>
+    if (typeof o.src === 'string' && num(o.width) && num(o.height)) keep(o.src, o.width, o.height)
+    const size = o.size as { w?: unknown; h?: unknown } | undefined
+    if (typeof o.src === 'string' && size && num(size.w) && num(size.h)) keep(o.src, size.w, size.h)
+    if (num(o.w) && num(o.h)) {
+      const c = (o.crop || { l: 0, t: 0, r: 0, b: 0 }) as { l: number; t: number; r: number; b: number }
+      const fw = (o.w * PT) / Math.max(0.05, 1 - c.l - c.r)
+      const fh = (o.h * PT) / Math.max(0.05, 1 - c.t - c.b)
+      if (typeof o.media === 'string') keepId(o.media, fw, fh)
+      const fill = o.fill as { type?: string; media?: string } | undefined
+      if (fill?.type === 'image') keepId(fill.media, o.w * PT, o.h * PT)
+    }
+    for (const k in o) walk(o[k])
+  }
+  walk(doc)
+  if (deck?.media && deck.size) {
+    for (const f of [...(deck.slides || []), ...(deck.masters || [])].map((x) => x.bg)) if (f?.type === 'image') keepId(f.media, deck.size.w * PT, deck.size.h * PT)
+    for (const [id, m] of Object.entries(deck.media)) { const s = byId.get(id); if (s && m?.data) keep(m.data, s.w, s.h) }
+  }
+  return out
 }
 
 /**
  * Every picture in a document, wherever the model keeps it (an image node's src,
- * a slide's media table, a sheet's pictures), optimised in place. Pictures are
- * found by VALUE rather than by field name, so all three editors share it and a
- * new place to keep a picture cannot be missed.
+ * a slide's media table, a sheet's pictures), optimised in place to a budget for
+ * the size it is SHOWN at. Pictures are found by VALUE rather than by field name,
+ * so all three editors share it and a new place to keep a picture cannot be missed;
+ * one whose size cannot be found gets the full-page budget.
  */
 export async function optimiseImagesIn<T>(doc: T): Promise<{ doc: T; changed: number; before: number; after: number }> {
   let changed = 0
   let before = 0
   let after = 0
+  const shown = shownSizes(doc)
   const cache = new Map<string, string>()
   const walk = async (v: unknown): Promise<unknown> => {
     if (typeof v === 'string') {
       if (!DATA_URL.test(v)) return v
       let out = cache.get(v)
-      if (out === undefined) { out = await optimiseDataUrl(v); cache.set(v, out) }
+      if (out === undefined) { out = await optimiseDataUrl(v, shown.get(v)); cache.set(v, out) }
       before += v.length
       after += out.length
       if (out !== v) changed++

@@ -7960,10 +7960,16 @@ case. **Every test that runs `soffice` gives it its own profile**
 (`-env:UserInstallation`): two at once on the shared profile fail, and adding
 tests elsewhere is enough to make two overlap.
 
-### Pictures are WebP, at most 800KB (`lib/office/optimiseImage.ts`)
+### Pictures are WebP, budgeted by the size they are SHOWN (`lib/office/optimiseImage.ts`)
 
+800KB is for a picture covering a whole A4 page; the budget scales with its
+share of that area (floor 24KB), and pixels are capped at about twice the
+displayed size — a half-inch logo is stored at ~96px, not the 2400 it came
+with. `shownSizes` finds the displayed size by SHAPE in all three models (a
+Word image node, a sheet picture, a deck's media by id through any crop, the
+biggest use winning); a picture whose size is unknown gets the full-page budget.
 Every picture an editor takes in — on import, in the worker, and on insert — is
-re-encoded as WebP and kept at or under 800KB: lossless first for PNG/GIF/BMP,
+re-encoded as WebP within that budget: lossless first for PNG/GIF/BMP,
 then lower quality, and only then fewer pixels. A picture is never made larger,
 and SVG, animated GIF and formats a browser cannot decode are left alone. On the
 way OUT to .docx/.xlsx/.pptx WebP becomes JPEG (PNG where it is transparent),

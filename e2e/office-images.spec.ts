@@ -66,3 +66,22 @@ test('a big picture inserted by hand is stored as WebP under 800KB too', async (
   expect(u.startsWith('data:image/webp;base64,')).toBe(true)
   expect(bytesOf(u)).toBeLessThanOrEqual(LIMIT)
 })
+
+test('a picture shown small is stored small: the budget follows the displayed size, not the file', async ({ page: p }) => {
+  test.setTimeout(90_000)
+  // The same multi-megabyte photo, placed as a half-inch decal (48 CSS px).
+  const fx = readFileSync('src/tools/word-editor/io/__fixtures__/python-docx.docx')
+  const doc = zipEntries(fx).find((e) => e.name === 'word/document.xml')!.data.toString('utf8').replace(/c([xy])="\d+"/g, 'c$1="457200"')
+  const file = replaceInZip(replaceInZip(fx, 'word/media/image1.png', BIG), 'word/document.xml', Buffer.from(doc, 'utf8'))
+  await p.goto('/en/apps/word-editor/')
+  await p.getByTestId('office-file-input').setInputFiles({ name: 'decal.docx', mimeType: 'application/octet-stream', buffer: file })
+  await expect(p.getByTestId('office-title')).toBeVisible({ timeout: 60_000 })
+  await expect.poll(async () => (await storedDocs(p)).length, { timeout: 20_000 }).toBeGreaterThan(0)
+  const [u] = pictures((await storedDocs(p))[0].data)
+  expect(u.startsWith('data:image/webp;base64,')).toBe(true)
+  // 48px is 0.2% of an A4 page: the floor budget, not 800KB …
+  expect(bytesOf(u)).toBeLessThanOrEqual(24 * 1024)
+  // … and about twice the shown size in pixels, not the 2400 it arrived with.
+  const w = await p.evaluate(async (src) => { const i = new Image(); i.src = src; await i.decode(); return i.naturalWidth }, u)
+  expect(w).toBeLessThanOrEqual(96)
+})
