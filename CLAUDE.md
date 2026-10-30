@@ -7821,6 +7821,26 @@ Three things worth carrying:
   back, but NOT confirmed against Calc: headless LibreOffice has no view to
   apply view settings to, and says nothing either way.
 
+**A floating picture keeps its side, and a text box is a box** (`text_box` in
+the word processor's schema; `image.float`). Both used to be in the loss ledger:
+pictures went inline and a text box's paragraphs were poured into the sentence
+beside it. Three things carry it:
+
+- **The mc:Choice is read when this reader understands what it requires**
+  (`pickAlternate`). The Fallback won every time before, and for a drawing that
+  is the worse copy — Word and LibreOffice write DrawingML in the Choice and
+  legacy VML in the Fallback. A Choice requiring anything else (a w14 checkbox)
+  still yields to the Fallback, which is what the mechanism is for. VML is still
+  read, for files Word 2007 wrote; `floating-vml.docx` is the same document with
+  only that branch.
+- **A text box arrives inside a RUN and is a BLOCK**, so the paragraph reader
+  lifts it out and sets it just before the paragraph it was anchored in — a CSS
+  float only affects what follows it. The writer does the reverse: it anchors
+  the box in the paragraph AFTER it, so the round trip adds no empty paragraph.
+- **Placement is three physical sides** (left, right, centred on its own line),
+  as Word's `positionH` is. Layering is what does not come across: a picture
+  behind or in front of the text sits beside it, and the ledger says so.
+
 **Import says what did not come across.** Each reader keeps a loss ledger
 (charts, SmartArt, macros, animations, an unsupported function) and the editor
 opens on a `LossDialog` listing it. A legacy binary `.doc`/`.xls`/`.ppt`

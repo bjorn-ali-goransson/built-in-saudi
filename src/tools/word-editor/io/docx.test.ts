@@ -1,15 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import { readDocx } from './docx-read'
+import { readOdt } from './odt-read'
 import { writeDocx, splitBidi, hex, imageSize } from './docx-write'
 import { schema } from '../schema'
 import { plainText, emptyDoc, type PMNode, type WordData } from '../model'
 
 const hasPy = (() => { try { execFileSync('python3', ['-c', 'import docx'], { stdio: 'ignore' }); return true } catch { return false } })()
+/** A 4×3 green PNG. */
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAEElEQVR4nGPgi7KHIwacHACWgQfVRVGdUQAAAABJRU5ErkJggg=='
+const hasSoffice = existsSync('/usr/bin/soffice')
 const FIX = new URL('./__fixtures__/', import.meta.url)
 const load = (n: string) => { const b = readFileSync(new URL(n, FIX)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer }
 
@@ -102,6 +106,90 @@ describe('reading .docx from LibreOffice', () => {
     expect(t.content![0].content![0].attrs!.rowspan).toBe(2)
     expect(t.content![2].content![0].attrs!.colspan).toBe(2)
     expect(all(d, 'paragraph').find((p) => plainText(p).startsWith('فقرة'))!.attrs!.dir).toBe('rtl')
+  })
+})
+
+describe('floating pictures and text boxes', () => {
+  // floating.docx and floating.odt are LibreOffice's own output (see
+  // scripts/make-office-fixtures.py); floating-vml.docx is the same document
+  // with the DrawingML branch removed, which is how Word 2007 wrote it.
+  const text = (n: PMNode) => plainText(n)
+  // VML carries no alt text for a picture, so only DrawingML can bring it.
+  const expectPlaced = (r: { data: WordData; loss: { what: string }[] }, alt: string | null = 'Company logo') => {
+    const d = r.data.doc
+    valid(d)
+    const img = all(d, 'image')[0]
+    expect(img.attrs!.float).toBe('right')
+    if (alt) expect(img.attrs!.alt).toBe(alt)
+    const box = all(d, 'text_box')
+    expect(box).toHaveLength(1)
+    expect(box[0].attrs!.float).toBe('left')
+    // Its own paragraphs — not words spilled into the sentence beside it.
+    expect(box[0].content!.map(text)).toEqual(['Key figure', 'Revenue rose twelve percent.'])
+    const beside = d.content!.find((n) => plainText(n).startsWith('This paragraph sits beside'))!
+    expect(plainText(beside)).not.toContain('Key figure')
+    // The box comes BEFORE the paragraph it was anchored in, so it floats beside it.
+    expect(d.content!.indexOf(box[0])).toBe(d.content!.indexOf(beside) - 1)
+    expect(r.loss.map((l) => l.what).filter((w) => /float|text box|shape|behind/.test(w))).toEqual([])
+  }
+  it('from LibreOffice .docx (DrawingML)', async () => { expectPlaced(await readDocx(load('floating.docx'))) })
+  it('from a VML-only .docx (Word 2007)', async () => { expectPlaced(await readDocx(load('floating-vml.docx')), null) })
+  it('from LibreOffice .odt', async () => { expectPlaced(await readOdt(load('floating.odt'))) })
+
+  const doc = (): WordData => ({ ...emptyDoc(), doc: { type: 'doc', content: [
+    P('Intro'),
+    { type: 'text_box', attrs: { width: 200, float: 'left', fill: '#fff2cc', border: true }, content: [P('Key figure'), P('Revenue rose.')] },
+    { type: 'paragraph', content: [
+      { type: 'image', attrs: { src: 'data:image/png;base64,' + PNG, alt: 'Logo', width: 40, height: 30, float: 'right' } },
+      { type: 'text', text: 'Beside the box.' }] },
+  ] } })
+
+  it('are written as an anchor and a text box, and come back the same', async () => {
+    const b = await bytesOf(doc())
+    const x = zipPart(b, 'word/document.xml')
+    expect(x).toContain('<wp:anchor')
+    expect(x).toMatch(/<wp:positionH relativeFrom="column"><wp:align>right<\/wp:align>/)
+    expect(x).toContain('<wp:wrapSquare wrapText="bothSides"/>')
+    expect(x).toContain('<mc:Choice Requires="wps">')
+    // Anchored in the paragraph after it, not in an empty one of its own.
+    expect(x).toMatch(/<w:p>(<w:pPr>.*?<\/w:pPr>)?<w:r><mc:AlternateContent>.*?<\/mc:AlternateContent><\/w:r><w:r><w:drawing>/)
+    const back = await readDocx(b.buffer as ArrayBuffer)
+    valid(back.data.doc)
+    const box = all(back.data.doc, 'text_box')[0]
+    expect(box.attrs).toMatchObject({ float: 'left', fill: '#fff2cc', border: true })
+    expect(box.content!.map(text)).toEqual(['Key figure', 'Revenue rose.'])
+    expect(all(back.data.doc, 'image')[0].attrs!.float).toBe('right')
+    expect(back.data.doc.content!.map(text)).toEqual(['Intro', 'Key figure\nRevenue rose.', 'Beside the box.'])
+  })
+
+  it.skipIf(!hasPy)('open in python-docx, with the box text inside a txbxContent', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wd-'))
+    const f = join(dir, 'float.docx')
+    writeFileSync(f, await bytesOf(doc()))
+    // lxml, not our reader: an undeclared prefix or a malformed part fails here.
+    const py = `import sys, docx, json
+from lxml import etree
+d = docx.Document(sys.argv[1])
+b = d.element.body
+ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'wp': 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing'}
+q = lambda e: etree.XPath(e, namespaces=ns)(b)
+print(json.dumps({'box': ''.join(q('.//w:txbxContent//w:t/text()')), 'align': q('.//wp:anchor/wp:positionH/wp:align/text()'), 'paras': [p.text for p in d.paragraphs]}))`
+    const out = JSON.parse(execFileSync('python3', ['-c', py, f]).toString())
+    expect(out.box).toBe('Key figureRevenue rose.')
+    expect(out.align).toEqual(['left', 'right'])
+    expect(out.paras).toEqual(['Intro', 'Beside the box.'])
+  })
+
+  it.skipIf(!hasSoffice)('LibreOffice reads them as a frame and a floating picture', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wd-'))
+    const f = join(dir, 'float.docx')
+    writeFileSync(f, await bytesOf(doc()))
+    execFileSync('soffice', ['--headless', '--convert-to', 'fodt', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
+    const fodt = readFileSync(join(dir, 'float.fodt'), 'utf8')
+    // LibreOffice opens a DrawingML text box as a shape carrying its paragraphs.
+    expect(fodt).toMatch(/<draw:(custom-shape|frame)[^>]*>(?:(?!<\/draw:(custom-shape|frame)>).)*Key figure(?:(?!<\/draw:(custom-shape|frame)>).)*Revenue rose\./s)
+    expect(fodt).toMatch(/style:horizontal-pos="right"/)
+    expect(fodt).toMatch(/style:wrap="(parallel|dynamic)"/)
   })
 })
 

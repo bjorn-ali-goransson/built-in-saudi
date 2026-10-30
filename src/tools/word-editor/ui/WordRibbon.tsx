@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Ribbon, RGroup, RBtn, RSelect, RColor, RPopover, RItem } from '../../../components/office/Ribbon'
 import { LinkIcon, ImageIcon, TableIcon, SearchIcon, ListIcon, TrashIcon, PaletteIcon } from '../../../components/icons'
 import type { WdStr } from '../strings'
+import type { Float } from '../schema'
 
 export interface WdFormat {
   bold: boolean; italic: boolean; underline: boolean; strike: boolean; sup: boolean; sub: boolean; code: boolean
@@ -42,7 +43,10 @@ export interface WdActions {
   pageView(): void
   table_(cmd: 'rowBefore' | 'rowAfter' | 'colBefore' | 'colAfter' | 'deleteRow' | 'deleteCol' | 'deleteTable' | 'merge' | 'split' | 'headerRow'): void
   cellShade(c: string | null): void
-  picturePatch(p: { width?: number | null; alt?: string }): void
+  picturePatch(p: { width?: number | null; alt?: string; float?: Float }): void
+  textBox(): void
+  textBoxPatch(p: { float?: Float; fill?: string | null; border?: boolean }): void
+  textBoxDelete(): void
   pictureDelete(): void
 }
 
@@ -59,15 +63,17 @@ export function pageSizeId(w: number, h: number): string {
   return PAGE_SIZES.find((p) => Math.abs(p.w - a) < 1 && Math.abs(p.h - b) < 1)?.id || 'custom'
 }
 
-export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture, page, rtl, zoom, outline, pageView }: {
+export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture, textBox, page, rtl, zoom, outline, pageView }: {
   s: WdStr; tab: string; onTab: (t: string) => void; fmt: WdFormat; act: WdActions; readOnly: boolean
-  inTable: boolean; picture: { width: number | null; alt: string } | null
+  inTable: boolean; picture: { width: number | null; alt: string; float: Float } | null
+  textBox: { float: Float; border: boolean } | null
   page: { width: number; height: number; margins: number; landscape: boolean }; rtl: boolean; zoom: number; outline: boolean; pageView: boolean
 }) {
   const tabs = [
     { id: 'home', label: s.home }, { id: 'insert', label: s.insert }, { id: 'layout', label: s.layout }, { id: 'view', label: s.view },
     ...(inTable ? [{ id: 'table', label: s.tableTab, contextual: true }] : []),
     ...(picture ? [{ id: 'picture', label: s.pictureTab, contextual: true }] : []),
+    ...(textBox ? [{ id: 'textbox', label: s.textBoxTab, contextual: true }] : []),
   ]
   const t = tabs.some((x) => x.id === tab) ? tab : 'home'
   const dis = readOnly
@@ -128,6 +134,7 @@ export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture
           </RGroup>
           <RGroup label={s.illustrations}>
             <RBtn label={s.picture} wide icon={<ImageIcon />} testid="wd-insert-picture" disabled={dis} onClick={act.picture} />
+            <RBtn label={s.textBox} wide icon={<BoxGlyph />} testid="wd-insert-textbox" disabled={dis || !!textBox} onClick={act.textBox} />
           </RGroup>
           <RGroup label={s.links}>
             <RBtn label={`${s.link} (Ctrl+K)`} wide icon={<LinkIcon />} testid="wd-insert-link" disabled={dis} onClick={act.link} />
@@ -202,6 +209,7 @@ export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture
               value={picture.width || 400} onChange={(e) => act.picturePatch({ width: +e.target.value })} className="w-[140px]" />
             <RBtn label={s.resetSize} testid="wd-picture-reset" disabled={dis} onClick={() => act.picturePatch({ width: null })}><span className="text-[0.78rem]">1:1</span></RBtn>
           </RGroup>
+          <WrapGroup s={s} value={picture.float} inline disabled={dis} onPick={(f) => act.picturePatch({ float: f })} testid="wd-picture-wrap" />
           <RGroup label={s.altText}>
             <input dir="auto" aria-label={s.altText} data-testid="wd-picture-alt" defaultValue={picture.alt} key={picture.alt} disabled={dis}
               onBlur={(e) => act.picturePatch({ alt: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
@@ -212,7 +220,56 @@ export function WordRibbon({ s, tab, onTab, fmt, act, readOnly, inTable, picture
           </RGroup>
         </>
       )}
+      {t === 'textbox' && textBox && (
+        <>
+          <WrapGroup s={s} value={textBox.float} disabled={dis} onPick={(f) => act.textBoxPatch({ float: f })} testid="wd-textbox-wrap" />
+          <RGroup label={s.boxFill}>
+            <RColor label={s.boxFill} testid="wd-textbox-fill" glyph={<PaletteIcon />} allowNone onPick={(c) => act.textBoxPatch({ fill: c })} />
+            <RBtn label={s.boxBorder} testid="wd-textbox-border" active={textBox.border} disabled={dis} onClick={() => act.textBoxPatch({ border: !textBox.border })}><BoxGlyph /></RBtn>
+          </RGroup>
+          <RGroup label={s.textBoxTab}>
+            <RBtn label={s.deleteTextBox} wide testid="wd-textbox-delete" disabled={dis} onClick={act.textBoxDelete} icon={<TrashIcon />} />
+          </RGroup>
+        </>
+      )}
     </Ribbon>
+  )
+}
+
+/** Where a picture or a box sits. Physical sides, as Word's placement is. */
+function WrapGroup({ s, value, inline, disabled, onPick, testid }: { s: WdStr; value: Float; inline?: boolean; disabled: boolean; onPick: (f: Float) => void; testid: string }) {
+  const opts: { v: Float; l: string; k: string }[] = [
+    ...(inline ? [{ v: null, l: s.inLine, k: 'inline' }] : []),
+    { v: 'left', l: s.wrapLeft, k: 'left' }, { v: 'right', l: s.wrapRight, k: 'right' }, { v: 'center', l: s.wrapCenter, k: 'center' },
+  ]
+  return (
+    <RGroup label={s.wrap}>
+      {opts.map((o) => (
+        <RBtn key={o.k} label={o.l} testid={`${testid}-${o.k}`} active={value === o.v} disabled={disabled} onClick={() => onPick(o.v)}><WrapGlyph k={o.k} /></RBtn>
+      ))}
+    </RGroup>
+  )
+}
+
+function WrapGlyph({ k }: { k: string }) {
+  // Drawn as on the page, not mirrored: a picture on the right is on the right in Arabic too.
+  const box = k === 'left' ? 1 : k === 'right' ? 10 : 5.5
+  return (
+    <svg viewBox="0 0 18 14" width={17} height={14} aria-hidden>
+      <rect x={k === 'inline' ? 6 : box} y={k === 'inline' ? 5 : 2} width={k === 'inline' ? 4 : 7} height={k === 'inline' ? 4 : 7} fill="currentColor" opacity={0.55} rx={0.6} />
+      {k === 'inline' ? <><rect x={1} y={6.2} width={4} height={1.6} rx={0.6} fill="currentColor" /><rect x={11} y={6.2} width={6} height={1.6} rx={0.6} fill="currentColor" /><rect x={1} y={11} width={16} height={1.6} rx={0.6} fill="currentColor" /></>
+        : k === 'center' ? <rect x={1} y={11} width={16} height={1.6} rx={0.6} fill="currentColor" />
+          : <>{[2.2, 5.2, 8.2].map((y) => <rect key={y} x={k === 'left' ? 9.5 : 1} y={y} width={7.5} height={1.6} rx={0.6} fill="currentColor" />)}<rect x={1} y={11} width={16} height={1.6} rx={0.6} fill="currentColor" /></>}
+    </svg>
+  )
+}
+
+function BoxGlyph() {
+  return (
+    <svg viewBox="0 0 18 14" width={17} height={14} aria-hidden>
+      <rect x={1.5} y={1.5} width={15} height={11} fill="none" stroke="currentColor" strokeWidth={1.4} rx={1} />
+      <rect x={4} y={4.5} width={10} height={1.5} rx={0.6} fill="currentColor" /><rect x={4} y={8} width={7} height={1.5} rx={0.6} fill="currentColor" />
+    </svg>
   )
 }
 

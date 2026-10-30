@@ -120,6 +120,8 @@ export function toMarkdown(doc: PMNode): string {
         }
         return lines.join('\n')
       }
+      // Markdown has no box: its paragraphs as a quote, so they stay together and apart.
+      case 'text_box': return (n.content || []).map((c) => '> ' + block(c)).join('\n>\n')
       case 'table': {
         const rows = (n.content || []).map((r) => (r.content || []).map((c) => (c.content || []).map((p) => mdInline(p.content)).join(' ').replace(/\|/g, '\\|')))
         if (!rows.length) return ''
@@ -165,7 +167,7 @@ export function htmlInline(nodes: PMNode[] | undefined, notes: string[]): string
   for (const n of nodes || []) {
     if (n.type === 'hard_break') { s += '<br>'; continue }
     if (n.type === 'image') {
-      const w = n.attrs?.width ? ` width="${Number(n.attrs.width)}"` : ''
+      const w = (n.attrs?.width ? ` width="${Number(n.attrs.width)}"` : '') + (n.attrs?.float === 'left' || n.attrs?.float === 'right' ? ` style="float:${n.attrs.float}"` : n.attrs?.float === 'center' ? ' style="display:block;margin:0 auto"' : '')
       const src = String(n.attrs?.src || '')
       s += /^(data:image\/|https?:)/.test(src) ? `<img src="${esc(src)}" alt="${esc(String(n.attrs?.alt || ''))}"${w}>` : ''
       continue
@@ -217,6 +219,11 @@ export function htmlBody(doc: PMNode, notes: string[] = []): string {
       case 'bullet_list': return `<ul${n.attrs?.checklist ? ' class="checklist"' : ''}>${(n.content || []).map(block).join('')}</ul>`
       case 'ordered_list': return `<ol${Number(n.attrs?.order) !== 1 && n.attrs?.order ? ` start="${Number(n.attrs.order)}"` : ''} style="list-style-type:${esc(String(n.attrs?.kind || 'decimal'))}">${(n.content || []).map(block).join('')}</ol>`
       case 'list_item': return `<li${n.attrs?.checked != null ? ` data-checked="${n.attrs.checked}"` : ''}>${n.attrs?.checked != null ? (n.attrs.checked ? '☑ ' : '☐ ') : ''}${(n.content || []).map((c, i) => (i === 0 && c.type === 'paragraph' ? htmlInline(c.content, notes) : block(c))).join('')}</li>`
+      case 'text_box': {
+        const f = n.attrs?.float
+        const st = [n.attrs?.width ? `width:${Number(n.attrs.width)}px` : '', f === 'left' || f === 'right' ? `float:${f}` : f === 'center' ? 'margin:0 auto' : '', /^#[0-9a-f]{3,8}$/i.test(String(n.attrs?.fill || '')) ? `background:${n.attrs!.fill}` : '', n.attrs?.border === false ? '' : 'border:1px solid #7a8a81', 'padding:4pt 6pt'].filter(Boolean).join(';')
+        return `<aside style="${st}">${(n.content || []).map(block).join('')}</aside>`
+      }
       case 'table': return `<table>${(n.content || []).map(block).join('')}</table>`
       case 'table_row': return `<tr>${(n.content || []).map(block).join('')}</tr>`
       case 'table_cell': case 'table_header': {

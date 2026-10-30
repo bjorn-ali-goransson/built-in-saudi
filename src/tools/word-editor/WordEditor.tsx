@@ -297,6 +297,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
   }, [state])
   const inTable = !!state && isInTable(state)
   const img = state ? C.selectedImage(state) : null
+  const box = state ? C.textBoxAt(state) : null
 
   const openLink = () => {
     const v = viewRef.current
@@ -355,12 +356,15 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
       const a = im.node.attrs
       const width = p.width === undefined ? a.width : p.width
       const height = p.width === undefined ? a.height : p.width && a.width && a.height ? Math.round((p.width * a.height) / a.width) : null
-      const tr = st.tr.setNodeMarkup(im.pos, undefined, { ...a, width, height, alt: p.alt ?? a.alt })
+      const tr = st.tr.setNodeMarkup(im.pos, undefined, { ...a, width, height, alt: p.alt ?? a.alt, float: p.float === undefined ? a.float : p.float })
       tr.setSelection(NodeSelection.create(tr.doc, im.pos))
       d?.(tr)
       return true
     }),
     pictureDelete: () => run((st, d) => { const im = C.selectedImage(st); if (!im) return false; d?.(st.tr.delete(im.pos, im.pos + im.node.nodeSize)); return true }),
+    textBox: () => run(C.insertTextBox),
+    textBoxPatch: (p) => run(C.setTextBox(p)),
+    textBoxDelete: () => run(C.unwrapTextBox),
   }
 
   // Page count: measured, not paginated. The page view draws a boundary every page-height.
@@ -435,7 +439,8 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
     >
       <style>{WD_CSS}</style>
       <WordRibbon s={s} tab={tab} onTab={setTab} fmt={fmt} act={act} readOnly={readOnly} inTable={inTable}
-        picture={img ? { width: img.node.attrs.width, alt: img.node.attrs.alt || '' } : null}
+        picture={img ? { width: img.node.attrs.width, alt: img.node.attrs.alt || '', float: img.node.attrs.float } : null}
+        textBox={box ? { float: box.node.attrs.float, border: box.node.attrs.border } : null}
         page={{ width: page.width, height: page.height, margins: page.margins.left, landscape: !!page.landscape }} rtl={!!meta.rtl} zoom={zoom} outline={outlineOpen} pageView={pageView} />
       {findOpen && <FindBar s={s} replace={findOpen.replace} count={findState.ranges.length} index={findState.i} readOnly={readOnly} message={findState.msg}
         onSearch={search} onStep={step} onReplace={replaceOne} onReplaceAll={replaceAll} onClose={closeFind} />}

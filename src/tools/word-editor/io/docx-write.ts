@@ -13,6 +13,9 @@
 //    so a bold Arabic word with only w:b comes out plain.
 //  - xml:space="preserve" on every text run, or Word eats the space between two.
 //  - A code block is one paragraph per LINE; Word breaks on paragraphs, not \n.
+//  - A floating picture is a wp:anchor, whose children are a SEQUENCE (Word
+//    calls the file damaged otherwise), and a text box is a DrawingML shape in
+//    an mc:AlternateContent whose Requires prefix must be declared on the root.
 import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu } from '../../../lib/office/opc'
 import { x, raw, xmlDoc, stripInvalidXmlChars, type XChild, type Xml } from '../../../lib/xml'
 import type { PMNode, PMMark, WordData } from '../model'
@@ -27,8 +30,10 @@ const CT = {
   header: 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
   footer: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml',
 }
+const WPS = 'http://schemas.microsoft.com/office/word/2010/wordprocessingShape'
 const W_ATTRS = {
   'xmlns:w': NS.w, 'xmlns:r': NS.r, 'xmlns:wp': NS.wp, 'xmlns:a': NS.a, 'xmlns:pic': NS.pic,
+  'xmlns:mc': NS.mc, 'xmlns:wps': WPS,
 }
 const TWIP_PER_MM = 1440 / 25.4
 const RTL_CH = /[֐-ࣿיִ-﷿ﹰ-﻿]/
@@ -179,16 +184,62 @@ class Writer {
     const cy = pxToEmu(hpx)
     const id = this.drawId++
     const alt = String(n.attrs?.alt || '')
+    const graphic = x('a:graphic', null, x('a:graphicData', { uri: 'http://schemas.openxmlformats.org/drawingml/2006/picture' },
+      x('pic:pic', null,
+        x('pic:nvPicPr', null, x('pic:cNvPr', { id, name: `Picture ${id}`, descr: alt || undefined }), x('pic:cNvPicPr')),
+        x('pic:blipFill', null, x('a:blip', { 'r:embed': rid }), x('a:stretch', null, x('a:fillRect'))),
+        x('pic:spPr', null, x('a:xfrm', null, x('a:off', { x: 0, y: 0 }), x('a:ext', { cx, cy })), x('a:prstGeom', { prst: 'rect' }, x('a:avLst'))))))
+    const docPr = x('wp:docPr', { id, name: `Picture ${id}`, descr: alt || undefined })
+    const locks = x('wp:cNvGraphicFramePr', null, x('a:graphicFrameLocks', { noChangeAspect: 1 }))
+    const float = n.attrs?.float as string | null | undefined
+    if (float) return x('w:r', null, x('w:drawing', null, this.anchor(float, cx, cy, docPr, locks, graphic)))
     return x('w:r', null, x('w:drawing', null,
-      x('wp:inline', { distT: 0, distB: 0, distL: 0, distR: 0 },
-        x('wp:extent', { cx, cy }),
-        x('wp:docPr', { id, name: `Picture ${id}`, descr: alt || undefined }),
-        x('wp:cNvGraphicFramePr', null, x('a:graphicFrameLocks', { noChangeAspect: 1 })),
-        x('a:graphic', null, x('a:graphicData', { uri: 'http://schemas.openxmlformats.org/drawingml/2006/picture' },
-          x('pic:pic', null,
-            x('pic:nvPicPr', null, x('pic:cNvPr', { id, name: `Picture ${id}`, descr: alt || undefined }), x('pic:cNvPicPr')),
-            x('pic:blipFill', null, x('a:blip', { 'r:embed': rid }), x('a:stretch', null, x('a:fillRect'))),
-            x('pic:spPr', null, x('a:xfrm', null, x('a:off', { x: 0, y: 0 }), x('a:ext', { cx, cy })), x('a:prstGeom', { prst: 'rect' }, x('a:avLst')))))))))
+      x('wp:inline', { distT: 0, distB: 0, distL: 0, distR: 0 }, x('wp:extent', { cx, cy }), docPr, locks, graphic)))
+  }
+
+  /** A floating object, set to one side of the column with the text running beside it. */
+  anchor(float: string, cx: number, cy: number, docPr: Xml, locks: Xml | null, graphic: Xml): Xml {
+    const gap = pxToEmu(12)
+    const side = float === 'right' ? 'right' : float === 'center' ? 'center' : 'left'
+    return x('wp:anchor', {
+      distT: pxToEmu(2), distB: pxToEmu(6), distL: side === 'right' ? gap : 0, distR: side === 'left' ? gap : 0,
+      simplePos: 0, relativeHeight: 251658240 + this.drawId, behindDoc: 0, locked: 0, layoutInCell: 1, allowOverlap: 1,
+    },
+      x('wp:simplePos', { x: 0, y: 0 }),
+      x('wp:positionH', { relativeFrom: 'column' }, x('wp:align', null, side)),
+      x('wp:positionV', { relativeFrom: 'paragraph' }, x('wp:posOffset', null, '0')),
+      x('wp:extent', { cx, cy }),
+      x('wp:effectExtent', { l: 0, t: 0, r: 0, b: 0 }),
+      side === 'center' ? x('wp:wrapTopAndBottom') : x('wp:wrapSquare', { wrapText: 'bothSides' }),
+      docPr, locks, graphic)
+  }
+
+  /** A text box: its own paragraphs in a DrawingML shape, anchored in a paragraph. */
+  async textBox(n: PMNode): Promise<Xml> {
+    const page = this.data.page
+    const colPx = ((page.landscape ? Math.max(page.width, page.height) : page.width) - page.margins.left - page.margins.right) * (96 / 25.4)
+    const wpx = Math.min(colPx, Number(n.attrs?.width) || Math.round(colPx / 3))
+    // The height is a starting size; spAutoFit lets Word grow the box to its text.
+    const lines = (n.content || []).reduce((k, b) => k + Math.max(1, Math.ceil(plainOf(b).length / Math.max(8, wpx / 7))), 0)
+    const hpx = Math.max(24, lines * 22 + 12)
+    const cx = pxToEmu(wpx)
+    const cy = pxToEmu(hpx)
+    const id = this.drawId++
+    const fill = n.attrs?.fill as string | null | undefined
+    const inner = await this.blocks(n.content)
+    const shape = x('wps:wsp', null,
+      x('wps:cNvSpPr', { txBox: 1 }),
+      x('wps:spPr', null,
+        x('a:xfrm', null, x('a:off', { x: 0, y: 0 }), x('a:ext', { cx, cy })),
+        x('a:prstGeom', { prst: 'rect' }, x('a:avLst')),
+        fill ? x('a:solidFill', null, x('a:srgbClr', { val: hex(fill) })) : x('a:noFill'),
+        n.attrs?.border === false ? x('a:ln', null, x('a:noFill')) : x('a:ln', { w: 9525 }, x('a:solidFill', null, x('a:srgbClr', { val: '7A8A81' })))),
+      x('wps:txbx', null, x('w:txbxContent', null, inner.length ? inner : x('w:p'))),
+      x('wps:bodyPr', { rot: 0, vert: 'horz', wrap: 'square', lIns: 91440, tIns: 45720, rIns: 91440, bIns: 45720, anchor: 't' }, x('a:spAutoFit')))
+    const graphic = x('a:graphic', null, x('a:graphicData', { uri: WPS }, shape))
+    const docPr = x('wp:docPr', { id, name: `Text Box ${id}` })
+    return x('w:r', null, x('mc:AlternateContent', null, x('mc:Choice', { Requires: 'wps' },
+      x('w:drawing', null, this.anchor(String(n.attrs?.float || 'center'), cx, cy, docPr, x('wp:cNvGraphicFramePr'), graphic)))))
   }
 
   // ---- blocks -------------------------------------------------------------------------
@@ -216,7 +267,19 @@ class Writer {
 
   async blocks(nodes: PMNode[] | undefined, ctx: { ilvl?: number; numId?: number } = {}): Promise<XChild[]> {
     const out: XChild[] = []
-    for (const n of nodes || []) out.push(...(await this.block(n, ctx)))
+    // A text box is anchored IN a paragraph: the one it sits before, when there is
+    // one, so it adds no empty line of its own; otherwise a paragraph to hold it.
+    let held: Xml[] = []
+    for (const n of nodes || []) {
+      if (n.type === 'text_box') { held.push(await this.textBox(n)); continue }
+      const xs = await this.block(n, ctx)
+      if (held.length && (n.type === 'paragraph' || n.type === 'heading') && xs.length) {
+        xs[0] = intoParagraph(xs[0] as Xml, held.map((h) => h.s).join(''))
+        held = []
+      } else if (held.length) { out.push(x('w:p', null, held)); held = [] }
+      out.push(...xs)
+    }
+    if (held.length) out.push(x('w:p', null, held))
     return out
   }
 
@@ -497,4 +560,12 @@ export async function writeDocx(data: WordData, meta: { title?: string } = {}): 
   writeDocProps(w, { title: meta.title, app: 'Built in Saudi — Document Editor' })
   void raw
   return { blob: await w.toBlob(DOCX_MIME), loss: [...wr.loss].map(([what, count]) => ({ what, count })) }
+}
+
+function plainOf(n: PMNode): string { return n.text ?? (n.content || []).map(plainOf).join('') }
+/** Put runs at the start of a built w:p, after its properties. */
+function intoParagraph(p: Xml, runs: string): Xml {
+  if (p.s === '<w:p/>') return raw(`<w:p>${runs}</w:p>`)
+  const end = p.s.startsWith('<w:p><w:pPr') ? p.s.indexOf('</w:pPr>') + '</w:pPr>'.length : '<w:p>'.length
+  return raw(p.s.slice(0, end) + runs + p.s.slice(end))
 }

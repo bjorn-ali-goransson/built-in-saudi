@@ -38,6 +38,13 @@ export const WD_CSS = `
 [data-wd-page] .ProseMirror .selectedCell::after{z-index:2;position:absolute;content:"";inset:0;background:#0b6e4f22;pointer-events:none}
 [data-wd-page] .ProseMirror .wd-img{position:relative;display:inline-block;max-width:100%;line-height:0}
 [data-wd-page] .ProseMirror .wd-img img{max-width:100%;height:auto;display:inline-block}
+[data-wd-page] .ProseMirror .wd-img[data-float=left],[data-wd-page] .ProseMirror .wd-textbox[data-float=left]{float:left;margin:2pt 12pt 6pt 0}
+[data-wd-page] .ProseMirror .wd-img[data-float=right],[data-wd-page] .ProseMirror .wd-textbox[data-float=right]{float:right;margin:2pt 0 6pt 12pt}
+[data-wd-page] .ProseMirror .wd-img[data-float=center]{display:block;width:fit-content;margin:6pt auto}
+[data-wd-page] .ProseMirror .wd-textbox{box-sizing:border-box;max-width:100%;border:1px solid #7a8a81;padding:4pt 6pt;margin:6pt 0;position:relative}
+[data-wd-page] .ProseMirror .wd-textbox[data-border="0"]{border-color:transparent}
+[data-wd-page] .ProseMirror .wd-textbox[data-float=center]{margin:6pt auto}
+[data-wd-page] .ProseMirror .wd-textbox>:last-child{margin-bottom:0}
 [data-wd-page] .ProseMirror .wd-img-selected img{outline:2px solid #0b6e4f;outline-offset:1px}
 [data-wd-page] .ProseMirror .wd-img-handle{display:none;position:absolute;inset-inline-end:-6px;bottom:-6px;width:12px;height:12px;background:#0b6e4f;border:2px solid #fff;border-radius:2px;cursor:nwse-resize;touch-action:none}
 [data-wd-page] .ProseMirror .wd-img-selected .wd-img-handle{display:block}

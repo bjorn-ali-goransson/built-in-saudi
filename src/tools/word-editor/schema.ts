@@ -92,9 +92,28 @@ const nodes: Record<string, NodeSpec> = {
   text: { group: 'inline' },
   image: {
     inline: true, group: 'inline', draggable: true,
-    attrs: { src: {}, alt: { default: null }, title: { default: null }, width: { default: null as number | null }, height: { default: null as number | null } },
-    parseDOM: [{ tag: 'img[src]', getAttrs: (d) => { const el = d as HTMLElement; return { src: el.getAttribute('src'), alt: el.getAttribute('alt'), title: el.getAttribute('title'), width: +(el.getAttribute('width') || 0) || null, height: +(el.getAttribute('height') || 0) || null } } }],
-    toDOM: (n) => ['img', { src: n.attrs.src, alt: n.attrs.alt || '', title: n.attrs.title, ...(n.attrs.width ? { width: String(n.attrs.width) } : {}), ...(n.attrs.height ? { height: String(n.attrs.height) } : {}) }],
+    // `float`: null sits in the line like a letter; left/right let the text run
+    // beside it; center puts it on a line of its own. PHYSICAL sides, as Word's
+    // own placement is: a picture set on the right is on the right in Arabic too.
+    attrs: { src: {}, alt: { default: null }, title: { default: null }, width: { default: null as number | null }, height: { default: null as number | null }, float: { default: null as Float } },
+    parseDOM: [{ tag: 'img[src]', getAttrs: (d) => { const el = d as HTMLElement; return { src: el.getAttribute('src'), alt: el.getAttribute('alt'), title: el.getAttribute('title'), width: +(el.getAttribute('width') || 0) || null, height: +(el.getAttribute('height') || 0) || null, float: floatOf(el.dataset.float) } } }],
+    toDOM: (n) => ['img', { src: n.attrs.src, alt: n.attrs.alt || '', title: n.attrs.title, ...(n.attrs.width ? { width: String(n.attrs.width) } : {}), ...(n.attrs.height ? { height: String(n.attrs.height) } : {}), ...(n.attrs.float ? { 'data-float': n.attrs.float } : {}) }],
+  },
+  // A box of its own paragraphs, placed beside the text the way Word's text box
+  // and LibreOffice's text frame are. Its words were once kept as loose text in
+  // the paragraph; a sidebar's two paragraphs then ran into the sentence it sat
+  // beside, which is not the document anybody wrote.
+  text_box: {
+    content: 'block+', group: 'block', defining: true, isolating: true,
+    attrs: { width: { default: null as number | null }, float: { default: null as Float }, fill: { default: null as string | null }, border: { default: true } },
+    parseDOM: [{ tag: 'div.wd-textbox', getAttrs: (d) => { const el = d as HTMLElement; return { width: parseFloat(el.style.width) || null, float: floatOf(el.dataset.float), fill: /^#[0-9a-f]{3,8}$/i.test(el.dataset.fill || '') ? el.dataset.fill! : null, border: el.dataset.border !== '0' } } }],
+    toDOM: (n) => ['div', {
+      class: 'wd-textbox', 'data-testid': 'wd-textbox',
+      ...(n.attrs.float ? { 'data-float': n.attrs.float } : {}),
+      ...(n.attrs.fill ? { 'data-fill': n.attrs.fill } : {}),
+      ...(n.attrs.border ? {} : { 'data-border': '0' }),
+      style: [n.attrs.width ? `width:${n.attrs.width}px` : '', n.attrs.fill ? `background-color:${n.attrs.fill}` : ''].filter(Boolean).join(';'),
+    }, 0],
   },
   hard_break: { inline: true, group: 'inline', selectable: false, parseDOM: [{ tag: 'br' }], toDOM: () => ['br'] },
   footnote: {
@@ -119,6 +138,9 @@ const nodes: Record<string, NodeSpec> = {
     },
   }),
 }
+
+export type Float = 'left' | 'right' | 'center' | null
+export const floatOf = (v: unknown): Float => (v === 'left' || v === 'right' || v === 'center' ? v : null)
 
 const TYPE_KIND: Record<string, string> = { '1': 'decimal', a: 'lower-alpha', A: 'upper-alpha', i: 'lower-roman', I: 'upper-roman' }
 

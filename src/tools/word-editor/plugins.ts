@@ -216,6 +216,7 @@ export function imageView(view: EditorView, getPos: () => number | undefined, no
     if (cur.attrs.title) img.title = cur.attrs.title
     img.style.width = cur.attrs.width ? `${cur.attrs.width}px` : ''
     wrap.setAttribute('data-width', String(cur.attrs.width || ''))
+    if (cur.attrs.float) wrap.setAttribute('data-float', cur.attrs.float); else wrap.removeAttribute('data-float')
   }
   paint()
   handle.addEventListener('pointerdown', (e) => {

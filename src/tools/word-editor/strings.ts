@@ -1,7 +1,7 @@
 // The document editor's own words. The shared shell's are in components/office/strings.
 const en = {
   blurb: 'A word processor that runs in your browser. Open Word, OpenDocument, Markdown and text files, write with headings, lists, tables, pictures and footnotes, then save back to the same file or download it as Word. Documents stay in this browser — nothing is uploaded — and you can invite others to write with you live.',
-  home: 'Home', insert: 'Insert', layout: 'Layout', view: 'View', tableTab: 'Table', pictureTab: 'Picture',
+  home: 'Home', insert: 'Insert', layout: 'Layout', view: 'View', tableTab: 'Table', pictureTab: 'Picture', textBoxTab: 'Text box', textBox: 'Text box', wrap: 'Wrap text', inLine: 'In line with text', wrapLeft: 'Left, text beside it', wrapRight: 'Right, text beside it', wrapCenter: 'Centred, on its own line', deleteTextBox: 'Delete text box', boxFill: 'Fill', boxBorder: 'Border',
   font: 'Font', paragraph: 'Paragraph', styles: 'Styles', editing: 'Editing', pages: 'Pages', links: 'Links', illustrations: 'Illustrations', tables: 'Tables', setup: 'Page setup', headerFooter: 'Header & footer', show: 'Show', rows: 'Rows', columns: 'Columns', merge: 'Merge', cell: 'Cell',
   bold: 'Bold', italic: 'Italic', underline: 'Underline', strike: 'Strikethrough', sup: 'Superscript', sub: 'Subscript', code: 'Inline code',
   fontFamily: 'Font', fontSize: 'Font size', textColor: 'Text colour', highlight: 'Highlight', clearFmt: 'Clear formatting',
@@ -36,7 +36,7 @@ type Str = typeof en
 
 const ar: Str = {
   blurb: 'معالج نصوص يعمل في متصفحك. افتح ملفات وورد وOpenDocument وMarkdown والنصوص، واكتب بعناوين وقوائم وجداول وصور وحواشٍ، ثم احفظ في الملف نفسه أو نزّله بصيغة وورد. تبقى المستندات في هذا المتصفح ولا يُرفع شيء، ويمكنك دعوة آخرين للكتابة معك مباشرة.',
-  home: 'الرئيسية', insert: 'إدراج', layout: 'التخطيط', view: 'عرض', tableTab: 'الجدول', pictureTab: 'الصورة',
+  home: 'الرئيسية', insert: 'إدراج', layout: 'التخطيط', view: 'عرض', tableTab: 'الجدول', pictureTab: 'الصورة', textBoxTab: 'مربع النص', textBox: 'مربع نص', wrap: 'التفاف النص', inLine: 'ضمن سطر النص', wrapLeft: 'يسارًا والنص بجانبه', wrapRight: 'يمينًا والنص بجانبه', wrapCenter: 'في الوسط على سطر مستقل', deleteTextBox: 'حذف مربع النص', boxFill: 'التعبئة', boxBorder: 'الإطار',
   font: 'الخط', paragraph: 'الفقرة', styles: 'الأنماط', editing: 'التحرير', pages: 'الصفحات', links: 'الروابط', illustrations: 'الرسوم', tables: 'الجداول', setup: 'إعداد الصفحة', headerFooter: 'الرأس والتذييل', show: 'إظهار', rows: 'الصفوف', columns: 'الأعمدة', merge: 'الدمج', cell: 'الخلية',
   bold: 'غامق', italic: 'مائل', underline: 'تسطير', strike: 'يتوسطه خط', sup: 'مرتفع', sub: 'منخفض', code: 'شيفرة',
   fontFamily: 'الخط', fontSize: 'حجم الخط', textColor: 'لون النص', highlight: 'تظليل', clearFmt: 'مسح التنسيق',
@@ -80,7 +80,8 @@ const LOSS_AR: Record<string, string> = {
   'embedded objects and charts': 'الكائنات المضمّنة والمخططات',
   'embedded objects': 'الكائنات المضمّنة',
   'equations (kept as plain text)': 'المعادلات (بقيت نصًا عاديًا)',
-  'floating pictures (placed in the text)': 'الصور العائمة (وُضعت داخل النص)',
+  'drawn shapes (lines, arrows, empty boxes)': 'الأشكال المرسومة (الخطوط والأسهم والمربعات الفارغة)',
+  'grouped shapes (their text is kept)': 'الأشكال المجمّعة (بقي نصها)',
   'linked (not embedded) pictures': 'الصور المرتبطة (غير المضمّنة)',
   'multiple text columns': 'الأعمدة النصية المتعددة',
   'pictures beyond 60MB in total': 'الصور التي تتجاوز ٦٠ ميغابايت إجمالًا',
@@ -89,7 +90,7 @@ const LOSS_AR: Record<string, string> = {
   'pictures in the header or footer': 'الصور في الرأس أو التذييل',
   'pictures linked from the web (not embedded)': 'صور مرتبطة من الويب (غير مضمّنة)',
   'section breaks (the first page setup is kept)': 'فواصل المقاطع (بقي إعداد الصفحة الأول)',
-  'text boxes and shapes (their text is kept)': 'مربعات النص والأشكال (بقي نصها)',
+  'pictures behind or in front of text (placed beside it)': 'الصور خلف النص أو أمامه (وُضعت بجانبه)',
   'tracked changes (accepted as they stand)': 'تعقب التغييرات (قُبلت كما هي)',
   'formatting (Markdown carries headings, lists, links, tables and emphasis only)': 'التنسيق (يحمل Markdown العناوين والقوائم والروابط والجداول والتوكيد فقط)',
   'all formatting, pictures and tables (plain text)': 'كل التنسيق والصور والجداول (نص عادي)',

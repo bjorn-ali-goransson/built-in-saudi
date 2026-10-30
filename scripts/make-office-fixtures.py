@@ -247,6 +247,40 @@ def word_libreoffice():
             shutil.copy(os.path.join(t, 'lo-source.' + fmt), os.path.join(WD, name))
 
 
+def word_floating():
+    """A picture floated right and a two-paragraph text box floated left, as
+    LibreOffice writes them: DrawingML in an mc:Choice with a VML Fallback in
+    .docx, and graphic styles in .odt. floating-vml.docx keeps only the VML
+    branch, which is how Word 2007 wrote the same thing."""
+    import base64, re, zipfile
+    b = base64.b64encode(png(40, 30)).decode()
+    fodt = f'''<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.text">
+<office:automatic-styles>
+<style:style style:name="frR" style:family="graphic"><style:graphic-properties style:wrap="parallel" style:horizontal-pos="right" style:horizontal-rel="paragraph" style:vertical-pos="top" style:vertical-rel="paragraph" fo:margin-left="0.2cm"/></style:style>
+<style:style style:name="frL" style:family="graphic"><style:graphic-properties style:wrap="parallel" style:horizontal-pos="left" style:horizontal-rel="paragraph" style:vertical-pos="top" style:vertical-rel="paragraph" fo:background-color="#fff2cc" fo:border="0.5pt solid #000000" fo:padding="0.1cm"/></style:style>
+</office:automatic-styles>
+<office:body><office:text>
+<text:p>Before the picture.</text:p>
+<text:p><draw:frame draw:style-name="frR" draw:name="Logo" text:anchor-type="paragraph" svg:width="3cm" svg:height="2.25cm"><draw:image><office:binary-data>{b}</office:binary-data></draw:image><svg:title>Company logo</svg:title></draw:frame>This paragraph wraps around a picture floated to the right of the text column, the way a newsletter places a logo.</text:p>
+<text:p><draw:frame draw:style-name="frL" draw:name="Box" text:anchor-type="paragraph" svg:width="5cm"><draw:text-box fo:min-height="2cm"><text:p>Key figure</text:p><text:p>Revenue rose twelve percent.</text:p></draw:text-box></draw:frame>This paragraph sits beside a text box floated to the left, a sidebar with two paragraphs of its own.</text:p>
+<text:p>After everything.</text:p>
+</office:text></office:body></office:document>'''
+    with tempfile.TemporaryDirectory() as t:
+        src = os.path.join(t, 'floating.fodt')
+        open(src, 'w', encoding='utf-8').write(fodt)
+        for filt, ext in (('docx:MS Word 2007 XML', 'docx'), ('odt', 'odt')):
+            subprocess.run(['soffice', '--headless', '--convert-to', filt, '--outdir', t, src], check=True, capture_output=True, timeout=120)
+            shutil.copy(os.path.join(t, 'floating.' + ext), os.path.join(WD, 'floating.' + ext))
+    zi = zipfile.ZipFile(os.path.join(WD, 'floating.docx'))
+    with zipfile.ZipFile(os.path.join(WD, 'floating-vml.docx'), 'w', zipfile.ZIP_DEFLATED) as zo:
+        for it in zi.infolist():
+            d = zi.read(it.filename)
+            if it.filename == 'word/document.xml':
+                d = re.sub(r'<mc:AlternateContent><mc:Choice Requires="wps">.*?</mc:Choice><mc:Fallback>(.*?)</mc:Fallback></mc:AlternateContent>', r'\1', d.decode(), flags=re.S).encode()
+            zo.writestr(it, d)
+
+
 def pptx_python():
     """A deck from python-pptx's default template: real masters, layouts, theme and placeholders."""
     from pptx import Presentation
@@ -327,6 +361,7 @@ def main():
         print('LibreOffice slides fixtures skipped:', e, file=sys.stderr)
     try:
         word_libreoffice()
+        word_floating()
     except Exception as e:  # noqa
         print('LibreOffice word fixtures skipped:', e, file=sys.stderr)
     try:

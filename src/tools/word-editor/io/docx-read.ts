@@ -11,6 +11,7 @@
 // equations. A converter that drops things silently is the failure to avoid.
 import { Package, NS, REL, relIs, sniffImage, dataUrl, OpcError, readTitle, EMU_PER_PX } from '../../../lib/office/opc'
 import { kids, kid, attr, textOf, isEl, type XEl } from '../../../lib/xml'
+import type { Float } from '../schema'
 import { A4, type PMNode, type PMMark, type WordData, type PageSetup, type ListKind, isRtlText } from '../model'
 
 export interface Loss { what: string; count: number }
@@ -53,6 +54,9 @@ class Reader {
   counters = new Map<string, number[]>()
   images = 0
   imageBytes = 0
+  boxes = 0
+  /** The text column, in CSS pixels — what a floating object's offset is measured against. */
+  page: PageSetup = A4
 
   constructor(public pkg: Package, public main: string) {}
 
@@ -342,7 +346,11 @@ class Reader {
     const pp: ParaProps = { ...this.defaultPara, ...st.para, ...own }
     const heading = this.headingLevel(styleId, pp)
     const baseRun: RunProps = heading ? {} : { ...st.run }
-    const inlines = await this.inlines(p, partPath, baseRun)
+    const all = await this.inlines(p, partPath, baseRun)
+    // A text box is a block; it arrives inside a run, so it is lifted out and set
+    // just BEFORE the paragraph that anchors it — a float only affects what follows.
+    const boxes = all.filter((n) => n.type === '__box').map((n) => n.attrs!.node as PMNode)
+    const inlines = all.filter((n) => n.type !== '__box')
     // A page break inside a paragraph splits it in two around a page_break block.
     const segments: PMNode[][] = [[]]
     const breaks: boolean[] = []
@@ -367,6 +375,7 @@ class Reader {
     if (pp.after !== undefined) attrs.spaceAfter = pp.after
     if (pp.line && pp.line !== 1) attrs.lineHeight = pp.line
     const out: { node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[] = []
+    for (const b of boxes) out.push({ node: b })
     if (pp.pageBreakBefore) out.push({ node: { type: 'page_break' } })
     const isCode = !heading && this.styleNameIs(styleId, /code|source|preformatted|html pre/i)
     const isQuote = !heading && this.styleNameIs(styleId, /^(quote|intense quote|block text)$/i)
@@ -472,7 +481,7 @@ class Reader {
     for (const c of r.children) {
       if (!isEl(c)) continue
       if (c.ns === NS.mc && c.local === 'AlternateContent') {
-        const pick = kid(c, NS.mc, 'Fallback') || kid(c, NS.mc, 'Choice')
+        const pick = this.pickAlternate(c)
         if (pick) await this.run({ ...r, children: pick.children }, out, base, link, deleted, onField, inInstr, partPath)
         continue
       }
@@ -505,7 +514,52 @@ class Reader {
     }
   }
 
-  async image(rid: string | undefined, partPath: string, w: number, h: number, alt: string | null, out: PMNode[]) {
+  /**
+   * Which branch of an mc:AlternateContent to read. The Fallback used to win
+   * every time, and for a drawing that is the WORSE copy: Word and LibreOffice
+   * write a floating picture or a text box as DrawingML in the Choice and as
+   * legacy VML in the Fallback, and the VML is where the placement is vaguest.
+   * A Choice is taken when everything it requires is a namespace this reader
+   * understands; anything else (a w14 checkbox, a future shape) keeps the
+   * Fallback, which is what the mechanism is for.
+   */
+  pickAlternate(c: XEl): XEl | null {
+    const choice = kid(c, NS.mc, 'Choice')
+    const req = (attr(choice, 'Requires') || '').split(/\s+/).filter(Boolean)
+    if (choice && req.length && req.every((r) => r === 'wps' || r === 'wpg' || r === 'wp14')) return choice
+    return kid(c, NS.mc, 'Fallback') || choice
+  }
+
+  /** Where Word placed a floating object, as the editor's three placements. */
+  anchorFloat(a: XEl, wPx: number): Float {
+    if (kid(a, NS.wp, 'wrapTopAndBottom')) return 'center'
+    const ph = kid(a, NS.wp, 'positionH')
+    const al = textOf(kid(ph, NS.wp, 'align') as XEl).trim()
+    if (al === 'left' || al === 'inside') return 'left'
+    if (al === 'right' || al === 'outside') return 'right'
+    if (al === 'center') return 'center'
+    const off = Number(textOf(kid(ph, NS.wp, 'posOffset') as XEl) || 0) / EMU_PER_PX
+    return this.sideOf(off, wPx, attr(ph, 'relativeFrom') || 'column')
+  }
+  /** An offset from the page or the column, turned into the side it is nearer. */
+  sideOf(off: number, wPx: number, rel: string): Float {
+    const pw = (this.page.landscape ? Math.max(this.page.width, this.page.height) : this.page.width) * (96 / 25.4)
+    const ml = this.page.margins.left * (96 / 25.4)
+    const col = pw - ml - this.page.margins.right * (96 / 25.4)
+    const x = (rel === 'page' || rel === 'leftMargin' ? off - ml : off) + wPx / 2
+    if (Math.abs(x - col / 2) < col * 0.12) return 'center'
+    return x < col / 2 ? 'left' : 'right'
+  }
+
+  /** A text box's paragraphs, as a block the paragraph that holds it hands up. */
+  async textBox(content: XEl, partPath: string, attrs: { width: number | null; float: Float; fill: string | null; border: boolean }, out: PMNode[]) {
+    const blocks = await this.blocks(content, partPath)
+    if (!blocks.some((b) => plainOf(b).trim() || b.type === 'table' || hasImage(b))) { this.lose('drawn shapes (lines, arrows, empty boxes)'); return }
+    this.boxes++
+    out.push({ type: '__box', attrs: { node: { type: 'text_box', attrs, content: blocks } } })
+  }
+
+  async image(rid: string | undefined, partPath: string, w: number, h: number, alt: string | null, out: PMNode[], float: Float = null) {
     if (!rid) return
     const rel = await this.pkg.relById(partPath, rid)
     if (!rel || rel.external) { this.lose('linked (not embedded) pictures'); return }
@@ -517,44 +571,73 @@ class Reader {
     if (this.imageBytes + bytes.length > 60 * 1024 * 1024) { this.lose('pictures beyond 60MB in total'); return }
     this.imageBytes += bytes.length
     this.images++
-    out.push({ type: 'image', attrs: { src: dataUrl(bytes, kind.mime), alt, title: null, width: w ? Math.round(w) : null, height: h ? Math.round(h) : null } })
+    const attrs: Record<string, unknown> = { src: dataUrl(bytes, kind.mime), alt, title: null, width: w ? Math.round(w) : null, height: h ? Math.round(h) : null }
+    if (float) attrs.float = float
+    out.push({ type: 'image', attrs })
   }
 
   async drawing(d: XEl, out: PMNode[], partPath: string) {
     const holder = kid(d, NS.wp, 'inline') || kid(d, NS.wp, 'anchor')
     if (!holder) return
-    if (holder.local === 'anchor') this.lose('floating pictures (placed in the text)')
     const ext = kid(holder, NS.wp, 'extent')
     const w = Number(attr(ext, 'cx') || 0) / EMU_PER_PX
     const h = Number(attr(ext, 'cy') || 0) / EMU_PER_PX
+    // A floating object keeps its side. What cannot come across is LAYERING: a
+    // picture behind or in front of the text sits beside it here instead.
+    const float = holder.local === 'anchor' ? this.anchorFloat(holder, w) : null
+    if (holder.local === 'anchor' && kid(holder, NS.wp, 'wrapNone')) this.lose('pictures behind or in front of text (placed beside it)')
     const docPr = kid(holder, NS.wp, 'docPr')
     const alt = attr(docPr, 'descr') || attr(docPr, 'title') || null
     const gd = kid(kid(holder, NS.a, 'graphic'), NS.a, 'graphicData')
     const uri = attr(gd, 'uri') || ''
     if (/chart/.test(uri)) { this.lose('charts'); return }
     if (/diagram/.test(uri)) { this.lose('SmartArt diagrams'); return }
-    if (/wordprocessingShape|wps/.test(uri)) {
-      // A text box: keep its words, as paragraphs would lose their place.
-      this.lose('text boxes and shapes (their text is kept)')
+    if (/wordprocessingGroup/.test(uri)) {
+      // A group of shapes is a drawing, not a box: its words are kept as text.
+      this.lose('grouped shapes (their text is kept)')
       const t = this.plain(gd!).trim()
       if (t) out.push({ type: 'text', text: ' ' + t + ' ' })
       return
     }
+    if (/wordprocessingShape/.test(uri)) {
+      const wsp = gd!.children.find((c) => isEl(c) && c.local === 'wsp') as XEl | undefined
+      const txbx = wsp && findLocal(wsp, 'txbxContent')
+      if (!txbx) { this.lose('drawn shapes (lines, arrows, empty boxes)'); return }
+      const spPr = wsp.children.find((c) => isEl(c) && c.local === 'spPr') as XEl | undefined
+      const fillHex = attr(findLocal(spPr && (spPr.children.find((c) => isEl(c) && c.local === 'solidFill') as XEl), 'srgbClr'), 'val')
+      const ln = spPr && (spPr.children.find((c) => isEl(c) && c.local === 'ln') as XEl | undefined)
+      const border = !!ln && !ln.children.some((c) => isEl(c) && c.local === 'noFill')
+      await this.textBox(txbx, partPath, { width: w ? Math.round(w) : null, float: float ?? 'center', fill: fillHex && /^[0-9a-f]{6}$/i.test(fillHex) ? '#' + fillHex.toLowerCase() : null, border }, out)
+      return
+    }
     const pic = kid(gd, NS.pic, 'pic')
     const blip = kid(kid(pic, NS.pic, 'blipFill'), NS.a, 'blip')
-    await this.image(attr(blip, 'embed', this.R) ?? attr(blip, 'embed', NS.rStrict), partPath, w, h, alt, out)
+    await this.image(attr(blip, 'embed', this.R) ?? attr(blip, 'embed', NS.rStrict), partPath, w, h, alt, out, float)
   }
 
   async vml(el: XEl, out: PMNode[], partPath: string) {
     const find = (e: XEl): XEl | null => { for (const c of e.children) { if (!isEl(c)) continue; if (c.local === 'imagedata') return c; const f = find(c); if (f) return f } return null }
     const img = find(el)
+    const shape = findLocal(el, 'shape') || findLocal(el, 'rect') || findLocal(el, 'roundrect')
+    const style = attr(shape, 'style') || ''
+    const px = (k: string) => { const m = style.match(new RegExp('(?:^|;)\\s*' + k + ':\\s*(-?[\\d.]+)(pt|px|in|cm|mm)?')); if (!m) return 0; const v = +m[1]; return m[2] === 'in' ? v * 96 : m[2] === 'px' ? v : m[2] === 'cm' ? v * 96 / 2.54 : m[2] === 'mm' ? v * 96 / 25.4 : v * (96 / 72) }
+    // Legacy VML: absolute position means floating, and mso-position-horizontal names the side.
+    const vmlFloat = (wPx: number): Float => {
+      if (!/position:\s*absolute/.test(style)) return null
+      const side = style.match(/mso-position-horizontal:\s*([a-z]+)/)?.[1]
+      if (side === 'left' || side === 'inside') return 'left'
+      if (side === 'right' || side === 'outside') return 'right'
+      if (side === 'center') return 'center'
+      return this.sideOf(px('margin-left'), wPx, style.match(/mso-position-horizontal-relative:\s*([a-z-]+)/)?.[1] === 'page' ? 'page' : 'column')
+    }
+    const txbx = findLocal(el, 'txbxContent')
     if (img) {
-      const shape = el.children.find((c) => isEl(c) && c.local === 'shape') as XEl | undefined
-      const style = attr(shape, 'style') || ''
-      const px = (k: string) => { const m = style.match(new RegExp(k + ':\\s*([\\d.]+)(pt|px|in)?')); if (!m) return 0; const v = +m[1]; return m[2] === 'in' ? v * 96 : m[2] === 'px' ? v : v * (96 / 72) }
-      await this.image(attr(img, 'id', this.R), partPath, px('width'), px('height'), attr(img, 'title') || null, out)
+      await this.image(attr(img, 'id', this.R), partPath, px('width'), px('height'), attr(img, 'title') || null, out, vmlFloat(px('width')))
     } else if (el.local === 'object') this.lose('embedded objects')
-    else this.lose('text boxes and shapes (their text is kept)')
+    else if (txbx) {
+      const fill = attr(shape, 'fillcolor')
+      await this.textBox(txbx, partPath, { width: px('width') ? Math.round(px('width')) : null, float: vmlFloat(px('width')) ?? 'center', fill: fill && /^#[0-9a-f]{6}$/i.test(fill) && attr(shape, 'filled') !== 'f' ? fill.toLowerCase() : null, border: attr(shape, 'stroked') !== 'f' }, out)
+    } else this.lose('drawn shapes (lines, arrows, empty boxes)')
   }
 
   async table(t: XEl, partPath: string): Promise<PMNode> {
@@ -709,11 +792,12 @@ export async function readDocx(buf: ArrayBuffer): Promise<DocxImport> {
   }
   const body = r.w(root, 'body')
   if (!body) throw new OpcError('missing-part', 'no body')
-  const content = await r.blocks(body, main)
   const sect = r.w(body, 'sectPr')
+  const page = r.pageSetup(sect)
+  r.page = page
+  const content = await r.blocks(body, main)
   const sections = findAllLocal(body, 'sectPr').length
   if (sections > 1) r.lose('section breaks (the first page setup is kept)', sections - 1)
-  const page = r.pageSetup(sect)
   const header = await r.headerFooter(sect, 'headerReference')
   const footer = await r.headerFooter(sect, 'footerReference')
   const paras = content.filter((n) => n.type === 'paragraph' || n.type === 'heading')
@@ -731,3 +815,11 @@ function findAllLocal(e: XEl, local: string, out: XEl[] = []): XEl[] {
   for (const c of e.children) if (isEl(c)) { if (c.local === local) out.push(c); findAllLocal(c, local, out) }
   return out
 }
+
+function findLocal(e: XEl | null | undefined, local: string): XEl | null {
+  if (!e) return null
+  for (const c of e.children) if (isEl(c)) { if (c.local === local) return c; const f = findLocal(c, local); if (f) return f }
+  return null
+}
+function plainOf(n: PMNode): string { return n.text ?? (n.content || []).map(plainOf).join('') }
+function hasImage(n: PMNode): boolean { return n.type === 'image' || (n.content || []).some(hasImage) }

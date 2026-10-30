@@ -13,6 +13,7 @@
 import { zipEntries, readEntry } from '../../../lib/unzip'
 import { parseXml, kids, attr, textOf, isEl, type XEl } from '../../../lib/xml'
 import { sniffImage, dataUrl, OpcError } from '../../../lib/office/opc'
+import type { Float } from '../schema'
 import { A4, type PMNode, type PMMark, type WordData, type PageSetup, isRtlText } from '../model'
 import type { Loss } from './docx-read'
 
@@ -30,7 +31,8 @@ const NS = {
 
 interface TextProps { b?: boolean; i?: boolean; u?: boolean; s?: boolean; color?: string; bg?: string; size?: number; font?: string; sup?: boolean; sub?: boolean }
 interface ParaProps { align?: string; rtl?: boolean; before?: number; after?: number; indent?: number; firstLine?: number; breakBefore?: boolean }
-interface OStyle { name: string; family: string; parent?: string; text: TextProps; para: ParaProps; display?: string; listStyle?: string; outline?: number }
+interface Graphic { wrap?: string; hpos?: string; fill?: string; stroke?: boolean }
+interface OStyle { name: string; family: string; parent?: string; text: TextProps; para: ParaProps; graphic?: Graphic; display?: string; listStyle?: string; outline?: number }
 interface ListLevel { bullet: boolean; fmt: string; start: number }
 
 const len = (v: string | undefined): number | undefined => {
@@ -63,7 +65,15 @@ class OdtReader {
           const tp = kids(c, NS.style, 'text-properties')[0]
           const pp = kids(c, NS.style, 'paragraph-properties')[0]
           const ol = attr(c, 'default-outline-level', NS.style)
+          const gp = kids(c, NS.style, 'graphic-properties')[0]
+          const fill = attr(gp, 'background-color', NS.fo) || (attr(gp, 'fill', NS.draw) === 'solid' ? attr(gp, 'fill-color', NS.draw) : undefined)
+          const graphic: Graphic | undefined = gp ? {
+            wrap: attr(gp, 'wrap', NS.style), hpos: attr(gp, 'horizontal-pos', NS.style),
+            fill: fill && /^#[0-9a-f]{6}$/i.test(fill) ? fill.toLowerCase() : undefined,
+            stroke: attr(gp, 'stroke', NS.draw) ? attr(gp, 'stroke', NS.draw) !== 'none' : !!attr(gp, 'border', NS.fo) && attr(gp, 'border', NS.fo) !== 'none',
+          } : undefined
           this.styles.set(name, {
+            graphic,
             name, family: attr(c, 'family', NS.style) || '', parent: attr(c, 'parent-style-name', NS.style),
             display: attr(c, 'display-name', NS.style), listStyle: attr(c, 'list-style-name', NS.style),
             text: this.textProps(tp), para: this.paraProps(pp), outline: ol ? +ol : undefined,
@@ -146,6 +156,22 @@ class OdtReader {
     while (cur && !seen.has(cur) && out.length < 20) { seen.add(cur); const s = this.styles.get(cur); if (!s) break; out.unshift(s); cur = s.parent }
     return out
   }
+  /**
+   * Where a frame sits. A frame anchored as a character is in the line; one
+   * anchored to the paragraph or the page floats to its horizontal position,
+   * and a frame that does not let text run beside it gets a line of its own.
+   */
+  frameFloat(frame: XEl): Float {
+    const anchor = attr(frame, 'anchor-type', NS.text)
+    if (anchor === 'as-char' || !anchor) return null
+    const g: Graphic = Object.assign({}, ...this.chain(attr(frame, 'style-name', NS.draw)).map((s) => s.graphic || {}))
+    if (g.wrap === 'none') return 'center'
+    if (g.wrap === 'run-through') this.lose('pictures behind or in front of text (placed beside it)')
+    const h = g.hpos
+    return h === 'right' || h === 'outside' ? 'right' : h === 'center' ? 'center' : 'left'
+  }
+  graphic(frame: XEl): Graphic { return Object.assign({}, ...this.chain(attr(frame, 'style-name', NS.draw)).map((s) => s.graphic || {})) }
+
   text(name: string | undefined): TextProps { return Object.assign({}, ...this.chain(name).map((s) => s.text)) }
   para(name: string | undefined): ParaProps { return Object.assign({}, ...this.chain(name).map((s) => s.para)) }
   displayNames(name: string | undefined): string[] { return this.chain(name).map((s) => (s.display || s.name).replace(/_20_/g, ' ')) }
@@ -196,11 +222,16 @@ class OdtReader {
             const w = len(attr(c, 'width', NS.svg))
             const h = len(attr(c, 'height', NS.svg))
             const title = kids(c, NS.svg, 'title')[0] || kids(c, NS.svg, 'desc')[0]
-            out.push({ type: 'image', attrs: { src: dataUrl(bytes, kind.mime), alt: title ? textOf(title) : null, title: null, width: w ? Math.round(w * 4 / 3) : null, height: h ? Math.round(h * 4 / 3) : null } })
+            const float = this.frameFloat(c)
+            out.push({ type: 'image', attrs: { src: dataUrl(bytes, kind.mime), alt: title ? textOf(title) : null, title: null, width: w ? Math.round(w * 4 / 3) : null, height: h ? Math.round(h * 4 / 3) : null, ...(float ? { float } : {}) } })
           } else this.lose('pictures in a format browsers cannot show (EMF, WMF, TIFF)')
         } else if (kids(c, NS.draw, 'text-box')[0]) {
-          this.lose('text boxes and shapes (their text is kept)')
-          push(' ' + textOf(c).trim() + ' ', base)
+          // A text frame is a box of paragraphs; the paragraph that holds it lifts it out.
+          const inner = this.blocks(kids(c, NS.draw, 'text-box')[0])
+          const w = len(attr(c, 'width', NS.svg))
+          const g = this.graphic(c)
+          if (inner.some((b) => plainOf(b).trim())) out.push({ type: '__box', attrs: { node: { type: 'text_box', attrs: { width: w ? Math.round(w * 4 / 3) : null, float: this.frameFloat(c) ?? 'center', fill: g.fill || null, border: !!g.stroke }, content: inner } } })
+          else this.lose('drawn shapes (lines, arrows, empty boxes)')
         } else if (kids(c, NS.draw, 'object')[0]) this.lose('embedded objects and charts')
       } else if (c.ns === NS.draw) this.lose('drawings and shapes')
       else if (c.ns === NS.office && c.local === 'annotation') this.lose('comments')
@@ -226,7 +257,10 @@ class OdtReader {
       if (c.ns === NS.text && (c.local === 'p' || c.local === 'h')) {
         const sn = attr(c, 'style-name', NS.text)
         const base = this.text(sn)
-        const content = this.inline(c, {}, undefined)
+        const all = this.inline(c, {}, undefined)
+        // A text box is a block; set it just before the paragraph it was anchored in.
+        for (const n of all) if (n.type === '__box') out.push(n.attrs!.node as PMNode)
+        const content = all.filter((n) => n.type !== '__box')
         if (this.para(sn).breakBefore) out.push({ type: 'page_break' })
         const names = this.displayNames(sn)
         const level = c.local === 'h' ? Math.min(6, Math.max(1, +(attr(c, 'outline-level', NS.text) || 1))) : 0
@@ -355,3 +389,5 @@ export async function readOdt(buf: ArrayBuffer): Promise<{ data: WordData; loss:
     title,
   }
 }
+
+function plainOf(n: PMNode): string { return n.text ?? (n.content || []).map(plainOf).join('') }

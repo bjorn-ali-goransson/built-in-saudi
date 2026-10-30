@@ -203,6 +203,75 @@ test('opening .docx and .odt written by LibreOffice: a list that starts at 3, an
   }
 })
 
+test('a floating picture and a text box from LibreOffice keep their place, and nothing is reported lost', async ({ page: p }) => {
+  for (const f of ['floating.docx', 'floating.odt']) {
+    await p.goto('/en/apps/word-editor/')
+    await p.getByTestId('office-file-input').setInputFiles(FIX + f)
+    await expect(editor(p)).toBeVisible({ timeout: 20_000 })
+    // This is the report that used to list both of these as lost.
+    await expect(p.getByTestId('office-loss')).toHaveCount(0)
+    const box = editor(p).getByTestId('wd-textbox')
+    await expect(box).toHaveCount(1)
+    await expect(box.locator('p')).toHaveText(['Key figure', 'Revenue rose twelve percent.'])
+    expect(await box.evaluate((el) => getComputedStyle(el).float)).toBe('left')
+    expect(await p.getByTestId('wd-image').evaluate((el) => getComputedStyle(el).float)).toBe('right')
+    // The text RUNS BESIDE the box: the paragraph after it starts on the same line, to its right.
+    const b = (await box.boundingBox())!
+    const para = editor(p).locator('p', { hasText: 'This paragraph sits beside' })
+    const r = await para.evaluate((el) => { const rg = document.createRange(); rg.setStart(el.firstChild!.firstChild || el.firstChild!, 0); rg.setEnd(el.firstChild!.firstChild || el.firstChild!, 1); const q = rg.getBoundingClientRect(); return { x: q.x, y: q.y } })
+    expect(r.x).toBeGreaterThan(b.x + b.width - 1)
+    expect(r.y).toBeLessThan(b.y + b.height)
+    await p.getByTestId('office-back').click()
+  }
+})
+
+test('a text box: inserted, written in, set to the left, and saved and exported as a box', async ({ page: p }) => {
+  await newBlank(p)
+  await p.keyboard.type('Body text beside the box.')
+  await p.getByTestId('tab-insert').click()
+  await p.getByTestId('wd-insert-textbox').click()
+  await p.keyboard.type('Sidebar note')
+  await expect(p.getByTestId('tab-textbox')).toBeVisible()
+  await p.getByTestId('tab-textbox').click()
+  await p.getByTestId('wd-textbox-wrap-left').click()
+  await expect(p.getByTestId('wd-textbox-wrap-left')).toHaveAttribute('aria-pressed', 'true')
+  const d = await storedDoc(p)
+  const box = nodes(d.data.doc, 'text_box')
+  expect(box).toHaveLength(1)
+  expect(box[0].attrs!.float).toBe('left')
+  expect(text(box[0])).toBe('Sidebar note')
+  // The body paragraph is not inside the box.
+  expect(d.data.doc.content!.map(text)).toEqual(['Sidebar note', 'Body text beside the box.'])
+  await p.getByTestId('office-file').click()
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.getByTestId('office-export-docx').click()])
+  const xml = zipPart(readFileSync(await dl.path()), 'word/document.xml')
+  expect(xml).toMatch(/<w:txbxContent>.*Sidebar note.*<\/w:txbxContent>/)
+  expect(xml).toMatch(/<wp:positionH relativeFrom="column"><wp:align>left<\/wp:align>/)
+  // Deleting the box keeps what was written in it.
+  await editor(p).getByTestId('wd-textbox').locator('p').click()
+  await p.getByTestId('tab-textbox').click()
+  await p.getByTestId('wd-textbox-delete').click()
+  await expect(editor(p).getByTestId('wd-textbox')).toHaveCount(0)
+  const after = await storedDoc(p)
+  expect(after.data.doc.content!.map(text)).toEqual(['Sidebar note', 'Body text beside the box.'])
+})
+
+test('a picture can float to one side with the text beside it, and is saved that way', async ({ page: p }) => {
+  await newBlank(p)
+  await p.keyboard.type('Words that should wrap around the picture on its left side.')
+  await p.keyboard.press('Home')
+  await p.getByTestId('wd-picture-input').setInputFiles('e2e/fixtures/diff-a.png')
+  await p.getByTestId('wd-image').click()
+  await p.getByTestId('tab-picture').click()
+  await p.getByTestId('wd-picture-wrap-right').click()
+  await expect(p.getByTestId('wd-picture-wrap-right')).toHaveAttribute('aria-pressed', 'true')
+  expect(await p.getByTestId('wd-image').evaluate((el) => getComputedStyle(el).float)).toBe('right')
+  const d = await storedDoc(p)
+  expect(nodes(d.data.doc, 'image')[0].attrs!.float).toBe('right')
+  await p.getByTestId('wd-picture-wrap-inline').click()
+  expect(nodes((await storedDoc(p)).data.doc, 'image')[0].attrs!.float).toBeNull()
+})
+
 test('a legacy .doc is named, not opened as junk', async ({ page: p }) => {
   await p.goto('/en/apps/word-editor/')
   await p.getByTestId('office-file-input').setInputFiles({ name: 'old.docx', mimeType: 'application/octet-stream', buffer: Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]) })

@@ -334,3 +334,42 @@ export function findInDoc(doc: Node, q: string, opts: { matchCase?: boolean; who
   })
   return out
 }
+
+/** The text box the selection is inside, if any. */
+export function textBoxAt(state: EditorState): { node: Node; pos: number } | null {
+  const { $from } = state.selection
+  for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === S.nodes.text_box) return { node: $from.node(d), pos: $from.before(d) }
+  return null
+}
+
+/** A text box after the current block, holding one empty paragraph with the cursor in it. */
+export const insertTextBox: Command = (state, dispatch) => {
+  if (textBoxAt(state)) return false
+  const box = S.nodes.text_box.create({ width: 220, float: 'right' }, S.nodes.paragraph.create())
+  const { $from } = state.selection
+  // Before the current top-level block, so it floats beside that block's text.
+  const at = $from.depth ? $from.before(1) : 0
+  if (dispatch) {
+    const tr = state.tr.insert(at, box)
+    tr.setSelection(TextSelection.create(tr.doc, at + 2))
+    dispatch(tr.scrollIntoView())
+  }
+  return true
+}
+
+export function setTextBox(attrs: Record<string, unknown>): Command {
+  return (state, dispatch) => {
+    const b = textBoxAt(state)
+    if (!b) return false
+    if (dispatch) dispatch(state.tr.setNodeMarkup(b.pos, undefined, { ...b.node.attrs, ...attrs }))
+    return true
+  }
+}
+
+/** Remove the box, keeping its paragraphs where it stood. */
+export const unwrapTextBox: Command = (state, dispatch) => {
+  const b = textBoxAt(state)
+  if (!b) return false
+  if (dispatch) dispatch(state.tr.replaceWith(b.pos, b.pos + b.node.nodeSize, b.node.content).scrollIntoView())
+  return true
+}
