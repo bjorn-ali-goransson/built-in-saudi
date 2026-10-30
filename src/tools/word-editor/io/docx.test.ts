@@ -348,3 +348,67 @@ describe('helpers', () => {
     expect(imageSize(new Uint8Array([1, 2, 3]))).toBeNull()
   })
 })
+
+describe('layout the generators use: rules, tab stops, bare and percentage tables, group bars (layout.docx)', () => {
+  const blocks = async (buf: ArrayBuffer) => (await readDocx(buf)).data.doc.content || []
+  const byText = (bs: PMNode[], t: string) => bs.find((b) => plainText(b).includes(t))!
+
+  it('every paragraph says its spacing, and where the file says nothing it is Word\'s single, 0, 0', async () => {
+    const bs = await blocks(load('layout.docx'))
+    expect(byText(bs, 'End.').attrs).toMatchObject({ lineHeight: 1, spaceBefore: 0, spaceAfter: 0 })
+    expect(byText(bs, 'Experience').attrs).toMatchObject({ spaceBefore: 12, spaceAfter: 4 })
+  })
+
+  it('a bottom rule, a right tab stop and a 13pt indent come in exactly', async () => {
+    const bs = await blocks(load('layout.docx'))
+    expect(byText(bs, 'Experience').attrs!.borders).toEqual({ b: { w: 0.5, c: '#d3d8dd', s: 6 } })
+    expect(byText(bs, 'Senior Analyst').attrs!.tabs).toEqual([{ pos: 451.3, align: 'right' }])
+    expect(byText(bs, 'Hand-made').attrs!.indent).toBeCloseTo(260 / 720, 2)
+  })
+
+  it('a heading keeps its style\'s colour and size', async () => {
+    const h = byText(await blocks(load('layout.docx')), 'Blue heading')
+    expect(h.type).toBe('heading')
+    const marks = (h.content![0].marks || []).map((m) => m.attrs || {})
+    expect(marks).toEqual(expect.arrayContaining([expect.objectContaining({ color: '#2e74b5', size: 16 })]))
+  })
+
+  it('a table with nil borders has no grid; a percentage table with placeholder columns spreads across the page', async () => {
+    const tables = (await blocks(load('layout.docx'))).filter((b) => b.type === 'table')
+    expect(tables[0].attrs!.grid).toBe(false)
+    expect(tables[1].attrs!.grid).toBe(true)
+    // Its 5pt placeholder columns are not kept as widths.
+    expect(tables[1].content![0].content!.every((c) => c.attrs!.colwidth === null)).toBe(true)
+  })
+
+  it('a group that is a filled box with words on it becomes a filled text box', async () => {
+    const box = (await blocks(load('layout.docx'))).find((b) => b.type === 'text_box')!
+    expect(box.attrs).toMatchObject({ fill: '#7f7f7f', border: false, float: 'center' })
+    expect(plainText(box)).toBe('PROFILE SUMMARY')
+  })
+
+  it('all of it is written back: read(write(read(x))) holds every property', async () => {
+    const a = await readDocx(load('layout.docx'))
+    const { blob } = await writeDocx(a.data)
+    const bs = await blocks(await blob.arrayBuffer())
+    expect(byText(bs, 'Experience').attrs!.borders).toEqual({ b: { w: 0.5, c: '#d3d8dd', s: 6 } })
+    expect(byText(bs, 'Senior Analyst').attrs!.tabs).toEqual([{ pos: 451.3, align: 'right' }])
+    expect(byText(bs, 'End.').attrs).toMatchObject({ lineHeight: 1, spaceBefore: 0, spaceAfter: 0 })
+    expect(byText(bs, 'Hand-made').attrs!.indent).toBeCloseTo(260 / 720, 2)
+    const tables = bs.filter((b) => b.type === 'table')
+    expect(tables.map((t) => t.attrs!.grid)).toEqual([false, true])
+    expect(bs.find((b) => b.type === 'text_box')!.attrs).toMatchObject({ fill: '#7f7f7f' })
+  })
+
+  it.skipIf(!hasSoffice)('LibreOffice puts the tabbed date at the right margin and draws no lines on the bare table', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wd-'))
+    const f = join(dir, 'layout.docx')
+    writeFileSync(f, Buffer.from(await (await writeDocx((await readDocx(load('layout.docx'))).data)).blob.arrayBuffer()))
+    execFileSync('soffice', [`-env:UserInstallation=file://${dir}/lo-profile`, '--headless', '--convert-to', 'pdf', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
+    const bbox = execFileSync('pdftotext', ['-bbox', join(dir, 'layout.pdf'), '-']).toString()
+    const x = (w: string) => Number(new RegExp(`xMin="([\\d.]+)"[^>]*>${w}<`).exec(bbox)?.[1])
+    // A4 is 595pt wide with 72pt margins: the date ends near 523pt, far right of its line's start.
+    expect(x('Present')).toBeGreaterThan(450)
+    expect(x('Senior')).toBeLessThan(100)
+  })
+})

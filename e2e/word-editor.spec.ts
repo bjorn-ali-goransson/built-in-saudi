@@ -544,3 +544,32 @@ test.describe('live co-writing, with the owner as the truth', () => {
     await expect(guest.getByTestId('office-status')).toBeVisible()
   })
 })
+
+test('layout from the file: a right tab stop puts the date at the margin, on screen and in print; rules and bare tables as drawn', async ({ page: p }) => {
+  await p.goto('/en/apps/word-editor/')
+  await p.getByTestId('office-file-input').setInputFiles('src/tools/word-editor/io/__fixtures__/layout.docx')
+  await expect(p.getByTestId('office-title')).toBeVisible({ timeout: 20_000 })
+  const ok = p.getByTestId('office-loss-ok')
+  if (await ok.isVisible().catch(() => false)) await ok.click()
+  const ed = p.getByTestId('wd-editor')
+  // The date's right edge is the text column's right edge (the paragraph's), within a few pixels.
+  const gap = async (root: import('@playwright/test').Locator) => root.locator('p[data-tabs]').first().evaluate((el) => {
+    const r = document.createRange(); const t = el.lastChild!; r.selectNodeContents(t.nodeType === 3 ? t : el)
+    const text = [...el.querySelectorAll('*'), el].map((n) => [...n.childNodes].filter((c) => c.nodeType === 3 && /Present/.test(c.textContent || ''))).flat()[0]!
+    r.selectNodeContents(text)
+    return Math.abs(el.getBoundingClientRect().right - r.getBoundingClientRect().right) / (el.getBoundingClientRect().width || 1)
+  })
+  await expect.poll(() => gap(ed), { timeout: 5_000 }).toBeLessThan(0.02)
+  // The heading rule is drawn, and the bare table's lines are only guides.
+  expect(await ed.locator('p', { hasText: 'Experience' }).evaluate((el) => getComputedStyle(el).borderBottomStyle)).toBe('solid')
+  expect(await ed.locator('table.wd-nogrid td').first().evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe('dashed')
+  // The section bar is a filled box.
+  expect(await ed.locator('.wd-textbox').first().evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(127, 127, 127)')
+  // In print: the same date at the same margin, and no lines on the bare table.
+  await p.getByTestId('office-file').click()
+  await p.getByTestId('office-print').click()
+  const f = p.frameLocator('[data-testid="office-preview-frame"]')
+  await expect(f.locator('.pv-pg').first()).toBeVisible({ timeout: 20_000 })
+  expect(await gap(f.locator('.pv-pg').first())).toBeLessThan(0.02)
+  expect(await f.locator('table.nogrid td').first().evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe('none')
+})

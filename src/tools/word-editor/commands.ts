@@ -98,7 +98,7 @@ export function blockAttr(state: EditorState, attr: string): unknown {
   return state.selection.$from.parent.attrs[attr]
 }
 
-const CARRY = ['align', 'dir', 'indent', 'lineHeight', 'spaceBefore', 'spaceAfter', 'firstLine']
+const CARRY = ['align', 'dir', 'indent', 'lineHeight', 'spaceBefore', 'spaceAfter', 'firstLine', 'borders', 'tabs']
 /** Change the block type keeping its direction and alignment (a heading in Arabic stays right to left). */
 export function setStyle(style: string): Command {
   return (state, dispatch) => {
@@ -189,7 +189,7 @@ export function indent(dir: 1 | -1): Command {
     if (!blocks.length) return false
     if (dispatch) {
       const tr = state.tr
-      for (const b of blocks) tr.setNodeMarkup(b.pos, undefined, { ...b.node.attrs, indent: Math.max(0, Math.min(8, (b.node.attrs.indent || 0) + dir)) })
+      for (const b of blocks) tr.setNodeMarkup(b.pos, undefined, { ...b.node.attrs, indent: Math.max(0, Math.min(8, dir > 0 ? Math.floor(b.node.attrs.indent || 0) + 1 : Math.ceil(b.node.attrs.indent || 0) - 1)) })
       dispatch(tr)
     }
     return true

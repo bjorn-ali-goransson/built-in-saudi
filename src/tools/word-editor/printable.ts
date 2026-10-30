@@ -4,6 +4,7 @@
 import { office } from '../../lib/office/officeClient'
 import { paginate, type Printable } from '../../components/office/print'
 import type { WordData } from './model'
+import { layoutTabs } from './tabLayout'
 
 // The exported page's own spacing is a web page's; on paper it follows the editor's.
 const PRINT_CSS = 'p{margin:0 0 6pt}li>p{margin:0 0 2pt}h1,h2,h3,h4,h5,h6{margin:12pt 0 6pt}'
@@ -14,6 +15,6 @@ export async function printable(data: WordData, title: string): Promise<Printabl
   const css = [...d.querySelectorAll('style')].map((s) => s.textContent || '').join('\n') + '\n' + PRINT_CSS
   return paginate({
     title, css, body: d.body.innerHTML, dir: data.rtl ? 'rtl' : 'ltr', lang: data.lang,
-    page: data.page, header: data.header, footer: data.footer,
+    page: data.page, header: data.header, footer: data.footer, prepare: layoutTabs,
   })
 }

@@ -30,6 +30,11 @@ export interface FlowInput {
   /** Running header and footer; `{page}` and `{pages}` are filled in per page. */
   header?: string
   footer?: string
+  /**
+   * Layout the browser cannot do from CSS alone (tab stops), run on the laid-out flow before it is
+   * measured and cut; its result is what every page shows.
+   */
+  prepare?: (root: HTMLElement) => void
 }
 /** Pages already made (a slide each): placed one per sheet, scaled to fit it. */
 export interface FixedInput { title: string; css?: string; pages: string[]; page: { width: number; height: number }; dir?: 'ltr' | 'rtl' }
@@ -93,6 +98,8 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
     d.close()
     await settled(d)
     const root = d.getElementById('pv-m')!
+    let body = input.body
+    if (input.prepare) { input.prepare(root); body = root.innerHTML }
     // Wider than the page: scale down to fit rather than lose the right-hand columns.
     const natural = Math.max(cw, root.scrollWidth)
     const scale = input.fitWidth && natural > cw + 1 ? cw / natural : 1
@@ -144,7 +151,7 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
       return `<div class="pv-pg" data-page="${i + 1}">`
         + (hdr ? `<div class="pv-run" style="top:${(m.top * MM) / 2 - 8}px;padding:0 ${m.left * MM}px" dir="auto">${hdr}</div>` : '')
         + `<div class="pv-area" style="left:${m.left * MM}px;top:${m.top * MM}px;width:${cw}px;height:${Math.ceil((sl.end - sl.start) * scale)}px">`
-        + `<div class="pv-flow" dir="${input.dir}" style="width:${scale === 1 ? cw : natural}px;transform:scale(${scale}) translateY(${-sl.start}px)">${input.body}</div></div>`
+        + `<div class="pv-flow" dir="${input.dir}" style="width:${scale === 1 ? cw : natural}px;transform:scale(${scale}) translateY(${-sl.start}px)">${body}</div></div>`
         + (ftr ? `<div class="pv-run" style="bottom:${(m.bottom * MM) / 2 - 8}px;padding:0 ${m.left * MM}px" dir="auto">${ftr}</div>` : '')
         + '</div>'
     })

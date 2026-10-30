@@ -7934,6 +7934,33 @@ All four used to be in the loss ledger; a real workbook carried all four at once
 - **A `filterColumn` with no criteria is not a filter** — Excel writes one just to
   hide a button. Real value lists open applied (`savedFilter`) and are written back.
 
+### Real documents, measured by somebody else's software (`evals/office/`)
+
+`npx vite-node evals/office/roundtrip.ts <corpus> <out>` reads every .docx/.xlsx/.pptx in a
+directory with our readers, writes it back unedited AND with an edit, and reads that back;
+`python3 -I evals/office/compare.py <out>` renders original and ours with LibreOffice (its
+own profile per conversion), and compares text recall, page count and per-page pixels, and
+opens ours with python-docx/openpyxl/python-pptx. **The corpus is real people's files and
+is never in the repo**; the tools are. Our own loop (read → write → read) losing a word is
+OUR bug; the third-party half catches what our own reader cannot see. Run on 66 real files,
+it took Word page-count mismatches **11 → 5** and Word text recall **96.7% → 98.2%**:
+
+- **Every imported paragraph says its spacing.** Unset meant OUR default (1.15, 8pt after),
+  where Word's for a file that says nothing is single, 0, 0 — every such document loosened.
+- **Paragraph borders, tab stops, borderless tables** are in the model now (`borders`,
+  `tabs` on a block, `grid` on a table). A right tab at the margin is how every CV puts its
+  dates flush right. CSS has no tab stops, so `tabLayout.ts` MEASURES and sizes each tab,
+  in the editor (a decoration plugin) and in print (`paginate`'s `prepare`) — one function.
+  prosemirror-tables draws tables through its own view, so the no-lines class is set in a
+  `TableView` subclass, not the schema's `toDOM`.
+- **A percentage-width table with placeholder 5pt grid columns** (pandoc, Google exports)
+  was kept literally — a sliver. **A group that is a filled box with words** (PDF-to-Word
+  section bars) is a filled text box. **Indents are exact** (a 13pt hand-made bullet indent
+  rounded to 0), one step is Word's 36pt everywhere, and **headings keep their style's look**.
+- **The reference renderer has quirks of its own**: LibreOffice reads a docDefaults line
+  spacing with no `lineRule` as "at least", where the spec says auto. When ours differs only
+  there, the file is right; check the XML before "fixing" toward the renderer.
+
 ### Slides are checked against LibreOffice's render of real decks
 
 A dense diagram deck (344 freeforms, nested icon groups, elbow connectors) was

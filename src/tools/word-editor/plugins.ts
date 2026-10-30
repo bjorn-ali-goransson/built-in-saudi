@@ -7,10 +7,11 @@ import { baseKeymap, chainCommands, exitCode, toggleMark } from 'prosemirror-com
 import { inputRules, wrappingInputRule, textblockTypeInputRule, InputRule, ellipsis, emDash } from 'prosemirror-inputrules'
 import { splitListItem } from 'prosemirror-schema-list'
 import { undo, redo, history } from 'prosemirror-history'
-import { goToNextCell, tableEditing, columnResizing } from 'prosemirror-tables'
+import { goToNextCell, tableEditing, columnResizing, TableView } from 'prosemirror-tables'
 import { dropCursor } from 'prosemirror-dropcursor'
 import { gapCursor } from 'prosemirror-gapcursor'
 import { schema } from './schema'
+import { layoutTabs } from './tabLayout'
 import { indent, insertBlock, setBlockAttr, setStyle, toggleList, toggleChecked } from './commands'
 
 const S = schema
@@ -186,6 +187,49 @@ export function find(): Plugin {
   })
 }
 
+/**
+ * Tab stops: each tab in a paragraph that has stops is wrapped in a span, and after every render
+ * tabLayout.ts sizes the spans to reach their stops. Measured, because CSS has no tab stops.
+ * The sizing is a style change ProseMirror would read as an edit, so its observer is paused for it.
+ */
+export function tabStops(): Plugin {
+  let frame = 0
+  return new Plugin({
+    props: {
+      decorations(state) {
+        const out: Decoration[] = []
+        state.doc.descendants((node, pos) => {
+          if (!node.isTextblock) return true
+          if (!(node.attrs.tabs as unknown[] | null)?.length) return false
+          node.forEach((child, off) => {
+            if (!child.isText) return
+            const t = child.text!
+            for (let i = t.indexOf('\t'); i >= 0; i = t.indexOf('\t', i + 1)) out.push(Decoration.inline(pos + 1 + off + i, pos + 2 + off + i, { class: 'wd-tab' }))
+          })
+          return false
+        })
+        return out.length ? DecorationSet.create(state.doc, out) : null
+      },
+    },
+    view(view) {
+      const run = () => {
+        cancelAnimationFrame(frame)
+        frame = requestAnimationFrame(() => {
+          const obs = (view as unknown as { domObserver?: { stop(): void; start(): void } }).domObserver
+          obs?.stop()
+          try { layoutTabs(view.dom) } finally { obs?.start() }
+        })
+      }
+      run()
+      // A narrower window or a font arriving moves text without a transaction.
+      const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(run)
+      ro?.observe(view.dom)
+      void (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready.then(run)
+      return { update: run, destroy: () => { cancelAnimationFrame(frame); ro?.disconnect() } }
+    },
+  })
+}
+
 /** "Start writing…" on an empty document. */
 export function placeholder(text: () => string): Plugin {
   return new Plugin({
@@ -261,4 +305,11 @@ function zoomOf(el: HTMLElement): number {
   return z ? +z : 1
 }
 
-export const corePlugins = () => [history(), dropCursor({ color: '#0b6e4f' }), gapCursor(), columnResizing(), tableEditing()]
+/** prosemirror-tables draws a table through its own view, past the schema's toDOM: the no-lines class goes on here. */
+class GridTableView extends TableView {
+  constructor(node: import('prosemirror-model').Node, minWidth: number) { super(node, minWidth); this.mark(node) }
+  override update(node: import('prosemirror-model').Node) { const ok = super.update(node); if (ok) this.mark(node); return ok }
+  private mark(node: import('prosemirror-model').Node) { this.table.classList.toggle('wd-nogrid', node.attrs.grid === false) }
+}
+
+export const corePlugins = () => [history(), dropCursor({ color: '#0b6e4f' }), gapCursor(), columnResizing({ View: GridTableView }), tableEditing()]

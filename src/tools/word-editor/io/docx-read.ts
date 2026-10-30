@@ -11,7 +11,7 @@
 // equations. A converter that drops things silently is the failure to avoid.
 import { Package, NS, REL, relIs, sniffImage, dataUrl, OpcError, readTitle, EMU_PER_PX } from '../../../lib/office/opc'
 import { kids, kid, attr, textOf, isEl, type XEl } from '../../../lib/xml'
-import type { Float } from '../schema'
+import type { Float, Borders, TabStop } from '../schema'
 import { A4, type PMNode, type PMMark, type WordData, type PageSetup, type ListKind, isRtlText } from '../model'
 
 export interface Loss { what: string; count: number }
@@ -26,8 +26,9 @@ interface RunProps {
 interface ParaProps {
   align?: string; bidi?: boolean; left?: number; firstLine?: number; before?: number; after?: number; line?: number
   numId?: string; ilvl?: number; pageBreakBefore?: boolean; outline?: number
+  borders?: Borders; tabs?: TabStop[]
 }
-interface Style { id: string; name: string; type: string; basedOn?: string; run: RunProps; para: ParaProps }
+interface Style { id: string; name: string; type: string; basedOn?: string; run: RunProps; para: ParaProps; grid?: boolean }
 interface Level { fmt: string; start: number; text: string }
 interface Numbering { abstracts: Map<string, Level[]>; nums: Map<string, { abs: string; starts: Map<number, number> }> }
 
@@ -141,7 +142,57 @@ class Reader {
     if (this.on(this.w(pPr, 'pageBreakBefore'))) p.pageBreakBefore = true
     const ol = this.val(this.w(pPr, 'outlineLvl'))
     if (ol !== undefined) p.outline = Number(ol)
+    const bdr = this.w(pPr, 'pBdr')
+    if (bdr) p.borders = this.borders(bdr)
+    const tabs = this.w(pPr, 'tabs')
+    if (tabs) {
+      p.tabs = this.ws(tabs, 'tab').flatMap((t): TabStop[] => {
+        const v = attr(t, 'val', this.W) || 'left'
+        const pos = Number(attr(t, 'pos', this.W))
+        if (v === 'clear' || v === 'bar' || !Number.isFinite(pos)) return []
+        const align = v === 'right' || v === 'end' ? 'right' : v === 'center' ? 'center' : v === 'decimal' ? 'decimal' : 'left'
+        const leader = attr(t, 'leader', this.W)
+        return [{ pos: round1(pos / 20), align, ...(leader && leader !== 'none' ? { leader: leader === 'dot' || leader === 'middleDot' ? 'dot' : leader === 'hyphen' ? 'hyphen' : 'line' } : {}) }]
+      })
+    }
     return p
+  }
+  /** The four sides of a paragraph's border; a side that is none or nil is absent. Widths in points. */
+  borders(bdr: XEl): Borders {
+    const out: Borders = {}
+    const side = (k: string) => {
+      const e = this.w(bdr, k)
+      const v = attr(e, 'val', this.W)
+      if (!e || !v || v === 'none' || v === 'nil') return undefined
+      const c = attr(e, 'color', this.W)
+      return { w: Math.max(0.25, Number(attr(e, 'sz', this.W) || 4) / 8), c: c && /^[0-9a-f]{6}$/i.test(c) ? '#' + c.toLowerCase() : '#000000', s: Number(attr(e, 'space', this.W) || 0), ...(v === 'double' ? { d: true } : {}) }
+    }
+    const t = side('top'), b = side('bottom'), l = side('left') ?? side('start'), r = side('right') ?? side('end')
+    if (t) out.t = t
+    if (b) out.b = b
+    if (l) out.l = l
+    if (r) out.r = r
+    return out
+  }
+  /** Whether a table draws lines: its own tblBorders, else its style's, else none (Word's "Normal Table"). */
+  tableHasGrid(tblPr: XEl | null): boolean {
+    const own = this.w(tblPr, 'tblBorders')
+    if (own) return this.anyBorder(own)
+    const st = this.val(this.w(tblPr, 'tblStyle'))
+    let cur = st
+    const seen = new Set<string>()
+    while (cur && !seen.has(cur)) {
+      seen.add(cur)
+      const s = this.styles.get(cur)
+      if (!s) break
+      if (s.grid !== undefined) return s.grid
+      cur = s.basedOn
+    }
+    // A style named like Word's own grid, missing from styles.xml, still means lines.
+    return !!st && /grid/i.test(st)
+  }
+  anyBorder(el: XEl): boolean {
+    return kids(el).some((e) => e.ns === this.W && (() => { const v = attr(e, 'val', this.W); return !!v && v !== 'none' && v !== 'nil' })())
   }
   async readStyles() {
     const rel = (await this.pkg.relsOfType(this.main, REL.styles))[0]
@@ -160,6 +211,7 @@ class Reader {
         basedOn: this.val(this.w(s, 'basedOn')),
         run: this.runProps(this.w(s, 'rPr')),
         para: this.paraProps(this.w(s, 'pPr')),
+        grid: (() => { const b = this.w(this.w(s, 'tblPr'), 'tblBorders'); return b ? this.anyBorder(b) : undefined })(),
       })
     }
   }
@@ -345,7 +397,9 @@ class Reader {
     const st = this.chain(styleId)
     const pp: ParaProps = { ...this.defaultPara, ...st.para, ...own }
     const heading = this.headingLevel(styleId, pp)
-    const baseRun: RunProps = heading ? {} : { ...st.run }
+    // A heading keeps its style's look — colour, size, face — as well as its level. Dropping it
+    // gave every imported heading this editor's house style instead of the document's own.
+    const baseRun: RunProps = { ...st.run }
     const all = await this.inlines(p, partPath, baseRun)
     // A text box is a block; it arrives inside a run, so it is lifted out and set
     // just BEFORE the paragraph that anchors it — a float only affects what follows.
@@ -369,11 +423,18 @@ class Reader {
     const text = inlines.map((n) => n.text || '').join('')
     if (pp.bidi === true || (pp.bidi === undefined && isRtlText(text))) attrs.dir = 'rtl'
     else if (pp.bidi === false && isRtlText(text)) attrs.dir = 'ltr'
-    if (pp.left && !pp.numId) attrs.indent = Math.min(8, Math.round(pp.left / 720))
+    // Exact, in half-inch steps: a 13pt indent is 0.36 of a step, and rounding it to whole steps put
+    // hand-made bullets (a typed "•" in an indented paragraph) back at the margin.
+    if (pp.left && !pp.numId) attrs.indent = Math.min(8, Math.round((pp.left / 720) * 100) / 100)
     if (pp.firstLine && !pp.numId) attrs.firstLine = Math.round(pp.firstLine / 20)
-    if (pp.before !== undefined) attrs.spaceBefore = pp.before
-    if (pp.after !== undefined) attrs.spaceAfter = pp.after
-    if (pp.line && pp.line !== 1) attrs.lineHeight = pp.line
+    // Every imported paragraph says what its spacing IS. Where the file says nothing, Word's own
+    // default applies — single, nothing before or after — and leaving it unset handed the
+    // paragraph to OUR default instead (1.15 lines, 8pt after), loosening every such document.
+    attrs.spaceBefore = pp.before ?? 0
+    attrs.spaceAfter = pp.after ?? 0
+    attrs.lineHeight = pp.line || 1
+    if (pp.borders && Object.keys(pp.borders).length) attrs.borders = pp.borders
+    if (pp.tabs?.length) attrs.tabs = pp.tabs
     const out: { node: PMNode; list?: { numId: string; ilvl: number; level: Level } }[] = []
     for (const b of boxes) out.push({ node: b })
     if (pp.pageBreakBefore) out.push({ node: { type: 'page_break' } })
@@ -593,10 +654,26 @@ class Reader {
     if (/chart/.test(uri)) { this.lose('charts'); return }
     if (/diagram/.test(uri)) { this.lose('SmartArt diagrams'); return }
     if (/wordprocessingGroup/.test(uri)) {
-      // A group of shapes is a drawing, not a box: its words are kept as text.
-      this.lose('grouped shapes (their text is kept)')
-      const t = this.plain(gd!).trim()
-      if (t) out.push({ type: 'text', text: ' ' + t + ' ' })
+      // A group is commonly a filled box with words on it — a section bar, a callout — and a
+      // PDF converted to Word is made of them. That much is a text box with a fill, which the
+      // model has; anything else drawn in the group (a rule, an arrow) is the loss.
+      const shapes: XEl[] = []
+      const collect = (e: XEl) => { for (const c of e.children) if (isEl(c)) { if (c.local === 'wsp') shapes.push(c); else if (c.local === 'grpSp' || c.local === 'wgp') collect(c) } }
+      collect(gd!)
+      const texts = shapes.map((sh) => findLocal(sh, 'txbxContent')).filter((t): t is XEl => !!t)
+      if (!texts.length) { this.lose('drawn shapes (lines, arrows, empty boxes)'); return }
+      const fillOf = (sh: XEl) => { const spPr = sh.children.find((c) => isEl(c) && c.local === 'spPr') as XEl | undefined; const v = attr(findLocal(spPr && (spPr.children.find((c) => isEl(c) && c.local === 'solidFill') as XEl), 'srgbClr'), 'val'); return v && /^[0-9a-f]{6}$/i.test(v) ? '#' + v.toLowerCase() : null }
+      const area = (sh: XEl) => { const e = findLocal(sh, 'ext'); return Number(attr(e, 'cx') || 0) * Number(attr(e, 'cy') || 0) }
+      // The fill is the biggest filled shape's — the box the words sit on — or the text box's own.
+      const bg = shapes.filter((sh) => !findLocal(sh, 'txbxContent') && fillOf(sh)).sort((a, b) => area(b) - area(a))[0]
+      const fill = (bg && fillOf(bg)) || texts.map((t) => { let p = t.parent; while (p && p.local !== 'wsp') p = p.parent; return p ? fillOf(p) : null }).find(Boolean) || null
+      const drawn = shapes.filter((sh) => !findLocal(sh, 'txbxContent') && sh !== bg).length
+      if (drawn) this.lose('lines and shapes drawn in a group (its box and text are kept)')
+      const blocks: PMNode[] = []
+      for (const t of texts) blocks.push(...(await this.blocks(t, partPath)))
+      if (!blocks.some((b) => plainOf(b).trim() || b.type === 'table' || hasImage(b))) return
+      this.boxes++
+      out.push({ type: '__box', attrs: { node: { type: 'text_box', attrs: { width: w ? Math.round(w) : null, float: float ?? 'center', fill, border: false }, content: blocks } } })
       return
     }
     if (/wordprocessingShape/.test(uri)) {
@@ -641,7 +718,12 @@ class Reader {
   }
 
   async table(t: XEl, partPath: string): Promise<PMNode> {
-    const grid = this.ws(this.w(t, 'tblGrid'), 'gridCol').map((g) => Math.round(Number(attr(g, 'w', this.W) || 0) / 15))
+    let grid = this.ws(this.w(t, 'tblGrid'), 'gridCol').map((g) => Math.round(Number(attr(g, 'w', this.W) || 0) / 15))
+    // Some writers (pandoc, Google Docs exports) give a table a PERCENTAGE width and a grid of
+    // placeholder columns a few points wide, which Word stretches. Kept literally, four 5pt
+    // columns made a table a sliver nobody could read; the page width is the honest answer.
+    const tw = this.w(this.w(t, 'tblPr'), 'tblW')
+    if ((attr(tw, 'type', this.W) === 'pct' || /%$/.test(attr(tw, 'w', this.W) || '')) && grid.reduce((a, b) => a + b, 0) < 96) grid = []
     const rows: PMNode[] = []
     // Per grid column, the cell a vertical merge started in.
     const origin = new Map<number, PMNode>()
@@ -681,7 +763,7 @@ class Reader {
       if (cells.length) rows.push({ type: 'table_row', content: cells })
     }
     if (!rows.length) return { type: 'paragraph' }
-    return { type: 'table', content: rows }
+    return { type: 'table', attrs: { grid: this.tableHasGrid(this.w(t, 'tblPr')) }, content: rows }
   }
 
   pageSetup(sect: XEl | null): PageSetup {

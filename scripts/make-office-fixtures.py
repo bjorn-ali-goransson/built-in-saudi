@@ -247,6 +247,54 @@ def word_libreoffice():
             shutil.copy(os.path.join(t, 'lo-source.' + fmt), os.path.join(WD, name))
 
 
+def word_layout():
+    """What CVs and reports use and a plain reader drops: a bottom rule under a heading (pBdr), a
+    right-aligned tab stop for dates, a layout table with NO lines, a table sized as a percentage
+    with placeholder 5pt grid columns, a section bar drawn as a group (filled box + text box), a
+    hand-made bullet in a 13pt indent, and a heading whose style is blue. Hand-written OOXML, as
+    the generators that produce these files write it; no styles part declares spacing, so Word's
+    implicit single spacing applies."""
+    import zipfile
+    W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+    def run(t, rpr=''):
+        return f'<w:r>{("<w:rPr>" + rpr + "</w:rPr>") if rpr else ""}<w:t xml:space="preserve">{t}</w:t></w:r>'
+    tab = '<w:r><w:tab/></w:r>'
+    bar = ('<w:p><w:r><mc:AlternateContent><mc:Choice Requires="wpg"><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="1" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1">'
+           '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
+           '<wp:extent cx="5486400" cy="228600"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapTopAndBottom/><wp:docPr id="7" name="Group 7"/><wp:cNvGraphicFramePr/>'
+           '<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"><wpg:wgp><wpg:cNvGrpSpPr/><wpg:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5486400" cy="228600"/><a:chOff x="0" y="0"/><a:chExt cx="5486400" cy="228600"/></a:xfrm></wpg:grpSpPr>'
+           '<wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5486400" cy="228600"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="7F7F7F"/></a:solidFill></wps:spPr><wps:bodyPr/></wps:wsp>'
+           '<wps:wsp><wps:cNvSpPr txBox="1"/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5486400" cy="228600"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></wps:spPr>'
+           '<wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val="center"/></w:pPr>' + run('PROFILE SUMMARY', '<w:b/><w:color w:val="FFFFFF"/>') + '</w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp>'
+           '</wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice></mc:AlternateContent></w:r></w:p>')
+    cell = lambda t: f'<w:tc><w:p>{run(t)}</w:p></w:tc>'
+    body = (
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr>' + run('Blue heading') + '</w:p>'
+        '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="6" w:color="D3D8DD"/></w:pBdr><w:spacing w:before="240" w:after="80"/></w:pPr>' + run('Experience') + '</w:p>'
+        '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9026"/></w:tabs></w:pPr>' + run('Senior Analyst, Acme') + tab + run('2018 – Present') + '</w:p>'
+        '<w:p><w:pPr><w:ind w:left="260"/></w:pPr>' + run('•   Hand-made bullet') + '</w:p>'
+        + bar +
+        '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr>'
+        '<w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="4500"/></w:tblGrid><w:tr>' + cell('Layout left') + cell('Layout right') + '</w:tr></w:tbl>'
+        '<w:p/>'
+        '<w:tbl><w:tblPr><w:tblW w:type="pct" w:w="100%"/><w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>'
+        '<w:tblGrid><w:gridCol w:w="100"/><w:gridCol w:w="100"/><w:gridCol w:w="100"/></w:tblGrid><w:tr>' + cell('Stored') + cell('Storage/mo') + cell('Total/mo') + '</w:tr><w:tr>' + cell('100 MB') + cell('$0.0023') + cell('~$0.008') + '</w:tr></w:tbl>'
+        '<w:p>' + run('End.') + '</w:p>'
+        '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>')
+    styles = (f'<w:styles {W}><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>'
+              '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="2E74B5"/><w:sz w:val="32"/></w:rPr></w:style></w:styles>')
+    ct = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+          '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>')
+    rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'
+    drels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'
+    with zipfile.ZipFile(os.path.join(WD, 'layout.docx'), 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('[Content_Types].xml', ct)
+        z.writestr('_rels/.rels', rels)
+        z.writestr('word/_rels/document.xml.rels', drels)
+        z.writestr('word/document.xml', f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document {W}><w:body>{body}</w:body></w:document>')
+        z.writestr('word/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + styles)
+
+
 def word_floating():
     """A picture floated right and a two-paragraph text box floated left, as
     LibreOffice writes them: DrawingML in an mc:Choice with a VML Fallback in
@@ -431,6 +479,7 @@ def pptx_libreoffice():
 
 def main():
     docx_python()
+    word_layout()
     pptx_python()
     pptx_drawn()
     try:

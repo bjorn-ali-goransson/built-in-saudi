@@ -13,18 +13,40 @@ const blockAttrs = {
   spaceBefore: { default: null as number | null },
   spaceAfter: { default: null as number | null },
   firstLine: { default: null as number | null },
+  borders: { default: null as Borders | null },
+  tabs: { default: null as TabStop[] | null },
 }
 
-type BAttrs = { align: string | null; dir: string | null; indent: number; lineHeight: number | null; spaceBefore: number | null; spaceAfter: number | null; firstLine: number | null }
+/** One side of a paragraph border: width and space in points, a colour, double or not. */
+export interface BorderSide { w: number; c: string; s: number; d?: boolean }
+export interface Borders { t?: BorderSide; b?: BorderSide; l?: BorderSide; r?: BorderSide }
+/** A tab stop, its position in points from the paragraph's start. */
+export interface TabStop { pos: number; align: 'left' | 'right' | 'center' | 'decimal'; leader?: 'dot' | 'hyphen' | 'line' }
+
+type BAttrs = { align: string | null; dir: string | null; indent: number; lineHeight: number | null; spaceBefore: number | null; spaceAfter: number | null; firstLine: number | null; borders?: Borders | null; tabs?: TabStop[] | null }
+
+/** A paragraph border as CSS: the line, and Word's "space" as padding between it and the text. Physical sides, as Word's are. */
+export function borderCss(b: Borders | null | undefined): string[] {
+  const out: string[] = []
+  if (!b) return out
+  for (const [k, side] of [['t', 'top'], ['b', 'bottom'], ['l', 'left'], ['r', 'right']] as const) {
+    const v = b[k]
+    if (!v) continue
+    out.push(`border-${side}:${v.d ? Math.max(3, v.w * 3) : v.w}pt ${v.d ? 'double' : 'solid'} ${v.c}`, `padding-${side}:${v.s}pt`)
+  }
+  return out
+}
 
 function blockStyle(a: BAttrs): string {
   const s: string[] = []
   if (a.align) s.push(`text-align:${a.align === 'left' ? 'start' : a.align === 'right' ? 'end' : a.align}`)
-  if (a.indent) s.push(`margin-inline-start:${a.indent * 2}em`)
+  // One step is Word's half inch, 36pt, so a document indented here is indented the same in Word.
+  if (a.indent) s.push(`margin-inline-start:${+(a.indent * 36).toFixed(2)}pt`)
   if (a.lineHeight) s.push(`line-height:${a.lineHeight}`)
   if (a.spaceBefore != null) s.push(`margin-top:${a.spaceBefore}pt`)
   if (a.spaceAfter != null) s.push(`margin-bottom:${a.spaceAfter}pt`)
   if (a.firstLine) s.push(`text-indent:${a.firstLine}pt`)
+  s.push(...borderCss(a.borders))
   return s.join(';')
 }
 function blockDom(tag: string, a: BAttrs): Record<string, string> {
@@ -33,6 +55,8 @@ function blockDom(tag: string, a: BAttrs): Record<string, string> {
   if (st) out.style = st
   // A paragraph with no stated direction takes it from its own first letter.
   out.dir = a.dir || 'auto'
+  // Tab stops are drawn by tabLayout.ts, which finds the paragraphs that have them by this.
+  if (a.tabs?.length) out['data-tabs'] = JSON.stringify(a.tabs)
   void tag
   return out
 }
@@ -42,7 +66,7 @@ function parseBlock(el: HTMLElement): Partial<BAttrs> {
   return {
     align: ta === 'center' || ta === 'justify' ? ta : ta === 'right' || ta === 'end' ? 'right' : ta === 'left' || ta === 'start' ? null : null,
     dir: el.getAttribute('dir') === 'rtl' ? 'rtl' : el.getAttribute('dir') === 'ltr' ? 'ltr' : null,
-    indent: ml ? Math.min(8, Math.round(ml / 32)) : 0,
+    indent: ml ? Math.min(8, Math.round((ml / 48) * 100) / 100) : 0,
   }
 }
 
@@ -182,6 +206,16 @@ const marks: Record<string, MarkSpec> = {
       return ['span', { style: s.join(';') }, 0]
     },
   },
+}
+
+// A table either draws its lines or does not — a CV's layout table has none, and drawing a grid
+// on it was the commonest visible difference from the original. No lines is shown in the editor
+// as faint guides (Word's "View Gridlines") and prints as nothing.
+nodes.table = {
+  ...nodes.table,
+  attrs: { grid: { default: true } },
+  parseDOM: [{ tag: 'table', getAttrs: (d) => ({ grid: !(d as HTMLElement).classList.contains('wd-nogrid') }) }],
+  toDOM: (n) => ['table', n.attrs.grid === false ? { class: 'wd-nogrid' } : {}, ['tbody', 0]],
 }
 
 export const schema = new Schema({ nodes, marks })

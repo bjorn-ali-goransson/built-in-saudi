@@ -2,6 +2,7 @@
 // text out. Pure string work on the document JSON, so it runs in the worker
 // and in tests alike.
 import { parseMarkdown, type Inline, type Block } from '../../../lib/markdown'
+import { borderCss, type Borders } from '../schema'
 import { emptyDoc, isRtlText, plainText, type PMNode, type PMMark, type WordData } from '../model'
 
 const inlineNodes = (inl: Inline[]): PMNode[] => inl.filter((n) => n.v).map((n): PMNode => {
@@ -173,7 +174,8 @@ export function htmlInline(nodes: PMNode[] | undefined, notes: string[]): string
       continue
     }
     if (n.type === 'footnote') { notes.push(String(n.attrs?.text || '')); s += `<sup class="fn"><a href="#fn${notes.length}" id="fnref${notes.length}">${notes.length}</a></sup>`; continue }
-    let t = esc(n.text || '')
+    // A tab is a span tabLayout.ts can size to its stop; elsewhere it is simply a tab.
+    let t = esc(n.text || '').replace(/\t/g, '<span class="wd-tab">\t</span>')
     for (const m of n.marks || []) {
       if (m.type === 'bold') t = `<strong>${t}</strong>`
       else if (m.type === 'italic') t = `<em>${t}</em>`
@@ -199,12 +201,14 @@ export function htmlInline(nodes: PMNode[] | undefined, notes: string[]): string
 function blockAttr(a: Record<string, unknown> | undefined): string {
   const st: string[] = []
   if (a?.align) st.push(`text-align:${a.align === 'left' ? 'start' : a.align === 'right' ? 'end' : a.align}`)
-  if (a?.indent) st.push(`margin-inline-start:${Number(a.indent) * 2}em`)
+  if (a?.indent) st.push(`margin-inline-start:${+(Number(a.indent) * 36).toFixed(2)}pt`)
   if (a?.lineHeight) st.push(`line-height:${a.lineHeight}`)
   if (a?.spaceBefore != null) st.push(`margin-top:${a.spaceBefore}pt`)
   if (a?.spaceAfter != null) st.push(`margin-bottom:${a.spaceAfter}pt`)
   if (a?.firstLine) st.push(`text-indent:${a.firstLine}pt`)
-  return ` dir="${a?.dir || 'auto'}"${st.length ? ` style="${st.join(';')}"` : ''}`
+  st.push(...borderCss(a?.borders as Borders | null | undefined))
+  const tabs = a?.tabs as unknown[] | null | undefined
+  return ` dir="${a?.dir || 'auto'}"${tabs?.length ? ` data-tabs="${esc(JSON.stringify(tabs))}"` : ''}${st.length ? ` style="${st.join(';')}"` : ''}`
 }
 
 export function htmlBody(doc: PMNode, notes: string[] = []): string {
@@ -224,7 +228,7 @@ export function htmlBody(doc: PMNode, notes: string[] = []): string {
         const st = [n.attrs?.width ? `width:${Number(n.attrs.width)}px` : '', f === 'left' || f === 'right' ? `float:${f}` : f === 'center' ? 'margin:0 auto' : '', /^#[0-9a-f]{3,8}$/i.test(String(n.attrs?.fill || '')) ? `background:${n.attrs!.fill}` : '', n.attrs?.border === false ? '' : 'border:1px solid #7a8a81', 'padding:4pt 6pt'].filter(Boolean).join(';')
         return `<aside style="${st}">${(n.content || []).map(block).join('')}</aside>`
       }
-      case 'table': return `<table>${(n.content || []).map(block).join('')}</table>`
+      case 'table': return `<table${n.attrs?.grid === false ? ' class="nogrid"' : ''}>${(n.content || []).map(block).join('')}</table>`
       case 'table_row': return `<tr>${(n.content || []).map(block).join('')}</tr>`
       case 'table_cell': case 'table_header': {
         const tag = n.type === 'table_header' ? 'th' : 'td'
@@ -241,7 +245,7 @@ export function htmlBody(doc: PMNode, notes: string[] = []): string {
 
 export const DOC_CSS = `body{font-family:"IBM Plex Sans Arabic",Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;color:#1b1b1b;max-width:46em;margin:2em auto;padding:0 1em}
 h1{font-size:20pt}h2{font-size:16pt}h3{font-size:14pt}h1,h2,h3,h4{color:#0b4f3a;line-height:1.25}
-table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #999;padding:4px 8px;vertical-align:top}th{background:#f2f2ee}
+table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #999;padding:4px 8px;vertical-align:top}th{background:#f2f2ee}table.nogrid td,table.nogrid th{border:0;background:none}
 blockquote{border-inline-start:3px solid #0b6e4f;margin-inline:0;padding-inline-start:1em;color:#444}
 pre{background:#f3f3f0;padding:.6em .8em;overflow:auto}img{max-width:100%;height:auto}
 .page-break{page-break-after:always;break-after:page}ul.checklist{list-style:none;padding-inline-start:1em}

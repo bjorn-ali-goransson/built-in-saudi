@@ -32,6 +32,7 @@ export const WD_CSS = `
 [data-wd-page] .ProseMirror table{border-collapse:collapse;table-layout:fixed;width:100%;overflow:hidden}
 [data-wd-page] .ProseMirror td,[data-wd-page] .ProseMirror th{border:1px solid #9aa;padding:3pt 6pt;vertical-align:top;position:relative;box-sizing:border-box;min-width:2em}
 [data-wd-page] .ProseMirror th{background:#f2f2ee;font-weight:700;text-align:start}
+[data-wd-page] .ProseMirror table.wd-nogrid td,[data-wd-page] .ProseMirror table.wd-nogrid th{border:1px dashed #dde3df;background:none}
 [data-wd-page] .ProseMirror td p,[data-wd-page] .ProseMirror th p{margin:0}
 [data-wd-page] .ProseMirror .column-resize-handle{position:absolute;inset-inline-end:-2px;top:0;bottom:0;width:4px;z-index:20;background:#0b6e4f66;pointer-events:none}
 [data-wd-page] .ProseMirror.resize-cursor{cursor:col-resize}

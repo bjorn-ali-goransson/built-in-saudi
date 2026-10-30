@@ -20,6 +20,7 @@ import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEm
 import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, raw, xmlDoc, stripInvalidXmlChars, type XChild, type Xml } from '../../../lib/xml'
 import type { PMNode, PMMark, WordData } from '../model'
+import type { Borders, BorderSide, TabStop } from '../schema'
 
 export const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const CT = {
@@ -253,7 +254,14 @@ class Writer {
     const kids: XChild[] = []
     if (style) kids.push(x('w:pStyle', { 'w:val': style }))
     if (extra.numId) kids.push(x('w:numPr', null, x('w:ilvl', { 'w:val': extra.ilvl || 0 }), x('w:numId', { 'w:val': extra.numId })))
-    if (extra.border) kids.push(x('w:pBdr', null, x('w:bottom', { 'w:val': 'single', 'w:sz': 6, 'w:space': 1, 'w:color': 'auto' })))
+    const bd = a?.borders as Borders | null | undefined
+    if (bd && (bd.t || bd.b || bd.l || bd.r)) {
+      // Schema order: top, left, bottom, right.
+      const side = (k: string, v?: BorderSide) => v ? x(`w:${k}`, { 'w:val': v.d ? 'double' : 'single', 'w:sz': Math.max(2, Math.round(v.w * 8)), 'w:space': Math.round(v.s), 'w:color': v.c.replace('#', '').toUpperCase() }) : null
+      kids.push(x('w:pBdr', null, side('top', bd.t), side('left', bd.l), side('bottom', bd.b), side('right', bd.r)))
+    } else if (extra.border) kids.push(x('w:pBdr', null, x('w:bottom', { 'w:val': 'single', 'w:sz': 6, 'w:space': 1, 'w:color': 'auto' })))
+    const tabs = a?.tabs as TabStop[] | null | undefined
+    if (tabs?.length) kids.push(x('w:tabs', null, [...tabs].sort((p, q) => p.pos - q.pos).map((t) => x('w:tab', { 'w:val': t.align, 'w:leader': t.leader === 'line' ? 'underscore' : t.leader, 'w:pos': Math.round(t.pos * 20) }))))
     const dir = a?.dir as string | null | undefined
     const rtl = dir === 'rtl' || (!dir && !!extra.rtlDefault)
     if (rtl) kids.push(x('w:bidi'))
@@ -263,7 +271,7 @@ class Writer {
     if (sb != null || sa != null || lh) kids.push(x('w:spacing', { 'w:before': sb != null ? Math.round(sb * 20) : undefined, 'w:after': sa != null ? Math.round(sa * 20) : undefined, 'w:line': lh ? Math.round(lh * 240) : undefined, 'w:lineRule': lh ? 'auto' : undefined }))
     const indent = Number(a?.indent || 0)
     const first = a?.firstLine as number | null | undefined
-    if (indent || first) kids.push(x('w:ind', { 'w:start': indent ? indent * 720 : undefined, 'w:firstLine': first && first > 0 ? Math.round(first * 20) : undefined, 'w:hanging': first && first < 0 ? Math.round(-first * 20) : undefined }))
+    if (indent || first) kids.push(x('w:ind', { 'w:start': indent ? Math.round(indent * 720) : undefined, 'w:firstLine': first && first > 0 ? Math.round(first * 20) : undefined, 'w:hanging': first && first < 0 ? Math.round(-first * 20) : undefined }))
     const al = a?.align as string | null | undefined
     // Logical alignment, written the way Word reads it: in a right-to-left
     // paragraph `left` and `right` are the start and the end.
@@ -402,8 +410,10 @@ class Writer {
       trs.push(x('w:tr', null, header ? x('w:trPr', null, x('w:tblHeader')) : null, tcs))
     }
     const rtl = !!this.data.rtl
+    // A table with no lines is written with none: without the grid style Word draws a table bare.
+    const grid = (t.attrs?.grid as boolean | undefined) !== false
     return x('w:tbl', null,
-      x('w:tblPr', null, x('w:tblStyle', { 'w:val': 'TableGrid' }), rtl ? x('w:bidiVisual') : null, x('w:tblW', { 'w:w': 0, 'w:type': 'auto' }), x('w:tblLook', { 'w:val': '04A0', 'w:firstRow': 1, 'w:lastRow': 0, 'w:firstColumn': 1, 'w:lastColumn': 0, 'w:noHBand': 0, 'w:noVBand': 1 })),
+      x('w:tblPr', null, grid ? x('w:tblStyle', { 'w:val': 'TableGrid' }) : null, rtl ? x('w:bidiVisual') : null, x('w:tblW', { 'w:w': 0, 'w:type': 'auto' }), x('w:tblLook', { 'w:val': '04A0', 'w:firstRow': 1, 'w:lastRow': 0, 'w:firstColumn': 1, 'w:lastColumn': 0, 'w:noHBand': 0, 'w:noVBand': 1 })),
       x('w:tblGrid', null, colTw.map((v) => x('w:gridCol', { 'w:w': v }))),
       trs)
   }

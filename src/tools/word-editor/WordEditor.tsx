@@ -26,7 +26,7 @@ import { schema } from './schema'
 import { emptyDoc, plainText, wordCount, type PMNode, type PageSetup, type WordData } from './model'
 import { PMCollab, collabPlugin, type Host } from './collab'
 import * as C from './commands'
-import { rules, keys, checklist, peers, find, placeholder, imageView, corePlugins, peersKey, findKey, type Peer } from './plugins'
+import { rules, keys, checklist, peers, find, placeholder, tabStops, imageView, corePlugins, peersKey, findKey, type Peer } from './plugins'
 import { WD_STR } from './strings'
 import { WordRibbon, type WdActions, type WdFormat } from './ui/WordRibbon'
 import { LinkDialog, FootnoteDialog, FindBar, type FindState } from './ui/Dialogs'
@@ -96,6 +96,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
     peers(),
     find(),
     placeholder(() => s.placeholder),
+    tabStops(),
     ...corePlugins(),
     collabPlugin(version, clientID),
   ], [clientID]) // eslint-disable-line react-hooks/exhaustive-deps
