@@ -18,6 +18,7 @@ import { RItem } from '../../components/office/Ribbon'
 import { OFFICE_STR } from '../../components/office/strings'
 import { pictureFromFile } from '../../lib/office/picture'
 import { PrintPreview } from '../../components/office/PrintPreview'
+import { pageThumbnail } from '../../components/office/print'
 import { printable } from './printable'
 import { randomId } from '../../lib/p2p/mesh'
 import { colorFor } from '../../lib/collab/session'
@@ -200,7 +201,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
   // ---- persistence ------------------------------------------------------------------
   const stored = useMemo(() => (doc ? { ...doc, title } : null), [doc, title])
   const getData = useCallback((): WordData => ({ ...metaRef.current, doc: (viewRef.current?.state.doc.toJSON() as PMNode) || initial.doc }), [initial])
-  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }) })
+  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }), renderThumb: async () => pageThumbnail(await printable(getData(), 'document')), })
 
   // ---- pictures -----------------------------------------------------------------------
   const insertPictures = useCallback(async (files: File[]) => {

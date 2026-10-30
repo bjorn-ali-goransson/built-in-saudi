@@ -41,6 +41,10 @@ const extOf = (name: string) => (name.match(/\.[a-z0-9]+$/i)?.[0] || '').toLower
  * granting it needs a click. So autosave writes to the file only while
  * permission is already held; Ctrl+S (a gesture) asks for it.
  */
+const THUMB_EVERY_MS = 8000
+/** A thumbnail drawn from the printed page, as against the kit's SVG sketch. */
+const isRendered = (t: string | undefined) => !!t && t.startsWith('data:image/jpeg')
+
 export function usePersistence<D>(opts: {
   doc: StoredDoc | null
   kit: EditorKit<D>
@@ -49,6 +53,13 @@ export function usePersistence<D>(opts: {
   /** A guest's view of somebody else's document is not saved anywhere. */
   disabled?: boolean
   onLoss?: (loss: string[], dir: 'export') => void
+  /**
+   * The first printed page as a picture, for the library. Drawn from the same
+   * paged document the print preview shows, so the card is the page — not a
+   * sketch of it. Expensive enough to throttle: made when a document is opened,
+   * then at most every THUMB_EVERY_MS while it is edited, and when it is left.
+   */
+  renderThumb?: () => Promise<string | undefined>
 }) {
   const { kit, getData, rev, disabled } = opts
   const docRef = useRef(opts.doc)
@@ -63,6 +74,10 @@ export function usePersistence<D>(opts: {
   const fileTimer = useRef<number>()
   const onLoss = useRef(opts.onLoss)
   onLoss.current = opts.onLoss
+  const renderThumb = useRef(opts.renderThumb)
+  renderThumb.current = opts.renderThumb
+  const thumbAt = useRef(0)
+  const thumbBusy = useRef<Promise<void> | null>(null)
 
   useEffect(() => { handleRef.current = opts.doc?.handle; setFileName(opts.doc?.fileName) }, [opts.doc?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,10 +85,39 @@ export function usePersistence<D>(opts: {
     const d = docRef.current
     if (!d || disabled) return
     const data = getData()
-    const next: StoredDoc = { ...d, data, updatedAt: Date.now(), bytes: estimateBytes(data), thumb: kit.thumb?.(data) ?? d.thumb, handle: handleRef.current, fileName: handleRef.current?.name }
+    // A rendered page outranks the kit's sketch; it is replaced by the next rendering, not by a sketch.
+    const thumb = isRendered(d.thumb) ? d.thumb : kit.thumb?.(data) ?? d.thumb
+    const next: StoredDoc = { ...d, data, updatedAt: Date.now(), bytes: estimateBytes(data), thumb, handle: handleRef.current, fileName: handleRef.current?.name }
     docRef.current = next
     await putDoc(next)
   }, [disabled, getData, kit])
+
+  const makeThumb = useCallback(async (force = false) => {
+    const r = renderThumb.current
+    if (!r || disabled || !docRef.current) return
+    if (thumbBusy.current) return thumbBusy.current
+    if (!force && Date.now() - thumbAt.current < THUMB_EVERY_MS) return
+    thumbAt.current = Date.now()
+    const job = (async () => {
+      try {
+        const t = await r()
+        // Read the record AFTER rendering: a save may have replaced it meanwhile.
+        const d = docRef.current
+        if (!t || !d) return
+        docRef.current = { ...d, thumb: t }
+        await putDoc(docRef.current)
+      } catch { /* a thumbnail is never worth an error */ } finally { thumbBusy.current = null }
+    })()
+    thumbBusy.current = job
+    return job
+  }, [disabled])
+
+  // Opening a document renders its card, so one imported and never edited still gets one.
+  useEffect(() => {
+    if (!docRef.current || disabled) return
+    const t = window.setTimeout(() => void makeThumb(true), 1200)
+    return () => window.clearTimeout(t)
+  }, [opts.doc?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const writeFile = useCallback(async (h: FileSystemFileHandle, ask: boolean): Promise<boolean> => {
     if (!(ask ? await ensureWritable(h) : await hasWriteAccess(h))) { setNeedsPermission(true); return false }
@@ -103,6 +147,7 @@ export function usePersistence<D>(opts: {
         }
         setStatus('saved')
         setWorkInProgress(key, false)
+        void makeThumb()
       } catch { setStatus('error') }
     }, 600)
   }, [rev]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -165,7 +210,16 @@ export function usePersistence<D>(opts: {
     return { blob, name: ensureExt(title, ext), loss }
   }, [getData, kit])
 
-  return { status, fileName, needsPermission, save, link, unlink, exportDownload, exportBlob, flush: writeIdb }
+  /** Leaving: save, and redraw the card if the page changed since it was drawn — never waiting long for that. */
+  const flush = useCallback(async () => {
+    const changed = rev !== firstRev.current
+    await writeIdb()
+    // One already being drawn is waited for too, or the library shows the old card.
+    const job = thumbBusy.current ?? (changed || !isRendered(docRef.current?.thumb) ? makeThumb(true) : null)
+    if (job) await Promise.race([job, new Promise((r) => setTimeout(r, 3000))])
+  }, [writeIdb, makeThumb, rev])
+
+  return { status, fileName, needsPermission, save, link, unlink, exportDownload, exportBlob, flush }
 }
 
 // ---- collaboration -------------------------------------------------------------

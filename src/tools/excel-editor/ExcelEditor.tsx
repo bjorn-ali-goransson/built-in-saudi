@@ -26,6 +26,7 @@ import {
 } from './actions'
 import { cellLook } from './ui/cellStyle'
 import { PrintPreview } from '../../components/office/PrintPreview'
+import { pageThumbnail } from '../../components/office/print'
 import { printable } from './printable'
 import { cellKey, parseRange, isError, type CellFormat, type ChartKind, type ChartSpec, type SheetData, type WorkbookData, type Addr } from './engine/model'
 import { stepDecimals, shownDecimals, DEFAULT_DECIMALS, type NumFmtId } from './engine/numfmt'
@@ -97,7 +98,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
   // ---- persistence ------------------------------------------------------------
   const stored = useMemo(() => (doc ? { ...doc, title } : null), [doc, title])
   const getData = useCallback(() => ({ ...model.book, active }), [model, active])
-  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }) })
+  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }), renderThumb: async () => { const sh = model.sheet(model.book.sheets[0].name); return pageThumbnail(await printable(sh, (r, c) => model.engine.value(sh.name, { row: r, col: c }), 'sheet')) }, })
 
   // ---- edits ------------------------------------------------------------------
   const run = useCallback((ops: XOp[], keepRedo = false): XOp[] | null => {

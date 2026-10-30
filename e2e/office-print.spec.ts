@@ -112,3 +112,23 @@ test.describe('on a phone', () => {
     expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   })
 })
+
+test('the library card is the first printed page, drawn — not a sketch', async ({ page: p }) => {
+  for (const [app, file] of [['word-editor', WD + 'python-docx.docx'], ['excel-editor', 'src/tools/excel-editor/io/__fixtures__/openpyxl-rich.xlsx'], ['powerpoint-editor', PP + 'python-pptx.pptx']]) {
+    await open(p, app, file)
+    await p.getByTestId('office-back').click()
+    const img = p.getByTestId('office-doc').first().locator('img')
+    await expect(img).toHaveAttribute('src', /^data:image\/jpeg;base64,/, { timeout: 10_000 })
+    // Drawn from the page: it has ink on it, not a blank white sheet.
+    const inked = await img.evaluate(async (el: HTMLImageElement) => {
+      await el.decode()
+      const c = document.createElement('canvas'); c.width = el.naturalWidth; c.height = el.naturalHeight
+      const g = c.getContext('2d')!; g.drawImage(el, 0, 0)
+      const d = g.getImageData(0, 0, c.width, c.height).data
+      let dark = 0
+      for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 600) dark++
+      return dark
+    })
+    expect(inked, app).toBeGreaterThan(50)
+  }
+})

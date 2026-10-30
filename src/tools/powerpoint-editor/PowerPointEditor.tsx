@@ -25,6 +25,7 @@ import { TextEditor, type TextEditorApi } from './TextEditor'
 import { Present, openAudienceWindow } from './Present'
 import { SlideView } from './render'
 import { PrintPreview } from '../../components/office/PrintPreview'
+import { pageThumbnail } from '../../components/office/print'
 import { printable } from './printable'
 import { markOn, tsAt, paraAttr, toggle as pmToggle, setTs, setPara, shiftLevel, setLink as pmLink, patchRuns, patchParas, firstRun, allRuns } from './textEdit'
 import { addSlide, duplicateSlide, relayout, align, newTable, tableEdit, findAll, replaceHits, resizeDeck, copyEls, type Hit } from './actions'
@@ -96,7 +97,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
   // ---- persistence -------------------------------------------------------------
   const stored = useMemo(() => (doc ? { ...doc, title } : null), [doc, title])
   const getData = useCallback(() => pruned(model.deck), [model])
-  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }) })
+  const persist = usePersistence({ doc: stored, kit, getData, rev: rev + titleRev * 1e9, disabled: guest, onLoss: (l) => setLoss({ items: l, dir: 'export' }), renderThumb: async () => pageThumbnail(await printable(model.deck, 'deck')), })
 
   // ---- edits ---------------------------------------------------------------------
   /** Apply ops; with `undoable`, remember how to take them back. */
