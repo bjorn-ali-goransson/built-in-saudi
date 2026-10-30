@@ -234,6 +234,8 @@ function ParaView({ p, body, theme, ctx, n }: { p: Para; body: TextBody; theme: 
           fontWeight: isBold(r, body) ? 700 : 400, fontStyle: r.i ? 'italic' : undefined,
           textDecoration: [r.u || r.link ? 'underline' : '', r.s ? 'line-through' : ''].filter(Boolean).join(' ') || undefined,
           verticalAlign: r.sup ? 'super' : r.sub ? 'sub' : undefined, background: r.highlight ? paint(r.highlight, theme) : undefined,
+          letterSpacing: r.spc ? fz(r.spc) : undefined,
+          textTransform: r.caps === 'all' ? 'uppercase' : undefined, fontVariant: r.caps === 'small' ? 'small-caps' : undefined,
         }
         if (r.link && ctx.onLink) return <a key={i} href={r.link.startsWith('#') ? undefined : r.link} style={{ ...st, cursor: 'pointer' }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); ctx.onLink!(r.link!) }}>{t}</a>
         if (r.link) st.color = paint('hlink', theme)

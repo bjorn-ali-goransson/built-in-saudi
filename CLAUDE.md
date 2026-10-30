@@ -7957,6 +7957,15 @@ it took Word page-count mismatches **11 → 5** and Word text recall **96.7% →
   was kept literally — a sliver. **A group that is a filled box with words** (PDF-to-Word
   section bars) is a filled text box. **Indents are exact** (a 13pt hand-made bullet indent
   rounded to 0), one step is Word's 36pt everywhere, and **headings keep their style's look**.
+- **Sheets keep their page setup** (`SheetData.print`): margins, paper, orientation, scale
+  or fit-to-page, Excel's header/footer codes (kept raw, turned into three-part running
+  text by `excelRunning` for print), print options. We wrote default margins and nothing
+  else, so a one-page form printed on two. Gridlines print only when the sheet says so.
+- **Deck runs keep letter spacing and caps** (`Run.spc`, `Run.caps`): spaced capitals are
+  a property, and the text keeps its own case.
+- Spreadsheets went pixel **14.1 → 7.1**, text **96.6% → 100%**, page mismatches **2 → 0**;
+  decks text **92.7% → 97.3%**. Compare text after **NFKC**: pdftotext returns shaped Arabic
+  as presentation forms, and an Arabic word otherwise compares as lost.
 - **The reference renderer has quirks of its own**: LibreOffice reads a docDefaults line
   spacing with no `lineRule` as "at least", where the spec says auto. When ours differs only
   there, the file is right; check the XML before "fixing" toward the renderer.

@@ -337,3 +337,41 @@ print(json.dumps({'runs': runs, 'sheet': ws.protection.sheet, 'pw': ws.protectio
     expect(out.filter).toEqual([[1, ['a']]])
   })
 })
+
+describe('page setup: margins, paper, orientation, fit, header and footer', () => {
+  const book = (): WorkbookData => ({
+    sheets: [{
+      name: 'Form', rows: 10, cols: 5, cells: { '0,0': { input: 'Title' } },
+      print: {
+        margins: { l: 0.335, r: 0.25, t: 0.882, b: 0.75, header: 0.3, footer: 0.3 }, paper: 9, landscape: true, fit: { w: 1, h: 0 },
+        header: '&L&G&C&"Arial,Bold"&14Meeting request&R&12&D', footer: '&CPage &P of &N', gridLines: true, centerH: true,
+      },
+    }],
+  })
+  it('is written and read back as it was, less the header picture it cannot carry', async () => {
+    const { blob } = await writeXlsx(book())
+    const back = (await readXlsx(await blob.arrayBuffer())).book.sheets[0].print!
+    expect(back).toMatchObject({ margins: { l: 0.335, r: 0.25, t: 0.882, b: 0.75 }, paper: 9, landscape: true, fit: { w: 1, h: 0 }, footer: '&CPage &P of &N', gridLines: true, centerH: true })
+    expect(back.header).toBe('&L&C&"Arial,Bold"&14Meeting request&R&12&D')
+  })
+  it('the header codes become text, in their three parts, with the page fields', async () => {
+    const { excelRunning } = await import('../printable')
+    const h = excelRunning('&L&G&C&"Arial,Bold"&14Meeting request&R&12&D', 'Form', 'doc') as { l: string; c: string; r: string }
+    expect(h.l).toBe('')
+    expect(h.c).toBe('Meeting request')
+    expect(h.r).toBe(new Date().toLocaleDateString())
+    expect(excelRunning('&CPage &P of &N &&co', 'Form', 'doc')).toBe('Page {page} of {pages} &co')
+    expect(excelRunning('&K00FF00&B&ASheet', 'Form', 'doc')).toBe('FormSheet')
+  })
+  it.skipIf(!hasPy)('openpyxl reads the same page setup', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'xl-'))
+    const f = join(dir, 'p.xlsx')
+    writeFileSync(f, Buffer.from(await (await writeXlsx(book())).blob.arrayBuffer()))
+    const py = `
+import sys, json, openpyxl
+ws = openpyxl.load_workbook(sys.argv[1]).active
+print(json.dumps({'o': ws.page_setup.orientation, 'fit': ws.sheet_properties.pageSetUpPr.fitToPage, 'fw': ws.page_setup.fitToWidth, 'left': ws.page_margins.left, 'grid': ws.print_options.gridLines, 'foot': ws.oddFooter.center.text}))`
+    const out = JSON.parse(execFileSync('python3', ['-c', py, f]).toString())
+    expect(out).toMatchObject({ o: 'landscape', fit: true, fw: 1, left: 0.335, grid: true, foot: 'Page &P of &N' })
+  })
+})

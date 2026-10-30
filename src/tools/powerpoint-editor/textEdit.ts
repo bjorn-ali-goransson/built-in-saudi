@@ -42,10 +42,10 @@ export const slideSchema = new Schema({
     sub: { excludes: 'sup', toDOM: () => ['sub', 0], parseDOM: [{ tag: 'sub' }] },
     link: { attrs: { href: {} }, inclusive: false, toDOM: (m) => ['a', { href: m.attrs.href, 'data-href': m.attrs.href }, 0], parseDOM: [{ tag: 'a[href]', getAttrs: (d) => ({ href: (d as HTMLElement).getAttribute('href') }) }] },
     ts: {
-      attrs: { color: { default: null }, highlight: { default: null }, size: { default: null }, font: { default: null } },
+      attrs: { color: { default: null }, highlight: { default: null }, size: { default: null }, font: { default: null }, spc: { default: null }, caps: { default: null } },
       // The CSS is filled in by the editor, which knows the theme; here the attributes are carried.
-      toDOM: (m) => ['span', { 'data-ts': '1', 'data-color': m.attrs.color || undefined, 'data-size': m.attrs.size || undefined, 'data-font': m.attrs.font || undefined, 'data-hl': m.attrs.highlight || undefined }, 0],
-      parseDOM: [{ tag: 'span[data-ts]', getAttrs: (d) => { const e = d as HTMLElement; return { color: e.dataset.color || null, size: e.dataset.size ? +e.dataset.size : null, font: e.dataset.font || null, highlight: e.dataset.hl || null } } }],
+      toDOM: (m) => ['span', { 'data-ts': '1', 'data-color': m.attrs.color || undefined, 'data-size': m.attrs.size || undefined, 'data-font': m.attrs.font || undefined, 'data-hl': m.attrs.highlight || undefined, 'data-spc': m.attrs.spc ?? undefined, 'data-caps': m.attrs.caps || undefined, style: [m.attrs.spc ? `letter-spacing:${m.attrs.spc}px` : '', m.attrs.caps === 'all' ? 'text-transform:uppercase' : m.attrs.caps === 'small' ? 'font-variant:small-caps' : ''].filter(Boolean).join(';') || undefined }, 0],
+      parseDOM: [{ tag: 'span[data-ts]', getAttrs: (d) => { const e = d as HTMLElement; return { color: e.dataset.color || null, size: e.dataset.size ? +e.dataset.size : null, font: e.dataset.font || null, highlight: e.dataset.hl || null, spc: e.dataset.spc ? +e.dataset.spc : null, caps: e.dataset.caps === 'all' || e.dataset.caps === 'small' ? e.dataset.caps : null } } }],
     },
   },
 })
@@ -65,7 +65,7 @@ export function toPM(body: TextBody | undefined): Node {
       if (r.sup) marks.push(S.marks.sup.create())
       if (r.sub) marks.push(S.marks.sub.create())
       if (r.link) marks.push(S.marks.link.create({ href: r.link }))
-      if (r.color || r.highlight || r.size || r.font) marks.push(S.marks.ts.create({ color: r.color || null, highlight: r.highlight || null, size: r.size || null, font: r.font || null }))
+      if (r.color || r.highlight || r.size || r.font || r.spc || r.caps) marks.push(S.marks.ts.create({ color: r.color || null, highlight: r.highlight || null, size: r.size || null, font: r.font || null, spc: r.spc || null, caps: r.caps || null }))
       // A run may hold a newline from a paste; split it into breaks.
       r.t.split('\n').forEach((part, i) => { if (i) kids.push(S.nodes.br.create()); if (part) kids.push(S.text(part, marks)) })
     }
@@ -100,7 +100,7 @@ export function fromPM(doc: Node, base: TextBody | undefined): TextBody {
       for (const m of c.marks) {
         const n = m.type.name
         if (n === 'link') r.link = m.attrs.href
-        else if (n === 'ts') { if (m.attrs.color) r.color = m.attrs.color; if (m.attrs.highlight) r.highlight = m.attrs.highlight; if (m.attrs.size) r.size = m.attrs.size; if (m.attrs.font) r.font = m.attrs.font }
+        else if (n === 'ts') { if (m.attrs.color) r.color = m.attrs.color; if (m.attrs.highlight) r.highlight = m.attrs.highlight; if (m.attrs.size) r.size = m.attrs.size; if (m.attrs.font) r.font = m.attrs.font; if (m.attrs.spc) r.spc = m.attrs.spc; if (m.attrs.caps) r.caps = m.attrs.caps }
         else (r as unknown as Record<string, boolean>)[n] = true
       }
       const last = p.runs[p.runs.length - 1]

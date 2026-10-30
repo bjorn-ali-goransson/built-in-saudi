@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
@@ -43,9 +44,15 @@ def to_pdf(path, outdir):
     return (pdf if os.path.exists(pdf) else None), round(time.time() - t, 1)
 
 
-def words(pdf):
+def text(pdf):
+    # NFKC folds Arabic presentation forms (which is how pdftotext hands shaped Arabic back) into
+    # the letters that were typed; without it every Arabic word compares as lost.
     txt = subprocess.run(['pdftotext', '-q', pdf, '-'], capture_output=True).stdout.decode('utf8', 'replace')
-    return Counter(w for w in re.split(r'[\s‌‍‎‏]+', txt) if w)
+    return unicodedata.normalize('NFKC', txt)
+
+
+def words(pdf):
+    return Counter(w for w in re.split('[\\s\\u200c\\u200d\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]+', text(pdf)) if w)
 
 
 def pages(pdf, prefix):
@@ -82,13 +89,14 @@ def one(out, rid, kind):
     if not pdfs['plain'] or not pdfs['ours']:
         row['error'] = 'LibreOffice could not render OUR export'
         return row
-    wo, wp, we = words(pdfs['orig']), words(pdfs['plain']), words(pdfs['ours'])
+    wo, wp = words(pdfs['orig']), words(pdfs['plain'])
     lost = wo - wp
     total = sum(wo.values()) or 1
     row['recall'] = round(1 - sum(lost.values()) / total, 4)
     row['lost'] = [w for w, _ in lost.most_common(25)]
     row['extra'] = [w for w, _ in (wp - wo).most_common(15)]
-    row['editRendered'] = we[EDIT] > 0
+    # A substring: pdftotext glues a Latin word to the Arabic beside it into one token.
+    row['editRendered'] = EDIT in text(pdfs['ours'])
     po, pp = pages(pdfs['orig'], os.path.join(work, 'o')), pages(pdfs['plain'], os.path.join(work, 'p'))
     row['pages'] = [len(po), len(pp)]
     ds = [diff(a, b) for a, b in zip(po, pp)]

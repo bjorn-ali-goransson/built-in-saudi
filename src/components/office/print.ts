@@ -27,9 +27,11 @@ export interface FlowInput {
   lang?: string
   page: PageSpec
   fitWidth?: boolean
-  /** Running header and footer; `{page}` and `{pages}` are filled in per page. */
-  header?: string
-  footer?: string
+  /** Running header and footer; `{page}` and `{pages}` are filled in per page. Three parts sit left, centre and right. */
+  header?: Running
+  footer?: Running
+  /** A fixed print scale (Excel's "Adjust to n%"), applied before fitting the width. */
+  scale?: number
   /**
    * Layout the browser cannot do from CSS alone (tab stops), run on the laid-out flow before it is
    * measured and cut; its result is what every page shows.
@@ -39,6 +41,8 @@ export interface FlowInput {
 /** Pages already made (a slide each): placed one per sheet, scaled to fit it. */
 export interface FixedInput { title: string; css?: string; pages: string[]; page: { width: number; height: number }; dir?: 'ltr' | 'rtl' }
 export interface Printable { html: string; pages: number; page: { width: number; height: number } }
+
+export type Running = string | { l?: string; c?: string; r?: string }
 
 export const MM = 96 / 25.4
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -59,7 +63,8 @@ body{background:#d9dedb;padding:16px 0}
 .pv-pg{position:relative;width:${w}px;height:${h}px;margin:0 auto 16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 20px rgba(0,0,0,.10);overflow:hidden;box-sizing:border-box}
 .pv-area{position:absolute;overflow:hidden}
 .pv-flow{transform-origin:0 0;position:absolute;top:0}
-.pv-run{position:absolute;inset-inline:0;font:9pt/1.3 "IBM Plex Sans Arabic",Calibri,Arial,sans-serif;color:#555;text-align:center;white-space:pre-wrap}
+.pv-run{position:absolute;inset-inline:0;font:9pt/1.3 "IBM Plex Sans Arabic",Calibri,Arial,sans-serif;color:#555;text-align:center;white-space:pre-wrap;box-sizing:border-box}
+.pv-run.pv-3{display:flex;justify-content:space-between;gap:1em}.pv-run.pv-3>span{flex:1}.pv-run.pv-3>span:nth-child(1){text-align:left}.pv-run.pv-3>span:nth-child(3){text-align:right}
 @page{size:${page.width}mm ${page.height}mm;margin:0}
 @media print{body{background:none;padding:0}.pv-pg{margin:0;box-shadow:none;break-after:page;page-break-after:always}.pv-pg:last-child{break-after:auto;page-break-after:auto}}
 </style></head><body>${body}</body></html>`
@@ -101,8 +106,10 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
     let body = input.body
     if (input.prepare) { input.prepare(root); body = root.innerHTML }
     // Wider than the page: scale down to fit rather than lose the right-hand columns.
-    const natural = Math.max(cw, root.scrollWidth)
-    const scale = input.fitWidth && natural > cw + 1 ? cw / natural : 1
+    const fixed = input.scale && input.scale > 0 ? input.scale : 1
+    if (fixed !== 1) root.style.width = `${cw / fixed}px`
+    const natural = Math.max(cw / fixed, root.scrollWidth)
+    const scale = input.fitWidth && natural * fixed > cw + 1 ? cw / natural : fixed
     if (scale !== 1) root.style.width = `${natural}px`
     const top = root.getBoundingClientRect().top
     const total = root.scrollHeight
@@ -144,15 +151,18 @@ html,body{margin:0;padding:0;background:none;max-width:none}#pv-m{width:${cw}px;
     }
     if (!slices.length) slices.push({ start: 0, end: 0 })
     const n = slices.length
-    const run = (t: string | undefined, i: number) => (t ? esc(t).replace(/\{page\}/g, String(i + 1)).replace(/\{pages\}/g, String(n)) : '')
+    const fill = (t: string | undefined, i: number) => (t ? esc(t).replace(/\{page\}/g, String(i + 1)).replace(/\{pages\}/g, String(n)) : '')
+    // Left, centre and right parts sit at the page's own left, centre and right — physical, as a printed page is.
+    const run = (t: Running | undefined, i: number) => (!t ? '' : typeof t === 'string' ? fill(t, i) : t.l || t.c || t.r ? `\u0000${['l', 'c', 'r'].map((k) => `<span dir="auto">${fill((t as Record<string, string | undefined>)[k], i)}</span>`).join('')}` : '')
+    const runDiv = (html: string, pos: string) => (html ? `<div class="pv-run${html.startsWith('\u0000') ? ' pv-3' : ''}" style="${pos};padding:0 ${m.left * MM}px"${html.startsWith('\u0000') ? ' dir="ltr"' : ' dir="auto"'}>${html.replace('\u0000', '')}</div>` : '')
     const pages = slices.map((sl, i) => {
       const hdr = run(input.header, i)
       const ftr = run(input.footer, i)
       return `<div class="pv-pg" data-page="${i + 1}">`
-        + (hdr ? `<div class="pv-run" style="top:${(m.top * MM) / 2 - 8}px;padding:0 ${m.left * MM}px" dir="auto">${hdr}</div>` : '')
+        + runDiv(hdr, `top:${(m.top * MM) / 2 - 8}px`)
         + `<div class="pv-area" style="left:${m.left * MM}px;top:${m.top * MM}px;width:${cw}px;height:${Math.ceil((sl.end - sl.start) * scale)}px">`
         + `<div class="pv-flow" dir="${input.dir}" style="width:${scale === 1 ? cw : natural}px;transform:scale(${scale}) translateY(${-sl.start}px)">${body}</div></div>`
-        + (ftr ? `<div class="pv-run" style="bottom:${(m.bottom * MM) / 2 - 8}px;padding:0 ${m.left * MM}px" dir="auto">${ftr}</div>` : '')
+        + runDiv(ftr, `bottom:${(m.bottom * MM) / 2 - 8}px`)
         + '</div>'
     })
     return { html: shell(input.title, input.dir, input.lang, input.css, page, pages.join('')), pages: n, page }

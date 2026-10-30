@@ -21,7 +21,7 @@ import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEm
 import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, raw, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { Workbook } from '../engine/workbook'
-import { colToLetters, parseA1, parseRange, isError, borderSides, validRuns, type CellFormat, type TextRun, type Protection, type SheetData, type WorkbookData, type CellValue, type ChartSpec } from '../engine/model'
+import { colToLetters, parseA1, parseRange, isError, borderSides, validRuns, type CellFormat, type TextRun, type Protection, type SheetData, type SheetPrint, type WorkbookData, type CellValue, type ChartSpec } from '../engine/model'
 import { toExcelNumFmt, type NumFmtId } from '../engine/numfmt'
 
 const MDW = 7
@@ -451,7 +451,7 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     (sheet.savedFilter || []).filter((f) => f.col >= af.c0 && f.col <= af.c1).map((f) => x('filterColumn', { colId: f.col - af.c0 },
       x('filters', { blank: f.keep.includes('') ? 1 : undefined }, f.keep.filter((v) => v !== '').map((v) => x('filter', { val: v })))))) : null
   return xmlDoc(x('worksheet', { xmlns: NS.s, 'xmlns:r': NS.r },
-    sheet.tabColor ? x('sheetPr', null, x('tabColor', { rgb: 'FF' + hex6(sheet.tabColor) })) : null,
+    sheet.tabColor || sheet.print?.fit ? x('sheetPr', null, sheet.tabColor ? x('tabColor', { rgb: 'FF' + hex6(sheet.tabColor) }) : null, sheet.print?.fit ? x('pageSetUpPr', { fitToPage: 1 }) : null) : null,
     x('dimension', { ref: used }),
     x('sheetViews', null, view),
     x('sheetFormatPr', { defaultRowHeight: 15 }),
@@ -463,11 +463,28 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     cfs,
     dvs.length ? x('dataValidations', { count: dvs.length }, dvs) : null,
     hl.length ? x('hyperlinks', null, hl) : null,
-    x('pageMargins', { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }),
+    ...printXml(sheet.print),
     drawing,
     legacy,
     tableParts.length ? x('tableParts', { count: tableParts.length }, tableParts) : null,
   ))
+}
+
+/** printOptions, pageMargins, pageSetup and headerFooter, in that (schema) order. */
+function printXml(p: SheetPrint | undefined): (Xml | null)[] {
+  const m = p?.margins || { l: 0.7, r: 0.7, t: 0.75, b: 0.75, header: 0.3, footer: 0.3 }
+  // A header picture (&G) needs a drawing part this writer does not carry: the code goes with it.
+  const code = (v?: string) => (v ? v.replace(/&G/g, '') : undefined)
+  const hf = p && [p.header, p.footer, p.firstHeader, p.firstFooter, p.evenHeader, p.evenFooter].some(Boolean)
+  return [
+    p && (p.gridLines || p.headings || p.centerH || p.centerV) ? x('printOptions', { horizontalCentered: p.centerH ? 1 : undefined, verticalCentered: p.centerV ? 1 : undefined, headings: p.headings ? 1 : undefined, gridLines: p.gridLines ? 1 : undefined }) : null,
+    x('pageMargins', { left: m.l, right: m.r, top: m.t, bottom: m.b, header: m.header, footer: m.footer }),
+    p && (p.paper || p.landscape || p.scale || p.fit) ? x('pageSetup', { paperSize: p.paper, scale: p.scale, fitToWidth: p.fit ? p.fit.w : undefined, fitToHeight: p.fit ? p.fit.h : undefined, orientation: p.landscape ? 'landscape' : 'portrait' }) : null,
+    hf ? x('headerFooter', { differentOddEven: p!.differentOddEven ? 1 : undefined, differentFirst: p!.differentFirst ? 1 : undefined },
+      p!.header ? x('oddHeader', null, code(p!.header)) : null, p!.footer ? x('oddFooter', null, code(p!.footer)) : null,
+      p!.evenHeader ? x('evenHeader', null, code(p!.evenHeader)) : null, p!.evenFooter ? x('evenFooter', null, code(p!.evenFooter)) : null,
+      p!.firstHeader ? x('firstHeader', null, code(p!.firstHeader)) : null, p!.firstFooter ? x('firstFooter', null, code(p!.firstFooter)) : null) : null,
+  ]
 }
 
 function oneCell(anchor: { row: number; col: number; dx?: number; dy?: number }, size: { w: number; h: number }, content: Xml): Xml {

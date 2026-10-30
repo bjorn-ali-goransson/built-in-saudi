@@ -308,3 +308,14 @@ print(sum(1 for s in p.slides[0].shapes if s.shape_type == MSO_SHAPE_TYPE.FREEFO
     expect(Number(execFileSync('python3', ['-c', py, file]).toString().trim())).toBe(2)
   })
 })
+
+describe('spaced capitals: letter spacing and caps are properties, not spaces', () => {
+  it('are written as spc and cap, and read back on the run', async () => {
+    const d = blankDeck(false)
+    const s = d.slides[0]
+    s.elements.push({ id: 'sp', kind: 'shape', geom: 'rect', x: 10, y: 10, w: 300, h: 40, fill: { type: 'none' }, line: null, text: body([para('', { runs: [{ t: 'What we do', spc: 3, caps: 'all' }] })]) } as ShapeEl)
+    const back = await readPptx(await bytesOf(d))
+    const run = back.data.slides[0].elements.flatMap((e) => (e.kind === 'shape' ? e.text?.paras || [] : [])).flatMap((p) => p.runs).find((r) => r.t === 'What we do')!
+    expect(run).toMatchObject({ spc: 3, caps: 'all' })
+  })
+})

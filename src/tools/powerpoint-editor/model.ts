@@ -37,6 +37,10 @@ export interface Run {
   /** A family name, or 'major' / 'minor' for the theme's. */
   font?: string
   link?: string
+  /** Letter spacing, points: a deck's spaced capitals ("W H A T  W E  D O") are this, not spaces. */
+  spc?: number
+  /** All capitals or small capitals, as a property: the text keeps its own case. */
+  caps?: 'all' | 'small'
 }
 
 export type Align = 'l' | 'ctr' | 'r' | 'just'

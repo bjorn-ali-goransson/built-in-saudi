@@ -70,7 +70,7 @@ function resolveMc(el: XEl): void {
 type ClrMap = Record<string, string>
 const DEFAULT_MAP: ClrMap = { bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2', accent1: 'accent1', accent2: 'accent2', accent3: 'accent3', accent4: 'accent4', accent5: 'accent5', accent6: 'accent6', hlink: 'hlink', folHlink: 'folHlink' }
 
-interface LvlStyle { size?: number; color?: string; font?: string; b?: boolean; i?: boolean; align?: Align; bullet?: 'bullet' | 'number' | null; char?: string; scheme?: string; lineSpacing?: number; spaceBefore?: number; spaceAfter?: number }
+interface LvlStyle { spc?: number; caps?: 'all' | 'small'; size?: number; color?: string; font?: string; b?: boolean; i?: boolean; align?: Align; bullet?: 'bullet' | 'number' | null; char?: string; scheme?: string; lineSpacing?: number; spaceBefore?: number; spaceAfter?: number }
 type ListStyle = LvlStyle[]
 interface BodyProps { anchor?: 't' | 'ctr' | 'b'; inset?: [number, number, number, number]; autofit?: 'shrink' | 'resize' | 'none'; fontScale?: number; wrap?: boolean; vertical?: boolean }
 interface PhInfo { type: string; idx?: string; xfrm?: Xfrm; list: ListStyle; body: BodyProps; fill?: Fill; line?: Line | null; geom?: string }
@@ -233,6 +233,8 @@ class Reader {
     const u = attr(rPr, 'u'); if (u !== undefined && u !== 'none') out.u = true
     const st = attr(rPr, 'strike'); if (st !== undefined && st !== 'noStrike') out.s = true
     const base = numAttr(rPr, 'baseline', 0); if (base > 0) out.sup = true; else if (base < 0) out.sub = true
+    const spc = attr(rPr, 'spc'); if (spc !== undefined) out.spc = +spc / 100
+    const cap = attr(rPr, 'cap'); if (cap !== undefined) out.caps = cap === 'all' ? 'all' : cap === 'small' ? 'small' : undefined
     const f = kid(rPr, A, 'solidFill'); if (f) out.color = this.color(f, theme, map)
     const hl = kid(rPr, A, 'highlight'); if (hl) out.highlight = this.color(hl, theme, map)
     const font = (k: string) => { const t = attr(kid(rPr, A, k), 'typeface'); return t ? (t.startsWith('+mj') ? 'major' : t.startsWith('+mn') ? 'minor' : t) : undefined }
@@ -314,6 +316,11 @@ class Reader {
           if (rs.size && rs.size !== inherited.size) run.size = rs.size
           if (rs.color && rs.color !== inherited.color) run.color = rs.color
           if (rs.highlight) run.highlight = rs.highlight
+          // Spacing and caps are flattened onto the run: the run says what it looks like.
+          const spc = 'spc' in rs ? rs.spc : inherited.spc
+          if (spc) run.spc = spc
+          const caps = 'caps' in rs ? rs.caps : inherited.caps
+          if (caps) run.caps = caps
           // Arabic runs set their font in `cs`, the complex-script slot; that is the one that shows.
           const font = /[؀-ۿ]/.test(text) && rs.cs ? rs.cs : rs.font
           if (font && font !== inherited.font) run.font = font

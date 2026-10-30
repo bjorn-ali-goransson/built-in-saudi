@@ -302,6 +302,8 @@ export type SheetData = {
   autoFilter?: string
   /** Pictures floating over the sheet. */
   images?: SheetImage[]
+  /** How the sheet prints: what the file said, kept and written back, and used by the print preview. */
+  print?: SheetPrint
   /** Sheet visibility. */
   hidden?: boolean
   /** Locked cells cannot be changed while this is set. */
@@ -335,6 +337,33 @@ export type Validation = {
   allowBlank?: boolean
   prompt?: string
   error?: string
+}
+
+/**
+ * A sheet's page setup. Margins in inches, as the file stores them. Header and footer are kept in
+ * Excel's own code form (`&L…&C…&R…`, `&P` page, `&N` pages, `&D` date) so nothing in them is lost.
+ */
+export type SheetPrint = {
+  margins?: { l: number; r: number; t: number; b: number; header: number; footer: number }
+  landscape?: boolean
+  /** Excel's paper code: 9 is A4, 1 Letter. */
+  paper?: number
+  /** Percent. Ignored when `fit` is on, as in Excel. */
+  scale?: number
+  /** Fit to this many pages wide / tall (0 = as many as it takes). */
+  fit?: { w: number; h: number }
+  header?: string
+  footer?: string
+  firstHeader?: string
+  firstFooter?: string
+  evenHeader?: string
+  evenFooter?: string
+  differentFirst?: boolean
+  differentOddEven?: boolean
+  gridLines?: boolean
+  headings?: boolean
+  centerH?: boolean
+  centerV?: boolean
 }
 
 export type SheetImage = {

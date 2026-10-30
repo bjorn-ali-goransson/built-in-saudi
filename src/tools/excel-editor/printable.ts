@@ -3,8 +3,8 @@
 // laid out by the shared paginator. Wider than a portrait page turns the page
 // landscape; wider than that scales it down — Excel's "fit all columns on one
 // page", which is what almost everybody printing a sheet wants.
-import { paginate, MM, type Printable } from '../../components/office/print'
-import { cellKey, parseRange, validRuns, type SheetData, type CellValue } from './engine/model'
+import { paginate, MM, type Printable, type Running } from '../../components/office/print'
+import { cellKey, parseRange, validRuns, type SheetData, type SheetPrint, type CellValue } from './engine/model'
 import { tableBoxes, tableLookAt } from './ui/tableStyle'
 import { runCss } from './ui/runs'
 import { cellLook } from './ui/cellStyle'
@@ -46,7 +46,8 @@ export function sheetHtml(sheet: SheetData, value: (r: number, c: number) => Cel
   const tables = tableBoxes(sheet.tables, parseRange)
   const visCols = Array.from({ length: cols }, (_, c) => c).filter((c) => !hiddenC.has(c))
   const width = visCols.reduce((w, c) => w + (sheet.colWidths?.[c] ?? DEFAULT_COL_W), 0)
-  let body = `<table class="xp${sheet.showGrid === false ? '' : ' grid'}" style="width:${width}px"><colgroup>${visCols.map((c) => `<col style="width:${sheet.colWidths?.[c] ?? DEFAULT_COL_W}px">`).join('')}</colgroup>`
+  // Gridlines print only when the sheet says so ("Print gridlines"), as in Excel — not because they show on screen.
+  let body = `<table class="xp${sheet.print?.gridLines ? ' grid' : ''}" style="width:${width}px"><colgroup>${visCols.map((c) => `<col style="width:${sheet.colWidths?.[c] ?? DEFAULT_COL_W}px">`).join('')}</colgroup>`
   for (let r = 0; r < rows; r++) {
     if (hiddenR.has(r)) continue
     body += `<tr style="height:${sheet.rowHeights?.[r] ?? DEFAULT_ROW_H}px">`
@@ -78,13 +79,53 @@ table.xp{border-collapse:collapse;table-layout:fixed}
 table.xp td{padding:1px 4px;overflow:hidden;white-space:pre;vertical-align:bottom;box-sizing:border-box}
 table.xp.grid td{border:1px solid #d4d4d4}`
 
+const PAPER: Record<number, [number, number]> = { 1: [215.9, 279.4], 5: [215.9, 355.6], 8: [297, 420], 9: [210, 297], 11: [148, 210] }
+
+/**
+ * Excel's header and footer codes as text: &L, &C and &R start the three parts; &P and &N are the
+ * page and the page count; &D, &T, &A and &F the date, time, sheet and file; font, size, colour and
+ * on/off codes are dropped, and && is a literal ampersand.
+ */
+export function excelRunning(code: string | undefined, sheet: string, title: string): Running | undefined {
+  if (!code) return undefined
+  const parts: Record<'l' | 'c' | 'r', string> = { l: '', c: '', r: '' }
+  let cur: 'l' | 'c' | 'r' = 'c'
+  const now = new Date()
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i]
+    if (ch !== '&') { parts[cur] += ch; continue }
+    const n = code[i + 1]
+    if (n === undefined) break
+    if (n === '&') { parts[cur] += '&'; i++; continue }
+    if (n === '"') { const end = code.indexOf('"', i + 2); i = end < 0 ? code.length : end; continue }
+    if (/\d/.test(n)) { while (/\d/.test(code[i + 1] || '')) i++; continue }
+    if (n === 'K') { i += /^[0-9A-Fa-f]{6}/.test(code.slice(i + 2)) ? 7 : 5; continue }
+    i++
+    if (n === 'L' || n === 'C' || n === 'R') cur = n.toLowerCase() as 'l' | 'c' | 'r'
+    else if (n === 'P') parts[cur] += '{page}'
+    else if (n === 'N') parts[cur] += '{pages}'
+    else if (n === 'D') parts[cur] += now.toLocaleDateString()
+    else if (n === 'T') parts[cur] += now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    else if (n === 'A') parts[cur] += sheet
+    else if (n === 'F') parts[cur] += title
+  }
+  return parts.l || parts.c || parts.r ? (parts.l || parts.r ? parts : parts.c) : undefined
+}
+
 export async function printable(sheet: SheetData, value: (r: number, c: number) => CellValue, title: string): Promise<Printable> {
   const { body, width } = sheetHtml(sheet, value)
-  const margins = { top: 15, right: 12, bottom: 15, left: 12 }
-  const portraitW = (210 - margins.left - margins.right) * MM
+  const p: SheetPrint = sheet.print || {}
+  const IN = 25.4
+  const margins = p.margins ? { top: p.margins.t * IN, right: p.margins.r * IN, bottom: p.margins.b * IN, left: p.margins.l * IN } : { top: 15, right: 12, bottom: 15, left: 12 }
+  const [pw, ph] = PAPER[p.paper || 9] || PAPER[9]
+  const portraitW = (pw - margins.left - margins.right) * MM
   return paginate({
-    title, css: SHEET_CSS, body, dir: sheet.rtl ? 'rtl' : 'ltr', fitWidth: true,
-    page: { width: 210, height: 297, landscape: width > portraitW * 1.05, margins },
-    footer: '{page} / {pages}',
+    title, css: SHEET_CSS, body, dir: sheet.rtl ? 'rtl' : 'ltr',
+    // The sheet's own setup where it has one; otherwise what almost everybody wants: all the columns on the page.
+    fitWidth: p.fit ? p.fit.w > 0 : !p.scale,
+    scale: p.fit ? undefined : p.scale ? p.scale / 100 : undefined,
+    page: { width: pw, height: ph, landscape: p.landscape ?? (!sheet.print && width > portraitW * 1.05), margins },
+    header: excelRunning(p.header, sheet.name, title),
+    footer: sheet.print ? excelRunning(p.footer, sheet.name, title) : '{page} / {pages}',
   })
 }

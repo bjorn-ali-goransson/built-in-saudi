@@ -22,7 +22,7 @@
 import { Package, NS, REL, relIs, sniffImage, dataUrl, emuToPx, OpcError } from '../../../lib/office/opc'
 import { kids, kid, find, findAll, attr, numAttr, textOf, isEl, type XEl } from '../../../lib/xml'
 import { DEFAULT_THEME, THEME_ORDER, INDEXED, applyTint, argb, sheetThemeColor, type ThemeColors } from '../../../lib/office/color'
-import { cellKey, parseA1, parseRange, colToLetters, type Cell, type CellFormat, type SheetData, type WorkbookData, type CondRule, type ScaleRule, type ChartSpec, type Validation, type SheetImage, type DefinedName, type TextRun, type Protection } from '../engine/model'
+import { cellKey, parseA1, parseRange, colToLetters, type Cell, type CellFormat, type SheetData, type WorkbookData, type CondRule, type ScaleRule, type ChartSpec, type Validation, type SheetImage, type SheetPrint, type DefinedName, type TextRun, type Protection } from '../engine/model'
 import { shiftFormula } from '../engine/formula'
 import { BUILTIN_FORMATS, isDateCode } from '../engine/fmtcode'
 
@@ -120,6 +120,39 @@ async function readTheme(pkg: Package, main: string): Promise<ThemeColors> {
     if (v && /^[0-9a-fA-F]{6}$/.test(v)) out[name] = '#' + v.toLowerCase()
   }
   return out
+}
+
+const on = (v: string | undefined) => v === '1' || v === 'true'
+/** A sheet's page setup, as written: margins, paper, orientation, scale or fit, header and footer, print options. */
+function readPrint(el: XEl, ns: string, pr: XEl | null): SheetPrint | undefined {
+  const out: SheetPrint = {}
+  const m = kid(el, ns, 'pageMargins')
+  if (m) out.margins = { l: numAttr(m, 'left', 0.7), r: numAttr(m, 'right', 0.7), t: numAttr(m, 'top', 0.75), b: numAttr(m, 'bottom', 0.75), header: numAttr(m, 'header', 0.3), footer: numAttr(m, 'footer', 0.3) }
+  const ps = kid(el, ns, 'pageSetup')
+  if (ps) {
+    if (attr(ps, 'orientation') === 'landscape') out.landscape = true
+    const paper = attr(ps, 'paperSize'); if (paper) out.paper = Number(paper)
+    const scale = attr(ps, 'scale'); if (scale && scale !== '100') out.scale = Number(scale)
+    if (on(attr(kid(pr, ns, 'pageSetUpPr'), 'fitToPage'))) out.fit = { w: Number(attr(ps, 'fitToWidth') ?? 1), h: Number(attr(ps, 'fitToHeight') ?? 1) }
+  }
+  const hf = kid(el, ns, 'headerFooter')
+  if (hf) {
+    const t = (k: string) => { const v = textOf(kid(hf, ns, k)); return v || undefined }
+    out.header = t('oddHeader'); out.footer = t('oddFooter')
+    out.firstHeader = t('firstHeader'); out.firstFooter = t('firstFooter')
+    out.evenHeader = t('evenHeader'); out.evenFooter = t('evenFooter')
+    if (on(attr(hf, 'differentFirst'))) out.differentFirst = true
+    if (on(attr(hf, 'differentOddEven'))) out.differentOddEven = true
+  }
+  const po = kid(el, ns, 'printOptions')
+  if (po) {
+    if (on(attr(po, 'gridLines'))) out.gridLines = true
+    if (on(attr(po, 'headings'))) out.headings = true
+    if (on(attr(po, 'horizontalCentered'))) out.centerH = true
+    if (on(attr(po, 'verticalCentered'))) out.centerV = true
+  }
+  for (const k of Object.keys(out) as (keyof SheetPrint)[]) if (out[k] === undefined) delete out[k]
+  return Object.keys(out).length ? out : undefined
 }
 
 function colorOf(el: XEl | null, theme: ThemeColors): string | undefined {
@@ -327,6 +360,9 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
   const pr = kid(el, ns, 'sheetPr')
   const tab = colorOf(kid(pr, ns, 'tabColor'), theme)
   if (tab) sheet.tabColor = tab
+  const print = readPrint(el, ns, pr)
+  if (print) sheet.print = print
+  if (/&G/.test(print?.header || '') || /&G/.test(print?.footer || '')) lose('pictures in the page header or footer')
   // Column widths and hidden columns.
   const fmtPr = kid(el, ns, 'sheetFormatPr')
   const defaultRowPx = fmtPr && attr(fmtPr, 'defaultRowHeight') ? ptToPx(Number(attr(fmtPr, 'defaultRowHeight'))) : 20
