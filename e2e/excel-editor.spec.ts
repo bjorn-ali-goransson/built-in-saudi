@@ -627,3 +627,70 @@ test.describe('live co-editing, with the owner as the truth', () => {
     await expect.poll(async () => (await storedBook(guest)).length).toBe(1)
   })
 })
+
+test.describe('a workbook with rich text, protection, a table and a saved filter (openpyxl)', () => {
+  async function openIt(p: Page) {
+    await p.goto('/en/apps/excel-editor/')
+    await p.getByTestId('office-file-input').setInputFiles('src/tools/excel-editor/io/__fixtures__/protected-rich.xlsx')
+    await expect(p.getByTestId('xl-grid')).toBeVisible({ timeout: 20_000 })
+  }
+
+  test('nothing is reported lost; the mixed formatting and the table style are drawn', async ({ page: p }) => {
+    await openIt(p)
+    await expect(p.getByTestId('office-loss')).toHaveCount(0)
+    const a1 = cell(p, 'A1')
+    await expect(a1).toHaveText('Status: late by two days')
+    const late = a1.locator('span', { hasText: /^late$/ })
+    await expect(late).toHaveCSS('font-weight', '700')
+    await expect(late).toHaveCSS('color', 'rgb(192, 0, 0)')
+    // TableStyleMedium9: the header row is filled with the first accent, in white.
+    await expect(cell(p, 'A4')).toHaveCSS('background-color', 'rgb(68, 114, 196)')
+    await expect(cell(p, 'A4')).toHaveCSS('color', 'rgb(255, 255, 255)')
+    // Banded rows: the first data row is tinted, the next is not.
+    await expect(cell(p, 'A5')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  })
+
+  test('a locked cell refuses typing, an unlocked one takes it, and the password unprotects', async ({ page: p }) => {
+    await openIt(p)
+    await clickCell(p, 'A1')
+    await p.keyboard.type('x')
+    await expect(p.getByTestId('xl-toast')).toContainText('locked')
+    await p.keyboard.press('Enter')
+    await expect(cell(p, 'A1')).toHaveText('Status: late by two days')
+    await typeIn(p, 'B1', 'changed')
+    await expect(cell(p, 'B1')).toHaveText('changed')
+    await p.getByTestId('tab-data').click()
+    await expect(p.getByTestId('xl-protect-sheet')).toHaveAttribute('aria-pressed', 'true')
+    await p.getByTestId('xl-protect-sheet').click()
+    await p.getByTestId('xl-password-input').fill('wrong')
+    await p.getByTestId('xl-password-ok').click()
+    await expect(p.getByTestId('xl-password-error')).toBeVisible()
+    await p.getByTestId('xl-password-input').fill('test')
+    await p.getByTestId('xl-password-ok').click()
+    await expect(p.getByTestId('xl-password')).toHaveCount(0)
+    await expect(p.getByTestId('xl-protect-sheet')).toHaveAttribute('aria-pressed', 'false')
+    await typeIn(p, 'A1', 'now editable')
+    await expect(cell(p, 'A1')).toHaveText('now editable')
+    // The stored workbook agrees: no protection, and the rich runs retired with the old text.
+    await saved(p)
+    const b = (await storedBook(p))[0].data as unknown as { sheets: { protect?: unknown; cells: Record<string, { fmt?: { runs?: unknown } }> }[] }
+    expect(b.sheets[0].protect).toBeUndefined()
+  })
+
+  test('the workbook structure lock refuses a new sheet', async ({ page: p }) => {
+    await openIt(p)
+    await expect(p.getByTestId('xl-sheet-tab')).toHaveCount(2)
+    await p.getByTestId('xl-add-sheet').click()
+    await expect(p.getByTestId('xl-toast')).toContainText('workbook is protected')
+    await expect(p.getByTestId('xl-sheet-tab')).toHaveCount(2)
+  })
+
+  test('the filter the file was saved with is applied when it opens', async ({ page: p }) => {
+    await openIt(p)
+    await p.getByTestId('xl-sheet-tab').nth(1).click()
+    await expect(cell(p, 'A2')).toHaveText('Riyadh')
+    await expect(cell(p, 'A4')).toHaveText('Dammam')
+    // Jeddah is "b", filtered out.
+    await expect(p.locator('[data-testid="xl-grid"] div[data-cell="A3"]')).toHaveCount(0)
+  })
+})

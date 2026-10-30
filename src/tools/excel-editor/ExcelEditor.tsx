@@ -17,7 +17,8 @@ import { XL_STR } from './strings'
 import { Grid, type Sel, type EditState, type GridCtl, type PeerSel } from './ui/Grid'
 import { XlRibbon, type XlActions } from './ui/XlRibbon'
 import { FindBar } from './ui/FindBar'
-import { LinkDialog, NoteDialog, ValidationDialog, NamesDialog, CondDialog, FormatDialog, SizeDialog, FunctionDialog, SplitDialog, RenameSheetDialog, FilterMenu } from './ui/Dialogs'
+import { LinkDialog, NoteDialog, ValidationDialog, NamesDialog, CondDialog, FormatDialog, SizeDialog, FunctionDialog, SplitDialog, RenameSheetDialog, FilterMenu, PasswordDialog } from './ui/Dialogs'
+import { refusal, verify, protection } from './engine/protect'
 import { normBox, expandForMerges, boxArea, inBox, DEFAULT_COL_W, DEFAULT_ROW_H, type Box } from './ui/geometry'
 import { toTsv, toHtml, parseTsv, readPayload, parseHtmlTable, pastePatches, textPayload, type ClipPayload } from './ui/clipboard'
 import {
@@ -37,7 +38,8 @@ import { colorFor } from '../../lib/collab/session'
 type Undo = { ops: XOp[]; inv: XOp[]; sheet: string; sel: Sel }
 type Dialog =
   | { k: 'link' } | { k: 'note' } | { k: 'validation' } | { k: 'names' } | { k: 'cond' } | { k: 'format' }
-  | { k: 'size'; axis: 'row' | 'col' } | { k: 'fn' } | { k: 'split' } | { k: 'rename'; sheet: string } | null
+  | { k: 'size'; axis: 'row' | 'col' } | { k: 'fn' } | { k: 'split' } | { k: 'rename'; sheet: string }
+  | { k: 'protect'; what: 'sheet' | 'book'; mode: 'set' | 'enter' } | null
 
 const ONE: Sel = { a: { row: 0, col: 0 }, f: { row: 0, col: 0 } }
 
@@ -69,7 +71,8 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
   const [matches, setMatches] = useState<{ list: Match[]; i: number; q: string; o: FindOpts; msg?: string }>({ list: [], i: 0, q: '', o: {} })
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [tabMenu, setTabMenu] = useState<{ sheet: string; x: number; y: number } | null>(null)
-  const [filters, setFilters] = useState<Record<string, SheetFilters>>({})
+  // A filter is a personal view; the one the FILE was saved with is where it opens.
+  const [filters, setFilters] = useState<Record<string, SheetFilters>>(() => Object.fromEntries(model.book.sheets.filter((x) => x.savedFilter?.length).map((x) => [x.name, x.savedFilter!.map((f) => ({ col: f.col, keep: [...f.keep] }))])))
   const [filterMenu, setFilterMenu] = useState<{ col: number; x: number; y: number } | null>(null)
   const clip = useRef<{ payload: ClipPayload; box: Box; sheet: string; cut: boolean } | null>(null)
   const [marquee, setMarquee] = useState<{ box: Box; sheet: string } | null>(null)
@@ -118,11 +121,18 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
 
   const dispatch = useCallback((ops: XOp | XOp[]) => {
     const list = Array.isArray(ops) ? ops : [ops]
+    // Protection is checked on the person's own edits, before anything is applied.
+    for (const op of list) {
+      if (model.book.protect && (op.k === 'sheet-add' || op.k === 'sheet-del' || op.k === 'sheet-ren' || op.k === 'sheet-move')) { say(s.refusedBook); return false }
+      if (!('sheet' in op) || op.k === 'props') continue
+      const why = refusal(model.sheet(op.sheet), op as never)
+      if (why) { say(why === 'locked' ? s.refusedLocked : why === 'format' ? s.refusedFormat : s.refusedStructure); return false }
+    }
     const inv = run(list)
     if (inv) { undo.current.push({ ops: list, inv, sheet: name, sel }); if (undo.current.length > 300) undo.current.shift() }
     setMarquee(null)
     return !!inv
-  }, [run, name, sel])
+  }, [run, name, sel, model, s]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const doUndo = useCallback(() => {
     const e = undo.current.pop()
@@ -164,10 +174,13 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
   }, [name])
 
   // ---- editing a cell -----------------------------------------------------------
-  const startEdit = (text: string, mode: 'enter' | 'edit', from: 'cell' | 'bar' = 'cell') => {
-    if (readOnly) return
+  const startEdit = (text: string, mode: 'enter' | 'edit', from: 'cell' | 'bar' = 'cell'): boolean => {
+    if (readOnly) return false
     const m = merges.find((b) => inBox(b, sel.a.row, sel.a.col))
+    // A locked cell on a protected sheet is refused before anything is typed, not after.
+    if (sheet.protect && refusal(sheet, { k: 'cells', cells: [{ r: m ? m.r0 : sel.a.row, c: m ? m.c0 : sel.a.col }] })) { say(s.refusedLocked); return false }
     setEdit({ r: m ? m.r0 : sel.a.row, c: m ? m.c0 : sel.a.col, text, mode, from })
+    return true
   }
   const commit = (move: 'down' | 'up' | 'right' | 'left' | 'none', extend = false) => {
     const e = edit
@@ -432,6 +445,9 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
     note: () => setDialog({ k: 'note' }),
     insertFunction: () => setDialog({ k: 'fn' }),
     validation: () => setDialog({ k: 'validation' }),
+    protectSheet: () => setDialog({ k: 'protect', what: 'sheet', mode: sheet.protect ? 'enter' : 'set' }),
+    protectBook: () => setDialog({ k: 'protect', what: 'book', mode: model.book.protect ? 'enter' : 'set' }),
+    lockCells: () => dispatch({ k: 'fmt', sheet: name, box: workBox, patch: { unlocked: fmt.unlocked ? (null as unknown as undefined) : true } }),
     dedupe: () => {
       const reg = region()
       const { patches, removed } = dedupePatches(sheet, reg, (r, c) => value(r, c), hasHeader((r, c) => value(r, c), reg))
@@ -612,7 +628,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
     >
       <XlRibbon s={s} tab={tab} onTab={setTab} fmt={fmt} act={act} merged={merges.some((m) => inBox(m, sel.a.row, sel.a.col))}
         sheetFreeze={!!(sheet.freeze?.rows || sheet.freeze?.cols)} showGrid={sheet.showGrid !== false} rtl={!!sheet.rtl} zoom={zoom} showFormulas={showFormulas}
-        chart={chart} picture={picture} readOnly={readOnly} />
+        chart={chart} picture={picture} readOnly={readOnly} protectedSheet={!!sheet.protect} protectedBook={!!model.book.protect} />
       <div className="flex-none flex items-stretch gap-1 px-2 py-1 border-b border-[color:var(--line-soft)] bg-[var(--surface)] relative" data-testid="xl-formula-bar">
         <input
           aria-label="Name box"
@@ -790,6 +806,23 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
         setFocusTick((x) => x + 1)
       }} />}
       {dialog?.k === 'split' && <SplitDialog s={s} onClose={() => setDialog(null)} onSplit={(d) => { const p = splitPatches(sheet, { ...workBox, c1: workBox.c0 }, d); if (p.length) dispatch({ k: 'cells', sheet: name, cells: p }) }} />}
+      {dialog?.k === 'protect' && (
+        <PasswordDialog s={s} mode={dialog.mode} onClose={() => setDialog(null)}
+          title={dialog.what === 'sheet' ? (dialog.mode === 'set' ? s.protectSheet : s.unprotectSheet) : (dialog.mode === 'set' ? s.protectBook : s.unprotectBook)}
+          onSubmit={async (pw) => {
+            const cur = dialog.what === 'sheet' ? sheet.protect : model.book.protect
+            if (dialog.mode === 'enter') {
+              if (!cur || !(await verify(cur, pw))) return false
+              if (dialog.what === 'sheet') run([{ k: 'props', sheet: name, patch: { protect: null as unknown as undefined } }])
+              else run([{ k: 'book', patch: { protect: null } }])
+              return true
+            }
+            const p = await protection(pw, dialog.what === 'sheet' ? {} : undefined)
+            if (dialog.what === 'sheet') run([{ k: 'props', sheet: name, patch: { protect: p } }])
+            else run([{ k: 'book', patch: { protect: p } }])
+            return true
+          }} />
+      )}
       {dialog?.k === 'rename' && <RenameSheetDialog s={s} name={dialog.sheet} taken={model.book.sheets.map((x) => x.name)} onClose={() => setDialog(null)} onSave={(n) => { if (n !== dialog.sheet) dispatch({ k: 'sheet-ren', from: dialog.sheet, to: n }) }} />}
       {loss && <LossDialog locale={locale} loss={loss.items} dir={loss.dir} onClose={() => setLoss(null)} />}
       {preview && <PrintPreview locale={locale} build={() => printable(sheet, (r, c) => model.engine.value(name, { row: r, col: c }), title || s.templates.budget)} onClose={() => setPreview(false)} />}

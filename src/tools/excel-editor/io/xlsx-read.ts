@@ -20,9 +20,9 @@
 // - **Theme colours.** A fill is usually "accent 1, 40% lighter", not a hex; a
 //   reader that ignores the theme paints every heading black on white.
 import { Package, NS, REL, relIs, sniffImage, dataUrl, emuToPx, OpcError } from '../../../lib/office/opc'
-import { kids, kid, find, findAll, attr, numAttr, textOf, type XEl } from '../../../lib/xml'
+import { kids, kid, find, findAll, attr, numAttr, textOf, isEl, type XEl } from '../../../lib/xml'
 import { DEFAULT_THEME, THEME_ORDER, INDEXED, applyTint, argb, sheetThemeColor, type ThemeColors } from '../../../lib/office/color'
-import { cellKey, parseA1, parseRange, colToLetters, type Cell, type CellFormat, type SheetData, type WorkbookData, type CondRule, type ScaleRule, type ChartSpec, type Validation, type SheetImage, type DefinedName } from '../engine/model'
+import { cellKey, parseA1, parseRange, colToLetters, type Cell, type CellFormat, type SheetData, type WorkbookData, type CondRule, type ScaleRule, type ChartSpec, type Validation, type SheetImage, type DefinedName, type TextRun, type Protection } from '../engine/model'
 import { shiftFormula } from '../engine/formula'
 import { BUILTIN_FORMATS, isDateCode } from '../engine/fmtcode'
 
@@ -37,7 +37,7 @@ const ptToPx = (pt: number) => Math.round((pt * 96) / 72)
 
 interface Font { b?: boolean; i?: boolean; u?: boolean; strike?: boolean; sz?: number; color?: string; name?: string }
 interface Border { t?: { s: string; c?: string }; r?: { s: string; c?: string }; b?: { s: string; c?: string }; l?: { s: string; c?: string } }
-interface Xf { numFmtId: number; fontId: number; fillId: number; borderId: number; align?: XEl | null }
+interface Xf { numFmtId: number; fontId: number; fillId: number; borderId: number; align?: XEl | null; prot?: XEl | null }
 interface Styles { numFmts: Map<number, string>; fonts: Font[]; fills: (string | undefined)[]; borders: Border[]; xfs: Xf[]; dxfs: { bg?: string; color?: string; b?: boolean }[]; cache: Map<number, CellFormat | undefined> }
 
 /** The schema a part uses: transitional or strict. Lookups try both. */
@@ -55,13 +55,14 @@ export async function readXlsx(buf: ArrayBuffer): Promise<XlsxImport> {
   const ns = sNs(wb)
   const theme = await readTheme(pkg, main)
   const styles = await readStyles(pkg, main, theme)
-  const sst = await readSharedStrings(pkg, main, lose)
+  const sst = await readSharedStrings(pkg, main, theme)
   const date1904 = ['1', 'true'].includes(attr(kid(wb, ns, 'workbookPr'), 'date1904') || '')
   if (pkg.names().some((n) => /vbaProject\.bin$/i.test(n))) lose('macros (VBA)')
   if (pkg.names().some((n) => /pivotTable/i.test(n))) lose('pivot tables', pkg.names().filter((n) => /pivotTables\/pivotTable\d+\.xml$/i.test(n)).length)
   if (pkg.names().some((n) => /externalLink/i.test(n))) lose('links to other workbooks', pkg.names().filter((n) => /externalLinks\/externalLink\d+\.xml$/i.test(n)).length)
   if (pkg.names().some((n) => /slicer/i.test(n))) lose('slicers')
-  if (find(wb, ns, 'workbookProtection')) lose('workbook protection')
+  const wbp = find(wb, ns, 'workbookProtection')
+  const bookProtect = wbp && (attr(wbp, 'lockStructure') === '1' || attr(wbp, 'lockStructure') === 'true') ? protectionOf(wbp, 'workbook') : undefined
 
   const sheetEls = kids(kid(wb, ns, 'sheets'), ns, 'sheet')
   const names: DefinedName[] = []
@@ -93,7 +94,7 @@ export async function readXlsx(buf: ArrayBuffer): Promise<XlsxImport> {
   if (!sheets.length) sheets.push({ name: 'Sheet1', cells: {}, rows: 100, cols: 26 })
   if (active >= sheets.length) active = 0
   const title = await readCoreTitle(pkg)
-  return { book: { sheets, names, active }, loss: [...loss].map(([what, count]) => ({ what, count })), title }
+  return { book: { sheets, names, active, ...(bookProtect ? { protect: bookProtect } : {}) }, loss: [...loss].map(([what, count]) => ({ what, count })), title }
 }
 
 async function readCoreTitle(pkg: Package): Promise<string> {
@@ -167,7 +168,7 @@ async function readStyles(pkg: Package, main: string, theme: ThemeColors): Promi
     st.borders.push({ t: side('top'), r: side('right'), b: side('bottom'), l: side('left') })
   }
   for (const x of kids(kid(el, ns, 'cellXfs'), ns, 'xf')) {
-    st.xfs.push({ numFmtId: numAttr(x, 'numFmtId', 0), fontId: numAttr(x, 'fontId', 0), fillId: numAttr(x, 'fillId', 0), borderId: numAttr(x, 'borderId', 0), align: kid(x, ns, 'alignment') })
+    st.xfs.push({ numFmtId: numAttr(x, 'numFmtId', 0), fontId: numAttr(x, 'fontId', 0), fillId: numAttr(x, 'fillId', 0), borderId: numAttr(x, 'borderId', 0), align: kid(x, ns, 'alignment'), prot: kid(x, ns, 'protection') })
   }
   for (const d of kids(kid(el, ns, 'dxfs'), ns, 'dxf')) {
     const pf = find(d, ns, 'patternFill')
@@ -221,27 +222,76 @@ function fmtOf(st: Styles, s: number): CellFormat | undefined {
     if (attr(al, 'indent')) out.indent = Number(attr(al, 'indent'))
     if (attr(al, 'textRotation')) out.rotate = Number(attr(al, 'textRotation'))
   }
+  const pr = xf.prot
+  if (pr) {
+    if (attr(pr, 'locked') === '0' || attr(pr, 'locked') === 'false') out.unlocked = true
+    if (attr(pr, 'hidden') === '1' || attr(pr, 'hidden') === 'true') out.hideFormula = true
+  }
   const res = Object.keys(out).length ? out : undefined
   st.cache.set(s, res)
   return res
 }
 
-async function readSharedStrings(pkg: Package, main: string, lose: (w: string, n?: number) => void): Promise<string[]> {
+/** A shared string: its text, and its runs when it mixes formatting. */
+interface Sst { text: string; runs?: TextRun[] }
+
+async function readSharedStrings(pkg: Package, main: string, theme: ThemeColors): Promise<Sst[]> {
   const rel = (await pkg.relsOfType(main, REL.sharedStrings))[0]
   const el = await pkg.tryXml(rel?.target)
   if (!el) return []
   const ns = sNs(el)
-  let rich = 0
-  const out = kids(el, ns, 'si').map((si) => {
+  return kids(el, ns, 'si').map((si) => {
     const t = kid(si, ns, 't')
-    if (t) return textOf(t)
-    // Rich text: the runs, concatenated. Phonetic guides (<rPh>) are not text.
-    const runs = kids(si, ns, 'r')
-    if (runs.length > 1) rich++
-    return runs.map((r) => textOf(kid(r, ns, 't'))).join('')
+    if (t) return { text: textOf(t) }
+    // Rich text. Phonetic guides (<rPh>) are not text.
+    const runs = kids(si, ns, 'r').map((r) => runOf(r, ns, theme))
+    const text = runs.map((r) => r.t).join('')
+    return runs.length > 1 && runs.some((r) => Object.keys(r).length > 1) ? { text, runs } : { text }
   })
-  if (rich) lose('mixed formatting inside one cell', rich)
+}
+
+/** One rich-text run: its text and the font properties it sets. */
+export function runOf(r: XEl, ns: string, theme: ThemeColors): TextRun {
+  const out: TextRun = { t: textOf(kid(r, ns, 't')) }
+  const rp = kid(r, ns, 'rPr')
+  if (!rp) return out
+  const on = (n: string) => { const k = kid(rp, ns, n); if (!k) return false; const v = attr(k, 'val'); return v === undefined || !(v === '0' || v === 'false' || v === 'none') }
+  if (on('b')) out.b = true
+  if (on('i')) out.i = true
+  if (on('u')) out.u = true
+  if (on('strike')) out.s = true
+  const va = attr(kid(rp, ns, 'vertAlign'), 'val')
+  if (va === 'superscript') out.sup = true
+  else if (va === 'subscript') out.sub = true
+  const sz = attr(kid(rp, ns, 'sz'), 'val')
+  if (sz) out.size = Number(sz)
+  const c = colorOf(kid(rp, ns, 'color'), theme)
+  if (c && c !== '#000000') out.color = c
+  const f = attr(kid(rp, ns, 'rFont'), 'val')
+  if (f) out.font = f
   return out
+}
+
+/** Protection from sheetProtection or workbookProtection: the hash, and what is still allowed. */
+function protectionOf(el: XEl, kind: 'sheet' | 'workbook'): Protection {
+  const p: Protection = {}
+  const pre = kind === 'workbook' ? 'workbook' : ''
+  const alg = attr(el, pre ? 'workbookAlgorithmName' : 'algorithmName')
+  const value = attr(el, pre ? 'workbookHashValue' : 'hashValue')
+  if (alg && value) p.hash = { algorithm: alg, value, salt: attr(el, pre ? 'workbookSaltValue' : 'saltValue') || '', spin: Number(attr(el, pre ? 'workbookSpinCount' : 'spinCount') || 0) }
+  const legacy = attr(el, pre ? 'workbookPassword' : 'password')
+  if (legacy) p.legacy = legacy
+  if (kind === 'sheet') {
+    const allow: Record<string, boolean> = {}
+    // In the file, an attribute set to 1 means that action is PROTECTED (forbidden),
+    // except the two selection ones, whose defaults run the other way. Store what is ALLOWED.
+    for (const k of ['formatCells', 'formatColumns', 'formatRows', 'insertColumns', 'insertRows', 'insertHyperlinks', 'deleteColumns', 'deleteRows', 'sort', 'autoFilter', 'pivotTables']) {
+      const v = attr(el, k)
+      allow[k] = v === '0' || v === 'false'
+    }
+    p.allow = allow
+  }
+  return p
 }
 
 // ---- a worksheet -----------------------------------------------------------------------
@@ -260,7 +310,7 @@ export function textInput(s: string): string {
 /** Excel's serial in the 1904 system is 1,462 days behind ours. */
 const D1904 = 1462
 
-async function readSheet(pkg: Package, part: string, name: string, st: Styles, sst: string[], date1904: boolean, theme: ThemeColors, lose: (w: string, n?: number) => void): Promise<SheetData> {
+async function readSheet(pkg: Package, part: string, name: string, st: Styles, sst: Sst[], date1904: boolean, theme: ThemeColors, lose: (w: string, n?: number) => void): Promise<SheetData> {
   const el = await pkg.xml(part)
   const ns = sNs(el)
   const cells: Record<string, Cell> = {}
@@ -319,6 +369,7 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
       const fEl = kid(c, ns, 'f')
       const vEl = kid(c, ns, 'v')
       let input = ''
+      let runs: TextRun[] | undefined
       if (fEl) {
         const ft = attr(fEl, 't')
         let ftext = textOf(fEl)
@@ -336,8 +387,14 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
       if (!input) {
         const v = vEl ? textOf(vEl) : ''
         switch (t) {
-          case 's': input = textInput(sst[Number(v)] ?? ''); break
-          case 'inlineStr': input = textInput(textOf(find(c, ns, 'is'))); break
+          case 's': { const e = sst[Number(v)]; input = textInput(e?.text ?? ''); runs = e?.runs; break }
+          case 'inlineStr': {
+            const is = find(c, ns, 'is')
+            const rr = is ? kids(is, ns, 'r') : []
+            if (rr.length > 1) { const list = rr.map((x) => runOf(x, ns, theme)); runs = list; input = textInput(list.map((x) => x.t).join('')) }
+            else input = textInput(textOf(is))
+            break
+          }
           case 'str': input = textInput(v); break
           case 'b': input = v === '1' ? 'TRUE' : 'FALSE'; break
           case 'e': input = '=' + v; break
@@ -353,7 +410,8 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
       if (!input && !fmt) continue
       if (count >= 400_000) { tooMany++; continue }
       count++
-      cells[cellKey(a.row, a.col)] = fmt ? { input, fmt } : { input }
+      const f2 = runs ? { ...(fmt || {}), runs } : fmt
+      cells[cellKey(a.row, a.col)] = f2 ? { input, fmt: f2 } : { input }
       if (input) { maxR = Math.max(maxR, a.row + 1); maxC = Math.max(maxC, a.col + 1) }
     }
   }
@@ -364,7 +422,20 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
   for (const m of kids(kid(el, ns, 'mergeCells'), ns, 'mergeCell')) { const ref = attr(m, 'ref'); if (ref && parseRange(ref)) (sheet.merges ||= []).push(ref) }
   // Auto-filter.
   const af = kid(el, ns, 'autoFilter')
-  if (af && attr(af, 'ref')) { sheet.autoFilter = attr(af, 'ref'); if (kids(af, ns, 'filterColumn').length) lose('active filter criteria') }
+  if (af && attr(af, 'ref')) {
+    sheet.autoFilter = attr(af, 'ref')
+    const box = parseRange(sheet.autoFilter!)
+    // A filterColumn can be nothing but a hidden button (showButton="0"): that is not a filter.
+    for (const fc of kids(af, ns, 'filterColumn')) {
+      const col = (box?.c0 ?? 0) + numAttr(fc, 'colId', 0)
+      const list = kid(fc, ns, 'filters')
+      if (list) {
+        const keep = kids(list, ns, 'filter').map((f) => attr(f, 'val') || '')
+        if (attr(list, 'blank') === '1' || attr(list, 'blank') === 'true') keep.push('')
+        ;(sheet.savedFilter ||= []).push({ col, keep })
+      } else if (fc.children.some((x) => isEl(x))) lose('filter rules other than a list of values')
+    }
+  }
   // Conditional formatting.
   readConditional(el, ns, st, theme, sheet, lose)
   // Data validation.
@@ -426,9 +497,28 @@ async function readSheet(pkg: Package, part: string, name: string, st: Styles, s
   if ((await pkg.relsOfType(part, 'http://schemas.microsoft.com/office/2017/10/relationships/threadedComment')).length) lose('threaded comment replies (kept as notes)')
   // Drawings: pictures and charts.
   for (const rel of await pkg.relsOfType(part, REL.drawing)) await readDrawing(pkg, rel.target, sheet, theme, lose)
-  if (find(el, ns, 'sheetProtection')) lose('sheet protection')
+  const sp = find(el, ns, 'sheetProtection')
+  if (sp && attr(sp, 'sheet') !== '0' && attr(sp, 'sheet') !== 'false') sheet.protect = protectionOf(sp, 'sheet')
   if (find(el, NS.x14, 'sparklineGroups')) lose('sparklines')
-  if (kids(kid(el, ns, 'tableParts'), ns, 'tablePart').length) lose('table styling (the data is kept)', kids(kid(el, ns, 'tableParts'), ns, 'tablePart').length)
+  for (const tp of kids(kid(el, ns, 'tableParts'), ns, 'tablePart')) {
+    const rid = attr(tp, 'id', R)
+    const rel = rid ? await pkg.relById(part, rid) : null
+    const t = rel ? await pkg.tryXml(rel.target) : null
+    if (!t || !attr(t, 'ref')) continue
+    const tns = sNs(t)
+    const si = kid(t, tns, 'tableStyleInfo')
+    const yes = (e: XEl | null, k: string) => attr(e, k) === '1' || attr(e, k) === 'true'
+    ;(sheet.tables ||= []).push({
+      name: attr(t, 'displayName') || attr(t, 'name') || `Table${(sheet.tables?.length || 0) + 1}`,
+      ref: attr(t, 'ref')!,
+      style: attr(si, 'name'),
+      header: attr(t, 'headerRowCount') !== '0',
+      totals: Number(attr(t, 'totalsRowCount') || 0) > 0,
+      rowStripes: yes(si, 'showRowStripes'), colStripes: yes(si, 'showColumnStripes'),
+      firstCol: yes(si, 'showFirstColumn'), lastCol: yes(si, 'showLastColumn'),
+      columns: kids(kid(t, tns, 'tableColumns'), tns, 'tableColumn').map((c) => attr(c, 'name') || ''),
+    })
+  }
   return sheet
 }
 

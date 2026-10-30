@@ -268,3 +268,72 @@ print(json.dumps({
     expect(performance.now() - t0).toBeLessThan(4000)
   }, 20_000)
 })
+
+describe('rich text, protection, tables and saved filters (protected-rich.xlsx, openpyxl)', () => {
+  it('come in as the workbook said, and nothing is reported lost', async () => {
+    const { book, loss } = await readXlsx(load('protected-rich.xlsx'))
+    expect(loss).toEqual([])
+    const s = book.sheets[0]
+    const a1 = cell(s, 'A1')
+    expect(a1.input).toBe('Status: late by two days')
+    expect(a1.fmt!.runs!.map((r) => r.t)).toEqual(['Status: ', 'late', ' by two days'])
+    expect(a1.fmt!.runs![1]).toMatchObject({ b: true, color: '#c00000' })
+    expect(s.protect!.legacy).toBe('CBEB')
+    expect(s.protect!.allow!.insertRows).toBe(true)
+    expect(s.protect!.allow!.deleteRows).toBe(false)
+    expect(cell(s, 'B1').fmt!.unlocked).toBe(true)
+    expect(book.protect).toBeDefined()
+    expect(s.tables).toEqual([expect.objectContaining({ name: 'Sales', ref: 'A4:C7', style: 'TableStyleMedium9', header: true, rowStripes: true, columns: ['Region', 'Q1', 'Q2'] })])
+    expect(book.sheets[1].savedFilter).toEqual([{ col: 1, keep: ['a'] }])
+  })
+
+  it('a filter column that only hides its button is not a filter', async () => {
+    // The shape of a real file this came from: showButton="0" and nothing else.
+    const { loss, book } = await readXlsx(load('protected-rich.xlsx'))
+    expect(loss.map((l) => l.what)).not.toContain('active filter criteria')
+    expect(book.sheets[0].savedFilter).toBeUndefined()
+  })
+
+  it('round-trip through our writer and reader unchanged', async () => {
+    const { book } = await readXlsx(load('protected-rich.xlsx'))
+    const back = await readXlsx(await (await writeXlsx(book)).blob.arrayBuffer())
+    const s = back.book.sheets[0]
+    expect(cell(s, 'A1').fmt!.runs).toEqual(cell(book.sheets[0], 'A1').fmt!.runs)
+    expect(s.protect).toEqual(book.sheets[0].protect)
+    expect(cell(s, 'B1').fmt!.unlocked).toBe(true)
+    expect(back.book.protect).toBeDefined()
+    expect(s.tables).toEqual(book.sheets[0].tables)
+    expect(back.book.sheets[1].savedFilter).toEqual([{ col: 1, keep: ['a'] }])
+  })
+
+  it('stale runs are dropped: an edited cell is written as the plain text it now holds', async () => {
+    const { book } = await readXlsx(load('protected-rich.xlsx'))
+    book.sheets[0].cells['0,0'] = { ...book.sheets[0].cells['0,0'], input: 'Status: on time' }
+    const back = await readXlsx(await (await writeXlsx(book)).blob.arrayBuffer())
+    expect(cell(back.book.sheets[0], 'A1').input).toBe('Status: on time')
+    expect(cell(back.book.sheets[0], 'A1').fmt?.runs).toBeUndefined()
+  })
+
+  it.skipIf(!hasPy)('openpyxl reads our export: the rich run, the protection, the table and the filter', async () => {
+    const { book } = await readXlsx(load('protected-rich.xlsx'))
+    const dir = mkdtempSync(join(tmpdir(), 'xl-'))
+    const f = join(dir, 'out.xlsx')
+    writeFileSync(f, new Uint8Array(await (await writeXlsx(book)).blob.arrayBuffer()))
+    const py = `import sys, json, openpyxl
+wb = openpyxl.load_workbook(sys.argv[1], rich_text=True)
+ws = wb['Plan']
+a1 = ws['A1'].value
+runs = [[b.text, bool(b.font.b) if hasattr(b, 'font') and b.font else False] if hasattr(b, 'text') else [b, False] for b in a1]
+print(json.dumps({'runs': runs, 'sheet': ws.protection.sheet, 'pw': ws.protection.password, 'b1': ws['B1'].protection.locked,
+  'book': bool(wb.security and wb.security.lockStructure), 'tables': {t.displayName: [t.ref, t.tableStyleInfo.name] for t in ws.tables.values()},
+  'filter': [[c.colId, list(c.filters.filter)] for c in wb['Filtered'].auto_filter.filterColumn]}))`
+    const out = JSON.parse(execFileSync('python3', ['-c', py, f]).toString())
+    expect(out.runs).toEqual([['Status: ', false], ['late', true], [' by two days', false]])
+    expect(out.sheet).toBe(true)
+    expect(out.pw).toBe('CBEB')
+    expect(out.b1).toBe(false)
+    expect(out.book).toBe(true)
+    expect(out.tables).toEqual({ Sales: ['A4:C7', 'TableStyleMedium9'] })
+    expect(out.filter).toEqual([[1, ['a']]])
+  })
+})

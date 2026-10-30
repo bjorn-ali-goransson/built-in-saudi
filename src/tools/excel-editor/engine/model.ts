@@ -51,7 +51,36 @@ export type CellControl =
   /** A dropdown / data-validation list — the cell value must be one of `options` (#315). */
   | { kind: 'dropdown'; options: string[] }
 
+/** One stretch of a cell's text with its own formatting — Excel's "rich text" in a cell. */
+export type TextRun = { t: string; b?: boolean; i?: boolean; u?: boolean; s?: boolean; color?: string; size?: number; font?: string; sup?: boolean; sub?: boolean }
+
+/**
+ * Sheet or workbook protection, as the file stated it. The password is never
+ * known: only its hash, which is what is checked when somebody unprotects, and
+ * what is written back so the file stays protected the same way.
+ */
+export type Protection = {
+  hash?: { algorithm: string; value: string; salt: string; spin: number }
+  /** The pre-2010 16-bit password hash, as four hex digits. */
+  legacy?: string
+  /** What the protection still ALLOWS, by the file's own attribute names (formatCells, insertRows …). */
+  allow?: Record<string, boolean>
+}
+
+/** An Excel table: a named range with a header row and a style. */
+export type SheetTable = { name: string; ref: string; style?: string; header: boolean; totals?: boolean; rowStripes?: boolean; colStripes?: boolean; firstCol?: boolean; lastCol?: boolean; columns: string[] }
+
 export type CellFormat = {
+  /**
+   * Mixed formatting within the cell's text. It applies only while the runs spell
+   * exactly the cell's text: editing the cell retires them without anything having
+   * to notice, so stale styling can never be drawn on new words.
+   */
+  runs?: TextRun[]
+  /** Excel's cell protection: cells are LOCKED unless this says otherwise. It only bites on a protected sheet. */
+  unlocked?: boolean
+  /** Hide the formula on a protected sheet. */
+  hideFormula?: boolean
   /**
    * THE FOUR TEXT MARKS. Bold shipped alone for a long time, which made a sheet the one surface in
    * the suite where a person could not italicise a note in a cell or strike a cancelled line
@@ -275,6 +304,23 @@ export type SheetData = {
   images?: SheetImage[]
   /** Sheet visibility. */
   hidden?: boolean
+  /** Locked cells cannot be changed while this is set. */
+  protect?: Protection
+  /** Excel tables on this sheet. */
+  tables?: SheetTable[]
+  /**
+   * The filter the FILE was saved with, by column: the values left visible. The
+   * editor's own filters are a personal view (engine/filter.ts); this is what opens
+   * applied, and what is written back.
+   */
+  savedFilter?: { col: number; keep: string[] }[]
+}
+
+/** The runs, if they still spell the cell's text — otherwise none. */
+export function validRuns(fmt: CellFormat | undefined, text: string): TextRun[] | null {
+  const r = fmt?.runs
+  if (!r || r.length < 2) return null
+  return r.map((x) => x.t).join('') === text ? r : null
 }
 
 export type Validation = {
@@ -306,6 +352,8 @@ export type DefinedName = { name: string; ref: string; sheet?: string }
 /** The whole document as the editor stores it. */
 export type WorkbookData = {
   sheets: SheetData[]
+  /** Workbook structure protection: sheets cannot be added, removed, renamed or moved. */
+  protect?: Protection
   names?: DefinedName[]
   /** Index of the sheet that was active when saved. */
   active?: number

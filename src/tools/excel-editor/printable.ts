@@ -4,7 +4,9 @@
 // landscape; wider than that scales it down — Excel's "fit all columns on one
 // page", which is what almost everybody printing a sheet wants.
 import { paginate, MM, type Printable } from '../../components/office/print'
-import { cellKey, type SheetData, type CellValue } from './engine/model'
+import { cellKey, parseRange, validRuns, type SheetData, type CellValue } from './engine/model'
+import { tableBoxes, tableLookAt } from './ui/tableStyle'
+import { runCss } from './ui/runs'
 import { cellLook } from './ui/cellStyle'
 import { DEFAULT_COL_W, DEFAULT_ROW_H } from './ui/geometry'
 import type { CSSProperties } from 'react'
@@ -41,6 +43,7 @@ export function sheetHtml(sheet: SheetData, value: (r: number, c: number) => Cel
     span.set(cellKey(a.row, a.col), { rs: b.row - a.row + 1, cs: b.col - a.col + 1 })
     for (let r = a.row; r <= b.row; r++) for (let c = a.col; c <= b.col; c++) if (r !== a.row || c !== a.col) covered.add(cellKey(r, c))
   }
+  const tables = tableBoxes(sheet.tables, parseRange)
   const visCols = Array.from({ length: cols }, (_, c) => c).filter((c) => !hiddenC.has(c))
   const width = visCols.reduce((w, c) => w + (sheet.colWidths?.[c] ?? DEFAULT_COL_W), 0)
   let body = `<table class="xp${sheet.showGrid === false ? '' : ' grid'}" style="width:${width}px"><colgroup>${visCols.map((c) => `<col style="width:${sheet.colWidths?.[c] ?? DEFAULT_COL_W}px">`).join('')}</colgroup>`
@@ -53,11 +56,16 @@ export function sheetHtml(sheet: SheetData, value: (r: number, c: number) => Cel
       const cell = sheet.cells[k]
       const sp = span.get(k)
       const attrs = sp ? `${sp.cs > 1 ? ` colspan="${sp.cs}"` : ''}${sp.rs > 1 ? ` rowspan="${sp.rs}"` : ''}` : ''
-      if (!cell) { body += `<td${attrs}></td>`; continue }
-      const look = cellLook(value(r, c), cell.fmt, { zoom: 1 })
-      const st: CSSProperties = { ...look.style, textAlign: look.align }
+      const tl = tables.length ? tableLookAt(tables, r, c) : null
+      const tcss: CSSProperties = tl ? { background: tl.bg, color: tl.color, fontWeight: tl.bold ? 700 : undefined, borderTop: tl.borderTop, borderBottom: tl.borderBottom } : {}
+      if (!cell) { body += `<td${attrs}${tl ? ` style="${css(tcss)}"` : ''}></td>`; continue }
+      const v = value(r, c)
+      const look = cellLook(v, cell.fmt, { zoom: 1 })
+      const st: CSSProperties = { ...tcss, ...look.style, textAlign: look.align }
       if (cell.fmt?.wrap) st.whiteSpace = 'pre-wrap'
-      body += `<td${attrs} style="${css(st)}" dir="auto">${esc(look.text)}</td>`
+      const runs = typeof v === 'string' ? validRuns(cell.fmt, look.text) : null
+      const inner = runs ? runs.map((x) => `<span style="${css(runCss(x))}">${esc(x.t)}</span>`).join('') : esc(look.text)
+      body += `<td${attrs} style="${css(st)}" dir="auto">${inner}</td>`
     }
     body += '</tr>'
   }

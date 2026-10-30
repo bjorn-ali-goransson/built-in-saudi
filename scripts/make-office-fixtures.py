@@ -281,6 +281,42 @@ def word_floating():
             zo.writestr(it, d)
 
 
+def xlsx_protected_rich():
+    """Rich text in a cell, a password-protected sheet with one unlocked cell,
+    workbook structure protection, a styled table and an autofilter with real
+    criteria — every item the spreadsheet importer used to list as lost."""
+    from openpyxl import Workbook
+    from openpyxl.cell.rich_text import CellRichText, TextBlock
+    from openpyxl.cell.text import InlineFont
+    from openpyxl.styles import Protection
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+    from openpyxl.workbook.protection import WorkbookProtection
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Plan'
+    ws['A1'] = CellRichText(['Status: ', TextBlock(InlineFont(b=True, color='FFC00000'), 'late'), ' by two days'])
+    ws['B1'] = 'unlocked here'
+    ws['B1'].protection = Protection(locked=False)
+    ws.protection.sheet = True
+    ws.protection.password = 'test'
+    ws.protection.insertRows = False
+    rows = [['Region', 'Q1', 'Q2'], ['Riyadh', 10, 12], ['Jeddah', 8, 9], ['Dammam', 7, 6]]
+    for i, r in enumerate(rows):
+        for j, v in enumerate(r):
+            ws.cell(row=4 + i, column=1 + j, value=v)
+    t = Table(displayName='Sales', ref='A4:C7')
+    t.tableStyleInfo = TableStyleInfo(name='TableStyleMedium9', showRowStripes=True)
+    ws.add_table(t)
+    f = wb.create_sheet('Filtered')
+    for i, r in enumerate([['City', 'Kind'], ['Riyadh', 'a'], ['Jeddah', 'b'], ['Dammam', 'a']]):
+        for j, v in enumerate(r):
+            f.cell(row=1 + i, column=1 + j, value=v)
+    f.auto_filter.ref = 'A1:B4'
+    f.auto_filter.add_filter_column(1, ['a'])
+    wb.security = WorkbookProtection(lockStructure=True)
+    wb.save(os.path.join(XL, 'protected-rich.xlsx'))
+
+
 def pptx_python():
     """A deck from python-pptx's default template: real masters, layouts, theme and placeholders."""
     from pptx import Presentation
@@ -372,6 +408,7 @@ def main():
     xlsx_openpyxl()
     xlsx_xlsxwriter()
     xlsx_1904()
+    xlsx_protected_rich()
     try:
         xlsx_libreoffice_shared()
     except Exception as e:  # noqa

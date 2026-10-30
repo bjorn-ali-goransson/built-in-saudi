@@ -20,7 +20,7 @@
 import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu } from '../../../lib/office/opc'
 import { x, raw, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { Workbook } from '../engine/workbook'
-import { colToLetters, parseA1, parseRange, isError, borderSides, type CellFormat, type SheetData, type WorkbookData, type CellValue, type ChartSpec } from '../engine/model'
+import { colToLetters, parseA1, parseRange, isError, borderSides, validRuns, type CellFormat, type TextRun, type Protection, type SheetData, type WorkbookData, type CellValue, type ChartSpec } from '../engine/model'
 import { toExcelNumFmt, type NumFmtId } from '../engine/numfmt'
 
 const MDW = 7
@@ -32,6 +32,7 @@ const CT = {
   sheet: 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml',
   styles: 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml',
   sst: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml',
+  table: 'application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml',
   comments: 'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml',
   vml: 'application/vnd.openxmlformats-officedocument.vmlDrawing',
   drawing: 'application/vnd.openxmlformats-officedocument.drawing+xml',
@@ -50,6 +51,8 @@ export function safeSheetName(name: string, used: Set<string>): string {
 }
 
 // ---- styles -------------------------------------------------------------------------
+
+const REL_TABLE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/table'
 
 class StyleTable {
   fonts: string[] = ['<font><sz val="11"/><name val="Calibri"/><family val="2"/></font>']
@@ -70,6 +73,7 @@ class StyleTable {
   }
 
   xf(fmt: CellFormat | undefined, quote = false): number {
+    if (fmt?.runs) { const { runs, ...rest } = fmt; void runs; fmt = Object.keys(rest).length ? rest : undefined }
     if (!fmt && !quote) return 0
     const key = JSON.stringify([fmt, quote])
     const hit = this.memo.get(key)
@@ -98,11 +102,12 @@ class StyleTable {
     const v = f.valign === 'middle' ? 'center' : f.valign === 'top' ? 'top' : undefined
     const hasAlign = h || v || f.wrap || f.indent || f.rotate
     const align = hasAlign ? x('alignment', { horizontal: h, vertical: v, wrapText: f.wrap ? 1 : undefined, indent: f.indent || undefined, textRotation: f.rotate || undefined }) : null
+    const prot = f.unlocked || f.hideFormula ? x('protection', { locked: f.unlocked ? 0 : undefined, hidden: f.hideFormula ? 1 : undefined }) : null
     const xf = x('xf', {
       numFmtId, fontId, fillId, borderId, xfId: 0,
       applyNumberFormat: numFmtId ? 1 : undefined, applyFont: fontId ? 1 : undefined, applyFill: fillId ? 1 : undefined, applyBorder: borderId ? 1 : undefined, applyAlignment: hasAlign ? 1 : undefined,
-      quotePrefix: quote ? 1 : undefined,
-    }, align).s
+      applyProtection: prot ? 1 : undefined, quotePrefix: quote ? 1 : undefined,
+    }, align, prot).s
     const id = this.idx(this.xfs, xf)
     this.memo.set(key, id)
     return id
@@ -139,19 +144,58 @@ export function hex6(c: string): string {
 // ---- shared strings ---------------------------------------------------------------------
 
 class Strings {
-  list: string[] = []
+  list: (string | TextRun[])[] = []
   map = new Map<string, number>()
   count = 0
-  id(s: string): number {
+  id(s: string | TextRun[]): number {
     this.count++
-    let i = this.map.get(s)
-    if (i === undefined) { i = this.list.length; this.list.push(s); this.map.set(s, i) }
+    const key = typeof s === 'string' ? 's' + s : 'r' + JSON.stringify(s)
+    let i = this.map.get(key)
+    if (i === undefined) { i = this.list.length; this.list.push(s); this.map.set(key, i) }
     return i
   }
   xml(): string {
+    const t = (s: string) => x('t', /^\s|\s$|\n/.test(s) ? { 'xml:space': 'preserve' } : null, s)
     return xmlDoc(x('sst', { xmlns: NS.s, count: this.count, uniqueCount: this.list.length },
-      this.list.map((s) => x('si', null, x('t', /^\s|\s$|\n/.test(s) ? { 'xml:space': 'preserve' } : null, s)))))
+      this.list.map((s) => x('si', null, typeof s === 'string' ? t(s) : s.map((r) => x('r', null, runPr(r), t(r.t)))))))
   }
+}
+
+/** A rich-text run's properties, in the order Excel writes them. */
+function runPr(r: TextRun): Xml | null {
+  const k: Xml[] = []
+  if (r.font) k.push(x('rFont', { val: r.font }))
+  if (r.b) k.push(x('b'))
+  if (r.i) k.push(x('i'))
+  if (r.s) k.push(x('strike'))
+  if (r.color) k.push(x('color', { rgb: 'FF' + hex6(r.color) }))
+  if (r.size) k.push(x('sz', { val: r.size }))
+  if (r.u) k.push(x('u'))
+  if (r.sup) k.push(x('vertAlign', { val: 'superscript' }))
+  else if (r.sub) k.push(x('vertAlign', { val: 'subscript' }))
+  return k.length ? x('rPr', null, k) : null
+}
+
+/** Protection as the file writes it: the hash back as it came, and 1 for each action still forbidden. */
+function protectionAttrs(p: Protection, kind: 'sheet' | 'workbook'): Record<string, string | number | undefined> {
+  const pre = kind === 'workbook'
+  const a: Record<string, string | number | undefined> = {}
+  if (p.hash) {
+    a[pre ? 'workbookAlgorithmName' : 'algorithmName'] = p.hash.algorithm
+    a[pre ? 'workbookHashValue' : 'hashValue'] = p.hash.value
+    a[pre ? 'workbookSaltValue' : 'saltValue'] = p.hash.salt
+    a[pre ? 'workbookSpinCount' : 'spinCount'] = p.hash.spin
+  }
+  if (p.legacy) a[pre ? 'workbookPassword' : 'password'] = p.legacy
+  if (pre) a.lockStructure = 1
+  else {
+    a.sheet = 1
+    for (const [k, v] of Object.entries(p.allow || {})) a[k] = v ? 0 : 1
+    // Objects and scenarios are protected with the sheet, as Excel's default does.
+    a.objects = 1
+    a.scenarios = 1
+  }
+  return a
 }
 
 // ---- the workbook ---------------------------------------------------------------------------
@@ -171,10 +215,11 @@ export async function writeXlsx(book: WorkbookData, meta: { title?: string } = {
   let charts = 0
   let comments = 0
   let images = 0
+  let tables = 0
 
   book.sheets.forEach((sheet, i) => {
     const part = `xl/worksheets/sheet${i + 1}.xml`
-    const body = sheetXml(sheet, engine, styles, sst, w, part, lose, () => ++drawings, () => ++charts, () => ++comments, () => ++images, names)
+    const body = sheetXml(sheet, engine, styles, sst, w, part, lose, () => ++drawings, () => ++charts, () => ++comments, () => ++images, names, () => ++tables)
     w.add(part, body, CT.sheet)
     w.rel('xl/workbook.xml', { type: REL.worksheet, target: part })
   })
@@ -192,6 +237,7 @@ export async function writeXlsx(book: WorkbookData, meta: { title?: string } = {
   const active = Math.min(book.active || 0, book.sheets.length - 1)
   w.add('xl/workbook.xml', xmlDoc(x('workbook', { xmlns: NS.s, 'xmlns:r': NS.r },
     x('workbookPr', { defaultThemeVersion: 164011 }),
+    book.protect ? x('workbookProtection', protectionAttrs(book.protect, 'workbook')) : null,
     x('bookViews', null, x('workbookView', { activeTab: active > 0 ? active : undefined, firstSheet: 0 })),
     x('sheets', null, book.sheets.map((s, i) => x('sheet', { name: names[i], sheetId: i + 1, state: s.hidden && i !== active ? 'hidden' : undefined, 'r:id': `rId${i + 1}` }))),
     definedNames.length ? x('definedNames', null, definedNames) : null,
@@ -205,11 +251,11 @@ export async function writeXlsx(book: WorkbookData, meta: { title?: string } = {
   w.add('xl/sharedStrings.xml', sst.xml(), CT.sst)
   w.rel('xl/workbook.xml', { type: REL.sharedStrings, target: 'xl/sharedStrings.xml' })
   writeDocProps(w, { title: meta.title, app: 'Built in Saudi — Excel Editor' })
-  void drawings; void charts; void comments; void images
+  void drawings; void charts; void comments; void images; void tables
   return { blob: await w.toBlob(MIME), loss: [...loss].map(([what, count]) => ({ what, count })) }
 }
 
-function cellValueXml(r: string, v: CellValue, input: string, s: number, sst: Strings): Xml | null {
+function cellValueXml(r: string, v: CellValue, input: string, s: number, sst: Strings, runs?: TextRun[] | null): Xml | null {
   const sAttr = s || undefined
   if (input.startsWith('=')) {
     const f = input.slice(1)
@@ -222,7 +268,7 @@ function cellValueXml(r: string, v: CellValue, input: string, s: number, sst: St
   if (typeof v === 'number') return x('c', { r, s: sAttr }, x('v', null, numText(v)))
   if (typeof v === 'boolean') return x('c', { r, s: sAttr, t: 'b' }, x('v', null, v ? '1' : '0'))
   if (isError(v)) return x('c', { r, s: sAttr, t: 'e' }, x('v', null, v.kind))
-  return x('c', { r, s: sAttr, t: 's' }, x('v', null, String(sst.id(String(v)))))
+  return x('c', { r, s: sAttr, t: 's' }, x('v', null, String(sst.id(runs || String(v)))))
 }
 function numText(v: number): string {
   // Full precision, no exponent where Excel would not use one.
@@ -230,7 +276,7 @@ function numText(v: number): string {
 }
 
 function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: Strings, w: PackageWriter, part: string, lose: (w: string, n?: number) => void,
-  nextDrawing: () => number, nextChart: () => number, nextComments: () => number, nextImage: () => number, names: string[]): string {
+  nextDrawing: () => number, nextChart: () => number, nextComments: () => number, nextImage: () => number, names: string[], nextTable: () => number): string {
   const rows = new Map<number, { c: number; xml: Xml }[]>()
   let maxR = 0
   let maxC = 0
@@ -245,7 +291,7 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     const quote = cell.input.startsWith("'")
     const s = styles.xf(cell.fmt ? { ...cell.fmt, control: undefined } : undefined, quote)
     const v = engine.value(sheet.name, { row, col })
-    const xml = cellValueXml(ref, v, cell.input, s, sst)
+    const xml = cellValueXml(ref, v, cell.input, s, sst, typeof v === 'string' ? validRuns(cell.fmt, v) : null)
     if (xml) {
       let list = rows.get(row)
       if (!list) { list = []; rows.set(row, list) }
@@ -369,6 +415,39 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     drawing = x('drawing', { 'r:id': rid })
   }
   const merges = (sheet.merges || []).filter((m) => parseRange(m))
+  // Tables: their own part each. A column's name must be its header cell's text, or Excel
+  // "repairs" the file; and names must be unique within the table.
+  const tableParts: Xml[] = []
+  const tableBoxes: { r0: number; c0: number; r1: number; c1: number }[] = []
+  for (const t of sheet.tables || []) {
+    const b = parseRange(t.ref)
+    if (!b) continue
+    tableBoxes.push(b)
+    const n = nextTable()
+    const tpart = `xl/tables/table${n}.xml`
+    const seen = new Set<string>()
+    const cols = Array.from({ length: b.c1 - b.c0 + 1 }, (_, i) => {
+      let name = t.header ? String(engine.value(sheet.name, { row: b.r0, col: b.c0 + i }) ?? '').trim() : ''
+      if (!name) name = t.columns[i] || `Column${i + 1}`
+      let u = name
+      for (let k = 2; seen.has(u.toLowerCase()); k++) u = `${name}${k}`
+      seen.add(u.toLowerCase())
+      return x('tableColumn', { id: i + 1, name: u })
+    })
+    const safe = t.name.replace(/[^\p{L}\p{N}_.]/gu, '_').replace(/^([^\p{L}_])/u, '_$1') || `Table${n}`
+    w.add(tpart, xmlDoc(x('table', { xmlns: NS.s, id: n, name: safe, displayName: safe, ref: t.ref, headerRowCount: t.header ? undefined : 0, totalsRowCount: t.totals ? 1 : undefined, totalsRowShown: t.totals ? undefined : 0 },
+      t.header ? x('autoFilter', { ref: t.totals ? `${colToLetters(b.c0)}${b.r0 + 1}:${colToLetters(b.c1)}${b.r1}` : t.ref }) : null,
+      x('tableColumns', { count: cols.length }, cols),
+      x('tableStyleInfo', { name: t.style || 'TableStyleMedium2', showFirstColumn: t.firstCol ? 1 : 0, showLastColumn: t.lastCol ? 1 : 0, showRowStripes: t.rowStripes ? 1 : 0, showColumnStripes: t.colStripes ? 1 : 0 }))), CT.table)
+    tableParts.push(x('tablePart', { 'r:id': w.rel(part, { type: REL_TABLE, target: tpart }) }))
+  }
+  // The sheet's own filter, with the criteria it was saved with — unless a table already
+  // filters that range, which Excel refuses as an overlap.
+  const af = sheet.autoFilter ? parseRange(sheet.autoFilter) : null
+  const overlaps = af && tableBoxes.some((t) => !(t.r1 < af.r0 || t.r0 > af.r1 || t.c1 < af.c0 || t.c0 > af.c1))
+  const autoFilter = af && !overlaps ? x('autoFilter', { ref: sheet.autoFilter },
+    (sheet.savedFilter || []).filter((f) => f.col >= af.c0 && f.col <= af.c1).map((f) => x('filterColumn', { colId: f.col - af.c0 },
+      x('filters', { blank: f.keep.includes('') ? 1 : undefined }, f.keep.filter((v) => v !== '').map((v) => x('filter', { val: v })))))) : null
   return xmlDoc(x('worksheet', { xmlns: NS.s, 'xmlns:r': NS.r },
     sheet.tabColor ? x('sheetPr', null, x('tabColor', { rgb: 'FF' + hex6(sheet.tabColor) })) : null,
     x('dimension', { ref: used }),
@@ -376,7 +455,8 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     x('sheetFormatPr', { defaultRowHeight: 15 }),
     cols.length ? x('cols', null, cols) : null,
     x('sheetData', null, sheetRows),
-    sheet.autoFilter && parseRange(sheet.autoFilter) ? x('autoFilter', { ref: sheet.autoFilter }) : null,
+    sheet.protect ? x('sheetProtection', protectionAttrs(sheet.protect, 'sheet')) : null,
+    autoFilter,
     merges.length ? x('mergeCells', { count: merges.length }, merges.map((m) => x('mergeCell', { ref: m }))) : null,
     cfs,
     dvs.length ? x('dataValidations', { count: dvs.length }, dvs) : null,
@@ -384,6 +464,7 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     x('pageMargins', { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }),
     drawing,
     legacy,
+    tableParts.length ? x('tableParts', { count: tableParts.length }, tableParts) : null,
   ))
 }
 

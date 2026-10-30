@@ -34,6 +34,7 @@ export type XOp =
   | { k: 'sheet-ren'; from: string; to: string }
   | { k: 'sheet-move'; name: string; to: number }
   | { k: 'names'; names: DefinedName[] }
+  | { k: 'book'; patch: { protect?: WorkbookData['protect'] | null } }
   | { k: 'replace'; book: WorkbookData }
 
 export const MAX_FMT_BOX = 250_000
@@ -64,7 +65,7 @@ export class SheetModel implements SeqModel<XOp> {
   }
 
   idempotent(op: XOp): boolean {
-    return op.k === 'cells' || op.k === 'fmt' || op.k === 'clear' || op.k === 'props' || op.k === 'names' || op.k === 'sheet-ren'
+    return op.k === 'cells' || op.k === 'fmt' || op.k === 'clear' || op.k === 'props' || op.k === 'names' || op.k === 'book' || op.k === 'sheet-ren'
   }
 
   snapshot(): unknown { return clone(this.book) }
@@ -148,6 +149,7 @@ export class SheetModel implements SeqModel<XOp> {
         return { k: 'sheet-move', name: op.name, to: i }
       }
       case 'names': return { k: 'names', names: clone(this.book.names || []) }
+      case 'book': return { k: 'book', patch: { protect: this.book.protect ? clone(this.book.protect) : null } }
       case 'replace': return { k: 'replace', book: clone(this.book) }
     }
   }
@@ -275,6 +277,11 @@ export class SheetModel implements SeqModel<XOp> {
         const [s] = this.book.sheets.splice(i, 1)
         this.book.sheets.splice(Math.max(0, Math.min(op.to, this.book.sheets.length)), 0, s)
         this.engine.reset(this.book.sheets, this.book.names || [])
+        break
+      }
+      case 'book': {
+        if (op.patch.protect) this.book.protect = clone(op.patch.protect)
+        else delete this.book.protect
         break
       }
       case 'names': {

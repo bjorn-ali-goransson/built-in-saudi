@@ -35,6 +35,9 @@ export interface XlActions {
   insertFunction(): void
   validation(): void
   dedupe(): void
+  protectSheet(): void
+  protectBook(): void
+  lockCells(): void
   names(): void
   cond(): void
   split(): void
@@ -54,10 +57,10 @@ const FONTS = ['IBM Plex Sans Arabic', 'Arial', 'Calibri', 'Times New Roman', 'C
 const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72]
 const FNS = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN', 'COUNTIF', 'SUMIF', 'IF', 'VLOOKUP', 'XLOOKUP', 'INDEX', 'MATCH', 'ROUND', 'TODAY', 'TEXT', 'CONCAT']
 
-export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGrid, rtl, zoom, showFormulas, chart, picture, readOnly }: {
+export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGrid, rtl, zoom, showFormulas, chart, picture, readOnly, protectedSheet = false, protectedBook = false }: {
   s: XlStr; tab: string; onTab: (t: string) => void; fmt: CellFormat; act: XlActions; merged: boolean
   sheetFreeze: boolean; showGrid: boolean; rtl: boolean; zoom: number; showFormulas: boolean
-  chart: ChartSpec | null; picture: SheetImage | null; readOnly: boolean
+  chart: ChartSpec | null; picture: SheetImage | null; readOnly: boolean; protectedSheet?: boolean; protectedBook?: boolean
 }) {
   const tabs = [
     { id: 'home', label: s.home }, { id: 'insert', label: s.insert }, { id: 'data', label: s.data }, { id: 'formulas', label: s.formulas }, { id: 'view', label: s.view },
@@ -179,6 +182,11 @@ export function XlRibbon({ s, tab, onTab, fmt, act, merged, sheetFreeze, showGri
             <RBtn label={s.sortDesc} wide testid="xl-data-sort-desc" disabled={dis} onClick={() => act.sort('desc')} icon={<span>Z↓</span>} />
             <RBtn label={s.filter} wide testid="xl-filter" onClick={act.filter} icon={<span>⏷</span>} />
             <RBtn label={s.clearFilter} testid="xl-clear-filter" onClick={act.clearFilters}>⨯⏷</RBtn>
+          </RGroup>
+          <RGroup label={s.protect}>
+            <RBtn label={protectedSheet ? s.unprotectSheet : s.protectSheet} wide testid="xl-protect-sheet" active={protectedSheet} disabled={readOnly} onClick={act.protectSheet} icon={<span>{protectedSheet ? '🔒' : '🔓'}</span>} />
+            <RBtn label={protectedBook ? s.unprotectBook : s.protectBook} wide testid="xl-protect-book" active={protectedBook} disabled={readOnly} onClick={act.protectBook} icon={<span>📘</span>} />
+            <RBtn label={fmt.unlocked ? s.lockCells : s.unlockCells} wide testid="xl-lock-cells" active={!fmt.unlocked} disabled={readOnly || protectedSheet} onClick={act.lockCells} icon={<span>{fmt.unlocked ? '▢' : '▣'}</span>} />
           </RGroup>
           <RGroup label={s.cells}>
             <RBtn label={s.validation} wide icon={<ListIcon />} testid="xl-validation" disabled={dis} onClick={act.validation} />

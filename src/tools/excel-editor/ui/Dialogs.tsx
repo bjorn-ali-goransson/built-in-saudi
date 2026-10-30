@@ -207,6 +207,33 @@ export function SplitDialog({ s, onSplit, onClose }: { s: XlStr; onSplit: (d: st
   )
 }
 
+/** Set a protection password (twice, optional) or enter one to remove it. */
+export function PasswordDialog({ s, title, mode, onSubmit, onClose }: { s: XlStr; title: string; mode: 'set' | 'enter'; onSubmit: (pw: string) => Promise<boolean>; onClose: () => void }) {
+  const [a, setA] = useState('')
+  const [b, setB] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    if (mode === 'set' && a !== b) { setErr(s.pwMismatch); return }
+    setBusy(true); setErr('')
+    const ok = await onSubmit(a)
+    setBusy(false)
+    if (ok) onClose(); else setErr(s.pwWrong)
+  }
+  return (
+    <Sheet onClose={onClose} data-testid="xl-password">
+      <SheetTitle>{title}</SheetTitle>
+      <form id="xl-password-form" className="grid gap-2" onSubmit={(e) => { e.preventDefault(); void submit() }}>
+        <Input autoFocus type="password" autoComplete="off" aria-label={mode === 'set' ? s.pwSet : s.pwEnter} placeholder={mode === 'set' ? s.pwSet : s.pwEnter} value={a} onChange={(e) => setA(e.target.value)} data-testid="xl-password-input" className="w-full" />
+        {mode === 'set' && a && <Input type="password" autoComplete="off" aria-label={s.pwConfirm} placeholder={s.pwConfirm} value={b} onChange={(e) => setB(e.target.value)} data-testid="xl-password-confirm" className="w-full" />}
+      </form>
+      {mode === 'set' && <p className="text-[0.8rem] text-ink-soft mt-2">{s.protectNote}</p>}
+      {err && <p className="text-[0.8rem] text-[color:var(--danger)] mt-1" data-testid="xl-password-error">{err}</p>}
+      <SheetActions><Button variant="primary" type="submit" form="xl-password-form" disabled={busy} data-testid="xl-password-ok">{busy ? s.pwChecking : s.ok}</Button></SheetActions>
+    </Sheet>
+  )
+}
+
 export function RenameSheetDialog({ s, name, taken, onSave, onClose }: { s: XlStr; name: string; taken: string[]; onSave: (n: string) => void; onClose: () => void }) {
   const [v, setV] = useState(name)
   const clash = taken.some((t) => t.toLowerCase() === v.trim().toLowerCase() && t !== name)

@@ -7910,6 +7910,30 @@ unconnected for 9 seconds is dropped and greeted afresh; and a lonely peer says
 hello again at 3, 8, 20 and 45 seconds. A rare race is a reliability bug, not
 flake — it was found only by repeating the join test many times.
 
+### Spreadsheet: rich text, protection, tables, saved filters
+
+All four used to be in the loss ledger; a real workbook carried all four at once.
+
+- **Mixed formatting lives in `fmt.runs`** and applies only while the runs spell
+  the cell's text (`validRuns`). Storing it in the format means every op already
+  carries it (undo, collab, insert/delete, copy, clear formats); comparing the
+  text means an edit retires it with nothing having to notice, so stale styling
+  can never be drawn on new words — and the writer drops runs that no longer match.
+- **Protection is Excel's own** (`engine/protect.ts`): the spun SHA-512 hash and
+  the legacy 16-bit one, checked against Python's hashlib and openpyxl. The spin
+  loop is a synchronous SHA-512, because 100,000 awaited `crypto.subtle` digests
+  took 13 seconds. Its round constants are GENERATED (cube roots of the first 80
+  primes): a hand-copied table dropped characters, and a self-consistency test
+  passed while the hash was wrong — only the external vector caught it. A locked
+  cell is refused when typing STARTS, and the refused keystroke is cleared from
+  the input sink, or it lands in the next cell typed in.
+- **A table is drawn from its style family** (`ui/tableStyle.ts`: Light/Medium/
+  Dark and the accent cycle) under the cell's own formatting, and written back as
+  a table part whose column names are the header cells' text (Excel "repairs" a
+  file where they differ).
+- **A `filterColumn` with no criteria is not a filter** — Excel writes one just to
+  hide a button. Real value lists open applied (`savedFilter`) and are written back.
+
 ### Printing: the preview IS the printout (`components/office/print.ts`)
 
 The flow is laid out once, at the page's text width, in a hidden frame; cut

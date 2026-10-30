@@ -18,7 +18,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Axis, DEFAULT_COL_W, DEFAULT_ROW_H, HEADER_H, HEADER_W, expandForMerges, inBox, normBox, jump, type Box } from './geometry'
 import { cellLook, overflowHashes, scaleColor } from './cellStyle'
-import { colToLetters, parseRange, cellKey, chartAnchor, CHART_DEFAULT_SIZE, type Addr, type SheetData, type CellValue, isError } from '../engine/model'
+import { tableBoxes, tableLookAt } from './tableStyle'
+import { RunsView } from './runs'
+import { colToLetters, parseRange, cellKey, validRuns, chartAnchor, CHART_DEFAULT_SIZE, type Addr, type SheetData, type CellValue, isError } from '../engine/model'
 import type { SheetModel } from '../doc'
 import { ChartSvg } from './Chart'
 import { readChart } from './chartData'
@@ -29,7 +31,8 @@ export interface PeerSel { client: string; name: string; color: string; sel: Sel
 
 export interface GridCtl {
   select(a: Addr, f?: Addr): void
-  startEdit(text: string, mode: 'enter' | 'edit'): void
+  /** False when the edit was refused (a locked cell on a protected sheet). */
+  startEdit(text: string, mode: 'enter' | 'edit'): boolean | void
   setEditText(t: string): void
   commit(move: 'down' | 'up' | 'right' | 'left' | 'none', extend?: boolean): void
   cancel(): void
@@ -95,6 +98,7 @@ export function Grid(p: Props) {
   const frozenH = rows.offset(fr)
   const frozenW = cols.offset(fc)
   const merges = useMemo(() => (sheet.merges || []).map((m) => parseRange(m)).filter((b): b is Box => !!b), [sheet.merges])
+  const tables = useMemo(() => tableBoxes(sheet.tables, parseRange), [sheet.tables])
   const mergeOf = useCallback((r: number, c: number) => merges.find((m) => inBox(m, r, c)) || null, [merges])
 
   useLayoutEffect(() => {
@@ -438,7 +442,8 @@ export function Grid(p: Props) {
   }
   const onInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const t = e.currentTarget.value
-    if (!edit) { if (p.readOnly) { e.currentTarget.value = ''; return } ctl.startEdit(t, 'enter') }
+    // A refused keystroke must not wait in the sink and land in the next cell somebody types in.
+    if (!edit) { if (p.readOnly || ctl.startEdit(t, 'enter') === false) e.currentTarget.value = '' }
     else ctl.setEditText(t)
   }
   // Mirror the edit text into the sink when the formula bar or a ref pick changed it.
@@ -494,6 +499,16 @@ export function Grid(p: Props) {
     const fmt = cell?.fmt
     const condBg = cell && (sheet.conds?.length || sheet.cond) ? model.engine.condFill(name, { row: rr, col: cc }) : undefined
     const look = cellLook(v, fmt, { zoom: z, showFormula: p.showFormulas && cell?.input.startsWith('=') ? cell.input : undefined, condBg })
+    // A table's style sits under the cell's own formatting: a cell somebody filled keeps its fill.
+    const tl = tables.length ? tableLookAt(tables, rr, cc) : null
+    if (tl) {
+      if (tl.bg && !look.style.background) look.style.background = tl.bg
+      if (tl.color && !fmt?.color) look.style.color = tl.color
+      if (tl.bold) look.style.fontWeight = 700
+      if (tl.borderTop && !look.style.borderTop) look.style.borderTop = tl.borderTop
+      if (tl.borderBottom && !look.style.borderBottom) look.style.borderBottom = tl.borderBottom
+    }
+    const runs = typeof v === 'string' && !p.showFormulas ? validRuns(fmt, look.text) : null
     let bg = look.style.background as string | undefined
     let bar: number | null = null
     for (const s of scaleStats) {
@@ -502,7 +517,7 @@ export function Grid(p: Props) {
       if (s.kind === 'databar') bar = t
       else bg = scaleColor(t, s.kind === 'scale3')
     }
-    if (!look.text && !bg && bar === null && !box && !fmt && !cell?.note) return
+    if (!look.text && !bg && bar === null && !box && !fmt && !cell?.note && !tl) return
     let text = look.text
     let width = w
     const wrap = !!fmt?.wrap
@@ -542,7 +557,7 @@ export function Grid(p: Props) {
     out.push(
       <div key={`${rr}:${cc}`} style={style} data-cell={`${colToLetters(cc)}${rr + 1}`} dir={typeof v === 'string' ? 'auto' : undefined} title={cell?.note || link || undefined}>
         {bar !== null && <span aria-hidden data-testid="xl-databar" style={{ position: 'absolute', insetInlineStart: 2, top: '20%', height: '60%', width: `${Math.max(2, bar * (w - 4))}px`, background: 'color-mix(in srgb, var(--color-green-600) 45%, transparent)', borderRadius: 2 }} />}
-        <span style={{ position: 'relative', color: link ? 'var(--color-green-700)' : undefined, textDecoration: link ? 'underline' : undefined, transform: fmt?.rotate ? `rotate(${-(fmt.rotate > 90 ? 90 - fmt.rotate : fmt.rotate)}deg)` : undefined }}>{text}</span>
+        <span style={{ position: 'relative', color: link ? 'var(--color-green-700)' : undefined, textDecoration: link ? 'underline' : undefined, transform: fmt?.rotate ? `rotate(${-(fmt.rotate > 90 ? 90 - fmt.rotate : fmt.rotate)}deg)` : undefined }}>{runs && text === look.text ? <RunsView runs={runs} zoom={z} /> : text}</span>
         {cell?.note && <span aria-hidden data-testid="xl-note-marker" style={{ position: 'absolute', top: 0, insetInlineEnd: 0, width: 0, height: 0, borderTop: `${6 * z}px solid var(--danger)`, borderInlineStart: `${6 * z}px solid transparent` }} />}
       </div>,
     )
@@ -561,7 +576,7 @@ export function Grid(p: Props) {
         if (hiddenC.has(c)) continue
         const m = mergeOf(r, c)
         if (m) { if (!seen.has(m)) { seen.add(m); drawCell(out, r, c, m) } continue }
-        if (!sheet.cells[cellKey(r, c)] && !sheet.scales?.length) continue
+        if (!sheet.cells[cellKey(r, c)] && !sheet.scales?.length && !(tables.length && tableLookAt(tables, r, c))) continue
         drawCell(out, r, c, null)
       }
     }
