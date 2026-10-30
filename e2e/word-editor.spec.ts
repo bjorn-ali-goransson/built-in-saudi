@@ -343,7 +343,8 @@ test('Save to a file on this device writes the document back on every save', asy
   await p.keyboard.type(' then the second')
   await p.keyboard.press('Control+s')
   await saved(p)
-  const bytes = async () => p.evaluate(async () => Array.from(new Uint8Array(await (await (await (await navigator.storage.getDirectory()).getFileHandle('notes.docx')).getFile()).arrayBuffer())))
+  // Reading while the editor is mid-write throws NotReadableError; that is "not yet", and the poll asks again.
+  const bytes = async () => p.evaluate(async () => { try { return Array.from(new Uint8Array(await (await (await (await navigator.storage.getDirectory()).getFileHandle('notes.docx')).getFile()).arrayBuffer())) } catch { return [] } })
   await expect.poll(async () => { const b = Buffer.from(await bytes()); return b.length && zipNames(b).includes('word/document.xml') ? zipPart(b, 'word/document.xml') : '' }).toContain('then the second')
 })
 
@@ -372,7 +373,8 @@ test('a linked file the browser stopped letting us write says so, and one click 
   await expect(banner).toContainText('Your changes are kept here')
   await p.getByTestId('office-permission-allow').click()
   await expect(banner).toHaveCount(0)
-  const bytes = async () => p.evaluate(async () => Array.from(new Uint8Array(await (await (await (await navigator.storage.getDirectory()).getFileHandle('notes.docx')).getFile()).arrayBuffer())))
+  // Reading while the editor is mid-write throws NotReadableError; that is "not yet", and the poll asks again.
+  const bytes = async () => p.evaluate(async () => { try { return Array.from(new Uint8Array(await (await (await (await navigator.storage.getDirectory()).getFileHandle('notes.docx')).getFile()).arrayBuffer())) } catch { return [] } })
   await expect.poll(async () => { const b = Buffer.from(await bytes()); return b.length && zipNames(b).includes('word/document.xml') ? zipPart(b, 'word/document.xml') : '' }).toContain('first second')
 })
 

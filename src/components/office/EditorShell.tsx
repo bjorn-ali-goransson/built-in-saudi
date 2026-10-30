@@ -69,7 +69,7 @@ export function EditorShell<D>(props: {
     <div className="fixed inset-0 z-[70] flex flex-col bg-[var(--bg)] text-ink" dir={props.locale === 'ar' ? 'rtl' : 'ltr'} lang={props.locale} data-testid="office-shell" data-kind={props.kit.kind}>
       <header className="flex-none flex items-center gap-2 px-2 py-1.5 bg-[var(--surface)] border-b border-[color:var(--line-soft)]">
         <button type="button" onClick={props.onBack} aria-label={s.back} title={s.back} data-testid="office-back" className="grid place-items-center size-9 rounded-md border-0 bg-transparent cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:size-5 rtl:[&_svg]:-scale-x-100"><BackIcon /></button>
-        <RPopover label={s.file} testid="office-file" trigger={<span className="text-[0.88rem] font-semibold px-1">{s.file}</span>}>
+        <RPopover label={s.file} short="" testid="office-file" trigger={<span className="text-[0.88rem] font-semibold px-1">{s.file}</span>}>
           {(close) => (
             <div className="py-1 w-[260px]">
               {props.fileExtra?.(close)}
@@ -87,7 +87,7 @@ export function EditorShell<D>(props: {
                   if (!sendToMessages(props.locale, async () => { const r = await props.exportBlob!(ext); return { kind: 'file', name: r.name, blob: r.blob } })) alert(s.popupBlocked)
                 }}>{s.sendCopyMessages}</RItem>
               )}
-              {props.onPrint && <RItem testid="office-print" hint="Ctrl+P" onClick={() => { close(); props.onPrint!() }}>{s.print}</RItem>}
+              {props.onPrint && <RItem testid="office-print" hint="Ctrl+P" onClick={() => { close(); props.onPrint!() }}>{s.print}…</RItem>}
               {collab.isGuest && props.onSaveCopy && <RItem testid="office-save-copy" onClick={() => { close(); props.onSaveCopy!() }}>{s.saveCopy}</RItem>}
             </div>
           )}

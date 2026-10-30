@@ -24,6 +24,8 @@ import { SlidesRibbon, type SlActions, type SlFormat } from './ui/SlidesRibbon'
 import { TextEditor, type TextEditorApi } from './TextEditor'
 import { Present, openAudienceWindow } from './Present'
 import { SlideView } from './render'
+import { PrintPreview } from '../../components/office/PrintPreview'
+import { printable } from './printable'
 import { markOn, tsAt, paraAttr, toggle as pmToggle, setTs, setPara, shiftLevel, setLink as pmLink, patchRuns, patchParas, firstRun, allRuns } from './textEdit'
 import { addSlide, duplicateSlide, relayout, align, newTable, tableEdit, findAll, replaceHits, resizeDeck, copyEls, type Hit } from './actions'
 import { pruned } from './kit'
@@ -60,7 +62,6 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
   // On a phone the rail becomes a strip under the slide; hiding it would leave no way between slides.
   const narrow = useSyncExternalStore(useCallback((f) => { const m = matchMedia('(max-width: 720px)'); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, []), () => matchMedia('(max-width: 720px)').matches)
   const [find, setFind] = useState<{ q: string; r: string; matchCase: boolean; hits: Hit[]; i: number; msg?: string } | null>(null)
-  const [printing, setPrinting] = useState(false)
   const [, bump] = useState(0)
   const undo = useRef<Undo[]>([])
   const redo = useRef<Undo[]>([])
@@ -388,15 +389,8 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
   }, [collab, cur, model])
 
   // ---- printing: every slide a page, at the deck's own proportions ----------------
-  const print = useCallback(() => {
-    setPrinting(true)
-    window.setTimeout(() => {
-      const done = () => { setPrinting(false); window.removeEventListener('afterprint', done) }
-      window.addEventListener('afterprint', done)
-      window.print()
-      window.setTimeout(done, 60_000)
-    }, 300)
-  }, [])
+  const [preview, setPreview] = useState(false)
+  const print = useCallback(() => setPreview(true), [])
 
   // ---- keyboard ---------------------------------------------------------------------
   useEffect(() => {
@@ -621,7 +615,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
           <button type="button" data-testid="sl-stop-follow" onClick={() => setFollowing(null)} className="absolute top-3 end-3 h-9 px-3 rounded-md border border-white/20 bg-white/10 text-white text-[0.85rem] cursor-pointer">{s.present.stopFollowing}</button>
           <span className="absolute top-4 start-4 text-white/70 text-[0.85rem]" dir="auto">{s.present.following(presenter!.name)}</span>
         </div>, document.body)}
-      {printing && createPortal(<PrintAll deck={deck} />, document.body)}
+      {preview && <PrintPreview locale={locale} build={() => printable(deck, title || 'Presentation')} onClose={() => setPreview(false)} />}
     </EditorShell>
   )
 }
@@ -633,16 +627,6 @@ function FollowView({ deck, slide, number }: { deck: DeckData; slide: Slide; num
 }
 
 /** Every slide as a printed page; the rest of the site is hidden while it prints. */
-function PrintAll({ deck }: { deck: DeckData }) {
-  const W = 1000
-  const H = Math.round((W * deck.size.h) / deck.size.w)
-  return (
-    <div data-testid="sl-print" className="sl-print-root">
-      <style>{`@media screen{.sl-print-root{position:fixed;left:-99999px;top:0}}@media print{@page{size:${deck.size.w}pt ${deck.size.h}pt;margin:0}body>*:not(.sl-print-root){display:none!important}.sl-print-root{position:static}.sl-print-page{break-after:page;page-break-after:always;width:${deck.size.w}pt;height:${deck.size.h}pt;overflow:hidden}.sl-print-page>div{transform-origin:0 0;transform:scale(calc(${deck.size.w}pt / ${W}px))}}`}</style>
-      {deck.slides.filter((x) => !x.hidden).map((x) => <div key={x.id} className="sl-print-page"><SlideView slide={x} width={W} ctx={{ deck, number: deck.slides.indexOf(x) + 1 }} style={{ height: H }} /></div>)}
-    </div>
-  )
-}
 
 function NotesPane({ s, value, readOnly, onChange }: { s: ReturnType<typeof getStr>; value: string; readOnly: boolean; onChange: (v: string) => void }) {
   const [v, setV] = useState(value)

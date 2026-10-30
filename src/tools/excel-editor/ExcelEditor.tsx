@@ -25,6 +25,8 @@ import {
   findAll, replaceIn, dedupePatches, splitPatches, fitWidth, selectionStats, freeSheetName, clampToUsed, boxRef, usedIn, type Match, type FindOpts,
 } from './actions'
 import { cellLook } from './ui/cellStyle'
+import { PrintPreview } from '../../components/office/PrintPreview'
+import { printable } from './printable'
 import { cellKey, parseRange, isError, type CellFormat, type ChartKind, type ChartSpec, type SheetData, type WorkbookData, type Addr } from './engine/model'
 import { stepDecimals, shownDecimals, DEFAULT_DECIMALS, type NumFmtId } from './engine/numfmt'
 import { distinctValues, hiddenRows as filterHiddenRows, withFilter, type SheetFilters } from './engine/filter'
@@ -46,6 +48,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
   const rev = useSyncExternalStore(useCallback((f) => model.subscribe(f), [model]), () => model.rev)
   const [title, setTitle] = useState(doc?.title || '')
   const [titleRev, setTitleRev] = useState(0)
+  const [preview, setPreview] = useState(false)
   const [active, setActive] = useState(() => Math.min(model.book.active || 0, model.book.sheets.length - 1))
   const sheet: SheetData = model.book.sheets[Math.min(active, model.book.sheets.length - 1)] || model.book.sheets[0]
   const name = sheet.name
@@ -446,7 +449,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
     chartDelete: () => { if (obj?.kind !== 'chart') return; dispatch({ k: 'props', sheet: name, patch: { charts: (sheet.charts || []).filter((c) => c.id !== obj.id) } }); setObj(null) },
     picturePatch: (p) => { if (obj?.kind !== 'image') return; dispatch({ k: 'props', sheet: name, patch: { images: (sheet.images || []).map((c) => (c.id === obj.id ? { ...c, ...p } : c)) } }) },
     pictureDelete: () => { if (obj?.kind !== 'image') return; dispatch({ k: 'props', sheet: name, patch: { images: (sheet.images || []).filter((c) => c.id !== obj.id) } }); setObj(null) },
-    print: () => printSheet(sheet, (r, c) => display(name, r, c), title || s.templates.budget),
+    print: () => setPreview(true),
   }
 
   const measure = useMemo(() => {
@@ -788,6 +791,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
       {dialog?.k === 'split' && <SplitDialog s={s} onClose={() => setDialog(null)} onSplit={(d) => { const p = splitPatches(sheet, { ...workBox, c1: workBox.c0 }, d); if (p.length) dispatch({ k: 'cells', sheet: name, cells: p }) }} />}
       {dialog?.k === 'rename' && <RenameSheetDialog s={s} name={dialog.sheet} taken={model.book.sheets.map((x) => x.name)} onClose={() => setDialog(null)} onSave={(n) => { if (n !== dialog.sheet) dispatch({ k: 'sheet-ren', from: dialog.sheet, to: n }) }} />}
       {loss && <LossDialog locale={locale} loss={loss.items} dir={loss.dir} onClose={() => setLoss(null)} />}
+      {preview && <PrintPreview locale={locale} build={() => printable(sheet, (r, c) => model.engine.value(name, { row: r, col: c }), title || s.templates.budget)} onClose={() => setPreview(false)} />}
     </EditorShell>
   )
 }
@@ -816,32 +820,4 @@ function ContextMenu({ x, y, onClose, children, up }: { x: number; y: number; on
   )
 }
 
-/** Print the sheet's used range as a plain table, via a hidden frame. */
-function printSheet(sheet: SheetData, display: (r: number, c: number) => string, title: string) {
-  let rows = 0
-  let cols = 0
-  for (const k of Object.keys(sheet.cells)) { const [r, c] = k.split(',').map(Number); rows = Math.max(rows, r + 1); cols = Math.max(cols, c + 1) }
-  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-  let body = ''
-  for (let r = 0; r < Math.min(rows, 5000); r++) {
-    if (sheet.hiddenRows?.includes(r)) continue
-    body += '<tr>'
-    for (let c = 0; c < Math.min(cols, 200); c++) {
-      if (sheet.hiddenCols?.includes(c)) continue
-      const f = sheet.cells[cellKey(r, c)]?.fmt
-      const st = [f?.bold && 'font-weight:700', f?.italic && 'font-style:italic', f?.bg && `background:${f.bg}`, f?.color && `color:${f.color}`, f?.align && `text-align:${f.align}`].filter(Boolean).join(';')
-      body += `<td style="${st}">${esc(display(r, c))}</td>`
-    }
-    body += '</tr>'
-  }
-  const html = `<!doctype html><html dir="${sheet.rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:10pt}table{border-collapse:collapse}td{border:1px solid #ccc;padding:2px 6px;white-space:pre}</style></head><body><table>${body}</table></body></html>`
-  const frame = document.createElement('iframe')
-  frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0'
-  frame.setAttribute('data-testid', 'xl-print-frame')
-  document.body.appendChild(frame)
-  frame.contentDocument!.open()
-  frame.contentDocument!.write(html)
-  frame.contentDocument!.close()
-  setTimeout(() => { try { frame.contentWindow!.focus(); frame.contentWindow!.print() } catch { /* */ } setTimeout(() => frame.remove(), 60_000) }, 50)
-}
 

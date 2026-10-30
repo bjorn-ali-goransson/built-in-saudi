@@ -16,8 +16,9 @@ import { usePersistence, useCollab } from '../../components/office/hooks'
 import type { EditorProps } from '../../components/office/OfficeApp'
 import { RItem } from '../../components/office/Ribbon'
 import { OFFICE_STR } from '../../components/office/strings'
-import { office } from '../../lib/office/officeClient'
 import { pictureFromFile } from '../../lib/office/picture'
+import { PrintPreview } from '../../components/office/PrintPreview'
+import { printable } from './printable'
 import { randomId } from '../../lib/p2p/mesh'
 import { colorFor } from '../../lib/collab/session'
 import { schema } from './schema'
@@ -64,7 +65,12 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
   const [title, setTitle] = useState(doc?.title || '')
   const [titleRev, setTitleRev] = useState(0)
   const [tab, setTab] = useState('home')
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoomRaw] = useState(1)
+  // Until somebody picks a zoom, a page wider than the screen is shown WHOLE, at its
+  // real proportions: the page is the document's layout, and a phone squeezing it
+  // into a column would show line breaks the printout does not have.
+  const zoomChosen = useRef(false)
+  const setZoom = useCallback((z: number) => { zoomChosen.current = true; setZoomRaw(z) }, [])
   const [outlineOpen, setOutlineOpen] = useState(false)
   const [pageView, setPageView] = useState(true)
   const [dialog, setDialog] = useState<Dialog>(null)
@@ -257,27 +263,13 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
   const closeFind = () => { setFindOpen(null); applyFind([], 0, null); viewRef.current?.focus() }
 
   // ---- printing -----------------------------------------------------------------------
-  const print = useCallback(async () => {
-    const data = getData()
-    let html = await office<string>('html-write', { data, opts: { title: title || s.templates.blank } })
-    const p = data.page
-    const w = p.landscape ? Math.max(p.width, p.height) : Math.min(p.width, p.height)
-    const h = p.landscape ? Math.min(p.width, p.height) : Math.max(p.width, p.height)
-    const m = p.margins
-    html = html.replace('</head>', `<style>@page{size:${w}mm ${h}mm;margin:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm}body{max-width:none;margin:0;padding:0}</style></head>`)
-    const frame = document.createElement('iframe')
-    frame.style.cssText = 'position:fixed;inset-inline-end:0;bottom:0;width:0;height:0;border:0'
-    frame.setAttribute('data-testid', 'wd-print-frame')
-    document.body.appendChild(frame)
-    const d = frame.contentDocument!
-    d.open(); d.write(html); d.close()
-    window.setTimeout(() => { try { frame.contentWindow?.focus(); frame.contentWindow?.print() } catch { /* */ } window.setTimeout(() => frame.remove(), 60_000) }, 250)
-  }, [getData, title, s])
+  const [preview, setPreview] = useState(false)
+  const print = useCallback(() => setPreview(true), [])
 
   hooks.current = {
     onLink: () => openLink(),
     onFind: (replace) => setFindOpen({ replace }),
-    onPrint: () => void print(),
+    onPrint: () => print(),
   }
 
   // ---- what the ribbon shows ------------------------------------------------------------
@@ -370,6 +362,20 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
   // Page count: measured, not paginated. The page view draws a boundary every page-height.
   const page = meta.page
   const pageHpx = page.height * MM
+  const pageWpx = (page.landscape ? Math.max(page.width, page.height) : page.width) * MM
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !pageView) return
+    const fit = () => {
+      if (zoomChosen.current) return
+      const z = Math.min(1, Math.floor(((el.clientWidth - 24) / pageWpx) * 100) / 100)
+      setZoomRaw(Math.max(0.25, z))
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [pageView, pageWpx])
   useEffect(() => {
     const el = paperRef.current
     if (!el) return
@@ -427,7 +433,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
       onUnlink={() => void persist.unlink()}
       exportBlob={persist.exportBlob}
       onExport={async (ext) => { setBusy(OFFICE_STR[locale].exporting); try { const l = await persist.exportDownload(ext); if (l.length) setLoss({ items: l, dir: 'export' }) } finally { setBusy('') } }}
-      onPrint={() => void print()}
+      onPrint={print}
       onUndo={() => { const v = viewRef.current; if (v) { undo(v.state, v.dispatch); v.focus() } }}
       onRedo={() => { const v = viewRef.current; if (v) { redo(v.state, v.dispatch); v.focus() } }}
       canUndo={!!state && undoDepth(state) > 0}
@@ -456,7 +462,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
           </aside>
         )}
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-auto bg-[color-mix(in_srgb,var(--ink)_7%,var(--bg))]" data-testid="wd-scroll" onMouseDown={(e) => { if (e.target === e.currentTarget) viewRef.current?.focus() }}>
-          <div data-zoom={zoom} style={{ zoom }} className="py-6 px-3 max-[560px]:px-0 max-[560px]:py-0">
+          <div data-zoom={zoom} style={{ zoom }} className={pageView ? 'py-6 px-3 w-fit min-w-full' : 'py-6 px-3 max-[560px]:px-0 max-[560px]:py-0'}>
             <div
               ref={paperRef}
               data-wd-page=""
@@ -465,9 +471,9 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
               data-paged={pageView ? '' : undefined}
               dir={meta.rtl ? 'rtl' : 'ltr'}
               lang={meta.lang || (meta.rtl ? 'ar' : 'en')}
-              className="relative mx-auto bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_6px_24px_rgba(0,0,0,0.08)] max-[560px]:shadow-none"
+              className={`relative mx-auto bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_6px_24px_rgba(0,0,0,0.08)]${pageView ? '' : ' max-[560px]:shadow-none'}`}
               style={pageView
-                ? { width: `${page.width}mm`, maxWidth: '100%', minHeight: `${page.height}mm`, padding: `${page.margins.top}mm ${page.margins.right}mm ${page.margins.bottom}mm ${page.margins.left}mm`, boxSizing: 'border-box' }
+                ? { width: `${page.width}mm`, minHeight: `${page.height}mm`, padding: `${page.margins.top}mm ${page.margins.right}mm ${page.margins.bottom}mm ${page.margins.left}mm`, boxSizing: 'border-box' }
                 : { maxWidth: '52em', padding: '2.5em 3em', boxSizing: 'border-box' }}
               onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); const v = viewRef.current; if (v) { v.dispatch(v.state.tr.setSelection(TextSelection.atEnd(v.state.doc))); v.focus() } } }}
             >
@@ -542,6 +548,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
           onSave={(t) => run(C.insertNode(S.nodes.footnote.create({ text: t })))} />
       )}
       {loss && <LossDialog locale={locale} loss={loss.items} dir={loss.dir} onClose={() => setLoss(null)} />}
+      {preview && <PrintPreview locale={locale} build={() => printable(getData(), title || s.templates.blank)} onClose={() => { setPreview(false); viewRef.current?.focus() }} />}
     </EditorShell>
   )
 }

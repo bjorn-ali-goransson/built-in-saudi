@@ -1,0 +1,114 @@
+import { test, expect, type Page } from '@playwright/test'
+
+// Print preview in the three editors. The preview IS the printed document — the
+// same paged HTML is what Print sends — so these read the pages inside the
+// preview's own frame, and count real print() calls from any frame.
+const WD = 'src/tools/word-editor/io/__fixtures__/'
+const PP = 'src/tools/powerpoint-editor/io/__fixtures__/'
+
+async function stubPrint(p: Page) {
+  // Runs in every frame, the hidden print frame included.
+  await p.addInitScript(() => {
+    window.print = () => { const t = window.top as unknown as { __printed?: number }; t.__printed = (t.__printed || 0) + 1 }
+  })
+}
+async function open(p: Page, app: string, file: string) {
+  await p.goto(`/en/apps/${app}/`)
+  await p.getByTestId('office-file-input').setInputFiles(file)
+  await expect(p.getByTestId('office-title')).toBeVisible({ timeout: 20_000 })
+  const ok = p.getByTestId('office-loss-ok')
+  if (await ok.isVisible().catch(() => false)) await ok.click()
+}
+async function preview(p: Page) {
+  await p.getByTestId('office-file').click()
+  await p.getByTestId('office-print').click()
+  await expect(p.getByTestId('office-preview-frame')).toBeVisible({ timeout: 20_000 })
+  return p.frameLocator('[data-testid="office-preview-frame"]')
+}
+
+test('Word: the preview is real pages, with the page break, header and page numbers, and Print prints it', async ({ page: p }) => {
+  await stubPrint(p)
+  await open(p, 'word-editor', WD + 'python-docx.docx')
+  await p.getByTestId('wd-footer').fill('Page {page} of {pages}')
+  const f = await preview(p)
+  await expect(p.getByTestId('office-preview-pages')).toHaveAttribute('data-pages', '2')
+  const pages = f.locator('.pv-pg')
+  await expect(pages).toHaveCount(2)
+  await expect(pages.nth(0)).toContainText('Quarterly report')
+  // The explicit break decides where page two starts.
+  await expect(pages.nth(1).locator('.pv-area')).toContainText('After the break')
+  // Running header on every page, and the footer's page numbers filled in.
+  await expect(pages.nth(0).locator('.pv-run').first()).toHaveText('Confidential')
+  await expect(pages.nth(0).locator('.pv-run').last()).toHaveText('Page 1 of 2')
+  await expect(pages.nth(1).locator('.pv-run').last()).toHaveText('Page 2 of 2')
+  expect(await p.evaluate(() => (window as unknown as { __printed?: number }).__printed || 0)).toBe(0)
+  await p.getByTestId('office-preview-print').click()
+  await expect.poll(() => p.evaluate(() => (window as unknown as { __printed?: number }).__printed || 0)).toBe(1)
+  await p.getByTestId('office-preview-close').click()
+  await expect(p.getByTestId('office-preview')).toHaveCount(0)
+})
+
+test('Word: a long document breaks between paragraphs, never through a line', async ({ page: p }) => {
+  await p.goto('/en/apps/word-editor/')
+  await p.getByTestId('office-new').click()
+  await p.getByTestId('wd-editor').click()
+  for (let i = 1; i <= 70; i++) { await p.keyboard.type(`Paragraph number ${i} of the long document.`); await p.keyboard.press('Enter') }
+  const f = await preview(p)
+  const n = Number(await p.getByTestId('office-preview-pages').getAttribute('data-pages'))
+  expect(n).toBeGreaterThan(1)
+  // Every page's visible slice ends exactly at a paragraph's bottom: nothing is cut.
+  const cut = await f.locator('body').evaluate(() => {
+    const out: number[] = []
+    document.querySelectorAll('.pv-pg').forEach((pg) => {
+      const area = pg.querySelector('.pv-area') as HTMLElement
+      const a = area.getBoundingClientRect()
+      for (const el of area.querySelectorAll('p')) { const r = el.getBoundingClientRect(); if (r.top < a.bottom - 0.5 && r.bottom > a.bottom + 0.5) out.push(r.bottom - a.bottom) }
+    })
+    return out
+  })
+  expect(cut).toEqual([])
+})
+
+test('Excel: a wide sheet prints landscape, scaled to fit, with every column', async ({ page: p }) => {
+  await p.goto('/en/apps/excel-editor/')
+  await p.getByTestId('office-new').click()
+  await expect(p.getByTestId('xl-active')).toHaveAttribute('data-cell', 'A1')
+  for (let c = 0; c < 14; c++) { await p.keyboard.type(`Col${c + 1}`); await p.keyboard.press('Tab') }
+  await p.keyboard.press('Enter')
+  const f = await preview(p)
+  const pg = f.locator('.pv-pg').first()
+  await expect(pg).toContainText('Col1')
+  await expect(pg).toContainText('Col14')
+  const box = await pg.evaluate((el) => ({ w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height, table: el.querySelector('table')!.getBoundingClientRect().right, right: el.querySelector('.pv-area')!.getBoundingClientRect().right }))
+  expect(box.w).toBeGreaterThan(box.h)
+  // Scaled down rather than cut off at the right-hand margin.
+  expect(box.table).toBeLessThanOrEqual(box.right + 1)
+})
+
+test('PowerPoint: one shown slide to a sheet, at the slide\'s proportions', async ({ page: p }) => {
+  await open(p, 'powerpoint-editor', PP + 'python-pptx.pptx')
+  const f = await preview(p)
+  await expect(f.locator('.pv-pg')).toHaveCount(4)
+  await expect(f.locator('.pv-pg').first()).toContainText('Product launch')
+  const r = await f.locator('.pv-pg').first().evaluate((el) => el.getBoundingClientRect().width / el.getBoundingClientRect().height)
+  expect(r).toBeCloseTo(16 / 9, 1)
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 800 } })
+  test('a document opens at its natural layout, the whole page shown, not reflowed into a column', async ({ page: p }) => {
+    await open(p, 'word-editor', WD + 'python-docx.docx')
+    const page = p.getByTestId('wd-page')
+    await expect(page).toBeVisible()
+    // Laid out at the page's real width (Letter is 816px) …
+    expect(await page.evaluate((el) => (el as HTMLElement).offsetWidth)).toBeGreaterThan(780)
+    // … and scaled to fit the screen, so all of it is in view.
+    await expect.poll(async () => Number(await page.locator('xpath=..').getAttribute('data-zoom'))).toBeLessThan(0.6)
+    const b = (await page.boundingBox())!
+    expect(b.x).toBeGreaterThanOrEqual(0)
+    expect(b.x + b.width).toBeLessThanOrEqual(390)
+    // Choosing a zoom is respected, not refitted.
+    await p.getByTestId('tab-view').click()
+    expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  })
+})

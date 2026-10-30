@@ -7910,6 +7910,22 @@ unconnected for 9 seconds is dropped and greeted afresh; and a lonely peer says
 hello again at 3, 8, 20 and 45 seconds. A rare race is a reliability bug, not
 flake — it was found only by repeating the join test many times.
 
+### Printing: the preview IS the printout (`components/office/print.ts`)
+
+The flow is laid out once, at the page's text width, in a hidden frame; cut
+into page-sized slices at block boundaries (a paragraph, list item or table
+row — never after a heading, always at a `.page-break`); and each page is a
+fixed-size box showing its slice. The preview shows that document and Print
+prints that same document, so they cannot disagree about where a page ends —
+which a preview plus the browser's own pagination always eventually does. Word
+feeds it the exported HTML plus the running header/footer (`{page}`/`{pages}`
+filled per page); Excel a table at the sheet's own widths, landscape when wide
+and scaled to fit (Excel's "fit all columns"); PowerPoint one static-rendered
+slide per sheet. **The page on a phone is the page**: the Word editor keeps its
+real width and starts zoomed to fit, rather than squeezing into a column, until
+somebody picks a zoom. The slicing check (`office-print.spec.ts`, "never
+through a line") is verified to fail when the slicer ignores block boundaries.
+
 ### Testing the editors
 
 - **Read it back another way.** The stored document is read straight from
