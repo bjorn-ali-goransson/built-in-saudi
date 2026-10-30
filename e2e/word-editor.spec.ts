@@ -33,7 +33,13 @@ async function stored(p: Page): Promise<Stored[]> {
 const walk = (n: Node, f: (n: Node) => void) => { f(n); n.content?.forEach((c) => walk(c, f)) }
 const nodes = (n: Node, type: string) => { const out: Node[] = []; walk(n, (x) => { if (x.type === type) out.push(x) }); return out }
 const text = (n: Node): string => n.text ?? (n.content || []).map(text).join('')
-async function saved(p: Page) { await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved') }
+// Two frames first: an edit marks the document unsaved in an effect AFTER React
+// commits, so straight after a key press the status can still read "saved" from
+// before it — and a read then gets the old document.
+async function saved(p: Page) {
+  await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+  await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved')
+}
 async function storedDoc(p: Page): Promise<Stored> {
   await saved(p)
   const all = await stored(p)

@@ -2684,8 +2684,10 @@ makes both branches reachable and is the right answer anyway on a 210mm page.
   computing viewport coordinates then sat 288px above the top of a phone
   screen. This is site-wide, not this tool's: anything using `position: fixed`
   inside the page wrapper is positioned against the wrapper. The local answer
-  is a PORTAL to `document.body`; the general one would be animating opacity
-  only, and is not done here.
+  is a PORTAL to `document.body`; the general one, animating opacity only, is
+  now done — see *The fade-in moved the page under the pointer* below — and the
+  portals stay, because they keep any future ancestor transform from trapping
+  `fixed` again.
 - **A portal escapes the DOM but NOT the React tree**, and that cost the whole
   icon palette. A pointerdown inside a portalled panel still bubbles — as a
   synthetic event — to the block that owns it, whose drag handler calls
@@ -3352,6 +3354,9 @@ been about reclaiming space inside what was left.
   than trusting the class name, which is the only reason it was caught** — an
   assertion on `class` or on computed `position` would have been green
   throughout. Any future full-screen surface on a tool page needs the portal.
+  (`fadeUp` is opacity-only now, so that particular trap is gone; the portal
+  is still the rule, because an editor must not depend on what its ancestors
+  happen to animate.)
 - **Leaving confirms, because there is nothing else to leave by.** Everything in
   this editor is unsaved by construction — that is the privacy stance, not an
   omission — so the back button raises a dialog that says exactly what is lost.
@@ -7846,6 +7851,15 @@ adapter, and each editor needs a different one:
   In a shared document undo must take back MY last change without rewinding a
   colleague's, and only an inverse op does that.
 
+**A live guest ignores a repeated welcome.** A guest says hello whenever a
+channel to the owner opens, and the owner answers every hello with a full
+welcome — so a reconnect hands a live guest a second one. Reloading from it
+replaced the document under somebody typing: the caret jumped to the start, and
+a CI run showed the guest's words landing in front of the owner's paragraph.
+A guest that genuinely missed commits finds out from the next one, whose version
+gap triggers the resync that re-sends what is pending
+(`session.test.ts`, verified to fail without the guard).
+
 **The deck made every op idempotent, and a fuzz is why.** Its first ops placed a
 slide or a shape relative to an ANCHOR ("after s3") or at an index. The
 convergence fuzz in `powerpoint-editor/doc.test.ts` — random concurrent edits
@@ -8070,6 +8084,36 @@ regression has either a vacuous test or the wrong target — check which before
 concluding either**, and the two extractors staying separate is right (one
 wants text, the other positioned runs with fonts), while the shared JUDGEMENT
 belongs in one place.
+
+## The fade-in moved the page under the pointer (`fadeUp`)
+
+Every tool page enters with `animate-[fadeUp_0.5s_ease_both]`, and the keyframes
+used to rise 14px as well as fade. **For half a second every button was
+moving**, so a press could go down on one element and come up on another — and
+then the browser fires no click at all. Found by logging a Join button that was
+"clicked" and did nothing: `pointerdown` landed on its container, `pointerup` on
+the button, `click` on their common ancestor. It cost three CI runs' worth of
+office-editor failures under load before it was understood, and it is not a
+test artefact: a person who clicks during the first half second gets the same
+silence. **It fades opacity only now**, which also ends the second trap the
+transform caused (the `both` fill left a transform on the wrapper forever,
+making it the containing block for every `position: fixed` descendant). **An
+entrance animation must not move anything that can be clicked.**
+
+## Peer-to-peer specs and mDNS
+
+Every P2P spec (Calls, Messages, the three editors' live sessions) puts two or
+three browsers on one machine, and Chromium by default hides their local
+addresses behind mDNS names each side must resolve. Under load that resolution
+failed often enough that **about one P2P case in forty never connected** — at
+CI's two workers, which with ~30 such cases made a red run more likely than not.
+`playwright.config.ts` launches Chromium with
+`--disable-features=WebRtcHideLocalIpsWithMdns`. Measured at CI's settings, 150
+repeated P2P cases: Messages failures **3 → 0**, connection failures **4 → 1**.
+Nothing users rely on is switched off: real peers are on different machines and
+meet through STUN. **A mesh change was tried first and made it WORSE** (8
+failures against 4 at the same load) — a "fresh hello" that dropped a stale
+half-formed pair also dropped pairs that were merely slow — and was reverted.
 
 ## Testing (e2e)
 

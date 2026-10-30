@@ -246,6 +246,17 @@ export class CollabSession {
     // ---- guest receives
     if (m.t === 'c-welcome') {
       if (this.ownerId && this.ownerId !== id) return // someone else already welcomed us
+      // The SAME owner welcoming us again: a hello re-sent on a reopened channel.
+      // Reloading from it would replace the document under the guest's caret —
+      // moving it to the start — and drop whatever they typed that is not yet
+      // confirmed. Its document is ignored: a guest that really did miss commits
+      // while the channel was down finds out from the next one, whose version
+      // gap triggers the resync below — which re-sends what is pending.
+      if (this.ownerId === id && this.state === 'live') {
+        this.role = m.role === 'edit' ? 'edit' : 'view'
+        this.ev.onRole?.(this.role)
+        return
+      }
       this.ownerId = id
       this.title = String(m.title || '')
       this.kind = String(m.kind || '')

@@ -45,7 +45,7 @@ jobs:
           ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }},GOOGLE_OAUTH_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID }},GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }},RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         run: |
           set -e
-          common=(--gen2 --runtime=nodejs20 --region=us-central1 \
+          common=(--gen2 --runtime=nodejs22 --region=us-central1 \
             --project="${{ vars.GCP_PROJECT }}" --source=. \
             --trigger-http --allow-unauthenticated --set-env-vars="$ENVV")
           # Prayer alerts

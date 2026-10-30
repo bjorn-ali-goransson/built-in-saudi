@@ -97,6 +97,32 @@ describe('CollabSession + OpDoc', () => {
     expect(g.doc.state).toEqual({ a: '1' })
   })
 
+  // A guest says hello whenever a channel to the owner opens, and the owner
+  // answers every hello with a welcome — so a reconnect hands a LIVE guest a
+  // second one. Reloading from it moved the caret to the start of the document
+  // under somebody who was typing (found in CI, where the order of opens varies).
+  it('a repeated welcome from the same owner does not reload a live guest', async () => {
+    const hub = new LocalHub()
+    const o = node(hub, 'owner', true, { a: '1' })
+    o.s.start()
+    const g = node(hub, 'guest', false)
+    g.s.start()
+    await flush(); await flush()
+    const ownerTx = (o.s as unknown as { tx: { send: (to: string, m: unknown) => void } }).tx
+    const welcome = (snap: S, version: number) => ({ t: 'c-welcome', role: 'edit', snap, version, title: 'Budget', kind: 'excel', name: 'owner', color: '#000' })
+    const v = o.doc.snapshot().version
+    // An edit in flight is the case that loses work: it must survive the repeat.
+    expect(g.doc.edit({ k: 'b', v: 'typing' })).toBe(true)
+    ownerTx.send('guest', welcome({ a: 'RELOADED' }, v))
+    await flush(); await flush(); await flush()
+    expect(g.doc.state).toEqual({ a: '1', b: 'typing' })
+    expect(o.doc.state).toEqual({ a: '1', b: 'typing' })
+    // A guest that really missed something still catches up — through the gap.
+    o.doc.edit({ k: 'c', v: '3' })
+    await flush(); await flush(); await flush()
+    expect(g.doc.state).toEqual(o.doc.state)
+  })
+
   it('owner leaving or ending is visible to guests; kick removes a guest', async () => {
     const hub = new LocalHub()
     const o = node(hub, 'owner', true)

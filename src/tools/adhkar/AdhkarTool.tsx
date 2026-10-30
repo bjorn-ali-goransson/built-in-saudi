@@ -206,8 +206,8 @@ export default function AdhkarTool() {
       )}
 
       {/* Persistent, edge-docked scroll-spy — how far through the list you are.
-          Portaled to <body> so it stays viewport-fixed (the tool page's fadeUp
-          animation leaves a transform that would otherwise capture `fixed`). */}
+          Portaled to <body> so it stays viewport-fixed whatever an ancestor does
+          (the page's fade-in once left a transform that captured `fixed`). */}
       {createPortal(
         <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-2px_10px_color-mix(in_srgb,var(--ink)_8%,transparent)]"
           dir={locale === 'ar' ? 'rtl' : 'ltr'}

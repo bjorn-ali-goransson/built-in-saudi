@@ -3,7 +3,7 @@
 // routes it through the owner so every browser applies the same edits in the
 // same order. Undo is by inverse op, so it takes back MY change and leaves a
 // colleague's alone.
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorShell, LossDialog } from '../../components/office/EditorShell'
 import { usePersistence, useCollab } from '../../components/office/hooks'
@@ -220,7 +220,11 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
     if (el.kind === 'table' && t.cell) { const rows = clone(el.rows); rows[t.cell[0]].cells[t.cell[1]].text = body; return { rows } }
     return { text: body }
   }
-  useEffect(() => {
+  // A LAYOUT effect: Escape and click-away finish an edit from ProseMirror's own
+  // listeners, outside React, so a quick double-click, type, Escape could arrive
+  // before a passive effect had run — and with no starting point the edit was
+  // dropped without a word.
+  useLayoutEffect(() => {
     if (!editing) { editStart.current = null; return }
     const b = bodyOf(editing)
     editStart.current = b ? { target: editing, body: clone(b) } : null
@@ -234,8 +238,11 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
   }
   const onTextDone = (b: TextBody, measured?: number) => {
     window.clearTimeout(liveTimer.current)
-    const st = editStart.current
     const t = editing
+    // Belt and braces for the same race: before the edit is applied, the box
+    // still holds the text it started with.
+    const sb = t && !editStart.current ? bodyOf(t) : undefined
+    const st = editStart.current || (t && sb ? { target: t, body: clone(sb) } : null)
     setEditing(null)
     if (!st || !t || !slide) return
     const el = slide.elements.find((e) => e.id === t.id)

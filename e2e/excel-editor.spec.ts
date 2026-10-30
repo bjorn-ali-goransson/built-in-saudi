@@ -45,7 +45,13 @@ async function storedBook(p: Page): Promise<{ title: string; data: { sheets: { n
     }
   }))
 }
-async function saved(p: Page) { await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved') }
+// Two frames first: an edit marks the document unsaved in an effect AFTER React
+// commits, so straight after a key press the status can still read "saved" from
+// before it — and a read then gets the old document.
+async function saved(p: Page) {
+  await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+  await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved')
+}
 
 test('library: start blank, type values and a formula, and it recalculates', async ({ page: p }) => {
   await p.goto('/en/apps/excel-editor/')

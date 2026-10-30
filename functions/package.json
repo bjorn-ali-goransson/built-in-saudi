@@ -5,7 +5,7 @@
   "description": "Prayer-time push notification backend (Cloud Functions gen2).",
   "main": "index.js",
   "type": "module",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.0",
     "@google-cloud/firestore": "^7.9.0",

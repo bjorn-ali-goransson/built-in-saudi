@@ -21,7 +21,13 @@ async function newBlank(p: Page, locale = 'en') {
   await p.getByTestId('office-new').click()
   await expect(slideEl(p)).toBeVisible()
 }
-async function saved(p: Page) { await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved') }
+// Two frames first: an edit marks the document unsaved in an effect AFTER React
+// commits, so straight after a key press the status can still read "saved" from
+// before it — and a read then gets the old document.
+async function saved(p: Page) {
+  await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+  await expect(p.getByTestId('office-status')).toHaveAttribute('data-status', 'saved')
+}
 /** The stored decks, read straight from IndexedDB — not from the screen. */
 async function stored(p: Page): Promise<Stored[]> {
   return p.evaluate(() => new Promise((resolve, reject) => {
@@ -138,8 +144,9 @@ test('typing over a selected box starts editing it, without double-clicking', as
   await p.keyboard.press('End')
   await p.keyboard.type('!')
   await p.keyboard.press('Escape')
-  d = await storedDeck(p)
-  expect(txt(current(d).elements.find((e) => e.geom === 'ellipse'))).toBe('Go!')
+  // Polled: the save after Escape is debounced, and "saved" can still be the
+  // status from before it — reading straight away raced it on a slow runner.
+  await expect.poll(async () => txt(current(await storedDeck(p)).elements.find((e) => e.geom === 'ellipse'))).toBe('Go!')
 })
 
 test('slides: new from a layout, Ctrl+M, duplicate, reorder by dragging, delete from the menu', async ({ page: p }) => {

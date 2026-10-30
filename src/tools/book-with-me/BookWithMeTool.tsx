@@ -667,8 +667,9 @@ export default function BookWithMeTool() {
 
       {saveState === 'error' && <p className="text-[0.82rem] text-gold-500">{s.saveErr}</p>}
 
-      {/* Sticky publish bar — portaled to <body> so ToolPage's fadeUp transform
-          doesn't trap the fixed positioning (that broke sticky on desktop). */}
+      {/* Sticky publish bar — portaled to <body>. ToolPage's fade-in once left a
+          transform that trapped fixed positioning (that broke sticky on desktop);
+          it fades opacity only now, and the portal keeps any ancestor from doing it again. */}
       {createPortal(
         <div className="fixed inset-x-0 bottom-0 z-40 bg-[var(--surface)] border-t border-[color:var(--line)] shadow-[0_-6px_20px_rgba(20,30,50,0.09)] pb-[env(safe-area-inset-bottom,0px)]">
           <div className="wrap py-2.5 flex items-center gap-2">

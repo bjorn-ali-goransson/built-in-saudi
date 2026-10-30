@@ -127,7 +127,12 @@
 }
 
 /* Motion — keyframes referenced by `animate-[…]` utilities in components. */
-@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+/* Opacity only. It used to rise 14px as well, which moved every button on the
+   page for its first half second: a press could go down on one element and up
+   on another, so the click never fired. And `fill-mode: both` left a transform
+   on the element for good, which made it the containing block for every
+   `position: fixed` descendant. Fading does neither. */
+@keyframes fadeUp { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 50% { opacity: 0.3; } }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 /* Calls: mic button "you're talking" flash — pulse the green speaking ring. */

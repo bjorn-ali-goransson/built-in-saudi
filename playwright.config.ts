@@ -71,7 +71,19 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], launchOptions: { proxy: offlineProxy } },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          proxy: offlineProxy,
+          // Every peer-to-peer spec puts two or three browsers on ONE machine, and
+          // by default Chromium hides their local addresses behind mDNS names that
+          // each side must resolve. Under load that resolution is what fails, and a
+          // pair that never connects looks exactly like a broken product. Real peers
+          // are on different machines and meet through STUN, so nothing a user
+          // relies on is switched off.
+          args: ['--disable-features=WebRtcHideLocalIpsWithMdns'],
+        },
+      },
     },
   ],
 })
