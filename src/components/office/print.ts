@@ -191,7 +191,14 @@ export function printDocument(p: Printable, testid = 'office-print-frame'): void
  * not available inside that picture; the browser's own fallback stands in, which
  * at thumbnail size is invisible.
  */
-export async function pageThumbnail(p: Printable, width = 240): Promise<string | undefined> {
+/**
+ * The card shows the page cropped to 4:3 and is about 190 points wide on a phone,
+ * whose screen has three pixels to the point: the picture's SHORTER side must
+ * carry about that many pixels, or it is upscaled and grainy. 240 wide was a
+ * quarter of what a phone needs.
+ */
+export const THUMB_MIN_SIDE = 560
+export async function pageThumbnail(p: Printable, minSide = THUMB_MIN_SIDE): Promise<string | undefined> {
   const f = frame()
   try {
     const d = f.contentDocument!
@@ -212,8 +219,9 @@ export async function pageThumbnail(p: Printable, width = 240): Promise<string |
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
     await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('thumbnail')); img.src = url })
     const c = document.createElement('canvas')
-    c.width = width
-    c.height = Math.round((width * h) / w)
+    const k = minSide / Math.min(w, h)
+    c.width = Math.round(w * k)
+    c.height = Math.round(h * k)
     const g = c.getContext('2d')!
     g.fillStyle = '#fff'
     g.fillRect(0, 0, c.width, c.height)

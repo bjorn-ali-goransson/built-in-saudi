@@ -35,6 +35,8 @@ export interface StoredDoc {
   thumb?: string
   /** Approximate size of `data`, for the storage readout. */
   bytes?: number
+  /** What an import could not bring across, shown once when the document is first opened. */
+  importLoss?: string[]
 }
 
 const DB = 'bis-docs'
@@ -94,6 +96,28 @@ export async function putDoc(doc: StoredDoc): Promise<void> {
   await tx('readwrite', (os) => os.put({ ...doc, bytes }))
   notify()
 }
+/**
+ * Change some fields of the record as it is NOW, in one transaction. For work done
+ * beside an open editor (a library rendering a thumbnail): read-modify-write in two
+ * transactions would put back a copy of the document from before the editor's save.
+ */
+export async function patchDoc(id: string, patch: Partial<StoredDoc>): Promise<void> {
+  await open().then((db) => new Promise<void>((resolve, reject) => {
+    const t = db.transaction(STORE, 'readwrite')
+    const os = t.objectStore(STORE)
+    const g = os.get(id)
+    g.onsuccess = () => {
+      if (!g.result) return
+      const next = { ...g.result, ...patch }
+      for (const [k, v] of Object.entries(patch)) if (v === undefined) delete (next as Record<string, unknown>)[k]
+      os.put(next)
+    }
+    t.oncomplete = () => { db.close(); resolve() }
+    t.onerror = () => { db.close(); reject(t.error) }
+    t.onabort = () => { db.close(); reject(t.error) }
+  }))
+  notify()
+}
 export async function deleteDoc(id: string): Promise<void> {
   await tx('readwrite', (os) => os.delete(id))
   notify()
@@ -150,12 +174,12 @@ export const FILE_TYPES: Record<DocKind, PickerType[]> = {
 export const EXT: Record<DocKind, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' }
 
 /** Open a file through the picker, keeping its handle. Null when cancelled or unsupported. */
-export async function pickFile(kind: DocKind): Promise<{ file: File; handle: FileSystemFileHandle } | null> {
+export async function pickFiles(kind: DocKind): Promise<{ file: File; handle: FileSystemFileHandle }[] | null> {
   const p = fsw().showOpenFilePicker
   if (!p) return null
   try {
-    const [handle] = await p({ types: FILE_TYPES[kind], multiple: false })
-    return { file: await handle.getFile(), handle }
+    const hs = await p({ types: FILE_TYPES[kind], multiple: true })
+    return Promise.all(hs.map(async (handle) => ({ file: await handle.getFile(), handle })))
   } catch { return null }
 }
 

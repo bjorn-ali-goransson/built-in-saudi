@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 
 // Print preview in the three editors. The preview IS the printed document — the
 // same paged HTML is what Print sends — so these read the pages inside the
@@ -131,4 +132,65 @@ test('the library card is the first printed page, drawn — not a sketch', async
     })
     expect(inked, app).toBeGreaterThan(50)
   }
+})
+
+test.describe('opening several files at once', () => {
+  test('each file shows up at once, converts in turn, and none opens by itself', async ({ page: p }) => {
+    await p.goto('/en/apps/word-editor/')
+    await p.getByTestId('office-file-input').setInputFiles([
+      { name: 'python-docx.docx', mimeType: 'application/octet-stream', buffer: readFileSync(WD + 'python-docx.docx') },
+      { name: 'layout.docx', mimeType: 'application/octet-stream', buffer: readFileSync(WD + 'layout.docx') },
+      { name: 'old.docx', mimeType: 'application/octet-stream', buffer: Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]) },
+    ])
+    // A card for each, before any conversion has finished.
+    await expect(p.getByTestId('office-job')).toHaveCount(3)
+    await expect(p.getByTestId('office-batch')).toBeVisible()
+    // The two real files become documents with a rendered page; the bad one says why.
+    await expect(p.getByTestId('office-doc')).toHaveCount(2, { timeout: 30_000 })
+    await expect(p.getByTestId('office-job')).toHaveCount(1, { timeout: 30_000 })
+    await expect(p.getByTestId('office-job')).toHaveAttribute('data-state', 'error')
+    await expect(p.getByTestId('office-import-error')).toContainText('old binary Office file')
+    await expect(p).not.toHaveURL(/doc=/)
+    await expect(p.getByTestId('office-library')).toBeVisible()
+    // Read back from storage, not the screen: both stored, both with a page picture of phone resolution.
+    const stored = await p.evaluate(() => new Promise<{ title: string; thumb?: string }[]>((res) => {
+      const r = indexedDB.open('bis-docs')
+      r.onsuccess = () => { const q = r.result.transaction('docs').objectStore('docs').getAll(); q.onsuccess = () => res(q.result) }
+    }))
+    expect(stored).toHaveLength(2)
+    for (const d of stored) expect(d.thumb).toMatch(/^data:image\/jpeg/)
+    const w = await p.evaluate((src) => new Promise<number>((res) => { const i = new Image(); i.onload = () => res(Math.min(i.naturalWidth, i.naturalHeight)); i.src = src }), stored[0].thumb!)
+    expect(w).toBeGreaterThanOrEqual(500)
+    await p.getByTestId('office-job-dismiss').click()
+    await expect(p.getByTestId('office-job')).toHaveCount(0)
+  })
+
+  test('one file still opens straight into the editor', async ({ page: p }) => {
+    await p.goto('/en/apps/excel-editor/')
+    await p.getByTestId('office-file-input').setInputFiles('src/tools/excel-editor/io/__fixtures__/openpyxl-rich.xlsx')
+    await expect(p.getByTestId('xl-grid')).toBeVisible()
+    await expect(p).toHaveURL(/doc=/)
+  })
+})
+
+test('a card drawn at the old low resolution is redrawn sharp', async ({ page: p }) => {
+  await p.goto('/en/apps/word-editor/')
+  await p.getByTestId('office-file-input').setInputFiles(WD + 'python-docx.docx')
+  await expect(p).toHaveURL(/doc=/)
+  await p.goto('/en/apps/word-editor/')
+  const store = (fn: string) => p.evaluate((fn) => new Promise<number>((res) => {
+    const r = indexedDB.open('bis-docs')
+    r.onsuccess = () => {
+      const os = r.result.transaction('docs', 'readwrite').objectStore('docs')
+      const q = os.getAll()
+      q.onsuccess = () => {
+        const d = q.result[0]
+        if (fn === 'shrink') { const c = document.createElement('canvas'); c.width = 24; c.height = 18; d.thumb = c.toDataURL('image/jpeg'); os.put(d); res(0); return }
+        const i = new Image(); i.onload = () => res(Math.min(i.naturalWidth, i.naturalHeight)); i.onerror = () => res(0); i.src = d.thumb
+      }
+    }
+  }), fn)
+  await store('shrink')
+  await p.reload()
+  await expect.poll(() => store('measure'), { timeout: 20_000 }).toBeGreaterThanOrEqual(500)
 })

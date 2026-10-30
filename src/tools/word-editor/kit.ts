@@ -54,6 +54,10 @@ export function wordKit(locale: 'en' | 'ar'): EditorKit<WordData> {
       return { data: r.data, loss: L(r.loss), title: r.title || undefined }
     },
     thumb: (data) => thumbnail(data),
+    async renderThumb(data) {
+      const [{ printable }, { pageThumbnail }] = await Promise.all([import('./printable'), import('../../components/office/print')])
+      return pageThumbnail(await printable(data, 'document'))
+    },
   }
 }
 

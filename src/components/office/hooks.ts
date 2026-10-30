@@ -26,6 +26,8 @@ export interface EditorKit<D> {
   importFile(file: File): Promise<{ data: D; loss: string[]; title?: string }>
   blank(): D
   thumb?(data: D): string | undefined
+  /** The first printed page as a picture, for a document the editor has not opened (an import). */
+  renderThumb?(data: D): Promise<string | undefined>
 }
 
 export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'

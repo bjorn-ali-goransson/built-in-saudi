@@ -93,6 +93,16 @@ const en = {
   linkedFileStop: 'Stop updating it',
   close: 'Close',
   fileTooBig: 'This file is too large to open in the browser.',
+  jobQueued: 'Waiting',
+  jobReading: 'Reading the file…',
+  jobConverting: 'Converting…',
+  jobPreview: 'Drawing the preview…',
+  jobFailed: 'Could not open',
+  jobBatch: (done: number, all: number) => `Converted ${done} of ${all}`,
+  jobDismiss: 'Dismiss',
+  openFiles: 'Open files',
+  dropHereMany: 'Drop files anywhere to add them',
+  downloadFile: 'Download',
 }
 export type OfficeStr = typeof en
 const ar: OfficeStr = {
@@ -185,6 +195,16 @@ const ar: OfficeStr = {
   linkedFileStop: 'أوقف تحديثه',
   close: 'إغلاق',
   fileTooBig: 'هذا الملف أكبر من أن يُفتح في المتصفح.',
+  jobQueued: 'في الانتظار',
+  jobReading: 'جارٍ قراءة الملف…',
+  jobConverting: 'جارٍ التحويل…',
+  jobPreview: 'جارٍ رسم المعاينة…',
+  jobFailed: 'تعذّر الفتح',
+  jobBatch: (done: number, all: number) => `حُوِّل ${done} من ${all}`,
+  jobDismiss: 'إخفاء',
+  openFiles: 'فتح ملفات',
+  dropHereMany: 'أفلت الملفات في أي مكان لإضافتها',
+  downloadFile: 'تنزيل',
 }
 export const OFFICE_STR: Record<'en' | 'ar', OfficeStr> = { en, ar }
 

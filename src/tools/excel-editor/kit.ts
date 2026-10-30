@@ -38,6 +38,13 @@ export function excelKit(locale: 'en' | 'ar'): EditorKit<WorkbookData> {
       return { data: r.book, loss: r.loss.map((l) => lossText(l, locale)), title: r.title }
     },
     thumb: (book) => thumbnail(book),
+    async renderThumb(book) {
+      const [{ printable }, { pageThumbnail }] = await Promise.all([import('./printable'), import('../../components/office/print')])
+      const sheet = book.sheets[book.active || 0] || book.sheets[0]
+      if (!sheet) return undefined
+      const wb = new Workbook(book.sheets, book.names || [])
+      return pageThumbnail(await printable(sheet, (r, c) => wb.value(sheet.name, { row: r, col: c }), 'sheet'))
+    },
   }
 }
 

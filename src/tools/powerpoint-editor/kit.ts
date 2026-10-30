@@ -43,6 +43,10 @@ export function slidesKit(locale: 'en' | 'ar'): EditorKit<DeckData> {
       return { data: r.data, loss: L(r.loss), title: r.title || slideTitle(r.data.slides[0] || { id: '', elements: [] }) || undefined }
     },
     thumb: (deck) => thumbnail(deck),
+    async renderThumb(deck) {
+      const [{ printable }, { pageThumbnail }] = await Promise.all([import('./printable'), import('../../components/office/print')])
+      return pageThumbnail(await printable(deck, 'deck'))
+    },
   }
 }
 
