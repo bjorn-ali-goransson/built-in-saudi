@@ -519,13 +519,51 @@ test('library: rename, duplicate and delete a document', async ({ page: p }) => 
   await expect(p.getByTestId('office-doc')).toHaveCount(1)
 })
 
+// THE ONE EDITOR CASE ON THE REAL WEBRTC MESH. Every other live-session case
+// runs over the relay (relayOnly), because a join that fails to form under load
+// fails a spec about something else. This one keeps the real path, for the
+// property the mesh exists for: nothing the two type reaches a server. One case
+// is enough because all three editors share the same mesh and session; its own
+// relay, so the relayed sessions above cannot put content in its record.
+test.describe('live co-editing over the real mesh', () => {
+  let relay: Relay
+  test.beforeAll(async () => { relay = await startRelay() })
+  test.afterAll(async () => { await relay.close() })
+
+  test('nothing the owner or the guest types reaches the relay', async ({ browser }) => {
+    const oc = await relayContext(browser, relay)
+    const owner = await oc.newPage()
+    await newBlank(owner)
+    await typeIn(owner, 'A1', 'secret-owner-value')
+    await owner.getByTestId('office-share').click()
+    await owner.getByTestId('collab-start').click()
+    const link = await owner.getByTestId('collab-link').inputValue()
+    await owner.getByTestId('sheet-close').click()
+    const gc = await relayContext(browser, relay)
+    const guest = await gc.newPage()
+    await guest.goto(link.replace(/^https?:\/\/[^/]+/, ''))
+    await guest.getByTestId('collab-name').fill('Omar')
+    await guest.getByTestId('office-join-go').click()
+    await expect(cell(guest, 'A1')).toHaveText('secret-owner-value', { timeout: 30_000 })
+    await typeIn(guest, 'B1', 'from-guest')
+    await expect(cell(owner, 'B1')).toHaveText('from-guest')
+    await guest.getByTestId('office-share').click()
+    await guest.getByTestId('collab-chat-input').fill('hello there')
+    await guest.getByTestId('collab-chat-send').click()
+    await expect(owner.getByTestId('office-unread')).toHaveText('1')
+    // The relay did carry the handshake — without that the check below is vacuous.
+    expect(relay.bodies.some((b) => b.includes('"offer"'))).toBe(true)
+    for (const s of ['secret-owner-value', 'from-guest', 'hello there']) expect(relay.bodies.some((b) => b.includes(s))).toBe(false)
+  })
+})
+
 test.describe('live co-editing, with the owner as the truth', () => {
   let relay: Relay
   test.beforeAll(async () => { relay = await startRelay() })
   test.afterAll(async () => { await relay.close() })
 
   async function hostAndJoin(browser: import('@playwright/test').Browser, role: 'edit' | 'view' = 'edit') {
-    const oc = await relayContext(browser, relay)
+    const oc = await relayContext(browser, relay, { relayOnly: true })
     const owner = await oc.newPage()
     await newBlank(owner)
     await typeIn(owner, 'A1', 'secret-owner-value')
@@ -534,7 +572,7 @@ test.describe('live co-editing, with the owner as the truth', () => {
     await owner.getByTestId('collab-start').click()
     const link = await owner.getByTestId('collab-link').inputValue()
     await owner.getByTestId('sheet-close').click()
-    const gc = await relayContext(browser, relay)
+    const gc = await relayContext(browser, relay, { relayOnly: true })
     const guest = await gc.newPage()
     await guest.goto(link.replace(/^https?:\/\/[^/]+/, ''))
     await guest.getByTestId('collab-name').fill('Omar')
@@ -565,8 +603,8 @@ test.describe('live co-editing, with the owner as the truth', () => {
     await guest.getByTestId('collab-chat-input').fill('hello there')
     await guest.getByTestId('collab-chat-send').click()
     await expect(owner.getByTestId('office-unread')).toHaveText('1')
-    // Nothing the two typed ever reached the relay.
-    for (const s of ['secret-owner-value', 'from-guest', 'hello there']) expect(relay.bodies.some((b) => b.includes(s))).toBe(false)
+    // These sessions run over the relay (relayOnly), so what reached it says
+    // nothing here; the real-mesh case in excel-editor.spec.ts proves it.
   })
 
   test('a view-only guest cannot edit, and is told so', async ({ browser }) => {

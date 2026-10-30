@@ -8115,6 +8115,22 @@ meet through STUN. **A mesh change was tried first and made it WORSE** (8
 failures against 4 at the same load) — a "fresh hello" that dropped a stale
 half-formed pair also dropped pairs that were merely slow — and was reverted.
 
+**The editors' live-session specs do NOT use WebRTC** (`src/lib/p2p/relayMesh.ts`,
+`relayContext(…, { relayOnly: true })`). Even after the mDNS fix a join failed to
+form about once in forty under CI load, and each editor's main session case
+failed a spec about ownership, roles and edit order for a reason that had nothing
+to do with them. They now run over the test relay, which carries the data the
+data channel would have. Two properties it keeps: sends are POSTED IN ORDER (two
+fetches in flight can reach the relay either way round, and commits out of order
+trigger a resync the real mesh never needs), and the first poll only learns
+where the room is, so a newcomer does not replay an owner's earlier broadcasts.
+**One case keeps the real mesh** (`excel-editor.spec.ts`, "over the real mesh"),
+on its own relay, for the property the mesh exists for: nothing typed reaches a
+server. It asserts the relay saw an `offer` first, without which "nothing
+reached it" would hold against a session that never ran. Verified both ways:
+breaking `RelayMesh`'s delivery reddens the three relayed cases and leaves the
+real one green. Messages and Calls stay on real WebRTC — there it is the subject.
+
 ## Testing (e2e)
 
 Playwright specs live in `e2e/`, driven by the `data-testid`s tools already

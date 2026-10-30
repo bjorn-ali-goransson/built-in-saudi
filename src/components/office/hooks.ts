@@ -8,6 +8,7 @@ import {
 } from '../../lib/docStore'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { Mesh, randomId, type MeshHandlers } from '../../lib/p2p/mesh'
+import { RelayMesh, relayOnly } from '../../lib/p2p/relayMesh'
 import { CollabSession, type CollabAdapter, type Member, type Role, type SessionState } from '../../lib/collab/session'
 
 export interface OfficeFormat { ext: string; label: string }
@@ -204,7 +205,7 @@ export function useCollab(opts: { adapter: Bindable | null; kind: DocKind; title
   const [room, setRoom] = useState('')
   const [refusedBy, setRefusedBy] = useState('')
   const [name, setNameState] = useState(defaultName)
-  const meshRef = useRef<Mesh | null>(null)
+  const meshRef = useRef<Mesh | RelayMesh | null>(null)
   const sessRef = useRef<CollabSession | null>(null)
   const metaRef = useRef(opts.onMeta)
   metaRef.current = opts.onMeta
@@ -217,7 +218,8 @@ export function useCollab(opts: { adapter: Bindable | null; kind: DocKind; title
     sessRef.current?.stop()
     meshRef.current?.stop()
     const h: MeshHandlers = {}
-    const mesh = new Mesh(r, h)
+    // Test-only: see relayMesh.ts for why the editors' session specs skip WebRTC.
+    const mesh = relayOnly() ? new RelayMesh(r, h) : new Mesh(r, h)
     const s = new CollabSession(mesh, a, {
       onState: (st) => { setState(st); if (st !== 'live' && st !== 'connecting') setPresence({}) },
       onRoster: (m) => {

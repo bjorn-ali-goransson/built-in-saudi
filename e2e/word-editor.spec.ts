@@ -378,7 +378,7 @@ test.describe('live co-writing, with the owner as the truth', () => {
   test.afterAll(async () => { await relay.close() })
 
   async function hostAndJoin(browser: import('@playwright/test').Browser, role: 'edit' | 'view' = 'edit') {
-    const oc = await relayContext(browser, relay)
+    const oc = await relayContext(browser, relay, { relayOnly: true })
     const owner = await oc.newPage()
     await newBlank(owner)
     await owner.keyboard.type('secret-owner-text')
@@ -387,7 +387,7 @@ test.describe('live co-writing, with the owner as the truth', () => {
     await owner.getByTestId('collab-start').click()
     const link = await owner.getByTestId('collab-link').inputValue()
     await owner.getByTestId('sheet-close').click()
-    const gc = await relayContext(browser, relay)
+    const gc = await relayContext(browser, relay, { relayOnly: true })
     const guest = await gc.newPage()
     await guest.goto(link.replace(/^https?:\/\/[^/]+/, ''))
     await guest.getByTestId('collab-name').fill('Omar')
@@ -419,7 +419,8 @@ test.describe('live co-writing, with the owner as the truth', () => {
     // Page setup travels too.
     await guest.getByTestId('wd-header').fill('Shared header')
     await expect(owner.getByTestId('wd-header')).toHaveValue('Shared header')
-    for (const s of ['secret-owner-text', 'from-guest', 'Shared header']) expect(relay.bodies.some((b) => b.includes(s))).toBe(false)
+    // These sessions run over the relay (relayOnly), so what reached it says
+    // nothing here; the real-mesh case in excel-editor.spec.ts proves it.
   })
 
   test('a view-only guest cannot write, and is told so', async ({ browser }) => {

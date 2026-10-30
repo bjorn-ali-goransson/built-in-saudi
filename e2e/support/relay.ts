@@ -61,12 +61,19 @@ export async function startRelay(): Promise<Relay> {
 }
 
 /** A browser context pointed at the relay, with the media flags WebRTC needs headless. */
-export async function relayContext(browser: Browser, relay: Relay, opts: { permissions?: string[] } = {}): Promise<BrowserContext> {
+/**
+ * `relayOnly` routes the office editors' live sessions through the relay instead
+ * of a WebRTC data channel (src/lib/p2p/relayMesh.ts). Use it where the session
+ * is the subject; a case asserting that content never reaches the relay must
+ * NOT, since in that mode it does by construction.
+ */
+export async function relayContext(browser: Browser, relay: Relay, opts: { permissions?: string[]; relayOnly?: boolean } = {}): Promise<BrowserContext> {
   const c = await browser.newContext({ permissions: opts.permissions || [] })
-  await c.addInitScript((u) => {
-    const w = window as unknown as { __CALL_SIGNAL: string; __CALL_FN: string }
+  await c.addInitScript(([u, only]) => {
+    const w = window as unknown as { __CALL_SIGNAL: string; __CALL_FN: string; __MESH_RELAY_ONLY?: boolean }
     w.__CALL_SIGNAL = u + '/call-signal'
     w.__CALL_FN = u
-  }, relay.base)
+    if (only) w.__MESH_RELAY_ONLY = true
+  }, [relay.base, !!opts.relayOnly] as const)
   return c
 }
