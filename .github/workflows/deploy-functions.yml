@@ -11,7 +11,13 @@ on:
       - 'functions/**'
       - '!functions/README.md'
       - '.github/workflows/deploy-functions.yml'
+      - 'scripts/functions-plan.mjs'
   workflow_dispatch:
+    inputs:
+      all:
+        description: Redeploy every function, not only the ones this push changed
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,7 +34,11 @@ jobs:
       run:
         working-directory: functions
     steps:
+      # Full history: the plan diffs this push against the one before it, which
+      # can be any number of commits back.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - id: auth
         uses: google-github-actions/auth@v2
@@ -38,56 +48,50 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      # Only what this push changed (scripts/functions-plan.mjs): a change to
+      # call.js redeploys the seven Calls/Messages functions, not all 35. Shared
+      # files, an unknown file, a manual run with `all`, or a push whose parent
+      # cannot be found redeploy everything.
+      - name: Plan
+        id: plan
+        working-directory: .
+        run: |
+          before='${{ github.event.before }}'
+          if [ '${{ github.event_name }}' != push ] || [ '${{ inputs.all }}' = true ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            node scripts/functions-plan.mjs --all > plan.txt
+          else
+            node scripts/functions-plan.mjs $(git diff --name-only "$before" '${{ github.sha }}') > plan.txt
+          fi
+          echo "Deploying $(wc -l < plan.txt) function(s):"; cat plan.txt
+          # Outside functions/: that folder IS the uploaded source.
+          mv plan.txt "$RUNNER_TEMP/plan.txt"
+
       - name: Deploy functions
         env:
           # Prayer-alert vars + Book With Me vars (Google OAuth / Resend / Telegram).
           # GOOGLE_OAUTH_CLIENT_ID is public (repo variable); the rest are secrets.
           ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }},GOOGLE_OAUTH_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID }},GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }},RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          PROJECT: ${{ vars.GCP_PROJECT }}
         run: |
           set -e
-          common=(--gen2 --runtime=nodejs22 --region=us-central1 \
-            --project="${{ vars.GCP_PROJECT }}" --source=. \
-            --trigger-http --allow-unauthenticated --set-env-vars="$ENVV")
-          # Prayer alerts
-          gcloud functions deploy subscribe   "${common[@]}" --entry-point=subscribe
-          gcloud functions deploy unsubscribe "${common[@]}" --entry-point=unsubscribe
-          gcloud functions deploy send-due    "${common[@]}" --entry-point=sendDue
-          gcloud functions deploy touch       "${common[@]}" --entry-point=touch
-          gcloud functions deploy debug       "${common[@]}" --entry-point=debug
-          # Book With Me — the callback name must match REDIRECT_URI in booking.js.
-          gcloud functions deploy booking-google-start    "${common[@]}" --entry-point=bookingGoogleStart
-          gcloud functions deploy booking-google-callback "${common[@]}" --entry-point=bookingGoogleCallback
-          gcloud functions deploy save-schedule           "${common[@]}" --entry-point=saveSchedule
-          gcloud functions deploy get-availability        "${common[@]}" --entry-point=getAvailability
-          gcloud functions deploy book                    "${common[@]}" --entry-point=book
-          gcloud functions deploy telegram-webhook        "${common[@]}" --entry-point=telegramWebhook
-          gcloud functions deploy delete-host             "${common[@]}" --entry-point=deleteHost
-          gcloud functions deploy my-data                 "${common[@]}" --entry-point=myData
-          gcloud functions deploy host-status             "${common[@]}" --entry-point=hostStatus
-          gcloud functions deploy get-config              "${common[@]}" --entry-point=getConfig
-          # CV Generator
-          gcloud functions deploy cv-generate             "${common[@]}" --entry-point=cvGenerate
-          gcloud functions deploy cv-refine               "${common[@]}" --entry-point=cvRefine
-
-          gcloud functions deploy shorten                 "${common[@]}" --entry-point=shorten
-          gcloud functions deploy resolve-link            "${common[@]}" --entry-point=resolveLink
-          gcloud functions deploy my-links                "${common[@]}" --entry-point=myLinks
-          gcloud functions deploy delete-link             "${common[@]}" --entry-point=deleteLink
-
-          gcloud functions deploy call-signal             "${common[@]}" --entry-point=callSignal
-          gcloud functions deploy call-register           "${common[@]}" --entry-point=callRegister
-          gcloud functions deploy call-ring               "${common[@]}" --entry-point=callRing
-          gcloud functions deploy call-delete             "${common[@]}" --entry-point=callDelete
-          gcloud functions deploy call-missed             "${common[@]}" --entry-point=callMissed
-          gcloud functions deploy call-dm                 "${common[@]}" --entry-point=callDm
-          gcloud functions deploy call-msg                "${common[@]}" --entry-point=callMsg
-
-          gcloud functions deploy analyze-prompt          "${common[@]}" --entry-point=analyzePrompt
-          gcloud functions deploy improve-prompt          "${common[@]}" --entry-point=improvePrompt
-
-          gcloud functions deploy diacritize              "${common[@]}" --entry-point=diacritize
-
-          gcloud functions deploy todo-sync               "${common[@]}" --entry-point=todoSync
-          gcloud functions deploy todo-mine               "${common[@]}" --entry-point=todoMine
-          gcloud functions deploy todo-share              "${common[@]}" --entry-point=todoShare
-          gcloud functions deploy todo-delete             "${common[@]}" --entry-point=todoDelete
+          plan="$RUNNER_TEMP/plan.txt"
+          [ -s "$plan" ] || { echo 'Nothing deployed changed.'; exit 0; }
+          # Six at a time instead of one after another: each deploy is a separate
+          # Cloud Build, and 35 in sequence took 40 minutes. A failure in one does
+          # not stop the others; the step fails at the end and names them all.
+          # Logs go to the runner's temp dir, never into functions/ — that folder
+          # is uploaded as the source, and a deploy log prints the env vars.
+          deploy() {
+            name=$1; entry=$2
+            if gcloud functions deploy "$name" --gen2 --runtime=nodejs22 --region=us-central1 \
+                 --project="$PROJECT" --source=. --trigger-http --allow-unauthenticated \
+                 --set-env-vars="$ENVV" --entry-point="$entry" > "$RUNNER_TEMP/log-$name.txt" 2>&1; then
+              echo "ok   $name"
+            else
+              echo "FAIL $name"; tail -n 20 "$RUNNER_TEMP/log-$name.txt"; return 1
+            fi
+          }
+          export -f deploy
+          if ! xargs -P 6 -L 1 bash -c 'deploy "$0" "$1"' < "$plan"; then
+            echo '::error::One or more functions failed to deploy (see FAIL above).'; exit 1
+          fi

@@ -8224,7 +8224,14 @@ carried that since they were written and only failed when a run happened to
 cross 00:00. The tool was right; the test was wrong.
 
 **The suite gates the deploy** (`.github/workflows/deploy.yml`): typecheck →
-build → Playwright, and nothing reaches Pages unless all three pass.
+unit tests → build → Playwright, and nothing reaches Pages unless all pass.
+**Build once, test in four shards.** The `build` job uploads `dist`, four `e2e`
+jobs download it and each run a quarter of the suite (`--shard=N/4`), and
+`deploy` needs all of them — so the 17–22 minute suite costs the deploy about a
+quarter of that, and every shard tests the exact artifact that is published.
+Every case still runs on every push: picking the specs a change "affects" was
+rejected, because most tools share `lib/` and a gate that guesses is how a
+regression ships green. A red shard uploads `playwright-report-N`.
 
 **A job TIMEOUT looks exactly like somebody cancelling the run**, and that cost
 a deploy. Run 640 ended `cancelled` at 25m15s against `timeout-minutes: 25`,
@@ -8234,7 +8241,8 @@ a person pressed the button. The signature to recognise: conclusion
 **`cancelled`, no failing test, and a runtime equal to the budget**. Two things
 spent it together, neither a defect — a cold `npm ci` at **7m01s** (the npm
 cache is evicted after 7 days unused and the previous run was 18 days earlier)
-and a suite that is now 16m54s on its own. Raised to 45. **Check the elapsed
+and a suite that was 16m54s on its own — which is why it now runs in shards,
+and the build job's budget is 20. **Check the elapsed
 time against the budget before concluding a run was interrupted.** The same
 workflow runs on **pull requests** (so a PR, including one from a fork, is
 verified before merge) but the `deploy` job is guarded to `push` on `main`, so a
@@ -8689,7 +8697,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   (`bis-missed-call` → window event `bis-call-missed`), which drops a pointless
   ringing screen back to the lobby.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
-  deploys all thirty-four functions on any `functions/**` change, authenticating **keylessly
+  deploys on any `functions/**` change — **only the functions that change touches**,
+  six at a time (`scripts/functions-plan.mjs` maps each module to its handlers: a
+  `call.js` change redeploys the seven Calls/Messages functions, not all 35; the
+  entry point, the dependencies, the workflow or an unknown file redeploy
+  everything, and a manual run can ask for `all`). The script fails if the code
+  registers a handler its table does not list, so a new function cannot silently
+  never deploy. **Add a new function to that table**, not to the workflow.
+  It authenticates **keylessly
   via Workload Identity Federation** (pool `github` in `blitz-ksa`, deploy SA
   `gh-fn-deploy@…`). Repo vars `GCP_PROJECT`/`GCP_WIF_PROVIDER`/`GCP_DEPLOY_SA`/
   `GOOGLE_OAUTH_CLIENT_ID`/`TELEGRAM_BOT_USERNAME` + repo secrets `VAPID_PUBLIC`/

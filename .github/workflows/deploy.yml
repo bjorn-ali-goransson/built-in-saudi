@@ -25,26 +25,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # THE SUITE OUTGREW 25 MINUTES, and the way it announced that was a deploy
-    # blocked with every test green. Run 640 was cancelled at 25m15s having
-    # reached case 1583 of ~1690 — 94% done, nothing red. GitHub reports a job
-    # timeout as "The operation was canceled", which reads as somebody pressing
-    # the button rather than as a budget being spent, so it is worth knowing the
-    # signature: conclusion `cancelled`, no failing test, and a runtime equal to
-    # this number.
-    #
-    # It was two things at once, and neither is a defect:
-    #   npm ci        7m01s  — the npm cache is evicted after 7 days unused and
-    #                          the previous run was 18 days earlier, so a cold
-    #                          install ate 28% of the budget on its own
-    #   typecheck+build+browser  1m09s
-    #   Playwright   16m54s  — ~1,690 cases at --workers=2
-    #
-    # 45 leaves room for a cold cache AND for the catalogue to keep growing,
-    # while still killing a genuinely hung job long before GitHub's own 6-hour
-    # default would. Raise it again when the arithmetic above says to, rather
-    # than after another blocked deploy.
-    timeout-minutes: 45
+    # A JOB TIMEOUT LOOKS LIKE SOMEBODY CANCELLING THE RUN. Run 640 ended
+    # `cancelled` at 25m15s with nothing red, because the whole suite then ran in
+    # this job and outgrew its budget; GitHub writes a spent budget as "The
+    # operation was canceled". The signature: conclusion `cancelled`, no failing
+    # test, and a runtime equal to the timeout. The suite is now in the `e2e`
+    # shards, so this job is install + checks + build — but a cold npm cache
+    # alone once took 7 minutes, which is what this budget leaves room for.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -80,15 +68,56 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The e2e shards test THIS dist, not a rebuild of their own: one build,
+      # handed on, so every shard checks exactly the artifact that is published.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name == 'push'
+        with:
+          path: dist
+
+  # THE SUITE IS SPLIT, NOT TRIMMED. It was one job of 17–22 minutes, most of a
+  # deploy; four shards run it in parallel on four runners, so the deploy waits
+  # on the slowest quarter. Every case still runs on every push — choosing which
+  # specs a change "affects" was rejected, because most tools share lib/ and a
+  # gate that guesses is how a regression ships green.
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false # one red shard should not hide what the others found
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
       # Only chromium — the suite's single project. --with-deps pulls the system
       # libraries the browser needs on a bare runner.
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      # playwright.config serves the dist we just built via `vite preview`, so this
+      # playwright.config serves the downloaded dist via `vite preview`, so this
       # tests exactly the artifact that is about to be published.
-      - name: End-to-end tests
-        run: npm run test:e2e
+      - name: End-to-end tests (shard ${{ matrix.shard }} of 4)
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4
 
       # Keep the report when something fails, so a red deploy is diagnosable without
       # re-running anything locally.
@@ -96,17 +125,12 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report
           retention-days: 7
 
-      - uses: actions/upload-pages-artifact@v5
-        if: github.event_name == 'push'
-        with:
-          path: dist
-
   deploy:
-    needs: build
+    needs: [build, e2e]
     # Verification runs for pull requests; publishing does not.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
