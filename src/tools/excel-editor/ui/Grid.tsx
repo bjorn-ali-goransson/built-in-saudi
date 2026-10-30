@@ -232,6 +232,9 @@ export function Grid(p: Props) {
     const text = edit.text.slice(0, start) + ref + edit.text.slice(end)
     pickRef.current = { start, end: start + ref.length, anchor: a }
     ctl.setEditText(text)
+    // Into the input NOW, not after the render: the next keystroke reads the input's own value, and a
+    // key typed before the mirroring effect ran turned "=A1" back into "=" plus the key ("=*B1").
+    if (ta) { ta.value = text; ta.setSelectionRange(start + ref.length, start + ref.length) }
     requestAnimationFrame(() => { if (ta) { ta.focus(); ta.setSelectionRange(start + ref.length, start + ref.length) } })
   }
   useEffect(() => { if (!edit) pickRef.current = null }, [edit])
