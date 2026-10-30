@@ -372,6 +372,47 @@ def pptx_python():
     prs.save(os.path.join(PP, 'python-pptx.pptx'))
 
 
+def pptx_drawn():
+    """Drawings the python-pptx deck lacks, written as PowerPoint writes them: a freeform whose points
+    are guide NAMES (as one copied from a preset keeps), one with an arcTo, an elbow connector, an icon
+    group coloured by <a:grpFill/>, a template grid hidden as a GROUP, and a text frame with an empty
+    <a:ln/>. Injected into slide 1 of python-pptx.pptx, since python-pptx writes none of them."""
+    import zipfile
+    A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+    def sp(i, name, xfrm, geom, fill='<a:solidFill><a:srgbClr val="C00000"/></a:solidFill>', ln='', text=''):
+        return (f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{name}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+                f'<p:spPr>{xfrm}{geom}{fill}{ln}</p:spPr>{text}</p:sp>')
+    xf = lambda x, y, w, h: f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{w}" cy="{h}"/></a:xfrm>'
+    freeform = ('<a:custGeom><a:avLst/><a:gdLst><a:gd name="x1" fmla="*/ w 1 2"/><a:gd name="y1" fmla="+- h 0 0"/></a:gdLst>'
+                '<a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path>'
+                '<a:moveTo><a:pt x="l" y="y1"/></a:moveTo><a:lnTo><a:pt x="x1" y="t"/></a:lnTo><a:lnTo><a:pt x="r" y="b"/></a:lnTo><a:close/>'
+                '</a:path></a:pathLst></a:custGeom>')
+    arc = ('<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="200" h="100" fill="none">'
+           '<a:moveTo><a:pt x="0" y="50"/></a:moveTo><a:arcTo wR="100" hR="50" stAng="10800000" swAng="10800000"/>'
+           '</a:path></a:pathLst></a:custGeom>')
+    elbow = ('<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="903" name="Elbow"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr>'
+             + xf(1270000, 3810000, 1270000, 635000) + '<a:prstGeom prst="bentConnector3"><a:avLst><a:gd name="adj1" fmla="val 25000"/></a:avLst></a:prstGeom>'
+             '<a:ln w="12700"><a:solidFill><a:srgbClr val="00B050"/></a:solidFill></a:ln></p:spPr></p:cxnSp>')
+    grp = lambda i, name, hidden, fill, inner: (
+        f'<p:grpSp><p:nvGrpSpPr><p:cNvPr id="{i}" name="{name}"{" hidden=\"1\"" if hidden else ""}/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
+        f'<p:grpSpPr><a:xfrm><a:off x="5080000" y="3810000"/><a:ext cx="635000" cy="635000"/><a:chOff x="0" y="0"/><a:chExt cx="635000" cy="635000"/></a:xfrm>{fill}</p:grpSpPr>{inner}</p:grpSp>')
+    icon = grp(904, 'Icon', False, '<a:solidFill><a:srgbClr val="0070C0"/></a:solidFill>',
+               sp(905, 'Icon piece', xf(0, 0, 635000, 635000), '<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>', '<a:grpFill/>', '<a:ln><a:noFill/></a:ln>'))
+    grid = grp(906, 'Grid', True, '', sp(907, 'Grid column', xf(0, 0, 635000, 635000), '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'))
+    label = sp(908, 'Label', xf(6350000, 3810000, 1905000, 381000), '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>', '<a:noFill/>', '<a:ln/>',
+               '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>No outline</a:t></a:r></a:p></p:txBody>')
+    extra = (sp(901, 'Freeform', xf(635000, 3810000, 635000, 635000), freeform) + sp(902, 'Arc', xf(2540000, 3810000, 1270000, 635000), arc, '<a:noFill/>',
+             '<a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>') + elbow + icon + grid + label)
+    src = os.path.join(PP, 'python-pptx.pptx')
+    out = os.path.join(PP, 'drawn.pptx')
+    with zipfile.ZipFile(src) as zi, zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zo:
+        for item in zi.infolist():
+            data = zi.read(item.filename)
+            if item.filename == 'ppt/slides/slide1.xml':
+                data = data.decode('utf-8').replace('</p:spTree>', extra + '</p:spTree>', 1).encode('utf-8')
+            zo.writestr(item, data)
+
+
 def pptx_libreoffice():
     """The same deck written back by LibreOffice Impress: a different producer's idea of every part."""
     with tempfile.TemporaryDirectory() as t:
@@ -391,6 +432,7 @@ def pptx_libreoffice():
 def main():
     docx_python()
     pptx_python()
+    pptx_drawn()
     try:
         pptx_libreoffice()
     except Exception as e:  # noqa

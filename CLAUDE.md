@@ -7934,6 +7934,32 @@ All four used to be in the loss ledger; a real workbook carried all four at once
 - **A `filterColumn` with no criteria is not a filter** — Excel writes one just to
   hide a button. Real value lists open applied (`savedFilter`) and are written back.
 
+### Slides are checked against LibreOffice's render of real decks
+
+A dense diagram deck (344 freeforms, nested icon groups, elbow connectors) was
+drawn next to LibreOffice's own PDF of it, and every difference was a real bug:
+
+- **A freeform keeps its geometry** (`ShapeEl.cust`, `io/custgeom.ts`): the
+  paths in their own box, absolute commands only, so they scale by x and y alone.
+  Points may name GUIDES (`*/ w 1 2`), so the guide list is evaluated; `arcTo`
+  is pen-relative and becomes an absolute SVG arc while the pen is known. It is
+  written back as `custGeom`, and python-pptx counts it as a freeform.
+- **The site's `svg { max-width: 100% }` reset squeezed every shape's SVG into
+  its box.** The SVG is padded past the box for strokes and arrowheads, so a
+  vertical line (0 wide) vanished and every other line was drawn narrow. Any SVG
+  that deliberately overflows its parent needs `maxWidth: 'none'`.
+- **A hidden GROUP hides its children** — templates keep a layout grid that way.
+- **`<a:grpFill/>` takes the nearest group's fill** — how icon sets colour all
+  their pieces; without it every icon was invisible.
+- **An empty `<a:ln/>` with no theme style is no outline**, not a black one.
+- **Text that does not fit spills out of its box** unless it is shrink-to-fit,
+  as PowerPoint draws "do not autofit".
+
+`io/__fixtures__/drawn.pptx` (`pptx_drawn` in the fixture script) carries each
+case. **Every test that runs `soffice` gives it its own profile**
+(`-env:UserInstallation`): two at once on the shared profile fail, and adding
+tests elsewhere is enough to make two overlap.
+
 ### Pictures are WebP, at most 800KB (`lib/office/optimiseImage.ts`)
 
 Every picture an editor takes in — on import, in the worker, and on insert — is

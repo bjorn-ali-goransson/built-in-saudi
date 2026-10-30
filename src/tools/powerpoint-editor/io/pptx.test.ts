@@ -239,7 +239,7 @@ print(json.dumps(out))`
     const dir = mkdtempSync(join(tmpdir(), 'pp-'))
     const f = join(dir, 'deck.pptx')
     writeFileSync(f, Buffer.from(await bytesOf(sample())))
-    execFileSync('soffice', ['--headless', '--convert-to', 'odp', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
+    execFileSync('soffice', [`-env:UserInstallation=file://${dir}/lo-profile`, '--headless', '--convert-to', 'odp', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
     const odp = readFileSync(join(dir, 'deck.odp'))
     const pkg = await Package.open(odp.buffer.slice(odp.byteOffset, odp.byteOffset + odp.byteLength) as ArrayBuffer).catch(() => null)
     // An .odp is a zip without [Content_Types].xml; read content.xml straight off it.
@@ -250,4 +250,61 @@ print(json.dumps(out))`
     expect(content).toContain('Riyadh')
     expect((content.match(/<draw:page /g) || []).length).toBe(3)
   }, 180_000)
+})
+
+describe('drawings: freeforms, connectors, hidden and group-filled groups', () => {
+  const named = (d: DeckData, n: string) => d.slides[0].elements.find((e) => e.name === n) as ShapeEl | undefined
+
+  it('a freeform keeps its own path, with guide names resolved against the shape size', async () => {
+    const { data, loss } = await readPptx(load('drawn.pptx'))
+    const f = named(data, 'Freeform')!
+    expect(f.cust).toHaveLength(1)
+    // x1 = w/2, y1 = h: a triangle from the bottom-left to the top middle to the bottom-right.
+    expect(f.cust![0]).toMatchObject({ w: 635000, h: 635000, d: 'M 0 635000 L 317500 0 L 635000 635000 Z' })
+    expect(loss.map((l) => l.what).join()).not.toMatch(/freeform/)
+  })
+
+  it('an arcTo becomes an absolute arc that ends where DrawingML says, and an unfilled path stays unfilled', async () => {
+    const { data } = await readPptx(load('drawn.pptx'))
+    const a = named(data, 'Arc')!.cust![0]
+    expect(a.fill).toBe(false)
+    // From the left end of a 200×100 ellipse, half a turn clockwise lands on its right end.
+    expect(a.d).toBe('M 0 50 A 100 50 0 0 1 200 50')
+  })
+
+  it('an elbow connector is read as one, and written back as one', async () => {
+    const { data } = await readPptx(load('drawn.pptx'))
+    const c = named(data, 'Elbow')!
+    expect(c.geom).toBe('bentConnector3')
+    expect(c.adj).toEqual([25000])
+    const back = await readPptx(await (await writePptx(data, { title: 'x' })).blob.arrayBuffer())
+    const c2 = back.data.slides[0].elements.find((e) => e.kind === 'shape' && e.geom === 'bentConnector3') as ShapeEl
+    expect(c2.adj).toEqual([25000])
+  })
+
+  it('a hidden group draws nothing; a grpFill piece takes its group fill; an empty outline is no outline', async () => {
+    const { data } = await readPptx(load('drawn.pptx'))
+    expect(named(data, 'Grid column')).toBeUndefined()
+    expect(named(data, 'Icon piece')!.fill).toEqual({ type: 'solid', color: '#0070c0' })
+    expect(named(data, 'Label')!.line).toBeNull()
+  })
+
+  it.skipIf(!hasPy)('a freeform written by us is a freeform to python-pptx, with the same points', async () => {
+    const { data } = await readPptx(load('drawn.pptx'))
+    const back = await readPptx(await (await writePptx(data, { title: 'x' })).blob.arrayBuffer())
+    const f = back.data.slides[0].elements.find((e) => e.kind === 'shape' && e.cust && /Z/.test(e.cust[0].d)) as ShapeEl
+    expect(f.cust![0].d).toBe('M 0 635000 L 317500 0 L 635000 635000 Z')
+    const arc = back.data.slides[0].elements.find((e) => e.kind === 'shape' && e.cust?.[0].d.includes('A')) as ShapeEl
+    expect(arc.cust![0].d).toBe('M 0 50 A 100 50 0 0 1 200 50')
+    const dir = mkdtempSync(join(tmpdir(), 'pp-'))
+    const file = join(dir, 'deck.pptx')
+    writeFileSync(file, Buffer.from(await (await writePptx(data, { title: 'x' })).blob.arrayBuffer()))
+    const py = `
+import sys
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+p = Presentation(sys.argv[1])
+print(sum(1 for s in p.slides[0].shapes if s.shape_type == MSO_SHAPE_TYPE.FREEFORM))`
+    expect(Number(execFileSync('python3', ['-c', py, file]).toString().trim())).toBe(2)
+  })
 })

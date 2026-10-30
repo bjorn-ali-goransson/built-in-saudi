@@ -244,7 +244,7 @@ export function SlideCanvas(p: {
               if (el.kind === 'shape' && isLine(el.geom)) {
                 const [a, z] = lineEnds(el)
                 return (
-                  <svg key={id} data-testid="sl-selected" data-id={id} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none' }} width={1} height={1}>
+                  <svg key={id} data-testid="sl-selected" data-id={id} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', maxWidth: 'none', pointerEvents: 'none' }} width={1} height={1}>
                     <line x1={a[0]} y1={a[1]} x2={z[0]} y2={z[1]} stroke="#0b6e4f" strokeWidth={1 / k} strokeDasharray={`${4 / k} ${3 / k}`} />
                     {single?.id === id && !p.readOnly && [a, z].map((q, i) => <circle key={i} data-testid={`sl-end-${i}`} cx={q[0]} cy={q[1]} r={hs / 1.6} fill="#fff" stroke="#0b6e4f" strokeWidth={1.5 / k} style={{ pointerEvents: 'all', cursor: 'crosshair' }} onPointerDown={(e) => begin(e, { k: 'end', which: i as 0 | 1, id, orig: { x: el.x, y: el.y, w: el.w, h: el.h, flipH: el.flipH, flipV: el.flipV } })} />)}
                   </svg>

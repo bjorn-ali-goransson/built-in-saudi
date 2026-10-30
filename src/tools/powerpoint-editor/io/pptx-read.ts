@@ -19,6 +19,7 @@ import { Package, NS, REL, relIs, sniffImage, dataUrl, OpcError, readTitle, type
 import { kids, kid, find, findAll, attr, numAttr, textOf, isEl, type XEl } from '../../../lib/xml'
 import { applyMods, PRESET_COLORS, DEFAULT_THEME, THEME_ORDER, type ThemeColors } from '../../../lib/office/color'
 import { isKnownPreset } from '../geom'
+import { readCustGeom } from './custgeom'
 import { spread } from '../order'
 import type { DeckData, El, Fill, Line, Master, Para, Run, ShapeEl, Slide, TextBody, TextDefaults, Theme, Placeholder, Align, Dash, ArrowEnd, TransitionKind, Cell, TableEl, ImageEl } from '../model'
 import { DEFAULT_DECK_THEME } from '../model'
@@ -467,12 +468,15 @@ class Reader {
   }
 
   // ---- shapes --------------------------------------------------------------
-  async shapes(tree: XEl | null, ctx: { part: Part; theme: Theme; map: ClrMap; layout?: LayoutCtx; decor?: boolean; group?: (x: Xfrm) => Xfrm }): Promise<El[]> {
+  async shapes(tree: XEl | null, ctx: { part: Part; theme: Theme; map: ClrMap; layout?: LayoutCtx; decor?: boolean; group?: (x: Xfrm) => Xfrm; grpFill?: Fill }): Promise<El[]> {
     const out: El[] = []
     if (!tree) return out
     const T = (x: Xfrm | undefined) => (x && ctx.group ? ctx.group(x) : x)
     for (const c of kids(tree)) {
       if (c.ns !== P) continue
+      // Hidden in the selection pane: not drawn. A hidden GROUP hides everything in it — a
+      // template's layout grid is commonly kept this way, and drawing it striped every slide.
+      if (attr(find(kids(c)[0], P, 'cNvPr'), 'hidden') === '1' || attr(find(kids(c)[0], P, 'cNvPr'), 'hidden') === 'true') continue
       if (c.local === 'sp') { const e = this.sp(c, ctx, T); if (e) out.push(e) }
       else if (c.local === 'cxnSp') { const e = this.sp(c, ctx, T, true); if (e) out.push(e) }
       else if (c.local === 'pic') { const e = this.pic(c, ctx, T); if (e) out.push(e) }
@@ -487,7 +491,10 @@ class Reader {
         const sy = numAttr(chext, 'cy', 0) ? numAttr(ext, 'cy', 0) / numAttr(chext, 'cy', 1) : 1
         const inner = (x: Xfrm): Xfrm => ({ ...x, x: ox + (x.x - cx) * sx, y: oy + (x.y - cy) * sy, w: x.w * sx, h: x.h * sy })
         const outer = ctx.group
-        out.push(...(await this.shapes(c, { ...ctx, group: outer ? (x) => outer(inner(x)) : inner })))
+        // A child's <a:grpFill/> takes the nearest group's own fill — how icon sets colour all their pieces at once.
+        const gpr = kid(c, P, 'grpSpPr')
+        const grpFill = kid(gpr, A, 'grpFill') ? ctx.grpFill : this.fill(gpr, ctx.theme, ctx.map, ctx.part) ?? ctx.grpFill
+        out.push(...(await this.shapes(c, { ...ctx, grpFill, group: outer ? (x) => outer(inner(x)) : inner })))
       } else if (c.local === 'contentPart') this.lose('ink drawings')
     }
     return out
@@ -498,7 +505,7 @@ class Reader {
     return (idx !== undefined ? list.find((p) => p.idx === idx) : undefined) || list.find((p) => p.type === type) || list.find((p) => norm(p.type) === norm(type) && (type !== 'body' || !p.idx || p.idx === idx))
   }
 
-  sp(sp: XEl, ctx: { part: Part; theme: Theme; map: ClrMap; layout?: LayoutCtx; decor?: boolean }, T: (x: Xfrm | undefined) => Xfrm | undefined, connector = false): ShapeEl | null {
+  sp(sp: XEl, ctx: { part: Part; theme: Theme; map: ClrMap; layout?: LayoutCtx; decor?: boolean; grpFill?: Fill }, T: (x: Xfrm | undefined) => Xfrm | undefined, connector = false): ShapeEl | null {
     const nv = kid(sp, P, connector ? 'nvCxnSpPr' : 'nvSpPr')
     const ph = find(nv, P, 'ph')
     // A layout's or master's own placeholders are prompts for slides, not decoration.
@@ -516,25 +523,31 @@ class Reader {
     if (!x) return null
     if (find(nv, P, 'videoFile') || find(nv, P, 'audioFile')) this.lose('video and sound')
     const custom = kid(spPr, A, 'custGeom')
-    if (custom) this.lose('freeform shapes (drawn as their outline box)')
-    let geom = attr(kid(spPr, A, 'prstGeom'), 'prst') || lay?.geom || mas?.geom || (connector ? 'line' : 'rect')
+    const ext = kid(kid(spPr, A, 'xfrm'), A, 'ext')
+    const cust = custom ? readCustGeom(custom, numAttr(ext, 'cx', x.w * 12700), numAttr(ext, 'cy', x.h * 12700)) : null
+    if (custom && !cust) this.lose('freeform shapes (drawn as their outline box)')
+    let geom = attr(kid(spPr, A, 'prstGeom'), 'prst')?.replace(/^oval$/, 'ellipse') || lay?.geom || mas?.geom || (connector ? 'line' : 'rect')
     if (!isKnownPreset(geom) && !custom) { this.lose('shapes this editor does not draw (shown as rectangles)'); geom = /connector/i.test(geom) ? 'line' : geom }
     const adj = kids(kid(kid(spPr, A, 'prstGeom'), A, 'avLst'), A, 'gd').map((g) => { const m = /val\s+(-?\d+)/.exec(attr(g, 'fmla') || ''); return m ? +m[1] : NaN })
     const style = kid(sp, P, 'style')
     // A shape that sets no fill takes its theme style's: `fillRef idx` with a colour.
     const styleFill = (() => { const fr = kid(style, A, 'fillRef'); if (!fr || numAttr(fr, 'idx', 0) === 0) return undefined; const c = this.color(fr, theme, map); return c ? ({ type: 'solid', color: c } as Fill) : undefined })()
     const styleLine = (() => { const lr = kid(style, A, 'lnRef'); if (!lr || numAttr(lr, 'idx', 0) === 0) return undefined; const c = this.color(lr, theme, map); return c ? ({ color: c, width: 0.75 * numAttr(lr, 'idx', 1) } as Line) : undefined })()
-    const fill = this.fill(spPr, theme, map, ctx.part) ?? lay?.fill ?? mas?.fill ?? styleFill
+    const fill = (kid(spPr, A, 'grpFill') ? ctx.grpFill : this.fill(spPr, theme, map, ctx.part)) ?? lay?.fill ?? mas?.fill ?? styleFill
     const ln = kid(spPr, A, 'ln')
     let line = this.line(ln, theme, map)
     if (line === undefined) line = lay?.line ?? mas?.line ?? styleLine
     else if (line && !line.color && styleLine?.color) line.color = styleLine.color
+    // An outline that names no paint and has no theme style to take one from is not drawn — an empty
+    // <a:ln/> is what PowerPoint writes for a text frame, and drawing it black boxed every label in.
+    if (line && !line.color && !styleLine?.color && !(lay?.line && lay.line.color) && !(mas?.line && mas.line.color) && !kid(ln, A, 'gradFill')) line = null
     if (ln && line && !line.width && styleLine?.width) line.width = styleLine.width
     const out: ShapeEl = { id: this.id('e'), kind: 'shape', geom, x: x.x, y: x.y, w: x.w, h: x.h }
     if (x.rot) out.rot = x.rot
     if (x.flipH) out.flipH = true
     if (x.flipV) out.flipV = true
     if (adj.length && adj.every(Number.isFinite)) out.adj = adj
+    if (cust) out.cust = cust
     out.fill = fill || { type: 'none' }
     out.line = line === undefined ? null : line
     const name = attr(cNvPr, 'name'); if (name) out.name = name

@@ -126,7 +126,7 @@ describe('writing .ods', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ods-'))
     const f = join(dir, 'budget.ods')
     writeFileSync(f, await bytes())
-    execFileSync('soffice', ['--headless', '--convert-to', 'xlsx', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
+    execFileSync('soffice', [`-env:UserInstallation=file://${dir}/lo-profile`, '--headless', '--convert-to', 'xlsx', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
     const py = [
       'import openpyxl, json, sys',
       'wb = openpyxl.load_workbook(sys.argv[1]); v = openpyxl.load_workbook(sys.argv[1], data_only=True)',

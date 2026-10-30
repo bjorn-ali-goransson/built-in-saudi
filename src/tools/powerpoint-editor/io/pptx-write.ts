@@ -15,7 +15,8 @@ import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage } from 
 import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { THEME_ORDER } from '../../../lib/office/color'
-import { isLine } from '../geom'
+import { isLine, isKnownPreset } from '../geom'
+import { custGeomXml } from './custgeom'
 import { runSize, fontName, isBold, cellLook, borderColor } from '../look'
 import { isRtlText, type DeckData, type El, type Fill, type Line, type Paint, type Para, type Run, type ShapeEl, type ImageEl, type TableEl, type TextBody, type Theme, type Slide, type Master } from '../model'
 
@@ -154,14 +155,14 @@ class Writer {
     if (isLine(e.geom)) {
       return x('p:cxnSp', null,
         x('p:nvCxnSpPr', null, x('p:cNvPr', { id: this.nextId(), name, descr: e.alt }), x('p:cNvCxnSpPr'), x('p:nvPr')),
-        x('p:spPr', null, xfrm(e), geomXml(e.geom === 'line' ? 'line' : 'straightConnector1'), fillXml({ type: 'none' }, this.mediaRel(from)), lineXml(e.line, true)))
+        x('p:spPr', null, xfrm(e), geomXml(e.geom === 'line' ? 'line' : isKnownPreset(e.geom) ? e.geom : 'straightConnector1', e.adj), fillXml({ type: 'none' }, this.mediaRel(from)), lineXml(e.line, true)))
     }
     const phType = e.ph === 'ctrTitle' ? 'ctrTitle' : e.ph === 'title' ? 'title' : e.ph === 'subTitle' ? 'subTitle' : e.ph ? 'body' : null
     const ph = phType ? x('p:ph', { type: phType === 'body' ? undefined : phType, idx: phType === 'title' || phType === 'ctrTitle' ? undefined : ++this.phIdx }) : null
-    const textOnly = !e.ph && (!e.fill || e.fill.type === 'none') && e.line === null && e.geom === 'rect' && !!e.text
+    const textOnly = !e.ph && (!e.fill || e.fill.type === 'none') && e.line === null && e.geom === 'rect' && !e.cust && !!e.text
     return x('p:sp', null,
       x('p:nvSpPr', null, x('p:cNvPr', { id: this.nextId(), name, descr: e.alt }, this.clickXml(e.link, from)), x('p:cNvSpPr', { txBox: textOnly ? 1 : undefined }), x('p:nvPr', null, ph)),
-      x('p:spPr', null, xfrm(e), geomXml(e.geom, e.adj), fillXml(e.fill || { type: 'none' }, this.mediaRel(from)), lineXml(e.line, false),
+      x('p:spPr', null, xfrm(e), e.cust ? custGeomXml(e.cust) : geomXml(e.geom, e.adj), fillXml(e.fill || { type: 'none' }, this.mediaRel(from)), lineXml(e.line, false),
         e.shadow ? x('a:effectLst', null, x('a:outerShdw', { blurRad: 57150, dist: 19050, dir: 5400000, algn: 'ctr', rotWithShape: 0 }, x('a:srgbClr', { val: '000000' }, x('a:alpha', { val: 35000 })))) : null),
       this.bodyXml(e.text, from))
   }

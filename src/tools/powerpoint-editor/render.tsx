@@ -7,7 +7,7 @@
 // HTML is what wraps, shapes Arabic and runs bidi correctly; shapes are SVG
 // paths behind it.
 import { memo, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { presetPath, textRect, isLine } from './geom'
+import { presetPath, textRect, isLine, custPathD } from './geom'
 import { runSize, runColor, fontName, isBold, cellLook, borderColor, tableGrid, bulletLabel } from './look'
 import { paint, promptFor, type DeckData, type El, type Fill, type ImageEl, type Line, type Para, type ShapeEl, type Slide, type TableEl, type TextBody, type Theme, type LayoutWords } from './model'
 
@@ -101,12 +101,17 @@ function ShapeSvg({ el, theme, deck }: { el: ShapeEl; theme: Theme; deck: DeckDa
     const shape = t === 'oval' ? <circle cx={5} cy={5} r={4} /> : t === 'diamond' ? <path d="M5 0 L10 5 L5 10 L0 5 Z" /> : t === 'arrow' ? <path d="M0 0 L10 5 L0 10" fill="none" stroke={paint(ln!.color || 'dk1', theme)} strokeWidth={1.6} /> : <path d="M0 0 L10 5 L0 10 Z" />
     return <marker id={mid} viewBox="0 0 10 10" refX={t === 'oval' || t === 'diamond' ? 5 : 9} refY={5} markerWidth={3.5} markerHeight={3.5} orient={end === 'head' ? 'auto-start-reverse' : 'auto'} fill={paint(ln!.color || 'dk1', theme)}>{shape}</marker>
   }
+  // maxWidth 'none' overrides the site's `svg { max-width: 100% }` reset: the SVG is padded past its
+  // box for the line's width and arrowheads, and squeezed back into the box a vertical line (0 wide)
+  // vanished and every other line was drawn slightly narrow.
   const flip = el.flipH || el.flipV ? `translate(${el.flipH ? w : 0} ${el.flipV ? h : 0}) scale(${el.flipH ? -1 : 1} ${el.flipV ? -1 : 1})` : undefined
   return (
-    <svg width={w + pad * 2} height={h + pad * 2} viewBox={`${-pad} ${-pad} ${w + pad * 2} ${h + pad * 2}`} style={{ position: 'absolute', left: -pad, top: -pad, overflow: 'visible', filter: el.shadow ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' : undefined, pointerEvents: 'none' }} aria-hidden>
+    <svg width={w + pad * 2} height={h + pad * 2} viewBox={`${-pad} ${-pad} ${w + pad * 2} ${h + pad * 2}`} style={{ position: 'absolute', left: -pad, top: -pad, overflow: 'visible', maxWidth: 'none', filter: el.shadow ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' : undefined, pointerEvents: 'none' }} aria-hidden>
       {(defs || ln?.head || ln?.tail) && <defs>{defs}{marker('head')}{marker('tail')}</defs>}
-      <path d={d} transform={flip} fill={fillAttr} fillRule="evenodd" stroke={ln ? paint(ln.color || 'dk1', theme) : 'none'} strokeWidth={sw} strokeDasharray={dash} strokeLinejoin="round"
-        markerStart={ln?.head && ln.head !== 'none' ? `url(#${id}-head)` : undefined} markerEnd={ln?.tail && ln.tail !== 'none' ? `url(#${id}-tail)` : undefined} vectorEffect="non-scaling-stroke" />
+      {(el.cust ? custPathD(el.cust, w, h) : [d]).map((pd, i, all) => (
+        <path key={i} d={pd} transform={flip} fill={el.cust?.[i].fill === false ? 'none' : fillAttr} fillRule="evenodd" stroke={ln && el.cust?.[i].stroke !== false ? paint(ln.color || 'dk1', theme) : 'none'} strokeWidth={sw} strokeDasharray={dash} strokeLinejoin="round"
+          markerStart={i === 0 && ln?.head && ln.head !== 'none' ? `url(#${id}-head)` : undefined} markerEnd={i === all.length - 1 && ln?.tail && ln.tail !== 'none' ? `url(#${id}-tail)` : undefined} vectorEffect="non-scaling-stroke" />
+      ))}
     </svg>
   )
 }
@@ -185,8 +190,10 @@ export function TextBlock({ body, ctx, prompt, autoShrink }: { body: TextBody; c
   const theme = ctx.deck.theme
   const justify = body.anchor === 'ctr' ? 'center' : body.anchor === 'b' ? 'flex-end' : 'flex-start'
   const counters: number[] = []
+  // Text that does not fit spills out of its box, as it does in PowerPoint ("do not autofit").
+  // Clipping it hid the second line of half the labels in a dense diagram.
   return (
-    <div ref={outer} style={{ position: 'absolute', inset: 0, padding: `${ins[1]}px ${ins[2]}px ${ins[3]}px ${ins[0]}px`, display: 'flex', flexDirection: 'column', justifyContent: justify, overflow: 'hidden', overflowWrap: 'anywhere', whiteSpace: body.wrap === false ? 'pre' : 'pre-wrap' }}>
+    <div ref={outer} style={{ position: 'absolute', inset: 0, padding: `${ins[1]}px ${ins[2]}px ${ins[3]}px ${ins[0]}px`, display: 'flex', flexDirection: 'column', justifyContent: justify, overflow: autoShrink ? 'hidden' : 'visible', overflowWrap: 'anywhere', whiteSpace: body.wrap === false ? 'pre' : 'pre-wrap' }}>
       <div ref={inner} style={{ ['--fit' as string]: String(fit) }} data-fit={fit}>
         {prompt ? <p dir="auto" style={{ margin: 0, color: '#8a8a8a', fontSize: fz(body.defaults?.size || 18), fontFamily: fontName(undefined, body, theme), fontWeight: body.defaults?.b ? 700 : 400, textAlign: alignCss(body.defaults?.align) }} data-testid="sl-prompt">{prompt}</p>
           : body.paras.map((p, i) => {

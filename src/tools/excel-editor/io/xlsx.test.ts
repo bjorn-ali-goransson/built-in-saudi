@@ -227,7 +227,7 @@ print(json.dumps({
     const f = join(dir, 'book.xlsx')
     writeFileSync(f, Buffer.from(await blob.arrayBuffer()))
     // HTML, not CSV: LibreOffice's CSV filter writes raw values, its HTML one what a reader SEES.
-    execFileSync('soffice', ['--headless', '--convert-to', 'html', '--outdir', dir, f], { stdio: 'ignore', timeout: 120_000 })
+    execFileSync('soffice', [`-env:UserInstallation=file://${dir}/lo-profile`, '--headless', '--convert-to', 'html', '--outdir', dir, f], { stdio: 'ignore', timeout: 120_000 })
     const html = readFileSync(join(dir, 'book.html'), 'utf8')
     expect(html).toContain('Rent')
     expect(html).toContain('6,950.50 SAR')

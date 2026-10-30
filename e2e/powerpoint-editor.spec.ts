@@ -489,3 +489,24 @@ test.describe('live co-editing, with the owner as the truth', () => {
     expect(current(await storedDeck(owner)).notes).toBeFalsy()
   })
 })
+
+test('an imported drawing is drawn as drawn: a freeform as its path, a connector bent and at full size', async ({ page: p }) => {
+  await p.goto('/en/apps/powerpoint-editor/')
+  await p.getByTestId('office-file-input').setInputFiles('src/tools/powerpoint-editor/io/__fixtures__/drawn.pptx')
+  await expect(p.getByTestId('office-title')).toBeVisible({ timeout: 20_000 })
+  const ok = p.getByTestId('office-loss-ok')
+  if (await ok.isVisible().catch(() => false)) await ok.click()
+  const el = (geom: string) => slideEl(p).locator(`[data-geom="${geom}"]`)
+  // The freeform's own triangle, not its bounding rectangle.
+  const tri = await slideEl(p).locator('[data-el] path').evaluateAll((ps) => ps.map((x) => x.getAttribute('d')).filter((d) => d && /^M 0 50 L 25 0 L 50 50 Z$/.test(d)).length)
+  expect(tri).toBe(1)
+  // An elbow, and its SVG is NOT squeezed into its box by the site's `svg { max-width: 100% }`:
+  // the SVG is padded past the box for the line and arrowheads, so it is wider than the box.
+  const elbow = el('bentConnector3')
+  await expect(elbow.locator('path')).toHaveAttribute('d', /H.*V.*H/)
+  const [box, svg] = await elbow.evaluate((e) => [e.getBoundingClientRect().width, e.querySelector('svg')!.getBoundingClientRect().width])
+  expect(svg).toBeGreaterThan(box + 10)
+  // The group-filled icon is painted in its group's colour, and the hidden grid draws nothing.
+  await expect(el('ellipse').locator('path')).toHaveAttribute('fill', '#0070c0')
+  expect(await slideEl(p).locator('[data-el] path[fill="#c00000"]').count()).toBe(1)
+})

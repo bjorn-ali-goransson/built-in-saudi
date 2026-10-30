@@ -104,12 +104,21 @@ interface Base {
   link?: string
 }
 
+/**
+ * One freeform path, in its own w × h coordinate box: absolute commands only —
+ * M x y, L x y, C x1 y1 x2 y2 x y, Q x1 y1 x y, A rx ry 0 large sweep x y, Z —
+ * so it scales to any box by multiplying x by one factor and y by another.
+ */
+export interface CustPath { w: number; h: number; d: string; fill?: false; stroke?: false }
+
 export interface ShapeEl extends Base {
   kind: 'shape'
   /** A DrawingML preset name: rect, roundRect, ellipse, triangle, rightArrow, line… */
   geom: string
   /** Adjust values in the preset's own units (1/100000ths), when not the default. */
   adj?: number[]
+  /** A freeform's own geometry (DrawingML custGeom); when present it is drawn instead of the preset. */
+  cust?: CustPath[]
   fill?: Fill
   /** Absent = the default outline; null = no outline. */
   line?: Line | null

@@ -184,7 +184,7 @@ print(json.dumps({'box': ''.join(q('.//w:txbxContent//w:t/text()')), 'align': q(
     const dir = mkdtempSync(join(tmpdir(), 'wd-'))
     const f = join(dir, 'float.docx')
     writeFileSync(f, await bytesOf(doc()))
-    execFileSync('soffice', ['--headless', '--convert-to', 'fodt', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
+    execFileSync('soffice', [`-env:UserInstallation=file://${dir}/lo-profile`, '--headless', '--convert-to', 'fodt', '--outdir', dir, f], { stdio: 'ignore', timeout: 150_000 })
     const fodt = readFileSync(join(dir, 'float.fodt'), 'utf8')
     // LibreOffice opens a DrawingML text box as a shape carrying its paragraphs.
     expect(fodt).toMatch(/<draw:(custom-shape|frame)[^>]*>(?:(?!<\/draw:(custom-shape|frame)>).)*Key figure(?:(?!<\/draw:(custom-shape|frame)>).)*Revenue rose\./s)
