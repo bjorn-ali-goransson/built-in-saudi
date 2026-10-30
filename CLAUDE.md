@@ -8115,6 +8115,21 @@ meet through STUN. **A mesh change was tried first and made it WORSE** (8
 failures against 4 at the same load) — a "fresh hello" that dropped a stale
 half-formed pair also dropped pairs that were merely slow — and was reverted.
 
+**The first message on a fresh data channel can be lost, and that was most of
+what looked like flake** (`lib/p2p/mesh.ts`). The trace of a red CI run showed a
+Messages link with signalling complete and the channel OPEN on both ends — and
+no message ever crossing it. Logging both ends found the answering side sending
+its `hello` the instant `open` fired and the other side never receiving it,
+sometimes even when it had opened a millisecond earlier. One lost first message
+is a lost handshake: a Messages link that never authenticates, an editor guest
+that never gets its welcome, and nothing retries. **`open` is now reported only
+once each end has heard the other's `ready` AND been told its own was heard**;
+`ready` is re-sent every 300ms until then, anything arriving earlier is HELD
+and delivered in order, and after 4s it opens anyway so an older build without
+the handshake still connects. Measured on the Messages file at 4 workers: **3–6
+failures in 250 before, 1 in 500 after.** It is a product fix, not a test fix —
+a real pair of browsers hits the same race.
+
 **The editors' live-session specs do NOT use WebRTC** (`src/lib/p2p/relayMesh.ts`,
 `relayContext(…, { relayOnly: true })`). Even after the mDNS fix a join failed to
 form about once in forty under CI load, and each editor's main session case

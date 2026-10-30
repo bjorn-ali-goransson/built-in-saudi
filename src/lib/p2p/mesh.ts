@@ -20,6 +20,14 @@
 // - **Exactly one side creates the channel.** Both creating one is the "two
 //   channels, each side reading the one the other never writes to" bug. The
 //   larger id initiates — the same rule as the Calls engine.
+// - **The first message on a fresh channel can be lost.** Measured under load:
+//   both ends fire `open`, the answering end sends at once, and the message
+//   never arrives — sometimes even when the other end had opened a millisecond
+//   earlier. Whatever the cause, nothing above this layer can see it, and a lost
+//   first message is a lost handshake: a Messages link that never authenticates,
+//   an editor guest that never gets its welcome. So `open` is not reported until
+//   each end has HEARD the other and been told it was heard — `ready` is re-sent
+//   until then — and anything that arrives before that is held, not dropped.
 
 export type MeshState = 'connecting' | 'open' | 'closed'
 
@@ -66,7 +74,19 @@ interface Peer {
   frags: Map<string, string[]>
   blobs: Map<string, { meta: BlobMeta; parts: ArrayBuffer[]; got: number }>
   born: number
+  /** The local channel has opened; the handshake below has started. */
+  local: boolean
+  /** The far end has confirmed it received our ready. */
+  heard: boolean
+  /** Messages that arrived before `open` was reported, delivered in order once it is. */
+  held: unknown[]
+  readyTimer?: ReturnType<typeof setInterval>
 }
+
+/** How often an unconfirmed ready is re-sent, and when to stop waiting for one. */
+const READY_EVERY_MS = 300
+/** A far end that never answers is an older build without the handshake: open anyway. */
+const READY_GIVE_UP_MS = 4000
 
 /** A peer that has not opened in this long is torn down and greeted again. */
 const STALL_MS = 9000
@@ -267,7 +287,7 @@ export class Mesh {
 
   private mkPeer(id: string, initiator: boolean): Peer {
     const pc = new RTCPeerConnection({ iceServers: ICE })
-    const peer: Peer = { pc, pending: this.orphans.get(id) || [], polite: this.me < id, makingOffer: false, open: false, frags: new Map(), blobs: new Map(), born: Date.now() }
+    const peer: Peer = { pc, pending: this.orphans.get(id) || [], polite: this.me < id, makingOffer: false, open: false, frags: new Map(), blobs: new Map(), born: Date.now(), local: false, heard: false, held: [] }
     this.orphans.delete(id)
     pc.onnegotiationneeded = async () => {
       try { peer.makingOffer = true; await pc.setLocalDescription(); this.signal('offer', id, pc.localDescription) }
@@ -292,13 +312,44 @@ export class Mesh {
   private bind(id: string, peer: Peer, dc: RTCDataChannel) {
     peer.dc = dc
     dc.binaryType = 'arraybuffer'
-    dc.onopen = () => { peer.open = true; this.h.onPeer?.(id, 'open') }
+    const ready = (got: boolean) => { try { if (dc.readyState === 'open') dc.send(JSON.stringify({ __mesh: 'ready', got })) } catch { /* */ } }
+    const opened = () => {
+      if (peer.open) return
+      peer.open = true
+      if (peer.readyTimer) clearInterval(peer.readyTimer)
+      peer.readyTimer = undefined
+      this.h.onPeer?.(id, 'open')
+      const held = peer.held
+      peer.held = []
+      for (const m of held) this.h.onMessage?.(id, m)
+    }
+    dc.onopen = () => {
+      if (peer.local) return
+      peer.local = true
+      ready(false)
+      if (peer.heard) { opened(); return }
+      const started = Date.now()
+      peer.readyTimer = setInterval(() => {
+        if (peer.open || this.peers.get(id) !== peer) { clearInterval(peer.readyTimer); return }
+        if (Date.now() - started > READY_GIVE_UP_MS) { opened(); return }
+        ready(false)
+      }, READY_EVERY_MS)
+    }
     dc.onclose = () => { if (this.peers.get(id) === peer) this.drop(id) }
     dc.onmessage = (e) => {
       if (typeof e.data === 'string') {
         const r = defragment(peer.frags, e.data)
         if (!r.done) return
-        const v = r.value as { __blob?: string; meta?: BlobMeta; id?: string }
+        const v = r.value as { __blob?: string; meta?: BlobMeta; id?: string; __mesh?: string; got?: boolean }
+        if (v && typeof v === 'object' && v.__mesh === 'ready') {
+          // Answer every ready that has not heard us yet, even after we opened:
+          // the far end is still waiting on exactly this.
+          if (!v.got) ready(true)
+          if (v.got) peer.heard = true
+          if (peer.heard && peer.local) opened()
+          return
+        }
+        if (!peer.open) { if (peer.held.length < 1000) peer.held.push(r.value); return }
         if (v && typeof v === 'object' && v.__blob === 'start' && v.meta) {
           peer.blobs.set(v.meta.id, { meta: v.meta, parts: [], got: 0 })
           this.h.onBlobProgress?.(id, v.meta, 0)
@@ -339,6 +390,7 @@ export class Mesh {
     const p = this.peers.get(id)
     if (!p) return
     this.peers.delete(id)
+    if (p.readyTimer) clearInterval(p.readyTimer)
     try { p.dc?.close() } catch { /* */ }
     try { p.pc.close() } catch { /* */ }
     this.h.onPeer?.(id, 'closed')
