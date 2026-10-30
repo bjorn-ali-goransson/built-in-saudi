@@ -81,6 +81,14 @@ export class DeckModel implements SeqModel<SOp> {
   subscribe(f: () => void): () => void { this.listeners.add(f); return () => this.listeners.delete(f) }
   private changed() { this.rev++; for (const f of this.listeners) f() }
 
+  // Which slides an op touched, so a view of one slide redraws only when IT changed. The slide
+  // rail drew every thumbnail, every element, on every click — 300ms per slide switch on a
+  // 469-shape diagram deck. A deck-wide change (theme, media, masters) moves them all.
+  private slideRev = new Map<string, number>()
+  private allRev = 0
+  versionOf(id: string): number { return this.allRev * 1e6 + (this.slideRev.get(id) || 0) }
+  private touch(id: string | undefined) { if (id) this.slideRev.set(id, (this.slideRev.get(id) || 0) + 1) }
+
   slide(id: string): Slide | undefined { return this.deck.slides.find((s) => s.id === id) }
   el(slide: string, id: string): El | undefined { return this.slide(slide)?.elements.find((e) => e.id === id) }
 
@@ -91,11 +99,16 @@ export class DeckModel implements SeqModel<SOp> {
     if (!d || typeof d !== 'object' || !Array.isArray(d.slides)) return
     this.deck = clone(d)
     normalise(this.deck)
+    this.allRev++
     this.changed()
   }
 
   apply(op: SOp): void {
     const d = this.deck
+    if (op.k === 'slide-add') this.touch(op.slide.id)
+    else if (op.k === 'slide-del' || op.k === 'slide-move' || op.k === 'slide-set') this.touch(op.id)
+    else if (op.k === 'el-add' || op.k === 'el-del' || op.k === 'el-set' || op.k === 'el-z') this.touch(op.slide)
+    else this.allRev++
     switch (op.k) {
       case 'slide-add': { const s = clone(op.slide); s.elements = (s.elements || []).sort(byOrd); upsert(d.slides, s); break }
       case 'slide-del': { const i = d.slides.findIndex((s) => s.id === op.id); if (i >= 0) d.slides.splice(i, 1); break }

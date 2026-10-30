@@ -11,7 +11,7 @@
 // Arabic is written as Office expects it to be read: the paragraph says rtl,
 // the run says its language, and the font goes in the complex-script slot,
 // which is the one PowerPoint uses for Arabic.
-import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage } from '../../../lib/office/opc'
+import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, dataUrl } from '../../../lib/office/opc'
 import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { THEME_ORDER } from '../../../lib/office/color'
@@ -392,13 +392,14 @@ async function classicMedia(d: DeckData): Promise<DeckData> {
   const media = { ...d.media }
   let changed = false
   for (const [id, m] of Object.entries(media)) {
+    // Only a WebP or AVIF needs converting; decoding every picture to find that out was a second
+    // full decode of each, on top of the writer's own.
+    if (!/^data:image\/(webp|avif)[;,]/.test(m.data)) continue
     const p = parseDataUrl(m.data)
     if (!p) continue
     const c = await classicImage(p.bytes)
     if (!c) continue
-    let s = ''
-    for (let i = 0; i < c.bytes.length; i += 0x8000) s += String.fromCharCode(...c.bytes.subarray(i, i + 0x8000))
-    media[id] = { ...m, data: `data:${c.mime};base64,${btoa(s)}` }
+    media[id] = { ...m, data: dataUrl(c.bytes, c.mime) }
     changed = true
   }
   return changed ? { ...d, media } : d

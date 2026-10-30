@@ -412,3 +412,22 @@ describe('layout the generators use: rules, tab stops, bare and percentage table
     expect(x('Senior')).toBeLessThan(100)
   })
 })
+
+describe('one picture, one part', () => {
+  it('a picture used three times is stored once, and each use points at it', async () => {
+    const src = `data:image/png;base64,${PNG}`
+    const img = { type: 'image', attrs: { src, alt: null, title: null, width: 4, height: 3 } }
+    const data: WordData = { ...emptyDoc(), doc: { type: 'doc', content: [1, 2, 3].map(() => ({ type: 'paragraph', content: [img] })) } } as WordData
+    const { blob } = await writeDocx(data)
+    const zip = new Uint8Array(await blob.arrayBuffer())
+    const media = Buffer.from(zip).toString('latin1').match(/word\/media\/image\d+\.[a-z]+/g) || []
+    expect(new Set(media).size).toBe(1)
+    const back = await readDocx(await blob.arrayBuffer())
+    const imgs: PMNode[] = []
+    const walk = (n: PMNode) => { if (n.type === 'image') imgs.push(n); n.content?.forEach(walk) }
+    walk(back.data.doc)
+    expect(imgs).toHaveLength(3)
+    // And the reader hands back the very same string for each, not three encodings of it.
+    expect(new Set(imgs.map((i) => i.attrs!.src)).size).toBe(1)
+  })
+})

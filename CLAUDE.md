@@ -8018,6 +8018,30 @@ did, so any re-render reset the record to the one opened, and the next
 thumbnail write stored that stale copy over the edit just saved — twelve
 editor specs went red, each reading an empty document back from IndexedDB.
 
+### Profiled, and the N+1s that were in it
+
+Measured on the real decks with the CDP profiler before anything changed: a 5.6MB
+deck read in 515ms and wrote in 213ms, and **base64 alone was 1.75s of CPU** in a
+profile of the round trip. Each fix is the removal of per-item work repeated:
+
+- **`toBase64`/`fromBase64` use the native `Uint8Array` methods where present**, a
+  lookup table into a `Uint8Array` otherwise — string concatenation per byte was the
+  whole cost. **CRC32 is a table**, not eight shifts per byte. Both are checked
+  against Node's own (`Buffer`, `zlib.crc32`) in `opc.test.ts`.
+- **One picture, one part.** The Word and Excel writers wrote a media part PER USE,
+  so a logo in every header was stored once per page; the readers decoded the same
+  part once per reference. Both directions are keyed by content/path now, with a
+  test counting the parts.
+- **The WebP pass checks the data-URL prefix before decoding anything.**
+- **A slide thumbnail re-renders only when ITS slide changed** (`versionOf` in
+  `doc.ts`, a memo comparator in `SlideRail`). Every edit re-drew every thumbnail.
+- **`TextBlock` measures only shrink-to-fit boxes, only when their text or size
+  changes.** It ran a forced layout on every render of every text box; a slide
+  switch on a 469-shape diagram spent most of its time in `scrollHeight`.
+
+Result: read 515 → 165ms, write 213 → 120ms; slide switch on that deck 300 → 222ms.
+**What is left in that profile is React drawing 260 shapes**, which is the work.
+
 ### Printing: the preview IS the printout (`components/office/print.ts`)
 
 The flow is laid out once, at the page's text width, in a hidden frame; cut

@@ -108,3 +108,24 @@ describe('images and base64', () => {
     expect(parseDataUrl('nope')).toBeNull()
   })
 })
+
+describe('the fast paths are the same answers', () => {
+  it('base64 matches Node\'s encoder at every length remainder, and decodes back', async () => {
+    const { toBase64, fromBase64 } = await import('./opc')
+    for (const n of [0, 1, 2, 3, 4, 5, 255, 256, 257, 100_001]) {
+      const b = new Uint8Array(n)
+      for (let i = 0; i < n; i++) b[i] = (i * 7919 + 13) & 0xff
+      expect(toBase64(b)).toBe(Buffer.from(b).toString('base64'))
+      expect([...fromBase64(toBase64(b))]).toEqual([...b])
+    }
+  })
+  it('the zip CRC-32 matches zlib\'s', async () => {
+    const { zipStore } = await import('../zip')
+    const { crc32 } = await import('node:zlib')
+    const bytes = new Uint8Array(70_000).map((_, i) => (i * 31 + 7) & 0xff)
+    const zip = new Uint8Array(await zipStore([{ name: 'a.bin', bytes }]).arrayBuffer())
+    // The local file header carries the CRC at offset 14.
+    const crc = new DataView(zip.buffer).getUint32(14, true)
+    expect(crc).toBe(crc32(bytes))
+  })
+})

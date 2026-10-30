@@ -169,23 +169,34 @@ function TextView({ el, ctx, slide, index }: { el: ShapeEl; ctx: RenderCtx; slid
 export function TextBlock({ body, ctx, prompt, autoShrink }: { body: TextBody; ctx: RenderCtx; prompt?: string; autoShrink?: boolean }) {
   const inner = useRef<HTMLDivElement>(null)
   const outer = useRef<HTMLDivElement>(null)
-  const [fit, setFit] = useState(body.fontScale || 1)
+  const [fit, setFit] = useState(autoShrink ? body.fontScale || 1 : 1)
   // Shrink-to-fit is MEASURED here rather than trusted from the file, so text typed
   // in this editor fits too. A few halving steps converge well within a frame.
+  // Only for a shrinking box, and only when its text or its size changes: measuring
+  // forces a layout, and doing it on every render of every text block made a slide
+  // switch on a dense diagram spend most of its time in scrollHeight.
   useLayoutEffect(() => {
     if (!autoShrink) { setFit(1); return }
     const o = outer.current, i = inner.current
     if (!o || !i) return
-    let lo = 0.3, hi = 1
-    const fits = (s: number) => { i.style.setProperty('--fit', String(s)); return i.scrollHeight <= o.clientHeight + 0.5 }
-    let best = 1
-    if (!fits(1)) {
-      for (let n = 0; n < 7; n++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m }
-      best = Math.round(lo * 1000) / 1000
+    const measure = () => {
+      let lo = 0.3, hi = 1
+      const fits = (s: number) => { i.style.setProperty('--fit', String(s)); return i.scrollHeight <= o.clientHeight + 0.5 }
+      let best = 1
+      if (!fits(1)) {
+        for (let n = 0; n < 7; n++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m }
+        best = Math.round(lo * 1000) / 1000
+      }
+      i.style.setProperty('--fit', String(best))
+      setFit(best)
     }
-    i.style.setProperty('--fit', String(best))
-    setFit(best)
-  })
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    let first = true
+    const ro = new ResizeObserver(() => { if (first) { first = false; return } measure() })
+    ro.observe(o)
+    return () => ro.disconnect()
+  }, [body, prompt, autoShrink])
   const ins = body.inset || [7.2, 3.6, 7.2, 3.6]
   const theme = ctx.deck.theme
   const justify = body.anchor === 'ctr' ? 'center' : body.anchor === 'b' ? 'flex-end' : 'flex-start'

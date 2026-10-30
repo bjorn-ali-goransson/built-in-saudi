@@ -158,10 +158,16 @@ class Writer {
     return x('w:r', null, x('w:rPr', null, x('w:rStyle', { 'w:val': 'FootnoteReference' })), x('w:footnoteReference', { 'w:id': id }))
   }
 
-  async image(n: PMNode): Promise<Xml> {
-    const src = String(n.attrs?.src || '')
+  /** Each picture once, however often it appears: decoded, converted and stored as one part. */
+  private media = new Map<string, Promise<{ part: string; bytes: Uint8Array } | null>>()
+  private mediaFor(src: string): Promise<{ part: string; bytes: Uint8Array } | null> {
+    let hit = this.media.get(src)
+    if (!hit) { hit = this.storeMedia(src); this.media.set(src, hit) }
+    return hit
+  }
+  private async storeMedia(src: string): Promise<{ part: string; bytes: Uint8Array } | null> {
     const parsed = parseDataUrl(src)
-    if (!parsed) { this.lose('pictures linked from the web (not embedded)'); return x('w:r', null) }
+    if (!parsed) { this.lose('pictures linked from the web (not embedded)'); return null }
     let bytes = parsed.bytes
     let kind = sniffImage(bytes)
     // Word reads PNG, JPEG, GIF and BMP. A WebP — what the editor keeps pictures as — goes out
@@ -172,13 +178,20 @@ class Writer {
     }
     if (!kind || !/png|jpeg|gif|bmp/.test(kind.mime)) {
       const png = await toPng(bytes, parsed.mime)
-      if (!png) { this.lose('pictures in a format Word cannot read'); return x('w:r', null) }
+      if (!png) { this.lose('pictures in a format Word cannot read'); return null }
       bytes = png
       kind = { mime: 'image/png', ext: 'png' }
     }
     this.images++
     const part = `word/media/image${this.images}.${kind.ext}`
     this.w.add(part, bytes)
+    return { part, bytes }
+  }
+
+  async image(n: PMNode): Promise<Xml> {
+    const m = await this.mediaFor(String(n.attrs?.src || ''))
+    if (!m) return x('w:r', null)
+    const { part, bytes } = m
     const rid = this.w.rel(this.part, { type: REL.image, target: part })
     let wpx = Number(n.attrs?.width) || 0
     let hpx = Number(n.attrs?.height) || 0

@@ -122,6 +122,8 @@ async function readTheme(pkg: Package, main: string): Promise<ThemeColors> {
   return out
 }
 
+/** Each picture's data URL, per package, by part. */
+const srcOf = new WeakMap<object, Map<string, string>>()
 const on = (v: string | undefined) => v === '1' || v === 'true'
 /** A sheet's page setup, as written: margins, paper, orientation, scale or fit, header and footer, print options. */
 function readPrint(el: XEl, ns: string, pr: XEl | null): SheetPrint | undefined {
@@ -627,7 +629,12 @@ async function readDrawing(pkg: Package, part: string, sheet: SheetData, theme: 
       const bytes = await pkg.bytes(rel.target).catch(() => null)
       const kind = bytes && sniffImage(bytes)
       if (!bytes || !kind || kind.ext === 'emf' || kind.ext === 'wmf') { lose('pictures in formats a browser cannot show (EMF/WMF)'); continue }
-      const img: SheetImage = { id: 'img' + ((sheet.images?.length || 0) + 1), src: dataUrl(bytes, kind.mime), anchor, size, alt: attr(find(pic, X, 'cNvPr'), 'descr') }
+      // The same picture on several sheets is encoded once (cached per package).
+      const urls = srcOf.get(pkg) ?? new Map<string, string>()
+      srcOf.set(pkg, urls)
+      let src = urls.get(rel.target)
+      if (!src) { src = dataUrl(bytes, kind.mime); urls.set(rel.target, src) }
+      const img: SheetImage = { id: 'img' + ((sheet.images?.length || 0) + 1), src, anchor, size, alt: attr(find(pic, X, 'cNvPr'), 'descr') }
       ;(sheet.images ||= []).push(img)
       continue
     }

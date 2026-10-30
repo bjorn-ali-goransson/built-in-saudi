@@ -539,7 +539,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
           onClose={() => setFind(null)} readOnly={readOnly} />
       )}
       <div className="flex-1 min-h-0 flex max-[720px]:flex-col-reverse">
-        <SlideRail s={s} deck={deck} current={slide.id} onPick={(id) => { setCur(id); setSel([]); setEditing(null) }} onMove={moveSlide}
+        <SlideRail s={s} deck={deck} current={slide.id} versionOf={(id) => model.versionOf(id)} onPick={(id) => { setCur(id); setSel([]); setEditing(null) }} onMove={moveSlide}
           onMenu={(e, id) => setMenu({ x: e.clientX, y: e.clientY, slide: id })} readOnly={readOnly} horizontal={narrow}
           peers={peerList.map((p) => ({ client: p.client, name: p.name, color: p.color, slide: p.slide }) as RailPeer)} />
         <div className="flex-1 min-w-0 min-h-0 flex flex-col">

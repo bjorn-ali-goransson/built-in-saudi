@@ -17,7 +17,7 @@
 // - A comment needs a VML shape as well as the comments part, or Excel drops it.
 // - Shared strings must be counted (`count`/`uniqueCount`) or some readers
 //   allocate the wrong table size.
-import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu } from '../../../lib/office/opc'
+import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu, dataUrl } from '../../../lib/office/opc'
 import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, raw, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { Workbook } from '../engine/workbook'
@@ -277,6 +277,9 @@ function numText(v: number): string {
   return Number.isInteger(v) ? String(v) : String(Number(v.toPrecision(15)))
 }
 
+/** The media part each picture was stored as, per package: by its data URL. */
+const mediaOf = new WeakMap<PackageWriter, Map<string, string>>()
+
 function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: Strings, w: PackageWriter, part: string, lose: (w: string, n?: number) => void,
   nextDrawing: () => number, nextChart: () => number, nextComments: () => number, nextImage: () => number, names: string[], nextTable: () => number): string {
   const rows = new Map<number, { c: number; xml: Xml }[]>()
@@ -386,12 +389,19 @@ function sheetXml(sheet: SheetData, engine: Workbook, styles: StyleTable, sst: S
     const dpart = `xl/drawings/drawing${d}.xml`
     const anchors: Xml[] = []
     let id = 1
+    const stored = mediaOf.get(w) ?? new Map<string, string>()
+    mediaOf.set(w, stored)
     for (const img of sheet.images || []) {
-      const parsed = parseDataUrl(img.src)
-      const kind = parsed && sniffImage(parsed.bytes)
-      if (!parsed || !kind) { lose('pictures that could not be read'); continue }
-      const mpart = `xl/media/image${nextImage()}.${kind.ext}`
-      w.add(mpart, parsed.bytes)
+      // One picture, one part: a logo on every sheet was decoded and stored once per sheet.
+      let mpart = stored.get(img.src)
+      if (!mpart) {
+        const parsed = parseDataUrl(img.src)
+        const kind = parsed && sniffImage(parsed.bytes)
+        if (!parsed || !kind) { lose('pictures that could not be read'); continue }
+        mpart = `xl/media/image${nextImage()}.${kind.ext}`
+        w.add(mpart, parsed.bytes)
+        stored.set(img.src, mpart)
+      }
       const rid = w.rel(dpart, { type: REL.image, target: mpart })
       anchors.push(oneCell(img.anchor, img.size, x('xdr:pic', null,
         x('xdr:nvPicPr', null, x('xdr:cNvPr', { id: id++, name: `Picture ${id}`, descr: img.alt }), x('xdr:cNvPicPr', null, x('a:picLocks', { noChangeAspect: 1 }))),
@@ -589,12 +599,10 @@ async function classicPictures(book: WorkbookData): Promise<WorkbookData> {
   const sheets = await Promise.all(book.sheets.map(async (s) => {
     if (!s.images?.length) return s
     const images = await Promise.all(s.images.map(async (im) => {
+      if (!/^data:image\/(webp|avif)[;,]/.test(im.src)) return im
       const p = parseDataUrl(im.src)
       const c = p ? await classicImage(p.bytes) : null
-      if (!c) return im
-      let b = ''
-      for (let i = 0; i < c.bytes.length; i += 0x8000) b += String.fromCharCode(...c.bytes.subarray(i, i + 0x8000))
-      return { ...im, src: `data:${c.mime};base64,${btoa(b)}` }
+      return c ? { ...im, src: dataUrl(c.bytes, c.mime) } : im
     }))
     return { ...s, images }
   }))

@@ -1,15 +1,25 @@
 // The strip of slide thumbnails: pick one, drag to reorder, and the slide's own
 // menu. Each thumbnail is the real renderer at a small width, so it cannot show
 // a slide that is not there.
-import { useRef, useState } from 'react'
+import { memo, useRef, useState } from 'react'
 import { SlideView } from './render'
-import { slideTitle, type DeckData } from './model'
+import { slideTitle, type DeckData, type Slide } from './model'
 import type { SlStr } from './strings'
 
 export interface RailPeer { client: string; name: string; color: string; slide: string }
 
-export function SlideRail({ s, deck, current, onPick, onMove, onMenu, peers, readOnly, horizontal }: {
+/**
+ * One thumbnail, redrawn only when its slide's VERSION changes (or its number or size). The model
+ * edits slides in place, so identity cannot say whether one changed; the version can.
+ */
+const Thumb = memo(function Thumb({ slide, deck, number, width }: { slide: Slide; deck: DeckData; number: number; width: number; version: number }) {
+  return <SlideView slide={slide} width={width} ctx={{ deck, number }} />
+}, (a, b) => a.slide.id === b.slide.id && a.version === b.version && a.number === b.number && a.width === b.width && a.deck === b.deck)
+
+export function SlideRail({ s, deck, current, onPick, onMove, onMenu, peers, readOnly, horizontal, versionOf }: {
   s: SlStr; deck: DeckData; current: string
+  /** A slide's version: changes whenever anything that slide shows changes. */
+  versionOf: (id: string) => number
   onPick: (id: string) => void
   onMove: (id: string, toIndex: number) => void
   onMenu: (e: React.MouseEvent | { clientX: number; clientY: number }, id: string) => void
@@ -56,7 +66,7 @@ export function SlideRail({ s, deck, current, onPick, onMove, onMenu, peers, rea
             >
               {!horizontal && <span className="w-4 pt-1 text-[0.72rem] text-ink-faint text-end">{i + 1}</span>}
               <span className={`relative block rounded-sm overflow-hidden ${sl.id === current ? 'ring-2 ring-green-600' : 'ring-1 ring-[color:var(--line)]'} ${sl.hidden ? 'opacity-45' : ''}`}>
-                <SlideView slide={sl} width={W} ctx={{ deck, number: i + 1 }} />
+                <Thumb slide={sl} width={W} deck={deck} number={i + 1} version={versionOf(sl.id)} />
                 {sl.hidden && <span className="absolute inset-0 grid place-items-center text-[0.7rem] text-ink-soft" data-testid="sl-thumb-hidden">⊘</span>}
                 {here.length > 0 && <span className="absolute top-1 end-1 flex gap-0.5">{here.map((p) => <span key={p.client} title={p.name} className="size-3 rounded-full ring-1 ring-white" style={{ background: p.color }} />)}</span>}
               </span>

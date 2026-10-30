@@ -306,13 +306,34 @@ export function sniffImage(b: Uint8Array): { mime: string; ext: string } | null 
   return null
 }
 
-/** Base64 of bytes, chunked so a large picture does not blow the argument limit. */
+const B64 = new TextEncoder().encode('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/')
+type Native64 = { toBase64?: () => string }
+type Native64From = { fromBase64?: (s: string) => Uint8Array }
+/**
+ * Base64 of bytes. The platform's own where it has one; otherwise encoded straight into a byte
+ * buffer and decoded once. Building a binary string and btoa'ing it was the single largest cost
+ * of reading a deck full of pictures (a fifth of the CPU).
+ */
 export function toBase64(b: Uint8Array): string {
-  let s = ''
-  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000))
-  return btoa(s)
+  const native = (b as unknown as Native64).toBase64
+  if (typeof native === 'function') return native.call(b)
+  const out = new Uint8Array(Math.ceil(b.length / 3) * 4)
+  let o = 0
+  let i = 0
+  for (; i + 2 < b.length; i += 3) {
+    const n = (b[i] << 16) | (b[i + 1] << 8) | b[i + 2]
+    out[o++] = B64[n >> 18]; out[o++] = B64[(n >> 12) & 63]; out[o++] = B64[(n >> 6) & 63]; out[o++] = B64[n & 63]
+  }
+  if (i < b.length) {
+    const n = (b[i] << 16) | ((i + 1 < b.length ? b[i + 1] : 0) << 8)
+    out[o++] = B64[n >> 18]; out[o++] = B64[(n >> 12) & 63]
+    out[o++] = i + 1 < b.length ? B64[(n >> 6) & 63] : 61; out[o++] = 61
+  }
+  return new TextDecoder('latin1').decode(out)
 }
 export function fromBase64(s: string): Uint8Array {
+  const native = (Uint8Array as unknown as Native64From).fromBase64
+  if (typeof native === 'function') return native(s)
   const bin = atob(s)
   const out = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)

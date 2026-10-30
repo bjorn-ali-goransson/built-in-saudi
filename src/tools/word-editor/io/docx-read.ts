@@ -620,19 +620,27 @@ class Reader {
     out.push({ type: '__box', attrs: { node: { type: 'text_box', attrs, content: blocks } } })
   }
 
+  private srcByPath = new Map<string, string | null>()
   async image(rid: string | undefined, partPath: string, w: number, h: number, alt: string | null, out: PMNode[], float: Float = null) {
     if (!rid) return
     const rel = await this.pkg.relById(partPath, rid)
     if (!rel || rel.external) { this.lose('linked (not embedded) pictures'); return }
     const path = rel.target
     if (!this.pkg.has(path)) return
-    const bytes = await this.pkg.bytes(path)
-    const kind = sniffImage(bytes)
-    if (!kind || !/png|jpeg|gif|webp|svg|bmp/.test(kind.mime)) { this.lose('pictures in a format browsers cannot show (EMF, WMF, TIFF)'); return }
-    if (this.imageBytes + bytes.length > 60 * 1024 * 1024) { this.lose('pictures beyond 60MB in total'); return }
-    this.imageBytes += bytes.length
+    // A picture used on every page (a logo, a signature) is encoded once, not once per use.
+    let src = this.srcByPath.get(path)
+    if (src === undefined) {
+      const bytes = await this.pkg.bytes(path)
+      const kind = sniffImage(bytes)
+      if (!kind || !/png|jpeg|gif|webp|svg|bmp/.test(kind.mime)) { this.lose('pictures in a format browsers cannot show (EMF, WMF, TIFF)'); this.srcByPath.set(path, null); return }
+      if (this.imageBytes + bytes.length > 60 * 1024 * 1024) { this.lose('pictures beyond 60MB in total'); this.srcByPath.set(path, null); return }
+      this.imageBytes += bytes.length
+      src = dataUrl(bytes, kind.mime)
+      this.srcByPath.set(path, src)
+    }
+    if (src === null) return
     this.images++
-    const attrs: Record<string, unknown> = { src: dataUrl(bytes, kind.mime), alt, title: null, width: w ? Math.round(w) : null, height: h ? Math.round(h) : null }
+    const attrs: Record<string, unknown> = { src, alt, title: null, width: w ? Math.round(w) : null, height: h ? Math.round(h) : null }
     if (float) attrs.float = float
     out.push({ type: 'image', attrs })
   }
