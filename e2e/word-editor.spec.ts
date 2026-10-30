@@ -347,6 +347,35 @@ test('Save to a file on this device writes the document back on every save', asy
   await expect.poll(async () => { const b = Buffer.from(await bytes()); return b.length && zipNames(b).includes('word/document.xml') ? zipPart(b, 'word/document.xml') : '' }).toContain('then the second')
 })
 
+test('a linked file the browser stopped letting us write says so, and one click updates it', async ({ page: p }) => {
+  await p.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>
+    const pick = async () => (await navigator.storage.getDirectory()).getFileHandle('notes.docx', { create: true })
+    w.showSaveFilePicker = pick
+    // What a reload does to a real file: the handle stays, write access goes back to "ask".
+    w.__perm = 'granted'
+    const proto = FileSystemHandle.prototype as unknown as Record<string, unknown>
+    proto.queryPermission = async () => w.__perm
+    proto.requestPermission = async () => { w.__perm = 'granted'; return 'granted' }
+  })
+  await newBlank(p)
+  await p.keyboard.type('first')
+  await p.getByTestId('office-file').click()
+  await p.getByTestId('office-link').click()
+  await expect(p.getByTestId('office-status')).toContainText('notes.docx')
+  await p.evaluate(() => { (window as unknown as Record<string, unknown>).__perm = 'prompt' })
+  await editor(p).click()
+  await p.keyboard.press('End')
+  await p.keyboard.type(' second')
+  const banner = p.getByTestId('office-permission')
+  await expect(banner).toContainText('notes.docx')
+  await expect(banner).toContainText('Your changes are kept here')
+  await p.getByTestId('office-permission-allow').click()
+  await expect(banner).toHaveCount(0)
+  const bytes = async () => p.evaluate(async () => Array.from(new Uint8Array(await (await (await (await navigator.storage.getDirectory()).getFileHandle('notes.docx')).getFile()).arrayBuffer())))
+  await expect.poll(async () => { const b = Buffer.from(await bytes()); return b.length && zipNames(b).includes('word/document.xml') ? zipPart(b, 'word/document.xml') : '' }).toContain('first second')
+})
+
 test('page setup, header and footer are kept with the document', async ({ page: p }) => {
   await newBlank(p)
   await p.keyboard.type('body')

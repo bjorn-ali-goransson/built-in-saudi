@@ -145,6 +145,7 @@ export function usePersistence<D>(opts: {
 
   const unlink = useCallback(async () => {
     handleRef.current = undefined
+    setNeedsPermission(false)
     setFileName(undefined)
     await writeIdb()
   }, [writeIdb])

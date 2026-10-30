@@ -78,7 +78,12 @@ const en = {
   recent: 'Recent',
   templates: 'Start from',
   blank: 'Blank',
-  linkedFileGone: 'The linked file needs permission again. Save to grant it.',
+  // Browsers withdraw write access to a file when the tab is reloaded or the file was
+  // opened rather than saved. Nothing went wrong, so the notice says what is true and
+  // offers the click the browser needs before it will ask.
+  linkedFileGone: (n: string) => `Your changes are kept here. ${n} on this device has not been updated: the browser needs your permission to write to it.`,
+  linkedFileAllow: 'Allow and update it',
+  linkedFileStop: 'Stop updating it',
   close: 'Close',
   fileTooBig: 'This file is too large to open in the browser.',
 }
@@ -161,7 +166,9 @@ const ar: OfficeStr = {
   recent: 'الأخيرة',
   templates: 'ابدأ من',
   blank: 'فارغ',
-  linkedFileGone: 'الملف المرتبط يحتاج إلى إذن من جديد. احفظ لمنحه.',
+  linkedFileGone: (n: string) => `تغييراتك محفوظة هنا. لم يُحدَّث ${n} على هذا الجهاز: يحتاج المتصفح إلى إذنك للكتابة فيه.`,
+  linkedFileAllow: 'اسمح وحدّثه',
+  linkedFileStop: 'أوقف تحديثه',
   close: 'إغلاق',
   fileTooBig: 'هذا الملف أكبر من أن يُفتح في المتصفح.',
 }

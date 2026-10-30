@@ -135,7 +135,13 @@ export function EditorShell<D>(props: {
       )}
       {collab.isGuest && guestState === 'live' && collab.role === 'view' && <Banner testid="office-viewonly" state="view">{s.viewOnly}</Banner>}
       {collab.refusedBy && <Banner testid="office-refused" state="view">{s.refused(collab.refusedBy)}</Banner>}
-      {props.needsPermission && <Banner testid="office-permission" state="view">{s.linkedFileGone}</Banner>}
+      {props.needsPermission && (
+        <Banner testid="office-permission" state="view">
+          <span dir="auto">{s.linkedFileGone(props.fileName || '')}</span>
+          <button type="button" data-testid="office-permission-allow" onClick={props.onSave} className="ms-2 underline border-0 bg-transparent cursor-pointer text-inherit font-semibold">{s.linkedFileAllow}</button>
+          <button type="button" data-testid="office-permission-stop" onClick={props.onUnlink} className="ms-2 underline border-0 bg-transparent cursor-pointer text-inherit">{s.linkedFileStop}</button>
+        </Banner>
+      )}
       <div className="flex-1 min-h-0 flex flex-col relative">{props.children}</div>
       {props.busy && (
         <div className="absolute inset-0 z-[5] grid place-items-center bg-[color-mix(in_srgb,var(--bg)_70%,transparent)]" data-testid="office-busy">
