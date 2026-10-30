@@ -869,6 +869,17 @@ test('a followed box is stored against the PICTURE, so a re-crop takes it with i
   await page.getByTestId('ve-mode-crop').click()
   await page.getByTestId('ve-aspect-1:1').click()
   await page.getByTestId('ve-mode-censor').click()
+  // A crop resizes the stage and the boxes are laid out against it a frame or
+  // two later, so a read taken at once can still see the old framing — which
+  // failed CI with the followed box apparently unmoved. Wait for the thing under
+  // test to settle rather than for time to pass: the box has to move, and the
+  // stage has to stop changing size.
+  await expect.poll(async () => Math.abs((await boxAtNow(page, 0)).x - followedBefore.x), { timeout: 10_000 }).toBeGreaterThan(0.05)
+  await expect.poll(async () => {
+    const a = (await page.getByTestId('ve-stage').boundingBox())!.width
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    return a === (await page.getByTestId('ve-stage').boundingBox())!.width
+  }).toBe(true)
   const followedAfter = await boxAtNow(page, 0)
   const handAfter = await boxAtNow(page, 1)
 
