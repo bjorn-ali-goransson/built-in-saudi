@@ -50,6 +50,11 @@ export interface GridCtl {
   openFilter(col: number, x: number, y: number): void
 }
 
+/** Resize grips straddle a header border; wide enough for a finger, invisible until used. */
+const GRIP = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 16 : 8
+const HANDLE = GRIP === 16 ? 15 : 9
+const GRIP_STYLE: CSSProperties = { pointerEvents: 'auto', touchAction: 'none', zIndex: 1, WebkitTouchCallout: 'none', userSelect: 'none' }
+
 const MOVE: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
 
 interface Props {
@@ -153,7 +158,7 @@ export function Grid(p: Props) {
   }
 
   // Keep the active cell in view.
-  const scrollIntoView = useCallback((a: Addr) => {
+  const scrollIntoView = useCallback((a: Addr, only: { row?: boolean; col?: boolean } = {}) => {
     const el = scrollRef.current
     if (!el) return
     // From the tracked view, not the element: reading clientWidth or scrollTop forces a
@@ -162,13 +167,13 @@ export function Grid(p: Props) {
     const bodyH = viewRef.current.h - hH - frozenH
     let sx = viewRef.current.sx
     let sy = viewRef.current.sy
-    if (a.col >= fc) {
+    if (only.col !== false && a.col >= fc) {
       const x0 = cols.offset(a.col) - frozenW
       const x1 = cols.offset(a.col + 1) - frozenW
       if (x0 < sx) sx = x0
       else if (x1 > sx + bodyW) sx = x1 - bodyW
     }
-    if (a.row >= fr) {
+    if (only.row !== false && a.row >= fr) {
       const y0 = rows.offset(a.row) - frozenH
       const y1 = rows.offset(a.row + 1) - frozenH
       if (y0 < sy) sy = y0
@@ -182,7 +187,14 @@ export function Grid(p: Props) {
     if (Math.abs(viewRef.current.sx - Math.abs(left)) > 0.5) el.scrollLeft = left
   }, [cols, rows, fc, fr, frozenW, frozenH, hW, hH, rtl])
 
-  useEffect(() => { scrollIntoView(sel.f) }, [sel.f.row, sel.f.col]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A whole column's selection ends on the last row, and following it there threw the
+  // reader to row four thousand for a click on a header. An axis the selection spans
+  // end to end stays where it is.
+  useEffect(() => {
+    const allRows = Math.min(sel.a.row, sel.f.row) === 0 && Math.max(sel.a.row, sel.f.row) >= nRows - 1
+    const allCols = Math.min(sel.a.col, sel.f.col) === 0 && Math.max(sel.a.col, sel.f.col) >= nCols - 1
+    scrollIntoView(sel.f, { row: !allRows, col: !allCols })
+  }, [sel.f.row, sel.f.col]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (sel.a.row >= nRows - 30) setExtra((e) => ({ ...e, rows: e.rows + 200 })) }, [sel.a.row, nRows])
 
   // Focus stays on the key sink, so typing always lands in the sheet.
@@ -251,6 +263,19 @@ export function Grid(p: Props) {
     if (target.closest('[data-grid-object]') || target.closest('[data-grid-ui]')) return
     const pt = localPoint(e.clientX, e.clientY)
     const touch = e.pointerType === 'touch'
+    // A resize grip on a header border: a real element, finger-sized, that claims its touch,
+    // because a 4px band in a container that pans was unreachable on a phone.
+    const grip = target.closest<HTMLElement>('[data-resize]')
+    if (grip) {
+      const [axis, n] = grip.dataset.resize!.split(':')
+      const i = +n
+      drag.current = axis === 'col'
+        ? { kind: 'col', start: { row: 0, col: i }, i, origin: pt.x, size: cols.size(i) / z }
+        : { kind: 'row', start: { row: i, col: 0 }, i, origin: pt.y, size: rows.size(i) / z }
+      grip.setPointerCapture?.(e.pointerId)
+      e.preventDefault()
+      return
+    }
     // Headers: select a whole row or column, or resize from the border.
     if (pt.y < hH && pt.x > hW) {
       const a = cellAt(pt.x, hH + 1)
@@ -369,6 +394,8 @@ export function Grid(p: Props) {
     if (d.kind === 'select' && pickRef.current) { /* keep the pick open for another drag */ }
   }
   const onDoubleClick = (e: React.MouseEvent) => {
+    const grip = (e.target as HTMLElement).closest<HTMLElement>('[data-resize]')
+    if (grip) { const [axis, n] = grip.dataset.resize!.split(':'); ctl.autofit(axis as 'row' | 'col', +n); return }
     const pt = localPoint(e.clientX, e.clientY)
     if (pt.y < hH && pt.x > hW) { const i = nearEdge(pt.x, 'col'); if (i !== null) ctl.autofit('col', i); return }
     if (pt.x < hW && pt.y > hH) { const i = nearEdge(pt.y, 'row'); if (i !== null) ctl.autofit('row', i); return }
@@ -655,7 +682,7 @@ export function Grid(p: Props) {
     const tid = (id: string, pane: string) => (pane === q.id ? id : undefined)
     if (multi) out.push(<div key="sel" data-testid={tid('xl-selection', paneOf(selBox.r0, selBox.c0))} style={{ position: 'absolute', insetInlineStart: selRect.x, top: selRect.y, width: selRect.w, height: selRect.h, background: 'color-mix(in srgb, var(--color-green-600) 12%, transparent)', border: '2px solid var(--color-green-600)', boxSizing: 'border-box', pointerEvents: 'none' }} />)
     out.push(<div key="act" data-testid={tid('xl-active', actPane)} data-cell={`${colToLetters(sel.a.col)}${sel.a.row + 1}`} style={{ position: 'absolute', insetInlineStart: activeRect.x, top: activeRect.y, width: activeRect.w, height: activeRect.h, border: multi ? '1px solid var(--color-green-700)' : '2px solid var(--color-green-700)', boxSizing: 'border-box', pointerEvents: 'none', background: multi ? 'color-mix(in srgb, var(--surface) 55%, transparent)' : undefined }} />)
-    if (!p.readOnly && !edit) out.push(<div key="fill" data-fill-handle="1" data-testid={tid('xl-fill-handle', selPane)} style={{ position: 'absolute', insetInlineStart: selRect.x + selRect.w - 5, top: selRect.y + selRect.h - 5, width: 9, height: 9, background: 'var(--color-green-700)', border: '1.5px solid var(--surface)', cursor: 'crosshair', touchAction: 'none', zIndex: 5 }} />)
+    if (!p.readOnly && !edit) out.push(<div key="fill" data-fill-handle="1" data-testid={tid('xl-fill-handle', selPane)} style={{ position: 'absolute', insetInlineStart: selRect.x + selRect.w - HANDLE / 2, top: selRect.y + selRect.h - HANDLE / 2, width: HANDLE, height: HANDLE, background: 'var(--color-green-700)', border: '1.5px solid var(--surface)', cursor: 'crosshair', touchAction: 'none', WebkitTouchCallout: 'none', userSelect: 'none', zIndex: 5 }} />)
     if (fillTarget) { const f = boxRect(fillTarget); out.push(<div key="ft" data-testid={tid('xl-fill-target', paneOf(fillTarget.r0, fillTarget.c0))} style={{ position: 'absolute', insetInlineStart: f.x, top: f.y, width: f.w, height: f.h, border: '1.5px dashed var(--color-green-700)', pointerEvents: 'none' }} />) }
     if (p.marquee) { const m = boxRect(p.marquee); out.push(<div key="mq" data-testid={tid('xl-marquee', paneOf(p.marquee.r0, p.marquee.c0))} style={{ position: 'absolute', insetInlineStart: m.x, top: m.y, width: m.w, height: m.h, border: '2px dashed var(--color-green-600)', pointerEvents: 'none' }} />) }
     const fr0 = p.filterRow
@@ -707,12 +734,22 @@ export function Grid(p: Props) {
   const headerCls = (on: boolean) => `grid place-items-center border-e border-b border-[color:var(--line-soft)] select-none ${on ? 'bg-[color-mix(in_srgb,var(--color-green-600)_18%,var(--surface))] text-green-700 font-semibold' : 'bg-[var(--sand-50)] text-ink-soft'}`
   const colHeaders = (c0: number, c1: number) => {
     const out: ReactNode[] = []
-    for (let c = c0; c <= c1; c++) { const w = cols.size(c); if (w > 0) out.push(<div key={c} data-col-header={colToLetters(c)} style={{ position: 'absolute', insetInlineStart: xOf(c), top: 0, width: w, height: hH, fontSize: 11 * z }} className={headerCls(c >= selBox.c0 && c <= selBox.c1)}>{colToLetters(c)}</div>) }
+    for (let c = c0; c <= c1; c++) {
+      const w = cols.size(c)
+      if (w <= 0) continue
+      out.push(<div key={c} data-col-header={colToLetters(c)} style={{ position: 'absolute', insetInlineStart: xOf(c), top: 0, width: w, height: hH, fontSize: 11 * z }} className={headerCls(c >= selBox.c0 && c <= selBox.c1)}>{colToLetters(c)}</div>)
+      if (!p.readOnly) out.push(<div key={`g${c}`} data-resize={`col:${c}`} data-testid={`xl-col-grip-${colToLetters(c)}`} style={{ position: 'absolute', insetInlineStart: xOf(c) + w - GRIP / 2, top: 0, width: GRIP, height: hH, ...GRIP_STYLE, cursor: 'col-resize' }} />)
+    }
     return out
   }
   const rowHeaders = (r0: number, r1: number) => {
     const out: ReactNode[] = []
-    for (let r = r0; r <= r1; r++) { const h = rows.size(r); if (h > 0) out.push(<div key={r} data-row-header={r + 1} style={{ position: 'absolute', insetInlineStart: 0, top: yOf(r), width: hW, height: h, fontSize: 11 * z }} className={headerCls(r >= selBox.r0 && r <= selBox.r1)}>{r + 1}</div>) }
+    for (let r = r0; r <= r1; r++) {
+      const h = rows.size(r)
+      if (h <= 0) continue
+      out.push(<div key={r} data-row-header={r + 1} style={{ position: 'absolute', insetInlineStart: 0, top: yOf(r), width: hW, height: h, fontSize: 11 * z }} className={headerCls(r >= selBox.r0 && r <= selBox.r1)}>{r + 1}</div>)
+      if (!p.readOnly) out.push(<div key={`g${r}`} data-resize={`row:${r}`} data-testid={`xl-row-grip-${r + 1}`} style={{ position: 'absolute', insetInlineStart: 0, top: yOf(r) + h - GRIP / 2, width: hW, height: GRIP, ...GRIP_STYLE, cursor: 'row-resize' }} />)
+    }
     return out
   }
 
@@ -729,7 +766,14 @@ export function Grid(p: Props) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onDoubleClick={onDoubleClick}
-      onContextMenu={(e) => { e.preventDefault(); ctl.context(e.clientX, e.clientY) }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        // A long press is how a phone starts a drag on a handle or grip, and the browser
+        // follows it with contextmenu: opening the menu then put it over the gesture.
+        const t = e.target as HTMLElement
+        if (drag.current || t.closest('[data-fill-handle],[data-resize],[data-grid-object]')) return
+        ctl.context(e.clientX, e.clientY)
+      }}
       data-testid="xl-grid"
       data-rtl={rtl ? '1' : '0'}
       className="relative flex-1 min-h-0 overflow-auto bg-[var(--surface)] outline-none [touch-action:pan-x_pan-y]"

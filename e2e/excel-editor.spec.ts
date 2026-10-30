@@ -694,3 +694,56 @@ test.describe('a workbook with rich text, protection, a table and a saved filter
     await expect(p.locator('[data-testid="xl-grid"] div[data-cell="A3"]')).toHaveCount(0)
   })
 })
+
+test.describe('headers and handles', () => {
+  test('clicking a column header selects it without scrolling to its last row', async ({ page: p }) => {
+    await newBlank(p)
+    const c = (await p.locator('[data-col-header="C"]').first().boundingBox())!
+    await p.mouse.click(c.x + c.width / 2, c.y + c.height / 2)
+    await expect(p.getByTestId('xl-active')).toHaveAttribute('data-cell', 'C1')
+    await p.waitForTimeout(200)
+    expect(await p.getByTestId('xl-grid').evaluate((e) => e.scrollTop)).toBe(0)
+    await expect(p.locator('[data-row-header="1"]').first()).toBeInViewport()
+  })
+
+  test('a column resizes by its grip with a mouse, and the width is stored', async ({ page: p }) => {
+    await newBlank(p)
+    const g = (await p.getByTestId('xl-col-grip-B').boundingBox())!
+    await p.mouse.move(g.x + g.width / 2, g.y + g.height / 2)
+    await p.mouse.down()
+    await p.mouse.move(g.x + 60, g.y + g.height / 2, { steps: 5 })
+    await p.mouse.up()
+    await saved(p)
+    const w = (await storedBook(p))[0].data.sheets[0] as unknown as { colWidths?: Record<string, number> }
+    expect(w.colWidths?.['1']).toBeGreaterThan(130)
+  })
+
+  test('a column resizes by touch, and a long press on a handle opens no menu', async ({ browser }) => {
+    const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } })
+    const p = await ctx.newPage()
+    await newBlank(p)
+    const cdp = await ctx.newCDPSession(p)
+    const touch = async (type: string, x?: number, y?: number) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y: y!, id: 1 }] })
+    const before = (await p.locator('[data-col-header="B"]').first().boundingBox())!.width
+    const g = (await p.getByTestId('xl-col-grip-B').boundingBox())!
+    const x = g.x + g.width / 2, y = g.y + g.height / 2
+    await touch('touchStart', x, y)
+    // Held past the long-press delay, then moved: the browser's contextmenu lands mid-gesture.
+    await p.waitForTimeout(700)
+    for (let i = 1; i <= 6; i++) await touch('touchMove', x + i * 10, y)
+    await touch('touchEnd')
+    await expect(p.getByTestId('xl-context-menu')).toHaveCount(0)
+    const after = (await p.locator('[data-col-header="B"]').first().boundingBox())!.width
+    expect(after).toBeGreaterThan(before + 30)
+    // The fill handle: a long press there starts a fill, not the menu.
+    const b2 = await at(p, 'B2')
+    await touch('touchStart', b2.x, b2.y)
+    await touch('touchEnd')
+    await expect(p.getByTestId('xl-active')).toHaveAttribute('data-cell', 'B2')
+    const h = (await p.getByTestId('xl-fill-handle').first().boundingBox())!
+    await p.getByTestId('xl-fill-handle').first().dispatchEvent('contextmenu')
+    expect(h.width).toBeGreaterThan(10)
+    await expect(p.getByTestId('xl-context-menu')).toHaveCount(0)
+    await ctx.close()
+  })
+})
