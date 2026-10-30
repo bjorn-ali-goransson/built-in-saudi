@@ -1,4 +1,4 @@
-import { inflateRawSync } from 'node:zlib'
+import { inflateRawSync, deflateSync } from 'node:zlib'
 import type { Page } from '@playwright/test'
 
 /**
@@ -89,4 +89,82 @@ export function zipNames(buf: Buffer): string[] {
     i += 30 + nlen + elen + packed
   }
   return out
+}
+
+/** Every entry of a ZIP, decompressed (read from the local headers, as zipPart does). */
+export function zipEntries(buf: Buffer): { name: string; data: Buffer }[] {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+  const out: { name: string; data: Buffer }[] = []
+  let i = 0
+  while (i + 30 <= buf.length && dv.getUint32(i, true) === 0x04034b50) {
+    const method = dv.getUint16(i + 8, true)
+    const packed = dv.getUint32(i + 18, true)
+    const nlen = dv.getUint16(i + 26, true)
+    const elen = dv.getUint16(i + 28, true)
+    const name = new TextDecoder('utf-8').decode(buf.subarray(i + 30, i + 30 + nlen))
+    const start = i + 30 + nlen + elen
+    const data = buf.subarray(start, start + packed)
+    out.push({ name, data: Buffer.from(method === 8 ? inflateRawSync(data) : data) })
+    i = start + packed
+  }
+  return out
+}
+
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return t })()
+function crc32(b: Buffer): number { let c = 0xffffffff; for (const x of b) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0 }
+
+/** A store-only ZIP of these entries — enough to hand an editor a doctored real file. */
+export function makeZip(entries: { name: string; data: Buffer }[]): Buffer {
+  const locals: Buffer[] = []
+  const centrals: Buffer[] = []
+  let off = 0
+  for (const e of entries) {
+    const name = Buffer.from(e.name, 'utf8')
+    const crc = crc32(e.data)
+    const lh = Buffer.alloc(30)
+    lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6); lh.writeUInt16LE(0, 8)
+    lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(e.data.length, 18); lh.writeUInt32LE(e.data.length, 22); lh.writeUInt16LE(name.length, 26)
+    const ch = Buffer.alloc(46)
+    ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8)
+    ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(e.data.length, 20); ch.writeUInt32LE(e.data.length, 24); ch.writeUInt16LE(name.length, 28); ch.writeUInt32LE(off, 42)
+    locals.push(lh, name, e.data)
+    centrals.push(ch, name)
+    off += 30 + name.length + e.data.length
+  }
+  const cd = Buffer.concat(centrals)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16)
+  return Buffer.concat([...locals, cd, end])
+}
+
+/** A real file with one part swapped for other bytes. */
+export function replaceInZip(buf: Buffer, name: string, data: Buffer): Buffer {
+  const all = zipEntries(buf)
+  if (!all.some((e) => e.name === name)) throw new Error(`replaceInZip: ${name} not in archive`)
+  return makeZip(all.map((e) => (e.name === name ? { name, data } : e)))
+}
+
+/**
+ * A photograph-like PNG: smooth gradients with noise on top. Noise is what makes
+ * a camera picture big — the deflater cannot predict it — so this is the hard
+ * case for a size limit, at several megabytes for a modest size.
+ */
+export function noisyPng(w: number, h: number, seed = 1): Buffer {
+  let s = seed
+  const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  for (let y = 0; y < h; y++) {
+    const row = y * (w * 3 + 1)
+    raw[row] = 0
+    for (let x = 0; x < w; x++) {
+      const i = row + 1 + x * 3
+      raw[i] = Math.min(255, (x / w) * 200 + rnd() * 55)
+      raw[i + 1] = Math.min(255, (y / h) * 200 + rnd() * 55)
+      raw[i + 2] = Math.min(255, 120 + rnd() * 80)
+    }
+  }
+  const chunk = (t: string, d: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t, 'latin1'), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, c]) }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 6 })), chunk('IEND', Buffer.alloc(0))])
 }

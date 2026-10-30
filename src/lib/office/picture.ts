@@ -4,6 +4,7 @@
 // kept exactly as it was. Shared by the document and presentation editors.
 import { decodeImage } from '../decodeImage'
 import { whyUnreadable } from '../imageInput'
+import { optimiseDataUrl } from './optimiseImage'
 
 export async function pictureFromFile(f: File, locale: 'en' | 'ar'): Promise<{ src: string; w: number; h: number } | { error: string }> {
   const asUrl = () => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(f) })
@@ -15,8 +16,12 @@ export async function pictureFromFile(f: File, locale: 'en' | 'ar'): Promise<{ s
   const bmp = await decodeImage(f)
   if (!bmp) return { error: await whyUnreadable(f, locale) }
   const { width: w, height: h } = bmp
-  const keep = /^image\/(png|gif|jpeg|webp)$/.test(f.type) && f.size < 1_500_000 && Math.max(w, h) <= 2400
-  if (keep) { bmp.close(); return { src: await asUrl(), w, h } }
+  // A picture somebody inserts is made modern and small like an imported one (WebP, at most
+  // 800KB). The size it is SHOWN at stays its own: only the stored pixels change.
+  if (/^image\/(png|gif|jpeg|webp|bmp)$/.test(f.type)) {
+    bmp.close()
+    return { src: await optimiseDataUrl(await asUrl()), w, h }
+  }
   const k = Math.min(1, 2000 / Math.max(w, h))
   const c = document.createElement('canvas')
   c.width = Math.round(w * k)
@@ -24,5 +29,5 @@ export async function pictureFromFile(f: File, locale: 'en' | 'ar'): Promise<{ s
   c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
   bmp.close()
   const png = f.type === 'image/png'
-  return { src: c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.86), w: c.width, h: c.height }
+  return { src: await optimiseDataUrl(c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.92)), w: c.width, h: c.height }
 }

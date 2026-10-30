@@ -34,6 +34,19 @@ self.onmessage = async (e: MessageEvent<Req>) => {
 }
 
 async function run(op: string, buf: ArrayBuffer | undefined, data: unknown, opts: Record<string, unknown>): Promise<unknown> {
+  const result = await dispatch(op, buf, data, opts)
+  // Every document read in comes out with its pictures made modern and small, before it is
+  // stored or shared — whatever format it came from, and however its model keeps pictures.
+  if (op.endsWith('-read') && result && typeof result === 'object') {
+    const { optimiseImagesIn } = await import('./optimiseImage')
+    const r = result as { data?: unknown; book?: unknown; images?: unknown }
+    const stats = await optimiseImagesIn(r.data ?? r.book)
+    r.images = { changed: stats.changed, before: stats.before, after: stats.after }
+  }
+  return result
+}
+
+async function dispatch(op: string, buf: ArrayBuffer | undefined, data: unknown, opts: Record<string, unknown>): Promise<unknown> {
   switch (op) {
     case 'xlsx-read': return (await import('../../tools/excel-editor/io/xlsx-read')).readXlsx(buf!)
     case 'xlsx-write': return (await import('../../tools/excel-editor/io/xlsx-write')).writeXlsx(data as never, opts as never)

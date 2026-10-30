@@ -12,6 +12,7 @@
 // the run says its language, and the font goes in the complex-script slot,
 // which is the one PowerPoint uses for Arabic.
 import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage } from '../../../lib/office/opc'
+import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { THEME_ORDER } from '../../../lib/office/color'
 import { isLine } from '../geom'
@@ -373,6 +374,7 @@ class Writer {
 }
 
 export async function writePptx(d: DeckData, meta: { title?: string } = {}): Promise<PptxExport> {
+  d = await classicMedia(d)
   const wr = new Writer(d)
   const blob = await wr.build(meta)
   const loss: { what: string; count: number }[] = []
@@ -382,3 +384,20 @@ export async function writePptx(d: DeckData, meta: { title?: string } = {}): Pro
 }
 
 export const _themeForTest = (t: Theme) => t
+
+/** WebP pictures as JPEG or PNG, which every PowerPoint opens; the deck itself is left as it is. */
+async function classicMedia(d: DeckData): Promise<DeckData> {
+  const media = { ...d.media }
+  let changed = false
+  for (const [id, m] of Object.entries(media)) {
+    const p = parseDataUrl(m.data)
+    if (!p) continue
+    const c = await classicImage(p.bytes)
+    if (!c) continue
+    let s = ''
+    for (let i = 0; i < c.bytes.length; i += 0x8000) s += String.fromCharCode(...c.bytes.subarray(i, i + 0x8000))
+    media[id] = { ...m, data: `data:${c.mime};base64,${btoa(s)}` }
+    changed = true
+  }
+  return changed ? { ...d, media } : d
+}

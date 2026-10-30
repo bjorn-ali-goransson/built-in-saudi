@@ -18,6 +18,7 @@
 // - Shared strings must be counted (`count`/`uniqueCount`) or some readers
 //   allocate the wrong table size.
 import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu } from '../../../lib/office/opc'
+import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, raw, xmlDoc, type Xml, type XChild } from '../../../lib/xml'
 import { Workbook } from '../engine/workbook'
 import { colToLetters, parseA1, parseRange, isError, borderSides, validRuns, type CellFormat, type TextRun, type Protection, type SheetData, type WorkbookData, type CellValue, type ChartSpec } from '../engine/model'
@@ -203,6 +204,7 @@ function protectionAttrs(p: Protection, kind: 'sheet' | 'workbook'): Record<stri
 export interface XlsxExport { blob: Blob; loss: { what: string; count: number }[] }
 
 export async function writeXlsx(book: WorkbookData, meta: { title?: string } = {}): Promise<XlsxExport> {
+  book = await classicPictures(book)
   const w = new PackageWriter()
   const engine = new Workbook(book.sheets.map((s) => ({ ...s, cells: { ...s.cells } })), book.names || [])
   const styles = new StyleTable()
@@ -563,3 +565,21 @@ function chartPart(ch: ChartSpec, sheet: SheetData, engine: Workbook, _names: st
 const THEME = xmlDoc(raw(`<a:theme xmlns:a="${NS.a}" name="Office Theme"><a:themeElements><a:clrScheme name="Office"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="Office"><a:majorFont><a:latin typeface="Calibri Light"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`))
 
 export { MIME as XLSX_MIME }
+
+/** WebP pictures as JPEG or PNG, which every Excel opens; the workbook itself is left as it is. */
+async function classicPictures(book: WorkbookData): Promise<WorkbookData> {
+  if (!book.sheets.some((s) => s.images?.length)) return book
+  const sheets = await Promise.all(book.sheets.map(async (s) => {
+    if (!s.images?.length) return s
+    const images = await Promise.all(s.images.map(async (im) => {
+      const p = parseDataUrl(im.src)
+      const c = p ? await classicImage(p.bytes) : null
+      if (!c) return im
+      let b = ''
+      for (let i = 0; i < c.bytes.length; i += 0x8000) b += String.fromCharCode(...c.bytes.subarray(i, i + 0x8000))
+      return { ...im, src: `data:${c.mime};base64,${btoa(b)}` }
+    }))
+    return { ...s, images }
+  }))
+  return { ...book, sheets }
+}

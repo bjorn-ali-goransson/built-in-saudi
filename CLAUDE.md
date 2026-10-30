@@ -7934,6 +7934,22 @@ All four used to be in the loss ledger; a real workbook carried all four at once
 - **A `filterColumn` with no criteria is not a filter** — Excel writes one just to
   hide a button. Real value lists open applied (`savedFilter`) and are written back.
 
+### Pictures are WebP, at most 800KB (`lib/office/optimiseImage.ts`)
+
+Every picture an editor takes in — on import, in the worker, and on insert — is
+re-encoded as WebP and kept at or under 800KB: lossless first for PNG/GIF/BMP,
+then lower quality, and only then fewer pixels. A picture is never made larger,
+and SVG, animated GIF and formats a browser cannot decode are left alone. On the
+way OUT to .docx/.xlsx/.pptx WebP becomes JPEG (PNG where it is transparent),
+because Office 2016 and earlier draw a red cross for WebP. Pictures are found by
+VALUE (any `data:image` string in the model), so a new place to keep one cannot
+be missed. `e2e/office-images.spec.ts` imports a deliberately huge photo.
+
+**The persistence hook must not re-adopt its `doc` prop on every render.** It
+did, so any re-render reset the record to the one opened, and the next
+thumbnail write stored that stale copy over the edit just saved — twelve
+editor specs went red, each reading an empty document back from IndexedDB.
+
 ### Printing: the preview IS the printout (`components/office/print.ts`)
 
 The flow is laid out once, at the page's text width, in a hidden frame; cut

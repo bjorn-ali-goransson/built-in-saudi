@@ -17,6 +17,7 @@
 //    calls the file damaged otherwise), and a text box is a DrawingML shape in
 //    an mc:AlternateContent whose Requires prefix must be declared on the root.
 import { PackageWriter, REL, NS, writeDocProps, parseDataUrl, sniffImage, pxToEmu } from '../../../lib/office/opc'
+import { classicImage } from '../../../lib/office/optimiseImage'
 import { x, raw, xmlDoc, stripInvalidXmlChars, type XChild, type Xml } from '../../../lib/xml'
 import type { PMNode, PMMark, WordData } from '../model'
 
@@ -162,7 +163,12 @@ class Writer {
     if (!parsed) { this.lose('pictures linked from the web (not embedded)'); return x('w:r', null) }
     let bytes = parsed.bytes
     let kind = sniffImage(bytes)
-    // Word reads PNG, JPEG, GIF and BMP. Anything else is redrawn as PNG on the way out.
+    // Word reads PNG, JPEG, GIF and BMP. A WebP — what the editor keeps pictures as — goes out
+    // as JPEG, or PNG where it is transparent; anything else is redrawn as PNG.
+    if (kind && /webp|avif/.test(kind.mime)) {
+      const c = await classicImage(bytes)
+      if (c) { bytes = c.bytes; kind = { mime: c.mime, ext: c.ext } }
+    }
     if (!kind || !/png|jpeg|gif|bmp/.test(kind.mime)) {
       const png = await toPng(bytes, parsed.mime)
       if (!png) { this.lose('pictures in a format Word cannot read'); return x('w:r', null) }
