@@ -109,11 +109,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محرّر منحنى بيزييه', description: 'اسحب نقطتي التحكّم لتشكيل منحنى تنعيم CSS من نوع cubic-bezier، وشاهد حركة حيّة تعيده، وابدأ من قوالب مثل ease-in-out، وانسخ القيمة الجاهزة للّصق. يعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'dice-roller',
-    en: { name: 'Dice Roller', description: 'Roll any number of dice with any number of sides (d4 to d20 and beyond), see each result and the total, or flip a coin — with fair, unbiased cryptographic randomness. Runs entirely in your browser.' },
-    ar: { name: 'رامي النرد', description: 'ارمِ أي عدد من حبّات النرد بأي عدد أوجه (من d4 إلى d20 وأكثر)، وشاهد كل نتيجة والمجموع، أو اقلب عملة — بعشوائية تشفيرية عادلة غير متحيّزة. تعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'typing-test',
     en: { name: 'Typing Speed Test', description: 'Type the shown passage to measure your typing speed in words per minute and your accuracy, with each character highlighted as right or wrong in real time. Runs entirely in your browser.' },
     ar: { name: 'اختبار سرعة الكتابة', description: 'اكتب المقطع المعروض لقياس سرعة كتابتك بالكلمات في الدقيقة ودقّتك، مع تمييز كل حرف صحيحًا أو خاطئًا لحظيًا. يعمل بالكامل في متصفحك.' },
@@ -457,11 +452,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'franco-arabic',
     en: { name: 'Franco-Arabic Converter', description: 'Convert Franco-Arabic — the chat alphabet where 3 is ع, 7 is ح and 5 is خ — into proper Arabic writing, or go the other way. Common words are recognised whole so the result reads like Arabic, and genuinely ambiguous letters are listed so you can check them.' },
     ar: { name: 'محوّل الفرانكو إلى عربي', description: 'حوّل الفرانكو — أبجدية الدردشة حيث ٣ تعني ع و٧ تعني ح و٥ تعني خ — إلى كتابة عربية سليمة، أو اعكس الاتجاه. تُعرف الكلمات الشائعة ككلمات كاملة ليقرأ الناتج كعربية، وتُذكر الحروف الملتبسة لتراجعها.' },
-  },
-  {
-    id: 'team-maker',
-    en: { name: 'Random Team Maker', description: 'Paste a list of names and split them into teams — by how many teams you want, or how many people each should hold. Name people to keep apart and they land on different teams. The shuffle uses cryptographic randomness with a proper Fisher-Yates, so every arrangement really is equally likely.' },
-    ar: { name: 'مولّد الفرق العشوائي', description: 'الصق قائمة أسماء ووزّعها على فرق — بعدد الفرق أو بعدد الأفراد في كل فريق. سمِّ من تريد الفصل بينهم فيقعون في فرق مختلفة. يستخدم الخلط عشوائية تعموية بخوارزمية فيشر-ييتس الصحيحة، فيكون كل ترتيب محتملًا بالتساوي.' },
   },
   {
     id: 'char-finder',

@@ -49,7 +49,7 @@ export const UNTUNED2 = [
   ['attendance register', 'attendance-sheet'],
   ['fake names for testing', 'fake-data'],
   ['paste from word into markdown', 'word-editor'],
-  ['random teams', 'team-maker'],
+  ['random teams', 'spin-wheel'],
   ['working days between', 'date-diff'],
   ['what language is this', 'detect-language'],
   // Arabic, written the same way — from the list, not from any miss.

@@ -43,7 +43,7 @@ export const COLLECTIONS: Collection[] = [
   {
     slug: 'teaching',
     toolIds: [
-      'worksheets', 'quiz-maker', 'flashcards', 'arabic-handwriting', 'seating-chart', 'attendance-sheet', 'certificate', 'timetable', 'spin-wheel', 'team-maker',
+      'worksheets', 'quiz-maker', 'flashcards', 'arabic-handwriting', 'seating-chart', 'attendance-sheet', 'certificate', 'timetable', 'spin-wheel',
     ],
   },
   {

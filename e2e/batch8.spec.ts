@@ -46,7 +46,7 @@ test.describe('team maker', () => {
   const NAMES = 'Ahmed\nFatimah\nKhalid\nNoura\nSalem\nHessa'
 
   test('splits names into the requested number of teams', async ({ page }) => {
-    await page.goto('/en/apps/team-maker')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-teams').click()
     await page.getByTestId('tm-names').fill(NAMES)
     await expect(page.getByTestId('tm-count')).toHaveText('6 names')
     await expect(page.getByTestId('tm-teams').locator('> div')).toHaveCount(2)
@@ -55,7 +55,7 @@ test.describe('team maker', () => {
   })
 
   test('splitting by team size makes enough teams to hold everyone', async ({ page }) => {
-    await page.goto('/en/apps/team-maker')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-teams').click()
     await page.getByTestId('tm-names').fill(NAMES)
     await page.getByTestId('tm-mode-size').click()
     await page.getByTestId('tm-number').fill('2')
@@ -63,7 +63,7 @@ test.describe('team maker', () => {
   })
 
   test('every name is placed exactly once', async ({ page }) => {
-    await page.goto('/en/apps/team-maker')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-teams').click()
     await page.getByTestId('tm-names').fill(NAMES)
     await page.getByTestId('tm-number').fill('4')
     const text = await page.getByTestId('tm-teams').innerText()
@@ -73,7 +73,7 @@ test.describe('team maker', () => {
   })
 
   test('people kept apart land on different teams', async ({ page }) => {
-    await page.goto('/en/apps/team-maker')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-teams').click()
     await page.getByTestId('tm-names').fill(NAMES)
     await page.getByTestId('tm-apart').fill('Ahmed, Khalid')
     for (let i = 0; i < 5; i++) {
@@ -86,7 +86,7 @@ test.describe('team maker', () => {
   })
 
   test('the list survives a reload', async ({ page }) => {
-    await page.goto('/en/apps/team-maker')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-teams').click()
     await page.getByTestId('tm-names').fill(NAMES)
     await page.reload()
     await expect(page.getByTestId('tm-count')).toHaveText('6 names')

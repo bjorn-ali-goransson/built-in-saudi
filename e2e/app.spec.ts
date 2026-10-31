@@ -456,7 +456,7 @@ test.describe('tools', () => {
     await expect(page.getByTestId('dd-working')).toHaveText('4')
   })
 
-  for (const [from, to] of [['age-calculator', 'date-diff'], ['working-days', 'date-diff'], ['pomodoro', 'stopwatch']]) {
+  for (const [from, to] of [['age-calculator', 'date-diff'], ['working-days', 'date-diff'], ['pomodoro', 'stopwatch'], ['team-maker', 'spin-wheel'], ['dice-roller', 'spin-wheel']]) {
     test(`${from} now lives in ${to}`, async ({ page }) => {
       await page.goto(`/en/apps/${from}`)
       await expect(page).toHaveURL(new RegExp(`/en/apps/${to}/?$`))
@@ -470,7 +470,7 @@ test.describe('tools', () => {
   })
 
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
-    await page.goto('/en/apps/dice-roller')
+    await page.goto('/en/apps/spin-wheel'); await page.getByTestId('rp-mode-dice').click()
     await page.getByTestId('dr-count').fill('2')
     await page.getByTestId('dr-d6').click()
     await page.getByTestId('dr-roll').click()

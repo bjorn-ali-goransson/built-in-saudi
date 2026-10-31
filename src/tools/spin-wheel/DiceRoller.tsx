@@ -10,7 +10,7 @@ const STR = {
 const SIDES = [4, 6, 8, 10, 12, 20]
 const rollDie = (sides: number) => (crypto.getRandomValues(new Uint32Array(1))[0] % sides) + 1
 
-export default function DiceRollerTool() {
+export default function DiceRoller() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [mode, setMode] = useState<'dice' | 'coin'>('dice')

@@ -911,6 +911,13 @@ Calculators and `/c/time/` redirects. Date Diff sits before `hijri-age` in the
 registry because «حاسبة العمر» ties the two exactly, and the plain question
 means the ordinary age.
 
+**Generators (106 → 103).** Passphrase went into the password generator — whose
+own passphrase mode had used a 128-word list (28 bits for four words) while the
+separate app had the 1,296-word diceware list (41) — and its dice flow is the
+generator's third mode. Random Team Maker and Dice Roller became modes of the
+Wheel of Names, which remembers the mode (`bis-random-mode`) because a teacher
+who makes teams every lesson should come back to the teams.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

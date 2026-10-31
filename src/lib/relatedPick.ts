@@ -52,7 +52,7 @@ export const CLUSTERS: string[][] = [
   ['calls', 'messages', 'book-me'],
   ['translate', 'detect-language', 'diacritize'],
   ['stopwatch', 'pomodoro', 'bpm-tap', 'metronome'],
-  ['typing-test', 'stopwatch', 'dice-roller'],
+  ['typing-test', 'stopwatch', 'spin-wheel'],
   ['word-editor', 'excel-editor', 'powerpoint-editor', 'pdf-to-word'],
   ['pdf-merge', 'pdf-compress', 'pdf-to-images'],
   ['pdf-ocr', 'image-to-text', 'pdf-to-word'],

@@ -55,7 +55,7 @@ export const UNTUNED = [
   ['uuid', 'uuid-generator'],
   ['markdown table', 'markdown-table'],
   ['uppercase', 'case-converter'],
-  ['roll dice', 'dice-roller'],
+  ['roll dice', 'spin-wheel'],
   ['split the bill', 'split-bill'],
   ['how old am i', 'date-diff'],
   ['days between two dates', 'date-diff'],

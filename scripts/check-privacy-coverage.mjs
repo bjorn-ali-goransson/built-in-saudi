@@ -84,7 +84,7 @@ const TEXT_UNVERIFIED = new Set([
   'arabic-normalize', 'arabic-numerals', 'arabic-poetry', 'attendance-sheet', 'case-converter',
   'certificate', 'csv-json', 'franco-arabic', 'json-diff', 'markdown-table',
   'password-generator', 'quiz-maker', 'readable-text', 'readme-generator', 'saudi-phone',
-  'seating-chart', 'spin-wheel', 'team-maker', 'typing-test', 'url-encoder', 'uuid-generator',
+  'seating-chart', 'spin-wheel', 'typing-test', 'url-encoder', 'uuid-generator',
   'worksheets',
 ])
 

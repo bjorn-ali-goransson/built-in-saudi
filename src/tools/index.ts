@@ -45,7 +45,6 @@ import { splitBillTool } from './split-bill/meta'
 import { zakatCalculatorTool } from './zakat-calculator/meta'
 import { cubicBezierTool } from './cubic-bezier/meta'
 import { readableTextTool } from './readable-text/meta'
-import { diceRollerTool } from './dice-roller/meta'
 import { typingTestTool } from './typing-test/meta'
 import { imageToAsciiTool } from './image-to-ascii/meta'
 import { steganographyTool } from './steganography/meta'
@@ -79,7 +78,6 @@ import { coordinatesTool } from './coordinates/meta'
 import { urlParserTool } from './url-parser/meta'
 import { jsonDiffTool } from './json-diff/meta'
 import { francoArabicTool } from './franco-arabic/meta'
-import { teamMakerTool } from './team-maker/meta'
 import { charFinderTool } from './char-finder/meta'
 import { hijriAgeTool } from './hijri-age/meta'
 import { certificateTool } from './certificate/meta'
@@ -163,8 +161,6 @@ export const tools: Tool[] = [
   flashcardsTool,
   kanbanTool,
   spinWheelTool,
-  teamMakerTool,
-  diceRollerTool,
   typingTestTool,
   tierListTool,
   imageToAsciiTool,

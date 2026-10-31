@@ -52,7 +52,7 @@ function shuffle<T>(items: T[]): T[] {
   return out
 }
 
-export default function TeamMakerTool() {
+export default function TeamMaker() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [raw, setRaw] = useState('')
