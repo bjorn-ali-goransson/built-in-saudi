@@ -7173,6 +7173,24 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `/call/?c=<back>&n=<name>`. A visible tab is also postMessaged
   (`bis-missed-call` → window event `bis-call-missed`), which drops a pointless
   ringing screen back to the lobby.
+- **Sawi Kalam organisers** (`functions/meet.js` over `functions/meetCore.js`,
+  one function `meet` with `action` in the body): organisers sign up and in with
+  a PASSKEY and nothing else — no password, PIN or email (`@simplewebauthn/server`,
+  discoverable credentials, user verification required). The relying party is
+  `sawikalam.com` and only that origin may run a ceremony. A meeting is a room
+  code recorded as owned by one organiser (`meetings/{code}`), so its owner hosts
+  it from any device with their passkey and nobody else can claim it. Firestore:
+  `meetOrganisers`, `meetCredentials` (public keys only), `meetChallenges` (five
+  minutes, single use), `meetings` (two months since last start). Sessions are
+  HMAC tokens on `SENDER_SECRET`, a month long. **meetCore takes its store as an
+  argument** so Sawi Kalam's e2e runs this exact code in memory with Chromium's
+  virtual authenticator — the tests are there, not here. Not covered by
+  `my-data` (no Google `sub`); deleting an organiser is still to build. Hosting is
+  decided by the embedder from `claim` before Calls mounts; the relay itself does
+  not yet refuse a non-owner who forges the host role.
+  Calls gained two host fields for it: `newMeetingPath` (where "new call" and
+  "start your own" go instead of an unowned lobby) and `pendingRoom` (a known
+  meeting nobody has started is waited in, not shown as ended).
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
   deploys on any `functions/**` change — **only the functions that change touches**,
   six at a time (`scripts/functions-plan.mjs` maps each module to its handlers: a

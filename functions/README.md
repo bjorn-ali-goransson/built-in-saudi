@@ -86,3 +86,10 @@ SEND_URL=$(gcloud functions describe send-due --gen2 --region=us-central1 --form
 gcloud scheduler jobs create http prayer-send --location=us-central1 \
   --schedule="* * * * *" --uri="${SEND_URL}?secret=<secret>" --http-method=GET
 ```
+
+## meet (Sawi Kalam organisers)
+
+Passkey sign-up/sign-in and meeting ownership for sawikalam.com. `meet.js` is the
+HTTP + Firestore shell; all logic is in `meetCore.js`, which takes its store as an
+argument so Sawi Kalam's e2e runs it in memory. POST `{ action, ... }` with action one
+of `registerOptions`, `register`, `loginOptions`, `login`, `create`, `info`, `claim`.
