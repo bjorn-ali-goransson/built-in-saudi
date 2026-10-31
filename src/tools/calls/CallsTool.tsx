@@ -6,9 +6,10 @@ import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, 
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
+import { callsHost } from './host'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
-  SITE, NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, startRingtone,
+  NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, startRingtone,
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
@@ -484,7 +485,7 @@ export default function CallsTool() {
       onClosed: () => { rtc.current = null; if (phaseRef.current === 'ended') return; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
       // Waiting caller: the busy owner told us to join their current call instead —
       // re-knock in that room (our name is already in sessionStorage).
-      onRedirect: (dest) => { try { window.location.assign(`${localePath(locale, '/apps/calls')}?code=${dest}&knock=1`) } catch { /* */ } },
+      onRedirect: (dest) => { try { window.location.assign(`${localePath(locale, callsHost().base)}?code=${dest}&knock=1`) } catch { /* */ } },
       // Waiting caller: the owner declined us, optionally with a note to show.
       onDeclined: (message) => { rtc.current?.close(); rtc.current = null; setEnded({ reason: 'declined', count: 0, message }); setPhase('ended') },
       onPollCycle: (delayMs) => {
@@ -507,8 +508,8 @@ export default function CallsTool() {
   // URL for an in-call / invite link vs the bare start page. When the host is
   // debugging, carry ?debug=1 into the invite so a (non-technical) guest lands with
   // diagnostics already on — no need to ask them to tap the bug button.
-  const joinPath = (code: string) => `${localePath(locale, '/apps/calls')}/join?code=${code}${debug ? '&debug=1' : ''}`
-  const lobbyPath = () => localePath(locale, '/apps/calls')
+  const joinPath = (code: string) => `${localePath(locale, callsHost().base)}/join?code=${code}${debug ? '&debug=1' : ''}`
+  const lobbyPath = () => localePath(locale, callsHost().base)
 
   // Host: start the call right away (others still need to be let in).
   async function startHost() {
@@ -589,7 +590,7 @@ export default function CallsTool() {
     setDeclineTarget(null)
     if (!target) return
     signalRoom(target.room, 'decline', { msg: msg.slice(0, 200) })
-    if (target.mode === 'screen') { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
+    if (target.mode === 'screen') { try { window.location.assign(localePath(locale, callsHost().base)) } catch { /* */ } }
   }
   // Escape a stale ?room= link: drop the room, become a host, clean the URL.
   function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
@@ -771,7 +772,7 @@ export default function CallsTool() {
       askToJoin()
     } else startHost()
   }
-  const newCall = () => window.location.assign(localePath(locale, '/apps/calls'))
+  const newCall = () => window.location.assign(localePath(locale, callsHost().base))
   // Ghosted by a call link (#211): claim a call link of OUR own, then re-send the
   // missed call carrying it. The owner's missed-call list turns into a "Call back"
   // button that simply rings us on our link — the roles swap, no new plumbing.
@@ -787,7 +788,7 @@ export default function CallsTool() {
   // pointless — drop back to the lobby, where the missed call is listed (#210).
   useEffect(() => {
     if (!incomingLink || answered) return
-    const onMissed = () => { try { window.location.assign(localePath(locale, '/apps/calls')) } catch { /* */ } }
+    const onMissed = () => { try { window.location.assign(localePath(locale, callsHost().base)) } catch { /* */ } }
     window.addEventListener('bis-call-missed', onMissed)
     return () => window.removeEventListener('bis-call-missed', onMissed)
   }, [incomingLink, answered, locale])
@@ -1103,7 +1104,7 @@ export default function CallsTool() {
   // to wipe the pure board when sharing starts.)
 
   async function shareInvite(code = room) {
-    const url = `${SITE}${joinPath(code)}`
+    const url = `${callsHost().site}${joinPath(code)}`
     try {
       const { makeInvite } = await import('./invite')
       const blob = await makeInvite(url, code, locale === 'ar')
@@ -1120,7 +1121,7 @@ export default function CallsTool() {
     sharedRef.current = true
     let code = existing || room
     if (!code) { code = code6(); setRoom(code); rememberHost(code); ensureRoom(code).enterLobby(name || s.you, true); setPhase('hosting') }
-    const url = `${SITE}${joinPath(code)}`
+    const url = `${callsHost().site}${joinPath(code)}`
     setShareUrl(url); setShareQr(''); setCopiedShare(false); setShareOpen(true)
     try { const QR = (await import('qrcode')).default; setShareQr(await QR.toDataURL(url, { margin: 1, width: 320, color: { dark: '#0e5a3f', light: '#ffffff' } })) } catch { /* offline */ }
   }
@@ -1328,7 +1329,7 @@ export default function CallsTool() {
               </div>
               {/* Recent calls — a conversation entry per call, alongside DM threads (#231). */}
               {!initialRoom && !incomingLink && <CallHistory locale={locale} s={s} />}
-              {!isGuest && !initialRoom && !incomingLink && (
+              {callsHost().callMe && !isGuest && !initialRoom && !incomingLink && (
                 <div className="w-full flex flex-col gap-1.5">
                   {/* "receive calls" separator above the Call Me box (#196). */}
                   <div className="flex items-center gap-2.5 my-0.5 text-sand-100/45" data-testid="call-receive-sep">
@@ -1341,7 +1342,7 @@ export default function CallsTool() {
                   <Contacts s={s} contacts={contacts} onRemove={removeContact} myName={name} />
                   <MissedCalls locale={locale} s={s} />
                   {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
-                  <CallLinkPanel locale={locale} name={name} site={SITE} onLinkChange={setHasCallLink} />
+                  <CallLinkPanel locale={locale} name={name} site={callsHost().site} onLinkChange={setHasCallLink} />
                 </div>
               )}
               {/* Hidden once a personal call link is published — that panel is the focus. */}

@@ -6953,7 +6953,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   directly peer-to-peer. No auth (public by random code), no per-user storage (so
   `my-data` untouched). **It also serves Sawi Kalam** (`sawikalam.com`, a sibling app built
   from this Calls/Messages code): its CORS allows both domains. Changing the
-  wire protocol breaks that app too, so treat it as shared. STUN is public; **no TURN** (strict NATs can't connect).
+  wire protocol breaks that app too, so treat it as shared.
+  Sawi Kalam embeds `CallsTool` itself: `src/tools/calls/host.ts`
+  (`configureCalls`) sets the site and base path the invite links use and can
+  turn the push-based call-me link off. Never hard-code `/apps/calls` or the
+  domain in the Calls code; read `callsHost()`. STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
   **Knock visibility (#217):** the ONLY admit control used to live inside the
