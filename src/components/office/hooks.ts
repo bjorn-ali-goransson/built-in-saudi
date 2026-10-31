@@ -318,6 +318,24 @@ export function useCollab(opts: { adapter: Bindable | null; kind: DocKind; title
 
   const host = useCallback((defaultRole: Role = 'edit') => { const r = 'od' + randomId(14); begin(r, true, defaultRole); return r }, [begin])
   const join = useCallback((r: string) => begin(r, false), [begin])
+  // Opened from a call (`?call=<room>`): the person asked to share THIS document
+  // into that call, so the session starts as soon as the editor is ready and its
+  // join link goes to the call's tab on a BroadcastChannel named for the room.
+  // Once per editor: ending the session does not start another.
+  const callRoom = useRef<string | null>(typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('call'))
+  const titleRef = useRef(opts.title)
+  titleRef.current = opts.title
+  useEffect(() => {
+    const call = callRoom.current
+    if (!call || !opts.adapter || state !== 'off') return
+    callRoom.current = null
+    const r = host('edit')
+    try {
+      const bc = new BroadcastChannel(`bis-call-${call}`)
+      bc.postMessage({ doc: { url: inviteUrl(opts.kind, r), title: titleRef.current, kind: opts.kind } })
+      bc.close()
+    } catch { /* no BroadcastChannel: the session still runs, its link is in the panel */ }
+  }, [opts.adapter, opts.kind, state, host])
   const end = useCallback(() => {
     sessRef.current?.stop()
     adapterRef.current?.bind(null)

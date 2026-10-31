@@ -6969,7 +6969,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   and "Turn video on anyway" ends its say for the call. `rtc.linkSamples()`
   reads the receivers' reports (`remote-inbound-rtp`) for what we send. The e2e
   injects the link through `window.__CALL_LINK_STATS` and shortens the timings
-  through `window.__CALL_GOV_LIMITS`, since CI cannot make a real bad link. STUN is public; **no TURN** (strict NATs can't connect).
+  through `window.__CALL_GOV_LIMITS`, since CI cannot make a real bad link.
+  **A live document can be shared into a call** when `callsHost().docs` names
+  where the editors live (null, the default, hides it). The view menu opens the
+  editor in a NEW tab with `?call=<room>` (leaving would end the call);
+  `useCollab` sees that, starts a session once the document is ready, and posts
+  the join link on `BroadcastChannel('bis-call-<room>')`; the call tab sends it
+  to everyone as a chat message with a `doc` field, and a link is drawn as a
+  document only if it is on this site (`liveDoc`). STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
   **Knock visibility (#217):** the ONLY admit control used to live inside the

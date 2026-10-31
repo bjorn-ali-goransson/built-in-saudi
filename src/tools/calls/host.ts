@@ -11,10 +11,12 @@ export interface CallsHost {
   base: string
   /** Messages' own path, for its invite links. */
   messagesBase: string
+  /** Where the office editors live, to share a live document into a call; null hides it. */
+  docs: { word: string; excel: string; slides: string } | null
   callMe: boolean
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', callMe: true }
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
 export const callsHost = (): CallsHost => host

@@ -25,7 +25,16 @@ import { addCall } from '../../lib/callHistory'
 import { useContacts } from '../../lib/contacts'
 import { claimCallLink, getMyCallLink, reportMissedCall, ringCallLink } from '../../lib/callLink'
 
-type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; reactions?: Record<string, string[]> }
+type ChatItem = { id: string; from: string; name: string; text?: string; fileName?: string; url?: string; doc?: { url: string; title: string }; reactions?: Record<string, string[]> }
+
+/** A shared live document, accepted only when its link is on this site. */
+function liveDoc(d: unknown): { url: string; title: string } | undefined {
+  if (!d || typeof d !== 'object') return undefined
+  const { url, title } = d as { url?: unknown; title?: unknown }
+  if (typeof url !== 'string') return undefined
+  try { if (new URL(url).origin !== window.location.origin) return undefined } catch { return undefined }
+  return { url, title: typeof title === 'string' && title ? title.slice(0, 120) : '…' }
+}
 
 export default function CallsTool() {
   const { locale } = useLocale()
@@ -385,7 +394,7 @@ export default function CallsTool() {
   }, [inCallPeers.length, isGuest])
 
   function onData(id: string, m: DataMsg) {
-    if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text }]); notify('c', `${m.name}: ${m.text}`) }
+    if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text, doc: liveDoc(m.doc) }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'react') addFloat(m.emoji, m.name)
     else if (m.t === 'msg-react') {
       // A remote reaction toggled on a message → notify (like a chat) if chat is closed,
@@ -870,6 +879,27 @@ export default function CallsTool() {
       screenToast(`${s.screenFailed}: ${err?.name || err?.message || 'error'}`)
     }
   }
+  // A live document: the editor opens in its own tab (leaving this one would end
+  // the call), starts a session and posts its join link here on a BroadcastChannel
+  // named for the room; we hand that link to everyone as a chat message. Only a
+  // link on THIS site is ever rendered as one, so a peer cannot dress up a link
+  // to somewhere else as a shared document.
+  function openDoc(k: 'word' | 'excel' | 'slides') {
+    const d = callsHost().docs
+    if (d) window.open(`/${locale}${d[k]}?call=${encodeURIComponent(room)}`, '_blank', 'noopener')
+  }
+  useEffect(() => {
+    if (phase !== 'live' || !room || typeof BroadcastChannel === 'undefined') return
+    const bc = new BroadcastChannel(`bis-call-${room}`)
+    bc.onmessage = (e) => {
+      const doc = liveDoc((e.data as { doc?: unknown })?.doc)
+      if (!doc) return
+      const id = oid(), text = `${doc.title}: ${doc.url}`
+      rtc.current?.broadcast({ t: 'chat', id, name: name || s.you, text, doc })
+      setChat((c) => [...c, { id, from: 'me', name: s.you, text, doc }])
+    }
+    return () => bc.close()
+  }, [phase, room, name, s])
   function sendChat() { const t = msg.trim(); if (!t) return; const id = oid(); rtc.current?.broadcast({ t: 'chat', id, name: name || s.you, text: t }); setChat((c) => [...c, { id, from: 'me', name: s.you, text: t }]); setMsg('') }
   // Live meeting reaction: drift a floating emoji/tag up the stage (with the
   // reactor's name above it) and tell everyone.
@@ -1628,6 +1658,9 @@ export default function CallsTool() {
           {canShareScreen && <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />}
           <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} testid="call-upload" />
           <MenuItem icon={<CompassIcon />} label={s.location} onClick={openLocation} active={view === 'loc'} testid="view-location" />
+          {callsHost().docs && (['word', 'excel', 'slides'] as const).map((k) => (
+            <MenuItem key={k} icon={<FileIcon />} label={s.shareDoc[k]} onClick={() => openDoc(k)} testid={`call-doc-${k}`} />
+          ))}
         </Menu>
 
         {/* participants / chat / call controls — top on desktop, bottom bar on mobile */}
@@ -1888,7 +1921,8 @@ export default function CallsTool() {
                     <div className={`flex items-center gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
                       {/* Speech bubble: tail corner squared toward the sender's side. */}
                       <div className={`px-3 py-1.5 rounded-2xl leading-snug break-words ${mine ? 'bg-green-600 text-sand-100 rounded-ee-sm' : 'bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink rounded-es-sm'}`}>
-                        {m.url ? <a href={m.url} download={m.fileName} className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
+                        {m.doc ? <a href={m.doc.url} target="_blank" rel="noopener" data-testid="call-doc-link" className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><FileIcon className="w-3.5 h-3.5" />{s.liveDoc(m.doc.title)}</a>
+                          : m.url ? <a href={m.url} download={m.fileName} className={`underline inline-flex items-center gap-1 ${mine ? 'text-sand-100' : 'text-green-700'}`}><DownloadIcon className="w-3.5 h-3.5" />{m.fileName}</a>
                           : m.fileName ? <span className="opacity-80 inline-flex items-center gap-1"><UploadIcon className="w-3.5 h-3.5" />{m.fileName}</span>
                             : m.text}
                       </div>

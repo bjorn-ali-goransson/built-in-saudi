@@ -64,7 +64,7 @@ export type WbObj =
 
 // App data messages (JSON, `t`) sent over the channel between in-call peers.
 export type DataMsg =
-  | { t: 'chat'; id: string; name: string; text: string }
+  | { t: 'chat'; id: string; name: string; text: string; doc?: { url: string; title: string } }
   // A live floating reaction on the meeting (Zoom/FB-style), and a toggle reaction
   // pinned to a specific chat message (by its id). Both carry the reactor's name.
   | { t: 'react'; emoji: string; name: string }
