@@ -51,7 +51,7 @@ export const CLUSTERS: string[][] = [
   ['id-expiry', 'saudi-plate', 'date-diff'],
   ['calls', 'messages', 'book-me'],
   ['translate', 'detect-language', 'diacritize'],
-  ['stopwatch', 'pomodoro', 'bpm-tap', 'metronome'],
+  ['stopwatch', 'metronome'],
   ['typing-test', 'stopwatch', 'spin-wheel'],
   ['word-editor', 'excel-editor', 'powerpoint-editor', 'pdf-to-word'],
   ['pdf-merge', 'pdf-compress', 'pdf-to-images'],
@@ -59,7 +59,7 @@ export const CLUSTERS: string[][] = [
   ['uuid-generator', 'fake-data', 'readme-generator'],
   ['jwt-decoder', 'cert-decoder', 'url-parser'],
   ['case-converter', 'char-finder', 'readable-text'],
-  ['audio-spectrum', 'audio-convert', 'metronome'],
+  ['audio-convert', 'video-edit'],
   ['link-shortener', 'url-parser'],
   ['csv-json', 'csv-vcard', 'excel-editor'],
 ]

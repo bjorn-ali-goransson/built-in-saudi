@@ -39,11 +39,6 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
-    id: 'audio-spectrum',
-    en: { name: 'Audio Spectrum Analyser', description: 'Draw the frequency content of an audio or video file and read off where it stops. A lossy encoder throws away everything above a cutoff, and that cutoff is visible — so a file converted to 320 kbps from a 128 kbps source shows a wall at 16 kHz. Analysed in your browser; nothing is uploaded.' },
-    ar: { name: 'محلّل الطيف الصوتي', description: 'ارسم المحتوى الترددي لملف صوتي أو مرئي واقرأ أين ينتهي. فالترميز الضائع يتخلّص من كل شيء فوق حدّ معيّن، وهذا الحدّ مرئي — فالملف المحوّل إلى ٣٢٠ كيلوبت من مصدر ١٢٨ يُظهر جدارًا عند ١٦ كيلوهرتز. يجري التحليل في متصفحك؛ ولا يُرفع شيء.' },
-  },
-  {
     id: 'calls',
     en: { name: 'Calls', description: 'Secure peer-to-peer voice/video/teams calling between browsers — no data touches our servers. Share one invite link and let people in from a waiting room; video, screen-share, a shared whiteboard, chat and file-drop all go straight between browsers over WebRTC, with only the initial handshake passing through a tiny relay that never sees your call.' },
     ar: { name: 'مكالمات', description: 'مكالمات صوت وفيديو وفرق آمنة بين المتصفحات مباشرةً — لا تمر أي بيانات بخوادمنا. شارك رابط دعوة واحدًا واسمح للناس بالدخول من غرفة انتظار؛ الفيديو ومشاركة الشاشة والسبورة والدردشة وإرسال الملفات تنتقل مباشرة عبر WebRTC، وفقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك.' },
@@ -417,11 +412,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'metronome',
     en: { name: 'Metronome', description: 'Tempo from 30 to 300, any time signature, subdivisions and an accented downbeat. Beats are scheduled on the audio clock rather than a JavaScript timer — a timer drifts by tens of milliseconds under load and stops in a background tab, which is audibly wrong within a few bars.' },
     ar: { name: 'ميقاتية (متـرونوم)', description: 'إيقاع من ٣٠ إلى ٣٠٠، وأي ميزان، وتقسيمات ونبضة أولى مشدّدة. تُجدوَل النبضات على ساعة الصوت لا على مؤقّت جافاسكربت — فالمؤقّت ينحرف بعشرات الأجزاء من الثانية ويتوقّف في تبويب خلفي، وهو خطأ مسموع خلال مازورات قليلة.' },
-  },
-  {
-    id: 'bpm-tap',
-    en: { name: 'Tap BPM', description: 'Find a track’s tempo by tapping along. It averages over a sliding window so it follows a tempo change instead of burying it, and it tells you how steady your tapping was. It also gives the quarter, eighth and dotted-eighth times in milliseconds, which is what a delay pedal wants.' },
-    ar: { name: 'قياس الإيقاع بالنقر', description: 'اعرف إيقاع مقطع بالنقر معه. تحسب الأداة المتوسط على نافذة متحركة فتتابع تغيّر الإيقاع بدل أن تدفنه، وتخبرك بمدى ثبات نقرك. وتعطيك أزمنة النغمة الربعية والثمانية والثمانية المنقوطة بالمللي ثانية، وهو ما يحتاجه جهاز التأخير.' },
   },
   {
     id: 'colour-blind',

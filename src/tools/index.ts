@@ -68,7 +68,6 @@ import { idExpiryTool } from './id-expiry/meta'
 import { passwordStrengthTool } from './password-strength/meta'
 import { passportPhotoTool } from './passport-photo/meta'
 import { audioConvertTool } from './audio-convert/meta'
-import { audioSpectrumTool } from './audio-spectrum/meta'
 import { pdfToWordTool } from './pdf-to-word/meta'
 import { spinWheelTool } from './spin-wheel/meta'
 import { cronBuilderTool } from './cron-builder/meta'
@@ -82,7 +81,6 @@ import { certificateTool } from './certificate/meta'
 import { colourBlindTool } from './colour-blind/meta'
 import { batchWatermarkTool } from './batch-watermark/meta'
 import { metronomeTool } from './metronome/meta'
-import { bpmTapTool } from './bpm-tap/meta'
 import { saudiPlateTool } from './saudi-plate/meta'
 import { shortAddressTool } from './short-address/meta'
 import { worksheetsTool } from './worksheets/meta'
@@ -118,7 +116,6 @@ export const tools: Tool[] = [
   passportPhotoTool,
   weatherTool,
   audioConvertTool,
-  audioSpectrumTool,
   videoEditTool,
   currencyConverterTool,
   idExpiryTool,
@@ -140,7 +137,6 @@ export const tools: Tool[] = [
   colourBlindTool,
   splitBillTool,
   metronomeTool,
-  bpmTapTool,
   zakatCalculatorTool,
   hijriCalendarTool,
   // Before hijri-age: «حاسبة العمر» ties the two exactly, and a bare

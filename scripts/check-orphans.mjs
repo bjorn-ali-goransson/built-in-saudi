@@ -33,7 +33,9 @@ const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '
 // selection logic, `twinprobe`'s copy of the loader): **use the shared loader;
 // do not write a second one.**
 const { tools: live } = await import('../evals/lib/tools.mjs')
-if (live.length < 100) {
+// A floor that only catches a loader returning almost nothing: the catalogue
+// itself went from 244 to under 100 in November 2026 on purpose.
+if (live.length < 50) {
   console.error(`check-orphans: loaded only ${live.length} tools — the loader is wrong, not the catalogue.`)
   process.exit(1)
 }

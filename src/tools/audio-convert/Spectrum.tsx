@@ -51,7 +51,7 @@ const STR = {
   },
 }
 
-export default function AudioSpectrumTool() {
+export default function Spectrum() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [busy, setBusy] = useState<'' | 'read' | 'run'>('')

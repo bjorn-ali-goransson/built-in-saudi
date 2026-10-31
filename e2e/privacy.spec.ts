@@ -62,6 +62,8 @@ async function tokenPdf(): Promise<Buffer> {
 
 export interface Case {
   id: string
+  /** The test's title when one tool has two intake paths (a mode each). */
+  label?: string
   /**
    * The file input's own testid, OR — when it has none — the testid of the
    * element it sits inside, with `within: true`.
@@ -207,7 +209,8 @@ export const CASES: Case[] = [
   { id: 'excel-editor', testid: 'office-file-input', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'word-editor', testid: 'office-file-input', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Notes\n\n${TOKEN}\n`) },
   { id: 'powerpoint-editor', testid: 'office-file-input', name: 'talk.md', mime: 'text/markdown', make: () => Buffer.from(`# Talk\n\n---\n\n# Point\n- ${TOKEN}\n`) },
-  { id: 'audio-spectrum', testid: 'as-file', name: 'clip.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
+  { id: 'audio-convert', label: 'audio-convert (spectrum)', testid: 'as-file', name: 'clip.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN),
+    reveal: async (page) => { await page.getByTestId('at-mode-spectrum').click() } },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
 
   // --- Second batch off the UNVERIFIED list. These twenty reach the input
@@ -371,7 +374,7 @@ const READ_PROBE = `
 `
 
 for (const c of CASES) {
-  test(`${c.id}: the file never leaves the browser`, async ({ page }) => {
+  test(`${c.label ?? c.id}: the file never leaves the browser`, async ({ page }) => {
     const leaked: string[] = []
     const withBody: string[] = []
     await page.addInitScript(READ_PROBE)

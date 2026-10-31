@@ -38,7 +38,7 @@ const RENAMED = Object.fromEntries(
 
 const ADDED = Object.fromEntries([...readFileSync('src/tools/added.ts', 'utf8').matchAll(/'([a-z0-9-]+)':\s*'(\d{4}-\d{2}-\d{2})'/g)].map((m) => [m[1], m[2]]))
 const live = new Set(Object.keys(ADDED))
-if (live.size < 100) {
+if (live.size < 50) {
   console.error(`gen-popularity: found only ${live.size} tools in src/tools/added.ts — the sweep is broken.`)
   process.exit(1)
 }

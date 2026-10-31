@@ -64,12 +64,13 @@ test.describe('metronome', () => {
 test.describe('tap bpm', () => {
   test('needs a couple of taps before it will guess', async ({ page }) => {
     await page.goto('/en/apps/bpm-tap')
+    await expect(page).toHaveURL(/\/en\/apps\/metronome\?mode=tap$/)
     await expect(page.getByTestId('bt-bpm')).toHaveText('—')
     await expect(page.getByTestId('bt-more')).toBeVisible()
   })
 
   test('counts the taps and reads a plausible tempo', async ({ page }) => {
-    await page.goto('/en/apps/bpm-tap')
+    await page.goto('/en/apps/metronome?mode=tap')
     for (let i = 0; i < 6; i++) {
       await page.getByTestId('bt-tap').click()
       if (i < 5) await page.waitForTimeout(500)
@@ -82,7 +83,7 @@ test.describe('tap bpm', () => {
   })
 
   test('the delay times agree with the tempo it is showing', async ({ page }) => {
-    await page.goto('/en/apps/bpm-tap')
+    await page.goto('/en/apps/metronome?mode=tap')
     // Short gaps on purpose: the tool treats a gap over two seconds as a new
     // attempt, and under parallel load a longer gap can genuinely stretch past
     // that and reset the sequence mid-test.
@@ -104,7 +105,7 @@ test.describe('tap bpm', () => {
   })
 
   test('reports how steady the tapping was', async ({ page }) => {
-    await page.goto('/en/apps/bpm-tap')
+    await page.goto('/en/apps/metronome?mode=tap')
     // Deliberately uneven gaps — the reading should not present itself as solid.
     for (const g of [200, 900, 300, 800, 250]) {
       await page.getByTestId('bt-tap').click()
@@ -115,7 +116,7 @@ test.describe('tap bpm', () => {
   })
 
   test('reset clears everything', async ({ page }) => {
-    await page.goto('/en/apps/bpm-tap')
+    await page.goto('/en/apps/metronome?mode=tap')
     for (let i = 0; i < 3; i++) { await page.getByTestId('bt-tap').click(); await page.waitForTimeout(400) }
     await expect(page.getByTestId('bt-count')).toContainText('3 taps')
     await page.getByTestId('bt-reset').click()

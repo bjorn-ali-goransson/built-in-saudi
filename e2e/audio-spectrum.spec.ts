@@ -29,7 +29,7 @@ function wav(sampleRate: number, seconds: number, fill: (i: number, sr: number) 
 const sine = (hz: number) => (i: number, sr: number) => 0.7 * Math.sin((2 * Math.PI * hz * i) / sr)
 
 async function analyse(page: import('@playwright/test').Page, buf: Buffer, locale = 'en') {
-  await page.goto(`/${locale}/apps/audio-spectrum`)
+  await page.goto(`/${locale}/apps/audio-convert?mode=spectrum`)
   await page.getByTestId('as-file').setInputFiles({ name: 'tone.wav', mimeType: 'audio/wav', buffer: buf })
   await expect(page.getByTestId('as-cutoff')).toBeVisible({ timeout: 30_000 })
 }
@@ -101,6 +101,7 @@ test('it draws something, and the canvas is not blank', async ({ page }) => {
 
 test('a file that is not audio is refused with a reason', async ({ page }) => {
   await page.goto('/en/apps/audio-spectrum')
+  await expect(page).toHaveURL(/\/en\/apps\/audio-convert\?mode=spectrum$/)
   await page.getByTestId('as-file').setInputFiles('e2e/fixtures/diff-small.png')
   await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 20_000 })
 })

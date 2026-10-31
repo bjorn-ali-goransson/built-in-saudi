@@ -42,7 +42,7 @@ const STR = {
   },
 }
 
-export default function BpmTapTool() {
+export default function TapTempo() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [taps, setTaps] = useState<number[]>([])

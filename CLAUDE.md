@@ -925,6 +925,12 @@ had ever recorded — it is gone now (204/204). `RenamedToolRedirect` takes a
 a QR code: **a merged tool's old address should open the part that does its
 job**, not the survivor's front page.
 
+URLs, audio and tempo the same way (102 → 99): the URL & HTML Encoder is a mode
+of the URL parser, the Spectrum Analyser a mode of the Audio Converter, and Tap
+BPM a mode of the Metronome, each old address opening its mode. **A tool with
+two intake paths needs a privacy row per path** — `Case.label` titles the second
+one — because the spectrum reads the file through its own worker.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`
