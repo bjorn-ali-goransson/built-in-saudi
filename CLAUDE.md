@@ -7181,7 +7181,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   code recorded as owned by one organiser (`meetings/{code}`), so its owner hosts
   it from any device with their passkey and nobody else can claim it. Firestore:
   `meetOrganisers`, `meetCredentials` (public keys only), `meetChallenges` (five
-  minutes, single use), `meetings` (two months since last start). Sessions are
+  minutes, single use), `meetings`. **Every record is forgotten after a month
+  of inactivity**: an organiser and their passkeys get another month whenever
+  they sign in or make or start a meeting, a meeting whenever its owner starts
+  it. meetCore treats an expired record as gone and deletes it on read; the
+  functions deploy sets Firestore TTL on `expiresAt` (stored as a Timestamp) for
+  the four collections, as a `continue-on-error` step in case the deploy account
+  lacks the permission. Sessions are
   HMAC tokens on `SENDER_SECRET`, a month long. **meetCore takes its store as an
   argument** so Sawi Kalam's e2e runs this exact code in memory with Chromium's
   virtual authenticator — the tests are there, not here. Not covered by
