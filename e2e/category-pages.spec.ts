@@ -131,7 +131,7 @@ test('no prerendered tool page is missing its category link', async () => {
   // Without this the whole test passes on an empty directory read, having
   // examined nothing — a green that means "I found no pages", not "every page
   // is fine".
-  expect(checked).toBeGreaterThan(200)
+  expect(checked).toBeGreaterThan(100) // 95 tools × 2 locales after the November 2026 merges; the floor only catches a read that found nothing
   expect(missing, `tool pages with no category link: ${missing.join(', ')}`).toEqual([])
 })
 
