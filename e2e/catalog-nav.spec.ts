@@ -12,8 +12,8 @@ test.describe('catalogue section nav', () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
     await expect(page.getByTestId('section-nav')).toBeVisible()
 
-    await page.getByTestId('section-nav-Design').click()
-    const head = page.getByTestId('section-Design')
+    await page.getByTestId('section-nav-Business').click()
+    const head = page.getByTestId('section-Business')
     await expect(head).toBeInViewport()
     // Not merely "in the viewport" — not underneath the header + the bar.
     await expect.poll(async () => Math.round((await head.boundingBox())!.y)).toBeGreaterThan(100)
@@ -51,9 +51,9 @@ test.describe('catalogue section nav', () => {
       return el.scrollTop
     })
     expect(await y()).toBe(0)
-    await page.getByTestId('section-nav-Design').click()
+    await page.getByTestId('section-nav-Business').click()
     await expect.poll(y).toBeGreaterThan(200)
-    await expect(page.getByTestId('section-Design')).toBeInViewport()
+    await expect(page.getByTestId('section-Business')).toBeInViewport()
   })
 
 
@@ -119,11 +119,11 @@ test('the recommended row shows the big families, not one corner of the site', a
   await page.goto('/en')
   const rec = page.getByTestId('section-__rec')
   await expect(rec).toBeVisible()
-  // PDF, images and the Saudi rules are the families this site has invested
+  // PDF, images and the office editors are the families this site has invested
   // most in, and a visitor who does not know what to ask for learns them here.
   await expect(rec.getByTestId('tool-pdf-to-word')).toBeVisible()
   await expect(rec.getByTestId('tool-image-compressor')).toBeVisible()
-  await expect(rec.getByTestId('tool-gosi-salary')).toBeVisible()
+  await expect(rec.getByTestId('tool-word-editor')).toBeVisible()
 })
 
 test('a tool dropped from Recommended is not hidden, it goes back to its category', async ({ page }) => {

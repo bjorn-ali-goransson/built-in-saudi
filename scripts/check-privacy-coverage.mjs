@@ -62,14 +62,12 @@ const UNVERIFIED = new Set([
 const TEXT_SENDS_DATA = new Map([
   ['diacritize', 'posts the text to our backend for the OpenAI pass'],
   ['prompt-analyzer', 'posts the prompt to our backend for the OpenAI pass'],
-  ['link-preview', 'fetches the URL you give it — that IS the tool'],
   ['password-strength', 'k-anonymous range query to HIBP; proved by e2e/password-strength.spec.ts'],
 ])
 
 /** Proved by a spec other than e2e/privacy.spec.ts, named so it can be checked. */
 const TEXT_PROVED_ELSEWHERE = new Map([
   ['translate', 'e2e/builtin-ai.spec.ts asserts the typed text never appears in a request'],
-  ['summarize', 'e2e/builtin-ai.spec.ts asserts the typed text never appears in a request'],
   ['detect-language', 'e2e/builtin-ai.spec.ts asserts the typed text never appears in a request'],
 ])
 
@@ -83,14 +81,11 @@ const TEXT_PROVED_ELSEWHERE = new Map([
  * got short three times before anyone noticed the pattern.
  */
 const TEXT_UNVERIFIED = new Set([
-  'a11y-check', 'arabic-normalize', 'arabic-numerals', 'arabic-poetry', 'attendance-sheet',
-  'bingo-cards', 'case-converter', 'certificate', 'csv-json', 'fix-encoding', 'franco-arabic',
-  'invisible-chars', 'json-diff', 'json-formatter', 'json-to-types', 'label-sheet',
-  'line-breaks', 'list-tools', 'markdown-table', 'passphrase', 'password-generator',
-  'paste-to-markdown', 'quiz-maker', 'quotation', 'random-picker', 'readable-text',
-  'readme-generator', 'regex-tester', 'robots-txt', 'saudi-phone', 'seating-chart',
-  'speech-time', 'spin-wheel', 'team-maker', 'text-counter', 'typing-test', 'url-encoder',
-  'user-agent', 'uuid-generator', 'word-search', 'worksheets',
+  'arabic-normalize', 'arabic-numerals', 'arabic-poetry', 'attendance-sheet', 'case-converter',
+  'certificate', 'csv-json', 'franco-arabic', 'json-diff', 'markdown-table', 'passphrase',
+  'password-generator', 'quiz-maker', 'readable-text', 'readme-generator', 'saudi-phone',
+  'seating-chart', 'spin-wheel', 'team-maker', 'typing-test', 'url-encoder', 'uuid-generator',
+  'worksheets',
 ])
 
 const root = process.cwd()

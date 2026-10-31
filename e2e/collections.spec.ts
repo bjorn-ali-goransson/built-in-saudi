@@ -13,7 +13,7 @@ import { readFileSync, existsSync } from 'node:fs'
 // collection are the same thing to a reader, so a second URL space would be two
 // mental models for one idea.
 
-const SLUGS = ['ramadan', 'teaching', 'compare'] as const
+const SLUGS = ['ramadan', 'teaching', 'security'] as const
 
 test('each collection has a page listing its curated tools', async ({ page }) => {
   for (const slug of SLUGS) {
@@ -28,25 +28,24 @@ test('each collection has a page listing its curated tools', async ({ page }) =>
 test('the tools are in the CURATED order, not registry order', async ({ page }) => {
   // A `filter` over the registry would silently reimpose the catalogue's order
   // on a list that was written to read in a particular sequence.
-  await page.goto('/en/c/compare/')
+  await page.goto('/en/c/security/')
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(ids.slice(0, 4)).toEqual(['text-diff', 'json-diff', 'sheet-diff', 'image-diff'])
+  expect(ids.slice(0, 4)).toEqual(['password-generator', 'password-strength', 'passphrase', 'jwt-decoder'])
 })
 
 test('a collection pulls from several DIFFERENT categories', async ({ page }) => {
   // That is the whole reason it exists rather than being a filing mistake.
-  await page.goto('/en/c/ramadan/')
+  await page.goto('/en/c/teaching/')
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(ids).toContain('prayer-times')     // Islamic
-  expect(ids).toContain('zakat-calculator') // a calculator
-  expect(ids).toContain('timesheet')        // Saudi / Local
-  expect(ids).toContain('water-intake')     // health
+  expect(ids).toContain('worksheets')  // Generators
+  expect(ids).toContain('flashcards')  // Text
+  expect(ids).toContain('certificate') // Business
 })
 
 test('searching the collection word offers the collection', async ({ page }) => {
-  for (const [q, slug] of [['ramadan', 'ramadan'], ['teacher', 'teaching'], ['compare', 'compare']] as const) {
+  for (const [q, slug] of [['ramadan', 'ramadan'], ['teacher', 'teaching'], ['privacy', 'security']] as const) {
     await page.goto('/en')
     await page.getByRole('searchbox').fill(q)
     const offer = page.getByTestId('category-offer')
@@ -59,7 +58,7 @@ test('searching the collection word offers the collection', async ({ page }) => 
 test('the Arabic words that measured as wide ties now reach a group', async ({ page }) => {
   // «رمضان» was a 6-way tie answered with the Hijri calendar; «معلم» a 6-way
   // answered with a seating chart.
-  for (const [q, slug] of [['رمضان', 'ramadan'], ['معلم', 'teaching'], ['مقارنة', 'compare']] as const) {
+  for (const [q, slug] of [['رمضان', 'ramadan'], ['معلم', 'teaching'], ['خصوصية', 'security']] as const) {
     await page.goto('/ar')
     await page.getByRole('searchbox').fill(q)
     await expect(page.getByTestId('category-offer'), q).toHaveAttribute('data-category', slug)
@@ -124,8 +123,8 @@ test('a browsing visitor can see the collections exist', async ({ page }) => {
   await page.goto('/en')
   await expect(page.getByTestId('collection-row')).toBeVisible()
   await expect(page.getByTestId('collection-link-security')).toBeVisible()
-  await page.getByTestId('collection-link-new-business').click()
-  await expect(page).toHaveURL(/\/en\/c\/new-business\/?$/)
+  await page.getByTestId('collection-link-teaching').click()
+  await expect(page).toHaveURL(/\/en\/c\/teaching\/?$/)
 })
 
 test('the row is NOT rendered over search results', async ({ page }) => {
@@ -149,11 +148,4 @@ test('a tool in NO collection shows none, rather than an empty label', async ({ 
   await page.goto('/en/apps/qr-code')
   await expect(page.getByTestId('tool-category-link')).toBeVisible()
   await expect(page.locator('[data-testid^="tool-collection-"]')).toHaveCount(0)
-})
-
-test('the Arabic side names the collection in Arabic', async ({ page }) => {
-  await page.goto('/ar/apps/cr-renewal')
-  const link = page.getByTestId('tool-collection-new-business')
-  await expect(link).toBeVisible()
-  expect(/[\u0600-\u06FF]/.test((await link.innerText()).trim())).toBe(true)
 })

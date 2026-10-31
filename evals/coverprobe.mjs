@@ -101,15 +101,11 @@ console.log(`=> It would caveat ${realDead.length} of ${real.length} real querie
 const SPELLING = [
   ['normalise', 'arabic-normalize'],
   ['optimise my cv', 'ats-cv-optimizer'],
-  ['anonymise', 'data-anonymize'],
-  ['sanitise', 'data-anonymize'],
-  ['analyse email headers', 'email-headers'],
   ['optimise an image', 'image-compressor'],
   ['romanization', 'name-spelling'],
   ['optimise a pdf', 'pdf-compress'],
   ['rasterise', 'pdf-to-images'],
   ['analyse a prompt', 'prompt-analyzer'],
-  ['optimizer for svg', 'svg-optimise'],
   ['diacritiser', 'diacritize'],
 ]
 console.log('\nSPELLING VARIANTS (-ise / -ize, both of which people type)')

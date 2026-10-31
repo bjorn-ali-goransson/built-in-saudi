@@ -28,24 +28,18 @@
 
 export const UNTUNED6 = [
   // --- verb vs verbal noun --------------------------------------------------
-  ['اختصر النص', 'summarize'],
-  ['تلخيص النص', 'summarize'],
   ['ترجم جملة', 'translate'],
   ['احسب الزكاة', 'zakat-calculator'],
   ['حساب الزكاة', 'zakat-calculator'],
-  ['اقسم ملف pdf', 'pdf-split'],
-  ['تقسيم ملف pdf', 'pdf-split'],
   ['ادمج الصور', 'images-to-pdf'],
   ['اضغط الصورة', 'image-compressor'],
   ['ضغط الصورة', 'image-compressor'],
   ['حوّل التاريخ', 'hijri-calendar'],
-  ['قص الفيديو', 'video-trim'],
-  ['اقتصاص صورة', 'image-cropper'],
+  ['قص الفيديو', 'video-edit'],
+  ['اقتصاص صورة', 'image-edit'],
 
   // --- singular vs plural ---------------------------------------------------
-  ['عرض تقديمي إلى نص', 'pptx-to-text'],
-  ['جهة اتصال إلى جدول', 'vcard-to-csv'],
-  ['جهات الاتصال', 'vcard-to-csv'],
+  ['عرض تقديمي إلى نص', 'powerpoint-editor'],
   ['كلمة سر عشوائية', 'password-generator'],
   ['كلمات سر عشوائية', 'password-generator'],
   ['بطاقة تعليمية', 'flashcards'],
@@ -58,9 +52,8 @@ export const UNTUNED6 = [
   // --- the definite article, and the agent noun ------------------------------
   ['المترجم', 'translate'],
   ['المدقق اللغوي للعربية', 'diacritize'],
-  ['العداد', 'text-counter'],
   ['الحاسبة الهجرية', 'hijri-age'],
-  ['المولّد العشوائي', 'random-picker'],
+  ['المولّد العشوائي', 'spin-wheel'],
   ['الضاغط', 'image-compressor'],
 
   // --- the same subject, several shapes -------------------------------------
@@ -75,9 +68,7 @@ export const UNTUNED6 = [
   ['اقرأ الباركود', 'qr-reader'],
 
   // --- possessive and prepositional prefixes ---------------------------------
-  ['للمخالفة المرورية', 'traffic-fine'],
   ['بالهجري', 'hijri-calendar'],
-  ['كمستند وورد', 'markdown-docx'],
-  ['بصيغة pdf', ['images-to-pdf', 'markdown-docx', 'pdf-to-images']],
-  ['وللإيجار', 'rent-rules'],
+  ['كمستند وورد', 'word-editor'],
+  ['بصيغة pdf', ['images-to-pdf', 'word-editor', 'pdf-to-images']],
 ]

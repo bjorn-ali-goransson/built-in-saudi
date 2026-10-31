@@ -1,5 +1,5 @@
 import { parseCsv, sniffDelimiter } from './csv'
-import { readWorkbook } from '../tools/xlsx-convert/xlsx'
+import { readWorkbook } from './xlsxRead'
 
 // "Read whatever table file the user has" — the third tool to need this, so it
 // belongs here rather than being copied a third time.

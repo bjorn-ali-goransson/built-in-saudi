@@ -8,7 +8,7 @@ export const csvJsonTool: Tool = {
   tagline: 'Convert between CSV and JSON, both ways.',
   description:
     'Paste CSV to get an array of JSON objects keyed by the header row, or paste JSON to get CSV back. Handles quoted fields, commas and newlines inside values. Everything is parsed in your browser — nothing is uploaded.',
-  category: 'Converters',
+  category: 'Developer',
   keywords: ['csv', 'json', 'convert', 'spreadsheet', 'data', 'table', 'parse', 'تحويل', 'بيانات'],
   status: 'stable',
   Icon: TableIcon,

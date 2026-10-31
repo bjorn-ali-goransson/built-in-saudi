@@ -33,30 +33,21 @@ export const UNTUNED_AR = [
   // PDF
   ['ضغط ملف pdf كبير', 'pdf-compress'],
   ['دمج ملفات pdf', 'pdf-merge'],
-  ['تقسيم ملف pdf', 'pdf-split'],
   ['توقيع مستند pdf', 'pdf-sign'],
-  ['استخراج النص من ملف pdf', 'pdf-to-text'],
-  ['ترقيم صفحات pdf', 'pdf-stamp'],
+  ['استخراج النص من ملف pdf', 'pdf-ocr'],
   // Images
   ['إزالة الخلفية من الصورة', 'remove-background'],
-  ['قص الصورة', 'image-cropper'],
+  ['قص الصورة', 'image-edit'],
   ['تصغير حجم الصورة', 'image-compressor'],
   ['صورة شخصية للجواز', 'passport-photo'],
-  ['حذف بيانات الصورة', 'metadata-remove'],
   // EXPECTATION WAS WRONG. «إخفاء معلومات في صورة» is literally "hiding
   // information inside an image", which IS steganography — the tool that won.
   // The Arabic for redaction is «طمس», so that is what the redactor is benched
   // on, and «طمس» turned out to be missing from its keywords entirely: it
   // scored 41.67, below the relevance floor, so it did not appear at all.
   ['إخفاء معلومات في صورة', 'steganography'],
-  ['طمس وجه في صورة', 'image-redact'],
-  ['استخراج الألوان من صورة', 'color-palette'],
+  ['طمس وجه في صورة', 'image-edit'],
   // Saudi / official
-  ['مكافأة نهاية الخدمة', 'end-of-service'],
-  ['رسوم تجديد الإقامة', 'iqama-fees'],
-  ['متى ينتهي الفحص الدوري', 'vehicle-renewal'],
-  ['ضريبة القيمة المضافة', 'vat-calculator'],
-  ['هل يلزمني التسجيل في الضريبة', 'vat-registration'],
   ['تحويل لوحة السيارة', 'saudi-plate'],
   ['التحقق من الآيبان', 'iban-validator'],
   ['العنوان الوطني المختصر', 'short-address'],
@@ -68,7 +59,6 @@ export const UNTUNED_AR = [
   ['التقويم الهجري', 'hijri-calendar'],
   ['دليل الحج والعمرة', 'hajj-umrah'],
   // Arabic language
-  ['تصحيح النص المشوّه', 'fix-encoding'],
   ['كتابة الاسم بالإنجليزية', 'name-spelling'],
   ['توحيد الهمزات', 'arabic-normalize'],
   ['الأرقام الهندية والعربية', 'arabic-numerals'],
@@ -78,12 +68,9 @@ export const UNTUNED_AR = [
   // «باركود» is what Saudi usage calls a QR code. Both readings are right.
   ['مولّد باركود', ['barcode', 'qr-code']],
   ['تقسيم الفاتورة بين الأصدقاء', 'split-bill'],
-  ['مقارنة نصين', 'text-diff'],
-  ['تسجيل الشاشة', 'screen-recorder'],
-  ['قص مقطع صوتي', 'audio-trim'],
   ['ساعة إيقاف', 'stopwatch'],
   // Two tools that are both a wheel you spin to choose. Nothing in the phrase
   // picks between them.
-  ['عجلة الاختيار العشوائي', ['spin-wheel', 'random-picker']],
-  ['تحويل ملف إكسل إلى csv', 'xlsx-convert'],
+  ['عجلة الاختيار العشوائي', ['spin-wheel']],
+  ['تحويل ملف إكسل إلى csv', 'excel-editor'],
 ]

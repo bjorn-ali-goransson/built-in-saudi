@@ -10,7 +10,9 @@ export const cronBuilderTool: Tool = {
   description:
     'Build a cron expression without remembering the field order — choose daily, weekly, monthly or every few minutes, and it writes the five fields for you. It then lists the next five times the schedule would actually fire, which is the only way to be sure you wrote what you meant. It also warns about the day-of-month and day-of-week trap, where cron fires when either matches rather than both.',
   category: 'Developer',
-  keywords: ['cron', 'crontab', 'schedule', 'builder', 'generator', 'كرون', 'جدولة', 'مهام مجدولة', 'تعبير'],
+  keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'cron explainer', 'explain cron', 'what does this cron mean','cron', 'crontab', 'schedule', 'builder', 'generator', 'كرون', 'جدولة', 'مهام مجدولة', 'تعبير'],
   status: 'stable',
   Icon: ClockIcon,
   component: lazyTool(() => import('./CronBuilderTool')),

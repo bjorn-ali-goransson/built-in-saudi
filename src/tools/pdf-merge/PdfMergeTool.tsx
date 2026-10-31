@@ -109,7 +109,7 @@ export default function PdfMergeTool() {
             // pdf-lib cannot open an encrypted PDF at all, but pdf.js can with
             // the password the reader already has. A refusal with nowhere to go
             // is a dead end; this is the same route pdf-split offers.
-            <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="pm-to-text">{s.toText}</Button>
+            <Button className="self-start" to={`/${locale}/apps/pdf-ocr`} data-testid="pm-to-text">{s.toText}</Button>
           )}
 
           <div className="flex gap-2 items-center">

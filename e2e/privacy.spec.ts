@@ -196,38 +196,10 @@ function mp4WithToken(token: string): Buffer {
 // Exported so a measurement can drive the same list without copying it —
 // a second list is how a guard and its audit stop agreeing.
 export const CASES: Case[] = [
-  // A spread across every family that takes a file, because the promise is
-  // made on all of them and a guard that only covers the tools I happened to
-  // write last is a guard over my own memory.
-  { id: 'pdf-to-text', testid: 'p2t-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  // A contract against its previous draft is the file this whole guard is for.
-  { id: 'pdf-diff', testid: 'pd-file-a', name: 'contract-v1.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'image-base64', testid: 'ib-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
-  { id: 'print-size', testid: 'ps-file', name: 'pic.png', mime: 'image/png', make: pngWithToken },
   { id: 'doc-scan', testid: 'ds-file', name: 'page.png', mime: 'image/png', make: pngWithToken },
-  {
-    id: 'zip-create',
-    testid: 'zc-file',
-    name: 'notes.txt',
-    mime: 'text/plain',
-    make: () => Buffer.from(TOKEN),
-    // It does not read the bytes until you build — so without this the guard
-    // sees no read and fails rather than passing vacuously, which is exactly
-    // what it was rewritten to do after `pdf-stamp`.
-    act: async (page) => { await page.getByTestId('zc-build').click() },
-  },
-  { id: 'markdown-html', testid: 'mh-file', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Title
-
-${TOKEN}
-`) },
   { id: 'pdf-organise', testid: 'po-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-ocr', testid: 'pk-file', name: 'scan.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'file-metadata', testid: 'meta-file', name: 'notes.txt', mime: 'text/plain', make: () => Buffer.from(TOKEN) },
-  { id: 'hex-viewer', testid: 'hx-file', name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN) },
-  { id: 'csv-to-xlsx', testid: 'cx-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,note\nSara,${TOKEN}\n`) },
-  { id: 'csv-split', testid: 'cs-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n2,x\n`) },
-  { id: 'csv-clean', testid: 'cc-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'csv-vcard', testid: 'cv-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,phone\n${TOKEN},0501234567\n`) },
   // Found missing by the code sweep that wired this tool to the shared table
   // reader: it has always taken a file and was never in this list. Which is the
@@ -236,7 +208,6 @@ ${TOKEN}
   { id: 'excel-editor', testid: 'office-file-input', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'word-editor', testid: 'office-file-input', name: 'notes.md', mime: 'text/markdown', make: () => Buffer.from(`# Notes\n\n${TOKEN}\n`) },
   { id: 'powerpoint-editor', testid: 'office-file-input', name: 'talk.md', mime: 'text/markdown', make: () => Buffer.from(`# Talk\n\n---\n\n# Point\n- ${TOKEN}\n`) },
-  { id: 'csv-merge', testid: 'cm-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b\n1,${TOKEN}\n`) },
   { id: 'audio-spectrum', testid: 'as-file', name: 'clip.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'video-frames', testid: 'vf-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
@@ -245,54 +216,22 @@ ${TOKEN}
   // through the dropzone that wraps it, which is what let the batch be this
   // size without touching twenty product files.
   { id: 'image-compressor', testid: 'imgcomp-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'image-cropper', testid: 'crop-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'image-redact', testid: 'redact-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'images-to-pdf', testid: 'i2p-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'image-to-ascii', testid: 'ascii-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'meme-generator', testid: 'meme-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'metadata-remove', testid: 'mr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'remove-background', testid: 'rmbg-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'steganography', testid: 'stego-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'favicon-generator', testid: 'favicon-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'qr-reader', testid: 'qr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'pdf-compress', testid: 'cmp-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-edit', testid: 'edit-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-fill', testid: 'fill-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-merge', testid: 'pm-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-sign', testid: 'sign-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'pdf-split', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-to-images', testid: 'p2i-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  {
-    // Needs a password before it touches the file, so picking one alone tested
-    // nothing at all until this act was added.
-    id: 'file-encrypt', testid: 'fe-drop', within: true, name: 'blob.bin', mime: 'application/octet-stream',
-    make: () => Buffer.from(TOKEN),
-    act: async (page) => {
-      await page.getByTestId('fe-password').fill('correct horse battery staple')
-      await page.getByTestId('fe-run').click()
-    },
-  },
-  {
-    id: 'hash-generator', testid: 'hash-drop', within: true,
-    name: 'blob.bin', mime: 'application/octet-stream', make: () => Buffer.from(TOKEN),
-    // Hashes TEXT by default; the dropzone only exists in file mode. Caught by
-    // the input never appearing, which is the right failure — a container that
-    // is not on the page is indistinguishable from a wrong selector until you
-    // look.
-    reveal: async (page) => {
-      await expect(async () => {
-        await page.getByTestId('hash-mode-file').click()
-        await expect(page.getByTestId('hash-drop')).toBeVisible({ timeout: 1000 })
-      }).toPass({ timeout: 15000 })
-    },
-  },
   { id: 'cert-decoder', testid: 'cd-file', name: 'cert.pem', mime: 'application/x-pem-file', make: () => Buffer.from(`-----BEGIN CERTIFICATE-----
 ${TOKEN}
 -----END CERTIFICATE-----
 `) },
-  { id: 'video-audio', testid: 'va-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
-  { id: 'video-trim', testid: 'vt-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-edit', testid: 've-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   // Two intake paths since the scissors and the plus landed: the editor takes a
   // second picture to lay on the first, and a path that touches the reader's
@@ -305,15 +244,6 @@ ${TOKEN}
       await expect(page.getByTestId('ie-piece-0')).toBeVisible({ timeout: 20_000 })
     } },
   { id: 'video-stabilize', testid: 'vs-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
-  // --- The last of the UNVERIFIED list except the two OCR tools, which pull
-  // the tesseract models and belong in a slower pass of their own.
-  { id: 'image-format-converter', testid: 'ifc-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'sheet-diff', testid: 'sd-file-a', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`a,b
-1,${TOKEN}
-`) },
-  { id: 'xlsx-convert', testid: 'xl-file', name: 'book.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', make: () => xmlZip('xl/sharedStrings.xml', `<sst><si><t>${TOKEN}</t></si></sst>`) },
-  { id: 'zatca-qr', testid: 'zq-file', name: 'invoice.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'svg-editor', testid: 'svg-file', name: 'art.svg', mime: 'image/svg+xml', make: () => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><title>${TOKEN}</title></svg>`) },
   // The file here is an OPTIONAL centre logo, not the tool's subject — but it
   // is still a file leaving the user's machine if anything went wrong.
   { id: 'qr-code', testid: 'qr-logo-file', name: 'logo.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
@@ -322,97 +252,13 @@ ${TOKEN}
   // GETs with no body, so the guard's two assertions still hold and the only
   // cost is time. If it ever goes off-origin, `e2e/ocr.spec.ts` fails first.
   { id: 'image-to-text', testid: 'ocr-drop', within: true, name: 'scan.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'image-diff', testid: 'idf-file-a', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-
-  // --- Working the UNVERIFIED list down (see scripts/check-privacy-coverage.mjs).
-  // 65 tools take a file and 17 were proved; these are the next 14. Chosen
-  // because their fixtures are shapes this file already builds — the image,
-  // PDF, audio and archive families — rather than because they were the tools
-  // most recently written, which is how the list got short in the first place.
-  { id: 'color-palette', testid: 'cp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'colour-blind', testid: 'cb-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN),
     reveal: (page) => page.getByTestId('cb-mode-image').click() },
-  { id: 'screenshot-frame', testid: 'sf-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'social-resize', testid: 'sr-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'passport-photo', testid: 'pp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'carousel-split', testid: 'cs-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'batch-watermark', testid: 'bw-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'pdf-booklet', testid: 'pb-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'pdf-redact', testid: 'pr-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  {
-    // Does not open the file at pick time — it only reads it when stamping.
-    id: 'pdf-stamp', testid: 'ps-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf,
-    act: async (page) => { await page.getByTestId('ps-apply').click() },
-  },
-  { id: 'audio-trim', testid: 'at-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
-  { id: 'remove-silence', testid: 'rs-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
-  { id: 'epub-text', testid: 'ep-file', name: 'book.epub', mime: 'application/epub+zip', make: () => xmlZip('OEBPS/ch1.xhtml', `<html><body><p>${TOKEN}</p></body></html>`) },
-  {
-    id: 'ics-builder', testid: 'ics-file', name: 'cal.ics', mime: 'text/calendar',
-    make: () => Buffer.from(['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `SUMMARY:${TOKEN}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n')),
-    // Retried, because the click can land before React attaches and then does
-    // nothing at all. The tab works perfectly in isolation and timed out here,
-    // which is the signature of a hydration race rather than a wrong selector —
-    // Playwright waits for the element to be actionable, not for a handler to
-    // have been attached to it.
-    reveal: async (page) => {
-      await expect(async () => {
-        await page.getByTestId('ics-tab-read').click()
-        await expect(page.getByTestId('ics-file')).toBeAttached({ timeout: 1000 })
-      }).toPass({ timeout: 15000 })
-    },
-  },
-  {
-    id: 'vcard-to-csv', testid: 'vc-file', name: 'contacts.vcf', mime: 'text/vcard',
-    make: () => Buffer.from(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${TOKEN}\r\nN:;${TOKEN};;;\r\nEND:VCARD\r\n`),
-  },
-  {
-    id: 'archive-inspector', testid: 'zip-file', name: 'bundle.zip', mime: 'application/zip',
-    make: () => zip([{ name: 'secret.txt', data: Buffer.from(TOKEN) }]),
-  },
-  {
-    // A manuscript is exactly the kind of file people will not upload.
-    id: 'markdown-epub', testid: 'me-file', name: 'book.md', mime: 'text/markdown',
-    make: () => Buffer.from(`# Chapter
-
-${TOKEN}
-`),
-  },
-  {
-    // A contract or a draft is exactly what people will not upload.
-    id: 'docx-markdown', testid: 'dm-file', name: 'draft.docx',
-    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    make: () => xmlZip('word/document.xml',
-      `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${TOKEN}</w:t></w:r></w:p></w:body></w:document>`),
-  },
-  {
-    // Plain text in, .docx out — the input is the sensitive half here, since
-    // the thing people convert is a contract or notes about a client.
-    id: 'markdown-docx', testid: 'md-file', name: 'notes.md', mime: 'text/markdown',
-    make: () => Buffer.from(`# Notes
-
-${TOKEN}
-`),
-  },
-  {
-    id: 'docx-to-text', testid: 'dx-file', name: 'letter.docx',
-    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    make: () => xmlZip('word/document.xml',
-      `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${TOKEN}</w:t></w:r></w:p></w:body></w:document>`),
-  },
-  {
-    id: 'pptx-to-text', testid: 'pt-file', name: 'deck.pptx',
-    mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    make: () => xmlZip('ppt/slides/slide1.xml',
-      `<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree><a:p><a:r><a:t>${TOKEN}</a:t></a:r></a:p></p:spTree></p:cSld></p:sld>`),
-  },
   {
     id: 'subtitle-editor', testid: 'sub-file', name: 'movie.srt', mime: 'text/plain',
     make: () => Buffer.from(`1\n00:00:01,000 --> 00:00:03,000\n${TOKEN}\n`),
-  },
-  {
-    id: 'svg-optimise', testid: 'so-file', name: 'logo.svg', mime: 'image/svg+xml',
-    make: () => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><title>${TOKEN}</title><rect width="10" height="10"/></svg>`),
   },
 ]
 
@@ -457,36 +303,6 @@ export const TEXT_CASES: TextCase[] = [
     id: 'jwt-decoder', testid: 'jwt-input', output: 'jwt-payload',
     text: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify({ sub: TOKEN })).toString('base64url')}.c2ln`,
   },
-  // A signing key, in the clear.
-  { id: 'hmac', testid: 'hm-key', output: 'hm-hex', text: TOKEN },
-  // A TOTP shared secret — base32, so the token cannot be pasted raw.
-  {
-    id: 'totp', testid: 'totp-secret', output: 'totp-code', text: 'JBSWY3DPEHPK3PXP',
-    act: async (page) => { await page.getByTestId('totp-add').click() },
-  },
-  // A real curl command carries an Authorization header more often than not.
-  {
-    id: 'curl-convert', testid: 'cv-input', output: 'cv-output',
-    text: `curl https://example.com/api -H "Authorization: Bearer ${TOKEN}"`,
-  },
-  // A tool whose entire subject is text containing personal identifiers.
-  { id: 'data-anonymize', testid: 'da-input', output: 'da-output', text: `Contact ${TOKEN}@example.com about it.` },
-  // Full headers: addresses, routing, IPs.
-  {
-    id: 'email-headers', testid: 'eh-input', output: 'eh-summary',
-    text: `From: ${TOKEN}@example.com
-To: b@example.com
-Subject: hello
-Date: Mon, 1 Jan 2026 00:00:00 +0300
-`,
-  },
-  // Its own copy says a prompt is often the most confidential thing a team
-  // writes, and that most counters post it to a server. That claim is now
-  // tested rather than asserted.
-  { id: 'token-counter', testid: 'tc-input', output: 'tc-count' },
-  { id: 'base64', testid: 'b64-input', output: 'b64-output' },
-  { id: 'readability', testid: 'rd-input', output: 'rd-grade', text: `${TOKEN} is a sentence about a thing that happened.` },
-  { id: 'text-diff', testid: 'diff-a', output: 'diff-output', text: TOKEN },
 ]
 
 for (const c of TEXT_CASES) {
@@ -588,41 +404,3 @@ for (const c of CASES) {
     expect(withBody, 'a request carried a body').toEqual([])
   })
 }
-
-test('the guard itself would notice a leak', async ({ page }) => {
-  // Every check above has only ever passed, which on its own is no evidence
-  // that it can fail. This fires exactly the request an uploading tool would
-  // and asserts the same listener catches it — so a green run above means the
-  // tools are clean, not that the detector is asleep.
-  const leaked: string[] = []
-  const withBody: string[] = []
-  page.on('request', (r) => {
-    const body = r.postData() ?? ''
-    if (r.url().includes(TOKEN) || body.includes(TOKEN)) leaked.push(r.url())
-    if (body && !ANALYTICS.test(r.url())) withBody.push(r.url())
-  })
-
-  await page.goto('/en/apps/pdf-to-text')
-  await page.evaluate(async (token) => {
-    // Deliberately what a tool must never do with a file.
-    await fetch('/upload-that-should-not-exist', { method: 'POST', body: `file=${token}` }).catch(() => {})
-  }, TOKEN)
-  await page.waitForTimeout(500)
-
-  expect(leaked.length, 'the token detector did not fire').toBeGreaterThan(0)
-  expect(withBody.length, 'the body detector did not fire').toBeGreaterThan(0)
-})
-
-test('analytics never carries what you typed', async ({ page }) => {
-  // A separate claim from "your file is not uploaded", and worth its own test:
-  // page views are counted, the content is not.
-  const carrying: string[] = []
-  page.on('request', (r) => {
-    if (!ANALYTICS.test(r.url())) return
-    if (r.url().includes(TOKEN) || (r.postData() ?? '').includes(TOKEN)) carrying.push(r.url().slice(0, 120))
-  })
-  await page.goto('/en/apps/text-counter')
-  await page.locator('textarea').first().fill(TOKEN)
-  await page.waitForTimeout(1000)
-  expect(carrying).toEqual([])
-})

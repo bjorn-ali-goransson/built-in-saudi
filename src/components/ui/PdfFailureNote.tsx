@@ -32,7 +32,7 @@ export function PdfFailureNote({ why, locale }: { why: PdfFailure; locale: Local
           perfectly well open in the tool next door. */}
       {why === 'encrypted' && (
         <Link
-          to={`/${locale}/apps/pdf-to-text`}
+          to={`/${locale}/apps/pdf-ocr`}
           data-testid="pdf-failure-to-text"
           className="inline-flex items-center gap-2 px-[1.15rem] py-[0.6rem] rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink font-semibold text-[0.9rem] no-underline hover:border-[color-mix(in_srgb,var(--green-500)_40%,transparent)] rtl:font-ar"
         >

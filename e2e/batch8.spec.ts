@@ -93,55 +93,6 @@ test.describe('team maker', () => {
   })
 })
 
-test.describe('quotation & receipt', () => {
-  test('computes the line totals, VAT and grand total', async ({ page }) => {
-    await page.goto('/en/apps/quotation')
-    await page.getByTestId('qt-desc-0').fill('Design work')
-    await page.getByTestId('qt-qty-0').fill('4')
-    await page.getByTestId('qt-price-0').fill('250')
-    await expect(page.getByTestId('qt-line-0')).toContainText('1,000.00')
-    await expect(page.getByTestId('qt-subtotal')).toContainText('1,000.00')
-    await expect(page.getByTestId('qt-vatamount')).toContainText('150.00')
-    await expect(page.getByTestId('qt-total')).toContainText('1,150.00')
-  })
-
-  test('VAT can be switched off', async ({ page }) => {
-    await page.goto('/en/apps/quotation')
-    await page.getByTestId('qt-qty-0').fill('1')
-    await page.getByTestId('qt-price-0').fill('100')
-    await page.getByTestId('qt-vat').uncheck()
-    await expect(page.getByTestId('qt-total')).toContainText('100.00')
-    await expect(page.getByTestId('qt-vatamount')).toHaveCount(0)
-  })
-
-  test('switching document type changes the title and the fields', async ({ page }) => {
-    await page.goto('/en/apps/quotation')
-    await expect(page.getByTestId('qt-title')).toHaveText('Quotation')
-    await expect(page.getByTestId('qt-valid')).toBeVisible()
-    await page.getByTestId('qt-receipt').click()
-    await expect(page.getByTestId('qt-title')).toHaveText('Receipt')
-    await expect(page.getByTestId('qt-method')).toBeVisible()
-    await expect(page.getByTestId('qt-valid')).toHaveCount(0)
-    await expect(page.getByTestId('qt-received')).toBeVisible()
-  })
-
-  test('each document says it is not a tax invoice', async ({ page }) => {
-    await page.goto('/en/apps/quotation')
-    await expect(page.getByTestId('disclaimer')).toContainText('not a tax invoice')
-    await page.getByTestId('qt-receipt').click()
-    await expect(page.getByTestId('disclaimer')).toContainText('not a tax invoice')
-  })
-
-  test('lines can be added and removed', async ({ page }) => {
-    await page.goto('/en/apps/quotation')
-    await expect(page.getByTestId('qt-rows').locator('> div')).toHaveCount(1)
-    await page.getByTestId('qt-add').click()
-    await expect(page.getByTestId('qt-rows').locator('> div')).toHaveCount(2)
-    await page.getByTestId('qt-del-1').click()
-    await expect(page.getByTestId('qt-rows').locator('> div')).toHaveCount(1)
-  })
-})
-
 test.describe('character finder', () => {
   test('finds a character by an English keyword', async ({ page }) => {
     await page.goto('/en/apps/char-finder')

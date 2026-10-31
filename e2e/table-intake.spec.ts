@@ -29,31 +29,3 @@ test('csv-vcard still opens a real .xlsx', async ({ page }) => {
   await page.getByTestId('cv-file').setInputFiles('e2e/fixtures/sample.xlsx')
   await expect(page.getByTestId('file-error')).toHaveCount(0)
 })
-
-test('csv-clean opens a spreadsheet, and refuses the old format by name', async ({ page }) => {
-  await page.goto('/en/apps/csv-clean')
-  await page.getByTestId('cc-file').setInputFiles('e2e/fixtures/sample.xlsx')
-  await expect(page.getByTestId('cc-input')).not.toBeEmpty()
-  await page.getByTestId('cc-file').setInputFiles('e2e/fixtures/legacy.xls')
-  await expect(page.getByTestId('file-error')).toContainText('.xls')
-})
-
-test('csv-merge opens a spreadsheet on either side', async ({ page }) => {
-  await page.goto('/en/apps/csv-merge')
-  await page.getByTestId('cm-file-a').setInputFiles('e2e/fixtures/sample.xlsx')
-  await expect(page.getByTestId('cm-text-a')).not.toBeEmpty()
-  await page.getByTestId('cm-file-b').setInputFiles('e2e/fixtures/legacy.xls')
-  await expect(page.getByTestId('file-error')).toContainText('.xls')
-})
-
-test('a pasted CSV is passed through byte for byte, not re-serialised', async ({ page }) => {
-  // A paste box should show what you gave it. Round-tripping every text file
-  // through the parser would renormalise the user's quoting for no reason.
-  await page.goto('/en/apps/csv-clean')
-  await page.getByTestId('cc-file').setInputFiles({
-    name: 'odd.csv',
-    mimeType: 'text/csv',
-    buffer: Buffer.from('a,b\n"keep  ""this"" exactly",2\n'),
-  })
-  await expect(page.getByTestId('cc-input')).toHaveValue('a,b\n"keep  ""this"" exactly",2\n')
-})

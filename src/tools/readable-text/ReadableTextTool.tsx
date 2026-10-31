@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocale, localePath } from '../../i18n'
+import { useLocale } from '../../i18n'
 import { Stack, Panel, Field, Check, Seg, SegButton } from '../../components/ui'
 import {
   DEFAULTS, MACHINE_SAFE_TRACKING, MEASURE_RANGE, detectScript, measureOk,
@@ -26,7 +26,6 @@ const STR = {
     measureBody: `A line between ${MEASURE_RANGE[0]} and ${MEASURE_RANGE[1]} characters is what typography has settled on: much longer and the eye loses the return sweep to the next line, much shorter and it breaks the sentence into fragments. It is the setting people never touch and the one that helps most.`,
     tooLong: 'Longer than the comfortable range', tooShort: 'Shorter than the comfortable range',
     ok: 'Within the comfortable range',
-    related: 'How hard is this text? Readability Scorer',
     empty: 'Paste some text above and it will be set here.',
   },
   ar: {
@@ -46,7 +45,6 @@ const STR = {
     measureBody: `السطر بين ${MEASURE_RANGE[0]} و${MEASURE_RANGE[1]} حرفًا هو ما استقرّت عليه الطباعة: أطول من ذلك فتضيع على العين عودتها إلى أول السطر التالي، وأقصر فتتقطّع الجملة. وهو الإعداد الذي لا يلمسه أحد وأكثرها نفعًا.`,
     tooLong: 'أطول من النطاق المريح', tooShort: 'أقصر من النطاق المريح',
     ok: 'ضمن النطاق المريح',
-    related: 'ما مدى صعوبة النص؟ مقياس السهولة',
     empty: 'ألصق نصًّا في الأعلى ليُعرض هنا.',
   },
 }
@@ -205,9 +203,6 @@ export default function ReadableTextTool() {
         <p className="text-ink-faint text-sm" data-testid="rt-machine">{s.machineBody}</p>
       </Panel>
 
-      <p className="text-sm">
-        <a href={localePath(locale, '/apps/readability')}>{s.related}</a>
-      </p>
     </Stack>
   )
 }

@@ -68,10 +68,7 @@ export function swapLocaleInPath(pathname: string, to: Locale): string {
 const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   Generators: { en: 'Generators', ar: 'مولّدات' },
   Images: { en: 'Images', ar: 'صور' },
-  Design: { en: 'Design', ar: 'تصميم' },
-  Converters: { en: 'Converters', ar: 'محوّلات' },
   Developer: { en: 'Developer', ar: 'أدوات المطوّرين' },
-  Web: { en: 'Web', ar: 'الويب' },
   Text: { en: 'Text', ar: 'نصوص' },
   Calculators: { en: 'Calculators', ar: 'حاسبات' },
   PDF: { en: 'PDF', ar: 'PDF' },
@@ -93,7 +90,6 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   // measurably the reason «حاسبة» was an 18-way tie: a BMI calculator and a VAT
   // calculator share the word "calculator" and nothing else. Health is a
   // subject and so is time; "calculator" is a shape.
-  Health: { en: 'Health', ar: 'صحة' },
   'Time & Date': { en: 'Time & Date', ar: 'الوقت والتاريخ' },
   Islamic: { en: 'Islamic', ar: 'إسلاميات' },
   Arabic: { en: 'Arabic', ar: 'العربية' },

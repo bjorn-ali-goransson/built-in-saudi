@@ -11,6 +11,8 @@ export const videoEditTool: Tool = {
     'Crop a video to the shape a platform wants, join a few clips end to end, and put a caption on top — all in your browser, with nothing uploaded. It shows you what a crop costs before you commit to it: going from a 16:9 recording to a 9:16 post keeps under a third of the picture, and whatever you filmed is rarely in the middle of what is left, so you drag to choose. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left, and the preview is the export rather than an approximation of it. You can also draw a box over anything that should not be in the picture — a face, a plate, a name on a screen — and each box carries its own settings: pixelate, solid or blur, with what that choice costs written next to it. Pixelating a video gives the detail back — the mosaic grid stays still while your subject moves through it, and 64 frames of that recover 98.6% of a number plate — so solid is one tap away. The sound is copied across untouched rather than re-encoded, so it loses nothing.',
   category: 'Files',
   keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'trim video', 'cut video', 'video trimmer', 'قص الفيديو',
     'video editor', 'edit video', 'crop video', 'crop a video', 'resize video', 'aspect ratio',
     'merge videos', 'join videos', 'combine videos', 'concatenate video', 'stitch clips', 'add clips together',
     // The PLURAL and the Arabic DUAL, deliberately. A query is matched against

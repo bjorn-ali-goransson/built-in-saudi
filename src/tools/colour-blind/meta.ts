@@ -9,7 +9,7 @@ export const colourBlindTool: Tool = {
   tagline: 'Which of your colours stop being different.',
   description:
     'See a palette or an image as someone with colour vision deficiency sees it — and, more usefully, which pairs of your colours collapse into the same thing. Around one man in twelve has some form of it, so a chart or a status badge that relies on red-versus-green is unreadable to a real share of your users. Simulated with the Machado matrices in linear light, not by dropping a channel.',
-  category: 'Design',
+  category: 'Images',
   keywords: ['colour blind', 'color blind', 'deuteranopia', 'protanopia', 'accessibility', 'a11y', 'palette', 'عمى الألوان', 'إتاحة', 'ألوان', 'تباين', 'تصميم'],
   status: 'stable',
   Icon: ContrastIcon,

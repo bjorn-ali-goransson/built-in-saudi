@@ -97,56 +97,6 @@ test.describe('svg optimiser', () => {
     <path d="M 10.123456 20.987654 L 80.111111 20.987654 L 45.500000 80.250000 Z" fill="#1f5c3d"/>
   </g>
 </svg>`
-
-  test('shrinks the file and keeps it valid', async ({ page }) => {
-    await page.goto('/en/apps/svg-optimise')
-    await page.getByTestId('so-input').fill(MESSY)
-    await expect(page.getByTestId('so-saved')).not.toHaveText('−0% saved')
-    const out = await page.getByTestId('so-output').inputValue()
-    expect(out).toContain('<path')
-    expect(out).not.toContain('inkscape')
-    expect(out).not.toContain('<metadata>')
-    expect(out).not.toContain('<!--')
-    // Coordinates rounded to two places, with the leading zero dropped.
-    expect(out).toContain('10.12')
-    expect(out).not.toContain('10.123456')
-  })
-
-  test('precision is adjustable and visible in the output', async ({ page }) => {
-    await page.goto('/en/apps/svg-optimise')
-    await page.getByTestId('so-input').fill(MESSY)
-    await page.getByTestId('so-precision').fill('0')
-    const out = await page.getByTestId('so-output').inputValue()
-    // Every coordinate becomes a whole number; none keeps a decimal point.
-    const d = out.match(/ d="([^"]+)"/)![1]
-    expect(d).not.toMatch(/\d\.\d/)
-    expect(d).toContain('10')
-  })
-
-  test('the preview is sandboxed, so a pasted SVG cannot run script here', async ({ page }) => {
-    await page.goto('/en/apps/svg-optimise')
-    await page.getByTestId('so-input').fill(MESSY)
-    const frame = page.getByTestId('so-preview')
-    await expect(frame).toBeVisible()
-    // An iframe with an empty sandbox: null origin, scripting disabled.
-    await expect(frame).toHaveAttribute('sandbox', '')
-    expect(await frame.evaluate((el) => el.tagName)).toBe('IFRAME')
-  })
-
-  test('rejects something that is not SVG', async ({ page }) => {
-    await page.goto('/en/apps/svg-optimise')
-    await page.getByTestId('so-input').fill('{"not":"svg"}')
-    await expect(page.getByTestId('so-invalid')).toBeVisible()
-  })
-
-  test('responsive mode drops width and height but keeps the viewBox', async ({ page }) => {
-    await page.goto('/en/apps/svg-optimise')
-    await page.getByTestId('so-input').fill(MESSY)
-    await page.getByTestId('so-responsive').check()
-    const out = await page.getByTestId('so-output').inputValue()
-    expect(out).toContain('viewBox')
-    expect(out).not.toMatch(/\swidth="100"/)
-  })
 })
 
 test.describe('batch watermark', () => {

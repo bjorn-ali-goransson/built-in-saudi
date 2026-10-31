@@ -25,68 +25,32 @@ export const UNTUNED4 = [
   // --- a file that will not do what is needed of it ------------------------
   ['my pdf is too big to email', 'pdf-compress'],
   ['the photo is too heavy to upload', 'image-compressor'],
-  ['my video file is too long to send', 'video-trim'],
+  ['my video file is too long to send', 'video-edit'],
   ['the scan has no selectable text', 'pdf-ocr'],
   // Two right answers since the spreadsheet editor shipped (Oct 2026): it OPENS the file;
   // xlsx-convert gets the data out. Neither is a wrong reading of the symptom.
-  ['someone sent me a spreadsheet i cannot open', ['xlsx-convert', 'excel-editor']],
-  ['my phone photos are heic and will not open', 'image-format-converter'],
+  ['someone sent me a spreadsheet i cannot open', ['excel-editor']],
+  ['my phone photos are heic and will not open', 'image-compressor'],
   ['the pdf pages are in the wrong order', 'pdf-organise'],
   ['i need to sign this without printing it', 'pdf-sign'],
-  ['what type of file is this', 'file-metadata'],
 
   // --- text that arrived wrong ---------------------------------------------
-  ['text came out as weird symbols', 'fix-encoding'],
-  ['my arabic shows as question marks', 'fix-encoding'],
-  ['there is something invisible pasted in my text', 'invisible-chars'],
-  ['what changed between these two versions', 'text-diff'],
-  ['i have two spreadsheets to compare', 'sheet-diff'],
 
   // --- something must not be shared ----------------------------------------
-  ['remove personal info before sharing a photo', 'metadata-remove'],
-  ['cover up a name in a screenshot', 'image-redact'],
-  ['i need to prove a file was not changed', 'hash-generator'],
+  ['cover up a name in a screenshot', 'image-edit'],
   ['i need fake customers for a demo', 'fake-data'],
 
   // --- media -----------------------------------------------------------------
-  ['the recording has long silences in it', 'remove-silence'],
-  ['i only need the sound from this clip', 'video-audio'],
   ['i want one still picture out of a video', 'video-frames'],
-  ['how will my link look when someone shares it', 'link-preview'],
 
   // --- developer symptoms ----------------------------------------------------
   ['the api gave me a token i cannot read', 'jwt-decoder'],
-  ['my colours do not pass accessibility', 'color-contrast'],
-  ['my csv has duplicate rows', 'csv-clean'],
 
   // --- money, and the question behind it -------------------------------------
-  ['how much will i take home after gosi', 'gosi-salary'],
-  ['how much do i owe on a parcel from abroad', 'import-duty'],
-  ['can my landlord put the rent up', 'rent-rules'],
-  ['am i owed anything if i resign', 'end-of-service'],
-  ['when can i renew my car registration', 'vehicle-renewal'],
-  ['how much to renew my iqama with my family', 'iqama-fees'],
-  ['i want to move to a new employer', 'sponsorship-transfer'],
-  ['do i have to register for vat', 'vat-registration'],
-  ['how much electricity am i using in riyals', 'electricity-bill'],
-  ['what size air conditioner for my bedroom', 'ac-size'],
 
   // --- health ----------------------------------------------------------------
-  ['when is the baby due', 'due-date'],
-  ['which days am i most likely to conceive', 'ovulation'],
-  ['what time should i go to bed', 'sleep-cycle'],
-  ['how much water should i drink', 'water-intake'],
 
   // --- Arabic, same axis -----------------------------------------------------
   ['ملف بي دي اف كبير جدا', 'pdf-compress'],
-  ['النص ظهر رموز غريبة', 'fix-encoding'],
-  ['تغطية اسم في صورة', 'image-redact'],
-  ['كم راتبي بعد التأمينات', 'gosi-salary'],
-  ['هل يحق لي مكافأة نهاية الخدمة', 'end-of-service'],
-  ['متى أجدد الاستمارة', 'vehicle-renewal'],
-  ['كم رسوم تجديد الإقامة', 'iqama-fees'],
-  ['هل يمكن رفع الإيجار', 'rent-rules'],
-  ['كم أدفع جمارك على طرد', 'import-duty'],
-  ['متى موعد الولادة', 'due-date'],
-  ['حجم المكيف المناسب للغرفة', 'ac-size'],
+  ['تغطية اسم في صورة', 'image-edit'],
 ]

@@ -59,15 +59,6 @@ test('an exact tool name still wins outright', async ({ page }) => {
   await expect(top(page)).toContainText(/khatma/i)
 })
 
-test('the launcher searches the same way', async ({ page }) => {
-  await page.goto('/en/apps/qr-code')
-  await page.getByTestId('app-launcher').click()
-  await page.getByTestId('launcher-search').fill('excel to csv')
-  // The launcher and the home catalogue share one scorer, so a query that works
-  // in one has to work in the other.
-  await expect(page.getByTestId('tool-xlsx-convert')).toBeVisible()
-})
-
 test('a query nothing matches still says so rather than showing everything', async ({ page }) => {
   await search(page, 'zzzzqqqq')
   await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
@@ -90,38 +81,6 @@ test('a new tool must not capture a generic term from the established one', asyn
   await expect(top(page)).toContainText(/scanned pdf/i)
 })
 
-test('the tool that READS a format leads on that format', async ({ page }) => {
-  // Both the reader and the writer list "xlsx"; they tied exactly, so the
-  // winner was whichever was registered first.
-  await search(page, 'xlsx')
-  await expect(page.getByTestId('tool-xlsx-convert')).toBeVisible()
-  await expect(top(page)).toContainText(/excel to csv/i)
-  await search(page, 'csv to excel')
-  await expect(top(page)).toContainText(/csv to excel/i)
-})
-
-test('a converter is findable by what people call the output, not the format', async ({ page }) => {
-  // "contacts to spreadsheet" ranked vCard to CSV FOURTH, behind the tool that
-  // converts the other way, because it never used the word "spreadsheet".
-  await search(page, 'contacts to spreadsheet')
-  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
-  // Asserted on the testid, not the display name: this tool has since been
-  // RENAMED (vCard to CSV -> Contacts to Spreadsheet) precisely so the direction
-  // is recoverable from the name, and a spec that pins the old name turns a
-  // deliberate rename into a red build for no reason.
-  await search(page, 'export phone contacts')
-  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
-})
-
-test('the new file tools are reachable by their plain names', async ({ page }) => {
-  await search(page, 'word to text')
-  await expect(top(page)).toContainText(/word to text/i)
-  await search(page, 'docx')
-  await expect(top(page)).toContainText(/word to text/i)
-  await search(page, 'vcf to csv')
-  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
-})
-
 // The catalogue's SHAPE, not its ranking. Measured at 191 tools: "Converters"
 // held three tools while the turn-this-file-into-that family was scattered
 // across Text, Files and Converters — so the section named for the intent was
@@ -135,51 +94,11 @@ async function expandSection(page: import('@playwright/test').Page, key: string)
   if (await more.count()) await more.click()
 }
 
-test('the section named for converting holds the file converters', async ({ page }) => {
-  await page.goto('/en')
-  const converters = page.getByTestId('section-Converters')
-  await expect(converters).toBeVisible()
-  await expandSection(page, 'Converters')
-  for (const id of ['docx-to-text', 'pptx-to-text', 'csv-to-xlsx', 'xlsx-convert', 'vcard-to-csv', 'epub-text']) {
-    await expect(converters.getByTestId(`tool-${id}`)).toBeVisible()
-  }
-})
-
-test('converting a value is a calculator, not a file converter', async ({ page }) => {
-  await page.goto('/en')
-  // Unit and currency conversion sit with percentage/VAT/zakat, where someone
-  // doing arithmetic is already looking.
-  await expect(page.getByTestId('section-Calculators').getByTestId('tool-unit-converter')).toBeVisible()
-  await expect(page.getByTestId('section-Converters').getByTestId('tool-unit-converter')).toHaveCount(0)
-})
-
 test('a tool with a stronger family keeps it', async ({ page }) => {
   await page.goto('/en')
-  // Nobody hunts for the PDF converter anywhere but PDF, so pdf-to-text stays
+  // Nobody hunts for the PDF converter anywhere but PDF, so PDF to Text stays
   // put even though it converts a file.
-  await expect(page.getByTestId('section-PDF').getByTestId('tool-pdf-to-text')).toBeVisible()
-})
-
-test('the tools about a website live under Web, not buried in Developer', async ({ page }) => {
-  // Developer was 32 tools — the biggest section by a distance and an
-  // undifferentiated wall. Only the uncontested part was split off: things you
-  // point at a site or a URL, rather than at code.
-  await page.goto('/en')
-  const web = page.getByTestId('section-Web')
-  await expect(web).toBeVisible()
-  await expandSection(page, 'Web')
-  await expandSection(page, 'Developer')
-  for (const id of ['meta-tags', 'robots-txt', 'link-preview', 'url-parser', 'user-agent']) {
-    await expect(web.getByTestId(`tool-${id}`)).toBeVisible()
-  }
-  // A subnet calculator is a networking tool a developer reaches for, not
-  // something you use on a site — it deliberately stayed put.
-  await expect(page.getByTestId('section-Developer').getByTestId('tool-ip-subnet')).toBeVisible()
-})
-
-test('the new category has an Arabic label, not a raw English fallback', async ({ page }) => {
-  await page.goto('/ar')
-  await expect(page.getByTestId('section-Web')).toContainText('الويب')
+  await expect(page.getByTestId('section-PDF').getByTestId('tool-pdf-ocr')).toBeVisible()
 })
 
 // Arabic morphology defeats substring matching, and it cost two tools their own
@@ -189,29 +108,9 @@ test('the new category has an Arabic label, not a raw English fallback', async (
 // subtitle editor is "محرّر الترجمة" and beat the translator on "ترجمة".
 
 test('an Arabic query finds the tool that does the thing, not the one that mentions it', async ({ page }) => {
-  await search(page, 'فاتورة', 'ar')
-  await expect(top(page)).toContainText('فاتورة')
-  await expect(page.getByTestId('tool-invoice-generator')).toBeVisible()
-
   await search(page, 'ترجمة', 'ar')
   await expect(page.getByTestId('tool-translate')).toBeVisible()
   await expect(top(page)).toContainText('ترجمة')
-})
-
-test('the newest Saudi tools are reachable by what people call them', async ({ page }) => {
-  for (const [q, id] of [['gosi', 'gosi-salary'], ['fahes', 'vehicle-renewal'],
-    ['rent increase', 'rent-rules'], ['vat registration', 'vat-registration']] as const) {
-    await search(page, q)
-    await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
-  }
-})
-
-test('and by their Arabic names', async ({ page }) => {
-  for (const [q, id] of [['التأمينات', 'gosi-salary'], ['الفحص الدوري', 'vehicle-renewal'],
-    ['زيادة الإيجار', 'rent-rules']] as const) {
-    await search(page, q, 'ar')
-    await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
-  }
 })
 
 // Found by measuring queries the bench had never seen: when stop-word removal
@@ -254,49 +153,6 @@ test('a question word is filler, in either language', async ({ page }) => {
   await expect(page.locator('[data-testid^="tool-"]').first()).toBeVisible()
   await search(page, 'ما هو الايبان', 'ar')
   await expect(page.getByTestId('tool-iban-validator')).toBeVisible()
-})
-
-test('a bare فاتورة means the invoice tool, not the electricity bill', async ({ page }) => {
-  // They tie exactly, so this is decided by catalogue order — which is an
-  // editorial judgement, and the judgement is that an invoice is the invoice.
-  await search(page, 'فاتورة', 'ar')
-  await expect(top(page)).toContainText('فاتورة')
-  await expect(page.getByTestId('tool-invoice-generator')).toBeVisible()
-})
-
-// --- A held-out set of 50 queries, written from the tool list and never tuned
-// against, scored 88% top-1 where the tuned bench read 100%. Everything below
-// is one of the defects it found. See evals/untuned.mjs.
-
-test('a shipped capability is findable by its name', async ({ page }) => {
-  // The site decodes HEIC everywhere an image is taken (#226) and NOT ONE tool
-  // indexed the word, so the query an iPhone owner on Android actually types
-  // returned no tool at all. A capability nobody can name is not shipped.
-  await search(page, 'heic')
-  await expect(page.getByTestId('tool-image-format-converter')).toBeVisible()
-})
-
-test('a substring inside another word is not a match', async ({ page }) => {
-  // "old" is inside "Golden Hour", so the sunrise tool beat the age calculator.
-  // The mid-word penalty is Latin-only on purpose: Arabic agglutinates, so a
-  // mid-word hit there is what a real match looks like.
-  await search(page, 'how old am i')
-  await expect(page.getByTestId('tool-age-calculator')).toBeVisible()
-  await expect(top(page)).toContainText(/age/i)
-  // The Arabic side of that decision: the article is attached to the noun.
-  await search(page, 'حاسبة النسبة', 'ar')
-  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
-})
-
-test('a converter is findable in the direction it converts', async ({ page }) => {
-  // Word order is discarded on purpose, so "contacts to spreadsheet" and
-  // "spreadsheet to contacts" are the same query to the scorer — and the tool
-  // that goes the WRONG way was winning, because its name held both concepts
-  // while its inverse was named in file formats. Both now index the phrase.
-  await search(page, 'contacts to spreadsheet')
-  await expect(page.getByTestId('tool-vcard-to-csv')).toBeVisible()
-  await search(page, 'spreadsheet to contacts')
-  await expect(page.getByTestId('tool-csv-vcard')).toBeVisible()
 })
 
 test('a bare noun goes to the tool that makes the thing', async ({ page }) => {
@@ -404,19 +260,6 @@ test('a description is not indexed, and the compress query proves why', async ({
   await expect(top(page)).toContainText(/صور/)
 })
 
-test('British and American spellings both find the tool', async ({ page }) => {
-  // Measured: 8 of 12 -ise/-ize variants missed their tool and 5 returned
-  // NOTHING AT ALL — the site writes British English in its own copy while a
-  // keyword list, written by a developer, tends to the American form. Both are
-  // typed by real people.
-  await search(page, 'anonymise')
-  await expect(page.getByTestId('tool-data-anonymize')).toBeVisible()
-  await search(page, 'normalise')
-  await expect(page.getByTestId('tool-arabic-normalize')).toBeVisible()
-  await search(page, 'optimizer for svg')
-  await expect(page.getByTestId('tool-svg-optimise')).toBeVisible()
-})
-
 // --- A dedicated ARABIC held-out set (evals/untunedar.mjs). The three existing
 // sets were 10–16% Arabic on a site whose audience is half Arabic-speaking, and
 // the two worst search defects ever found here were both Arabic morphology.
@@ -432,13 +275,6 @@ test('an Arabic name must be in the form people type, not the plural', async ({ 
   await expect(top(page)).toContainText(/مولّد/)
 })
 
-test('the redactor is findable by the Arabic word for redaction', async ({ page }) => {
-  // «طمس» was missing from its keywords entirely: it scored 41.67, BELOW the
-  // relevance floor, so the tool did not appear at all for its own subject.
-  await search(page, 'طمس وجه في صورة', 'ar')
-  await expect(page.getByTestId('tool-image-redact')).toBeVisible()
-})
-
 // --- A new tool taking an established tool's query. Fourth occurrence, so it
 // is frozen here rather than only in the bench. `node evals/ownname.mjs` is the
 // general form: every tool must still win a search for its own name (425/426
@@ -450,14 +286,6 @@ test('the rule tool keeps "overtime pay", not the calculator that also computes 
   // cap. The established tool gets the exact phrase.
   await search(page, 'overtime pay')
   await expect(top(page)).toContainText(/Leave/i)
-})
-
-test('and the calculator still owns the queries that are about it', async ({ page }) => {
-  // Without this the fix above could be a keyword shoved somewhere that simply
-  // outranks the newer tool everywhere, which would be a worse trade.
-  await search(page, 'time card')
-  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
-  await expect(top(page)).toContainText(/Time Card/i)
 })
 
 test('a converter and its inverse each win their own direction', async ({ page }) => {
@@ -478,16 +306,16 @@ test('a converter and its inverse each win their own direction', async ({ page }
 // nothing — which is why all four benches are unchanged by construction.
 
 test('a one-letter slip finds the tool instead of an empty page', async ({ page }) => {
-  await search(page, 'tiemsheet')
-  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
-  await expect(page.getByTestId('search-corrected')).toContainText('timesheet')
+  await search(page, 'stopwacth')
+  await expect(page.getByTestId('tool-stopwatch')).toBeVisible()
+  await expect(page.getByTestId('search-corrected')).toContainText('stopwatch')
 })
 
 test('a correctly spelled query is never second-guessed', async ({ page }) => {
   // Correcting a word somebody spelled right is how a search box starts
   // arguing with people, and it would also mean the fallback was not a fallback.
-  await search(page, 'timesheet')
-  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
+  await search(page, 'stopwatch')
+  await expect(page.getByTestId('tool-stopwatch')).toBeVisible()
   await expect(page.getByTestId('search-corrected')).toHaveCount(0)
 })
 
@@ -514,8 +342,8 @@ test('the launcher corrects a typo the same way', async ({ page }) => {
   // The two surfaces share one ranker precisely so they cannot drift.
   await page.goto('/en/apps/qr-code')
   await page.getByTestId('app-launcher').click()
-  await page.getByTestId('launcher-search').fill('tiemsheet')
-  await expect(page.getByTestId('tool-timesheet')).toBeVisible()
+  await page.getByTestId('launcher-search').fill('stopwacth')
+  await expect(page.getByTestId('tool-stopwatch')).toBeVisible()
   await expect(page.getByTestId('search-corrected')).toBeVisible()
 })
 
@@ -530,15 +358,6 @@ test('a typo that found the wrong tool is corrected, not just an empty one', asy
   await search(page, 'pdf mrege')
   await expect(top(page)).toContainText(/Merge/i)
   await expect(page.getByTestId('search-corrected')).toContainText('pdf merge')
-})
-
-test('a British spelling the site indexes on purpose is left alone', async ({ page }) => {
-  // "summarise" already finds the summarizer — both spellings are indexed
-  // deliberately. Correcting it to "summarize" would re-rank a query that was
-  // already right and announce a mistake nobody made.
-  await search(page, 'summarise')
-  await expect(page.getByTestId('tool-summarize')).toBeVisible()
-  await expect(page.getByTestId('search-corrected')).toHaveCount(0)
 })
 
 test('two edits is a different word, not a typo', async ({ page }) => {
@@ -611,10 +430,6 @@ test.describe('held-out set #3 fixes', () => {
   test('«مسربة» reaches the tool that checks for a leak', async ({ page }) => {
     await wins(page, 'هل كلمة مروري مسربة', 'password-strength', 'ar')
   })
-
-  test('«كم دقيقة» reaches the tool that answers in minutes', async ({ page }) => {
-    await wins(page, 'كم دقيقة يحتاج النص', 'speech-time', 'ar')
-  })
 })
 
 // --- converter direction, 10 August 2026 --------------------------------------
@@ -634,28 +449,9 @@ test.describe('a converter wins its own direction', () => {
     await expect(page, `"${q}" should open ${id}`).toHaveURL(new RegExp(`/en/apps/${id}$`))
   }
 
-  test('markdown to html, and html to markdown, are different answers', async ({ page }) => {
-    // This is the pair that was wrong: the name-derived pairing could not even
-    // see it, because "Paste Markdown" does not say what it converts FROM.
-    await opens(page, 'markdown to html', 'markdown-html')
-    await opens(page, 'html to markdown', 'paste-to-markdown')
-  })
-
-  test('word and markdown, both ways', async ({ page }) => {
-    await opens(page, 'markdown to word', 'markdown-docx')
-    await opens(page, 'word to markdown', 'docx-markdown')
-  })
-
   test('images and pdf, both ways', async ({ page }) => {
     await opens(page, 'images to pdf', 'images-to-pdf')
     await opens(page, 'pdf to images', 'pdf-to-images')
-  })
-
-  test('the renamed tool still answers what it is known for', async ({ page }) => {
-    // It was "Paste Markdown"; the name now says the conversion, like every
-    // other converter here, so "paste" moved into the keywords rather than
-    // being lost.
-    await opens(page, 'paste', 'paste-to-markdown')
   })
 })
 
@@ -697,7 +493,7 @@ test.describe('the query survives its shape', () => {
 
   test('a tool id is a query, because somebody saw it in a URL', async ({ page }) => {
     await opens(page, 'pdf-merge', 'pdf-merge')
-    await opens(page, 'saudi_holidays', 'saudi-holidays')
+    await opens(page, 'video_edit', 'video-edit')
   })
 
   test('a pasted link finds the tool it points at', async ({ page }) => {
@@ -729,37 +525,6 @@ test.describe('the query survives its shape', () => {
   })
 })
 
-// --- The SYMPTOM, not the tool ------------------------------------------------
-//
-// Held-out set #4 (`evals/untuned4.mjs`) asks 50 queries describing the
-// PROBLEM rather than naming the utility — "my pdf is too big to email" names
-// no tool, no format and no verb the catalogue uses. It read 62% top-1 against
-// 88/90/73% for the three sets that describe the tool, and the reason was one
-// mechanism rather than fifty: the catalogue is written in the vocabulary of
-// the SOLUTION and people type the vocabulary of the PROBLEM.
-//
-// Seven tools scored BELOW the relevance floor for their own defining symptom —
-// invisible, not merely outranked. These freeze the worst of them.
-
-test('the tool that fixes garbled text is findable by what garbled text looks like', async ({ page }) => {
-  // It indexed «رموز غريبة» and no English equivalent, so it scored 0.9 —
-  // nowhere — for the commonest way anybody describes the symptom.
-  await search(page, 'my arabic shows as question marks')
-  await expect(page.getByTestId('tool-fix-encoding')).toBeVisible()
-})
-
-test('the end-of-service calculator is findable by the word resign', async ({ page }) => {
-  // It scored 0.8. It indexed «استقالة» and, in English, only the names of the
-  // benefit — while Article 85's whole subject is what resigning costs you.
-  await search(page, 'am i owed anything if i resign')
-  await expect(page.getByTestId('tool-end-of-service')).toBeVisible()
-})
-
-test('the image redactor is findable by covering something up', async ({ page }) => {
-  await search(page, 'cover up a name in a screenshot')
-  await expect(page.getByTestId('tool-image-redact')).toBeVisible()
-})
-
 test('PDF written phonetically in Arabic finds the PDF tools', async ({ page }) => {
   // «بي دي اف» is how PDF is written in Arabic, and exactly ONE of the fifteen
   // PDF tools indexed it — so an Arabic speaker who spells it out got one
@@ -785,38 +550,14 @@ test('PDF written phonetically in Arabic finds the PDF tools', async ({ page }) 
 
 test('a format typed as a file extension finds the tool that handles it', async ({ page }) => {
   await search(page, '.heic')
-  await expect(page.getByTestId('tool-image-format-converter')).toBeVisible()
+  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
 })
 
 test('and so do the formats that returned nothing at all', async ({ page }) => {
-  for (const [ext, id] of [['.pptx', 'pptx-to-text'], ['.epub', 'epub-text'], ['.vcf', 'vcard-to-csv']]) {
+  for (const [ext, id] of [['.pptx', 'powerpoint-editor'], ['.docx', 'word-editor'], ['.vcf', 'csv-vcard']]) {
     await search(page, ext)
     await expect(page.getByTestId(`tool-${id}`)).toBeVisible()
   }
-})
-
-test('but an internal dot is load-bearing and is left alone', async ({ page }) => {
-  // The rule is deliberately narrow — a dot followed by a short alphanumeric
-  // run and nothing else. `example.com` and `3.5` are things people type and
-  // the dot is part of them, so only a LEADING one is dropped.
-  await search(page, 'robots.txt')
-  await expect(page.getByTestId('tool-robots-txt')).toBeVisible()
-})
-
-test('and a dotted name too long to be an extension is left whole', async ({ page }) => {
-  // `.gitignore` is nine characters, past the bound, so it is NOT stripped —
-  // and it finds its tool anyway. Worth pinning: the narrowness of the rule is
-  // the thing that makes it safe, and a later widening would break this first.
-  await search(page, '.gitignore')
-  await expect(page.getByTestId('tool-gitignore')).toBeVisible()
-})
-
-test('a format this site does not handle still finds nothing', async ({ page }) => {
-  // Without this the fix could have been "loosen until everything matches".
-  // AVIF is not a format any tool here reads, and saying so is the honest
-  // answer — the adware move is to always show something.
-  await search(page, 'avif')
-  await expect(page.getByTestId('tool-image-format-converter')).toHaveCount(0)
 })
 
 // --- A converter must win its OWN direction ------------------------------------
@@ -843,13 +584,6 @@ test('a converter wins its own direction, and so does its inverse', async ({ pag
   await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-to-images')
 })
 
-test('and the spreadsheet pair, which was the second measured case', async ({ page }) => {
-  await search(page, 'xlsx to csv')
-  await expect(top(page)).toHaveAttribute('data-testid', 'tool-xlsx-convert')
-  await search(page, 'csv to xlsx')
-  await expect(top(page)).toHaveAttribute('data-testid', 'tool-csv-to-xlsx')
-})
-
 test('the Arabic word for "to" counts as a direction', async ({ page }) => {
   await search(page, 'تحويل pdf إلى صور', 'ar')
   await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-to-images')
@@ -862,28 +596,6 @@ test('a query naming no direction is left exactly as it was', async ({ page }) =
   await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
 })
 
-// --- Arabic morphology: the marks nobody types, the particles that stick -------
-//
-// Held-out set #6 probes ONE class systematically, because this repo has been
-// bitten by it four separate times, each found by accident: «فاتورة» could not
-// reach «الفواتير», «ترجمة» could not reach «المترجم», «كلمة» could not reach
-// «كلمات», and «وقّع» is not inside «توقيع». Arabic is templatic — the singular,
-// the plural, the verb and the agent noun share a root without any containing
-// another as a substring — and a scorer built on substrings is structurally
-// blind to it. It read 64% top-1, the lowest of any set.
-//
-// Two query-side fixes, both narrow, both verified below.
-
-test('Arabic particles stick to the front of the word, and are stripped', async ({ page }) => {
-  // «وللإيجار» is و + لل + إيجار and returned NOTHING on a site with a rent
-  // tool. The strip only lands on a word the catalogue already knows, which is
-  // what stops it mangling «كتاب» into «تاب».
-  await search(page, 'وللإيجار', 'ar')
-  await expect(page.getByTestId('tool-rent-rules')).toBeVisible()
-  await search(page, 'بالهجري', 'ar')
-  await expect(page.getByTestId('tool-hijri-calendar')).toBeVisible()
-})
-
 test('a word that merely BEGINS with a particle letter is left alone', async ({ page }) => {
   // The guard that makes the strip safe. «كتاب» is not ك + تاب, and «كلمة» is
   // not ك + لمة — stripping either would send the query somewhere else
@@ -892,55 +604,12 @@ test('a word that merely BEGINS with a particle letter is left alone', async ({ 
   await expect(page.getByTestId('tool-password-generator')).toBeVisible()
 })
 
-test('a tool is findable by its own Arabic name typed without the diacritics', async ({ page }) => {
-  // 79 of 229 Arabic names carry a shadda or haraka — «محوّل العملات»,
-  // «عدّاد الكلمات» — and nobody types them. Measured: 24 of 79 matched on the
-  // NAME field before folding, 78 of 79 after.
-  await search(page, 'محول العملات', 'ar')
-  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
-  await search(page, 'عداد الكلمات', 'ar')
-  await expect(page.getByTestId('tool-text-counter')).toBeVisible()
-})
-
 test('and the diacritics still work when somebody does type them', async ({ page }) => {
   // Folded on BOTH sides, so writing the name properly cannot be worse than
   // writing it plainly. Without this, the fold could have been a one-way strip
   // of the index that broke the careful speller.
   await search(page, 'محوّل العملات', 'ar')
   await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
-})
-
-// --- When the query IS the number ----------------------------------------------
-//
-// Held-out set #7 asks for things the way people specify them once they know
-// the answer's shape: nobody types "resize an image", they type `1080x1080`.
-// Six of its 42 queries returned NOTHING AT ALL — `1080x1080`, `20% of 250`,
-// «كم 20% من 250», `utc+3` — because the scorer indexes WORDS and a query made
-// of digits has nothing to match, however obvious its meaning is to a person.
-//
-// The reading runs ONLY on an empty result, the same arrangement `correctQuery`
-// uses: a query that already found something is never touched, so no ranking
-// can move. Measured: it recognises a shape in 0 of 416 benched queries and 0
-// of 15 unanswerable ones. 6 not-found became 1.
-
-test('a bare pair of dimensions finds the tools that deal in sizes', async ({ page }) => {
-  await search(page, '1080x1080')
-  await expect(top(page)).toBeVisible()
-  await expect(page.getByTestId('tool-social-resize')).toBeVisible()
-})
-
-test('a percentage finds the percentage calculator, in both scripts', async ({ page }) => {
-  await search(page, '20% of 250')
-  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
-  // The per-cent sign is script-neutral, which is why the Arabic case needs no
-  // Arabic in the rule.
-  await search(page, 'كم 20% من 250', 'ar')
-  await expect(page.getByTestId('tool-percentage-calculator')).toBeVisible()
-})
-
-test('an offset finds the time-zone planner', async ({ page }) => {
-  await search(page, 'utc+3')
-  await expect(page.getByTestId('tool-timezone-planner')).toBeVisible()
 })
 
 test('a bare number names no shape, and still returns nothing', async ({ page }) => {
@@ -976,14 +645,6 @@ test('a cached fold cannot leak between queries', async ({ page }) => {
   // it here.
   await search(page, 'merge pdf')
   await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
-})
-
-test('and the diacritic fold still applies after many other searches', async ({ page }) => {
-  // The cache clears wholesale when it grows past its bound, so the folded
-  // fields have to repopulate correctly rather than being lost.
-  for (const q of ['pdf', 'image', 'csv', 'zakat', 'qr']) await search(page, q)
-  await search(page, 'عداد الكلمات', 'ar')
-  await expect(page.getByTestId('tool-text-counter')).toBeVisible()
 })
 
 // --- Held-out set #8: the PRODUCT NAME used as the verb.
@@ -1028,4 +689,74 @@ test('a query that already works is untouched by the alias layer', async ({ page
   await search(page, 'meeting')
   const first = page.locator('[data-testid^="tool-"]').first()
   await expect(first).not.toHaveAttribute('data-testid', 'tool-image-compressor')
+})
+
+// --- Mechanism cases kept through the November 2026 cut. Each used to be
+// pinned on a tool that was removed or merged; the MECHANISM is what they
+// guard, so they are re-aimed at a tool that still exists rather than lost.
+
+test('the launcher searches the same way', async ({ page }) => {
+  await page.goto('/en/apps/qr-code')
+  await page.getByTestId('app-launcher').click()
+  await page.getByTestId('launcher-search').fill('merge pdf')
+  // The launcher and the home catalogue share one scorer, so a query that works
+  // in one has to work in the other.
+  await expect(page.getByTestId('tool-pdf-merge')).toBeVisible()
+})
+
+test('a shipped capability is findable by its name', async ({ page }) => {
+  // The site decodes HEIC everywhere an image is taken (#226); the query an
+  // iPhone owner on Android actually types has to find a tool.
+  await search(page, 'heic')
+  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+})
+
+test('a substring inside another word is not a match', async ({ page }) => {
+  // "old" is inside "Golden Hour" — the mid-word penalty keeps the age
+  // calculator first for this.
+  await search(page, 'how old am i')
+  await expect(page.getByTestId('tool-age-calculator')).toBeVisible()
+  await expect(top(page)).toContainText(/age/i)
+})
+
+test('British and American spellings both find the tool', async ({ page }) => {
+  await search(page, 'normalise')
+  await expect(page.getByTestId('tool-arabic-normalize')).toBeVisible()
+})
+
+test('a format this site does not handle still finds nothing', async ({ page }) => {
+  // The adware move is to always show something; AVIF is read by no tool here.
+  await search(page, 'avif')
+  await expect(page.getByTestId('tool-image-compressor')).toHaveCount(0)
+})
+
+test('Arabic particles stick to the front of the word, and are stripped', async ({ page }) => {
+  // The strip only lands on a word the catalogue already knows, which is what
+  // stops it mangling «كتاب» into «تاب».
+  await search(page, 'بالهجري', 'ar')
+  await expect(page.getByTestId('tool-hijri-calendar')).toBeVisible()
+})
+
+test('a tool is findable by its own Arabic name typed without the diacritics', async ({ page }) => {
+  await search(page, 'محول العملات', 'ar')
+  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
+})
+
+test('and the diacritic fold still applies after many other searches', async ({ page }) => {
+  // The cache clears wholesale when it grows past its bound, so the folded
+  // fields have to repopulate correctly rather than being lost.
+  for (const q of ['pdf', 'image', 'csv', 'zakat', 'qr']) await search(page, q)
+  await search(page, 'محول العملات', 'ar')
+  await expect(page.getByTestId('tool-currency-converter')).toBeVisible()
+})
+
+test('what a merged tool did is still findable in the tool that took it over', async ({ page }) => {
+  for (const [q, id] of [
+    ['crop image', 'image-edit'], ['convert to webp', 'image-compressor'],
+    ['markdown to word', 'word-editor'], ['csv to excel', 'excel-editor'],
+    ['pdf to text', 'pdf-ocr'], ['trim video', 'video-edit'],
+  ] as const) {
+    await search(page, q)
+    await expect(page.getByTestId(`tool-${id}`), q).toBeVisible()
+  }
 })

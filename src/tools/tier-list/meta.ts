@@ -8,7 +8,7 @@ export const tierListTool: Tool = {
   tagline: 'Rank anything into S–D tiers, then export.',
   description:
     'Add labels for the things you want to rank, then drag them into S, A, B, C and D tiers to build a classic tier list — and download it as an image to share. Your list is saved in this browser; nothing is uploaded.',
-  category: 'Design',
+  category: 'Generators',
   keywords: ['tier list', 'ranking', 'rank', 's tier', 'compare', 'vote', 'قائمة تصنيف', 'ترتيب', 'تصنيف'],
   status: 'stable',
   Icon: TierIcon,

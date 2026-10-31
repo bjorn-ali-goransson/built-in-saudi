@@ -114,8 +114,7 @@ const STR = {
     download: 'Download',
     big: 'These clips are large. Every frame is decoded and encoded again here, so this will take a while and use a lot of memory — a phone may run out.',
     unsupportedTitle: 'This browser cannot re-encode video',
-    unsupportedBody: 'Cropping, joining and captioning all change what is in the picture, so the frames have to be decoded and encoded again. That needs WebCodecs with H.264, which this browser does not offer. Chrome, Edge and Safari 16.4 or later can; Firefox on Android cannot. Trimming a clip needs none of it and still works here.',
-    trimLink: 'Trim a video instead',
+    unsupportedBody: 'Cropping, joining and captioning all change what is in the picture, so the frames have to be decoded and encoded again. That needs WebCodecs with H.264, which this browser does not offer. Chrome, Edge and Safari 16.4 or later can; Firefox on Android cannot. Open this page in one of those and everything here works.',
     undecodable: 'This browser has no decoder for this clip, so it cannot be re-encoded here.',
     errors: {
       'not-mp4': 'This does not look like a video this editor can read. It opens MP4, MOV, WebM and MKV files.',
@@ -204,8 +203,7 @@ const STR = {
     download: 'تنزيل',
     big: 'هذه المقاطع كبيرة. يُفَكّ ترميز كل إطار ويُعاد ترميزه هنا، فسيستغرق ذلك وقتًا ويستهلك ذاكرة كبيرة — وقد تنفد ذاكرة الهاتف.',
     unsupportedTitle: 'هذا المتصفح لا يستطيع إعادة ترميز الفيديو',
-    unsupportedBody: 'الاقتصاص والدمج وإضافة النص كلها تغيّر ما في الصورة، فلا بد من فك ترميز الإطارات وإعادة ترميزها. وهذا يحتاج WebCodecs مع H.264، وهو ما لا يوفّره هذا المتصفح. تقدر عليه كروم وإيدج وسفاري ١٦٫٤ فأحدث؛ ولا يقدر عليه فَيرفُكس على أندرويد. أما اقتطاع مقطع فلا يحتاج شيئًا من ذلك ويعمل هنا.',
-    trimLink: 'اقتطع فيديو بدل ذلك',
+    unsupportedBody: 'الاقتصاص والدمج وإضافة النص كلها تغيّر ما في الصورة، فلا بد من فك ترميز الإطارات وإعادة ترميزها. وهذا يحتاج WebCodecs مع H.264، وهو ما لا يوفّره هذا المتصفح. تقدر عليه كروم وإيدج وسفاري ١٦٫٤ فأحدث؛ ولا يقدر عليه فَيرفُكس على أندرويد. افتح هذه الصفحة في أحدها يعمل كل شيء هنا.',
     undecodable: 'لا يملك هذا المتصفح فاكّ ترميز لهذا المقطع، فلا يمكن إعادة ترميزه هنا.',
     errors: {
       'not-mp4': 'لا يبدو هذا فيديو يستطيع هذا المحرر قراءته. فهو يفتح ملفات MP4 وMOV وWebM وMKV.',
@@ -1648,7 +1646,6 @@ export default function VideoEditTool() {
         <Panel className="gap-2" data-testid="ve-unsupported">
           <p className="text-[0.95rem] font-semibold text-ink rtl:font-ar">{s.unsupportedTitle}</p>
           <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.unsupportedBody}</p>
-          <a className="text-[0.9rem] text-green-700 underline rtl:font-ar" href={`/${locale}/apps/video-trim`}>{s.trimLink}</a>
         </Panel>
       </Stack>
     )

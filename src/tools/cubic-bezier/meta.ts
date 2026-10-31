@@ -8,7 +8,7 @@ export const cubicBezierTool: Tool = {
   tagline: 'Craft CSS easing curves and preview them.',
   description:
     'Drag the two control points to shape a CSS cubic-bezier easing curve, watch a live animation play it back, start from presets like ease-in-out, and copy the ready-to-paste value. Runs entirely in your browser.',
-  category: 'Design',
+  category: 'Developer',
   keywords: ['cubic bezier', 'easing', 'css', 'animation', 'transition', 'timing function', 'curve', 'منحنى', 'حركة', 'تنعيم'],
   status: 'stable',
   Icon: CurveIcon,

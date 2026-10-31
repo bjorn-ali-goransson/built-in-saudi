@@ -21,11 +21,8 @@ const byId = new Map(tools.map((t) => [t.id, t]))
 
 /** Default cases: the pairs this repo has actually had to reason about. */
 const PAIRS = [
-  ['html to markdown', 'paste-to-markdown', 'markdown-html'],
   ['تشكيل النص', 'diacritize', 'arabic-normalize'],
-  ['طمس وجه في صورة', 'image-redact', 'steganography'],
-  ['open a zip', 'archive-inspector', 'zip-create'],
-  ['ضغط ملفات', 'zip-create', 'svg-optimise'],
+  ['طمس وجه في صورة', 'image-edit', 'steganography'],
 ]
 
 const cases = process.argv.length >= 5

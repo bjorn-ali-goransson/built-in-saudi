@@ -20,12 +20,13 @@ const pick = (page: import('@playwright/test').Page, buffer: Buffer, name = 'sca
   page.getByTestId('pk-file').setInputFiles({ name, mimeType: 'application/pdf', buffer })
 
 test.describe('ocr a scanned pdf', () => {
-  test('a PDF that already has text is sent to the extractor instead', async ({ page }) => {
+  test('a PDF that already has text hands its text back at once', async ({ page }) => {
     await page.goto('/en/apps/pdf-ocr')
     await pick(page, await pdf([['Contract of employment', 'Signed in Riyadh on 1 March']]), 'contract.pdf')
     await expect(page.getByTestId('pk-has-text')).toBeVisible()
-    await page.getByTestId('pk-use-extract').click()
-    await expect(page).toHaveURL(/\/en\/apps\/pdf-to-text/)
+    // No OCR step: reading a perfect copy by eye could only make it worse.
+    await expect(page.getByTestId('pk-run')).toHaveCount(0)
+    await expect(page.getByTestId('pk-page-0')).toContainText('Contract of employment')
   })
 
   test('a mixed file says only the picture pages were read by eye', async ({ page }) => {

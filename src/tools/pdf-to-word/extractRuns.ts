@@ -1,6 +1,6 @@
 // pdf.js → positioned, sized, bold-flagged runs.
 //
-// `pdf-to-text/extract.ts` deliberately throws away everything but the
+// `lib/pdfExtract.ts` deliberately throws away everything but the
 // characters, which is right for its job and useless for this one: without the
 // size there is no heading and without the font there is no bold, so the Word
 // document would be one long undifferentiated paragraph.

@@ -22,42 +22,34 @@
 
 export const UNTUNED5 = [
   // --- images ---------------------------------------------------------------
-  ['jpg to png', 'image-format-converter'],
-  ['png to jpg', 'image-format-converter'],
-  ['webp to jpg', 'image-format-converter'],
-  ['.heic', 'image-format-converter'],
-  ['heic to jpeg', 'image-format-converter'],
-  ['avif', 'image-format-converter'],
-  ['.svg', ['svg-editor', 'svg-optimise']],
-  ['svg to png', 'image-format-converter'],
-  ['.ico', 'favicon-generator'],
+  ['jpg to png', 'image-compressor'],
+  ['png to jpg', 'image-compressor'],
+  ['webp to jpg', 'image-compressor'],
+  ['.heic', 'image-compressor'],
+  ['heic to jpeg', 'image-compressor'],
+  ['avif', 'image-compressor'],
+  ['svg to png', 'image-compressor'],
 
   // --- documents -------------------------------------------------------------
-  ['.docx', ['docx-to-text', 'docx-markdown']],
-  ['docx to txt', 'docx-to-text'],
-  ['.pptx', 'pptx-to-text'],
-  ['pptx to text', 'pptx-to-text'],
-  ['.epub', ['epub-text', 'markdown-epub']],
-  ['epub to txt', 'epub-text'],
-  ['md to docx', 'markdown-docx'],
-  ['.md', ['markdown-html', 'markdown-docx', 'paste-to-markdown']],
+  ['.docx', ['word-editor']],
+  ['docx to txt', 'word-editor'],
+  ['.pptx', 'powerpoint-editor'],
+  ['pptx to text', 'powerpoint-editor'],
+  ['md to docx', 'word-editor'],
+  ['.md', ['word-editor']],
   ['pdf to jpg', 'pdf-to-images'],
   ['pdf to docx', 'pdf-to-word'],
   ['jpg to pdf', 'images-to-pdf'],
 
   // --- tabular and data ------------------------------------------------------
-  ['.xlsx', ['xlsx-convert', 'csv-to-xlsx']],
-  ['xlsx to csv', 'xlsx-convert'],
-  ['csv to xlsx', 'csv-to-xlsx'],
-  ['.csv', ['csv-clean', 'csv-json', 'csv-split']],
+  ['.xlsx', ['excel-editor']],
+  ['xlsx to csv', 'excel-editor'],
+  ['csv to xlsx', 'excel-editor'],
+  ['.csv', ['csv-json']],
   ['json to csv', 'csv-json'],
   ['csv to json', 'csv-json'],
-  ['.vcf', 'vcard-to-csv'],
-  ['vcf to csv', 'vcard-to-csv'],
-  ['.ics', 'ics-builder'],
 
   // --- audio and video -------------------------------------------------------
-  ['mp4 to mp3', 'video-audio'],
   ['mp4 to gif', 'video-gif'],
   ['.wav', 'audio-convert'],
   ['m4a to wav', 'audio-convert'],
@@ -65,24 +57,15 @@ export const UNTUNED5 = [
   ['mp4 to jpg', 'video-frames'],
 
   // --- archives and binaries -------------------------------------------------
-  ['.zip', ['archive-inspector', 'zip-create']],
-  ['open a .zip', 'archive-inspector'],
-  ['make a .zip', 'zip-create'],
-  ['.exe what is inside', 'hex-viewer'],
 
   // --- developer formats -----------------------------------------------------
-  ['.json pretty', 'json-formatter'],
   ['.jwt', 'jwt-decoder'],
   ['.pem', 'cert-decoder'],
-  ['base64 to png', 'image-base64'],
-  ['png to base64', 'image-base64'],
 
   // --- Arabic, same axis -----------------------------------------------------
-  ['تحويل jpg إلى png', 'image-format-converter'],
+  ['تحويل jpg إلى png', 'image-compressor'],
   // «open an xlsx file» — the spreadsheet editor opens it, xlsx-convert reads it out.
-  ['فتح ملف xlsx', ['xlsx-convert', 'excel-editor']],
+  ['فتح ملف xlsx', ['excel-editor']],
   ['تحويل pdf إلى صور', 'pdf-to-images'],
-  ['ملف vcf', 'vcard-to-csv'],
-  ['تحويل mp4 إلى mp3', 'video-audio'],
   ['ملف srt', 'subtitle-editor'],
 ]

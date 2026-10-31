@@ -35,48 +35,6 @@ test.describe('barcode', () => {
   })
 })
 
-test.describe('curl converter', () => {
-  test('parses a multi-header POST and emits fetch', async ({ page }) => {
-    await page.goto('/en/apps/curl-convert')
-    await page.getByTestId('cv-sample').click()
-    await expect(page.getByTestId('cv-url')).toHaveText('https://api.example.com/v1/orders')
-    await expect(page.getByTestId('cv-headers')).toHaveText('2')
-    const out = page.getByTestId('cv-output')
-    await expect(out).toHaveValue(/method: 'POST'/)
-    await expect(out).toHaveValue(/'Authorization': 'Bearer sk_test_123'/)
-    await expect(out).toHaveValue(/JSON\.stringify\(/)
-  })
-
-  test('a header value containing a space survives tokenising', async ({ page }) => {
-    await page.goto('/en/apps/curl-convert')
-    await page.getByTestId('cv-input').fill(`curl https://x.test -H 'User-Agent: Mozilla 5.0 Safari'`)
-    await expect(page.getByTestId('cv-output')).toHaveValue(/'User-Agent': 'Mozilla 5\.0 Safari'/)
-  })
-
-  test('switches target language', async ({ page }) => {
-    await page.goto('/en/apps/curl-convert')
-    await page.getByTestId('cv-sample').click()
-    await page.getByTestId('cv-python').click()
-    const out = page.getByTestId('cv-output')
-    await expect(out).toHaveValue(/import requests/)
-    // JSON true must become Python True, or the snippet does not run.
-    await expect(out).toHaveValue(/True/)
-    await expect(out).toHaveValue(/requests\.post\(/)
-  })
-
-  test('flags -k rather than silently reproducing it', async ({ page }) => {
-    await page.goto('/en/apps/curl-convert')
-    await page.getByTestId('cv-input').fill('curl -k https://self-signed.test/api')
-    await expect(page.getByTestId('cv-insecure')).toBeVisible()
-  })
-
-  test('rejects input with no URL', async ({ page }) => {
-    await page.goto('/en/apps/curl-convert')
-    await page.getByTestId('cv-input').fill('just some words')
-    await expect(page.getByTestId('cv-invalid')).toBeVisible()
-  })
-})
-
 test.describe('coordinate converter', () => {
   test('converts decimal into every other notation', async ({ page }) => {
     await page.goto('/en/apps/coordinates')
@@ -159,35 +117,4 @@ test.describe('link preview', () => {
     '<meta property="og:url" content="https://example.com/guide">',
     '<meta name="twitter:card" content="summary_large_image">',
   ].join('\n')
-
-  test('renders a card from pasted tags', async ({ page }) => {
-    await page.goto('/en/apps/link-preview')
-    await page.getByTestId('lp-html').fill(TAGS)
-    const preview = page.getByTestId('lp-preview')
-    await expect(preview).toContainText('How to renew your iqama')
-    await expect(preview).toContainText('example.com')
-    await expect(page.getByTestId('lp-good')).toBeVisible()
-  })
-
-  test('names what is missing', async ({ page }) => {
-    await page.goto('/en/apps/link-preview')
-    await page.getByTestId('lp-html').fill('<meta property="og:title" content="Just a title">')
-    const problems = page.getByTestId('lp-problems')
-    await expect(problems).toContainText('og:description')
-    await expect(problems).toContainText('og:image')
-    await expect(problems).toContainText('twitter:card')
-  })
-
-  test('flags a relative image path', async ({ page }) => {
-    await page.goto('/en/apps/link-preview')
-    await page.getByTestId('lp-html').fill(TAGS.replace('https://example.com/card.png', '/card.png'))
-    await expect(page.getByTestId('lp-problems')).toContainText('relative path')
-  })
-
-  test('switching platform changes the card', async ({ page }) => {
-    await page.goto('/en/apps/link-preview')
-    await page.getByTestId('lp-html').fill(TAGS)
-    await page.getByTestId('lp-x').click()
-    await expect(page.getByTestId('lp-preview')).toContainText('How to renew your iqama')
-  })
 })

@@ -35,10 +35,10 @@ import { categoryLabel, type Locale } from '../i18n'
  * into their own sections, and the Duʿāʾ row is untouched.
  */
 const RECOMMENDED = ['ats-cv-optimizer', 'prayer-times', 'pdf-to-word', 'image-compressor',
-  'gosi-salary', 'qr-code', 'translate', 'calls']
+  'word-editor', 'qr-code', 'translate', 'calls']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
-const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Office', 'Text', 'Converters', 'Calculators', 'Health', 'Time & Date',
-  'Images', 'PDF', 'Files', 'Developer', 'Web', 'Generators', 'Design', 'Business', 'Communication']
+const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Office', 'Text', 'Calculators', 'Time & Date',
+  'Images', 'PDF', 'Files', 'Developer', 'Generators', 'Business', 'Communication']
 
 export interface ToolSection {
   key: string
@@ -80,16 +80,11 @@ export interface ToolSection {
 const DEMOTE_AT = 2
 const FAIR_CHANCE_DAYS = 30
 const MIN_VISIBLE = 3
-const ESSENTIAL = new Set([
-  // The Saudi tax wedge: 15% VAT is a weekly question here, and whether to
-  // register is the one every new business gets wrong.
-  'vat-calculator', 'vat-registration',
-  // The printable month of prayer times — the Islamic core, on paper.
-  'prayer-timetable',
-  // The staples a visitor checks a toolbox for before trusting it with
-  // anything else; missing them reads as a site that is not finished.
-  'pdf-split', 'pdf-to-text', 'json-formatter', 'text-counter', 'text-diff',
-  'percentage-calculator', 'image-cropper', 'image-format-converter',
+const ESSENTIAL = new Set<string>([
+  // Every tool that stayed through the November 2026 cut earned its place by
+  // being used; the no-traffic "staples" this list used to protect were the
+  // ones that went. Kept as a mechanism so a genuinely essential tool can be
+  // named here with its reason, rather than as a list of habits.
 ])
 
 const DAY = 86400000

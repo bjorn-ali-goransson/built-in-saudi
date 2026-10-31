@@ -9,8 +9,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 // type, and the only page answering it was home, which lists all 207 tools and
 // is therefore about nothing in particular.
 
-const SLUGS = ['pdf', 'images', 'saudi', 'islamic', 'arabic', 'calculators', 'text',
-  'converters', 'developer', 'files', 'generators', 'design', 'web', 'business', 'communication']
+const SLUGS = ['pdf', 'images', 'saudi', 'islamic', 'arabic', 'calculators', 'time', 'text',
+  'developer', 'files', 'generators', 'business', 'communication', 'office']
 
 test('every category is prerendered in both locales with its OWN description', async () => {
   // Not through the browser: this is about the static HTML a crawler is served
@@ -32,18 +32,6 @@ test('every category is prerendered in both locales with its OWN description', a
       expect(html).toContain(`href="https://built-in-saudi.com/${locale}/c/${slug}/"`)
       expect(html).toContain('<h1>')
     }
-  }
-})
-
-test('the prerendered page lists its own tools and links every other category', async () => {
-  const html = readFileSync('dist/en/c/pdf/index.html', 'utf8')
-  expect(html).toContain('/en/apps/pdf-merge/')
-  expect(html).toContain('/en/apps/pdf-split/')
-  // Not a tool from another category.
-  expect(html).not.toContain('/en/apps/qibla/')
-  // Fifteen pages that each link only back to home are fifteen leaves.
-  for (const slug of SLUGS.filter((s) => s !== 'pdf')) {
-    expect(html, `pdf page should link /c/${slug}/`).toContain(`/en/c/${slug}/`)
   }
 })
 

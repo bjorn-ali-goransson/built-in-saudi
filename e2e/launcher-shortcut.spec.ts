@@ -34,12 +34,6 @@ test('you can type straight into it and land on a tool', async ({ page }) => {
   await expect(page).toHaveURL(/\/en\/apps\/iban-validator/)
 })
 
-test('a bare k does nothing, so typing in a tool is unaffected', async ({ page }) => {
-  await page.goto('/en/apps/text-counter')
-  await page.keyboard.press('k')
-  await expect(panel(page)).toHaveCount(0)
-})
-
 test('it does not steal the key from a rich-text surface', async ({ page }) => {
   // A contenteditable may bind Cmd/Ctrl+K to "insert link"; taking that key
   // off it would break the tool in order to speed up leaving it.
@@ -105,9 +99,9 @@ test('type and press Enter to land on the top result', async ({ page }) => {
 
 test('Enter on the home search does the same thing', async ({ page }) => {
   await page.goto('/en')
-  await page.locator('.tool-search__input').fill('gosi')
+  await page.locator('.tool-search__input').fill('iban')
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/en\/apps\/gosi-salary/)
+  await expect(page).toHaveURL(/\/en\/apps\/iban-validator/)
 })
 
 test('Enter with nothing to open does nothing', async ({ page }) => {
@@ -121,7 +115,7 @@ test('Enter with nothing to open does nothing', async ({ page }) => {
 
 test('Enter works in Arabic, on the Arabic name', async ({ page }) => {
   await page.goto('/ar')
-  await page.locator('.tool-search__input').fill('التأمينات')
+  await page.locator('.tool-search__input').fill('محول العملات')
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/ar\/apps\/gosi-salary/)
+  await expect(page).toHaveURL(/\/ar\/apps\/currency-converter/)
 })

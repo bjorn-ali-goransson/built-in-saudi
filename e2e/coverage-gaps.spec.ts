@@ -1,18 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { MockApi, ok, serverError, stubGoogleSignIn } from './support/mockApi'
 
-// Behavioral coverage for tools/pages the survey flagged as untested — each
-// asserts real output, not just that a container is visible.
-
-test('word counter counts words and characters', async ({ page }) => {
-  await page.goto('/en/apps/text-counter')
-  await expect(page.getByTestId('word-counter')).toBeVisible()
-  await page.getByTestId('wc-input').fill('hello brave new world')
-  const stats = page.getByTestId('wc-stats')
-  await expect(stats).toContainText('4') // words
-  await expect(stats).toContainText('21') // characters
-})
-
 test.describe('qibla with a fixed location', () => {
   test.use({ geolocation: { latitude: 24.7136, longitude: 46.6753 }, permissions: ['geolocation'] }) // Riyadh
 

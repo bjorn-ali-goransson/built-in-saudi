@@ -1,6 +1,6 @@
 // "Is this PDF a picture of a document?" — asked in two places.
 //
-// `pdf-to-text/extract.ts` and `pdf-to-word/extractRuns.ts` are separate
+// `lib/pdfExtract.ts` and `pdf-to-word/extractRuns.ts` are separate
 // extractors on purpose: one wants text, the other wants positioned runs with
 // their fonts, and merging them would give each the other's cost. But both have
 // to answer the same question, and both carried their own copy of the answer.

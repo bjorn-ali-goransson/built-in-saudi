@@ -11,6 +11,8 @@ export const imageEditTool: Tool = {
     'The video editor’s screen, for the one-frame case: crop a picture to the shape a platform wants, draw a box over anything that should not be in it, and type a caption straight onto the frame — in your browser, with nothing uploaded. It shows what a crop costs before you commit to it, and the rectangle is dragged over the WHOLE picture so you can see what is being thrown away rather than watching the result appear to zoom. A dragged corner snaps onto 9:16, 1:1, 4:5 or 16:9 when it gets close and lets go again when it does not, so an arbitrary shape is still expressible. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left. The box that hides something offers pixelate, solid or blur, with what that choice costs written next to it — a single picture gives far less back to a pixel-unpicking attack than a video does, and the tool says so rather than repeating the video figure it did not measure here. And there is a control that tilts every picture one degree clockwise, on by default, because somebody asked for it that way.',
   category: 'Images',
   keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'crop photo', 'meme', 'meme generator', 'redact image', 'blur a face', 'قص الصورة', 'ميم', 'طمس',
     // EDITOR-shaped, deliberately. `image-cropper` owns 'crop image' and
     // `image-redact` owns the bare 'blur', 'redact' and «طمس» for pictures, and
     // taking either would be the documented mistake of a new tool capturing a

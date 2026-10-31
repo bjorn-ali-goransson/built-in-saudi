@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **244 tools are live.** This
+The backlog, and an honest account of what exists. **114 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -23,31 +23,43 @@ registry disagree.
 
 | Category | Count | Shape of it |
 |---|---|---|
-| Saudi / Local | 27 | iqama fees and expiry, GOSI and end of service, exit/re-entry, sponsorship transfer, retirement age, VAT registration and the **e-invoicing waves**, **RETT**, rent rules, **traffic fines**, vehicle and commercial-register renewal, import duty, IBAN, plates, short address, phone, weather |
-| Developer | 26 | encoders, formatters, regex, JWT, cron (explain **and** build), cURL→code, HMAC, JSON diff, CSV clean/merge, X.509 certificates, email headers, **AI token counter** |
-| Images | 24 | compress/convert/crop, OCR, background removal, redaction, passport photos, carousel, screenshot framing, batch watermark, colour-blindness simulator, **document-scan correction**, **print sizing**, **stills from video**, **the image editor** |
-| Text | 24 | counters, diffing, readability, anonymising, invisible characters, subtitles, character finder, on-device **translator, summariser and language detector**, **password strength with the k-anonymous breach check**, to-do and kanban |
-| Generators | 23 | QR, barcode, passwords, passphrases, 2FA, printable paper, labels, wheels and draws, worksheets, bingo cards, quizzes, **word searches**, Arabic handwriting sheets, .ics events, seating charts, attendance sheets, **school timetables**, **illustrated activity schedules** |
-| PDF | 16 | merge/split/compress/sign/fill/edit, →images, →text, **→Word**, booklet imposition, stamping, page organiser, true redaction, OCR, **diffing** |
-| Files | 15 | archives (read **and write**), metadata, hex, encryption, audio trim/extract/**spectrum**, remove silence, video→GIF, video trim (no re-encode), **the video editor and the stabiliser**, CSV split, spreadsheet diff |
-| Converters | 14 | **Markdown ↔ Word / EPUB / HTML**, docx/pptx/EPUB→text, xlsx→CSV/JSON, CSV→xlsx, contacts ↔ spreadsheet, image→base64, **audio** |
-| Islamic | 12 | prayer times and printable timetables, qibla, Hijri calendar and age, adhkar, Hisn al-Muslim, istikhara, khatma planner, zakat, hajj & umrah |
-| Calculators | 11 | VAT, percentage, units, currency, coordinates, split bill, GPA, **AC sizing**, **fuel cost**, tempo tap, sound meter |
-| Design | 10 | colour, contrast, gradients, bezier, palette-from-image, SVG optimiser, box shadow, aspect ratio, tier list |
-| Time & Date | 9 | age, date difference, working days, countdown, sun times, timezone planner, **timesheet**, **stopwatch**, pomodoro |
-| Web | 8 | meta tags, robots.txt, link preview, link shortener, URL encode/parse, user agent, accessibility check |
+| Generators | 16 | QR, barcode, passwords, passphrases, a wheel of names, dice, teams, worksheets, quizzes, Arabic handwriting sheets, seating charts, attendance sheets, school timetables, illustrated activity schedules, metronome, tier list |
+| Developer | 15 | JWT, X.509 certificates, cron (build **and** explain), number bases, UUIDs, fake data, JSON diff, Markdown tables, READMEs, CSV ⇄ JSON, URL encode/parse, link shortener, cubic bezier, prompt analyzer |
+| Images | 13 | the image editor (crop, censor, caption, cut and compose), compress and convert, background removal, OCR, QR reader, document-scan correction, passport photos, photo booth, steganography, ASCII art, stills from video, batch watermark, colour-blindness simulator |
+| Text | 12 | kanban and to-do lists, on-device translator and language detector, typing test, password strength with the k-anonymous breach check, character finder, readable text, Arabic poetry meters, case converter, flashcards, subtitles |
+| Islamic | 11 | prayer times, qibla, Hijri and Islamic calendars, Hijri age, adhkar, Hisn al-Muslim, istikhara, khatma planner, zakat, hajj & umrah |
+| PDF | 10 | sign, compress, →Word, →images, merge, edit, images→PDF, PDF to text (with OCR for scans), page organiser, fill forms |
 | Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
-| Health | 7 | **due date**, **ovulation**, calories, water intake, sleep cycles, glucose units, medicine schedule |
-| Business | 6 | invoice, quotation/receipt, certificates, CV optimizer, Book Me, **pricing and margin** |
-| Communication | 2 | Calls — P2P video, whiteboard; Messages — P2P team chat |
+| Saudi / Local | 6 | plates, iqama and ID expiry, phone numbers, IBAN, short address, weather |
+| Files | 6 | the video editor and the stabiliser, video→GIF, audio spectrum and conversion, spreadsheet to contacts |
+| Calculators | 5 | units, currency, coordinates, split bill, tempo tap |
+| Time & Date | 5 | date difference, age, working days, stopwatch & timer, pomodoro |
+| Business | 3 | CV optimizer, Book Me, certificates |
 | Office | 3 | **presentation editor** — pptx/md outline in a worker, themes, presenter view, live co-editing; **spreadsheet editor** — xlsx/ods/csv in a worker, formulas, charts, live co-editing; **document editor** — docx/odt/md/html, styles, tables, footnotes, prosemirror-collab |
+| Communication | 2 | Calls — P2P video, whiteboard; Messages — P2P team chat |
 
-**Three of those categories did not exist in the August 2026 table**, and the
-splits are recorded in CLAUDE.md rather than here: `Calculators` was several
-subjects wearing one shape and became **Health** and **Time & Date**;
-`Saudi / Local` gave up **Islamic** and **Arabic**, because neither Islamic
-practice nor the Arabic language is a Saudi *administrative* matter; and
-`Developer` gave up **Web**, the tools you point at a site rather than at code.
+**The catalogue was cut from 244 tools to 114 in November 2026**, on three
+rules, and every removed address redirects:
+
+- **No tool that encodes a regulation.** GOSI, VAT, iqama fees, end of service,
+  traffic fines, rent rules, e-invoicing waves, RETT and the rest: their answer
+  could go stale without anyone touching the code, and being wrong about a
+  government rule is the worst thing a free tool can be. They redirect to the
+  catalogue. (Zakat stays: it is a religious obligation, not a regulation.)
+- **No health calculators.** Pregnancy, ovulation, calories, water, sleep,
+  glucose and medicine timing were out of scope for a toolbox.
+- **Nothing nobody used.** Every tool seen twice or less in eleven weeks of
+  counting (12 Aug – 28 Oct) went, staples included.
+- **Overlaps were merged into the tool that already does the job**, and their
+  addresses redirect there: Markdown/Word/HTML converters into the Document
+  Editor, CSV↔Excel into the Spreadsheet Editor, PowerPoint→text into the
+  Presentation Editor, cropping, redaction and memes into the Image Editor,
+  format conversion into the Image Compressor, PDF to text into the OCR tool
+  (now named PDF to Text), the video trimmer into the Video Editor, the cron
+  explainer into the Cron Builder.
+- **Web, Design and Converters stopped being categories** once each held three
+  tools; their tools moved to Developer, Images, Generators and Files. Health
+  went with its tools.
 
 Everything is client-side except the documented server-backed tools (Book Me,
 Calls signalling, prayer alerts, to-do list sync, CV optimizer, link shortener,
@@ -65,10 +77,10 @@ to Have I Been Pwned, which is a property of the protocol rather than a promise.
 **This is a product principle, not a footnote to one.** The catalogue is
 Saudi-made and bilingual, and its Islamic tools are a stated wedge — so a tool
 whose subject is impermissible is not a tool with a caveat on it, it is a tool
-that does not belong here. **Both ids in the retired list are here for this
-reason** — no tool has ever been pulled from the catalogue for anything else —
-and both of them shipped, or were rebuilt after being withdrawn, before
-anything objected. That is why the rule is written out rather than assumed.
+that does not belong here. **The loan calculator and the tuner were
+withdrawn for this reason** — and both of them shipped, or were rebuilt after
+being withdrawn, before anything objected. (The November 2026 cut withdrew
+far more, for the separate reasons below.) That is why the rule is written out rather than assumed.
 (A Word-to-PDF tool was also abandoned in August 2026, but before it shipped
 and for a correctness reason: react-pdf mangles Arabic lam-alef. It has no
 retired route because it never had a route.)
@@ -79,10 +91,8 @@ and it is what keeps the exclusion from spreading over a whole technology:
 
 | in | out | why |
 |---|---|---|
-| `early-settlement` | a loan/EMI calculator | it encodes the SAMA rule that **waives** the remaining term cost |
-| `metronome`, `bpm-tap`, `sound-meter` | an instrument tuner | a metronome times any repeated activity, a tap counter measures a rate, a meter measures noise |
+| `metronome`, `bpm-tap` | an instrument tuner | a metronome times any repeated activity, a tap counter measures a rate, a meter measures noise |
 | `dice-roller` | a betting, casino or lottery tool | it draws lots — **قرعة**, an established practice — and the dice are the randomiser, not a stake |
-| `bingo-cards` | a lottery or betting tool | it makes printable cards from a teacher's own word list |
 
 **A contested subject counts.** The tuner was not withdrawn because a ruling is
 settled — the permissibility of musical instruments is disputed. It was
@@ -137,6 +147,24 @@ keywords**, so it advertises itself for the use the tuner was withdrawn over
 even though the tool itself stays. Dropping those two words is the consistent
 move; it costs findability for a legitimate use, so it is recorded rather than
 done unilaterally.
+
+
+### The second rule: no tool that encodes a regulation
+
+**A tool whose answer is a government rule is out** — a tax rate, a fee
+schedule, a labour-law formula, a fine, a filing deadline, a threshold. Those
+answers change by decree without anyone touching the code, the people who
+reach for them are about to act on the number, and being confidently wrong
+about a rule is the one failure a free tool cannot afford. The November 2026
+cut withdrew all of them (GOSI, VAT, iqama and visa fees, end of service, leave
+and overtime, traffic fines, rent rules, e-invoicing waves, RETT, import duty,
+the invoice and quotation writers, and the rest), and `scripts/check-retired.mjs`
+keeps their ids from coming back.
+
+What stays is what does **not** move by decree: a format (IBAN, phone numbers,
+plates, the short address), a date somebody types (ID expiry), and a religious
+obligation (zakat). **Health calculators went for scope, not for this rule** —
+a toolbox is the wrong place to work out a due date or a dose.
 
 ### Everything else
 

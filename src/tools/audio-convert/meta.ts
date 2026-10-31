@@ -9,7 +9,7 @@ export const audioConvertTool: Tool = {
   tagline: 'Any audio file to WAV, at the rate you need.',
   description:
     'Turn an M4A voice memo, an OGG, an AAC or a FLAC into a WAV that every piece of software accepts — and pick the sample rate and channels while you are there. 16 kHz mono is what transcription and speech software expects and is roughly a sixth the size of 44.1 kHz stereo; the tool shows the resulting size before you commit to it. Resampling is done by the browser’s own band-limited resampler rather than a hand-rolled one, so downsampling does not alias. The file is decoded on your device and never uploaded.',
-  category: 'Converters',
+  category: 'Files',
   keywords: [
     'audio converter', 'convert audio', 'm4a to wav', 'mp3 to wav', 'aac to wav', 'ogg to wav', 'flac to wav',
     'opus', 'voice memo', 'wav', 'sample rate', 'resample', '16khz', 'mono', 'stereo', 'downsample',

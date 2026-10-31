@@ -10,7 +10,9 @@ export const spinWheelTool: Tool = {
   description:
     'A spinning wheel for picking a name fairly — for a classroom, a giveaway, a team draw or deciding who presents first. Paste the names, spin, and optionally drop each winner so nobody is drawn twice. The result is chosen with the browser’s cryptographic random source, not Math.random, and your list stays in this browser.',
   category: 'Generators',
-  keywords: ['wheel', 'random', 'picker', 'raffle', 'names', 'draw', 'spinner', 'giveaway', 'عجلة', 'قرعة', 'اختيار عشوائي', 'أسماء', 'سحب'],
+  keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'random picker', 'picker wheel','wheel', 'random', 'picker', 'raffle', 'names', 'draw', 'spinner', 'giveaway', 'عجلة', 'قرعة', 'اختيار عشوائي', 'أسماء', 'سحب'],
   status: 'stable',
   Icon: WheelIcon,
   component: lazyTool(() => import('./SpinWheelTool')),

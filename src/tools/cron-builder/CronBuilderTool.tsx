@@ -1,3 +1,4 @@
+import CronExplain from './CronExplain'
 import { useMemo, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Button, Input, Select, Stack, Seg, SegButton, CodeOut, Panel } from '../../components/ui'
@@ -181,9 +182,12 @@ export default function CronBuilderTool() {
 
       {bothDays && <Panel><p className="text-[0.85rem] text-gold-500 rtl:font-ar">{s.orTrap}</p></Panel>}
       <p className="text-[0.85rem] text-ink-faint rtl:font-ar">{s.tz}</p>
-      <Button to={`/${locale}/apps/cron-explainer`} className="self-start">
-        {locale === 'ar' ? 'اشرح تعبيرًا موجودًا' : 'Explain an existing expression'}
-      </Button>
+      {/* The explainer was its own tool until the catalogue was cut: reading an
+          expression somebody else wrote is the other half of writing one. */}
+      <section className="flex flex-col gap-2 border-t border-[color:var(--line-soft)] pt-4" data-testid="cron-explain">
+        <h2 className="font-display text-[1.15rem] text-ink rtl:font-ar">{locale === 'ar' ? 'اشرح تعبيرًا موجودًا' : 'Explain an existing expression'}</h2>
+        <CronExplain />
+      </section>
     </Stack>
   )
 }

@@ -37,26 +37,6 @@ export const LEAD_DAYS: Record<DocKind, number> = {
   other: 30,
 }
 
-/**
- * The tool that owns the RULE behind a document, where one exists.
- *
- * This tool knows a date and nothing else — it will tell somebody their iqama
- * runs out in six weeks on a site that also works out what the renewal costs,
- * warns that an exit-re-entry visa cannot outrun it, and knows a lapsed Fahes
- * blocks an istimara renewal. Every one of those lived a click away with
- * nothing pointing at it: **`IdExpiryTool` had zero outbound links.**
- *
- * Only where the tool genuinely answers the next question. A passport or an
- * insurance policy has no rule module here, and inventing a link would be
- * worse than none.
- */
-export const GUIDE: Partial<Record<DocKind, { tool: string; en: string; ar: string }>> = {
-  iqama: { tool: 'iqama-fees', en: 'What the renewal costs', ar: 'كم يكلّف التجديد' },
-  istimara: { tool: 'vehicle-renewal', en: 'The window, and the Fahes that gates it', ar: 'النافذة والفحص الذي يشترطها' },
-  visa: { tool: 'exit-reentry', en: 'The fee, and the iqama it cannot outrun', ar: 'الرسوم والإقامة التي لا تتجاوزها' },
-  cr: { tool: 'cr-renewal', en: 'The window, and why the grace is not an extension', ar: 'النافذة ولماذا ليست المهلة تمديدًا' },
-  municipal: { tool: 'cr-renewal', en: 'How it gates the commercial register', ar: 'كيف تشترط السجل التجاري' },
-}
 
 export type Calendar = 'gregorian' | 'hijri'
 

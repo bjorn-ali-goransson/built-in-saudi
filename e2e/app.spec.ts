@@ -61,21 +61,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('uuid-output')).toContainText(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}/i)
   })
 
-  test('json formatter: prettifies valid and flags invalid', async ({ page }) => {
-    await page.goto('/en/tools/json-formatter')
-    await page.getByTestId('json-input').fill('{"b":1,"a":2}')
-    await page.getByTestId('json-format').click()
-    await expect(page.getByTestId('json-output')).toContainText('"b": 1')
-    await page.getByTestId('json-input').fill('{"a":1,}')
-    await page.getByTestId('json-format').click()
-    await expect(page.getByTestId('json-error')).toBeVisible()
-    // CSS format
-    await page.getByTestId('fmt-css').click()
-    await page.getByTestId('json-input').fill('a{color:red;font-weight:bold}')
-    await page.getByTestId('json-format').click()
-    await expect(page.getByTestId('json-output')).toContainText('color: red;')
-  })
-
   test('unit converter: length and temperature', async ({ page }) => {
     await page.goto('/en/tools/unit-converter')
     await page.getByTestId('unit-value').fill('1') // default 1 m → ft
@@ -108,16 +93,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('iban-card')).toHaveCount(0)
   })
 
-  test('vat calculator: add and remove 15%', async ({ page }) => {
-    await page.goto('/en/tools/vat-calculator')
-    await page.getByTestId('vat-amount').fill('100')
-    await expect(page.getByTestId('vat-vat')).toContainText('15.00')
-    await expect(page.getByTestId('vat-gross')).toContainText('115.00')
-    await page.getByTestId('vat-mode-remove').click()
-    await page.getByTestId('vat-amount').fill('115')
-    await expect(page.getByTestId('vat-net')).toContainText('100.00')
-  })
-
   test('arabic poetry: meters reference + verse formatter', async ({ page }) => {
     await page.goto('/en/tools/arabic-poetry')
     await expect(page.getByTestId('bahr-taweel')).toContainText('الطويل')
@@ -141,20 +116,6 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
-  test('image converter: renders the dropzone', async ({ page }) => {
-    await page.goto('/en/tools/image-format-converter')
-    await expect(page.getByTestId('image-format-converter')).toBeVisible()
-    await expect(page.getByTestId('ifc-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
-  })
-
-  test('image cropper: renders the dropzone', async ({ page }) => {
-    await page.goto('/en/tools/image-cropper')
-    await expect(page.getByTestId('image-cropper')).toBeVisible()
-    await expect(page.getByTestId('crop-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
-  })
-
   test('images to pdf: renders the dropzone', async ({ page }) => {
     await page.goto('/en/tools/images-to-pdf')
     await expect(page.getByTestId('images-to-pdf')).toBeVisible()
@@ -166,13 +127,6 @@ test.describe('tools', () => {
     await page.goto('/en/tools/pdf-merge')
     await expect(page.getByTestId('pdf-merge')).toBeVisible()
     await expect(page.getByTestId('pm-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
-  })
-
-  test('pdf split: renders the dropzone', async ({ page }) => {
-    await page.goto('/en/tools/pdf-split')
-    await expect(page.getByTestId('pdf-split')).toBeVisible()
-    await expect(page.getByTestId('ps-drop')).toBeVisible()
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
@@ -213,58 +167,6 @@ test.describe('tools', () => {
     })
     await page.locator('input[type=file]').first().setInputFiles({ name: 'blank.png', mimeType: 'image/png', buffer: Buffer.from(blank) })
     await expect(page.getByTestId('qr-none')).toBeVisible()
-  })
-
-  test('metadata remover: drops EXIF losslessly and keeps the pixels', async ({ page }) => {
-    // A real JPEG with a real APP1/EXIF segment spliced in, so the tool has
-    // something genuine to strip.
-    const jpeg = await page.evaluate(async () => {
-      const c = document.createElement('canvas'); c.width = 120; c.height = 90
-      const x = c.getContext('2d')!
-      x.fillStyle = '#2f5482'; x.fillRect(0, 0, 120, 90)
-      x.fillStyle = '#fff'; x.fillRect(20, 20, 40, 30)
-      const b: Blob = await new Promise((r) => c.toBlob((v) => r(v!), 'image/jpeg', 0.9))
-      return Array.from(new Uint8Array(await b.arrayBuffer()))
-    })
-    const src = Buffer.from(jpeg)
-    // Build an APP1 "Exif\0\0" segment and insert it right after SOI.
-    const payload = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), Buffer.alloc(200, 0x41)])
-    const app1 = Buffer.concat([Buffer.from([0xff, 0xe1, ((payload.length + 2) >> 8) & 0xff, (payload.length + 2) & 0xff]), payload])
-    const withExif = Buffer.concat([src.subarray(0, 2), app1, src.subarray(2)])
-
-    await page.goto('/en/apps/metadata-remove')
-    await expect(page.getByTestId('metadata-remove')).toBeVisible()
-    await page.locator('input[type=file]').first().setInputFiles({ name: 'holiday.jpg', mimeType: 'image/jpeg', buffer: withExif })
-
-    await expect(page.getByTestId('mr-removed')).toContainText(/EXIF/i)
-    // Structural strip, not a re-encode — that is the whole point.
-    await expect(page.getByTestId('mr-mode')).toContainText(/not re-compressed/i)
-    await expect(page.getByTestId('mr-download')).toHaveAttribute('download', 'holiday.jpg')
-    // The cleaned file must be smaller than the one carrying the segment, and
-    // still decode to the same dimensions.
-    const { w, h } = await page.getByTestId('mr-preview').evaluate((el) => ({ w: (el as HTMLImageElement).naturalWidth, h: (el as HTMLImageElement).naturalHeight }))
-    expect(w).toBe(120)
-    expect(h).toBe(90)
-    await expect(page.getByTestId('mr-size')).toContainText(/saved/i)
-  })
-
-  test('hash generator: verifies a pasted checksum and picks the algorithm from it', async ({ page }) => {
-    await page.goto('/en/apps/hash-generator')
-    await page.getByTestId('hash-text').fill('built in saudi')
-    await expect(page.getByTestId('hash-hex')).not.toBeEmpty()
-    const sha256 = await page.getByTestId('hash-hex').innerText()
-
-    // Switch away, then paste a SHA-256 — the length alone should switch it back.
-    await page.getByTestId('hash-algo-SHA-1').click()
-    await page.getByTestId('hash-expected').fill(sha256)
-    await expect(page.getByTestId('hash-verdict-match')).toBeVisible()
-
-    // sha256sum output is usually pasted as "<hash>  <filename>".
-    await page.getByTestId('hash-expected').fill(`${sha256}  built-in-saudi.txt`)
-    await expect(page.getByTestId('hash-verdict-match')).toBeVisible()
-
-    await page.getByTestId('hash-expected').fill(sha256.replace(/.$/, (c) => (c === 'a' ? 'b' : 'a')))
-    await expect(page.getByTestId('hash-verdict-no')).toBeVisible()
   })
 
   test('image to text: actually reads words out of a picture, from our own origin', async ({ page }) => {
@@ -379,27 +281,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('p2i-error')).toBeVisible()
   })
 
-  test('invoice generator: computes VAT and total from line items', async ({ page }) => {
-    await page.goto('/en/tools/invoice-generator')
-    await expect(page.getByTestId('invoice-generator')).toBeVisible()
-    await page.getByTestId('inv-qty-0').fill('2')
-    await page.getByTestId('inv-price-0').fill('100')
-    await page.getByTestId('inv-add-row').click()
-    await page.getByTestId('inv-qty-1').fill('1')
-    await page.getByTestId('inv-price-1').fill('50')
-    // subtotal 250, VAT 15% = 37.50, total 287.50
-    await expect(page.getByTestId('inv-subtotal')).toContainText('250')
-    await expect(page.getByTestId('inv-vat')).toContainText('37.5')
-    await expect(page.getByTestId('inv-total')).toContainText('287.5')
-    // share button + zoomable preview modal
-    await expect(page.getByTestId('inv-share')).toBeVisible()
-    await page.getByTestId('inv-preview').click()
-    await expect(page.getByTestId('inv-modal')).toBeVisible()
-    await expect(page.getByTestId('inv-modal').getByText('287.5', { exact: false })).toBeVisible()
-    await page.getByTestId('inv-modal-close').click()
-    await expect(page.getByTestId('inv-modal')).toHaveCount(0)
-  })
-
   test('qr studio: renders a code + customization controls', async ({ page }) => {
     await page.goto('/en/tools/qr-code')
     await expect(page.getByTestId('qr-code')).toBeVisible()
@@ -417,27 +298,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('qr-label')).toHaveCount(0)
     await page.getByTestId('qr-frame-circle').click()
     await expect(page.getByTestId('qr-label')).toBeVisible()
-  })
-
-  test('color tools: shows the picker, values and palettes', async ({ page }) => {
-    await page.goto('/en/tools/color-tools')
-    await expect(page.getByTestId('color-tools')).toBeVisible()
-    await expect(page.getByTestId('color-hex')).toContainText('#')
-    await expect(page.getByTestId('color-rgb')).toContainText('rgb(')
-    await expect(page.getByTestId('color-palette')).toBeVisible()
-  })
-
-  test('hash generator: SHA-256 of "abc" matches the known vector', async ({ page }) => {
-    await page.goto('/en/tools/hash-generator')
-    await page.getByTestId('hash-algo-SHA-256').click()
-    await page.getByTestId('hash-text').fill('abc')
-    await expect(page.getByTestId('hash-hex')).toHaveText('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
-  })
-
-  test('base64: encodes text', async ({ page }) => {
-    await page.goto('/en/tools/base64')
-    await page.getByTestId('b64-input').fill('Built in Saudi')
-    await expect(page.getByTestId('b64-output')).toHaveText('QnVpbHQgaW4gU2F1ZGk=')
   })
 
   test('date diff: computes a duration', async ({ page }) => {
@@ -484,13 +344,6 @@ test.describe('tools', () => {
     await expect(hero).not.toContainText('BC')
   })
 
-  test('lorem: generates and switches to Arabic', async ({ page }) => {
-    await page.goto('/en/tools/lorem-ipsum')
-    await expect(page.getByTestId('lorem-out')).toContainText(/lorem/i)
-    await page.getByTestId('lorem-flavor-arabic').click()
-    await expect(page.getByTestId('lorem-out')).toContainText(/[؀-ۿ]/)
-  })
-
   test('istikhara: shows the du‘a and its source', async ({ page }) => {
     await page.goto('/en/tools/istikhara')
     await expect(page.getByTestId('istikhara-dua')).toContainText('اللَّهُمَّ')
@@ -506,14 +359,6 @@ test.describe('tools', () => {
     await page.getByTestId('hisn-back').click()
     await page.getByTestId('hisn-search').fill('الاستيقاظ')
     await expect.poll(() => page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
-  })
-
-  test('regex tester: highlights matches and counts them', async ({ page }) => {
-    await page.goto('/en/apps/regex-tester')
-    await page.getByTestId('re-pattern').fill('\\d+')
-    await page.getByTestId('re-input').fill('a1 b22 c333')
-    await expect(page.getByTestId('re-count')).toContainText('3')
-    await expect(page.getByTestId('re-output').locator('mark').first()).toHaveText('1')
   })
 
   test('remove background: loads a dropzone; picking a file reveals the Remove button', async ({ page }) => {
@@ -532,28 +377,6 @@ test.describe('tools', () => {
     await page.getByTestId('jwt-input').fill(jwt)
     await expect(page.getByTestId('jwt-header')).toContainText('HS256')
     await expect(page.getByTestId('jwt-payload')).toContainText('John Doe')
-  })
-
-  test('cron explainer: describes an expression and lists next runs', async ({ page }) => {
-    await page.goto('/en/apps/cron-explainer')
-    await page.getByTestId('cron-input').fill('0 0 * * *')
-    await expect(page.getByTestId('cron-desc')).toContainText('00:00')
-    await expect(page.getByTestId('cron-next').locator('li').first()).toBeVisible()
-  })
-
-  test('text diff: flags an added line', async ({ page }) => {
-    await page.goto('/en/apps/text-diff')
-    await page.getByTestId('diff-a').fill('one\ntwo')
-    await page.getByTestId('diff-b').fill('one\ntwo\nthree')
-    await expect(page.getByTestId('diff-output')).toContainText('three')
-    await expect(page.getByTestId('diff-output').getByText('+', { exact: false }).first()).toBeVisible()
-  })
-
-  test('unix timestamp: converts epoch 0 to 1970 UTC', async ({ page }) => {
-    await page.goto('/en/apps/unix-timestamp')
-    await page.getByTestId('ts-input').fill('0')
-    await expect(page.getByTestId('ts-out')).toContainText('1970')
-    await expect(page.getByTestId('ts-now')).toBeVisible()
   })
 
   test('url encoder: percent-encodes a component', async ({ page }) => {
@@ -599,26 +422,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cj-output')).toContainText('"city": "Riyadh"')
   })
 
-  test('list tools: dedupes and sorts', async ({ page }) => {
-    await page.goto('/en/apps/list-tools')
-    await page.getByTestId('list-input').fill('banana\napple\nbanana')
-    await expect(page.getByTestId('list-output')).toHaveValue('apple\nbanana')
-  })
-
-  test('contrast checker: black on white is 21:1', async ({ page }) => {
-    await page.goto('/en/apps/color-contrast')
-    await page.getByTestId('cc-text').fill('#000000')
-    await page.getByTestId('cc-bg').fill('#ffffff')
-    await expect(page.getByTestId('cc-ratio')).toHaveText('21.00')
-  })
-
-  test('percentage calculator: 15% of 200 is 30', async ({ page }) => {
-    await page.goto('/en/apps/percentage-calculator')
-    await page.getByTestId('pc-q1-p').fill('15')
-    await page.getByTestId('pc-q1-of').fill('200')
-    await expect(page.getByTestId('pc-q1-result')).toHaveText('30')
-  })
-
   test('bill splitter: 240 across 4 is 60 each', async ({ page }) => {
     await page.goto('/en/apps/split-bill')
     await page.getByTestId('sb-bill').fill('240')
@@ -627,58 +430,10 @@ test.describe('tools', () => {
     await expect(page.getByTestId('sb-per')).toHaveText('60.00')
   })
 
-  test('aspect ratio: 16:9 width 1920 gives height 1080', async ({ page }) => {
-    await page.goto('/en/apps/aspect-ratio')
-    await page.getByTestId('ar-preset-16x9').click()
-    await page.getByTestId('ar-width').fill('1920')
-    await expect(page.getByTestId('ar-height')).toHaveValue('1080')
-  })
-
   test('pomodoro: renders the timer at 25:00', async ({ page }) => {
     await page.goto('/en/apps/pomodoro')
     await expect(page.getByTestId('pom-time')).toHaveText('25:00')
     await expect(page.getByTestId('pom-toggle')).toBeVisible()
-  })
-
-  test('end-of-service: 7 years at 10000, contract ended', async ({ page }) => {
-    await page.goto('/en/apps/end-of-service')
-    await page.getByTestId('eos-wage').fill('10000')
-    await page.getByTestId('eos-years').fill('7')
-    await page.getByTestId('eos-months').fill('0')
-    // first 5y: 5*0.5*10000=25000; next 2y: 2*10000=20000; total 45000
-    await expect(page.getByTestId('eos-award')).toHaveText('45,000.00')
-    // resign at 7y → two-thirds → 30000
-    await page.getByTestId('eos-resigned').click()
-    await expect(page.getByTestId('eos-award')).toHaveText('30,000.00')
-  })
-
-  test('end-of-service: a resignation the law treats as a termination is NOT reduced', async ({ page }) => {
-    // Article 85's reduction is not the whole rule, and the missing half was
-    // the half that costs money: Article 87 gives a female worker the FULL
-    // award if she ends the contract within six months of marriage or three of
-    // childbirth, and Article 81 does the same when the employer broke the
-    // contract. Without this the tool told her she was owed two-thirds.
-    await page.goto('/en/apps/end-of-service')
-    await page.getByTestId('eos-wage').fill('10000')
-    await page.getByTestId('eos-years').fill('7')
-    await page.getByTestId('eos-months').fill('0')
-    await page.getByTestId('eos-resigned').click()
-    await expect(page.getByTestId('eos-award')).toHaveText('30,000.00')
-    await page.getByTestId('eos-exempt-yes').click()
-    await expect(page.getByTestId('eos-award')).toHaveText('45,000.00')
-    await expect(page.getByTestId('eos-exempt-applied')).toBeVisible()
-  })
-
-  test('end-of-service: the exemption is only offered where it can apply', async ({ page }) => {
-    // It is a question about a resignation. Asking it of someone whose contract
-    // ended would be a form pretending the answer mattered.
-    await page.goto('/en/apps/end-of-service')
-    await expect(page.getByTestId('eos-exempt')).toHaveCount(0)
-    await page.getByTestId('eos-resigned').click()
-    await expect(page.getByTestId('eos-exempt')).toBeVisible()
-    await expect(page.getByTestId('eos-exempt-why')).toContainText('Article 87')
-    await page.getByTestId('eos-ended').click()
-    await expect(page.getByTestId('eos-exempt')).toHaveCount(0)
   })
 
   test('zakat: 2.5% above nisab', async ({ page }) => {
@@ -709,79 +464,6 @@ test.describe('tools', () => {
     await expect(page.getByTestId('cb-output')).toHaveText('cubic-bezier(0, 0, 1, 1)')
   })
 
-  test('box shadow: outputs a box-shadow rule', async ({ page }) => {
-    await page.goto('/en/apps/box-shadow')
-    await expect(page.getByTestId('bs-output')).toContainText('box-shadow:')
-    await expect(page.getByTestId('bs-preview')).toBeVisible()
-  })
-
-  test('gradient: linear by default, switches to radial', async ({ page }) => {
-    await page.goto('/en/apps/gradient-generator')
-    await expect(page.getByTestId('gg-output')).toContainText('linear-gradient(')
-    await page.getByTestId('gg-radial').click()
-    await expect(page.getByTestId('gg-output')).toContainText('radial-gradient(')
-  })
-
-  test('ip subnet: /24 network, broadcast and 254 hosts', async ({ page }) => {
-    await page.goto('/en/apps/ip-subnet')
-    await page.getByTestId('ipc-input').fill('192.168.1.10/24')
-    await expect(page.getByTestId('ipc-network')).toHaveText('192.168.1.0/24')
-    await expect(page.getByTestId('ipc-broadcast')).toHaveText('192.168.1.255')
-    await expect(page.getByTestId('ipc-hosts')).toHaveText('254')
-  })
-
-  test('user-agent: detects Firefox from a pasted UA', async ({ page }) => {
-    await page.goto('/en/apps/user-agent')
-    await page.getByTestId('ua-input').fill('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0')
-    await expect(page.getByTestId('ua-browser')).toContainText('Firefox')
-    await expect(page.getByTestId('ua-os')).toContainText('Windows')
-  })
-
-  test('readability: scores a simple sentence', async ({ page }) => {
-    await page.goto('/en/apps/readability')
-    await page.getByTestId('rd-input').fill('The cat sat on the mat. The dog ran fast. We had fun today.')
-    await expect(page.getByTestId('rd-ease')).toBeVisible()
-    await expect(page.getByTestId('rd-grade')).toBeVisible()
-  })
-
-  test('random picker: spins and shows a winner', async ({ page }) => {
-    await page.goto('/en/apps/random-picker')
-    await page.getByTestId('rp-input').fill('Alpha\nBeta\nGamma')
-    await page.getByTestId('rp-spin').click()
-    await expect(page.getByTestId('rp-result')).toHaveText(/Alpha|Beta|Gamma/, { timeout: 6000 })
-  })
-
-  test('random picker: sound toggle persists', async ({ page }) => {
-    await page.goto('/en/apps/random-picker')
-    const btn = page.getByTestId('rp-sound')
-    // aria-pressed = the toggle's on/off state, not "was clicked": sound defaults to ON
-    await expect(btn).toHaveAttribute('aria-pressed', 'true')
-    await btn.click()
-    await expect(btn).toHaveAttribute('aria-pressed', 'false')
-    await page.reload()
-    await expect(page.getByTestId('rp-sound')).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  test('random picker: ticks while spinning; a mid-spin mute silences the rest', async ({ page }) => {
-    // Every sound (tick or ding) creates one WebAudio oscillator, so counting
-    // oscillator creations counts sounds played — even in silent headless runs.
-    await page.addInitScript(() => {
-      window.bisTestSoundCount = 0
-      const orig = AudioContext.prototype.createOscillator
-      AudioContext.prototype.createOscillator = function () { window.bisTestSoundCount++; return orig.apply(this) }
-    })
-    const soundsPlayed = () => page.evaluate(() => window.bisTestSoundCount)
-    await page.goto('/en/apps/random-picker')
-    await page.getByTestId('rp-spin').click()
-    // "mid-spin" = the wheel has audibly ticked but no winner yet — no duration assumed
-    await expect.poll(soundsPlayed).toBeGreaterThan(0)
-    await expect(page.getByTestId('rp-result')).toHaveCount(0)
-    await page.getByTestId('rp-sound').click() // mute mid-spin
-    const atMute = await soundsPlayed()
-    await expect(page.getByTestId('rp-result')).toBeVisible({ timeout: 6000 })
-    expect(await soundsPlayed()).toBe(atMute) // silent after the mute, winner ding included
-  })
-
   test('dice roller: rolls two d6 into a total', async ({ page }) => {
     await page.goto('/en/apps/dice-roller')
     await page.getByTestId('dr-count').fill('2')
@@ -790,65 +472,11 @@ test.describe('tools', () => {
     await expect(page.getByTestId('dr-total')).toBeVisible()
   })
 
-  test('countdown: shows a live day count for a future date', async ({ page }) => {
-    await page.goto('/en/apps/countdown')
-    await page.getByTestId('cd-input').fill('2099-01-01T00:00')
-    await expect(page.getByTestId('cd-days')).toBeVisible()
-  })
-
   test('typing test: renders a passage and input', async ({ page }) => {
     await page.goto('/en/apps/typing-test')
     await expect(page.getByTestId('typing-test')).toBeVisible()
     await expect(page.getByTestId('tt-input')).toBeVisible()
     await expect(page.getByTestId('tt-wpm')).toBeVisible()
-  })
-
-  test('image tools: ascii/meme/favicon/steganography render a dropzone', async ({ page }) => {
-    await page.goto('/en/apps/image-to-ascii')
-    await expect(page.getByTestId('ascii-drop')).toBeVisible()
-    await page.goto('/en/apps/meme-generator')
-    await expect(page.getByTestId('meme-drop')).toBeVisible()
-    await page.goto('/en/apps/favicon-generator')
-    await expect(page.getByTestId('favicon-drop')).toBeVisible()
-    await page.goto('/en/apps/steganography')
-    await expect(page.getByTestId('stego-drop')).toBeVisible()
-    await page.getByTestId('stego-reveal').click()
-    await expect(page.getByTestId('stego-drop')).toBeVisible()
-  })
-
-  test('media/privacy tools render their entry points', async ({ page }) => {
-    await page.goto('/en/apps/screen-recorder')
-    await expect(page.getByTestId('screen-recorder')).toBeVisible()
-    await page.goto('/en/apps/photo-booth')
-    await expect(page.getByTestId('pb-start')).toBeVisible()
-    await page.goto('/en/apps/image-redact')
-    await expect(page.getByTestId('redact-drop')).toBeVisible()
-    await page.goto('/en/apps/file-encrypt')
-    await expect(page.getByTestId('fe-drop')).toBeVisible()
-  })
-
-  test('meta tags: generates OG tags from the title', async ({ page }) => {
-    await page.goto('/en/apps/meta-tags')
-    await page.getByTestId('mt-title').fill('My Great Page')
-    await expect(page.getByTestId('mt-output')).toContainText('og:title" content="My Great Page"')
-  })
-
-  test('robots.txt: block-all disallows everything', async ({ page }) => {
-    await page.goto('/en/apps/robots-txt')
-    await page.getByTestId('rb-block').click()
-    await expect(page.getByTestId('rb-output')).toContainText('Disallow: /')
-  })
-
-  test('gitignore: includes selected Node rules', async ({ page }) => {
-    await page.goto('/en/apps/gitignore')
-    await expect(page.getByTestId('gi-output')).toContainText('node_modules/')
-  })
-
-  test('json to types: infers interfaces from a sample', async ({ page }) => {
-    await page.goto('/en/apps/json-to-types')
-    await expect(page.getByTestId('jt-output')).toContainText('interface Root')
-    await expect(page.getByTestId('jt-output')).toContainText('interface Address')
-    await expect(page.getByTestId('jt-output')).toContainText('string[]')
   })
 
   test('flashcards: add a card then study it', async ({ page }) => {
@@ -898,12 +526,6 @@ test.describe('tools', () => {
     await page.getByTestId('fd-count').fill('3')
     await page.getByTestId('fd-generate').click()
     await expect(page.getByTestId('fd-output')).toContainText('"name"')
-  })
-
-  test('slugify: makes a URL slug', async ({ page }) => {
-    await page.goto('/en/apps/slugify')
-    await page.getByTestId('sl-input').fill('Hello, World! 2026')
-    await expect(page.getByTestId('sl-output')).toHaveText('hello-world-2026')
   })
 
   test('adhkar: lists remembrances and counts on tap', async ({ page }) => {
@@ -986,50 +608,6 @@ test.describe('shell', () => {
     await expect(page.getByTestId('updated-toast')).toHaveCount(0)
     // …and the higher build must survive, so it can't ping-pong on the next visit.
     expect(await page.evaluate(() => localStorage.getItem('bis-last-build'))).toBe('9999999999999')
-  })
-})
-
-test.describe('line break converter', () => {
-  test('single-spaced lines become double-spaced', async ({ page }) => {
-    await page.goto('/en/apps/line-breaks')
-    await page.getByTestId('newline-input').fill('one\ntwo\nthree')
-    await expect(page.getByTestId('newline-output')).toHaveValue('one\n\ntwo\n\nthree')
-    await expect(page.getByTestId('newline-message')).toContainText('single line breaks')
-  })
-
-  test('double-spaced lines collapse to single', async ({ page }) => {
-    await page.goto('/en/apps/line-breaks')
-    await page.getByTestId('newline-input').fill('one\n\ntwo\n\nthree')
-    await expect(page.getByTestId('newline-output')).toHaveValue('one\ntwo\nthree')
-    await expect(page.getByTestId('newline-message')).toContainText('double line breaks')
-  })
-
-  test('mixed spacing normalises to double', async ({ page }) => {
-    await page.goto('/en/apps/line-breaks')
-    await page.getByTestId('newline-input').fill('one\ntwo\n\nthree')
-    await expect(page.getByTestId('newline-output')).toHaveValue('one\n\ntwo\n\nthree')
-    await expect(page.getByTestId('newline-message')).toContainText('mixed spacing')
-  })
-})
-
-test.describe('paste to markdown', () => {
-  test('converts pasted HTML to Markdown', async ({ page }) => {
-    await page.goto('/en/apps/paste-to-markdown')
-    const box = page.getByTestId('md-input')
-    await expect(box).toBeVisible()
-    // Simulate a rich-text paste (clipboardData with text/html).
-    await box.evaluate((el) => {
-      const html = '<h1>Title</h1><p>Some <strong>bold</strong> and a <a href="https://x.com">link</a>.</p><ul><li>a</li><li>b</li></ul>'
-      const dt = new DataTransfer()
-      dt.setData('text/html', html)
-      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
-    })
-    const out = page.getByTestId('md-output')
-    await expect(out).toHaveValue(/# Title/)
-    await expect(out).toHaveValue(/\*\*bold\*\*/)
-    await expect(out).toHaveValue(/\[link\]\(https:\/\/x\.com\)/)
-    await expect(out).toHaveValue(/- a\n- b/)
-    await expect(page.getByTestId('md-message')).toContainText('Converted to Markdown')
   })
 })
 
@@ -1119,87 +697,6 @@ test.describe('privacy', () => {
   })
 })
 
-test.describe('svg-editor', () => {
-  test('loads a canvas with the sample shapes and a layers list', async ({ page }) => {
-    await page.goto('/en/apps/svg-editor')
-    await expect(page.getByTestId('svg-canvas')).toBeVisible()
-    await expect(page.getByTestId('svg-artboard')).toBeVisible()
-    // The sample imports to three editable shapes (rect + circle→ellipse + path).
-    await expect(page.getByTestId('svg-layer')).toHaveCount(3)
-    // Nothing selected yet → the empty-state hint shows.
-    await expect(page.getByTestId('svg-noselection')).toBeVisible()
-  })
-
-  test('draws a rectangle, selects it, and restyles it', async ({ page }) => {
-    await page.goto('/en/apps/svg-editor')
-    await page.getByTestId('svg-clear').click()
-    await expect(page.getByTestId('svg-layer')).toHaveCount(0)
-    // Pick the rectangle tool and drag on the canvas to draw one.
-    await page.getByTestId('svg-tool-rect').click()
-    const canvas = page.getByTestId('svg-canvas')
-    const box = (await canvas.boundingBox())!
-    await page.mouse.move(box.x + 80, box.y + 80)
-    await page.mouse.down()
-    await page.mouse.move(box.x + 200, box.y + 180, { steps: 5 })
-    await page.mouse.up()
-    // A shape now exists, is selected (style panel visible), and shows resize handles.
-    await expect(page.getByTestId('svg-layer')).toHaveCount(1)
-    await expect(page.getByTestId('svg-selection')).toBeVisible()
-    await expect(page.getByTestId('svg-fill')).toBeVisible()
-    // Delete via the layer's trash removes it.
-    await page.getByTestId('svg-layer-del').click()
-    await expect(page.getByTestId('svg-layer')).toHaveCount(0)
-  })
-
-  test('exports optimised SVG and round-trips through the code view', async ({ page }) => {
-    await page.goto('/en/apps/svg-editor')
-    // The sample document exports to something the optimiser shrinks.
-    const size = await page.getByTestId('svg-size').textContent()
-    const m = (size || '').match(/(\d+)%\)/) // "… (−NN%)"
-    expect(m).not.toBeNull()
-    // Flip to code view → apply a fresh SVG → it re-imports as one shape.
-    await page.getByTestId('svg-code-toggle').click()
-    await page.getByTestId('svg-code').fill('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect x="5" y="5" width="30" height="30" fill="#c00"/></svg>')
-    await page.getByTestId('svg-code-apply').click()
-    await expect(page.getByTestId('svg-canvas')).toBeVisible()
-    await expect(page.getByTestId('svg-layer')).toHaveCount(1)
-  })
-
-  test('edits path nodes — drag, add and remove', async ({ page }) => {
-    await page.goto('/en/apps/svg-editor')
-    // Load a deterministic 3-point open path via the code view.
-    await page.getByTestId('svg-code-toggle').click()
-    await page.getByTestId('svg-code').fill('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><polyline points="40,40 150,40 100,150" fill="none" stroke="#0a0" stroke-width="3"/></svg>')
-    await page.getByTestId('svg-code-apply').click()
-    // Node tool + select the path from the layers list → its 3 nodes appear.
-    await page.getByTestId('svg-tool-node').click()
-    await page.getByTestId('svg-layer').first().click()
-    await expect(page.getByTestId('svg-nodes')).toBeVisible()
-    await expect(page.locator('[data-node]')).toHaveCount(3)
-
-    // Drag the first node — it should move on screen.
-    const n0 = page.locator('[data-node="0"]')
-    const before = (await n0.boundingBox())!
-    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(before.x + 40, before.y + 30, { steps: 5 })
-    await page.mouse.up()
-    const after = (await n0.boundingBox())!
-    expect(Math.abs(after.x - before.x) + Math.abs(after.y - before.y)).toBeGreaterThan(8)
-
-    // Double-click the midpoint of segment 0–1 → a node is inserted (3 → 4).
-    const b0 = (await page.locator('[data-node="0"]').boundingBox())!
-    const b1 = (await page.locator('[data-node="1"]').boundingBox())!
-    await page.mouse.dblclick((b0.x + b0.width / 2 + b1.x + b1.width / 2) / 2, (b0.y + b0.height / 2 + b1.y + b1.height / 2) / 2)
-    await expect(page.locator('[data-node]')).toHaveCount(4)
-
-    // Double-click an existing node → it is removed (4 → 3).
-    const bn = (await page.locator('[data-node="2"]').boundingBox())!
-    await page.mouse.dblclick(bn.x + bn.width / 2, bn.y + bn.height / 2)
-    await expect(page.locator('[data-node]')).toHaveCount(3)
-  })
-})
-
 test.describe('currency-converter', () => {
   // Stub the public rates feed so the test is deterministic + offline.
   async function stub(page: import('@playwright/test').Page) {
@@ -1271,52 +768,12 @@ test.describe('to-do lists', () => {
   })
 })
 
-test.describe('image format converter', () => {
-  // Android hands over iPhone HEIC photos with an empty or non-image MIME, and the
-  // browser can't decode HEIC anyway. Both used to hit a bare `return` — the file
-  // vanished with no message at all, which is what made this look like "I can't
-  // select HEIC" rather than "HEIC isn't supported".
-  test('a HEIC photo explains itself instead of silently doing nothing', async ({ page }) => {
-    await page.goto('/en/apps/image-format-converter')
-    // ISO-BMFF header with the `heic` brand — recognised by content, not by name.
-    const heic = Buffer.concat([
-      Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypheic'),
-      Buffer.from([0, 0, 0, 0]), Buffer.from('mif1heic'),
-    ])
-    await page.locator('input[type=file]').setInputFiles({ name: 'IMG_0042.HEIC', mimeType: '', buffer: heic })
-    // A malformed HEIC still has to say so — but must blame the file, not the browser,
-    // now that HEIC decoding works (#226).
-    const err = page.getByTestId('file-error')
-    await expect(err).toBeVisible({ timeout: 20_000 })
-    await expect(err).toContainText('HEIC')
-    await expect(err).not.toContainText('can’t open HEIC')
-  })
-
-  test('an unreadable file says so rather than failing silently', async ({ page }) => {
-    await page.goto('/en/apps/image-format-converter')
-    await page.locator('input[type=file]').setInputFiles({
-      name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not actually a png'),
-    })
-    await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 10_000 })
-  })
-
-  // An image `accept` makes Chrome on Android open the gallery picker, which only
-  // lists MediaStore-indexed media — files in Downloads aren't offered at all. The
-  // input must stay unrestricted so the full document browser opens.
-  test('the picker is unrestricted, so Android opens the document browser', async ({ page }) => {
-    await page.goto('/en/apps/image-format-converter')
-    await expect(page.locator('input[type=file]')).not.toHaveAttribute('accept', /.+/)
-  })
-})
-
 // #225: the same two defects existed in every image tool. Drive each one's picker
 // with a HEIC and assert it explains itself rather than doing nothing, and that no
 // tool re-introduces an image-only `accept` (which hides Downloads on Android).
 const HEIC = () => readFileSync('e2e/fixtures/sample.heic')
 
-for (const tool of [
-  'favicon-generator', 'image-compressor', 'image-cropper', 'image-format-converter',
-  'image-redact', 'image-to-ascii', 'images-to-pdf', 'meme-generator',
+for (const tool of [ 'image-compressor', 'image-to-ascii', 'images-to-pdf',
   'remove-background', 'steganography',
 ]) {
   test(`${tool}: accepts a real HEIC, and the picker isn't image-only`, async ({ page }) => {
@@ -1330,32 +787,6 @@ for (const tool of [
     await expect(page.getByTestId('file-error')).toHaveCount(0, { timeout: 30_000 })
   })
 }
-
-// #226: a real HEIC (generated by ffmpeg, ftyp/heic brand) must actually CONVERT,
-// not merely be recognised. This is the whole point — before this, every iPhone
-// photo was a dead end on Android.
-test.describe('HEIC decoding', () => {
-  test('a real HEIC converts to JPG instead of being refused', async ({ page }) => {
-    await page.goto('/en/apps/image-format-converter')
-    await page.locator('input[type=file]').setInputFiles('e2e/fixtures/sample.heic')
-    // No error, and the converted output appears (the wasm decoder is fetched lazily,
-    // so allow for that download).
-    await expect(page.getByTestId('ifc-download')).toBeVisible({ timeout: 45_000 })
-    await expect(page.getByTestId('file-error')).toHaveCount(0)
-  })
-
-  test('the HEIC decoder is not downloaded for an ordinary PNG', async ({ page }) => {
-    const fetched: string[] = []
-    page.on('request', (r) => { if (/wasm-bundle|libheif/i.test(r.url())) fetched.push(r.url()) })
-    await page.goto('/en/apps/image-format-converter')
-    await page.locator('input[type=file]').setInputFiles({
-      name: 'x.png', mimeType: 'image/png',
-      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'),
-    })
-    await expect(page.getByTestId('ifc-download')).toBeVisible({ timeout: 20_000 })
-    expect(fetched, 'the 1.4MB wasm must not load for non-HEIC files').toEqual([])
-  })
-})
 
 // #228: the deploy auto-reload must never destroy work, and must be visible when it
 // does act — a dimmed UI is a diagnostic signal a user can report.
@@ -1400,20 +831,20 @@ test.describe('update gate', () => {
     // the real version.json wins.
     await page.route('**/version.json*', (r) =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
-    await page.goto('/en/apps/image-format-converter')
+    await page.goto('/en/apps/image-compressor')
     // Load a real image so the tool declares work in progress.
     await page.locator('input[type=file]').setInputFiles({
       name: 'x.png', mimeType: 'image/png',
       buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'),
     })
-    await expect(page.getByTestId('ifc-download')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('imgcomp-download')).toBeVisible({ timeout: 20_000 })
 
     await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
     // Offered, not applied: the work survives and the page did not reload.
     await expect(page.getByTestId('update-offered')).toBeVisible({ timeout: 10_000 })
     await expect(page.getByTestId('update-reloading')).toHaveCount(0)
-    await expect(page.getByTestId('ifc-download')).toBeVisible()
+    await expect(page.getByTestId('imgcomp-download')).toBeVisible()
     // And the user can take it when ready.
     await expect(page.getByTestId('update-reload-now')).toBeVisible()
   })
@@ -1493,21 +924,6 @@ test.describe('arabic normalizer', () => {
     await expect(page.getByTestId('norm-output')).toHaveValue('احمد')
     await page.getByTestId('norm-alef').uncheck()
     await expect(page.getByTestId('norm-output')).toHaveValue('أحمد')
-  })
-})
-
-test.describe('fix garbled text', () => {
-  test('recovers Arabic mangled as windows-1252', async ({ page }) => {
-    await page.goto('/en/apps/fix-encoding')
-    await page.getByTestId('enc-sample').click()
-    await expect(page.getByTestId('enc-output')).toHaveValue('السلام عليكم')
-    await expect(page.getByTestId('enc-via')).toContainText('windows-1252')
-  })
-
-  test('intact text is reported as needing no repair', async ({ page }) => {
-    await page.goto('/en/apps/fix-encoding')
-    await page.getByTestId('enc-input').fill('perfectly fine text')
-    await expect(page.getByTestId('enc-none')).toContainText('already looks intact')
   })
 })
 
@@ -1730,48 +1146,6 @@ test.describe('id expiry', () => {
 test.describe('2fa code generator', () => {
   // RFC 6238 test vector: the ASCII secret "12345678901234567890" in base32.
   const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
-
-  test('produces the RFC 6238 reference code for a known time', async ({ page }) => {
-    // setFixedTime, not install: an installed clock keeps ticking through page
-    // load, which pushed T=59s into the next 30-second window and changed the code.
-    await page.clock.setFixedTime(new Date(59_000))
-    await page.goto('/en/apps/totp')
-    await page.getByTestId('totp-secret').fill(RFC_SECRET)
-    await page.getByTestId('totp-digits').selectOption('8')
-    await page.getByTestId('totp-add').click()
-    await expect(page.getByTestId('totp-code')).toHaveText('94287082')
-  })
-
-  test('parses an otpauth link and picks up its settings', async ({ page }) => {
-    await page.goto('/en/apps/totp')
-    await page.getByTestId('totp-secret').fill('otpauth://totp/ACME:me@example.com?secret=' + RFC_SECRET + '&issuer=ACME&digits=6&period=60')
-    await page.getByTestId('totp-add').click()
-    await expect(page.getByTestId('totp-row')).toContainText('ACME')
-    await expect(page.getByTestId('totp-row')).toContainText('me@example.com')
-    await expect(page.getByTestId('totp-row')).toContainText('60s')
-    await expect(page.getByTestId('totp-code')).toHaveText(/^\d{6}$/)
-  })
-
-  test('rejects a secret that is not base32', async ({ page }) => {
-    await page.goto('/en/apps/totp')
-    await page.getByTestId('totp-secret').fill('not-a-secret-189!')
-    await page.getByTestId('totp-add').click()
-    await expect(page.getByTestId('totp-error')).toBeVisible()
-    await expect(page.getByTestId('totp-empty')).toBeVisible()
-  })
-
-  test('nothing is stored unless the user opts in', async ({ page }) => {
-    await page.goto('/en/apps/totp')
-    await page.getByTestId('totp-secret').fill(RFC_SECRET)
-    await page.getByTestId('totp-add').click()
-    await expect(page.getByTestId('totp-row')).toBeVisible()
-    expect(await page.evaluate(() => localStorage.getItem('bis-totp'))).toBe('[]')
-
-    await page.getByTestId('totp-remember').check()
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bis-totp') || '[]').length)).toBe(1)
-    await page.reload()
-    await expect(page.getByTestId('totp-row')).toBeVisible()
-  })
 })
 
 test.describe('password strength', () => {
@@ -1882,4 +1256,18 @@ test.describe('qr email fields (#sweep)', () => {
     await page.getByTestId('qr-email-to').fill('a@b.com')
     expect(await page.getByTestId('qr-canvas').getAttribute('data-value')).toBe('mailto:a@b.com')
   })
+})
+
+test('photo booth renders its entry point', async ({ page }) => {
+  await page.goto('/en/apps/photo-booth')
+  await expect(page.getByTestId('pb-start')).toBeVisible()
+})
+
+// The explainer was its own tool until November 2026 and now lives under the
+// builder (the redirect itself is checked in catalogue-cut.spec.ts).
+test('cron builder: explains a pasted expression and lists next runs', async ({ page }) => {
+  await page.goto('/en/apps/cron-builder')
+  await page.getByTestId('cron-input').fill('0 0 * * *')
+  await expect(page.getByTestId('cron-desc')).toContainText('00:00')
+  await expect(page.getByTestId('cron-next').locator('li').first()).toBeVisible()
 })

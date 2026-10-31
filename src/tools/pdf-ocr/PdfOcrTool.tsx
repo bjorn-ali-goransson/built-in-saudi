@@ -5,7 +5,7 @@ import { CopyIcon, DownloadIcon, UploadIcon } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { createOcrWorker, type OcrLang } from '../../lib/ocr'
 import { renderPdf } from '../../lib/pdfRender'
-import { extractPdf } from '../pdf-to-text/extract'
+import { extractPdf } from '../../lib/pdfExtract'
 
 const WIP = 'pdf-ocr'
 
@@ -18,8 +18,7 @@ const STR = {
     rendering: 'Rendering the pages…',
     of: 'of',
     hasText: 'This PDF already contains real text',
-    hasTextBody: 'It does not need reading by eye — the text is in the file. OCR would turn a perfect copy into a guess, so use PDF to Text instead: it is instant, exact, and keeps every character.',
-    hasTextLink: 'Open PDF to Text',
+    hasTextBody: 'It does not need reading by eye — the text is in the file, so here it is exactly as written.',
     someText: 'Some pages already contain text',
     someTextBody: 'Those pages were taken as they are; only the picture-only pages were read by eye. Text taken from the file is exact, so mixing them is better than OCRing the lot.',
     result: 'Text', page: 'Page',
@@ -39,8 +38,7 @@ const STR = {
     rendering: 'جارٍ تجهيز الصفحات…',
     of: 'من',
     hasText: 'هذا الملف يحتوي نصًا حقيقيًا أصلًا',
-    hasTextBody: 'لا يحتاج قراءةً بالعين — فالنص موجود في الملف. والتعرّف الضوئي يحوّل نسخةً مضبوطة إلى تخمين، فاستخدم أداة «PDF إلى نص»: فورية ودقيقة وتحفظ كل حرف.',
-    hasTextLink: 'افتح «PDF إلى نص»',
+    hasTextBody: 'لا يحتاج قراءةً بالعين — فالنص موجود في الملف، وهذا هو كما كُتب تمامًا.',
     someText: 'بعض الصفحات تحتوي نصًا أصلًا',
     someTextBody: 'أُخذت تلك الصفحات كما هي، ولم تُقرأ بالعين إلا الصفحات المصوّرة. فالنص المأخوذ من الملف مضبوط، والمزج بينهما أفضل من التعرّف على الجميع.',
     result: 'النص', page: 'صفحة',
@@ -81,7 +79,7 @@ export default function PdfOcrTool() {
     setPhase('render')
     setWrongPassword(false)
     try {
-      // pdf-to-text's extractor already knows how to pull the text layer out and
+      // The shared extractor already knows how to pull the text layer out and
       // how to recognise an encrypted file — no reason to have a second opinion
       // about either.
       const { pages: extracted, encrypted, wrongPassword } = await extractPdf(f, pw || undefined)
@@ -94,7 +92,15 @@ export default function PdfOcrTool() {
         return
       }
       setLocked(null)
-      setEmbedded(extracted.map((p) => p.text.trim()))
+      const texts = extracted.map((p) => p.text.trim())
+      setEmbedded(texts)
+      // A file that is text throughout needs no reading by eye: its text is the
+      // answer, exact and instant, so it is shown at once. (This was a separate
+      // "PDF to Text" tool until the two were merged; OCR over a perfect copy
+      // would only have made it worse.)
+      if (texts.length > 0 && texts.every((t) => t.length > 20)) {
+        setPages(texts.map((text, index) => ({ index, text, fromFile: true })))
+      }
       setFile(f)
       setWorkInProgress(WIP, true)
     } catch {
@@ -189,7 +195,6 @@ export default function PdfOcrTool() {
         <Panel className="gap-2" data-testid="pk-has-text">
           <p className="text-[1rem] text-ink font-semibold rtl:font-ar">{s.hasText}</p>
           <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.hasTextBody}</p>
-          <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="pk-use-extract">{s.hasTextLink}</Button>
         </Panel>
       )}
 
@@ -200,7 +205,7 @@ export default function PdfOcrTool() {
         </Panel>
       )}
 
-      {file && (
+      {file && !allHaveText && (
         <div className="flex flex-wrap items-end gap-3">
           <Field label={s.lang}>
             <Select value={lang} data-testid="pk-lang" onChange={(e) => setLang(e.target.value as OcrLang)}>

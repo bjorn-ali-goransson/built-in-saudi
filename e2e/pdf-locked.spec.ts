@@ -11,11 +11,6 @@ import { test, expect } from '@playwright/test'
 // ever fed one kind of file would have passed against both.
 
 const TOOLS: { id: string; pick: string; within: boolean; act?: string }[] = [
-  // pdf-stamp does not open the file at pick time — it only reads it when
-  // stamping, so the reason appears at the action rather than on arrival.
-  { id: 'pdf-stamp', pick: 'ps-file', within: false, act: 'ps-apply' },
-  { id: 'pdf-booklet', pick: 'pb-file', within: false },
-  { id: 'pdf-redact', pick: 'pr-file', within: false },
   { id: 'pdf-fill', pick: 'fill-drop', within: true },
   { id: 'pdf-compress', pick: 'cmp-drop', within: true },
   { id: 'pdf-edit', pick: 'edit-drop', within: true },

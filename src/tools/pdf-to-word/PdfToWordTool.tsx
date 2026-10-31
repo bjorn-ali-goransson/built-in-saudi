@@ -26,10 +26,10 @@ const STR = {
     empty: 'No text came out of that PDF.',
     scannedTitle: 'This looks like a scan',
     scannedBody: 'There is almost no text in this PDF, which means the pages are pictures. A Word file made from it would be empty. Read it with OCR first — that also runs on your device.',
-    ocr: 'Scanned PDF to Text (OCR)',
+    ocr: 'Read it with PDF to Text (OCR)',
     limitTitle: 'What survives, and what does not',
     limitBody: 'A PDF has no paragraphs, headings or lists — it has characters at coordinates in fonts. So this infers the structure: a line larger than the body text becomes a heading, a line ending mid-sentence joins the one before it, and a bullet or a number starts a real Word list. What it does NOT carry over is images, the exact page layout, and a table as a table. The upload sites promise a faithful reproduction and need a server to half-manage it; this gives you the text and its shape, to edit.',
-    inverse: 'The other direction: Markdown to Word',
+    inverse: 'Edit the Word file here',
     text: 'Just the plain text: PDF to Text',
   },
   ar: {
@@ -47,10 +47,10 @@ const STR = {
     empty: 'لم يخرج أي نصّ من هذا الملف.',
     scannedTitle: 'يبدو أن هذا ملف ممسوح ضوئيًا',
     scannedBody: 'لا يكاد يوجد نصّ في هذا الملف، أي أن صفحاته صور. ومستند وورد المصنوع منه سيكون فارغًا. اقرأه أولًا بالتعرّف الضوئي على الحروف — وهو أيضًا يعمل على جهازك.',
-    ocr: 'استخراج نص من PDF ممسوح',
+    ocr: 'اقرأه بأداة «PDF إلى نص» (تعرّف ضوئي)',
     limitTitle: 'ما يبقى وما لا يبقى',
     limitBody: 'ملف PDF لا يحوي فقرات ولا عناوين ولا قوائم — بل حروفًا في إحداثيات بخطوط. فهذه الأداة تستنتج البنية: السطر الأكبر من نصّ المتن يصير عنوانًا، والسطر المنتهي في وسط الجملة ينضمّ إلى ما قبله، والنقطة أو الرقم في أول السطر يبدأ قائمة وورد حقيقية. أما ما لا ينتقل فهو الصور وتخطيط الصفحة الدقيق والجدول بوصفه جدولًا. مواقع الرفع تَعِد بنسخة طبق الأصل وتحتاج خادمًا لتدبير نصفها؛ وهذه تعطيك النصّ وشكله، لتحرّره.',
-    inverse: 'الاتجاه الآخر: ماركداون إلى وورد',
+    inverse: 'حرّر ملف وورد هنا',
     text: 'النصّ المجرّد فقط: PDF إلى نص',
   },
 }
@@ -209,8 +209,8 @@ export default function PdfToWordTool() {
       </Panel>
 
       <div className="flex flex-wrap gap-2">
-        <Button className="px-3 py-1" to={localePath(locale, '/apps/markdown-docx')} data-testid="ptw-inverse">{s.inverse}</Button>
-        <Button className="px-3 py-1" to={localePath(locale, '/apps/pdf-to-text')} data-testid="ptw-text">{s.text}</Button>
+        <Button className="px-3 py-1" to={localePath(locale, '/apps/word-editor')} data-testid="ptw-inverse">{s.inverse}</Button>
+        <Button className="px-3 py-1" to={localePath(locale, '/apps/pdf-ocr')} data-testid="ptw-text">{s.text}</Button>
       </div>
     </Stack>
   )

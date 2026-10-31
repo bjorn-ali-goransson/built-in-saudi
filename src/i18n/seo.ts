@@ -39,59 +39,9 @@ export const staticPageSeo: ToolSeo[] = [
 /** Live (routable) tools only — used to prerender /<locale>/tools/<id>/. */
 export const liveToolSeo: ToolSeo[] = [
   {
-    id: 'ac-size',
-    en: { name: 'Air Conditioner Size Calculator', description: 'Work out the cooling a room needs here rather than in a temperate country — the rule of thumb the American calculators use is about a third of what a Gulf summer asks for. Adjusts for sun, top floor, ceiling height and occupants, converts tons to BTU, rounds to a size you can buy, and warns when that size will short-cycle instead of dehumidifying.' },
-    ar: { name: 'حاسبة مقاس المكيف', description: 'احسب التبريد الذي تحتاجه الغرفة هنا لا في بلد معتدل — فالقاعدة التي تستخدمها الحاسبات الأمريكية نحو ثلث ما يتطلبه صيف الخليج. تراعي الشمس والدور العلوي وارتفاع السقف وعدد الأشخاص، وتحوّل بين الطن ووحدات BTU، وتنبّه حين يزيد المقاس عن الحاجة.' },
-  },
-  {
-    id: 'ovulation',
-    en: { name: 'Ovulation Calculator', description: 'Find the fertile window from your last period and cycle length — and see why it is not what most calculators say. Ovulation is about fourteen days before the NEXT period, not fourteen after the last, and the days that matter are the five BEFORE it. Every date in the Hijri calendar as well as the Gregorian.' },
-    ar: { name: 'حاسبة الإباضة', description: 'اعرفي نافذة الخصوبة من آخر دورة وطول دورتك — واعرفي لماذا تختلف عمّا تقوله معظم الحاسبات. فالإباضة قبل الدورة القادمة بنحو أربعة عشر يومًا لا بعد السابقة، والأيام التي تهمّ هي الخمسة السابقة لها. وكل تاريخ بالهجري كما بالميلادي.' },
-  },
-  {
     id: 'audio-spectrum',
     en: { name: 'Audio Spectrum Analyser', description: 'Draw the frequency content of an audio or video file and read off where it stops. A lossy encoder throws away everything above a cutoff, and that cutoff is visible — so a file converted to 320 kbps from a 128 kbps source shows a wall at 16 kHz. Analysed in your browser; nothing is uploaded.' },
     ar: { name: 'محلّل الطيف الصوتي', description: 'ارسم المحتوى الترددي لملف صوتي أو مرئي واقرأ أين ينتهي. فالترميز الضائع يتخلّص من كل شيء فوق حدّ معيّن، وهذا الحدّ مرئي — فالملف المحوّل إلى ٣٢٠ كيلوبت من مصدر ١٢٨ يُظهر جدارًا عند ١٦ كيلوهرتز. يجري التحليل في متصفحك؛ ولا يُرفع شيء.' },
-  },
-  {
-    id: 'fuel-cost',
-    en: { name: 'Fuel Cost Calculator', description: 'Work out the fuel for a trip in whatever unit your car shows — km per litre off the dashboard, litres per 100 km off the spec sheet, or miles per gallon in either of the two gallons that differ by a fifth. Pick a route or type a distance, split it between passengers, and see whether 95 is worth its extra over 91.' },
-    ar: { name: 'حاسبة تكلفة الوقود', description: 'احسب وقود رحلتك بالوحدة التي تعرضها سيارتك — كم لكل لتر من لوحة العدادات، أو لتر لكل ١٠٠ كم من النشرة الفنية. اختر رحلة أو اكتب المسافة، وقسّمها على الركاب، واعرف هل يستحق ٩٥ زيادته على ٩١.' },
-  },
-  {
-    id: 'gpa-calculator',
-    en: { name: 'GPA Calculator', description: 'Work out a GPA course by course on the Saudi 5.00 scale or on 4.00, with the overall classification and your cumulative average — and convert between the scales grade by grade rather than with the shortcut every other site uses. Your marks stay in your browser.' },
-    ar: { name: 'حاسبة المعدل التراكمي', description: 'احسب معدلك مقررًا مقررًا على مقياس ٥٫٠٠ السعودي أو على ٤٫٠٠، مع التقدير العام والمعدل التراكمي — وحوّل بين المقياسين تقديرًا بتقدير لا بالمعادلة التي تستخدمها بقية المواقع. وتبقى درجاتك في متصفحك.' },
-  },
-  {
-    id: 'docx-markdown',
-    en: { name: 'Word to Markdown', description: 'Turn a Word document into Markdown — headings, bold and italic, bulleted and numbered lists, tables, blockquotes and links all survive as Markdown rather than being flattened into prose. Read in your browser and never uploaded.' },
-    ar: { name: 'وورد إلى ماركداون', description: 'حوّل مستند وورد إلى ماركداون — فتبقى العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات والروابط ماركداون، بدل أن تُسطّح إلى نصٍّ عادي. تجري القراءة في متصفحك ولا يُرفع المستند أبدًا.' },
-  },
-  {
-    id: 'timesheet',
-    en: { name: 'Time Card Calculator', description: 'Total a week of shifts with breaks, overnight shifts and overtime, and read it both as hours and minutes and as the decimal hours a payroll system asks for. It knows the Saudi 8-hour day, the 6-hour Ramadan day and overtime at 150%, all as defaults you can change. Nothing is uploaded.' },
-    ar: { name: 'حاسبة ساعات العمل', description: 'اجمع أسبوعًا من الورديات مع الاستراحات والورديات الليلية والعمل الإضافي، واقرأه بالساعات والدقائق وبالساعات العشرية التي يطلبها نظام الرواتب. وتعرف اليوم السعودي بثماني ساعات، ويوم رمضان بست، والإضافي ب١٥٠٪، وكلها قيم افتراضية يمكنك تغييرها. ولا يُرفع شيء.' },
-  },
-  {
-    id: 'markdown-epub',
-    en: { name: 'Markdown to EPUB', description: 'Turn Markdown into a real EPUB you can read on a Kindle, a phone or any e-reader — chapters split at your headings, a working table of contents, and your formatting carried across. Arabic books are written right-to-left properly: the text direction and the page-turn direction both. Built in your browser, so an unpublished manuscript is never uploaded.' },
-    ar: { name: 'ماركداون إلى كتاب EPUB', description: 'حوّل ماركداون إلى كتاب EPUB حقيقي تقرؤه على الكيندل أو الجوال أو أي قارئ — تُقسّم الفصول عند عناوينك، مع فهرس يعمل، وينتقل تنسيقك كما هو. وتُكتب الكتب العربية من اليمين إلى اليسار كما ينبغي: اتجاه النص واتجاه تقليب الصفحات معًا. يُبنى في متصفحك، فلا تُرفع مخطوطة غير منشورة.' },
-  },
-  {
-    id: 'word-search',
-    en: { name: 'Word Search Maker', description: 'Make a printable word search from your own list, in English or Arabic, with an answer key on a second page. Arabic works properly: alef in all its forms counts as one letter and words run right to left. Every sheet carries a seed, so reprinting gives you the same puzzle. Drawn in your browser — the word list is never uploaded.' },
-    ar: { name: 'صانع البحث عن الكلمات', description: 'اصنع لعبة البحث عن الكلمات للطباعة من قائمتك، بالعربية أو الإنجليزية، مع ورقة حلّ في صفحة ثانية. والعربية تعمل كما ينبغي: فالألف بكل صورها حرف واحد، وتُقرأ الكلمات من اليمين إلى اليسار. وتحمل كل ورقة رمزًا، فإعادة الطباعة تعطيك اللغز نفسه. يُرسم في متصفحك — ولا تُرفع قائمة الكلمات أبدًا.' },
-  },
-  {
-    id: 'markdown-docx',
-    en: { name: 'Markdown to Word', description: 'Turn Markdown into a real Word document — headings, bold and italic, bulleted and numbered lists, tables, blockquotes, code blocks and dividers all arrive as Word formatting rather than as asterisks and pipes. Built in your browser and never uploaded.' },
-    ar: { name: 'ماركداون إلى وورد', description: 'حوّل ماركداون إلى مستند وورد حقيقي — فتصل العناوين والخط العريض والمائل والقوائم والجداول والاقتباسات وكتل الشيفرة والفواصل تنسيقًا في وورد، لا نجومًا في النص. يُبنى في متصفحك ولا يُرفع أبدًا.' },
-  },
-  {
-    id: 'due-date',
-    en: { name: 'Pregnancy Due Date Calculator', description: 'Work out an estimated due date from your last period, the date of conception, or an IVF transfer — and see how many weeks and days along you are, which trimester that is, and every date in between. It adjusts for a cycle that is not 28 days, and gives every date in the Hijri calendar as well as the Gregorian one. Nothing is sent anywhere.' },
-    ar: { name: 'حاسبة الحمل وموعد الولادة', description: 'احسبي موعد الولادة المتوقع من آخر دورة، أو من تاريخ حدوث الحمل، أو من تاريخ الإرجاع في أطفال الأنابيب — واعرفي كم أسبوعًا ويومًا مضى، وفي أي ثلثٍ أنتِ، وكل تاريخ بينهما. تراعي الأداة الدورة التي لا تساوي ٢٨ يومًا، وتعطي كل تاريخ بالهجري كما بالميلادي. ولا يُرسل شيء إلى أي مكان.' },
   },
   {
     id: 'calls',
@@ -124,29 +74,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محلّل الموجّهات', description: 'الصق موجّه نظام لنموذج لغوي فيقيّمه مرور واحد للذكاء الاصطناعي من ١ إلى ٥ عبر ثمانية أبعاد — تماسك الغرض وتناغم السياق مع التعليمات والحدّة والصياح والتناقضات والصياغة ومنفذ الخروج والاستخدام اللاحق — كمخطط عنكبوتي بألوان حرارية مع سرد المشكلات. ثم أجب عن الثغرات لتحصل على موجّه مُعاد صياغته أقوى. ثلاثة تحاليل كل ٢٤ ساعة.' },
   },
   {
-    id: 'regex-tester',
-    en: { name: 'Regex Tester', description: 'Write a regular expression and see every match highlighted in your test text as you type, with capture groups and a live match count. Uses the native JavaScript engine, entirely in your browser — nothing is uploaded.' },
-    ar: { name: 'مختبِر التعابير النمطية', description: 'اكتب تعبيرًا نمطيًا وشاهد كل مطابقة مُظلّلة في نصك أثناء الكتابة، مع مجموعات الالتقاط وعدّ حيّ للمطابقات. يستخدم محرّك JavaScript بالكامل في متصفحك — لا يُرفع أي شيء.' },
-  },
-  {
     id: 'jwt-decoder',
     en: { name: 'JWT Decoder', description: 'Paste a JSON Web Token to decode its header and payload into readable JSON, with expiry and issued-at times shown in local time. Decoding happens entirely in your browser — the token is never uploaded and the signature is not verified.' },
     ar: { name: 'مفكّك رموز JWT', description: 'الصق رمز JSON Web Token لفكّ ترويسته وحمولته إلى JSON مقروء، مع أوقات الانتهاء والإصدار بالتوقيت المحلي. يتم الفكّ بالكامل في متصفحك — لا يُرفع الرمز ولا يُتحقَّق من التوقيع.' },
-  },
-  {
-    id: 'cron-explainer',
-    en: { name: 'Cron Explainer', description: 'Paste a 5-field cron expression and get a plain-language description of when it runs, plus the next several run times in your local timezone. Supports ranges, steps and lists, computed in your browser.' },
-    ar: { name: 'مفسّر Cron', description: 'الصق تعبير cron المكوَّن من خمسة حقول لتحصل على وصف واضح لموعد تشغيله وأوقات التشغيل القادمة بتوقيتك المحلي. يدعم النطاقات والخطوات والقوائم، ويُحسب في متصفحك.' },
-  },
-  {
-    id: 'text-diff',
-    en: { name: 'Text Diff', description: 'Paste two versions of a text and see a line-by-line diff — additions, removals and unchanged lines colour-coded, with a count of what changed. Runs entirely in your browser; nothing is uploaded.' },
-    ar: { name: 'مقارنة النصوص', description: 'الصق نسختين من نصّ لترى الفروق سطرًا بسطر — الإضافات والحذوفات والأسطر غير المتغيّرة بألوان مميّزة، مع عدّ لما تغيّر. يعمل بالكامل في متصفحك؛ لا يُرفع أي شيء.' },
-  },
-  {
-    id: 'unix-timestamp',
-    en: { name: 'Unix Timestamp', description: 'Convert a Unix timestamp (seconds or milliseconds) to a readable date and back, in both your local timezone and UTC, with a live current-time readout. Runs entirely in your browser.' },
-    ar: { name: 'الطابع الزمني يونكس', description: 'حوّل طابعًا زمنيًا يونكس (بالثواني أو المللي ثانية) إلى تاريخ مقروء والعكس، بتوقيتك المحلي وبتوقيت UTC، مع عرض حيّ للوقت الحالي. يعمل بالكامل في متصفحك.' },
   },
   {
     id: 'url-encoder',
@@ -164,39 +94,14 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'CSV ⇄ JSON', description: 'الصق CSV لتحصل على مصفوفة كائنات JSON مفهرسة بصف الترويسة، أو الصق JSON لتحصل على CSV. يتعامل مع الحقول المقتبسة والفواصل والأسطر داخل القيم. يُحلَّل في متصفحك — لا يُرفع أي شيء.' },
   },
   {
-    id: 'list-tools',
-    en: { name: 'List Tools', description: 'Paste a list, one item per line, and clean it up: sort alphabetically or numerically, remove duplicates and blank lines, trim whitespace, change case, reverse or shuffle, with live before/after counts. Runs entirely in your browser.' },
-    ar: { name: 'أدوات القوائم', description: 'الصق قائمة، عنصرًا في كل سطر، ونظّفها: رتّب أبجديًا أو رقميًا، أزل المكرّرات والأسطر الفارغة، شذّب المسافات، غيّر الحالة، اعكس أو اخلط، مع عدّادات قبل وبعد. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'color-contrast',
-    en: { name: 'Contrast Checker', description: 'Pick a text and background colour and see their WCAG 2.1 contrast ratio, with clear pass/fail badges for AA and AAA at normal and large text sizes, plus a live preview. Runs entirely in your browser.' },
-    ar: { name: 'فاحص التباين', description: 'اختر لون النص والخلفية لترى نسبة التباين وفق WCAG 2.1، مع شارات نجاح/رسوب لمستويي AA وAAA لأحجام النص العادية والكبيرة، ومعاينة حيّة. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'percentage-calculator',
-    en: { name: 'Percentage Calculator', description: 'Answer the common percentage questions instantly: what is X% of Y, X is what percent of Y, and the percentage increase or decrease from one number to another. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة النسبة المئوية', description: 'أجب فورًا عن أسئلة النسب الشائعة: كم يساوي X% من Y، وX يمثّل أي نسبة من Y، ونسبة الزيادة أو النقص من رقم إلى آخر. تعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'split-bill',
     en: { name: 'Bill Splitter', description: 'Split a restaurant or group bill fairly: add an optional tip percentage, set how many people are paying, and see the per-person share and the grand total. Runs entirely in your browser.' },
     ar: { name: 'مقسّم الفاتورة', description: 'قسّم فاتورة مطعم أو مجموعة بإنصاف: أضف نسبة بقشيش اختيارية، وحدّد عدد الدافعين، وشاهد نصيب كل شخص والمجموع الكلي. تعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'aspect-ratio',
-    en: { name: 'Aspect Ratio Calculator', description: 'Lock an aspect ratio and solve for the missing dimension: enter a width to get the matching height or vice-versa, pick common presets like 16:9 or 4:3, and read the simplified ratio. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة نسبة الأبعاد', description: 'ثبّت نسبة الأبعاد واحسب البُعد الناقص: أدخل العرض لتحصل على الارتفاع المطابق أو العكس، اختر قوالب شائعة مثل 16:9 أو 4:3، واقرأ النسبة المبسّطة. تعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'pomodoro',
     en: { name: 'Pomodoro Timer', description: 'A distraction-free Pomodoro timer: work in focused sprints, take short and long breaks, and let it cycle automatically with a gentle chime and a round counter. Custom lengths are remembered on your device. Runs entirely in your browser.' },
     ar: { name: 'مؤقّت بومودورو', description: 'مؤقّت بومودورو خالٍ من التشتيت: اعمل في جلسات مركّزة، وخذ فترات راحة قصيرة وطويلة، ودعه يتنقّل تلقائيًا مع نغمة لطيفة وعدّاد جولات. تُحفظ مدّتك المخصّصة على جهازك. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'end-of-service',
-    en: { name: 'End-of-Service Calculator', description: 'Estimate the Saudi end-of-service gratuity (mukāfaʾat nihāyat al-khidma): half a month per year for the first five years and a full month per year thereafter, adjusted for resignation vs contract end. Based on Labour Law Articles 84–85, informational only — not legal advice. Runs in your browser.' },
-    ar: { name: 'حاسبة نهاية الخدمة', description: 'قدّر مكافأة نهاية الخدمة السعودية: نصف شهر عن كل سنة من السنوات الخمس الأولى وشهر كامل عن كل سنة بعدها، مع تعديلها حسب الاستقالة أو انتهاء العقد. مبنيّة على المادتين 84 و85 من نظام العمل، لأغراض إرشادية فقط وليست استشارة قانونية. تعمل في متصفحك.' },
   },
   {
     id: 'zakat-calculator',
@@ -219,44 +124,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محرّر منحنى بيزييه', description: 'اسحب نقطتي التحكّم لتشكيل منحنى تنعيم CSS من نوع cubic-bezier، وشاهد حركة حيّة تعيده، وابدأ من قوالب مثل ease-in-out، وانسخ القيمة الجاهزة للّصق. يعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'box-shadow',
-    en: { name: 'Box Shadow Generator', description: 'Adjust offset, blur, spread, colour, opacity and inset to design a CSS box-shadow, see it on a live preview tile, and copy the exact rule. Runs entirely in your browser.' },
-    ar: { name: 'مولّد ظل الصندوق', description: 'اضبط الإزاحة والتمويه والانتشار واللون والشفافية والظل الداخلي لتصميم ظل CSS، وشاهده على بلاطة معاينة حيّة، وانسخ القاعدة بدقّة. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'gradient-generator',
-    en: { name: 'CSS Gradient Generator', description: 'Design a CSS gradient from multiple colour stops — linear at any angle or radial — see it fill a live preview, and copy the exact background rule. Runs entirely in your browser.' },
-    ar: { name: 'مولّد تدرّجات CSS', description: 'صمّم تدرّج CSS من عدّة محطّات ألوان — خطّي بأي زاوية أو شعاعي — وشاهده يملأ معاينة حيّة، وانسخ قاعدة الخلفية بدقّة. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'ip-subnet',
-    en: { name: 'IP Subnet Calculator', description: 'Enter an IPv4 address with a CIDR prefix (e.g. 192.168.1.10/24) to get the network and broadcast addresses, the usable host range, the subnet mask and wildcard, and the number of usable hosts. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة الشبكات الفرعية', description: 'أدخل عنوان IPv4 مع بادئة CIDR (مثل 192.168.1.10/24) لتحصل على عنواني الشبكة والبثّ، ونطاق المضيفين، وقناع الشبكة والقناع البديل، وعدد المضيفين. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'user-agent',
-    en: { name: 'User-Agent Parser', description: 'Read your own browser’s user-agent string, or paste any other, and see the detected browser, rendering engine, operating system and device type broken out. Parsed locally — your UA is never sent anywhere.' },
-    ar: { name: 'محلّل وكيل المستخدم', description: 'اقرأ نص وكيل المستخدم لمتصفحك، أو الصق أي نص آخر، لترى المتصفح ومحرّك العرض ونظام التشغيل ونوع الجهاز مفصّلة. يُحلَّل محليًا — لا يُرسل وكيلك إلى أي مكان.' },
-  },
-  {
-    id: 'readability',
-    en: { name: 'Readability Scorer', description: 'Paste English text to get its Flesch Reading Ease score and Flesch–Kincaid grade level, plus word, sentence and syllable counts and averages, so you can see and simplify how hard your writing is. Runs entirely in your browser.' },
-    ar: { name: 'مقياس المقروئية', description: 'الصق نصًّا إنجليزيًا لتحصل على درجة سهولة القراءة (Flesch) ومستوى الصف الدراسي (Flesch–Kincaid)، مع عدد الكلمات والجُمل والمقاطع ومتوسّطاتها، لترى مدى صعوبة كتابتك وتبسّطها. تعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'random-picker',
-    en: { name: 'Random Picker Wheel', description: 'Type your options, one per line, and spin a colourful wheel to pick one at random — great for names, prizes, chores or deciding where to eat. Uses cryptographic randomness. Runs entirely in your browser.' },
-    ar: { name: 'عجلة الاختيار العشوائي', description: 'اكتب خياراتك، خيارًا في كل سطر، وأدِر عجلة ملوّنة لاختيار واحد عشوائيًا — مثالية للأسماء أو الجوائز أو المهام أو تقرير مكان الأكل. تستخدم عشوائية تشفيرية. تعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'dice-roller',
     en: { name: 'Dice Roller', description: 'Roll any number of dice with any number of sides (d4 to d20 and beyond), see each result and the total, or flip a coin — with fair, unbiased cryptographic randomness. Runs entirely in your browser.' },
     ar: { name: 'رامي النرد', description: 'ارمِ أي عدد من حبّات النرد بأي عدد أوجه (من d4 إلى d20 وأكثر)، وشاهد كل نتيجة والمجموع، أو اقلب عملة — بعشوائية تشفيرية عادلة غير متحيّزة. تعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'countdown',
-    en: { name: 'Countdown Timer', description: 'Set a target date and time — a deadline, launch, trip or celebration — and watch a live countdown of days, hours, minutes and seconds tick down. Your event is remembered on this device. Runs entirely in your browser.' },
-    ar: { name: 'العدّ التنازلي', description: 'حدّد تاريخًا ووقتًا مستهدفًا — موعدًا نهائيًا أو إطلاقًا أو رحلة أو احتفالًا — وشاهد عدًّا تنازليًا حيًّا بالأيام والساعات والدقائق والثواني. تُحفظ مناسبتك على هذا الجهاز. يعمل بالكامل في متصفحك.' },
   },
   {
     id: 'typing-test',
@@ -269,59 +139,14 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'صورة إلى ASCII', description: 'أفلت صورة وحوّلها إلى فنّ ASCII — اختر العرض ومجموعة الرموز وعكس الفاتح/الداكن، ثم انسخ النص أو نزّله. تُعالَج بالكامل على جهازك ولا تُرفع أبدًا.' },
   },
   {
-    id: 'meme-generator',
-    en: { name: 'Meme Generator', description: 'Drop an image, add bold top and bottom captions in the classic meme style, tweak the font size, and download the result as a PNG. Drawn on your device — the image is never uploaded.' },
-    ar: { name: 'مولّد الميمز', description: 'أفلت صورة، وأضِف تعليقين علوي وسفلي بالنمط الكلاسيكي للميمز، واضبط حجم الخط، ونزّل الناتج كـPNG. تُرسم على جهازك — لا تُرفع الصورة أبدًا.' },
-  },
-  {
-    id: 'favicon-generator',
-    en: { name: 'Favicon Generator', description: 'Drop a square image or logo and generate crisp favicon and app-icon PNGs at every common size (16 to 512, plus the Apple touch icon), with ready-to-paste HTML link tags. Generated on your device — nothing is uploaded.' },
-    ar: { name: 'مولّد الأيقونات', description: 'أفلت صورة مربّعة أو شعارًا وأنشئ أيقونات favicon وتطبيقات واضحة بكل المقاسات الشائعة (من 16 إلى 512، مع أيقونة Apple)، مع وسوم HTML الجاهزة للّصق. تُنشأ على جهازك — لا يُرفع أي شيء.' },
-  },
-  {
     id: 'steganography',
     en: { name: 'Hide Text in Image', description: 'Hide a text message inside an image by tweaking the least-significant bits of its pixels — the picture looks unchanged — then reveal it later from the saved PNG. Everything happens on your device; nothing is uploaded.' },
     ar: { name: 'إخفاء نص في صورة', description: 'أخفِ رسالة نصية داخل صورة بتعديل البتات الأقل أهمية في بكسلاتها — تبدو الصورة دون تغيير — ثم اكشفها لاحقًا من ملف PNG المحفوظ. كل شيء يجري على جهازك؛ لا يُرفع أي شيء.' },
   },
   {
-    id: 'screen-recorder',
-    en: { name: 'Screen Recorder', description: 'Record a screen, window or browser tab — optionally with your microphone — straight to a video file you can download. Captured and saved entirely on your device; nothing is uploaded or streamed.' },
-    ar: { name: 'مسجّل الشاشة', description: 'سجّل شاشة أو نافذة أو تبويبًا — مع المايك اختياريًا — مباشرةً إلى ملف فيديو يمكنك تنزيله. يُلتقط ويُحفظ بالكامل على جهازك؛ لا يُرفع أو يُبثّ في أي مكان.' },
-  },
-  {
     id: 'photo-booth',
     en: { name: 'Webcam Photo Booth', description: 'Take photos with your webcam, apply fun filters, mirror the image, and download each shot. The camera only turns on when you start it, and every photo stays on your device — nothing is uploaded.' },
     ar: { name: 'كشك تصوير الويب كام', description: 'التقط صورًا بكاميرا الويب، وطبّق مرشّحات ممتعة، واعكس الصورة، ونزّل كل لقطة. لا تعمل الكاميرا إلا حين تبدأها، وتبقى كل صورة على جهازك — لا يُرفع أي شيء.' },
-  },
-  {
-    id: 'image-redact',
-    en: { name: 'Image Redactor', description: 'Drop an image and drag boxes over anything sensitive — faces, names, numbers — to pixelate or black it out, then download the redacted picture. The redaction is baked into the pixels and everything runs on your device.' },
-    ar: { name: 'محرّر تمويه الصور', description: 'أفلت صورة واسحب مربّعات فوق أي شيء حسّاس — وجوه، أسماء، أرقام — لتبكسله أو تحجبه، ثم نزّل الصورة المموّهة. يُدمج التمويه في البكسلات وكل شيء يجري على جهازك.' },
-  },
-  {
-    id: 'file-encrypt',
-    en: { name: 'File Encryptor', description: 'Encrypt any file with a password using AES-256-GCM (with a PBKDF2-derived key), then decrypt it later with the same password. The file and password never leave your browser — real, standard cryptography on your device.' },
-    ar: { name: 'مشفّر الملفات', description: 'شفّر أي ملف بكلمة مرور باستخدام AES-256-GCM (بمفتاح مشتقّ عبر PBKDF2)، ثم فُكّ تشفيره لاحقًا بالكلمة نفسها. لا يغادر الملف ولا كلمة المرور متصفحك — تشفير قياسي حقيقي على جهازك.' },
-  },
-  {
-    id: 'meta-tags',
-    en: { name: 'Meta Tag Generator', description: 'Fill in a page’s title, description, URL and preview image to generate the full set of SEO, Open Graph and Twitter Card meta tags — with a live social-share preview — ready to paste into your <head>. Runs entirely in your browser.' },
-    ar: { name: 'مولّد وسوم Meta', description: 'أدخل عنوان الصفحة ووصفها ورابطها وصورة المعاينة لتوليد مجموعة وسوم SEO وOpen Graph وبطاقة تويتر كاملة — مع معاينة حيّة — جاهزة للّصق في <head>. تعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'robots-txt',
-    en: { name: 'robots.txt Generator', description: 'Generate a valid robots.txt: allow or block crawlers, add disallowed paths, set a crawl-delay and point to your sitemap — then copy or download the file. Runs entirely in your browser.' },
-    ar: { name: 'مولّد robots.txt', description: 'ولّد ملف robots.txt صالحًا: اسمح أو امنع الزواحف، وأضِف مسارات ممنوعة، وحدّد مهلة الزحف، وأشِر إلى خريطة موقعك — ثم انسخ الملف أو نزّله. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'gitignore',
-    en: { name: '.gitignore Generator', description: 'Pick the languages, tools and editors you use and get a combined .gitignore with the usual build artefacts, dependency folders and OS/editor cruft — ready to copy or download. Runs entirely in your browser.' },
-    ar: { name: 'مولّد .gitignore', description: 'اختر اللغات والأدوات والمحرّرات التي تستخدمها لتحصل على ملف .gitignore مدمج يشمل مخرجات البناء ومجلّدات الاعتماديات وفوضى النظام والمحرّر — جاهز للنسخ أو التنزيل. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'json-to-types',
-    en: { name: 'JSON to TypeScript', description: 'Paste a JSON object or array and get clean TypeScript interfaces inferred from it — nested objects become their own interfaces, arrays are typed, and keys missing from some items become optional. Runs entirely in your browser.' },
-    ar: { name: 'JSON إلى TypeScript', description: 'الصق كائن أو مصفوفة JSON لتحصل على واجهات TypeScript مستنبطة منها — تصبح الكائنات المتداخلة واجهات خاصة بها، وتُصنَّف المصفوفات، وتصير المفاتيح الغائبة من بعض العناصر اختيارية. تعمل بالكامل في متصفحك.' },
   },
   {
     id: 'todo',
@@ -354,19 +179,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد جداول Markdown', description: 'الصق بياناتٍ مفصولة بفواصل أو بعلامات جدولة (النسخ المباشر من جدول بيانات يعمل) لتحصل على جدول Markdown مرتّب بنمط GitHub، مع خيار محاذاة الأعمدة. يعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'svg-editor',
-    en: { name: 'SVG Editor', description: 'Paste or drop an SVG, see it render live, and copy or download a cleaned-up version. The built-in optimiser (SVGOMG-style, sane defaults) strips editor cruft — comments, metadata, Inkscape/Illustrator namespaces — collapses whitespace and rounds coordinates so your icons ship lean. Runs entirely in your browser; nothing is uploaded.' },
-    ar: { name: 'محرّر SVG', description: 'الصق أو أفلت ملف SVG، وشاهده يُعرض مباشرةً، وانسخ أو نزّل نسخة منظّفة. يزيل المُحسِّن المدمج (بأسلوب SVGOMG وبإعدادات معقولة) فضلات المحرّرات — التعليقات والبيانات الوصفية ومساحات أسماء Inkscape/Illustrator — ويطوي المسافات ويقرّب الإحداثيات فتخرج أيقوناتك خفيفة. يعمل بالكامل في متصفحك؛ لا يُرفع أي شيء.' },
-  },
-  {
     id: 'fake-data',
     en: { name: 'Fake Data Generator', description: 'Generate realistic-looking sample records — names, emails, phones, cities, companies, dates and IDs — for seeding tests, mockups and demos. Pick the fields and count, then export as JSON or CSV. Runs entirely in your browser.' },
     ar: { name: 'مولّد بيانات وهمية', description: 'ولّد سجلّات عيّنة واقعية المظهر — أسماء وبُرد إلكترونية وهواتف ومدن وشركات وتواريخ ومعرّفات — لتغذية الاختبارات والنماذج والعروض. اختر الحقول والعدد، ثم صدّر JSON أو CSV. يعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'slugify',
-    en: { name: 'Slugify', description: 'Convert a title or heading into a clean, URL-safe slug — lowercased, accents stripped, spaces and punctuation turned into hyphens, with a basic Arabic-to-Latin transliteration. Choose the separator and case. Runs entirely in your browser.' },
-    ar: { name: 'مولّد الروابط اللطيفة', description: 'حوّل عنوانًا إلى «سلَگ» نظيف آمن للروابط — أحرف صغيرة، بلا تشكيل، والمسافات وعلامات الترقيم تصبح شرطات، مع تحويل تقريبي من العربية إلى اللاتينية. اختر الفاصل والحالة. يعمل بالكامل في متصفحك.' },
   },
   {
     id: 'book-me',
@@ -382,21 +197,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'link-shortener',
     en: { name: 'Link Shortener', description: 'Turn a long URL into a clean built-in-saudi.com/s/… link you can share anywhere. Sign in with Google to create and manage your links and see their click counts. Each link is kept for 6 months. Free, no ads.' },
     ar: { name: 'اختصار الروابط', description: 'حوّل رابطًا طويلًا إلى رابط قصير أنيق على built-in-saudi.com/s/… تشاركه في أي مكان. سجّل الدخول بحساب Google لإنشاء روابطك وإدارتها ورؤية عدد النقرات. يُحفظ كل رابط ٦ أشهر. مجاني بلا إعلانات.' },
-  },
-  {
-    id: 'color-tools',
-    en: { name: 'Color Picker & Palettes', description: 'Pick a colour and read it as HEX/RGB/HSL, then generate complementary, analogous and triadic palettes plus a shades ramp — copy any swatch. In your browser.' },
-    ar: { name: 'منتقي الألوان واللوحات', description: 'اختر لونًا واقرأه بصيغ HEX/RGB/HSL، ثم ولّد لوحات مكمّلة ومتجانسة وثلاثية وتدرّجات — وانسخ أي لون. داخل متصفحك.' },
-  },
-  {
-    id: 'invoice-generator',
-    en: { name: 'Invoice Generator', description: 'Create a bilingual (AR/EN) SAR invoice with line items, automatic 15% Saudi VAT and the total in Arabic words. Print or save as PDF; nothing uploaded.' },
-    ar: { name: 'إنشاء فاتورة', description: 'أنشئ فاتورة ثنائية اللغة بالريال ببنودٍ وضريبة ١٥٪ تلقائيًا والإجمالي بالأحرف العربية. اطبعها أو احفظها PDF؛ لا يُرفع شيء.' },
-  },
-  {
-    id: 'pdf-split',
-    en: { name: 'Split PDF', description: 'Split a PDF in your browser — extract a page range like 1-3,5 into a new file, or burst into single-page PDFs (ZIP or one by one). Never uploaded.' },
-    ar: { name: 'تقسيم PDF', description: 'قسّم PDF داخل متصفحك — استخرج نطاق صفحات مثل 1-3،5 في ملف جديد، أو فكّكه إلى صفحات مفردة (ZIP أو واحدة تلو الأخرى). لا يُرفع أبدًا.' },
   },
   {
     id: 'pdf-merge',
@@ -429,11 +229,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'قارئ الباركود', description: 'اقرأ الباركود من صورة أو من الكاميرا وشاهد محتواه الحقيقي قبل فتحه — مع تنبيهات للروابط المضللة والمختصرة. لا يُرفع شيء.' },
   },
   {
-    id: 'metadata-remove',
-    en: { name: 'Remove Image Metadata', description: 'Strip EXIF, GPS, XMP and IPTC data from a photo before you share it — without re-compressing the image, so quality is untouched. Never uploaded.' },
-    ar: { name: 'إزالة بيانات الصورة', description: 'احذف بيانات EXIF وGPS وXMP وIPTC من الصورة قبل مشاركتها — دون إعادة ضغطها، فتبقى الجودة كما هي. لا تُرفع أبدًا.' },
-  },
-  {
     id: 'image-to-text',
     en: { name: 'Image to Text (OCR)', description: 'Extract text from a photo, screenshot or scan — English, Arabic or both — then copy it or save as .txt. The OCR engine runs in your browser; nothing is uploaded.' },
     ar: { name: 'استخراج النص من صورة', description: 'استخرج النص من صورة أو لقطة شاشة أو مستند ممسوح — بالإنجليزية أو العربية أو كليهما — ثم انسخه أو احفظه كملف .txt. يعمل داخل متصفحك ولا يُرفع شيء.' },
@@ -447,16 +242,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'images-to-pdf',
     en: { name: 'Images to PDF', description: 'Combine JPG/PNG images into a single PDF, one per page — reorder, fit-to-image or A4/Letter with a margin. Built in your browser; never uploaded.' },
     ar: { name: 'الصور إلى PDF', description: 'ادمج صور JPG/PNG في PDF واحد، صورة لكل صفحة — إعادة ترتيب، وملاءمة الصورة أو A4/Letter بهامش. داخل متصفحك؛ لا تُرفع أبدًا.' },
-  },
-  {
-    id: 'image-cropper',
-    en: { name: 'Image Cropper', description: 'Crop an image in your browser — drag/resize the crop box, lock to 1:1/4:3/16:9 or free, full-resolution output, download as PNG/JPG/WebP. Never uploaded.' },
-    ar: { name: 'أداة قص الصور', description: 'اقتصّ الصورة داخل متصفحك — اسحب مربّع القص، ثبّته على 1:1 أو 4:3 أو 16:9 أو حر، ناتج بالدقة الكاملة، نزّله PNG/JPG/WebP. لا تُرفع أبدًا.' },
-  },
-  {
-    id: 'image-format-converter',
-    en: { name: 'Image Converter', description: 'Convert images between PNG, JPG and WebP in your browser — quality for lossy formats, background fill when flattening a transparent PNG to JPG. Never uploaded.' },
-    ar: { name: 'محوّل صيغ الصور', description: 'حوّل الصور بين PNG وJPG وWebP داخل متصفحك — جودة للصيغ ذات الفقد، ولون خلفية عند تسطيح PNG الشفاف إلى JPG. لا تُرفع أبدًا.' },
   },
   {
     id: 'image-compressor',
@@ -574,79 +359,14 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد UUID', description: 'أنشئ معرّفًا واحدًا أو عدة معرّفات UUID (v4) مع خيارات تنسيق، بالكامل داخل متصفحك.' },
   },
   {
-    id: 'text-counter',
-    en: { name: 'Word Counter', description: 'Live word, character, sentence and paragraph counts with reading-time estimates — Arabic-correct, in your browser.' },
-    ar: { name: 'عدّاد الكلمات والحروف', description: 'عدّ مباشر للكلمات والحروف والجُمل والفقرات مع تقدير وقت القراءة — دقيق للعربية، داخل متصفحك.' },
-  },
-  {
-    id: 'domestic-worker',
-    en: { name: 'Domestic Worker Entitlements', description: 'What a domestic worker in Saudi Arabia is really entitled to — one month’s wage per four years, 30 days leave after two, sick pay and rest — under the regulation that covers them, not the Labour Law that does not. Free, in your browser.' },
-    ar: { name: 'حقوق العمالة المنزلية', description: 'ما تستحقه العمالة المنزلية فعلًا — أجر شهر عن كل أربع سنوات، وثلاثون يوم إجازة بعد سنتين، والإجازة المرضية والراحة — بموجب اللائحة التي تشملهم لا نظام العمل. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'pricing',
-    en: { name: 'Product Pricing & Margin', description: 'What a sale really leaves you where the advertised price already includes the 15% and the payment fee is taken on all of it — plus the price to display to truly hit your margin, and why markup is not margin. Free, in your browser.' },
-    ar: { name: 'تسعير المنتج وهامش الربح', description: 'كم تترك لك عملية البيع فعلًا حيث السعر المعلن شامل للضريبة والرسوم تُقتطع من كامله — والسعر الواجب عرضه لتحقيق هامشك، ولماذا نسبة الإضافة ليست الهامش. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'rett',
-    en: { name: 'Property Transaction Tax (RETT)', description: 'What the 5% property transaction tax comes to on a sale — why the 15% VAT does not also apply, how the first-home relief tapers above SAR 1,000,000, and why the late penalty is 2% a month and not 5%. Free, in your browser.' },
-    ar: { name: 'التصرفات العقارية', description: 'كم تبلغ ضريبة التصرفات العقارية ٥٪ عند البيع — لماذا لا تُضاف ضريبة القيمة المضافة ١٥٪، وكيف يتدرّج إعفاء المسكن الأول فوق مليون ريال، ولماذا الغرامة ٢٪ شهريًا لا ٥٪. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'import-duty',
-    en: { name: 'Import Duty & VAT', description: 'What a parcel from abroad really costs — duty on the CIF value, the 15% VAT that applies at any value even under the SAR 1,000 exemption, and why the rates do not add to 20%. Free, in your browser.' },
-    ar: { name: 'الرسوم الجمركية والضريبة', description: 'كم يكلّف الطرد من الخارج فعلًا — الرسوم على القيمة CIF، وضريبة ١٥٪ التي تُطبَّق على أي قيمة حتى دون إعفاء الألف ريال، ولماذا لا تُجمع النسبتان. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'sponsorship-transfer',
-    en: { name: 'Sponsorship Transfer', description: 'What a sponsorship transfer costs — 2,000, 4,000 or 6,000 by the worker’s transfer count — who owes it under Article 40, when you do not need the employer’s consent, and the 60-day window after a contract ends. Free, in your browser.' },
-    ar: { name: 'نقل الكفالة', description: 'كم يكلّف نقل الكفالة — ٢٬٠٠٠ أو ٤٬٠٠٠ أو ٦٬٠٠٠ بحسب عدد مرات النقل — ومن يتحمّلها بموجب المادة ٤٠، ومتى لا تحتاج موافقة صاحب العمل، ومهلة الستين يومًا بعد انتهاء العقد. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'zip-create',
-    en: { name: 'Create a ZIP', description: 'Bundle files into one .zip on your device — properly compressed, Arabic filenames intact, and an honest answer about why there is no password option. Free, and nothing is uploaded.' },
-    ar: { name: 'ضغط الملفات في ZIP', description: 'اجمع الملفات في ملف ‎.zip‎ واحد على جهازك — مضغوطة فعلًا وبأسماء عربية سليمة، مع جواب صريح عن غياب خيار كلمة المرور. مجانًا، ولا يُرفع شيء.' },
-  },
-  {
-    id: 'print-size',
-    en: { name: 'Photo Print Size', description: 'How large a photo can be printed at A4, A3 or any size before the pixel grid shows — read from the picture itself and worked out for your real viewing distance. Free, and nothing is uploaded.' },
-    ar: { name: 'مقاس الطباعة', description: 'إلى أي مقاس تُطبع الصورة على A4 أو A3 أو غيره قبل أن تظهر شبكة البكسلات — محسوبًا من الصورة نفسها وللمسافة التي تنظر منها فعلًا. مجانًا، ولا يُرفع شيء.' },
-  },
-  {
-    id: 'markdown-html',
-    en: { name: 'Markdown to HTML', description: 'Turn Markdown into HTML — a fragment for a CMS or a standalone file with its own stylesheet, heading anchors, and both dir and lang set for Arabic. Raw HTML is escaped rather than passed through. Free, in your browser.' },
-    ar: { name: 'ماركداون إلى HTML', description: 'حوّل ماركداون إلى HTML — مقطعًا لنظام إدارة محتوى أو ملفًا مستقلًا بتنسيقه، مع معرّفات للعناوين وضبط dir وlang معًا للعربية. وتُهرَّب الوسوم الخام بدل تمريرها. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'image-base64',
-    en: { name: 'Image to Base64', description: 'Turn an image into a data URI for CSS, HTML or Markdown, and back again — with the smaller encoding for SVG, HEIC transcoded so it actually displays, and the true cost of embedding shown. Free, in your browser.' },
-    ar: { name: 'صورة إلى Base64', description: 'حوّل صورة إلى data URI لـCSS أو HTML أو ماركداون وبالعكس — بالترميز الأصغر لـSVG، وتحويل HEIC ليُعرض فعلًا، مع بيان كلفة التضمين الحقيقية. مجانًا داخل متصفحك.' },
-  },
-  {
     id: 'pdf-to-word',
     en: { name: 'PDF to Word', description: 'Turn a PDF into an editable .docx with the headings, bold and lists recovered — and a locked PDF opens with your password. Free, and the file never leaves your browser.' },
     ar: { name: 'PDF إلى وورد', description: 'حوّل ملف PDF إلى مستند ‎.docx‎ قابل للتحرير مع استعادة العناوين والخط العريض والقوائم — ويُفتح الملف المحمي بكلمة مرورك. مجانًا، ولا يغادر الملف متصفحك.' },
   },
   {
-    id: 'saudi-holidays',
-    en: { name: 'Saudi Public Holidays', description: 'Every official paid holiday under Article 112 — Eid al-Fitr, Eid al-Adha, National Day and Founding Day — for any year, in both calendars, with the weekend-compensation and annual-leave rules. Free, in your browser.' },
-    ar: { name: 'الإجازات الرسمية في السعودية', description: 'كل إجازة رسمية مدفوعة بموجب المادة ١١٢ — عيد الفطر وعيد الأضحى واليوم الوطني ويوم التأسيس — لأي سنة بالتقويمين، مع أحكام التعويض والإجازة السنوية. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'speech-time',
-    en: { name: 'Words to Speaking Time', description: 'How long a script takes to read silently and to say out loud — with the correct rate for Arabic, which reads far slower per word than English. Free, in your browser.' },
-    ar: { name: 'وقت الإلقاء والقراءة', description: 'كم يستغرق النص قراءةً صامتة وإلقاءً بصوت عالٍ — بالمعدّل الصحيح للعربية، التي تُقرأ أبطأ بكثير في الكلمة الواحدة من الإنجليزية. مجانًا داخل متصفحك.' },
-  },
-  {
     id: 'doc-scan',
     en: { name: 'Photo to Scan', description: 'Turn a photo of a page into something that looks scanned — straightened by a projective transform, paper made white, and a fraction of the size. Nothing uploaded. Free, in your browser.' },
     ar: { name: 'تصحيح صورة المستند', description: 'حوّل صورة صفحة إلى ما يشبه المسح الضوئي — معدّلة الميل بتحويل إسقاطي، والورق أبيض، وبجزء يسير من الحجم. ولا يُرفع شيء. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'pdf-diff',
-    en: { name: 'Compare PDFs', description: 'See exactly which words changed between two versions of a PDF, and on which page — text-aligned, not pixel-compared. Neither file is uploaded. Free, in your browser.' },
-    ar: { name: 'مقارنة ملفات PDF', description: 'اعرف أي الكلمات تغيّرت بين نسختين من ملف PDF وفي أي صفحة — بمحاذاة النصّ لا بمقارنة البكسل. ولا يُرفع أي ملف. مجانًا داخل متصفحك.' },
   },
   {
     id: 'activity-schedule',
@@ -659,44 +379,14 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'الجدول الأسبوعي', description: 'املأ جدولًا أسبوعيًا للحصص أو الدوام واطبعه، يبدأ بالأحد — وفي العربية تنعكس الأعمدة لا أسماء الأيام وحدها. مجانًا داخل متصفحك.' },
   },
   {
-    id: 'retirement-age',
-    en: { name: 'When Can I Retire? (GOSI)', description: 'When you can draw a Saudi GOSI pension under the law in force from 3 July 2024 — 65 for a new entrant, a 58-to-65 band for everybody else, and why it is not 60 any more. Free, in your browser.' },
-    ar: { name: 'متى أتقاعد؟ (التأمينات)', description: 'متى يمكنك صرف معاش التأمينات وفق النظام النافذ من ٣ يوليو ٢٠٢٤ — ٦٥ للداخل الجديد، ونطاق ٥٨ إلى ٦٥ لمن عداه، ولماذا لم يعد ٦٠. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'cr-renewal',
-    en: { name: 'Commercial Registration Renewal', description: 'When a Saudi commercial registration can be renewed and when it must be — 90 days before expiry, 90 days of grace after, and why that grace is not an extension. Free, in your browser.' },
-    ar: { name: 'تجديد السجل التجاري', description: 'متى يمكن تجديد السجل التجاري ومتى يجب — تسعون يومًا قبل الانتهاء، وتسعون بعده، ولماذا ليست تمديدًا. مجانًا داخل متصفحك.' },
-  },
-  {
-    id: 'traffic-fine',
-    en: { name: 'Traffic Fine Discount & Deadlines', description: 'What a Saudi traffic fine costs at the 25% Article 75 reduction, and the exact day it lapses — 30 days to object plus 15 to pay, running one after the other. Free, in your browser.' },
-    ar: { name: 'خصم المخالفة المرورية ومهلها', description: 'كم تكلّف المخالفة المرورية بتخفيض ٢٥٪ وفق المادة ٧٥، ومتى يسقط بالضبط — ٣٠ يومًا للاعتراض و١٥ للسداد تجريان تباعًا. مجانًا داخل متصفحك.' },
-  },
-  {
     id: 'readable-text',
     en: { name: 'Readable Text', description: 'Set hard-to-read text the way you can read it — size, line spacing, line length, contrast, a focus band. Letter spacing is off for Arabic, because the letters join. Free, in your browser.' },
     ar: { name: 'نص أسهل للقراءة', description: 'اضبط النص الصعب كما تستطيع قراءته — الحجم وتباعد الأسطر وطول السطر والتباين وإبراز السطر. وتباعد الحروف مُعطَّل للعربية لأن حروفها تتّصل. مجانًا داخل متصفحك.' },
   },
   {
-    id: 'token-counter',
-    en: { name: 'AI Token Counter', description: 'Count the exact tokens in a prompt with the real tokenizer, for GPT-4o-era and GPT-4-era models — see how wrong "characters divided by 4" is, and how much more Arabic costs. Free, in your browser.' },
-    ar: { name: 'عدّاد توكنز الذكاء الاصطناعي', description: 'اعرف عدد التوكنز الدقيق في تعليمتك بالمُجزّئ الحقيقي، لنماذج جيل GPT-4o وجيل GPT-4 — وكم تخطئ قاعدة «الحروف ÷ ٤»، وكم تكلّف العربية أكثر. مجانًا داخل متصفحك.' },
-  },
-  {
     id: 'detect-language',
     en: { name: 'Language Detector', description: 'Detect the language of any text in your browser — script detection plus common-word matching across major languages, with a confidence score. Nothing uploaded.' },
     ar: { name: 'كاشف اللغة', description: 'اكتشف لغة أي نصٍّ داخل متصفحك — كشف النظام الكتابي ومطابقة الكلمات الشائعة لكبرى اللغات، مع درجة ثقة. دون رفع أي شيء.' },
-  },
-  {
-    id: 'lorem-ipsum',
-    en: { name: 'Lorem Ipsum', description: 'Generate placeholder text by paragraphs, sentences or words — classic Lorem ipsum or an Arabic filler variant. Runs entirely in your browser.' },
-    ar: { name: 'نص بديل', description: 'ولّد نصًا بديلًا بالفقرات أو الجُمل أو الكلمات — نص Lorem ipsum الكلاسيكي أو نص حشو عربي. يعمل بالكامل داخل متصفحك.' },
-  },
-  {
-    id: 'vat-calculator',
-    en: { name: 'VAT Calculator', description: 'Add or remove Saudi VAT (15% default, 5%/0% presets) — net, VAT and gross in SAR to the halala, with a copyable breakdown. Bilingual, in-browser.' },
-    ar: { name: 'حاسبة ضريبة القيمة المضافة', description: 'أضِف أو استخرج ضريبة القيمة المضافة السعودية (١٥٪ افتراضيًا) — الصافي والضريبة والإجمالي بالريال، مع تفاصيل قابلة للنسخ. داخل متصفحك.' },
   },
   {
     id: 'arabic-poetry',
@@ -709,11 +399,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محوّل حالة الأحرف', description: 'حوّل النص بين الحالات — كبيرة/صغيرة/أول الكلمة/أول الجملة وcamelCase وsnake_case وkebab وCONSTANT — مباشرةً مع النسخ. العربية دون تغيير.' },
   },
   {
-    id: 'line-breaks',
-    en: { name: 'Line Break Converter', description: 'Auto-flip line spacing — single-spaced lines become double-spaced, double becomes single, mixed normalises to double. Result box with copy and share, all in your browser.' },
-    ar: { name: 'محوّل فواصل الأسطر', description: 'تبديل تلقائي لتباعد الأسطر — المفردة تصبح مزدوجة والمزدوجة مفردة والمختلطة تُوحَّد إلى مزدوجة. صندوق ناتج مع نسخ ومشاركة، داخل متصفحك.' },
-  },
-  {
     id: 'diacritize',
     en: { name: 'Arabic Diacritizer', description: 'Paste Arabic text and AI adds full diacritics (تشكيل) with grammatical case endings, ready to copy. Google sign-in; one run per 24 hours.' },
     ar: { name: 'مُشكِّل النصوص العربية', description: 'الصق نصًّا عربيًّا فيضيف الذكاء الاصطناعي التشكيل الكامل مع الإعراب، جاهزًا للنسخ. تسجيل دخول Google؛ مرة كل ٢٤ ساعة.' },
@@ -722,21 +407,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'arabic-verbs',
     en: { name: 'Arabic Verb Conjugator', description: 'Enter an Arabic root for the full conjugation — past, present (3 moods), imperative, passive across 13 pronouns, Forms I–X + quadriliteral, derived nouns and emphatics. Weak/irregular roots flagged. All in-browser.' },
     ar: { name: 'مُصرِّف الأفعال العربية', description: 'أدخل جذرًا عربيًّا للتصريف الكامل — الماضي والمضارع (ثلاثة أوجه) والأمر والمجهول عبر ١٣ ضميرًا، الأوزان من فَعَلَ إلى استفعل والرباعي، مع المشتقات والتوكيد. تُنبَّه الجذور المعتلّة والشاذّة. داخل المتصفح.' },
-  },
-  {
-    id: 'paste-to-markdown',
-    en: { name: 'HTML to Markdown', description: 'Paste from Word, a web page or WordPad and get clean Markdown — line breaks, bold, italics, links, headings, lists, quotes, code and tables. Copy or share; nothing uploaded.' },
-    ar: { name: 'HTML إلى ماركداون', description: 'الصق من وورد أو صفحة ويب أو WordPad واحصل على ماركداون نظيف — فواصل أسطر وخط عريض ومائل وروابط وعناوين وقوائم واقتباسات وشيفرة وجداول. انسخ أو شارك؛ لا يُرفع شيء.' },
-  },
-  {
-    id: 'hash-generator',
-    en: { name: 'Hash Generator', description: 'Compute SHA-1/256/384/512 of any text or file — hex and Base64. Files are hashed locally and never uploaded.' },
-    ar: { name: 'مولّد البصمة (Hash)', description: 'احسب SHA-1/256/384/512 لأي نص أو ملف — ست عشري وBase64. تُحسب الملفات محليًا ولا تُرفع.' },
-  },
-  {
-    id: 'json-formatter',
-    en: { name: 'Code Formatter', description: 'Format, minify and validate code in your browser — JSON (line/column errors, sort keys) plus CSS and XML beautify/minify. Nothing uploaded.' },
-    ar: { name: 'منسّق الكود', description: 'نسّق وصغّر وتحقّق من الكود داخل متصفحك — JSON (أخطاء بالسطر والعمود وترتيب المفاتيح) مع CSS وXML. دون رفع أي شيء.' },
   },
   {
     id: 'unit-converter',
@@ -749,24 +419,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محوّل العملات', description: 'حوّل بين الريال السعودي وعملات العالم بأسعار مرجعية يومية محدّثة — وبدّل الاتجاه بنقرة. أسعار من مصدر عام مجاني تُحفظ للعمل دون اتصال؛ ولا تغادر مبالغك متصفحك.' },
   },
   {
-    id: 'base64',
-    en: { name: 'Base64 Convert', description: 'Encode and decode Base64 text with full UTF-8 support and a URL-safe option — entirely in your browser.' },
-    ar: { name: 'ترميز وفكّ Base64', description: 'رمّز وفكّ نصوص Base64 بدعم كامل لـ UTF-8 وخيار آمن للروابط — بالكامل داخل متصفحك.' },
-  },
-  {
     id: 'date-diff',
     en: { name: 'Date Diff', description: 'Find the exact duration between two dates — years, months, days, plus total days and weeks. Runs entirely in your browser.' },
     ar: { name: 'الفرق بين تاريخين', description: 'احسب المدة الدقيقة بين تاريخين — سنوات وأشهر وأيام، وإجمالي الأيام والأسابيع. يعمل بالكامل داخل متصفحك.' },
-  },
-  {
-    id: 'archive-inspector',
-    en: { name: 'Archive Inspector', description: 'Peek inside a .zip and other archives in your browser — detect the format and list every entry with sizes and dates, without extracting or uploading.' },
-    ar: { name: 'فاحص الأرشيف', description: 'اطّلع على محتوى ملفات .zip وغيرها داخل متصفحك — تعرّف على الصيغة واعرض كل عنصر بحجمه وتاريخه دون فكّ أو رفع.' },
-  },
-  {
-    id: 'file-metadata',
-    en: { name: 'File Metadata', description: 'Reveal a file’s metadata in your browser — size, image dimensions, camera EXIF with GPS, PNG text, PDF info and media tags. Nothing is uploaded.' },
-    ar: { name: 'بيانات الملف', description: 'اكشف البيانات الوصفية لملفٍ داخل متصفحك — الحجم وأبعاد الصورة وبيانات EXIF مع GPS ونصوص PNG ومعلومات PDF ووسوم الوسائط. دون رفع أي شيء.' },
   },
   {
     id: 'subtitle-editor',
@@ -799,11 +454,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'قياس الإيقاع بالنقر', description: 'اعرف إيقاع مقطع بالنقر معه. تحسب الأداة المتوسط على نافذة متحركة فتتابع تغيّر الإيقاع بدل أن تدفنه، وتخبرك بمدى ثبات نقرك. وتعطيك أزمنة النغمة الربعية والثمانية والثمانية المنقوطة بالمللي ثانية، وهو ما يحتاجه جهاز التأخير.' },
   },
   {
-    id: 'sound-meter',
-    en: { name: 'Sound Level Meter', description: 'A live level meter using your microphone, with a running graph and peak hold. It shows relative loudness in dBFS, not calibrated decibels — a browser cannot know which microphone it is behind or what gain the system applied. Good for comparing two rooms; not for judging whether a workplace is safe.' },
-    ar: { name: 'مقياس مستوى الصوت', description: 'مقياس مستوى حي عبر الميكروفون، مع رسم متحرك وحفظ للذروة. يعرض الجهارة النسبية بوحدة dBFS لا الديسيبل المعاير — فالمتصفح لا يعرف أي ميكروفون خلفه ولا الكسب الذي طبّقه النظام. مناسب لمقارنة غرفتين؛ لا للحكم على سلامة بيئة عمل.' },
-  },
-  {
     id: 'passphrase',
     en: { name: 'Passphrase Generator', description: 'Build a passphrase from a 1296-word list — 10.3 bits a word, short enough to type. You can also roll physical dice and enter the numbers, the original diceware method and the only version whose randomness you need not take on trust. There is an Arabic wordlist too.' },
     ar: { name: 'مولّد عبارات المرور', description: 'ابنِ عبارة مرور من قائمة بـ١٢٩٦ كلمة — ١٠٫٣ بت لكل كلمة، وقصيرة بما يكفي للكتابة. ويمكنك رمي نرد حقيقي وإدخال الأرقام، وهي طريقة diceware الأصلية والنسخة الوحيدة التي لا تضطر لتصديق أحد في عشوائيتها. وهناك قائمة كلمات عربية أيضًا.' },
@@ -814,29 +464,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محاكي عمى الألوان', description: 'شاهد لوحة ألوان أو صورة كما يراها من لديه قصور في رؤية الألوان — وأي أزواج ألوانك تنهار إلى الشيء نفسه. فنحو رجل من كل اثني عشر لديه شكل منه، ما يجعل رسمًا يعتمد على الأحمر مقابل الأخضر غير مقروء لشريحة حقيقية من مستخدميك.' },
   },
   {
-    id: 'svg-optimise',
-    en: { name: 'SVG Optimiser', description: 'Shrink an SVG by removing Inkscape, Illustrator and Figma metadata, rounding coordinates and squeezing out whitespace — then shows the result rendered so you can see nothing broke. Deliberately conservative: it will not merge paths or strip referenced ids.' },
-    ar: { name: 'محسّن ملفات SVG', description: 'صغّر ملف SVG بإزالة بيانات إنكسكيب وإليستريتور وفيغما، وتقريب الإحداثيات، وعصر المسافات — ثم يعرض الناتج مرسومًا لترى أن شيئًا لم ينكسر. متحفّظ عن قصد: لا يدمج المسارات ولا يحذف معرّفًا مُشارًا إليه.' },
-  },
-  {
     id: 'batch-watermark',
     en: { name: 'Batch Watermark', description: 'Watermark a whole folder of images at once with text or a logo, then download them as a zip. The mark is sized as a share of each image rather than in fixed pixels, so a 4000-pixel photo and an 800-pixel one come back looking the same.' },
     ar: { name: 'علامة مائية على دفعة صور', description: 'ضع علامة مائية نصية أو شعارًا على مجلد صور كامل دفعة واحدة، ثم نزّلها في ملف مضغوط. ويُحسب حجم العلامة كنسبة من كل صورة لا ببكسلات ثابتة، فتعود صورة بعرض ٤٠٠٠ بكسل وأخرى بـ٨٠٠ متشابهتين.' },
-  },
-  {
-    id: 'pdf-booklet',
-    en: { name: 'Booklet & N-up', description: 'Impose a PDF for printing: booklet order so a folded, stapled stack reads correctly, or two and four pages to a sheet to save paper. A booklet is not pages 1,2,3,4 on sheets — the outermost sheet carries the last page beside the first. Right-to-left binding for Arabic documents.' },
-    ar: { name: 'ترتيب الكتيّب وتوفير الورق', description: 'رتّب ملف PDF للطباعة: ترتيب كتيّب ليُقرأ بشكل صحيح بعد الطي والتدبيس، أو صفحتين وأربع صفحات في الورقة لتوفير الورق. فالكتيّب ليس صفحات ١ و٢ و٣ و٤ على الأوراق — إذ تحمل الورقة الخارجية الصفحة الأخيرة بجوار الأولى. مع تجليد من اليمين للمستندات العربية.' },
-  },
-  {
-    id: 'pdf-stamp',
-    en: { name: 'Page Numbers & Watermark', description: 'Stamp a PDF without flattening it — page numbers in any position and format including Arabic-Indic, a header, a footer and a diagonal watermark. Start numbering after the cover and say what number that page carries. The text underneath stays searchable and selectable.' },
-    ar: { name: 'ترقيم صفحات PDF والعلامة المائية', description: 'اختم ملف PDF دون تسطيحه — أرقام صفحات بأي موضع وصيغة بما فيها الأرقام الهندية، وترويسة وتذييل وعلامة مائية مائلة. ابدأ الترقيم بعد الغلاف وحدّد الرقم الذي تحمله تلك الصفحة. ويبقى النص تحتها قابلًا للبحث والتحديد.' },
-  },
-  {
-    id: 'label-sheet',
-    en: { name: 'Label Sheets', description: 'Print a list onto adhesive labels — addresses, names, asset tags — on the common A4 and US Letter stocks at their published measurements. You can start at any label position, so a sheet with twelve left on it is not wasted. Arabic names are shaped and laid out correctly.' },
-    ar: { name: 'مولّد أوراق الملصقات', description: 'اطبع قائمة على ورقة ملصقات لاصقة — عناوين أو أسماء أو وسوم أصول — على مقاسات A4 وLetter الشائعة وبمقاييسها المنشورة. ويمكنك البدء من أي موضع ملصق، فلا تُهدر ورقة بقي فيها اثنا عشر ملصقًا. وتُشكَّل الأسماء العربية بشكل صحيح.' },
   },
   {
     id: 'certificate',
@@ -844,49 +474,14 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد الشهادات', description: 'أنشئ شهادات إتمام أو مشاركة لقائمة كاملة دفعة واحدة — الصق الأسماء، واضبط النص وسطور التوقيع، ونزّل كل الصفحات في ملف PDF واحد. وتظهر الأسماء العربية واللاتينية بشكل صحيح، حتى مختلطة في قائمة واحدة.' },
   },
   {
-    id: 'pdf-redact',
-    en: { name: 'Redact a PDF', description: 'Drag over anything that has to go. A black rectangle drawn in a PDF viewer hides nothing — the text stays in the file and can be selected, copied or extracted with one command. This rebuilds each page as an image so the words genuinely cease to exist, then re-reads the export to prove none are left.' },
-    ar: { name: 'حجب معلومات من ملف PDF', description: 'اسحب فوق كل ما يجب إزالته. فالمربع الأسود المرسوم في قارئ PDF لا يخفي شيئًا — إذ يبقى النص في الملف ويمكن تحديده أو نسخه أو استخراجه بأمر واحد. تعيد الأداة بناء كل صفحة صورةً فتزول الكلمات فعلًا، ثم تعيد قراءة الملف المُصدَّر لتثبت ذلك.' },
-  },
-  {
     id: 'video-gif',
     en: { name: 'Video to GIF', description: 'Turn a clip into an animated GIF without uploading it anywhere. Choose the start, length, frame rate, width and colour count. All frames share one palette so the animation does not flicker the way cheap converters make it, and it tells you when the file has grown past the point anyone will wait for it.' },
     ar: { name: 'تحويل الفيديو إلى صورة متحركة', description: 'حوّل مقطعًا إلى صورة GIF متحركة دون رفعه. اختر البداية والمدة ومعدّل الإطارات والعرض وعدد الألوان. وتتشارك كل الإطارات لوحة ألوان واحدة فلا ترتجف الحركة كما تفعل المحوّلات الرديئة، وتنبّهك حين يتجاوز الحجم ما يصبر عليه أحد.' },
   },
   {
-    id: 'carousel-split',
-    en: { name: 'Carousel Splitter', description: 'Cut a panorama or wide graphic into Instagram carousel slides that read as one continuous picture when someone swipes. Each slide comes out at the platform’s aspect ratio — which is what makes the seams meet — and the files are numbered so they upload in order.' },
-    ar: { name: 'مقسّم صور الكاروسيل', description: 'قسّم صورة بانورامية أو رسمًا عريضًا إلى شرائح كاروسيل انستقرام تُقرأ كصورة واحدة متصلة عند التمرير. تخرج كل شريحة بنسبة أبعاد المنصة — وهو ما يجعل الحواف تلتقي — وتُرقَّم الملفات لترفعها بالترتيب.' },
-  },
-  {
-    id: 'csv-merge',
-    en: { name: 'CSV Merge & Join', description: 'Match two CSV exports on a column they share — an id, an email, an order number — and get one file with both sides’ data, told how many rows matched and how many found nothing. Or stack two files aligned by column NAME rather than position, because positional stacking silently moves a phone number into the city column.' },
-    ar: { name: 'دمج وربط ملفات CSV', description: 'اربط تصديرَي CSV بعمود مشترك — معرّف أو بريد أو رقم طلب — لتحصل على ملف واحد يحمل بيانات الجانبين، مع عدد الصفوف المطابقة وغير المطابقة. أو ضعهما معًا متوائمين بأسماء الأعمدة لا بمواقعها، لأن الدمج بالمواقع ينقل رقم الهاتف إلى عمود المدينة بصمت.' },
-  },
-  {
-    id: 'glucose-units',
-    en: { name: 'Blood Sugar Converter', description: 'Convert a blood glucose reading between mg/dL and mmol/L, and HbA1c between % and mmol/mol, with the estimated average glucose. Saudi labs report mg/dL while most research uses mmol/L, and the factor between them is 18. It says where a reading falls and flags one low or high enough to need acting on now.' },
-    ar: { name: 'محوّل قراءات سكر الدم', description: 'حوّل قراءة سكر الدم بين mg/dL وmmol/L، والسكر التراكمي بين ٪ وmmol/mol، مع متوسط السكر التقديري. تستخدم المختبرات في السعودية mg/dL بينما تستخدم معظم الأبحاث mmol/L، والمعامل بينهما ١٨. وتبيّن الأداة أين تقع القراءة وتنبّه إلى ما يستدعي تصرّفًا فوريًا.' },
-  },
-  {
-    id: 'sleep-cycle',
-    en: { name: 'Sleep Cycle Calculator', description: 'Work backwards from when you need to be up, or forwards from now, to the times that land at the end of a ~90-minute sleep cycle rather than mid deep sleep. Allows for the time it takes to fall asleep, shows Fajr, and marks the last third of the night for qiyām.' },
-    ar: { name: 'حاسبة دورات النوم', description: 'احسب رجوعًا من وقت استيقاظك، أو تقدّمًا من الآن، إلى الأوقات التي تقع في نهاية دورة نوم مدتها نحو ٩٠ دقيقة بدل وسط النوم العميق. تحتسب وقت الخلود للنوم، وتعرض الفجر، وتحدّد الثلث الأخير من الليل للقيام.' },
-  },
-  {
-    id: 'water-intake',
-    en: { name: 'Water Intake Calculator', description: 'Work out a day’s water from your body weight, then add what the heat, your activity and time in the sun actually cost — because “eight glasses a day” describes a mild climate and says nothing about a Riyadh summer. Shows how the total is made up and how to fit it between iftar and suhoor.' },
-    ar: { name: 'حاسبة شرب الماء اليومي', description: 'احسب ماء يومك من وزن جسمك، ثم أضف ما يكلّفك إياه الحر والنشاط والشمس فعلًا — فعبارة «ثمانية أكواب يوميًا» تصف مناخًا معتدلًا ولا تقول شيئًا عن صيف الرياض. وتعرض كيف تكوّن المجموع وكيف توزّعه بين الإفطار والسحور.' },
-  },
-  {
     id: 'hijri-age',
     en: { name: 'Hijri Age Calculator', description: 'Enter a date of birth in either calendar and get your exact age in both — years, months and days, total days lived, and your next Hijri birthday. A Hijri year is about 354 days, so a Hijri age runs ahead by roughly a year every 33, which is why subtracting year numbers gives the wrong answer.' },
     ar: { name: 'حاسبة العمر الهجري', description: 'أدخل تاريخ ميلادك بأي من التقويمين لتحصل على عمرك الدقيق بهما — بالسنوات والأشهر والأيام، ومجموع الأيام، وميلادك الهجري القادم. السنة الهجرية نحو ٣٥٤ يومًا، لذا يسبق العمر الهجري بنحو سنة كل ٣٣، ولهذا يعطي طرح أرقام السنوات نتيجة خاطئة.' },
-  },
-  {
-    id: 'medicine-schedule',
-    en: { name: 'Medicine Timing Planner', description: 'Spread doses evenly across your waking day, or across the window between iftar and suhoor — about ten hours rather than twenty-four. Each dose is anchored to the nearest prayer, easier to remember than a clock time, and it warns when four doses will not fit comfortably in a fasting night.' },
-    ar: { name: 'مخطّط مواعيد الدواء', description: 'وزّع الجرعات بالتساوي على ساعات يقظتك، أو على النافذة بين الإفطار والسحور — وهي نحو عشر ساعات لا أربع وعشرين. وتُربط كل جرعة بأقرب صلاة لأنها أسهل في التذكّر، وتنبّهك حين لا تتسع ليلة الصيام لأربع جرعات.' },
   },
   {
     id: 'franco-arabic',
@@ -899,24 +494,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد الفرق العشوائي', description: 'الصق قائمة أسماء ووزّعها على فرق — بعدد الفرق أو بعدد الأفراد في كل فريق. سمِّ من تريد الفصل بينهم فيقعون في فرق مختلفة. يستخدم الخلط عشوائية تعموية بخوارزمية فيشر-ييتس الصحيحة، فيكون كل ترتيب محتملًا بالتساوي.' },
   },
   {
-    id: 'quotation',
-    en: { name: 'Quotation & Receipt', description: 'Write a quotation, a proforma invoice or a payment receipt, bilingual and ready to print or save as PDF. Line items, 15% VAT, your terms, and the fields each document actually needs. It says plainly what these are not: neither is a tax invoice.' },
-    ar: { name: 'عرض سعر وسند قبض', description: 'اكتب عرض سعر أو فاتورة مبدئية أو سند قبض، بلغتين وجاهزًا للطباعة أو الحفظ PDF. بنود وضريبة ١٥٪ وشروطك، والحقول التي يحتاجها كل مستند. وتوضّح الأداة صراحةً أن أيًّا منها ليس فاتورة ضريبية.' },
-  },
-  {
     id: 'char-finder',
     en: { name: 'Character Finder', description: 'Search for the character you need by name — arrows, maths symbols, currency, Arabic marks and ligatures like ﷺ and ﷼, punctuation, ticks and crosses — then tap to copy. Inspect mode goes the other way: paste anything and see exactly what each character is.' },
     ar: { name: 'باحث المحارف والرموز', description: 'ابحث عن المحرف الذي تريده بالاسم — أسهم ورموز رياضية وعملات وعلامات عربية وتركيبات مثل ﷺ و﷼ وعلامات ترقيم وصح وخطأ — ثم انقر لنسخه. ووضع الفحص يعمل بالعكس: الصق أي شيء لترى حقيقة كل محرف.' },
-  },
-  {
-    id: 'paper-generator',
-    en: { name: 'Printable Paper', description: 'Make your own paper and print it: graph paper, dot grid, ruled lines, isometric, Cornell notes, music staves, and a four-line Arabic handwriting guide. Set the spacing in millimetres, the margin, the ink and the page count. Downloads as a PDF, so the spacing you asked for is what prints.' },
-    ar: { name: 'مولّد الورق للطباعة', description: 'اصنع ورقك واطبعه: ورق مربعات ونقاط ومسطّر ومتساوي القياس وملاحظات كورنيل ومدرّج موسيقي ومسطّر رباعي لتدريب الخط العربي. حدّد التباعد بالمليمتر والهامش واللون وعدد الصفحات. يُنزَّل بصيغة PDF، فالتباعد الذي طلبته هو ما يُطبع.' },
-  },
-  {
-    id: 'color-palette',
-    en: { name: 'Palette from Image', description: 'Extract the palette from any image — the colours that are actually in it, ranked by how much of the picture each covers, with hex, RGB and HSL. Export as CSS custom properties, a Tailwind colour block or JSON. The same image always gives the same palette.' },
-    ar: { name: 'استخراج لوحة الألوان من صورة', description: 'استخرج لوحة الألوان من أي صورة — الألوان الموجودة فيها فعلًا، مرتّبة بحسب مساحتها، مع قيم hex وRGB وHSL. صدّرها متغيّرات CSS أو كتلة ألوان Tailwind أو JSON. الصورة نفسها تعطي اللوحة نفسها دائمًا.' },
   },
   {
     id: 'json-diff',
@@ -924,24 +504,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقارنة ملفات JSON', description: 'المقارنة السطرية لملفات JSON عديمة الجدوى تقريبًا: إعادة التنسيق تجعل كل سطر يبدو متغيّرًا والبيانات نفسها. تقارن هذه الأداة القيم بالمسار وتسرد ما أُضيف وما حُذف وما تغيّر، مع خيار التعامل مع المصفوفات كغير مرتّبة.' },
   },
   {
-    id: 'hex-viewer',
-    en: { name: 'Hex Viewer', description: 'Open any file and look at its actual bytes, with the printable characters alongside so embedded strings stand out. It reads the magic number to say what the file really is, and tells you when the extension and the contents disagree. Search for text or bytes, and jump to any offset.' },
-    ar: { name: 'عارض الملفات السداسي عشري', description: 'افتح أي ملف واطّلع على بايتاته الفعلية، مع المحارف المقروءة بجانبها لتبرز النصوص المخبوءة. تقرأ الأداة الرقم السحري لتخبرك بحقيقة الملف، وتنبّهك حين يختلف الامتداد عن المحتوى. ابحث عن نص أو بايتات وانتقل إلى أي إزاحة.' },
-  },
-  {
-    id: 'sun-times',
-    en: { name: 'Sunrise, Sunset & Golden Hour', description: 'Sunrise, sunset, solar noon, the three twilights, and the golden and blue hours for any place and date — computed from the sun’s actual altitude rather than a rule of thumb like “an hour after sunrise”. Shows the Hijri date and prayer times for the same spot.' },
-    ar: { name: 'الشروق والغروب والساعة الذهبية', description: 'الشروق والغروب والظهيرة الشمسية والشفق بأنواعه الثلاثة والساعتان الذهبية والزرقاء لأي مكان وتاريخ — محسوبة من ارتفاع الشمس الفعلي لا من قاعدة تقريبية مثل «ساعة بعد الشروق». وتعرض التاريخ الهجري وأوقات الصلاة للموضع نفسه.' },
-  },
-  {
     id: 'barcode',
     en: { name: 'Barcode Generator', description: 'Generate a real, scannable barcode — EAN-13 and EAN-8 for retail, UPC-A for North America, and Code 128 for any text on a shipping or shelf label. The check digit is calculated for you and the quiet zone is included, because without it a scanner cannot find the code.' },
     ar: { name: 'مولّد الباركود', description: 'ولّد باركود حقيقيًا قابلًا للمسح — EAN-13 وEAN-8 للتجزئة، وUPC-A لأمريكا الشمالية، وCode 128 لأي نص على ملصق شحن أو رف. يُحسب رقم التحقق نيابةً عنك، ويُضمَّن الهامش الصامت لأن الماسح لا يجد الرمز بدونه.' },
-  },
-  {
-    id: 'curl-convert',
-    en: { name: 'cURL Converter', description: 'Copy a request as cURL from your browser’s network tab and paste it here to get the same request as fetch, Node, axios, Python requests or HTTPie. Quoting, line continuations, multiple headers and JSON bodies are handled properly, and nothing leaves the page.' },
-    ar: { name: 'محوّل أوامر cURL', description: 'انسخ طلبًا بصيغة cURL من تبويب الشبكة في متصفحك والصقه هنا لتحصل عليه بصيغة fetch أو Node أو axios أو Python requests أو HTTPie. تُعالَج علامات الاقتباس وأسطر المتابعة والترويسات وأجسام JSON بشكل صحيح، ولا يغادر شيء الصفحة.' },
   },
   {
     id: 'coordinates',
@@ -954,54 +519,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محلّل الروابط ومحرّرها', description: 'فكّك رابطًا إلى بروتوكوله ومضيفه ومساره وجزئه ومعاملاته، وعدّل أيًّا منها، ثم احصل على رابط مُرمّز بشكل صحيح. وتكشف الأداة معاملات التتبّع — ‎utm_*‎ وgclid وfbclid وأمثالها — وتزيلها بنقرة واحدة.' },
   },
   {
-    id: 'link-preview',
-    en: { name: 'Link Preview Checker', description: 'Paste your page’s meta tags and see the card WhatsApp, X, LinkedIn and Facebook will actually render, then a list of what will go wrong — a missing og:image, a title that will be truncated, a relative image path crawlers will not resolve.' },
-    ar: { name: 'فاحص معاينة الروابط', description: 'الصق وسوم صفحتك وشاهد البطاقة التي سيعرضها واتساب وإكس ولينكدإن وفيسبوك فعلًا، ثم قائمة بما سيختل — صورة og مفقودة، أو عنوان سيُقتطع، أو مسار صورة نسبي لن تحلّه الزواحف.' },
-  },
-  {
-    id: 'csv-clean',
-    en: { name: 'CSV Cleaner', description: 'Clean up a CSV without opening a spreadsheet — trim stray spaces, drop blank rows and entirely empty columns, and remove duplicate rows. It detects the separator itself and flags rows whose field count does not match the header, which is what usually breaks an import.' },
-    ar: { name: 'منظّف ملفات CSV', description: 'نظّف ملف CSV دون فتح برنامج جداول — شذّب المسافات الزائدة، واحذف الصفوف الفارغة والأعمدة الفارغة، وأزل الصفوف المكرّرة. تكتشف الأداة الفاصل بنفسها وتُظهر الصفوف التي يختلف عدد حقولها عن العناوين، وهو ما يُفسد الاستيراد عادةً.' },
-  },
-  {
-    id: 'data-anonymize',
-    en: { name: 'Data Anonymizer', description: 'Before you send a spreadsheet to a colleague, a vendor or a chatbot, remove the parts that identify a person — emails, phone numbers, IBANs, Saudi ID and iqama numbers, card numbers, IPs. Mask, redact, or replace each value with a stable label. Runs entirely in this page.' },
-    ar: { name: 'إخفاء البيانات الشخصية', description: 'قبل أن ترسل جدولًا إلى زميل أو مورّد أو روبوت محادثة، أزل ما يدل على الأشخاص — البُرد الإلكترونية وأرقام الهواتف والآيبان والهوية والإقامة والبطاقات وعناوين IP. أخفِها أو احجبها أو استبدلها بعلامات ثابتة. تعمل داخل الصفحة بالكامل.' },
-  },
-  {
-    id: 'invisible-chars',
-    en: { name: 'Invisible Character Finder', description: 'Text copied from a web page, a PDF or a chatbot often carries characters that are present but invisible — zero-width spaces, direction marks, exotic spaces, control codes. They break exact matching and search in ways that look like a bug in your code. This finds, names and removes them.' },
-    ar: { name: 'كاشف المحارف الخفية', description: 'النص المنسوخ من صفحة ويب أو PDF أو روبوت محادثة يحمل غالبًا محارف غير مرئية — مسافات بعرض صفري وعلامات اتجاه ومسافات غريبة ورموز تحكّم. وهي تُفسد المطابقة والبحث بطريقة تبدو كخلل في كودك. تكشفها الأداة وتسمّيها وتزيلها.' },
-  },
-  {
-    id: 'timezone-planner',
-    en: { name: 'Time Zone Planner', description: 'Add the places your people are in and see the whole day at once, colour-coded by whether each hour lands in working hours, at the edges, or in the middle of the night. It ranks the best slots for everyone, with daylight saving on the chosen date already handled.' },
-    ar: { name: 'مخطّط المناطق الزمنية', description: 'أضف أماكن فريقك وشاهد اليوم كاملًا دفعة واحدة، ملوّنًا بحسب وقوع كل ساعة في وقت العمل أو على أطرافه أو في منتصف الليل. وترتّب الأداة أفضل الأوقات للجميع، والتوقيت الصيفي في التاريخ المختار محسوب أصلًا.' },
-  },
-  {
-    id: 'calorie-needs',
-    en: { name: 'Calorie & BMI Calculator', description: 'Work out how much you actually burn in a day and what to eat for your goal — resting burn, total daily burn, a calorie target for losing, holding or gaining, and a reasonable protein/carb/fat split, plus your BMI and healthy weight range. Uses Mifflin-St Jeor, which measures closest to reality.' },
-    ar: { name: 'حاسبة السعرات ومؤشر كتلة الجسم', description: 'احسب كم تحرق فعلًا في اليوم وماذا تأكل لهدفك — الحرق في الراحة والحرق اليومي وهدف السعرات للإنقاص أو المحافظة أو الزيادة، وتوزيعًا معقولًا للبروتين والكربوهيدرات والدهون، مع مؤشر كتلة جسمك ونطاق الوزن الصحي. تستخدم معادلة ميفلين-سانت جيور الأقرب للواقع.' },
-  },
-  {
-    id: 'screenshot-frame',
-    en: { name: 'Screenshot Beautifier', description: 'Paste or drop a screenshot and it comes back padded, rounded and sitting on a backdrop instead of floating on white — ready for a slide, a post or a README. Pick the shape, corner radius and shadow, then export at up to 3×.' },
-    ar: { name: 'تجميل لقطات الشاشة', description: 'الصق لقطة شاشة أو ألقِها لتعود بهوامش وحواف دائرية وخلفية بدل أن تطفو على بياض — جاهزة لشريحة أو منشور أو ملف README. اختر الشكل ونصف قطر الحواف والظل، ثم صدّر بدقة تصل إلى ٣ أضعاف.' },
-  },
-  {
-    id: 'social-resize',
-    en: { name: 'Social Media Resizer', description: 'Resize one image to every size the platforms want — Instagram square, portrait and story, X post and header, LinkedIn, a YouTube thumbnail, a Facebook cover and an Open Graph preview. Fill and crop or fit the whole image, and take them all as one zip.' },
-    ar: { name: 'محوّل مقاسات السوشال ميديا', description: 'غيّر مقاس صورة واحدة إلى كل ما تطلبه المنصات — انستقرام مربع وطولي وستوري، ومنشور وغلاف إكس، ولينكدإن، وصورة يوتيوب المصغّرة، وغلاف فيسبوك، ومعاينة الرابط. املأ واقتصّ أو أظهر الصورة كاملة، وخذها كلها في ملف مضغوط واحد.' },
-  },
-  {
     id: 'spin-wheel',
     en: { name: 'Wheel of Names', description: 'A spinning wheel for picking a name fairly — for a classroom, a giveaway, a team draw or deciding who presents first. Paste the names, spin, and optionally drop each winner. The result uses the browser’s cryptographic random source, not Math.random.' },
     ar: { name: 'عجلة الأسماء', description: 'عجلة دوّارة لاختيار اسم بعدل — لفصل دراسي أو مسابقة أو توزيع فريق أو تحديد من يعرض أولًا. الصق الأسماء وأدر العجلة، ويمكنك حذف كل فائز. تُختار النتيجة عبر مصدر العشوائية التعموي في المتصفح لا عبر Math.random.' },
-  },
-  {
-    id: 'hmac',
-    en: { name: 'HMAC Generator', description: 'Compute an HMAC over any message with a shared secret — SHA-256, SHA-1, SHA-384 or SHA-512, key as text, hex or base64, output as hex or base64. Paste the value you were sent and it tells you whether it matches, which is what you need when debugging a webhook signature.' },
-    ar: { name: 'مولّد HMAC والتحقق منه', description: 'احسب قيمة HMAC لأي رسالة بمفتاح مشترك — بخوارزميات SHA-256 أو SHA-1 أو SHA-384 أو SHA-512، ومفتاح بصيغة نص أو hex أو base64. الصق القيمة التي وصلتك لتخبرك الأداة إن كانت مطابقة، وهو ما تحتاجه عند تتبّع توقيع ويب هوك.' },
   },
   {
     id: 'cron-builder',
@@ -1014,21 +534,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد صور الجواز والمعاملات', description: 'حوّل صورة عادية إلى صورة رسمية بالمقاس الصحيح — ٤×٦ سم السعودي، ومعيار الجواز ٣٥×٤٥ مم، و٢×٢ إنش وغيرها. تُظهر الخطوط أين يقع الرأس والذقن والعينان، ويمكنك طباعة عدة نسخ على ورقة واحدة مع خطوط القص. لا تُرفع أبدًا.' },
   },
   {
-    id: 'audio-trim',
-    en: { name: 'Audio Trimmer', description: 'Open an MP3, M4A, WAV, OGG or FLAC, drag across the waveform to pick the part you want, listen back, and save just that. A short fade at each end stops the cut clicking. Nothing is uploaded.' },
-    ar: { name: 'قص الملفات الصوتية', description: 'افتح ملف MP3 أو M4A أو WAV أو OGG أو FLAC، واسحب على الموجة لاختيار الجزء الذي تريده، واستمع إليه، ثم احفظه وحده. ويمنع تلاشٍ قصير في الطرفين صوت الطقطقة. لا يُرفع شيء.' },
-  },
-  {
-    id: 'video-audio',
-    en: { name: 'Extract Audio from Video', description: 'Pull the soundtrack out of an MP4, MOV, WebM or MKV and save it as an audio file. The video is decoded in your browser — never uploaded, never watched, and only the audio track is read.' },
-    ar: { name: 'استخراج الصوت من الفيديو', description: 'استخرج المسار الصوتي من ملف MP4 أو MOV أو WebM أو MKV واحفظه ملفًا صوتيًا. يُفك ترميز الفيديو داخل متصفحك — فلا يُرفع، ولا يُشاهَد، ولا يُقرأ منه إلا مسار الصوت.' },
-  },
-  {
-    id: 'pdf-to-text',
-    en: { name: 'PDF to Text', description: 'Get the words out of a PDF as plain text — page by page, in reading order, ready to paste anywhere. If the PDF is a scan with no text in it, the tool says so and points you at OCR instead of handing you an empty box.' },
-    ar: { name: 'PDF إلى نص', description: 'استخرج كلمات ملف PDF كنص عادي — صفحةً صفحة وبترتيب القراءة، جاهزًا للصق. وإن كان الملف صورة ممسوحة بلا نص، تخبرك الأداة وتحيلك إلى التعرّف الضوئي بدل صندوق فارغ.' },
-  },
-  {
     id: 'weather',
     en: { name: 'Weather', description: 'A clean forecast for any Saudi city or your own location: current conditions, the next 24 hours, the week ahead with Hijri dates, UV, and the dust and PM10 reading that matters here — plus the temperature at each prayer time. Prayer times are worked out on your device.' },
     ar: { name: 'الطقس', description: 'نشرة جوية نظيفة لأي مدينة سعودية أو لموقعك: الحالة الآن، والـ٢٤ ساعة القادمة، والأسبوع القادم بالتواريخ الهجرية، والأشعة فوق البنفسجية، وقراءة الغبار وPM10 المهمة هنا — مع درجة الحرارة عند كل وقت صلاة. تُحسب أوقات الصلاة على جهازك.' },
@@ -1039,19 +544,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'انتهاء الإقامة والوثائق', description: 'تابع مواعيد انتهاء وثائقك. أدخل تاريخ الانتهاء بالتقويم الهجري أو الميلادي وشاهد الأيام المتبقية بالتقويمين، مرتّبة بحسب الأقرب انتهاءً — الإقامة أو الجواز أو رخصة القيادة أو الاستمارة أو التأمين أو التأشيرة. كل شيء يبقى في هذا المتصفح.' },
   },
   {
-    id: 'totp',
-    en: { name: '2FA Code Generator', description: 'Turn a two-factor secret into the rolling six-digit code, exactly as an authenticator app would (RFC 6238 TOTP, SHA-1/256/512, 6 or 8 digits). Paste the base32 secret or the whole otpauth:// link. The secret never leaves the page.' },
-    ar: { name: 'مولّد رموز التحقق الثنائي', description: 'حوّل مفتاح التحقق الثنائي إلى الرمز المتجدّد من ست خانات، تمامًا كما يفعل تطبيق المصادقة (معيار RFC 6238، وSHA-1 و256 و512، بست أو ثماني خانات). الصق مفتاح base32 أو رابط ‎otpauth://‎ كاملًا. لا يغادر المفتاح الصفحة أبدًا.' },
-  },
-  {
     id: 'password-strength',
     en: { name: 'Password Strength', description: 'Check a password honestly. Raw entropy flatters something like Password123!, so this penalises what actually makes a password guessable: common words, keyboard walks, runs, repeats, years and predictable shapes. Nothing you type leaves the page.' },
     ar: { name: 'قوة كلمة المرور', description: 'افحص كلمة مرورك بصدق. حساب العشوائية وحده يجامل كلمة مثل Password123!‎، لذا تخصم الأداة ما يجعلها فعلًا قابلة للتخمين: الكلمات الشائعة ومسارات لوحة المفاتيح والتسلسلات والتكرار والسنوات والأنماط المتوقّعة. لا يغادر ما تكتبه الصفحة.' },
-  },
-  {
-    id: 'fix-encoding',
-    en: { name: 'Fix Garbled Text', description: 'Repair text that arrived as Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© or â€™ instead of readable characters — the classic mojibake you get when UTF-8 is opened as the wrong codepage. It works out which encoding mangled it and undoes the damage.' },
-    ar: { name: 'إصلاح النص المشوّه', description: 'أصلح النص الذي وصل على شكل Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© أو â€™ بدل الحروف المقروءة — التشويه المعتاد حين يُفتح ترميز UTF-8 بترميز خاطئ. تكتشف الأداة الترميز الذي أفسده وتُلغي الضرر.' },
   },
   {
     id: 'saudi-plate',
@@ -1069,11 +564,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'أوراق تمارين الرياضيات', description: 'أنشئ أوراق تمارين حسابية قابلة للطباعة — جمعًا وطرحًا وضربًا وقسمة ضمن المدى العددي الذي تحدّده — مع صفحة إجابات مطابقة دائمًا. لكل ورقة رمز، فإعادة الطباعة تعطيك الأسئلة نفسها لا مجموعة جديدة لا تناسبها ورقة الإجابات. وتُبنى مسائل القسمة من الناتج فتنتهي بعدد صحيح.' },
   },
   {
-    id: 'bingo-cards',
-    en: { name: 'Bingo Cards', description: 'Turn a list of words, names or numbers into printable bingo cards — 3×3, 4×4 or 5×5, with an optional free centre. Every card is checked against the others so no two players get the same one, and it says so honestly when your list is too short to make as many distinct cards as you asked for. Comes with a shuffled call list.' },
-    ar: { name: 'بطاقات بينغو', description: 'حوّل قائمة كلمات أو أسماء أو أرقام إلى بطاقات بينغو قابلة للطباعة — ٣×٣ أو ٤×٤ أو ٥×٥، مع مربّع حر اختياري في الوسط. تُقارن كل بطاقة بغيرها فلا يحصل لاعبان على البطاقة نفسها، وتخبرك بصراحة حين تكون قائمتك أقصر من أن تصنع العدد المطلوب من البطاقات المختلفة. ومعها قائمة نداء مخلوطة.' },
-  },
-  {
     id: 'quiz-maker',
     en: { name: 'Quiz Maker', description: 'Write a quiz — multiple choice, true/false and short answer — then print it as a question paper with a separate answer key, or share a link anyone can take in their browser. The link carries the whole quiz after the # in the URL, and a fragment is never sent to a server: nothing is stored and there is no account.' },
     ar: { name: 'صانع الاختبارات', description: 'اكتب اختبارًا — اختيار من متعدد وصح/خطأ وإجابة قصيرة — ثم اطبعه ورقة أسئلة مع ورقة إجابات منفصلة، أو شارك رابطًا يستطيع أي أحد أداءه في متصفحه. يحمل الرابط الاختبار كاملًا بعد علامة # في العنوان، وما بعدها لا يُرسل إلى خادم أبدًا: فلا شيء مخزّن ولا حساب.' },
@@ -1082,11 +572,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'translate',
     en: { name: 'Translator', description: 'Translate between Arabic and 50+ languages using a model that runs inside your browser, so nothing you type is uploaded anywhere — and it keeps working with no connection once the language pack is downloaded. Covers the languages actually spoken at work here: Urdu, Hindi, Bengali, Malayalam, Tamil, Nepali, Sinhala, Amharic, Tigrinya, Somali, Pashto and Farsi. Needs Chrome or Edge 138+ on a computer.' },
     ar: { name: 'ترجمة النصوص', description: 'ترجم بين العربية وأكثر من ٥٠ لغة عبر نموذج يعمل داخل متصفحك، فلا يُرفع شيء مما تكتبه إلى أي مكان — ويظل يعمل دون اتصال بعد تنزيل حزمة اللغة. ويغطي اللغات المستخدمة فعلًا في العمل هنا: الأردية والهندية والبنغالية والمالايالامية والتاميلية والنيبالية والسنهالية والأمهرية والتيغرينية والصومالية والبشتوية والفارسية. يتطلب Chrome أو Edge 138+ على حاسوب.' },
-  },
-  {
-    id: 'summarize',
-    en: { name: 'Summarizer', description: 'Turn a long article, thread, email or set of meeting notes into key points, a TL;DR, a teaser or a headline — using a model that runs inside your browser, so the text is never uploaded. English, Spanish, Japanese, German and French only: the on-device model does not do Arabic yet, and the tool says so rather than guessing. Needs Chrome or Edge 138+ on a computer.' },
-    ar: { name: 'الملخِّص', description: 'حوّل مقالًا طويلًا أو سلسلة تغريدات أو بريدًا أو محضر اجتماع إلى نقاط رئيسية أو خلاصة مختصرة أو تشويق أو عنوان — عبر نموذج يعمل داخل متصفحك، فلا يُرفع النص أبدًا. الإنجليزية والإسبانية واليابانية والألمانية والفرنسية فقط: فالنموذج على الجهاز لا يدعم العربية بعد، والأداة تقول ذلك صراحةً بدل أن تخمّن. يتطلب Chrome أو Edge 138+ على حاسوب.' },
   },
   {
     id: 'image-edit',
@@ -1104,19 +589,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'تثبيت الفيديو', description: 'الفيديو المصوَّر باليد يهتزّ، وكل أداة تعالج ذلك تريد ملفك على خادم غيرك أولًا. أما هنا فتُقاس حركة الكاميرا فعليًّا — شبكة من النقاط تُتتبَّع من إطار إلى إطار، فلا يجرّ عابرٌ في المشهد التقديرَ خلفه — ثم يُنعَّم المسار وتُزحزح الإطارات لتعود تحته. وما لا تدّعيه الأداة أن التصحيح مجّاني: فإزاحة الإطار تُخرج طرفه البعيد من الصورة، ولذلك يقتصّ كل مثبِّت، وهذا يحسب المقدار من مقطعك أنت ويعرضه قبل أن تلتزم به بدل أن يطلب منك نسبةً مسبقة. ويُعاد التسعير فورًا عند تحريك المؤشر، لأن المقطع يُقاس مرة واحدة. وتستطيع الأداة كذلك تثبيت هدف متحرك في المنتصف بدل الكاميرا: ارسم مربّعًا حوله فيتبعه الإطار — وهذا يكلّف من الصورة أكثر بكثير، والرقم يقول كم قبل أن تلتزم. ويُنسخ الصوت كما هو دون إعادة ترميز فلا يفقد شيئًا.' },
   },
   {
-    id: 'video-trim',
-    en: { name: 'Video Trimmer', description: 'Trim an MP4 or MOV in your browser by copying its frames rather than re-encoding them — so the output is the same video at the same quality, and a half-hour recording trims in seconds instead of minutes. The start of a cut snaps to the nearest keyframe, which the tool shows you on the timeline. Nothing is uploaded.' },
-    ar: { name: 'قص الفيديو', description: 'اقتطع ملف MP4 أو MOV داخل متصفحك بنسخ إطاراته بدل إعادة ترميزها — فيخرج المقطع نفسه بالجودة نفسها، ويُقتطع تسجيل نصف الساعة في ثوانٍ لا دقائق. وتنتقل بداية القص إلى أقرب إطار مفتاحي، وتعرض الأداة هذه الإطارات على الشريط الزمني. ولا يُرفع شيء.' },
-  },
-  {
     id: 'arabic-handwriting',
     en: { name: 'Arabic Handwriting Sheets', description: 'Printable Arabic handwriting practice — every letter in all four of its positional forms (alone, at the start, in the middle, at the end), or any word or name you type. The letters are shaped and joined properly, which is the thing generic worksheet sites get wrong when they print 28 isolated glyphs a child will never meet in a word. Ruled guide lines, faded or dotted tracing, and as many rows as you want.' },
     ar: { name: 'كراسة الخط العربي', description: 'أوراق تدريب على الخط العربي قابلة للطباعة — كل حرف في مواضعه الأربعة (مفردًا، وأول الكلمة، ووسطها، وآخرها)، أو أي كلمة أو اسم تكتبه. والحروف تُشكَّل وتُوصَل على وجهها الصحيح، وهو ما تخطئ فيه مواقع أوراق العمل العامة حين تطبع ٢٨ شكلًا مفردًا لا يلقاها الطفل في كلمة قط. مع أسطر مسطّرة، وتتبّع باهت أو منقّط، وعدد الأسطر الذي تريد.' },
-  },
-  {
-    id: 'xlsx-convert',
-    en: { name: 'Excel to CSV / JSON', description: 'Open an Excel .xlsx workbook in your browser and take the data out as CSV, TSV or JSON — nothing is uploaded. Reads every sheet, keeps blank cells in the right columns, and turns date cells back into real dates instead of the five-digit numbers a naive converter emits. Values only: formulas come out as the value the spreadsheet last calculated.' },
-    ar: { name: 'إكسل إلى CSV أو JSON', description: 'افتح مصنّف إكسل ‎.xlsx‎ في متصفحك واستخرج بياناته بصيغة CSV أو TSV أو JSON — دون رفع أي شيء. يقرأ كل الأوراق، ويُبقي الخلايا الفارغة في أعمدتها الصحيحة، ويعيد خلايا التواريخ تواريخَ حقيقية بدل الأرقام ذات الخمس خانات التي تخرجها المحوّلات الساذجة. القيم فقط: فالمعادلات تخرج بالقيمة التي حسبها الجدول آخر مرة.' },
   },
   {
     id: 'khatma',
@@ -1124,19 +599,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مخطّط الختمة', description: 'خطّط ختمة على أي عدد من الأيام — رمضان أو شهر أو أسبوع — مقسّمة بالتساوي بالصفحات أو بالأجزاء، مع التاريخين الميلادي والهجري جنبًا إلى جنب. اطبعها بمربّع تعليم لكل يوم، أو علّم الأيام هنا؛ ويبقى تقدّمك على جهازك. وأرقام الصفحات بحسب مصحف المدينة ذي الـ٦٠٤ صفحات، والأداة تصرّح بذلك، لأن خطة بأرقام طبعة لا تملكها أسوأ من لا خطة.' },
   },
   {
-    id: 'ics-builder',
-    en: { name: 'Calendar File (.ics)', description: 'Build a calendar invite anyone can open in Apple Calendar, Outlook or Google, with repeats and a reminder — or paste an .ics you have been sent and see plainly what it says in your own timezone. Follows the parts of RFC 5545 that generators usually skip: lines folded at 75 octets, commas and semicolons escaped, and all-day events written as dates rather than midnight-to-midnight.' },
-    ar: { name: 'ملف تقويم (‎.ics‎)', description: 'أنشئ دعوة تقويم يفتحها أي أحد في Apple Calendar أو Outlook أو Google، مع التكرار والتذكير — أو الصق ملف ‎.ics‎ وصلك وشاهد بوضوح ما فيه بتوقيتك أنت. تلتزم الأداة بما تتخطاه المولّدات عادةً من معيار RFC 5545: طيّ الأسطر عند ٧٥ ثمانية، وتهريب الفواصل والفواصل المنقوطة، وكتابة أحداث اليوم الكامل تواريخَ لا من منتصف ليل إلى منتصف ليل.' },
-  },
-  {
     id: 'cert-decoder',
     en: { name: 'Certificate Decoder', description: 'Paste a PEM certificate and read what is actually in it: who it was issued to and by, when it expires and in how many days, the key and signature algorithms, every hostname it covers, its extensions and its SHA-256 fingerprint. Decoded in your browser by a small ASN.1 parser — nothing is uploaded, and no online checker sees your certificate.' },
     ar: { name: 'فاحص الشهادات', description: 'الصق شهادة بصيغة PEM واقرأ ما فيها فعلًا: لمن صدرت ومن أصدرها، ومتى تنتهي وكم بقي لها، وخوارزميتَي المفتاح والتوقيع، وكل اسم نطاق تغطيه، وامتداداتها وبصمة SHA-256. تُفك في متصفحك عبر محلّل ASN.1 صغير — فلا يُرفع شيء، ولا يطّلع فاحص إلكتروني على شهادتك.' },
-  },
-  {
-    id: 'email-headers',
-    en: { name: 'Email Header Analyser', description: 'Paste the raw headers of an email and see the route it actually took, with the delay at each hop, plus the SPF, DKIM and DMARC verdicts explained in plain words and a note of anything worth a second look — a reply address on another domain, an authentication failure. Parsed in your browser, never uploaded.' },
-    ar: { name: 'محلّل ترويسات البريد', description: 'الصق ترويسات رسالة بريدية خامًا لترى الطريق الذي سلكته فعلًا وزمن كل محطة، مع نتائج SPF وDKIM وDMARC مشروحة بكلام واضح، وتنبيهًا لما يستحق نظرة ثانية — كعنوان رد على نطاق آخر، أو فشل في التوثيق. يجري التحليل في متصفحك ولا يُرفع شيء.' },
   },
   {
     id: 'seating-chart',
@@ -1154,39 +619,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'جدول إلى جهات اتصال', description: 'حوّل قائمة أشخاص في ملف CSV أو إكسل إلى ملف ‎.vcf‎ يستورده هاتفك — أسماء وأرقام وبُرد إلكترونية وشركات ومسمّيات وظيفية. تُطابَق الأعمدة من عناوينها ويمكنك تصحيحها. وتُعاد كتابة الأرقام السعودية بالصيغة الدولية، لأن 0512345678 يفقد معناه متى خرج الهاتف من البلد. ولا يُرفع شيء.' },
   },
   {
-    id: 'sheet-diff',
-    en: { name: 'Compare Spreadsheets', description: 'Compare two versions of the same spreadsheet — CSV or Excel — and see which rows were added, removed or changed, and exactly which cell changed in each. Rows are matched on a key column rather than their position, because by the time you need a diff somebody has already sorted or inserted something. Duplicate keys are reported instead of quietly picking one.' },
-    ar: { name: 'مقارنة الجداول', description: 'قارن نسختين من الجدول نفسه — CSV أو إكسل — وشاهد أي الصفوف أُضيفت وأيها حُذفت وأيها تغيّرت، وأي خلية تغيّرت في كل منها. وتُطابَق الصفوف على عمود مفتاح لا على مواضعها، لأنه حين تحتاج المقارنة يكون أحدهم قد فرز أو أدرج شيئًا. وتُذكر المفاتيح المكرّرة بدل اختيار أحدها في صمت.' },
-  },
-  {
-    id: 'prayer-timetable',
-    en: { name: 'Monthly Prayer Timetable', description: 'Print a whole month of prayer times for any Saudi city — Fajr through Isha, with Hijri dates alongside and Fridays shaded so the sheet can be read from across a room. For a fridge, a noticeboard or a mosque door. Calculated on your device with the Umm al-Qura method, the same one the Prayer Times app here uses, so the two never disagree.' },
-    ar: { name: 'تقويم مواقيت الصلاة', description: 'اطبع شهرًا كاملًا من مواقيت الصلاة لأي مدينة سعودية — من الفجر إلى العشاء، مع التواريخ الهجرية بجانبها وتظليل أيام الجمعة ليمكن قراءة الورقة من بعيد. للثلاجة أو لوحة الإعلانات أو باب المسجد. تُحسب على جهازك بطريقة أم القرى، وهي نفسها التي يستخدمها تطبيق مواقيت الصلاة هنا، فلا يختلف الاثنان.' },
-  },
-  {
-    id: 'remove-silence',
-    en: { name: 'Remove Silence', description: 'Cut the silence out of an audio recording — the pauses in a lecture, the gaps in an interview, the dead air at the start. Set how quiet counts as silent and how long a gap has to be, and see exactly what will go before it goes. A margin is kept at each edge so a breath before a word survives, because a cut made exactly on the silence sounds chopped.' },
-    ar: { name: 'حذف الصمت', description: 'احذف الصمت من تسجيل صوتي — سكتات المحاضرة، وفجوات المقابلة، والفراغ في البداية. حدّد ما يُعدّ صمتًا وكم يجب أن تطول السكتة، وشاهد بالضبط ما سيُحذف قبل حذفه. ويُترك هامش عند كل طرف لتبقى الشهقة قبل الكلمة، فالقص على حدّ الصمت تمامًا يجعل النتيجة مبتورة.' },
-  },
-  {
-    id: 'epub-text',
-    en: { name: 'EPUB to Text', description: 'Open an EPUB and take its text out — the whole book or one chapter at a time, as plain text or Markdown — along with its title, authors, publisher and ISBN. Chapters come out in the order the book says to read them, not the order the files happen to be named. Read in your browser; the file is never uploaded.' },
-    ar: { name: 'كتاب EPUB إلى نص', description: 'افتح ملف EPUB واستخرج نصّه — الكتاب كله أو فصلًا فصلًا، نصًّا عاديًا أو ماركداون — مع عنوانه ومؤلفيه وناشره ورقمه الدولي. وتخرج الفصول بالترتيب الذي يقول الكتاب أن يُقرأ به، لا بترتيب أسماء الملفات. تجري القراءة في متصفحك؛ ولا يُرفع الملف أبدًا.' },
-  },
-  {
-    id: 'csv-split',
-    en: { name: 'Split a CSV', description: 'Break one big spreadsheet into several smaller CSVs — by row count, by file size, or one file per value in a column, so a staff list becomes one file per department. Every part keeps the header row, and a byte-order mark is added by default so Excel reads Arabic correctly instead of turning it into mojibake. Downloads as a zip.' },
-    ar: { name: 'تقسيم ملف CSV', description: 'قسّم جدولًا كبيرًا إلى ملفات CSV أصغر — بعدد الصفوف أو بحجم الملف أو ملفًا لكل قيمة في عمود، فتصير قائمة الموظفين ملفًا لكل إدارة. ويحتفظ كل جزء بصف العناوين، وتُضاف علامة ترتيب البايتات افتراضيًا ليقرأ إكسل العربية صحيحة بدل أن يحيلها رموزًا. ويُنزَّل الكل في ملف مضغوط.' },
-  },
-  {
     id: 'name-spelling',
     en: { name: 'Name in English Letters', description: 'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.' },
     ar: { name: 'كتابة الاسم بالإنجليزية', description: 'اكتب اسمًا عربيًا بحروف لاتينية، جزءًا جزءًا، مختارًا بين الكتابات التي تظهر فعلًا في الوثائق هنا. ولا جواب صحيح واحد — فمحمد تُكتب Mohammed وMuhammad وMohamed وMohammad وMuhammed في خمسة جوازات لأسرة واحدة — ولذلك تعرض الأداة الخيارات ولا تدّعي حكمًا، وتنصحك بنسخ جوازك إن كان لديك واحد.' },
-  },
-  {
-    id: 'zatca-qr',
-    en: { name: 'Invoice QR Reader', description: 'Photograph a receipt, or paste its QR text, and read what the invoice says: the seller, their VAT registration number, when it was issued, the total and the VAT. It also checks the arithmetic — a standard-rated sale whose VAT is not 15% of the pre-VAT amount is worth a second look. Everything happens on your device. It reads the invoice; it does not verify the signature, which needs ZATCA own certificates.' },
-    ar: { name: 'قارئ رمز الفاتورة', description: 'صوّر إيصالًا أو الصق نص رمزه واقرأ ما تقوله الفاتورة: البائع ورقمه الضريبي ووقت الإصدار والإجمالي والضريبة. وتتحقق الأداة من الحساب أيضًا — فبيع خاضع للنسبة العادية لا تساوي ضريبته ١٥٪ من المبلغ قبل الضريبة يستحق نظرة ثانية. كل ذلك على جهازك. وهي تقرأ الفاتورة ولا تتحقق من توقيعها، فذلك يحتاج شهادات زاتكا نفسها.' },
   },
   {
     id: 'pdf-organise',
@@ -1195,78 +630,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'pdf-ocr',
-    en: { name: 'Scanned PDF to Text', description: 'A scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
-    ar: { name: 'نص من PDF ممسوح', description: 'عقد ممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
-  },
-  {
-    id: 'docx-to-text',
-    en: { name: 'Word to Text', description: 'Read a Word document as plain text, with the paragraphs where they were and the table columns still apart — ready to paste into anything, on a machine with no Word on it. Headers, footers and footnotes are kept separate rather than mixed into the body. The file is read in your browser and never uploaded.' },
-    ar: { name: 'وورد إلى نص', description: 'اقرأ مستند وورد نصًا عاديًا، بفقراته في مواضعها وأعمدة جداوله متباعدة كما كانت — جاهزًا للصق في أي شيء، وعلى جهاز لا وورد فيه. وتُفصل الرؤوس والتذييلات والحواشي عن المتن بدل أن تختلط به. ويُقرأ الملف في متصفحك ولا يُرفع أبدًا.' },
-  },
-  {
-    id: 'csv-to-xlsx',
-    en: { name: 'CSV to Excel', description: 'Turn a CSV into a real .xlsx, so opening it does not damage it. A CSV carries no types, so Excel guesses — and its guesses eat the leading zero off every phone number and national ID, and round a 16-digit IBAN into scientific notation. Here each column declares what it is, and the file is UTF-8 by definition, so Arabic arrives as Arabic. The conversion runs in your browser.' },
-    ar: { name: 'CSV إلى إكسل', description: 'حوّل ملف CSV إلى ملف ‎.xlsx‎ حقيقي، حتى لا يفسده مجرد فتحه. فملف CSV لا يحمل أنواعًا، فيخمّن إكسل — وتخمينه يأكل الصفر الأول من كل رقم جوال وهوية، ويقرّب رقم آيبان من ستة عشر رقمًا إلى صيغة أُسّية. أما هنا فيعلن كل عمود عن نوعه، والملف بترميز UTF-8 أصلًا، فتصل العربية عربيةً.' },
-  },
-  {
-    id: 'vcard-to-csv',
-    en: { name: 'Contacts to Spreadsheet', description: 'Turn the .vcf your phone exports into a spreadsheet. Arabic names written the way Android encodes them come out as names rather than gibberish, an iPhone export keeps the numbers it hides behind item groups, and a contact with three phone numbers gets three columns instead of losing two. Download it as CSV or as an Excel file that keeps the leading zero on every mobile number.' },
-    ar: { name: 'جهات الاتصال إلى جدول', description: 'حوّل ملف ‎.vcf‎ الذي يصدّره هاتفك إلى جدول. فالأسماء العربية المكتوبة بالطريقة التي يرمّزها بها أندرويد تخرج أسماءً لا طلاسم، وتصدير آيفون يحتفظ بالأرقام التي يخفيها خلف المجموعات، ومن له ثلاثة أرقام يحصل على ثلاثة أعمدة. ونزّله ملف CSV أو ملف إكسل يحفظ الصفر الأول في كل رقم جوال.' },
-  },
-  {
-    id: 'pptx-to-text',
-    en: { name: 'PowerPoint to Text', description: 'Pull the words out of a .pptx — every slide in the right order, with the speaker notes if you want them. Useful when you have the deck but not PowerPoint, or when what you need is the text itself: to quote it, translate it, or search it. Slides are ordered by their real number rather than by filename, so slide 10 does not land between 1 and 2. The file is read in your browser and never uploaded.' },
-    ar: { name: 'بوربوينت إلى نص', description: 'استخرج كلمات ملف ‎.pptx‎ — كل شريحة بترتيبها الصحيح، ومعها ملاحظات المُقدِّم إن أردتها. مفيد حين يكون لديك العرض دون بوربوينت، أو حين يكون ما تحتاجه هو النص نفسه. وتُرتَّب الشرائح برقمها الحقيقي لا باسم الملف. ويُقرأ الملف في متصفحك ولا يُرفع أبدًا.' },
-  },
-  {
-    id: 'gosi-salary',
-    en: { name: 'GOSI & Net Salary', description: 'Work out your real GOSI deduction and your take-home pay. Contributions are charged on basic salary plus housing allowance only — not transport, phone, commission or bonus — and stop at SAR 45,000 a month, which is why "just take 10% of your salary" is wrong for anyone with allowances. It also knows there are two systems: anyone registered before 3 July 2024 stays on the old rates, while the newer scheme rises half a point every July. A non-Saudi employee has nothing deducted at all.' },
-    ar: { name: 'التأمينات وصافي الراتب', description: 'احسب خصم التأمينات الحقيقي وصافي راتبك. فالاشتراكات تُحتسب على الراتب الأساسي وبدل السكن فقط — لا على النقل ولا الجوال ولا العمولة ولا المكافأة — وتتوقف عند 45,000 ريال شهريًا. وتعرف الأداة أن هناك نظامين: من سُجّل قبل 3 يوليو 2024 يبقى على النسب القديمة، أما النظام الأحدث فيرتفع نصف نقطة كل يوليو. والموظف غير السعودي لا يُخصم منه شيء إطلاقًا.' },
-  },
-  {
-    id: 'vat-registration',
-    en: { name: 'Do I Need to Register for VAT?', description: 'Find out whether VAT registration is mandatory, optional, or not required — on the test ZATCA actually applies rather than the one people assume. It is any twelve consecutive months, not your calendar year, so the clock may have started months before you noticed; and expecting to cross in the year ahead makes registration due now. Exempt supplies do not count towards the threshold while zero-rated ones do. When you have crossed, it shows the month it happened and the date you have to register by.' },
-    ar: { name: 'هل يلزمني التسجيل في ضريبة القيمة المضافة؟', description: 'اعرف إن كان التسجيل في ضريبة القيمة المضافة إلزاميًا أم اختياريًا أم غير لازم — وفق الاختبار الذي تطبّقه هيئة الزكاة والضريبة والجمارك فعلًا. فالعبرة بأي اثني عشر شهرًا متتالية لا بالسنة الميلادية، وقد تكون المهلة بدأت قبل أن تنتبه بأشهر. والتوريدات المعفاة لا تُحتسب ضمن الحد بينما تُحتسب الخاضعة بنسبة صفر. وإن كنت قد تجاوزت، تبيّن لك الأداة الشهر والتاريخ الذي يلزمك التسجيل قبله.' },
-  },
-  {
-    id: 'vehicle-renewal',
-    en: { name: 'Car Registration & Fahes Due Dates', description: 'Work out when your periodic inspection and your vehicle registration are due — and, the part people find out at the counter, which one has to happen first. A valid Fahes is required to renew the istimara, so an overdue inspection blocks the renewal outright. A new private car is exempt from inspection for three years from first registration, which means the first one falls due on an anniversary nobody has a reminder for. Every date is shown in both Gregorian and Hijri.' },
-    ar: { name: 'مواعيد الفحص والاستمارة', description: 'اعرف متى يستحق الفحص الدوري ومتى تنتهي استمارتك — والأهم أيّهما قبل الآخر. فالفحص الساري شرط لتجديد الاستمارة، ومن ثمّ فالفحص المتأخر يمنع التجديد أصلًا. والسيارة الخاصة الجديدة معفاة من الفحص ثلاث سنوات من أول تسجيل، ومعنى ذلك أن أول فحص يستحق في ذكرى سنوية لا تذكير لأحد بها. وكل تاريخ معروض بالميلادي والهجري معًا.' },
-  },
-  {
-    id: 'rent-rules',
-    en: { name: 'Rent Increase & Renewal Rules', description: 'Whether your rent can legally be increased, and the date you have to give notice by. Increases inside Riyadh’s urban boundary are frozen for five years from 25 September 2025 — but an escalation clause in a contract already in place on that date still stands, so two tenants in the same building can get different answers depending on which side of one day their signature falls. Separately, and everywhere in the Kingdom, a lease renews itself automatically unless one party gives the other 60 days’ notice.' },
-    ar: { name: 'قواعد زيادة الإيجار والتجديد', description: 'هل يجوز نظامًا رفع إيجارك، وما التاريخ الذي يلزمك الإشعار قبله. فالزيادات داخل النطاق العمراني للرياض مجمّدة خمس سنوات من 25 سبتمبر 2025 — لكن شرط الزيادة في عقد كان قائمًا قبل ذلك التاريخ يظل نافذًا. وبمعزل عن ذلك، وفي المملكة كلها، يتجدد العقد تلقائيًا ما لم يُشعر أحد الطرفين الآخر بستين يومًا.' },
-  },
-  {
-    id: 'early-settlement',
-    en: { name: 'Early Loan Settlement', description: 'Work out what it costs to settle a personal finance early, and what that saves you against carrying on. The rule is the opposite of what most people assume: settling early does not mean paying the rest of the term cost. You pay the outstanding balance plus the term cost for the three months following repayment, worked out on a declining balance, and the rest of the term is waived. The three months is a ceiling set by SAMA, not a fee the lender chooses.' },
-    ar: { name: 'السداد المبكر للتمويل', description: 'احسب كلفة سداد تمويلك الشخصي مبكرًا، وكم يوفّر عليك ذلك مقارنةً بالاستمرار. والقاعدة عكس ما يظنه أكثر الناس: فالسداد المبكر لا يعني دفع بقية تكلفة الأجل. إنما تدفع الرصيد القائم مع تكلفة أجل الأشهر الثلاثة التالية، محسوبة على رصيد متناقص، ويُسقط باقي الأجل. والأشهر الثلاثة حدٌّ أعلى وضعته مؤسسة النقد لا رسمٌ يختاره الممول.' },
-  },
-  {
-    id: 'leave-overtime',
-    en: { name: 'Leave, Overtime & Notice', description: 'Your annual leave, what overtime is worth, and how much notice either side has to give — the entitlements that apply while you are still working. Three of them are routinely got wrong: leave steps from 21 days to 30 after five continuous years with the same employer, and the tool tells you the date; notice is 30 days if you resign but 60 if your employer ends it; and overtime is capped at 720 hours a year, a cap that exists to protect you rather than to limit what you can be paid for.' },
-    ar: { name: 'الإجازة والعمل الإضافي والإشعار', description: 'إجازتك السنوية، وكم يساوي العمل الإضافي، وكم مدة الإشعار على كل طرف — وهي الحقوق التي تسري وأنت على رأس العمل. وثلاثة منها يخطئ فيها الناس كثيرًا: الإجازة ترتفع من 21 يومًا إلى 30 بعد خمس سنوات متصلة، والأداة تخبرك بالتاريخ؛ ومدة الإشعار 30 يومًا إن استقلت و60 إن أنهاه صاحب العمل؛ والعمل الإضافي محدود بـ720 ساعة سنويًا لحمايتك.' },
-  },
-  {
-    id: 'exit-reentry',
-    en: { name: 'Exit & Re-entry Visa Fee', description: 'Work out the fee for the trip you are actually taking, and see the two things that catch people out. Months are charged in whole 30-day blocks, so 31 days costs the same as 60 while 61 costs a month more — the tool shows how many days you have before the price steps again. And the visa cannot outrun your iqama: a trip that returns after it expires is no visa at all until you renew. Extending from abroad costs double per month.' },
-    ar: { name: 'رسوم تأشيرة الخروج والعودة', description: 'احسب رسوم الرحلة التي ستسافرها فعلًا، واطّلع على الأمرين اللذين يغفل عنهما الناس. فالأشهر تُحتسب كتلًا كاملة من ثلاثين يومًا، فـ31 يومًا كـ60 يومًا في السعر بينما 61 يومًا تزيد شهرًا. والتأشيرة لا تتجاوز إقامتك: فالرحلة التي تعود بعد انتهائها لا تأشيرة لها حتى تجدّد. والتمديد من الخارج يكلّف ضعف قيمة الشهر.' },
-  },
-  {
-    id: 'image-diff',
-    en: { name: 'Compare Images', description: 'Compare two images pixel by pixel and see exactly what changed — differences highlighted, side by side, or under a slider. Images of different sizes are not scaled to fit: only the overlapping region is compared and the pixels left out are counted, because scaling one to match the other reports a difference on every pixel. The tolerance is adjustable and explained, since two screenshots of the same page on different machines disagree on thousands of pixels by a level or two. Both images are read on your device.' },
-    ar: { name: 'مقارنة صورتين', description: 'قارن صورتين بكسلًا بكسل وشاهد ما تغيّر بالضبط — بإبراز الفروق أو جنبًا إلى جنب أو تحت شريط. والصورتان المختلفتان في المقاس لا تُحجَّم إحداهما، بل تُقارَن المنطقة المشتركة وتُحتسب البكسلات المتروكة. والتسامح قابل للضبط ومشروح، فلقطتان للصفحة نفسها من جهازين تختلفان في آلاف البكسلات بدرجة أو درجتين. وتُقرأ الصورتان على جهازك.' },
-  },
-  {
-    id: 'a11y-check',
-    en: { name: 'Accessibility Checker', description: 'Paste markup and get the accessibility problems that are decidable from the HTML alone: images with no alt attribute (and alt text that is really just the file name), headings that skip a level, links that say only "click here", form fields with no label, buttons with no accessible name, duplicate ids, and positive tabindex. Everything runs in your browser. It is explicit about the half it cannot judge — whether alt text is meaningful, whether a keyboard user can finish a form — so a clean result is a floor, not a pass.' },
-    ar: { name: 'فاحص إتاحة الوصول', description: 'الصق الوسم واحصل على مشكلات إتاحة الوصول التي يمكن الحكم عليها من HTML وحده: صور بلا نص بديل، وعناوين تقفز مستوى، وروابط لا تقول إلا «اضغط هنا»، وحقول بلا تسمية، وأزرار بلا اسم يُنطق، ومعرّفات مكررة. وكل شيء يجري في متصفحك. وهي صريحة في النصف الذي لا تستطيع الحكم عليه، فالنتيجة النظيفة حدٌّ أدنى لا شهادة.' },
-  },
-  {
-    id: 'zatca-wave',
-    en: { name: 'Which E-Invoicing Wave Am I In?', description: 'Find which ZATCA e-invoicing wave your business falls into and by when it must be integrated with Fatoora. Two things about the rule catch people out: the threshold is met if ANY ONE of 2022, 2023 or 2024 crossed it, so a good 2022 followed by two quiet years still counts; and a bigger business has an EARLIER deadline, because the waves started at SAR 3 billion and step down. ZATCA notifies each taxpayer directly at least six months ahead, and that letter is the official trigger.' },
-    ar: { name: 'أي موجة فوترة إلكترونية أنا فيها؟', description: 'اعرف في أي موجة من موجات الفوترة الإلكترونية تقع منشأتك، ومتى يجب ربطها مع فاتورة. وأمران يخدعان الناس: يتحقق الحد إذا تجاوزته أي سنة من 2022 أو 2023 أو 2024، فسنة جيدة تليها سنتان هادئتان تكفي؛ والمنشأة الأكبر موعدها أبكر لأن الموجات بدأت من ثلاثة مليارات ريال وتنزل تدريجيًا. وتخاطب الهيئة كل مكلّف مباشرةً قبل موعده بستة أشهر على الأقل، وذلك الإشعار هو المرجع الرسمي.' },
+    en: { name: 'PDF to Text', description: 'Copy the text out of any PDF, in your browser. A PDF with real text is read exactly and at once; a scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
+    ar: { name: 'PDF إلى نص', description: 'انسخ النص من أي ملف PDF داخل متصفحك. يُقرأ الملف ذو النص الحقيقي بدقة وفورًا؛ أما العقد الممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
   },
   {
     id: 'video-frames',
@@ -1279,24 +644,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محوّل الصوت', description: 'حوّل مذكرة صوتية بصيغة M4A أو ملف OGG أو AAC أو FLAC إلى ملف WAV يقبله كل برنامج — واختر معدّل العيّنات وعدد القنوات. فـ16 كيلوهرتز أحادي هو ما تتوقعه برامج التفريغ، وحجمه نحو سدس 44.1 كيلوهرتز ثنائي، والأداة تعرض الحجم الناتج قبل أن تلتزم به. ويُفكّ ترميز الملف على جهازك ولا يُرفع أبدًا.' },
   },
   {
-    id: 'iqama-fees',
-    en: { name: 'Iqama Renewal Cost', description: 'Work out what renewing an iqama costs, and see the fee people forget. The iqama itself is 650 SAR a year; the dependent fee is 400 SAR per person per MONTH, collected up front for the whole period — so a spouse and two children for a year is 14,400 SAR due in one payment, and the iqama fee is the small part of the bill. Renewing quarterly splits the same yearly cost into four payments rather than reducing it. And the monthly work permit levy is your employer’s: Article 40 of the Labour Law forbids charging it to the worker.' },
-    ar: { name: 'تكلفة تجديد الإقامة', description: 'احسب تكلفة تجديد الإقامة، واطّلع على الرسم الذي ينساه الناس. فالإقامة نفسها 650 ريالًا سنويًا، أما رسم المرافقين فأربعمئة ريال عن كل فرد شهريًا تُدفع كاملة مقدمًا عن المدة كلها — فزوجة وطفلان لسنة تعني 14,400 ريال دفعةً واحدة. والتجديد كل ثلاثة أشهر يقسّم التكلفة السنوية نفسها إلى أربع دفعات لا أن يخفّضها. ورسم رخصة العمل الشهري على صاحب العمل: والمادة الأربعون من نظام العمل تمنع تحميله للعامل.' },
-  },
-  {
-    id: 'electricity-bill',
-    en: { name: 'Electricity Bill Estimate', description: 'Work out roughly what a month of electricity costs, with the breakdown that shows where it came from — units at each rate, the meter service charge and VAT. It also corrects the thing almost everyone gets wrong: the tariff is marginal, not a cliff. The first 6,000 kWh are charged at 18 halalas however much you use in total, and only the units above that cost 30, so crossing the threshold adds a few riyals rather than repricing the whole bill.' },
-    ar: { name: 'تقدير فاتورة الكهرباء', description: 'احسب تقريبًا كم يكلّف شهر من الكهرباء، مع تفصيل يبيّن من أين جاء المبلغ — الوحدات بكل سعر، ورسم خدمة العداد، والضريبة. وتصحّح الأداة ما يخطئ فيه أكثر الناس: فالتعرفة تصاعدية لا قفزة. إذ تُحتسب أول 6000 كيلوواط بـ18 هللة مهما بلغ استهلاكك، ولا تُحتسب بـ30 إلا ما فوقها، فتجاوز الحد يزيد بضعة ريالات لا أن يُعيد تسعير الفاتورة كلها.' },
-  },
-  {
     id: 'stopwatch',
     en: { name: 'Stopwatch & Timer', description: 'A stopwatch with laps and a countdown timer with an alarm, in one place. Both take their time from the clock rather than by counting ticks, so switching tabs, locking the phone or leaving it in the background does not lose the minutes in between — which is what usually goes wrong with a timer in a browser.' },
     ar: { name: 'ساعة إيقاف ومؤقّت', description: 'ساعة إيقاف بلفّات ومؤقّت تنازلي بمنبّه، في مكان واحد. وكلاهما يأخذ وقته من الساعة نفسها لا بعدّ النبضات، فلا تضيع الدقائق حين تنتقل بين التبويبات أو تُقفل الهاتف أو تتركه في الخلفية.' },
-  },
-  {
-    id: 'admission-score',
-    en: { name: 'Weighted Admission Score', description: 'Your weighted admission percentage from high school, Qudurat and Tahsili — at whatever weighting the university actually uses. The formula is exact and only the weights differ between universities and programmes, so they are yours to set, with the common ones ready to pick. It shows the same three scores under every common weighting, and works out where your remaining points really are: at 30/30/40 a point of Tahsili is worth a third more than a point of school.' },
-    ar: { name: 'النسبة الموزونة للقبول', description: 'نسبتك الموزونة للقبول من الثانوية والقدرات والتحصيلي — بأي ترجيح تستخدمه الجامعة فعلًا. فالمعادلة ثابتة ولا يختلف إلا الترجيح بين الجامعات والبرامج، والأشهر منه جاهز للاختيار. وتعرض الأداة الدرجات نفسها بكل ترجيح شائع، وتبيّن أين نقاطك المتبقية: فعند 30/30/40 تساوي نقطة التحصيلي ثلث زيادة على نقطة الثانوية.' },
   },
 ]
 
@@ -1338,23 +688,13 @@ export const collectionSeo: CategorySeo[] = [
   },
   {
     slug: 'teaching', category: '',
-    en: { name: 'Tools for teachers', description: 'Worksheets, word searches, quizzes, bingo cards and flashcards to print; Arabic handwriting practice with the correct joined letter forms; plus seating charts, attendance sheets, certificates, label sheets and a random picker. Free, no sign-up, nothing uploaded.' },
-    ar: { name: 'أدوات المعلّمين', description: 'أوراق عمل وكلمات متقاطعة واختبارات وبطاقات بينغو وبطاقات مراجعة للطباعة؛ وتدريب على الخط العربي بالأشكال المتصلة الصحيحة؛ مع مخططات الجلوس وكشوف الحضور والشهادات وأوراق الملصقات ومنتقٍ عشوائي. مجانًا، دون تسجيل، ولا يُرفع شيء.' },
-  },
-  {
-    slug: 'new-business', category: '',
-    en: { name: 'Starting a business in Saudi Arabia', description: 'The registrations and deadlines a small business here has to meet, and the paperwork it has to produce: commercial registration renewal, whether VAT registration is required, which e-invoicing wave applies, import duty and VAT on a shipment, plus invoices, quotations and an IBAN checker. Free, and everything runs in your browser.' },
-    ar: { name: 'بدء نشاط تجاري في السعودية', description: 'التسجيلات والمواعيد التي على المنشأة الصغيرة الالتزام بها، والأوراق التي عليها إصدارها: تجديد السجل التجاري، وهل يلزم التسجيل في ضريبة القيمة المضافة، وأي موجة فوترة إلكترونية تشملك، والجمارك والضريبة على الشحنة، مع الفواتير وعروض الأسعار ومدقّق الآيبان. مجانًا، وكل شيء يعمل داخل متصفحك.' },
+    en: { name: 'Tools for teachers', description: 'Worksheets, quizzes and flashcards to print; Arabic handwriting practice with the correct joined letter forms; plus seating charts, attendance sheets, certificates, a weekly timetable and a wheel of names. Free, no sign-up, nothing uploaded.' },
+    ar: { name: 'أدوات المعلّمين', description: 'أوراق عمل واختبارات وبطاقات مراجعة للطباعة؛ وتدريب على الخط العربي بالأشكال المتصلة الصحيحة؛ مع مخططات الجلوس وكشوف الحضور والشهادات وجدول أسبوعي وعجلة أسماء. مجانًا، دون تسجيل، ولا يُرفع شيء.' },
   },
   {
     slug: 'security', category: '',
-    en: { name: 'Security and privacy tools', description: 'Generate a strong password or passphrase, check whether one has leaked without sending it, hash and sign, read a JWT or an SSL certificate, encrypt a file, strip the metadata a photo carries, and black out what should not be in a document. Everything runs in your browser.' },
-    ar: { name: 'أدوات الأمان والخصوصية', description: 'أنشئ كلمة مرور أو عبارة قوية، وتحقّق من تسرّبها دون إرسالها، واحسب البصمات ووقّع الرسائل، واقرأ رمز JWT أو شهادة SSL، وشفّر ملفًا، وامسح البيانات التي تحملها الصورة، واطمس ما لا ينبغي أن يبقى في مستند. كل ذلك داخل متصفحك.' },
-  },
-  {
-    slug: 'compare', category: '',
-    en: { name: 'Compare two things', description: 'See what changed between two pieces of text, two JSON documents, two spreadsheets, two images or two dates — each comparison runs in your browser, so neither version is ever uploaded.' },
-    ar: { name: 'قارن بين شيئين', description: 'اعرف ما تغيّر بين نصّين، أو مستندَي JSON، أو جدولَي بيانات، أو صورتين، أو تاريخين — كل مقارنة تجري داخل متصفحك، فلا تُرفع أي نسخة.' },
+    en: { name: 'Security and privacy tools', description: 'Generate a strong password or passphrase, check whether one has leaked without sending it, read a JWT or an SSL certificate, and hide a message inside a picture. Everything runs in your browser.' },
+    ar: { name: 'أدوات الأمان والخصوصية', description: 'أنشئ كلمة مرور أو عبارة قوية، وتحقّق من تسرّبها دون إرسالها، واقرأ رمز JWT أو شهادة SSL، وأخفِ رسالة داخل صورة. كل ذلك داخل متصفحك.' },
   },
 ]
 
@@ -1385,11 +725,6 @@ export const categorySeo: CategorySeo[] = [
     ar: { name: 'أدوات اللغة العربية', description: 'وحّد الهمزات وصور الألف، وحوّل بين الأرقام الهندية والعربية، واكتب الأرقام تفقيطًا، وصرّف فعلًا، وأضف التشكيل، واكتب الاسم بالإنجليزية، واقرأ العربيزي.' },
   },
   {
-    slug: 'health', category: 'Health',
-    en: { name: 'Free health calculators', description: 'Calorie and BMI needs, water intake for a 45°C summer, a blood-sugar unit converter, sleep cycles, a pregnancy due date, the fertile window, and medicine timings that fit a fasting day. Every one runs in your browser and none of it is stored.' },
-    ar: { name: 'حاسبات صحية مجانية', description: 'السعرات ومؤشر كتلة الجسم، وكمية الماء في صيفٍ بـ٤٥ درجة، ومحوّل وحدات سكر الدم، ودورات النوم، وموعد الولادة، ونافذة الخصوبة، ومواعيد الدواء التي تناسب يوم الصيام. كلها تعمل في متصفحك ولا يُحفظ منها شيء.' },
-  },
-  {
     slug: 'time', category: 'Time & Date',
     en: { name: 'Free time and date tools', description: 'Work out an age, the days between two dates, working days around the Saudi weekend and holidays, a timesheet with overtime, sunrise and golden hour, a time-zone planner, plus a stopwatch, timer and Pomodoro. Free, no sign-up, all in your browser.' },
     ar: { name: 'أدوات الوقت والتاريخ مجانًا', description: 'احسب العمر، والمدة بين تاريخين، وأيام العمل حول نهاية الأسبوع والإجازات السعودية، وجدول ساعات العمل مع الإضافي، والشروق والساعة الذهبية، ومخطط المناطق الزمنية، مع ساعة إيقاف ومؤقّت وبومودورو. مجانًا دون تسجيل وداخل متصفحك.' },
@@ -1405,11 +740,6 @@ export const categorySeo: CategorySeo[] = [
     ar: { name: 'أدوات النصوص المجانية', description: 'العدّ والمقارنة والتنظيف وتغيير حالة الأحرف والـslug، وكشف المحارف الخفية، وإصلاح النص المشوّه، واستخراج النص من مستند، وبناء جدول ماركداون. ويبقى نصّك في المتصفح.' },
   },
   {
-    slug: 'converters', category: 'Converters',
-    en: { name: 'Free file converters', description: 'Turn a document or data file into another format — CSV, Excel, JSON, vCard, EPUB, Word, PowerPoint, audio and video. Converted on your device, so nothing is uploaded to anybody.' },
-    ar: { name: 'محوّلات ملفات مجانية', description: 'حوّل مستندًا أو ملف بيانات إلى صيغة أخرى — CSV وإكسل وJSON وvCard وEPUB ووورد وباوربوينت والصوت والفيديو. ويجري التحويل على جهازك، فلا يُرفع شيء إلى أحد.' },
-  },
-  {
     slug: 'developer', category: 'Developer',
     en: { name: 'Free developer tools', description: 'JSON, base64, hashes and HMAC, JWT and certificate decoding, regex, cron, UUIDs, subnets, timestamps, curl conversion and fake data. All client-side, so a secret you paste stays on your machine.' },
     ar: { name: 'أدوات المطوّرين المجانية', description: 'JSON وbase64 والبصمات وHMAC، وفكّ JWT والشهادات، والتعابير النمطية، وcron، والمعرّفات، والشبكات الفرعية، والطوابع الزمنية، وتحويل curl، وبيانات وهمية. كلها في المتصفح، فما تلصقه من أسرار يبقى على جهازك.' },
@@ -1423,16 +753,6 @@ export const categorySeo: CategorySeo[] = [
     slug: 'generators', category: 'Generators',
     en: { name: 'Free generators', description: 'QR codes and barcodes, passwords and passphrases, invoices and quotations, certificates, labels, worksheets, quizzes, bingo cards and lorem ipsum — generated in the browser and ready to print.' },
     ar: { name: 'مولّدات مجانية', description: 'الباركود ورموز QR، وكلمات المرور والعبارات، والفواتير وعروض الأسعار، والشهادات، والملصقات، وأوراق العمل، والاختبارات، وبطاقات البينغو، والنص البديل — تُولَّد في المتصفح وجاهزة للطباعة.' },
-  },
-  {
-    slug: 'design', category: 'Design',
-    en: { name: 'Free design tools', description: 'Colour palettes and contrast, gradients, box shadows, cubic-bezier curves, favicons, aspect ratios, social image sizes and a colour-blindness check. Copy the CSS straight out.' },
-    ar: { name: 'أدوات تصميم مجانية', description: 'لوحات الألوان والتباين، والتدرّجات، والظلال، ومنحنيات cubic-bezier، والأيقونات المفضّلة، ونِسب الأبعاد، ومقاسات صور التواصل، وفحص عمى الألوان. وانسخ الـCSS مباشرة.' },
-  },
-  {
-    slug: 'web', category: 'Web',
-    en: { name: 'Free tools for a website', description: 'Meta tags and a link preview, robots.txt, URL encoding and parsing, a user-agent reader, an accessibility check on pasted markup, and a link shortener.' },
-    ar: { name: 'أدوات مجانية لموقعك', description: 'وسوم الميتا ومعاينة الرابط، وrobots.txt، وترميز الروابط وتحليلها، وقارئ وكيل المستخدم، وفحص الوصولية لشيفرة ملصوقة، ومختصر روابط.' },
   },
   {
     slug: 'business', category: 'Business',

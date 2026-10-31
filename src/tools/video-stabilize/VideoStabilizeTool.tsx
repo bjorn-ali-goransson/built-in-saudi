@@ -99,7 +99,6 @@ const STR = {
     out: (mb: string) => `${mb} MB`,
     unsupportedTitle: 'This browser cannot re-encode video',
     unsupportedBody: 'Steadying a clip means decoding every frame, redrawing it and encoding it again, which needs WebCodecs with an H.264 encoder behind it. This browser does not have one. Chrome, Edge and Safari 16.4 and later do; Firefox on Android does not.',
-    trimLink: 'Trim a video without re-encoding',
     errors: {
       'not-mp4': 'That does not look like an MP4. This tool reads .mp4 and .mov files.',
       'no-video': 'That file has no video track in it.',
@@ -152,7 +151,6 @@ const STR = {
     out: (mb: string) => `${mb} ميجابايت`,
     unsupportedTitle: 'هذا المتصفح لا يستطيع إعادة ترميز الفيديو',
     unsupportedBody: 'تثبيت المقطع يعني فكّ ترميز كل إطار وإعادة رسمه وترميزه من جديد، وهذا يحتاج WebCodecs ومعه مرمّز H.264. وهذا المتصفح لا يملكه. كروم وإيدج وسفاري ١٦٫٤ فأحدث تملكه، وفَيَرفُكس على أندرويد لا يملكه.',
-    trimLink: 'قصّ فيديو دون إعادة ترميز',
     errors: {
       'not-mp4': 'لا يبدو هذا ملف MP4. تقرأ هذه الأداة ملفات ‎.mp4‎ و‎.mov‎.',
       'no-video': 'لا يحتوي هذا الملف على مسار فيديو.',
@@ -532,7 +530,6 @@ export default function VideoStabilizeTool() {
         <Panel className="gap-2" data-testid="vs-unsupported">
           <p className="text-[0.95rem] font-semibold text-ink rtl:font-ar">{s.unsupportedTitle}</p>
           <p className="text-[0.9rem] text-ink-soft rtl:font-ar">{s.unsupportedBody}</p>
-          <a className="text-[0.9rem] text-green-700 underline rtl:font-ar" href={`/${locale}/apps/video-trim`}>{s.trimLink}</a>
         </Panel>
       </Stack>
     )

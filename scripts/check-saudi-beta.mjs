@@ -18,25 +18,16 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs'
 
 /** Badged beta by judgement, with the reason. */
 const EXTRA = {
-  'vat-calculator': 'applies the ZATCA VAT rate',
   'zakat-calculator': 'applies zakat rates and nisab',
-  'end-of-service': 'applies the Labour Law gratuity formula',
   'id-expiry': 'counts against iqama and ID renewal windows',
-  'zatca-qr': 'reads the ZATCA invoice QR (TLV) spec',
-  'invoice-generator': 'produces an invoice that must satisfy ZATCA',
-  quotation: 'produces a document that must satisfy ZATCA',
 }
 
 /** Not badged, deliberately: a naming standard is not a rule that can move. */
-// A naming standard is not a rule that can move. Neither is Naegele's rule,
-// which is obstetrics from 1812: `due-date` is medical rather than
-// regulatory, so nobody republishes it and the badge would be noise. Same for
-// `ovulation`: the luteal phase is physiology, not a published rate.
-// `print-size` cites SOURCES for human visual acuity (1 arcminute) and the
-// 3438 arcminutes in a radian. Beta means the figure can go stale WITHOUT
-// anyone touching the code — a pension rate steps every July. Geometry does
-// not, and neither does the resolving power of an eye.
-const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling', 'due-date', 'ovulation', 'print-size'])
+// A naming standard is not a rule that can move. Beta means the figure can go
+// stale WITHOUT anyone touching the code — a pension rate steps every July. The
+// tools that encoded such rules were withdrawn in November 2026; the guard stays
+// so a new one cannot come back unbadged.
+const NOT_A_RULE = new Set(['saudi-plate', 'short-address', 'saudi-phone', 'name-spelling'])
 
 const root = process.cwd()
 const reg = readFileSync('src/tools/index.ts', 'utf8')

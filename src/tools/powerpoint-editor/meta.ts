@@ -10,7 +10,9 @@ export const powerpointEditorTool: Tool = {
   description:
     'A presentation editor that runs entirely in your browser. Open .pptx and .odp files or a Markdown outline, build slides with layouts, themes, shapes, pictures and tables, write speaker notes, and present full screen with a presenter view and a second audience window. Arabic slides read right to left. Save back to the same file or download as PowerPoint or an outline. Decks are kept in this browser, never uploaded, and you can invite others to edit live, browser to browser, with you as the owner whose copy is the truth.',
   category: 'Office',
-  keywords: ['powerpoint', 'slides', 'presentation', 'pptx', 'powerpoint editor', 'edit powerpoint online', 'open pptx', 'presentation maker', 'slide deck', 'odp', 'open odp', 'impress', 'pitch deck', 'make a presentation', 'presenter view', 'باوربوينت', 'بوربوينت', 'عرض تقديمي', 'عروض تقديمية', 'شرائح', 'تعديل ملف باوربوينت', 'فتح ملف pptx', 'إنشاء عرض تقديمي'],
+  keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'pptx to text', 'powerpoint to text', 'speaker notes', 'باوربوينت إلى نص','powerpoint', 'slides', 'presentation', 'pptx', 'powerpoint editor', 'edit powerpoint online', 'open pptx', 'presentation maker', 'slide deck', 'odp', 'open odp', 'impress', 'pitch deck', 'make a presentation', 'presenter view', 'باوربوينت', 'بوربوينت', 'عرض تقديمي', 'عروض تقديمية', 'شرائح', 'تعديل ملف باوربوينت', 'فتح ملف pptx', 'إنشاء عرض تقديمي'],
   status: 'beta',
   Icon: SlidesIcon,
   component: lazyTool(() => import('./PowerPointEditorTool')),

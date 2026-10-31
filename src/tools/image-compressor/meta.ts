@@ -11,6 +11,8 @@ export const imageCompressorTool: Tool = {
     'Compress and resize images right in your browser — pick JPEG/WebP/PNG, a quality level and an optional max width, and see the before→after size and how much you saved. Unlike the ad-driven sites, the image is never uploaded — it never leaves your device.',
   category: 'Images',
   keywords: [
+    // Merged in November 2026 from the tools this one replaced.
+    'convert image', 'image converter', 'jpg to png', 'png to jpg', 'convert to webp', 'heic', 'heic to jpg', 'تحويل الصور', 'تحويل صيغة الصورة',
     // Both spellings. This site writes British English in its own copy while
     // a keyword list, written by a developer, tends to the American form —
     // measured: 8 of 12 -ise/-ize variants missed, 5 returning nothing at all.

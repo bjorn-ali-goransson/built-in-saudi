@@ -139,7 +139,7 @@ export default function PdfOrganiseTool() {
       {busy === 'read' && <p className="flex items-center gap-2 text-ink-faint rtl:font-ar" data-testid="po-reading"><Spinner /> {s.reading}</p>}
       {error && <FileError message={error} />}
       {locked && (
-        <Button className="self-start" to={`/${locale}/apps/pdf-to-text`} data-testid="po-to-text">{s.toText}</Button>
+        <Button className="self-start" to={`/${locale}/apps/pdf-ocr`} data-testid="po-to-text">{s.toText}</Button>
       )}
 
       {file && pages.length > 0 && (

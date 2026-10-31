@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-// Calculators was 27 tools, and a security collection.
+// Calculators was 27 tools, and a security collection. (Health, split out
+// here, was withdrawn with its tools in November 2026.)
 //
 // `node evals/catalogshape.mjs` measured the outlier: **Calculators at 27, 1.8x
 // the median** — the same shape that split Saudi / Local at 31 and Developer at
@@ -14,35 +15,13 @@ import { test, expect } from '@playwright/test'
 // the redaction tools out of the format families people actually hunt in. A
 // collection says "these are all privacy tools" without moving any of them.
 
-test('the health tools are their own group now', async ({ page }) => {
-  await page.goto('/en/c/health/')
-  await expect(page.getByTestId('category-page')).toHaveAttribute('data-category', 'Health')
-  const ids = await page.locator('[data-testid^="tool-"]')
-    .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(ids).toContain('calorie-needs')
-  expect(ids).toContain('ovulation')
-  expect(ids).toContain('medicine-schedule')
-  // And NOT the things that merely share the word "calculator".
-  expect(ids).not.toContain('vat-calculator')
-})
-
 test('the time and date tools are their own group now', async ({ page }) => {
   await page.goto('/en/c/time/')
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
   expect(ids).toContain('working-days')
   expect(ids).toContain('stopwatch')
-  expect(ids).toContain('timezone-planner')
-  expect(ids).not.toContain('calorie-needs')
-})
-
-test('Calculators is what is left, and is much smaller', async ({ page }) => {
-  await page.goto('/en/c/calculators/')
-  const n = await page.locator('[data-testid^="tool-"]').count()
-  // 27 before the split, 11 after. A conservative ceiling, so this tests the
-  // split rather than one exact roster.
-  expect(n).toBeLessThan(16)
-  expect(n).toBeGreaterThan(6)
+  expect(ids).toContain('pomodoro')
 })
 
 test('a security collection exists WITHOUT moving anything out of its category', async ({ page }) => {
@@ -50,7 +29,7 @@ test('a security collection exists WITHOUT moving anything out of its category',
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
   expect(ids).toContain('password-generator')
-  expect(ids).toContain('pdf-redact')
+  expect(ids).toContain('steganography')
   expect(ids).toContain('cert-decoder')
 
   // The point of the collection: each is still filed where people hunt for it.
@@ -58,10 +37,10 @@ test('a security collection exists WITHOUT moving anything out of its category',
   const gen = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
   expect(gen, 'password-generator must stay in Generators').toContain('password-generator')
-  await page.goto('/en/c/pdf/')
-  const pdf = await page.locator('[data-testid^="tool-"]')
+  await page.goto('/en/c/images/')
+  const img = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(pdf, 'pdf-redact must stay in PDF').toContain('pdf-redact')
+  expect(img, 'steganography must stay in Images').toContain('steganography')
 })
 
 test('a bare noun still goes to the tool that MAKES the thing', async ({ page }) => {
@@ -73,7 +52,7 @@ test('a bare noun still goes to the tool that MAKES the thing', async ({ page })
 })
 
 test('the new groups are offered from search', async ({ page }) => {
-  for (const [q, slug] of [['health', 'health'], ['time', 'time'], ['security', 'security'], ['privacy', 'security']] as const) {
+  for (const [q, slug] of [['time', 'time'], ['security', 'security'], ['privacy', 'security']] as const) {
     await page.goto('/en')
     await page.getByRole('searchbox').fill(q)
     await expect(page.getByTestId('category-offer'), q).toHaveAttribute('data-category', slug)
@@ -129,13 +108,10 @@ test('a query that matches nothing AND names nothing stays empty', async ({ page
 
 test('the split groups appear on the home catalogue', async ({ page }) => {
   await page.goto('/en')
-  await expect(page.getByTestId('section-Health')).toBeVisible()
   await expect(page.getByTestId('section-Time & Date')).toBeVisible()
 })
 
 test('it works in Arabic', async ({ page }) => {
   await page.goto('/ar/c/time/')
   await expect(page.getByTestId('category-title')).toContainText('الوقت')
-  await page.goto('/ar/c/health/')
-  await expect(page.getByTestId('category-title')).toContainText('صحية')
 })

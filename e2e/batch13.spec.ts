@@ -123,33 +123,3 @@ test.describe('tap bpm', () => {
     await expect(page.getByTestId('bt-bpm')).toHaveText('—')
   })
 })
-
-test.describe('sound meter', () => {
-  test('says plainly it is not a calibrated instrument', async ({ page }) => {
-    await page.goto('/en/apps/sound-meter')
-    const note = page.getByTestId('disclaimer')
-    await expect(note).toHaveAttribute('data-kind', 'official')
-    await expect(note).toContainText('NOT a sound level meter in the regulatory sense')
-  })
-
-  test('a refused microphone is explained', async ({ page }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'mediaDevices', {
-        value: { getUserMedia: () => Promise.reject(new Error('denied')) },
-        configurable: true,
-      })
-    })
-    await page.goto('/en/apps/sound-meter')
-    await page.getByTestId('sm-toggle').click()
-    await expect(page.getByTestId('sm-error')).toBeVisible()
-  })
-
-  test('a browser with no getUserMedia at all is handled', async ({ page }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true })
-    })
-    await page.goto('/en/apps/sound-meter')
-    await page.getByTestId('sm-toggle').click()
-    await expect(page.getByTestId('sm-error')).toContainText('will not give a page microphone access')
-  })
-})
