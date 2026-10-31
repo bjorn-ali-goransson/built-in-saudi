@@ -21,7 +21,12 @@ import {
 
 const CHALLENGE_MS = 5 * 60000 // a ceremony that takes longer than this is abandoned
 const SESSION_MS = 30 * 86400000 // a sign-in lasts a month, then the passkey is asked again
-const MEETING_MS = 60 * 86400000 // an unused meeting is forgotten after two months
+// Every record is forgotten after a month of INACTIVITY, and each use starts the
+// month again: an organiser and their passkeys when they sign in or make or
+// start a meeting, a meeting when its organiser starts it. Expired records are
+// treated as gone here and deleted when read; Firestore's TTL policy on
+// `expiresAt` (set by the deploy workflow) removes the ones nobody reads.
+const IDLE_MS = 30 * 86400000
 const CODE = 'abcdefghjkmnpqrstuvwxyz23456789' // the Calls room alphabet: no 0/o, 1/l/i
 
 export class MeetError extends Error {
@@ -72,6 +77,30 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     if (!c || c.kind !== kind || !(c.expiresAt > now())) throw new MeetError(400, 'start again')
     return c
   }
+  // A record past its expiry is gone, whether or not the TTL sweep has run yet.
+  async function live(col, id) {
+    const r = id ? await store.get(col, id) : null
+    if (!r) return null
+    if (!(r.expiresAt > now())) { await store.del(col, id); return null }
+    return r
+  }
+  // Activity by an organiser: they, and every passkey they have, get another month.
+  async function touchOrganiser(uid, org) {
+    const until = now() + IDLE_MS
+    await store.set('meetOrganisers', uid, { ...org, expiresAt: until })
+    for (const id of org.creds || []) {
+      const c = await store.get('meetCredentials', id)
+      if (c) await store.set('meetCredentials', id, { ...c, expiresAt: until })
+    }
+  }
+  // A session is only as alive as its organiser: one forgotten for inactivity
+  // signs in again with a passkey, which a forgotten account no longer has.
+  async function organiser(token) {
+    const s = session(token)
+    const org = await live('meetOrganisers', s.uid)
+    if (!org) throw new MeetError(401, 'sign in')
+    return { s, org }
+  }
   const issue = (uid, name) => ({ token: sign({ uid, name, exp: now() + SESSION_MS }), name })
 
   return {
@@ -102,9 +131,9 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       const cred = v.registrationInfo.credential
       if (await store.get('meetCredentials', cred.id)) throw new MeetError(409, 'passkey already registered')
       await store.set('meetCredentials', cred.id, {
-        uid: c.uid, publicKey: b64u(cred.publicKey), counter: cred.counter, transports: cred.transports || [], createdAt: now(),
+        uid: c.uid, publicKey: b64u(cred.publicKey), counter: cred.counter, transports: cred.transports || [], createdAt: now(), expiresAt: now() + IDLE_MS,
       })
-      await store.set('meetOrganisers', c.uid, { name: c.name, createdAt: now() })
+      await store.set('meetOrganisers', c.uid, { name: c.name, creds: [cred.id], createdAt: now(), expiresAt: now() + IDLE_MS })
       return issue(c.uid, c.name)
     },
 
@@ -120,8 +149,9 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     async login({ challengeId, response }) {
       const c = await takeChallenge(challengeId, 'auth')
       const credId = String(response?.id || '')
-      const stored = credId ? await store.get('meetCredentials', credId) : null
-      if (!stored) throw new MeetError(401, 'unknown passkey')
+      const stored = await live('meetCredentials', credId)
+      const org = stored ? await live('meetOrganisers', stored.uid) : null
+      if (!stored || !org) throw new MeetError(401, 'unknown passkey')
       let v
       try {
         v = await verifyAuthenticationResponse({
@@ -131,17 +161,18 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       } catch (e) { throw new MeetError(401, `passkey not accepted: ${e.message}`) }
       if (!v.verified) throw new MeetError(401, 'passkey not accepted')
       await store.set('meetCredentials', credId, { ...stored, counter: v.authenticationInfo.newCounter, usedAt: now() })
-      const org = await store.get('meetOrganisers', stored.uid)
-      return issue(stored.uid, org?.name || '')
+      await touchOrganiser(stored.uid, org)
+      return issue(stored.uid, org.name || '')
     },
 
     /** A new meeting, owned by the signed-in organiser. */
     async create({ token }) {
-      const s = session(token)
+      const { s, org } = await organiser(token)
+      await touchOrganiser(s.uid, org)
       for (let i = 0; i < 5; i++) {
         const code = code7()
-        if (await store.get('meetings', code)) continue
-        await store.set('meetings', code, { owner: s.uid, ownerName: s.name || '', createdAt: now(), expiresAt: now() + MEETING_MS })
+        if (await live('meetings', code)) continue
+        await store.set('meetings', code, { owner: s.uid, ownerName: org.name || '', createdAt: now(), expiresAt: now() + IDLE_MS })
         return { code }
       }
       throw new MeetError(503, 'try again')
@@ -149,20 +180,21 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 
     /** What anybody may know about a meeting: that it exists, and whose it is. */
     async info({ code }) {
-      const m = await store.get('meetings', clean(code, 20))
-      if (!m || !(m.expiresAt > now())) return { exists: false }
+      const m = await live('meetings', clean(code, 20))
+      if (!m) return { exists: false }
       return { exists: true, organiser: m.ownerName }
     },
 
     /** Is the signed-in organiser this meeting's owner? Starting it is a use, so
-     *  it pushes the expiry on. */
+     *  the meeting and its organiser get another month. */
     async claim({ token, code }) {
-      const s = session(token)
+      const { s, org } = await organiser(token)
       const id = clean(code, 20)
-      const m = await store.get('meetings', id)
-      if (!m || !(m.expiresAt > now())) return { owner: false, exists: false }
+      const m = await live('meetings', id)
+      if (!m) return { owner: false, exists: false }
       if (m.owner !== s.uid) return { owner: false, exists: true }
-      await store.set('meetings', id, { ...m, expiresAt: now() + MEETING_MS })
+      await store.set('meetings', id, { ...m, expiresAt: now() + IDLE_MS })
+      await touchOrganiser(s.uid, org)
       return { owner: true, exists: true }
     },
   }

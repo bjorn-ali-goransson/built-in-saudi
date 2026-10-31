@@ -5,6 +5,8 @@
 // POST { action, ... } → the action's JSON, or { error } with its status.
 // Collections: meetOrganisers/{uid}, meetCredentials/{credentialId} (a public
 // key, never a secret), meetChallenges/{id} (five minutes), meetings/{code}.
+// All four carry `expiresAt`: a month after last use, five minutes for a
+// challenge. Firestore's TTL policy on that field deletes them.
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
 import { meetService, MeetError, MEET_ACTIONS } from './meetCore.js'
@@ -13,9 +15,16 @@ const { Firestore } = firestore
 const db = new Firestore()
 const SITE = 'https://sawikalam.com'
 
+// meetCore keeps `expiresAt` as epoch milliseconds; Firestore keeps it as a
+// Timestamp, because that is the type its TTL policy deletes on.
 const store = {
-  async get(col, id) { const s = await db.collection(col).doc(id).get(); return s.exists ? s.data() : null },
-  async set(col, id, obj) { await db.collection(col).doc(id).set(obj) },
+  async get(col, id) {
+    const s = await db.collection(col).doc(id).get()
+    if (!s.exists) return null
+    const d = s.data()
+    return d.expiresAt?.toMillis ? { ...d, expiresAt: d.expiresAt.toMillis() } : d
+  },
+  async set(col, id, obj) { await db.collection(col).doc(id).set(typeof obj.expiresAt === 'number' ? { ...obj, expiresAt: new Date(obj.expiresAt) } : obj) },
   async del(col, id) { await db.collection(col).doc(id).delete() },
 }
 

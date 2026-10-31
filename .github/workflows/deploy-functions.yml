@@ -95,3 +95,17 @@ jobs:
           if ! xargs -P 6 -L 1 bash -c 'deploy "$0" "$1"' < "$plan"; then
             echo '::error::One or more functions failed to deploy (see FAIL above).'; exit 1
           fi
+
+      # Sawi Kalam's records expire a month after last use (meetCore.js). The code
+      # already treats an expired record as gone; these TTL policies are what
+      # delete the ones nobody ever reads again. Idempotent, so every deploy can
+      # run it. If the deploy account lacks the Firestore field-admin permission
+      # this step goes amber and the functions above are unaffected.
+      - name: Firestore TTL for Sawi Kalam records
+        continue-on-error: true
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT }}
+        run: |
+          for g in meetOrganisers meetCredentials meetChallenges meetings; do
+            gcloud firestore fields ttls update expiresAt --collection-group="$g" --enable-ttl --project="$PROJECT" --async --quiet
+          done
