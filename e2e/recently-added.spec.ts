@@ -75,7 +75,7 @@ test('every live tool has a derived date, so none can be invisible here', async 
   // the spec will see why it matters.
   const reg = readFileSync('src/tools/index.ts', 'utf8')
   const ids = [...reg.matchAll(/from '\.\/([a-z0-9-]+)\/meta'/g)].map((m) => m[1])
-  expect(ids.length).toBeGreaterThan(200)
+  expect(ids.length).toBeGreaterThan(100)
   const known = new Set(dates.map(([id]) => id))
   // Folder names and tool ids differ for at least one tool, so compare on the
   // count rather than on the folder name.

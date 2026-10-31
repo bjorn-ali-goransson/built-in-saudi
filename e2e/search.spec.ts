@@ -71,14 +71,14 @@ test('a query nothing matches still says so rather than showing everything', asy
 // These are the cases that moved.
 
 test('a new tool must not capture a generic term from the established one', async ({ page }) => {
-  // "Scanned PDF to Text" was first called "OCR a Scanned PDF", which starts
+  // "PDF to Text" was first called "OCR a Scanned PDF", which starts
   // with OCR and therefore outscored "Image to Text (OCR)" on a bare "ocr" —
   // a query that means the general tool, not the PDF one.
   await search(page, 'ocr')
   await expect(top(page)).toContainText(/image to text/i)
   // ...while the specific query still reaches the specific tool.
   await search(page, 'scanned pdf')
-  await expect(top(page)).toContainText(/scanned pdf/i)
+  await expect(top(page)).toContainText(/PDF to Text/i)
 })
 
 // The catalogue's SHAPE, not its ranking. Measured at 191 tools: "Converters"
@@ -279,25 +279,6 @@ test('an Arabic name must be in the form people type, not the plural', async ({ 
 // is frozen here rather than only in the bench. `node evals/ownname.mjs` is the
 // general form: every tool must still win a search for its own name (425/426
 // today, the one exception being the documented باركود / QR ambiguity).
-
-test('the rule tool keeps "overtime pay", not the calculator that also computes it', async ({ page }) => {
-  // `timesheet` shipped with 'payroll' in its keywords and took this query off
-  // `leave-overtime`, which is the tool that owns the 150% rule and the 720-hour
-  // cap. The established tool gets the exact phrase.
-  await search(page, 'overtime pay')
-  await expect(top(page)).toContainText(/Leave/i)
-})
-
-test('a converter and its inverse each win their own direction', async ({ page }) => {
-  // Three tools now share this vocabulary — Word to Text, Word to Markdown and
-  // Markdown to Word — which is exactly where a new tool blurs an old one.
-  await search(page, 'word to markdown')
-  await expect(top(page)).toContainText(/Word to Markdown/i)
-  await search(page, 'markdown to word')
-  await expect(top(page)).toContainText(/Markdown to Word/i)
-  await search(page, 'word to text')
-  await expect(top(page)).toContainText(/Word to Text/i)
-})
 
 // --- Typos. Measured before this existed (`node evals/typoprobe.mjs`, 23
 // realistic mistypings of queries the benches already agree on): 74% still

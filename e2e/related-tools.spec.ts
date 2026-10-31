@@ -37,7 +37,7 @@ test('the row is localized, not an English fallback', async ({ page }) => {
 test('no tool page is a dead end any more', async ({ page }) => {
   // Each of these had an empty row: nothing in a cluster, nothing above the
   // lexical threshold. They are filled from the tool's own category now.
-  for (const id of ['dice-roller', 'base64', 'flashcards', 'coordinates', 'calls']) {
+  for (const id of ['dice-roller', 'uuid-generator', 'flashcards', 'coordinates', 'calls']) {
     await page.goto(`/en/apps/${id}`)
     await expect(row(page), `${id} should not be a dead end`).toBeVisible()
     await expect(row(page).locator('a')).not.toHaveCount(0)
@@ -80,13 +80,14 @@ test('the row is still capped rather than listing a whole category', async ({ pa
 // lexical scorer cannot see.
 
 test('a tool whose whole family is invisible to the scorer still gets pointed at', async ({ page }) => {
-  // translate / summarize / detect-language share an entire subsystem — the
-  // same availability gate, the same download-with-progress — and almost no
+  // translate and detect-language share an entire subsystem — the same
+  // availability gate, the same download-with-progress — and almost no
   // vocabulary, which is exactly why a cluster and not the scorer has to say so.
   await page.goto('/en/apps/translate')
   const grid = page.getByTestId('related-grid')
-  await expect(grid).toContainText('Summarizer')
   await expect(grid).toContainText('Language Detector')
+  await page.goto('/en/apps/detect-language')
+  await expect(page.getByTestId('related-grid')).toContainText('Translator')
 })
 
 test('giving a tool inbound links did not cost a neighbour its best outgoing one', async ({ page }) => {
