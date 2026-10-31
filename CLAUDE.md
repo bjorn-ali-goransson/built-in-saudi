@@ -933,6 +933,9 @@ one — because the spectrum reads the file through its own worker.
 
 Image to Text joined PDF to Text (99 → 98): one reader, one engine
 (`lib/ocr.ts`), two modes, and `/apps/image-to-text` opens the picture mode.
+The UUID Generator became the UUID mode of Fake Data (98 → 97). Batch Watermark
+was looked at and kept: the compressor takes one picture and the watermark
+tool many, so putting them together would have been two tools behind tabs.
 
 ## Design system
 

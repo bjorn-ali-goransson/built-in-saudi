@@ -37,7 +37,7 @@ test('the row is localized, not an English fallback', async ({ page }) => {
 test('no tool page is a dead end any more', async ({ page }) => {
   // Each of these had an empty row: nothing in a cluster, nothing above the
   // lexical threshold. They are filled from the tool's own category now.
-  for (const id of ['spin-wheel', 'uuid-generator', 'flashcards', 'coordinates', 'calls']) {
+  for (const id of ['spin-wheel', 'fake-data', 'flashcards', 'coordinates', 'calls']) {
     await page.goto(`/en/apps/${id}`)
     await expect(row(page), `${id} should not be a dead end`).toBeVisible()
     await expect(row(page).locator('a')).not.toHaveCount(0)

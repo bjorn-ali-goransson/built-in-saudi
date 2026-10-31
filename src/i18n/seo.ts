@@ -314,11 +314,6 @@ export const liveToolSeo: ToolSeo[] = [
     },
   },
   {
-    id: 'uuid-generator',
-    en: { name: 'UUID Generator', description: 'Generate one or many RFC-4122 v4 UUIDs with optional formatting, entirely in your browser.' },
-    ar: { name: 'مولّد UUID', description: 'أنشئ معرّفًا واحدًا أو عدة معرّفات UUID (v4) مع خيارات تنسيق، بالكامل داخل متصفحك.' },
-  },
-  {
     id: 'pdf-to-word',
     en: { name: 'PDF to Word', description: 'Turn a PDF into an editable .docx with the headings, bold and lists recovered — and a locked PDF opens with your password. Free, and the file never leaves your browser.' },
     ar: { name: 'PDF إلى وورد', description: 'حوّل ملف PDF إلى مستند ‎.docx‎ قابل للتحرير مع استعادة العناوين والخط العريض والقوائم — ويُفتح الملف المحمي بكلمة مرورك. مجانًا، ولا يغادر الملف متصفحك.' },

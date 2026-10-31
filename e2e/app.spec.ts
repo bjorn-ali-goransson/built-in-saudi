@@ -40,8 +40,8 @@ test.describe('home', () => {
     await page.getByTestId('app-launcher').click()
     await expect(page.getByTestId('app-launcher-panel')).toBeVisible()
     await page.getByTestId('launcher-search').fill('uuid')
-    await page.getByTestId('tool-uuid-generator').click()
-    await expect(page).toHaveURL(/\/apps\/uuid-generator$/)
+    await page.getByTestId('tool-fake-data').click()
+    await expect(page).toHaveURL(/\/apps\/fake-data$/)
   })
 })
 
@@ -57,7 +57,9 @@ test.describe('tools', () => {
   })
 
   test('uuid: generates a v4 uuid', async ({ page }) => {
+    // The old address, through the legacy /tools path, opens the UUID mode.
     await page.goto('/en/tools/uuid-generator')
+    await expect(page).toHaveURL(/\/en\/apps\/fake-data\?mode=uuid$/)
     await expect(page.getByTestId('uuid-output')).toContainText(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}/i)
   })
 

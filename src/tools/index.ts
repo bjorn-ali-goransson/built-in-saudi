@@ -21,7 +21,6 @@ import { ibanValidatorTool } from './iban-validator/meta'
 import { tafqeetTool } from './tafqeet/meta'
 import { qiblaTool } from './qibla/meta'
 import { passwordGeneratorTool } from './password-generator/meta'
-import { uuidGeneratorTool } from './uuid-generator/meta'
 import { caseConverterTool } from './case-converter/meta'
 import { poetryTool } from './poetry/meta'
 import { languageDetectTool } from './language-detect/meta'
@@ -198,7 +197,6 @@ export const tools: Tool[] = [
   arabicVerbsTool,
   diacritizeTool,
   qiblaTool,
-  uuidGeneratorTool,
   caseConverterTool,
   poetryTool,
   translateTool,

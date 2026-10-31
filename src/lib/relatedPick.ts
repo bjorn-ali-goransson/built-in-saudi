@@ -56,7 +56,7 @@ export const CLUSTERS: string[][] = [
   ['word-editor', 'excel-editor', 'powerpoint-editor', 'pdf-to-word'],
   ['pdf-merge', 'pdf-compress', 'pdf-to-images'],
   ['pdf-ocr', 'pdf-to-word'],
-  ['uuid-generator', 'fake-data', 'readme-generator'],
+  ['fake-data', 'readme-generator'],
   ['jwt-decoder', 'cert-decoder', 'url-parser'],
   ['case-converter', 'char-finder', 'readable-text'],
   ['audio-convert', 'video-edit'],

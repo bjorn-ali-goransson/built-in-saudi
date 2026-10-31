@@ -104,5 +104,4 @@ export const ADDED: Record<string, string> = {
   'qr-code': '2026-07-02',
   'tafqeet': '2026-07-02',
   'unit-converter': '2026-07-02',
-  'uuid-generator': '2026-07-02',
 }

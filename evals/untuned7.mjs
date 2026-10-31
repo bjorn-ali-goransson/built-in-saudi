@@ -37,7 +37,7 @@ export const UNTUNED7 = [
 
   // --- technical numbers ------------------------------------------------------
   ['base 16', 'base-converter'],
-  ['128 bit uuid', 'uuid-generator'],
+  ['128 bit uuid', 'fake-data'],
   ['+966 number', 'saudi-phone'],
 
   // --- health and body ---------------------------------------------------------

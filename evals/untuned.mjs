@@ -52,7 +52,7 @@ export const UNTUNED = [
   ['compress pdf', 'pdf-compress'],
   ['heic', 'image-compressor'],
   ['webp to jpg', 'image-compressor'],
-  ['uuid', 'uuid-generator'],
+  ['uuid', 'fake-data'],
   ['markdown table', 'markdown-table'],
   ['uppercase', 'case-converter'],
   ['roll dice', 'spin-wheel'],

@@ -446,20 +446,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/password-generator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/uuid-generator/</loc>
-    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/uuid-generator"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/uuid-generator/</loc>
-    <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/uuid-generator"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/uuid-generator"/>
-  </url>
-  <url>
     <loc>https://built-in-saudi.com/en/apps/date-diff/</loc>
     <lastmod>2026-07-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/date-diff"/>

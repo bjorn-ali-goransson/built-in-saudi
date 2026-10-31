@@ -26,7 +26,7 @@ function format(uuid: string, upper: boolean, noDashes: boolean, braces: boolean
   return u
 }
 
-export default function UuidGeneratorTool() {
+export default function Uuids() {
   const { locale } = useLocale()
   const s = STR[locale]
 

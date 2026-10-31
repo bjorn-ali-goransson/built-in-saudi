@@ -44,7 +44,7 @@ const CASES = [
   ['qrcode', 'qr-code'],
   ['barcode-generator', 'qr-code'],
   ['password-gen', 'password-generator'],
-  ['uuid', 'uuid-generator'],
+  ['uuid', 'fake-data'],
   ['jwt', 'jwt-decoder'],
   ['cron', 'cron-builder'],
   ['unit-convert', 'unit-converter'],

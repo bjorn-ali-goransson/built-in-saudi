@@ -71,7 +71,7 @@ test('the row is not there at all before anything has been opened', async ({ pag
 
 test('it never grows past a shortcut', async ({ page }) => {
   const ids = ['qr-code', 'iban-validator', 'password-generator', 'unit-converter',
-    'jwt-decoder', 'uuid-generator', 'case-converter', 'cron-builder', 'date-diff', 'stopwatch']
+    'jwt-decoder', 'fake-data', 'case-converter', 'cron-builder', 'date-diff', 'stopwatch']
   for (const id of ids) await visit(page, id)
   await page.goto('/en')
   await expect(recent(page).locator('[data-testid^="tool-"]')).toHaveCount(8)

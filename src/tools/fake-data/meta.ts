@@ -7,9 +7,14 @@ export const fakeDataTool: Tool = {
   name: 'Fake Data Generator',
   tagline: 'Generate mock rows for testing — JSON or CSV.',
   description:
-    'Generate realistic-looking sample records — names, emails, phones, cities, companies, dates and IDs — for seeding tests, mockups and demos. Pick the fields and count, then export as JSON or CSV. Runs entirely in your browser.',
+    'Generate realistic-looking sample records — names, emails, phones, cities, companies, dates and IDs — for seeding tests, mockups and demos. Pick the fields and count, then export as JSON or CSV. A second mode makes v4 UUIDs in bulk. Runs entirely in your browser.',
   category: 'Developer',
-  keywords: ['fake data', 'mock', 'sample', 'test data', 'seed', 'faker', 'json', 'csv', 'بيانات وهمية', 'اختبار'],
+  keywords: [
+    'fake data', 'mock', 'sample', 'test data', 'seed', 'faker', 'json', 'csv', 'بيانات وهمية', 'اختبار',
+    // Merged in from the UUID Generator (November 2026).
+    'uuid', 'guid', 'v4', 'rfc 4122', 'uuid generator', 'معرّف',
+  ],
+  aliases: ['UUID Generator', 'مولّد UUID'],
   status: 'stable',
   Icon: SeedIcon,
   component: lazyTool(() => import('./FakeDataTool')),
@@ -17,6 +22,6 @@ export const fakeDataTool: Tool = {
     name: 'مولّد بيانات وهمية',
     tagline: 'ولّد صفوفًا وهمية للاختبار — JSON أو CSV.',
     description:
-      'ولّد سجلّات عيّنة واقعية المظهر — أسماء وبُرد إلكترونية وهواتف ومدن وشركات وتواريخ ومعرّفات — لتغذية الاختبارات والنماذج والعروض. اختر الحقول والعدد، ثم صدّر JSON أو CSV. يعمل بالكامل في متصفحك.',
+      'ولّد سجلّات عيّنة واقعية المظهر — أسماء وبُرد إلكترونية وهواتف ومدن وشركات وتواريخ ومعرّفات — لتغذية الاختبارات والنماذج والعروض. اختر الحقول والعدد، ثم صدّر JSON أو CSV. وفي وضع ثانٍ ينشئ معرّفات UUID (v4) بالجملة. يعمل بالكامل في متصفحك.',
   },
 }
