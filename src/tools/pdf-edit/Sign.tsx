@@ -36,7 +36,11 @@ const STR = {
 
 let uid = 0
 
-export default function PdfSignTool() {
+/** One mode of Edit PDF. `file` is the PDF already open in another mode, so
+ *  switching modes does not ask for the same file twice. */
+export default function Sign({ file: given, onPick }: { file?: File | null; onPick?: (f: File) => void } = {}) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (given) void onFile(given) }, [])
   const { locale } = useLocale()
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)
@@ -88,6 +92,7 @@ export default function PdfSignTool() {
 
   async function onFile(f: File | null | undefined) {
     if (!f) return
+    onPick?.(f)
     // NOT gated on the MIME type or the extension. A bare `return` on a wrong
     // pick is the dead-UI failure this repo already documents for image intake
     // (#225): nothing happens and nothing says why. And the gate is wrong on

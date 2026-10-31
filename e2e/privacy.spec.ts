@@ -223,9 +223,11 @@ export const CASES: Case[] = [
   { id: 'qr-reader', testid: 'qr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'pdf-compress', testid: 'cmp-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'pdf-edit', testid: 'edit-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'pdf-fill', testid: 'fill-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-edit', label: 'pdf-edit (fill)', testid: 'fill-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf,
+    reveal: async (page) => { await page.getByTestId('pe-mode-fill').click() } },
   { id: 'pdf-merge', testid: 'pm-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'pdf-sign', testid: 'sign-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
+  { id: 'pdf-edit', label: 'pdf-edit (sign)', testid: 'sign-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf,
+    reveal: async (page) => { await page.getByTestId('pe-mode-sign').click() } },
   { id: 'pdf-to-images', testid: 'p2i-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'cert-decoder', testid: 'cd-file', name: 'cert.pem', mime: 'application/x-pem-file', make: () => Buffer.from(`-----BEGIN CERTIFICATE-----
 ${TOKEN}

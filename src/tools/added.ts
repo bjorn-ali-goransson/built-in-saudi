@@ -81,8 +81,6 @@ export const ADDED: Record<string, string> = {
   'pdf-compress': '2026-07-12',
   'prompt-analyzer': '2026-07-12',
   'pdf-edit': '2026-07-11',
-  'pdf-fill': '2026-07-11',
-  'pdf-sign': '2026-07-11',
   'link-shortener': '2026-07-10',
   'ats-cv-optimizer': '2026-07-06',
   'book-me': '2026-07-06',

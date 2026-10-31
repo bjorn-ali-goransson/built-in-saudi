@@ -47,3 +47,21 @@ test('signature exports with transparency (SMask) so it sits on any background',
   expect(hasImage).toBe(true)
   expect(hasSMask).toBe(true) // transparent → composites over the cyan, no white box
 })
+
+// Sign PDF and Fill PDF Form became modes of Edit PDF in November 2026. The PDF
+// picked in one mode is handed to the next, so switching never asks again.
+test('switching from signing to filling keeps the same PDF open', async ({ page }) => {
+  await page.goto('/en/apps/pdf-sign')
+  await expect(page).toHaveURL(/\/en\/apps\/pdf-edit\?mode=sign$/)
+  const { PDFDocument } = await import('pdf-lib')
+  const doc = await PDFDocument.create()
+  doc.addPage([300, 300])
+  await page.getByTestId('sign-drop').locator('input[type="file"]')
+    .setInputFiles({ name: 'contract.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await doc.save()) })
+  await expect(page.locator('[data-testid="pdf-sign"] img').first()).toBeVisible({ timeout: 30_000 })
+  await page.getByTestId('pe-mode-fill').click()
+  // No picker in the fill mode: it opened the same file.
+  await expect(page.getByTestId('fill-drop')).toHaveCount(0, { timeout: 30_000 })
+  await page.getByTestId('pe-mode-edit').click()
+  await expect(page.getByTestId('edit-drop')).toHaveCount(0, { timeout: 30_000 })
+})

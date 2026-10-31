@@ -210,9 +210,11 @@ test('a broad query keeps its whole family, because the floor is relative', asyn
   // The reason the floor is a share of the top hit rather than a fixed score:
   // a broad query legitimately has many good answers, and they all score alike.
   await search(page, 'pdf')
-  await expect(page.locator('[data-testid^="tool-"]')).not.toHaveCount(0)
-  const n = await page.locator('[data-testid^="tool-"]').count()
-  expect(n).toBeGreaterThan(8)
+  // Every member of the family, not a count: the family shrank from 16 to 6 in
+  // the November 2026 merges, and a count would have had to shrink with it.
+  for (const id of ['pdf-merge', 'pdf-edit', 'pdf-compress', 'pdf-to-word', 'pdf-to-images', 'pdf-ocr']) {
+    await expect(page.getByTestId(`tool-${id}`), id).toBeVisible()
+  }
 })
 
 test('a query we cannot serve at all returns nothing rather than a guess', async ({ page }) => {
@@ -385,7 +387,7 @@ test.describe('held-out set #3 fixes', () => {
   test('the Arabic VERB reaches the tool named with the verbal noun', async ({ page }) => {
     // «وقّع» is not a substring of «توقيع» — the documented morphology trap,
     // on the tool whose whole subject it is. It returned NOTHING.
-    await wins(page, 'وقّع على عقد', 'pdf-sign', 'ar')
+    await wins(page, 'وقّع على عقد', 'pdf-edit', 'ar')
   })
 
   test('«بالحروف» reaches the tool that writes numbers in letters', async ({ page }) => {

@@ -937,6 +937,16 @@ The UUID Generator became the UUID mode of Fake Data (98 → 97). Batch Watermar
 was looked at and kept: the compressor takes one picture and the watermark
 tool many, so putting them together would have been two tools behind tabs.
 
+Sign PDF and Fill PDF Form became modes of Edit PDF (97 → 95), and **the PDF
+picked in one mode is handed to the next** (`file`/`onPick` props on each mode),
+so a contract can be signed and then filled without picking it twice. Each mode
+still saves its own result, because each writes the file a different way.
+Edit PDF lost its `beta` badge on the way: that badge means "encodes a rule that
+can move", which a PDF editor never did. **And the direction tie-break looks
+past second place now** — a merged tool's extra words put Edit PDF between
+Merge PDF and PDF to Images for «ملف pdf إلى صور», and a tie-break that only
+compared the top two silently stopped applying.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

@@ -32,7 +32,7 @@ export const UNTUNED4 = [
   ['someone sent me a spreadsheet i cannot open', ['excel-editor']],
   ['my phone photos are heic and will not open', 'image-compressor'],
   ['the pdf pages are in the wrong order', 'pdf-merge'],
-  ['i need to sign this without printing it', 'pdf-sign'],
+  ['i need to sign this without printing it', 'pdf-edit'],
 
   // --- text that arrived wrong ---------------------------------------------
 

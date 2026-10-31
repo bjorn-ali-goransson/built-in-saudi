@@ -48,7 +48,7 @@ export const NOMATCH = [
 ]
 
 export const UNTUNED = [
-  ['sign a document', 'pdf-sign'],
+  ['sign a document', 'pdf-edit'],
   ['compress pdf', 'pdf-compress'],
   ['heic', 'image-compressor'],
   ['webp to jpg', 'image-compressor'],

@@ -70,10 +70,10 @@ function producesIt(names: string[], dest: string): boolean {
 }
 
 /**
- * Reorder the top two when the query names a direction and they are inverses.
+ * Put a converter's inverse first when the query names the inverse's direction.
  *
- * Returns a NEW array; the input is untouched. Everything below the top two is
- * left alone — a tool that lost to both of them did not lose because of word
+ * Returns a NEW array; the input is untouched. Only the inverse moves; every
+ * other tool keeps its order — a tool that lost did not lose because of word
  * order.
  */
 export function preferDirection<T extends Directional>(query: string, ranked: T[]): T[] {
@@ -81,8 +81,15 @@ export function preferDirection<T extends Directional>(query: string, ranked: T[
   const dest = destinationOf(query)
   if (!dest) return ranked
 
-  const [first, second] = ranked
-  if (first.inverse !== second.id || second.inverse !== first.id) return ranked
+  // The inverse need not be SECOND. Once merged tools carried more words, a
+  // third tool could slip between a converter and its inverse while both stayed
+  // within noise of each other — «ملف pdf إلى صور» put Edit PDF there — and
+  // the tie-break, which only compared the top two, stopped applying.
+  const [first] = ranked
+  const j = ranked.findIndex((r, k) => k > 0 && r.id === first.inverse)
+  if (j < 0) return ranked
+  const second = ranked[j]
+  if (second.inverse !== first.id) return ranked
   if (!first.score || (first.score - second.score) / first.score > NOISE) return ranked
 
   const firstFits = producesIt(first.names, dest)
@@ -91,5 +98,5 @@ export function preferDirection<T extends Directional>(query: string, ranked: T[
   if (firstFits === secondFits) return ranked
   if (firstFits) return ranked
 
-  return [second, first, ...ranked.slice(2)]
+  return [second, ...ranked.filter((_, k) => k !== j)]
 }

@@ -33,7 +33,7 @@ export const UNTUNED_AR = [
   // PDF
   ['ضغط ملف pdf كبير', 'pdf-compress'],
   ['دمج ملفات pdf', 'pdf-merge'],
-  ['توقيع مستند pdf', 'pdf-sign'],
+  ['توقيع مستند pdf', 'pdf-edit'],
   ['استخراج النص من ملف pdf', 'pdf-ocr'],
   // Images
   ['إزالة الخلفية من الصورة', 'remove-background'],

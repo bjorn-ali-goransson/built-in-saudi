@@ -57,9 +57,9 @@ export const UNTUNED6 = [
   ['الضاغط', 'image-compressor'],
 
   // --- the same subject, several shapes -------------------------------------
-  ['موقّع pdf', 'pdf-sign'],
-  ['توقيع إلكتروني', 'pdf-sign'],
-  ['وقّع المستند', 'pdf-sign'],
+  ['موقّع pdf', 'pdf-edit'],
+  ['توقيع إلكتروني', 'pdf-edit'],
+  ['وقّع المستند', 'pdf-edit'],
   ['محوّل العملات', 'currency-converter'],
   ['تحويل عملة', 'currency-converter'],
   ['حوّل الريال إلى دولار', 'currency-converter'],

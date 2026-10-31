@@ -174,16 +174,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'دمج PDF', description: 'اجمع ملفات PDF والصور في ملف واحد، ثم أدر الصفحات ورتّبها واحذف ما لا تريد. يعمل داخل متصفحك؛ لا تُرفع مستنداتك أبدًا.' },
   },
   {
-    id: 'pdf-sign',
-    en: { name: 'Sign PDF', description: 'Sign a PDF by hand in your browser: draw your signature with a finger or mouse, then drag, pinch and place it exactly — with a magnifier for precise positioning. Powered by pdf-lib; your document is never uploaded.' },
-    ar: { name: 'توقيع PDF', description: 'وقّع ملف PDF بخط يدك داخل متصفحك: ارسم توقيعك بإصبعك أو بالفأرة، ثم اسحبه واقرِصه وضعه بدقة — مع عدسة مكبّرة لضبطٍ مثالي. يعمل عبر pdf-lib؛ لا يُرفع مستندك أبدًا.' },
-  },
-  {
-    id: 'pdf-fill',
-    en: { name: 'Fill PDF Form', description: 'Fill PDF forms in your browser. Interactive fields are detected automatically — clean web form for well-named ones, editable boxes on the page otherwise — and field-less PDFs let you drop text anywhere. Export a filled, optionally flattened PDF; never uploaded.' },
-    ar: { name: 'تعبئة نموذج PDF', description: 'عبّئ نماذج PDF داخل متصفحك. تُكتشف الحقول التفاعلية تلقائيًا — نموذج ويب أنيق للأسماء الواضحة، ومربعات على الصفحة لغيرها — والملفات بلا حقول تتيح إضافة نص أينما شئت. صدّر ملفًا معبّأً وقابلًا للتثبيت؛ دون رفعه أبدًا.' },
-  },
-  {
     id: 'pdf-edit',
     en: { name: 'Edit PDF', description: 'A rudimentary in-browser PDF editor: select and move or delete images, and add new text with resize handles and line breaks. Edits the PDF content streams with pdf-lib and never uploads your file. Existing text can’t be edited or removed yet.' },
     ar: { name: 'تحرير PDF', description: 'محرّر PDF مبدئي داخل المتصفح: حدّد الصور وحرّكها أو احذفها، وأضِف نصًا جديدًا بمقابض لتغيير الحجم وفواصل أسطر. يحرّر محتوى الملف عبر pdf-lib ولا يرفع ملفك أبدًا. لا يمكن تعديل أو حذف النص الموجود بعد.' },

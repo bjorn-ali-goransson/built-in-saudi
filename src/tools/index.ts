@@ -5,8 +5,6 @@ import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfToImagesTool } from './pdf-to-images/meta'
 import { qrReaderTool } from './qr-reader/meta'
-import { pdfSignTool } from './pdf-sign/meta'
-import { pdfFillTool } from './pdf-fill/meta'
 import { pdfEditTool } from './pdf-edit/meta'
 import { pdfCompressTool } from './pdf-compress/meta'
 import { qrCodeTool } from './qr-code/meta'
@@ -177,8 +175,6 @@ export const tools: Tool[] = [
   pdfToImagesTool,
   pdfToWordTool,
   qrReaderTool,
-  pdfSignTool,
-  pdfFillTool,
   pdfEditTool,
   pdfCompressTool,
   certificateTool,

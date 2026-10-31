@@ -29,7 +29,7 @@ export const UNTUNED8 = [
   // --- products whose function we DO have -----------------------------------
   ['calendly', 'book-me'],
   ['doodle poll', 'book-me'],
-  ['docusign', 'pdf-sign'],
+  ['docusign', 'pdf-edit'],
   ['bitly', 'link-shortener'],
   ['tinyurl', 'link-shortener'],
   ['tinypng', 'image-compressor'],
@@ -62,7 +62,7 @@ export const UNTUNED8 = [
 
   // --- compound tasks: two jobs in one sentence -----------------------------
   ['compress a photo and change its format', ['image-compressor']],
-  ['sign a pdf and send it', 'pdf-sign'],
+  ['sign a pdf and send it', 'pdf-edit'],
   ['scan a receipt and get the text', ['pdf-ocr', 'doc-scan']],
   ['split a pdf then merge the parts', ['pdf-merge']],
   ['remove the background and resize for instagram', ['remove-background']],
