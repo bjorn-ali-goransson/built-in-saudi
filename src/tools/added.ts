@@ -45,7 +45,6 @@ export const ADDED: Record<string, string> = {
   'id-expiry': '2026-08-05',
   'json-diff': '2026-08-05',
   'metronome': '2026-08-05',
-  'passphrase': '2026-08-05',
   'passport-photo': '2026-08-05',
   'password-strength': '2026-08-05',
   'quiz-maker': '2026-08-05',

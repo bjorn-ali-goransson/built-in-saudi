@@ -83,7 +83,6 @@ import { teamMakerTool } from './team-maker/meta'
 import { charFinderTool } from './char-finder/meta'
 import { hijriAgeTool } from './hijri-age/meta'
 import { certificateTool } from './certificate/meta'
-import { passphraseTool } from './passphrase/meta'
 import { colourBlindTool } from './colour-blind/meta'
 import { batchWatermarkTool } from './batch-watermark/meta'
 import { metronomeTool } from './metronome/meta'
@@ -213,7 +212,6 @@ export const tools: Tool[] = [
   arabicVerbsTool,
   diacritizeTool,
   qiblaTool,
-  passphraseTool,
   uuidGeneratorTool,
   caseConverterTool,
   poetryTool,

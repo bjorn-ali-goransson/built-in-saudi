@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **106 tools are live.** This
+The backlog, and an honest account of what exists. **105 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -23,7 +23,7 @@ registry disagree.
 
 | Category | Count | Shape of it |
 |---|---|---|
-| Generators | 16 | QR, barcode, passwords, passphrases, a wheel of names, dice, teams, worksheets, quizzes, Arabic handwriting sheets, seating charts, attendance sheets, school timetables, illustrated activity schedules, metronome, tier list |
+| Generators | 15 | QR, barcode, passwords and passphrases (with diceware), a wheel of names, dice, teams, worksheets, quizzes, Arabic handwriting sheets, seating charts, attendance sheets, school timetables, illustrated activity schedules, metronome, tier list |
 | Developer | 15 | JWT, X.509 certificates, cron (build **and** explain), number bases, UUIDs, fake data, JSON diff, Markdown tables, READMEs, CSV ⇄ JSON, URL encode/parse, link shortener, cubic bezier, prompt analyzer |
 | Images | 12 | the image editor (crop, censor, caption, cut and compose), compress and convert, background removal, OCR, QR reader, document-scan correction, passport photos, photo booth, steganography, ASCII art, batch watermark, colour-blindness simulator |
 | Text | 12 | kanban and to-do lists, on-device translator and language detector, typing test, password strength with the k-anonymous breach check, character finder, readable text, Arabic poetry meters, case converter, flashcards, subtitles |

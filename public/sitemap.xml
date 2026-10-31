@@ -1136,20 +1136,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/certificate"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/passphrase/</loc>
-    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/passphrase"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/passphrase"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/passphrase"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/passphrase/</loc>
-    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/passphrase"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/passphrase"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/passphrase"/>
-  </url>
-  <url>
     <loc>https://built-in-saudi.com/en/apps/colour-blind/</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/colour-blind"/>

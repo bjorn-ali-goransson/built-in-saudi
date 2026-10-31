@@ -40,7 +40,7 @@ export const UNTUNED2 = [
   ['seating plan for a wedding', 'seating-chart'],
   ['blur part of a picture', 'image-edit'],
   ['turn a photo into text art', 'image-to-ascii'],
-  ['strong passphrase', 'passphrase'],
+  ['strong passphrase', 'password-generator'],
   ['decode a jwt', 'jwt-decoder'],
   ['convert coordinates', 'coordinates'],
   ['hide a message in a picture', 'steganography'],

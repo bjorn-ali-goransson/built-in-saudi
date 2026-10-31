@@ -1,8 +1,16 @@
 import { test, expect } from '@playwright/test'
 
+// The Passphrase app became the password generator's "With dice" mode in
+// November 2026. It opens on the dice; the device source is one tap away.
+async function diceware(page: import('@playwright/test').Page, source: 'device' | 'dice' = 'device') {
+  await page.goto('/en/apps/password-generator')
+  await page.getByTestId('pw-mode-dice').click()
+  await page.getByTestId(`pp-src-${source}`).click()
+}
+
 test.describe('passphrase generator', () => {
   test('generates a phrase and reports honest entropy', async ({ page }) => {
-    await page.goto('/en/apps/passphrase')
+    await diceware(page)
     const phrase = page.getByTestId('pp-phrase')
     await expect(phrase).not.toBeEmpty()
     // 5 words from a 1296-word list = 5 × 10.34 = 51.7 → 52 bits.
@@ -11,7 +19,7 @@ test.describe('passphrase generator', () => {
   })
 
   test('more words means more entropy', async ({ page }) => {
-    await page.goto('/en/apps/passphrase')
+    await diceware(page)
     await page.getByTestId('pp-count').fill('8')
     // 8 × 10.34 = 82.7 → 83.
     await expect(page.getByTestId('pp-bits')).toHaveText('83 bits')
@@ -19,15 +27,14 @@ test.describe('passphrase generator', () => {
   })
 
   test('regenerating gives a different phrase', async ({ page }) => {
-    await page.goto('/en/apps/passphrase')
+    await diceware(page)
     const first = await page.getByTestId('pp-phrase').innerText()
     await page.getByTestId('pp-regen').click()
     await expect(page.getByTestId('pp-phrase')).not.toHaveText(first)
   })
 
   test('dice mode maps four rolls to a word, and rejects a bad roll', async ({ page }) => {
-    await page.goto('/en/apps/passphrase')
-    await page.getByTestId('pp-src-dice').click()
+    await diceware(page, 'dice')
     await expect(page.getByTestId('pp-dice-how')).toContainText('Roll 4 dice')
     // Only three numbers for a four-dice list.
     await page.getByTestId('pp-rolls').fill('1 2 3')
@@ -43,8 +50,21 @@ test.describe('passphrase generator', () => {
     await expect(page.getByTestId('pp-phrase')).toHaveText('able')
   })
 
-  test('the Arabic list has fewer bits per word, and says so', async ({ page }) => {
+  test('the generator itself uses the same lists, not a short one', async ({ page }) => {
+    await page.goto('/en/apps/password-generator')
+    await page.getByTestId('pw-mode-passphrase').click()
+    await page.getByTestId('pw-list-words').selectOption('en')
+    // Four words from 1,296 is 41 bits; the old 128-word list gave 28.
+    await expect(page.getByTestId('pw-strength')).toContainText(/4[0-9] bits/)
+  })
+
+  test('passphrase now lives in the password generator', async ({ page }) => {
     await page.goto('/en/apps/passphrase')
+    await expect(page).toHaveURL(/\/en\/apps\/password-generator\/?$/)
+  })
+
+  test('the Arabic list has fewer bits per word, and says so', async ({ page }) => {
+    await diceware(page)
     await page.getByTestId('pp-list').selectOption('ar')
     // 216 words = 7.75 bits; 5 words = 38.75 → 39.
     await expect(page.getByTestId('pp-bits')).toHaveText('39 bits')

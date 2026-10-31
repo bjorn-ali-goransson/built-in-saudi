@@ -434,11 +434,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'قياس الإيقاع بالنقر', description: 'اعرف إيقاع مقطع بالنقر معه. تحسب الأداة المتوسط على نافذة متحركة فتتابع تغيّر الإيقاع بدل أن تدفنه، وتخبرك بمدى ثبات نقرك. وتعطيك أزمنة النغمة الربعية والثمانية والثمانية المنقوطة بالمللي ثانية، وهو ما يحتاجه جهاز التأخير.' },
   },
   {
-    id: 'passphrase',
-    en: { name: 'Passphrase Generator', description: 'Build a passphrase from a 1296-word list — 10.3 bits a word, short enough to type. You can also roll physical dice and enter the numbers, the original diceware method and the only version whose randomness you need not take on trust. There is an Arabic wordlist too.' },
-    ar: { name: 'مولّد عبارات المرور', description: 'ابنِ عبارة مرور من قائمة بـ١٢٩٦ كلمة — ١٠٫٣ بت لكل كلمة، وقصيرة بما يكفي للكتابة. ويمكنك رمي نرد حقيقي وإدخال الأرقام، وهي طريقة diceware الأصلية والنسخة الوحيدة التي لا تضطر لتصديق أحد في عشوائيتها. وهناك قائمة كلمات عربية أيضًا.' },
-  },
-  {
     id: 'colour-blind',
     en: { name: 'Colour Blindness Simulator', description: 'See a palette or an image as someone with colour vision deficiency sees it — and which pairs of your colours collapse into the same thing. Around one man in twelve has some form of it, so a chart relying on red-versus-green is unreadable to a real share of your users.' },
     ar: { name: 'محاكي عمى الألوان', description: 'شاهد لوحة ألوان أو صورة كما يراها من لديه قصور في رؤية الألوان — وأي أزواج ألوانك تنهار إلى الشيء نفسه. فنحو رجل من كل اثني عشر لديه شكل منه، ما يجعل رسمًا يعتمد على الأحمر مقابل الأخضر غير مقروء لشريحة حقيقية من مستخدميك.' },

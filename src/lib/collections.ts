@@ -56,7 +56,7 @@ export const COLLECTIONS: Collection[] = [
     // privacy tools" without moving any of them.
     slug: 'security',
     toolIds: [
-      'password-generator', 'password-strength', 'passphrase', 'jwt-decoder', 'cert-decoder', 'steganography',
+      'password-generator', 'password-strength', 'jwt-decoder', 'cert-decoder', 'steganography',
     ],
   },
 ]

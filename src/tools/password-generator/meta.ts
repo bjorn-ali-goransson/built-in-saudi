@@ -7,7 +7,7 @@ export const passwordGeneratorTool: Tool = {
   name: 'Password Generator',
   tagline: 'Strong, memorable passwords — generated locally.',
   description:
-    'Create strong random passwords and passphrases entirely in your browser. Tune length and character sets, or generate a memorable word-based passphrase — with a live strength estimate. Nothing is ever sent anywhere.',
+    'Create strong random passwords and passphrases entirely in your browser. Tune length and character sets, or generate a memorable passphrase from the diceware wordlists in English or Arabic — or roll real dice for it, so the randomness comes from your hand — with a live strength estimate. Nothing is ever sent anywhere.',
   category: 'Generators',
   // The Arabic side was one word — 'كلمة المرور' — while the strength checker
   // had 'قوة' and 'قوية' added during the evaluative-words fix. So «كلمة مرور
@@ -22,7 +22,10 @@ export const passwordGeneratorTool: Tool = {
     // The phrase still leads here because earlier keywords score higher.
     'كلمة مرور قوية', 'كلمة المرور', 'قوية', 'إنشاء كلمة مرور', 'مولد كلمات المرور', 'عشوائية', 'آمنة',
     'password', 'passphrase', 'random', 'secure', 'generator',
+    // Merged in from the Passphrase Generator (November 2026).
+    'diceware', 'dice', 'memorable', 'عبارة مرور', 'نرد',
   ],
+  aliases: ['Passphrase Generator', 'مولّد عبارات المرور'],
   status: 'stable',
   Icon: KeyIcon,
   component: lazyTool(() => import('./PasswordGeneratorTool')),
@@ -30,6 +33,6 @@ export const passwordGeneratorTool: Tool = {
     name: 'مولّد كلمة المرور',
     tagline: 'كلمات مرور قوية تُنشأ محليًا على جهازك.',
     description:
-      'أنشئ كلمات مرور وعبارات مرور قوية وعشوائية بالكامل داخل متصفحك. تحكّم في الطول ومجموعات الأحرف، أو أنشئ عبارة مرور سهلة التذكّر مبنية على كلمات — مع تقدير فوري للقوة. لا يُرسل أي شيء إلى أي مكان.',
+      'أنشئ كلمات مرور وعبارات مرور قوية وعشوائية بالكامل داخل متصفحك. تحكّم في الطول ومجموعات الأحرف، أو أنشئ عبارة مرور سهلة التذكّر من قوائم كلمات النرد بالعربية أو الإنجليزية — أو ارمِ نردًا حقيقيًا لتأتي العشوائية من يدك — مع تقدير فوري للقوة. لا يُرسل أي شيء إلى أي مكان.',
   },
 }

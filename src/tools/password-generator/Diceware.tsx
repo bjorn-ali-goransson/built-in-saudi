@@ -84,7 +84,12 @@ function humanTime(bits: number, locale: 'en' | 'ar'): string {
   return ar ? `${Math.round(n).toLocaleString('ar')} سنة` : `${Math.round(n)} years`
 }
 
-export default function PassphraseTool() {
+/**
+ * Diceware: a passphrase whose randomness comes from dice in your hand. This
+ * was the separate Passphrase app until November 2026; it is the generator's
+ * third mode now, and opens on the dice.
+ */
+export default function Diceware() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [listId, setListId] = useState<ListId>(locale === 'ar' ? 'ar' : 'en')
@@ -92,7 +97,7 @@ export default function PassphraseTool() {
   const [separator, setSeparator] = useState('-')
   const [capitalise, setCapitalise] = useState(false)
   const [number, setNumber] = useState(false)
-  const [source, setSource] = useState<'device' | 'dice'>('device')
+  const [source, setSource] = useState<'device' | 'dice'>('dice')
   const [words, setWords] = useState<string[]>([])
   const [rolls, setRolls] = useState('')
   const [rollError, setRollError] = useState('')

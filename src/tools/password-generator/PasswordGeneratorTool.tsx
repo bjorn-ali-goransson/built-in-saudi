@@ -5,10 +5,11 @@ import {
   generatePassword, generatePassphrase, passwordEntropy, phraseEntropy,
   strength, type Strength,
 } from './build'
-import { WORDS } from './words'
+import { LISTS, type ListId } from './wordlist'
+import Diceware from './Diceware'
 import { Button, Seg, SegButton, Field, Input, Select, Check } from '../../components/ui'
 
-type Mode = 'password' | 'passphrase'
+type Mode = 'password' | 'passphrase' | 'dice'
 
 /** The most a batch may be. Ten thousand sixteen-character passwords is ~17ms
  *  of generation and ~200KB of text, so the ceiling is a product decision
@@ -24,7 +25,7 @@ const PREVIEW = 100
 
 const STR = {
   en: {
-    password: 'Password', passphrase: 'Passphrase',
+    password: 'Password', passphrase: 'Passphrase', dice: 'With dice', list: 'Wordlist',
     length: 'Length', lowercase: 'Lowercase', uppercase: 'Uppercase',
     digits: 'Digits', symbols: 'Symbols', excludeAmbiguous: 'Exclude look-alikes (I l 1 O 0 o)',
     words: 'Words', separator: 'Separator', capitalize: 'Capitalize', addNumber: 'Add a number',
@@ -45,7 +46,7 @@ const STR = {
     sepDash: 'Dash (-)', sepSpace: 'Space', sepDot: 'Dot (.)',
   },
   ar: {
-    password: 'كلمة مرور', passphrase: 'عبارة مرور',
+    password: 'كلمة مرور', passphrase: 'عبارة مرور', dice: 'بالنرد', list: 'قائمة الكلمات',
     length: 'الطول', lowercase: 'أحرف صغيرة', uppercase: 'أحرف كبيرة',
     digits: 'أرقام', symbols: 'رموز', excludeAmbiguous: 'استبعاد المتشابهة (I l 1 O 0 o)',
     words: 'عدد الكلمات', separator: 'الفاصل', capitalize: 'حرف أول كبير', addNumber: 'إضافة رقم',
@@ -88,6 +89,10 @@ export default function PasswordGeneratorTool() {
 
   const [words, setWords] = useState(4)
   const [separator, setSeparator] = useState('-')
+  // The diceware lists (1,296 English words, 216 Arabic), not a short list of
+  // 128: at 10.3 bits a word four words are 41 bits, where 128 words gave 28.
+  const [listId, setListId] = useState<ListId>(locale === 'ar' ? 'ar' : 'en')
+  const WORDS = LISTS[listId].words as readonly string[] as string[]
   const [capitalize, setCapitalize] = useState(true)
   const [addNumber, setAddNumber] = useState(true)
 
@@ -113,7 +118,7 @@ export default function PasswordGeneratorTool() {
       ? generatePassword(pwOpts)
       : generatePassphrase(phraseOpts, WORDS)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, length, lower, upper, digits, symbols, excludeAmbiguous, words, separator, capitalize, addNumber],
+    [mode, length, lower, upper, digits, symbols, excludeAmbiguous, words, separator, capitalize, addNumber, listId],
   )
 
   const generate = useCallback(() => {
@@ -185,6 +190,7 @@ export default function PasswordGeneratorTool() {
 
   return (
     <div className="flex flex-col gap-[1.3rem]" data-testid="password-generator">
+      {mode !== 'dice' && (
       <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md p-[1.2rem]" data-testid="pw-output-wrap">
         <label className="text-[0.82rem] font-semibold text-ink-soft tracking-[0.01em]" htmlFor="pw-output">
           {many ? s.outputMany : s.output}
@@ -254,17 +260,18 @@ export default function PasswordGeneratorTool() {
           </div>
         )}
       </div>
+      )}
 
       <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.3rem] grid gap-[1.1rem]">
         <Seg role="group" aria-label={s.strength}>
-          {(['password', 'passphrase'] as Mode[]).map((m) => (
+          {(['password', 'passphrase', 'dice'] as Mode[]).map((m) => (
             <SegButton key={m} active={mode === m}
               aria-pressed={mode === m} data-testid={`pw-mode-${m}`}
               onClick={() => setMode(m)}>{s[m]}</SegButton>
           ))}
         </Seg>
 
-        {mode === 'password' ? (
+        {mode === 'dice' ? <Diceware /> : mode === 'password' ? (
           <>
             <div className={CONTROL}>
               <label htmlFor="pw-length">{s.length} <span className="text-ink-faint font-medium">{num(length)}</span></label>
@@ -288,6 +295,13 @@ export default function PasswordGeneratorTool() {
                 data-testid="pw-words" aria-label={s.words}
                 onChange={(e) => setWords(Number(e.target.value))} />
             </div>
+            <Field label={s.list}>
+              <Select value={listId} data-testid="pw-list-words" aria-label={s.list} onChange={(e) => setListId(e.target.value as ListId)}>
+                {(Object.keys(LISTS) as ListId[]).map((id) => (
+                  <option key={id} value={id}>{LISTS[id].label[locale]} · {LISTS[id].words.length.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</option>
+                ))}
+              </Select>
+            </Field>
             <Field label={s.separator}>
               <Select value={separator} data-testid="pw-separator"
                 aria-label={s.separator} onChange={(e) => setSeparator(e.target.value)}>
@@ -306,6 +320,7 @@ export default function PasswordGeneratorTool() {
         {/* A number field rather than a slider: the useful values here are 1,
             and then whatever somebody was actually asked for — 250 seats, 1,000
             vouchers — and no slider from 1 to 10,000 can be aimed at those. */}
+        {mode !== 'dice' && (
         <Field label={s.count}>
           <Input type="number" inputMode="numeric" min={1} max={MAX_COUNT} value={count}
             data-testid="pw-count" aria-label={s.count}
@@ -318,6 +333,7 @@ export default function PasswordGeneratorTool() {
               setCount(Number.isFinite(n) && n > 0 ? Math.min(n, MAX_COUNT) : 1)
             }} />
         </Field>
+        )}
       </div>
 
       <p className="text-[0.8rem] text-ink-faint flex items-center gap-[0.4rem]"><span aria-hidden="true">🔒</span> {s.privacy}</p>

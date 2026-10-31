@@ -31,7 +31,7 @@ test('the tools are in the CURATED order, not registry order', async ({ page }) 
   await page.goto('/en/c/security/')
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(ids.slice(0, 4)).toEqual(['password-generator', 'password-strength', 'passphrase', 'jwt-decoder'])
+  expect(ids.slice(0, 4)).toEqual(['password-generator', 'password-strength', 'jwt-decoder', 'cert-decoder'])
 })
 
 test('a collection pulls from several DIFFERENT categories', async ({ page }) => {
