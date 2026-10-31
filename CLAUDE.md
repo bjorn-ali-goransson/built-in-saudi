@@ -6951,7 +6951,9 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   SDP only) in an ephemeral Firestore `callRooms/{code}` doc (2h TTL, polled); it
   **never sees names, audio/video/whiteboard/chat/files** — all of those flow
   directly peer-to-peer. No auth (public by random code), no per-user storage (so
-  `my-data` untouched). STUN is public; **no TURN** (strict NATs can't connect).
+  `my-data` untouched). **It also serves Sawi Kalam** (`sawikalam.com`, a sibling app built
+  from this Calls/Messages code): its CORS allows both domains. Changing the
+  wire protocol breaks that app too, so treat it as shared. STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
   **Knock visibility (#217):** the ONLY admit control used to live inside the

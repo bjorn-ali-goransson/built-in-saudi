@@ -19,7 +19,10 @@ const SITE = 'https://built-in-saudi.com'
 
 function cors(req, res) {
   const origin = (req.headers && req.headers.origin) || ''
-  const ok = /^https:\/\/([a-z0-9-]+\.)?built-in-saudi\.com$/.test(origin)
+  // Sawi Kalam (sawikalam.com) is a sibling app built from the same Calls and
+  // Messages code and shares this relay. The push links below still point at
+  // built-in-saudi; they need a per-app origin before Sawi Kalam uses push.
+  const ok = /^https:\/\/([a-z0-9-]+\.)?(built-in-saudi|sawikalam)\.com$/.test(origin)
   res.set('Access-Control-Allow-Origin', ok ? origin : SITE)
   res.set('Vary', 'Origin')
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
