@@ -42,15 +42,3 @@ test.describe('csv merge', () => {
   const B = 'id,city\n1,Riyadh\n2,Jeddah\n9,Dammam'
 })
 
-test.describe('video to gif', () => {
-  test('explains the shared-palette choice up front', async ({ page }) => {
-    await page.goto('/en/apps/video-gif')
-    await expect(page.getByText(/All frames share one palette/)).toBeVisible()
-  })
-
-  test('a file with no playable video is reported', async ({ page }) => {
-    await page.goto('/en/apps/video-gif')
-    await page.getByTestId('vg-file').setInputFiles({ name: 'x.bin', mimeType: '', buffer: Buffer.from('not a video') })
-    await expect(page.getByTestId('file-error')).toBeVisible({ timeout: 15_000 })
-  })
-})

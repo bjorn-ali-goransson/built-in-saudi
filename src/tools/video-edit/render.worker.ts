@@ -1,7 +1,7 @@
 // Decode → draw → encode → mux, off the main thread (#154).
 //
 // Everything else in the video family deliberately avoids re-encoding:
-// `video-trim` copies compressed samples, `video-frames` grabs one picture.
+// `video-trim` copies compressed samples, a still is one frame of this same picture.
 // Cropping, joining and captioning cannot: all three change what is IN the
 // picture, so the frames have to be decoded, redrawn and encoded again. That is
 // the line this tool crosses and the reason it is the only one here that costs
@@ -28,6 +28,8 @@ import { decoderDescription, demuxVideo, type AnyDemuxed as Demuxed } from '../.
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
 import { avcCBox, codecFor, smallest, uprightFrame } from '../../lib/mp4Encode'
 import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from '../../lib/frameCompose'
+import { drawStabilised } from '../../lib/motion'
+import { correctionAt, type Steady } from '../../lib/steady'
 
 export interface AudioInfo {
   codec: string
@@ -123,6 +125,12 @@ export interface RenderPlan {
    */
   overlays: PlanLayer[]
   censors: Censor[]
+  /**
+   * Aligned with `slots`: how to steady each clip, or null to leave it as
+   * recorded. Applied to the frame BEFORE the crop, exactly as the page's
+   * preview does, so the boxes and captions land on the same picture.
+   */
+  steady?: (Steady | null)[]
 }
 
 export type Req =
@@ -296,14 +304,17 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
   let lastKeyAt = -Infinity
   let lastTs = -1
 
-  for (const clip of clips) {
+  for (const [ci, clip] of clips.entries()) {
     const v = clip.video
+    const steady = plan.steady?.[ci] ?? null
     const base = smallest(v.samples, (s) => s.cts) / v.timescale
     const coded = { width: v.width ?? plan.out.width, height: v.height ?? plan.out.height }
     const source = displaySize(coded, v.rotation)
     // Turned ONCE as it leaves the decoder, so `compose.ts` receives the picture
     // the stage showed rather than the frame the file stores.
     const upright = v.rotation === 0 ? null : new OffscreenCanvas(source.width, source.height)
+    const steadied = steady ? new OffscreenCanvas(source.width, source.height) : null
+    const steadyCtx = steadied?.getContext('2d') ?? null
     let first = true
 
     const decoder = new VideoDecoder({
@@ -318,7 +329,12 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
           // a copy mid-GOP.
           if (at < clip.from - 1e-6 || at >= clip.to - 1e-6) return
           const tOut = offsetSec + at - clip.from
-          drawFrame(ctx, upright ? uprightFrame(frame, v.rotation, upright) : frame, source, plan.crop, plan.out)
+          let picture: CanvasImageSource = upright ? uprightFrame(frame, v.rotation, upright) : frame
+          if (steady && steadied && steadyCtx) {
+            drawStabilised(steadyCtx, picture, source, correctionAt(steady, at), steady.zoom, source)
+            picture = steadied
+          }
+          drawFrame(ctx, picture, source, plan.crop, plan.out)
           // Censors go on the PICTURE, before the captions — a caption is
           // something you chose to show, and hiding it under a black box that
           // was aimed at a face behind it would be the wrong way round.

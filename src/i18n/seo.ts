@@ -474,11 +474,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مولّد الشهادات', description: 'أنشئ شهادات إتمام أو مشاركة لقائمة كاملة دفعة واحدة — الصق الأسماء، واضبط النص وسطور التوقيع، ونزّل كل الصفحات في ملف PDF واحد. وتظهر الأسماء العربية واللاتينية بشكل صحيح، حتى مختلطة في قائمة واحدة.' },
   },
   {
-    id: 'video-gif',
-    en: { name: 'Video to GIF', description: 'Turn a clip into an animated GIF without uploading it anywhere. Choose the start, length, frame rate, width and colour count. All frames share one palette so the animation does not flicker the way cheap converters make it, and it tells you when the file has grown past the point anyone will wait for it.' },
-    ar: { name: 'تحويل الفيديو إلى صورة متحركة', description: 'حوّل مقطعًا إلى صورة GIF متحركة دون رفعه. اختر البداية والمدة ومعدّل الإطارات والعرض وعدد الألوان. وتتشارك كل الإطارات لوحة ألوان واحدة فلا ترتجف الحركة كما تفعل المحوّلات الرديئة، وتنبّهك حين يتجاوز الحجم ما يصبر عليه أحد.' },
-  },
-  {
     id: 'hijri-age',
     en: { name: 'Hijri Age Calculator', description: 'Enter a date of birth in either calendar and get your exact age in both — years, months and days, total days lived, and your next Hijri birthday. A Hijri year is about 354 days, so a Hijri age runs ahead by roughly a year every 33, which is why subtracting year numbers gives the wrong answer.' },
     ar: { name: 'حاسبة العمر الهجري', description: 'أدخل تاريخ ميلادك بأي من التقويمين لتحصل على عمرك الدقيق بهما — بالسنوات والأشهر والأيام، ومجموع الأيام، وميلادك الهجري القادم. السنة الهجرية نحو ٣٥٤ يومًا، لذا يسبق العمر الهجري بنحو سنة كل ٣٣، ولهذا يعطي طرح أرقام السنوات نتيجة خاطئة.' },
@@ -584,11 +579,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'محرّر الفيديو', description: 'اقتصّ الفيديو بالشكل الذي تطلبه المنصّة، وادمج عدة مقاطع واحدًا تلو الآخر، وضع نصًّا فوقها — كل ذلك داخل متصفحك دون رفع شيء. وتريك الأداة ثمن الاقتصاص قبل أن تلتزم به: الانتقال من تسجيل ١٦:٩ إلى منشور ٩:١٦ يُبقي أقلّ من ثلث الصورة، وما صوّرته نادرًا ما يكون في وسط ما تبقّى، فتسحب لتختار. وتُرسم النصوص بخطوط هذه الصفحة نفسها، فتتصل الحروف العربية وتجري من اليمين إلى اليسار، والمعاينة هي المُخرَج لا تقريبٌ له. ويمكنك أيضًا رسم مربّع فوق ما لا ينبغي أن يظهر — وجه أو لوحة سيارة أو اسم على شاشة — ولكل مربّع إعداداته: بكسلة أو حجب كامل أو تمويه، وإلى جانبها ثمن هذا الاختيار. فبكسلة الفيديو تعيد التفاصيل — شبكة البكسلة تثبت بينما يتحرك من تخفيه خلالها، و٦٤ إطارًا من ذلك تستردّ ٩٨٫٦٪ من لوحة السيارة — والحجب الكامل على بُعد نقرة. ويُنسخ الصوت كما هو دون إعادة ترميز فلا يفقد شيئًا.' },
   },
   {
-    id: 'video-stabilize',
-    en: { name: 'Video Stabilizer', description: 'Handheld video shakes, and every tool that fixes it wants your file on somebody else’s server first. This measures how the camera actually moved — a grid of points tracked from frame to frame, so a person walking through the shot does not drag the estimate after them — smooths that path, and slides each frame back under it. What it will not do is pretend the correction is free: sliding a frame back means its far edge slides out of the picture, so a stabiliser always crops, and this one works out how much from YOUR clip and shows the figure before you commit rather than making you pick a percentage in advance. One slider re-prices the trade instantly, because the clip is only measured once. It can also hold a moving SUBJECT in the middle instead of the camera: drag a box around it, and the frame follows it — which costs far more picture, and the figure says how much before you commit. The sound is copied across untouched rather than re-encoded, so it loses nothing.' },
-    ar: { name: 'تثبيت الفيديو', description: 'الفيديو المصوَّر باليد يهتزّ، وكل أداة تعالج ذلك تريد ملفك على خادم غيرك أولًا. أما هنا فتُقاس حركة الكاميرا فعليًّا — شبكة من النقاط تُتتبَّع من إطار إلى إطار، فلا يجرّ عابرٌ في المشهد التقديرَ خلفه — ثم يُنعَّم المسار وتُزحزح الإطارات لتعود تحته. وما لا تدّعيه الأداة أن التصحيح مجّاني: فإزاحة الإطار تُخرج طرفه البعيد من الصورة، ولذلك يقتصّ كل مثبِّت، وهذا يحسب المقدار من مقطعك أنت ويعرضه قبل أن تلتزم به بدل أن يطلب منك نسبةً مسبقة. ويُعاد التسعير فورًا عند تحريك المؤشر، لأن المقطع يُقاس مرة واحدة. وتستطيع الأداة كذلك تثبيت هدف متحرك في المنتصف بدل الكاميرا: ارسم مربّعًا حوله فيتبعه الإطار — وهذا يكلّف من الصورة أكثر بكثير، والرقم يقول كم قبل أن تلتزم. ويُنسخ الصوت كما هو دون إعادة ترميز فلا يفقد شيئًا.' },
-  },
-  {
     id: 'arabic-handwriting',
     en: { name: 'Arabic Handwriting Sheets', description: 'Printable Arabic handwriting practice — every letter in all four of its positional forms (alone, at the start, in the middle, at the end), or any word or name you type. The letters are shaped and joined properly, which is the thing generic worksheet sites get wrong when they print 28 isolated glyphs a child will never meet in a word. Ruled guide lines, faded or dotted tracing, and as many rows as you want.' },
     ar: { name: 'كراسة الخط العربي', description: 'أوراق تدريب على الخط العربي قابلة للطباعة — كل حرف في مواضعه الأربعة (مفردًا، وأول الكلمة، ووسطها، وآخرها)، أو أي كلمة أو اسم تكتبه. والحروف تُشكَّل وتُوصَل على وجهها الصحيح، وهو ما تخطئ فيه مواقع أوراق العمل العامة حين تطبع ٢٨ شكلًا مفردًا لا يلقاها الطفل في كلمة قط. مع أسطر مسطّرة، وتتبّع باهت أو منقّط، وعدد الأسطر الذي تريد.' },
@@ -632,11 +622,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'pdf-ocr',
     en: { name: 'PDF to Text', description: 'Copy the text out of any PDF, in your browser. A PDF with real text is read exactly and at once; a scanned contract, a stamped letter, a photocopied receipt — a PDF that is really a picture, so nothing can be selected or searched. This reads the letters off each page and hands you the text, in English or Arabic. Pages that already carry real text are taken as they are rather than guessed at. The engine runs in your browser: the scan never leaves your device.' },
     ar: { name: 'PDF إلى نص', description: 'انسخ النص من أي ملف PDF داخل متصفحك. يُقرأ الملف ذو النص الحقيقي بدقة وفورًا؛ أما العقد الممسوح، أو خطاب مختوم، أو إيصال مصوَّر — ملف PDF هو في الحقيقة صورة، فلا يمكن تحديد شيء فيه ولا البحث. تقرأ هذه الأداة الحروف من كل صفحة وتسلّمك النص، بالعربية أو الإنجليزية. ويعمل المحرك في متصفحك: فلا يغادر المستند جهازك.' },
-  },
-  {
-    id: 'video-frames',
-    en: { name: 'Video to Image', description: 'Scrub to the moment you want and save it as a PNG, JPG or WebP — a thumbnail, a poster frame, or the one shot you needed out of a long clip. Or take one frame every few seconds and download the lot as a zip. The video is read by your own browser and never uploaded, which is the whole difference from the sites that ask for the file first. A browser seeks to the nearest frame it can decode by itself, so the frame is shown before you save it.' },
-    ar: { name: 'لقطة من الفيديو', description: 'انتقل إلى اللحظة التي تريدها واحفظها بصيغة PNG أو JPG أو WebP — مصغّرة أو لقطة غلاف أو الصورة الوحيدة التي احتجتها من مقطع طويل. أو خُذ لقطة كل بضع ثوانٍ ونزّلها كلها في ملف مضغوط. ويقرأ متصفحك الفيديو ولا يُرفع أبدًا. وتُعرض اللقطة قبل حفظها لأن المتصفح يقفز إلى أقرب لقطة يفك ترميزها وحدها.' },
   },
   {
     id: 'audio-convert',

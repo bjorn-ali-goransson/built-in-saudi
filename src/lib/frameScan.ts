@@ -2,7 +2,7 @@
 // forget it — plus the two measuring passes built on that loop.
 //
 // EXTRACTED AT THE SECOND CALLER, which is the only reason it exists. It was
-// `scanFrames`/`analyse`/`track` inside `video-stabilize/stabilize.worker.ts`,
+// `scanFrames`/`analyse`/`track` inside the old Video Stabilizer's worker,
 // and `video-edit` now needs exactly the same three things so a censor box can
 // follow the face it was drawn over. Copying them would have given the two
 // tools slightly different decode, backpressure, luma conversion and failure

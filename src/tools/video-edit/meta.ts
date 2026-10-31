@@ -6,9 +6,9 @@ export const videoEditTool: Tool = {
   id: 'video-edit',
   name: 'Video Editor',
   nameAr: 'محرّر الفيديو',
-  tagline: 'Crop, join, caption and censor a clip — on your device.',
+  tagline: 'Cut, crop, join, caption, censor and steady a clip — on your device.',
   description:
-    'Crop a video to the shape a platform wants, join a few clips end to end, and put a caption on top — all in your browser, with nothing uploaded. It shows you what a crop costs before you commit to it: going from a 16:9 recording to a 9:16 post keeps under a third of the picture, and whatever you filmed is rarely in the middle of what is left, so you drag to choose. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left, and the preview is the export rather than an approximation of it. You can also draw a box over anything that should not be in the picture — a face, a plate, a name on a screen — and each box carries its own settings: pixelate, solid or blur, with what that choice costs written next to it. Pixelating a video gives the detail back — the mosaic grid stays still while your subject moves through it, and 64 frames of that recover 98.6% of a number plate — so solid is one tap away. The sound is copied across untouched rather than re-encoded, so it loses nothing.',
+    'Crop a video to the shape a platform wants, join a few clips end to end, and put a caption on top — all in your browser, with nothing uploaded. It shows you what a crop costs before you commit to it: going from a 16:9 recording to a 9:16 post keeps under a third of the picture, and whatever you filmed is rarely in the middle of what is left, so you drag to choose. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left, and the preview is the export rather than an approximation of it. You can also draw a box over anything that should not be in the picture — a face, a plate, a name on a screen — and each box carries its own settings: pixelate, solid or blur, with what that choice costs written next to it. Pixelating a video gives the detail back — the mosaic grid stays still while your subject moves through it, and 64 frames of that recover 98.6% of a number plate — so solid is one tap away. The sound is copied across untouched rather than re-encoded, so it loses nothing. A shaky clip can be steadied, with the share of the picture that costs shown as you choose, and the result saved as an MP4, an animated GIF, or the frame on screen as a picture.',
   category: 'Files',
   keywords: [
     // Merged in November 2026 from the tools this one replaced.
@@ -47,6 +47,14 @@ export const videoEditTool: Tool = {
     'أبعاد الفيديو', 'مقاس الفيديو', 'بدون علامة مائية', 'دون رفع',
     'طمس وجه في فيديو', 'تمويه فيديو', 'إخفاء وجه في مقطع', 'حجب جزء من الفيديو',
     'تمويه لوحة السيارة', 'بكسلة فيديو',
+    // Merged in from Video to GIF, Video to Image and the Video Stabilizer.
+    // Video-qualified, so a bare 'gif' or 'image' stays with the tools that own it.
+    'video to gif', 'mp4 to gif', 'make a gif from a video', 'gif from video',
+    'video to image', 'video frame', 'grab a frame', 'still from video', 'screenshot from video',
+    'thumbnail from video', 'video to png', 'video to jpg', 'mp4 to jpg', 'mp4 to image', 'freeze frame',
+    'video stabilizer', 'video stabiliser', 'stabilize video', 'stabilise video', 'video stabilization',
+    'shaky video', 'shaky footage', 'my video is shaky', 'camera shake', 'steady a video',
+    'فيديو إلى صورة متحركة', 'فيديو إلى جيف', 'لقطة من الفيديو', 'صورة من فيديو', 'تثبيت الفيديو', 'فيديو مهتز',
   ],
   // NOT beta, and that is this repo's own rule rather than a downgrade in
   // confidence. The badge here means "this figure can go stale WITHOUT anyone
@@ -62,6 +70,6 @@ export const videoEditTool: Tool = {
     name: 'محرّر الفيديو',
     tagline: 'اقتصّ المقاطع وادمجها وضع عليها نصًّا واحجب ما تريد — على جهازك.',
     description:
-      'اقتصّ الفيديو بالشكل الذي تطلبه المنصّة، وادمج عدة مقاطع واحدًا تلو الآخر، وضع نصًّا فوقها — كل ذلك داخل متصفحك دون رفع شيء. وتريك الأداة ثمن الاقتصاص قبل أن تلتزم به: الانتقال من تسجيل ١٦:٩ إلى منشور ٩:١٦ يُبقي أقلّ من ثلث الصورة، وما صوّرته نادرًا ما يكون في وسط ما تبقّى، فتسحب لتختار. وتُرسم النصوص بخطوط هذه الصفحة نفسها، فتتصل الحروف العربية وتجري من اليمين إلى اليسار، والمعاينة هي المُخرَج لا تقريبٌ له. ويمكنك أيضًا رسم مربّع فوق ما لا ينبغي أن يظهر — وجه أو لوحة سيارة أو اسم على شاشة — ولكل مربّع إعداداته: بكسلة أو حجب كامل أو تمويه، وإلى جانبها ثمن هذا الاختيار. فبكسلة الفيديو تعيد التفاصيل — شبكة البكسلة تثبت بينما يتحرك من تخفيه خلالها، و٦٤ إطارًا من ذلك تستردّ ٩٨٫٦٪ من لوحة السيارة — والحجب الكامل على بُعد نقرة. ويُنسخ الصوت كما هو دون إعادة ترميز فلا يفقد شيئًا.',
+      'اقتصّ الفيديو بالشكل الذي تطلبه المنصّة، وادمج عدة مقاطع واحدًا تلو الآخر، وضع نصًّا فوقها — كل ذلك داخل متصفحك دون رفع شيء. وتريك الأداة ثمن الاقتصاص قبل أن تلتزم به: الانتقال من تسجيل ١٦:٩ إلى منشور ٩:١٦ يُبقي أقلّ من ثلث الصورة، وما صوّرته نادرًا ما يكون في وسط ما تبقّى، فتسحب لتختار. وتُرسم النصوص بخطوط هذه الصفحة نفسها، فتتصل الحروف العربية وتجري من اليمين إلى اليسار، والمعاينة هي المُخرَج لا تقريبٌ له. ويمكنك أيضًا رسم مربّع فوق ما لا ينبغي أن يظهر — وجه أو لوحة سيارة أو اسم على شاشة — ولكل مربّع إعداداته: بكسلة أو حجب كامل أو تمويه، وإلى جانبها ثمن هذا الاختيار. فبكسلة الفيديو تعيد التفاصيل — شبكة البكسلة تثبت بينما يتحرك من تخفيه خلالها، و٦٤ إطارًا من ذلك تستردّ ٩٨٫٦٪ من لوحة السيارة — والحجب الكامل على بُعد نقرة. ويُنسخ الصوت كما هو دون إعادة ترميز فلا يفقد شيئًا. ويمكنك تثبيت المقطع المهتز مع عرض ما يكلّفه ذلك من الصورة، وحفظ النتيجة فيديو MP4 أو صورة متحركة GIF أو الإطار الظاهر صورةً.',
   },
 }

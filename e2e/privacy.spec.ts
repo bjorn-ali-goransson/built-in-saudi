@@ -210,7 +210,6 @@ export const CASES: Case[] = [
   { id: 'powerpoint-editor', testid: 'office-file-input', name: 'talk.md', mime: 'text/markdown', make: () => Buffer.from(`# Talk\n\n---\n\n# Point\n- ${TOKEN}\n`) },
   { id: 'audio-spectrum', testid: 'as-file', name: 'clip.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
   { id: 'audio-convert', testid: 'ac-file', name: 'note.wav', mime: 'audio/wav', make: () => wavWithToken(TOKEN) },
-  { id: 'video-frames', testid: 'vf-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
 
   // --- Second batch off the UNVERIFIED list. These twenty reach the input
   // through the dropzone that wraps it, which is what let the batch be this
@@ -231,7 +230,6 @@ export const CASES: Case[] = [
 ${TOKEN}
 -----END CERTIFICATE-----
 `) },
-  { id: 'video-gif', testid: 'vg-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   { id: 'video-edit', testid: 've-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   // Two intake paths since the scissors and the plus landed: the editor takes a
   // second picture to lay on the first, and a path that touches the reader's
@@ -243,7 +241,6 @@ ${TOKEN}
         .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: pngWithToken(TOKEN) })
       await expect(page.getByTestId('ie-piece-0')).toBeVisible({ timeout: 20_000 })
     } },
-  { id: 'video-stabilize', testid: 'vs-file', name: 'clip.mp4', mime: 'video/mp4', make: () => mp4WithToken(TOKEN) },
   // The file here is an OPTIONAL centre logo, not the tool's subject — but it
   // is still a file leaving the user's machine if anything went wrong.
   { id: 'qr-code', testid: 'qr-logo-file', name: 'logo.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },

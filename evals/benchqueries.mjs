@@ -84,7 +84,7 @@ export const BENCH_QUERIES = [
   // unfindable costs most: someone looking for "what is deducted from my
   // salary" will not browse a catalogue for it.
   ['stopwatch', 'stopwatch'],
-  ['video to image', 'video-frames'],
-  ['grab a frame from a video', 'video-frames'],
-  ['thumbnail from video', 'video-frames'],
+  ['video to image', 'video-edit'],
+  ['grab a frame from a video', 'video-edit'],
+  ['thumbnail from video', 'video-edit'],
 ]

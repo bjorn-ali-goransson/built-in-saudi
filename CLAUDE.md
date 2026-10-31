@@ -882,6 +882,16 @@ with a TypeScript-AST script (cases navigating to `/apps/<id>` or
 `/tools/<id>`, and table rows naming an id), and its output was read case by
 case for exactly that reason.
 
+**Then one app per job, starting with video (114 → 111).** Video to GIF and
+Video to Image became export formats of the editor (MP4 / GIF / the frame on
+screen as a PNG) and the stabiliser became a slider in it. Each export runs
+through the editor's own pipeline, so a GIF or a still carries the cut, crop,
+captions, censors and steadying — which is the point: the three apps could each
+do one of those things to a raw clip, and none of them to an edited one. A GIF
+is made by rendering the MP4 first and sampling it (≤480px, ≤10fps, ≤300
+frames) into `lib/gif.ts`; a still re-renders the captions at output size so it
+is sharp. The three ids redirect to `video-edit`.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`
@@ -2278,16 +2288,22 @@ outside — every privacy-first converter site lists audio and we did not.
   discard quality a second time. Stating it beats looking like a missing
   feature.
 
-## Steadying a shaky clip, and what that costs (`video-stabilize`)
+## Steadying a shaky clip, and what that costs (now inside `video-edit`)
 
-A SEPARATE APP rather than a fifth mode in the editor, and the reason is what
-the two tools are. Everything `video-edit` does is a decision somebody makes ON
-the picture, which is why it is a full-screen editor with its controls on the
-frame. Stabilising is one measurement, one choice about how hard, and one number
-saying what that costs — so it is an ordinary tool page. Burying it behind a
-mode would also have hidden it from everyone who arrives with the SYMPTOM
-(`my video is shaky`) and no interest in cropping, which is how held-out set #4
-says people actually type.
+**This was the separate Video Stabilizer until November 2026, and that call was
+reversed.** It was kept apart because stabilising is "one measurement, one
+choice and one number" rather than a decision made on the picture — true, and
+not worth a second app: somebody steadying a clip almost always also wants to
+cut or crop it, and two apps meant a download between them. It is the "Steady
+the shake" slider in the editor's settings now (`lib/steady.ts`). The editor
+was already measuring every clip's camera motion for censor boxes that follow,
+so steadying is that same measurement smoothed — no second decode. The
+steadied frame is the SOURCE: it is computed before the crop, the boxes and the
+captions, in the preview and in the worker alike, so nothing downstream
+changed, and a followed box's path goes through `steadyPoint` so it stays on
+the face. `e2e/video-edit-unified.spec.ts` measures the marker's jitter on the
+EXPORTED file against the source. The notes below are about the measurement
+and still hold.
 
 **The claim it is built on is that stabilising costs picture, and the amount is
 a property of YOUR clip.** Sliding a frame back under the output rectangle
@@ -3957,37 +3973,6 @@ at **0 dead ends** — a tool leaving changes the graph exactly as one arriving
 does. And `check-roadmap-counts` failed the build until the header and the
 Images row came down by one, which is the gate doing its job in the removal
 direction for the first time.
-
-## Taking a still out of a video (`video-frames`)
-
-No new dependency and no WebCodecs: a `<video>` element, a seek, and
-`drawImage` onto a canvas. `video-trim` needed mp4box because it rearranges
-compressed samples; grabbing a picture needs only what the browser already does
-to show you the video.
-
-- **Waiting for `seeked` is the whole trick, and it has a trap.** If
-  `currentTime` is already the requested value the event never fires again and
-  the promise hangs forever, so the wait short-circuits when it is already
-  there.
-- **The seek is NOT frame-exact, and the tool says so.** A browser seeks to the
-  nearest independently decodable frame, so on a video with widely spaced
-  keyframes you land a moment either side of the time you asked for. Claiming
-  millisecond accuracy would be a lie; the frame is shown before it is saved so
-  the choice can be nudged, and the limit is written down. Frame-exact would
-  need `VideoDecoder` — **which Safari has had since 16.4; that claim was wrong
-  for three years and is corrected under the video editor below.** Frame-exact
-  seeking is still unbuilt here; it is now a question of effort, not support.
-- **The filename carries the timestamp**, so several stills from one clip do not
-  overwrite each other in the downloads folder.
-- Named **Video to Image**, joining the site's X-to-Y family, and deliberately
-  NOT anything starting with "Frame" — `screenshot-frame` is a device-frame
-  beautifier and owns that word.
-
-**The privacy fixture is the real sample video with the token in a trailing
-`free` box.** An ISO-BMFF reader skips a box it does not recognise, so the video
-still plays and the bytes still carry a marker — the same discipline as the PNG
-`tEXt` and WAV `LIST/INFO` fixtures. A fixture the tool cannot open never
-reaches the code that could upload, and the case passes having tested nothing.
 
 ## Ten thousand passwords, and the two things a batch gets wrong (`password-generator`)
 

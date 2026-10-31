@@ -86,8 +86,6 @@ import { francoArabicTool } from './franco-arabic/meta'
 import { teamMakerTool } from './team-maker/meta'
 import { charFinderTool } from './char-finder/meta'
 import { hijriAgeTool } from './hijri-age/meta'
-import { videoGifTool } from './video-gif/meta'
-import { videoFramesTool } from './video-frames/meta'
 import { certificateTool } from './certificate/meta'
 import { passphraseTool } from './passphrase/meta'
 import { colourBlindTool } from './colour-blind/meta'
@@ -100,7 +98,6 @@ import { worksheetsTool } from './worksheets/meta'
 import { quizMakerTool } from './quiz-maker/meta'
 import { translateTool } from './translate/meta'
 import { videoEditTool } from './video-edit/meta'
-import { videoStabilizeTool } from './video-stabilize/meta'
 import { arabicHandwritingTool } from './arabic-handwriting/meta'
 import { khatmaTool } from './khatma/meta'
 import { certDecoderTool } from './cert-decoder/meta'
@@ -133,9 +130,6 @@ export const tools: Tool[] = [
   audioConvertTool,
   audioSpectrumTool,
   videoEditTool,
-  videoStabilizeTool,
-  videoGifTool,
-  videoFramesTool,
   currencyConverterTool,
   idExpiryTool,
   passwordGeneratorTool,

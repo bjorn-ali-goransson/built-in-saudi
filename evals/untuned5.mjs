@@ -50,11 +50,11 @@ export const UNTUNED5 = [
   ['csv to json', 'csv-json'],
 
   // --- audio and video -------------------------------------------------------
-  ['mp4 to gif', 'video-gif'],
+  ['mp4 to gif', 'video-edit'],
   ['.wav', 'audio-convert'],
   ['m4a to wav', 'audio-convert'],
   ['.srt', 'subtitle-editor'],
-  ['mp4 to jpg', 'video-frames'],
+  ['mp4 to jpg', 'video-edit'],
 
   // --- archives and binaries -------------------------------------------------
 

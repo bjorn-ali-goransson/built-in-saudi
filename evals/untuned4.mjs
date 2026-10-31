@@ -41,7 +41,7 @@ export const UNTUNED4 = [
   ['i need fake customers for a demo', 'fake-data'],
 
   // --- media -----------------------------------------------------------------
-  ['i want one still picture out of a video', 'video-frames'],
+  ['i want one still picture out of a video', 'video-edit'],
 
   // --- developer symptoms ----------------------------------------------------
   ['the api gave me a token i cannot read', 'jwt-decoder'],

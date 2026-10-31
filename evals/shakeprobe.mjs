@@ -3,7 +3,7 @@
 //
 //   node evals/shakeprobe.mjs
 //
-// `video-stabilize` corrects a recording by an amount it estimated itself, so
+// `video-edit` steadies a recording by an amount it estimated itself, so
 // every claim the tool makes — how much shake there was, how much picture the
 // correction costs — is downstream of one function being right. Nothing about a
 // wobbly output says which way it was wrong, and a browser test cannot tell a

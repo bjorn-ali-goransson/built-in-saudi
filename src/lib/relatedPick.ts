@@ -63,7 +63,6 @@ export const CLUSTERS: string[][] = [
   ['link-shortener', 'url-parser', 'url-encoder'],
   ['barcode', 'qr-reader'],
   ['csv-json', 'csv-vcard', 'excel-editor'],
-  ['video-edit', 'video-stabilize', 'video-gif', 'video-frames'],
 ]
 
 /** Curated partners for a tool, in the order they were written. */

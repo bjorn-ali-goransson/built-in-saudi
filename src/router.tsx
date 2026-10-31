@@ -78,6 +78,13 @@ export const router = createBrowserRouter([
       // MERGED tool redirects to the one that now does its job; a WITHDRAWN one
       // (it encoded a regulation, was a health calculator, or nobody used it)
       // redirects to the catalogue. scripts/check-retired.mjs reads these lines.
+      { path: 'apps/video-gif', element: <RenamedToolRedirect to="video-edit" /> },
+      { path: 'apps/video-frames', element: <RenamedToolRedirect to="video-edit" /> },
+      { path: 'apps/video-stabilize', element: <RenamedToolRedirect to="video-edit" /> },
+      // November 2026: the catalogue was cut from 244 tools to about 100. A
+      // MERGED tool redirects to the one that now does its job; a WITHDRAWN one
+      // (it encoded a regulation, was a health calculator, or nobody used it)
+      // redirects to the catalogue. scripts/check-retired.mjs reads these lines.
       { path: 'apps/docx-to-text', element: <RenamedToolRedirect to="word-editor" /> },
       { path: 'apps/docx-markdown', element: <RenamedToolRedirect to="word-editor" /> },
       { path: 'apps/markdown-docx', element: <RenamedToolRedirect to="word-editor" /> },

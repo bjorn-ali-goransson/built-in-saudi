@@ -14,7 +14,9 @@ import {
   projectPath, resizePath, shiftPath, SEGMENTS, thinPath, timeline,
   totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop, type Rect,
 } from '../../lib/frameCompose'
-import { TRACK_LOST, type Estimate } from '../../lib/motion'
+import { TRACK_LOST, drawStabilised, type Estimate } from '../../lib/motion'
+import { correctionAt, steadyKept, steadyPlan, steadyPoint, type Steady } from '../../lib/steady'
+import { encodeGif } from '../../lib/gif'
 import { renderCaption } from '../../lib/captionBitmap'
 import type { ProbeInfo, RenderPlan, Req, Res } from './render.worker'
 import type { Req as MotionReq, Res as MotionRes } from './motion.worker'
@@ -101,6 +103,15 @@ const STR = {
     quality: 'Quality',
     qualities: ['Smaller file', 'Normal', 'Sharper'],
     maxHeight: 'Largest side',
+    saveAs: 'Save as',
+    formats: { mp4: 'Video (MP4)', gif: 'Animated GIF', png: 'This frame (PNG)' },
+    gifNote: 'A GIF has no sound and few colours, and is made small: up to 480px across and 10 frames a second.',
+    pngNote: 'The picture on screen at the playhead, at the full output size, with everything you have added.',
+    steady: 'Steady the shake',
+    steadyOff: 'Off',
+    steadyKeeps: (p: number) => `Keeps ${p}% of the picture — steadying enlarges it so no frame shows its edge.`,
+    steadyMeasuring: 'Measuring the camera’s movement…',
+    steadyFailed: 'The camera’s movement could not be measured in this clip, so it cannot be steadied.',
     noUpscale: 'Never larger than the source: upscaling adds pixels and no detail.',
     audioCopied: 'The sound is copied across untouched — it is never re-encoded, so it loses nothing.',
     audioMixed: 'These clips store their sound differently, so it cannot be joined without re-encoding — which this browser cannot do. The export will be silent.',
@@ -190,6 +201,15 @@ const STR = {
     quality: 'الجودة',
     qualities: ['ملف أصغر', 'عادية', 'أوضح'],
     maxHeight: 'أطول ضلع',
+    saveAs: 'احفظ بصيغة',
+    formats: { mp4: 'فيديو (MP4)', gif: 'صورة متحركة GIF', png: 'هذا الإطار (PNG)' },
+    gifNote: 'صورة GIF بلا صوت وبألوان قليلة، وتُصنع صغيرة: حتى ٤٨٠ بكسل عرضًا و١٠ إطارات في الثانية.',
+    pngNote: 'الصورة الظاهرة عند مؤشر التشغيل، بحجم الإخراج الكامل، بكل ما أضفته.',
+    steady: 'ثبّت الاهتزاز',
+    steadyOff: 'إيقاف',
+    steadyKeeps: (p: number) => `يحتفظ بـ${p.toLocaleString('ar-SA')}٪ من الصورة — فالتثبيت يكبّرها حتى لا تظهر حافة أي إطار.`,
+    steadyMeasuring: 'جارٍ قياس حركة الكاميرا…',
+    steadyFailed: 'تعذّر قياس حركة الكاميرا في هذا المقطع، فلا يمكن تثبيته.',
     noUpscale: 'لا يتجاوز المصدر أبدًا: التكبير يضيف بكسلات ولا يضيف تفصيلًا.',
     audioCopied: 'يُنسخ الصوت كما هو دون إعادة ترميز، فلا يفقد شيئًا.',
     audioMixed: 'تخزّن هذه المقاطع صوتها بصيغ مختلفة، فلا يمكن دمجه دون إعادة ترميز، وهذا ما لا يقدر عليه هذا المتصفح. سيخرج المقطع صامتًا.',
@@ -348,6 +368,13 @@ export default function VideoEditTool() {
   const [boxPanel, setBoxPanel] = useState(false)
   const [quality, setQuality] = useState(1)
   const [maxHeight, setMaxHeight] = useState(1080)
+  /** What the export button makes: the video, a GIF of it, or the frame on screen. */
+  const [format, setFormat] = useState<'mp4' | 'gif' | 'png'>('mp4')
+  /**
+   * How hard to steady the camera, in seconds of movement counted as intent.
+   * 0 is off. This was the separate Video Stabilizer until November 2026.
+   */
+  const [steadySec, setSteadySec] = useState(0)
   /**
    * Does the FILE keep its sound?
    *
@@ -369,7 +396,7 @@ export default function VideoEditTool() {
   const [copied, setCopied] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
-  const [out, setOut] = useState<{ url: string; size: number; audio: string } | null>(null)
+  const [out, setOut] = useState<{ url: string; size: number; audio: string; ext: 'mp4' | 'gif' | 'png' } | null>(null)
 
   /**
    * What is known about each clip's movement, keyed by slot.
@@ -450,7 +477,7 @@ export default function VideoEditTool() {
   // A SECOND worker, so measuring a clip never queues behind an export and an
   // export never waits for a measurement. No dependencies on purpose: a cleanup
   // keyed on a changing value terminates the worker while it is still in use,
-  // which is the bug `video-stabilize` records having sat on "measuring" for
+  // which is the bug the old Video Stabilizer recorded having sat on "measuring" for
   // ever because of.
   useEffect(() => {
     const w = new Worker(new URL('./motion.worker.ts', import.meta.url), { type: 'module' })
@@ -625,20 +652,50 @@ export default function VideoEditTool() {
    * It also means a re-crop moves a followed box WITH the picture instead of
    * leaving it hanging over whatever now happens to be at those coordinates.
    */
+  /**
+   * How each clip is steadied, from the motion measured when it was opened.
+   * Changing the strength re-runs three array passes and no decode, which is
+   * what lets the cost (the share of the picture kept) be a live figure.
+   */
+  const steadyBySlot = useMemo(() => {
+    const m: Record<number, Steady | null> = {}
+    for (const c of clips) {
+      const a = analysis[c.slot]
+      m[c.slot] = a?.state === 'ready'
+        ? steadyPlan(a.steps, a.times, c.info.fps, steadySec, { width: c.info.width, height: c.info.height })
+        : null
+    }
+    return m
+  }, [clips, analysis, steadySec])
+  const steadyZoom = Math.max(1, ...Object.values(steadyBySlot).map((p) => p?.zoom ?? 1))
+
   const resolveCensor = useCallback((c: Censor): Censor => {
     if (!c.path) return c
     const i = clips.findIndex((x) => x.slot === c.path?.slot)
     const clip = clips[i]
     if (!clip) return c
+    // A followed box was measured in the RECORDED picture; steadying moves the
+    // picture, so the box is moved with it before the crop is applied.
+    const st = steadyBySlot[clip.slot]
+    const dim = { width: clip.info.width, height: clip.info.height }
+    const path = st ? {
+      ...c.path,
+      keys: c.path.keys.map((k) => {
+        const p = steadyPoint(st, k.t, (k.x + k.w / 2) * dim.width, (k.y + k.h / 2) * dim.height, dim)
+        const w = k.w * st.zoom
+        const h = k.h * st.zoom
+        return { ...k, x: p.x / dim.width - w / 2, y: p.y / dim.height - h / 2, w, h }
+      }),
+    } : c.path
     const keys = projectPath(
-      c.path,
+      path,
       { width: clip.info.width, height: clip.info.height },
       crop,
       trimOf(clip),
       spans[i]?.start ?? 0,
     )
     return keys.length ? { ...c, keys } : c
-  }, [clips, crop, trimOf, spans])
+  }, [clips, crop, trimOf, spans, steadyBySlot])
 
   const shownCensors = useMemo(() => censors.map(resolveCensor), [censors, resolveCensor])
 
@@ -803,68 +860,29 @@ export default function VideoEditTool() {
    */
   useEffect(() => {
     setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
-  }, [crop, censors, captions, overlays, trims, keepAudio, quality, maxHeight])
+  }, [crop, censors, captions, overlays, trims, keepAudio, quality, maxHeight, format, steadySec])
 
 
-  const paint = useCallback(() => {
-    const v = videoRef.current
-    const rc = stageRef.current
-    if (!v || !rc || !current || !v.videoWidth) return
-    // NOTHING TO DRAW IS NOT THE SAME AS DRAW NOTHING, and the difference is a
-    // black screen. Setting `rc.width` below CLEARS the canvas, and
-    // `drawImage` of a video with no decoded frame is a silent no-op — so a
-    // moment of idle, after which Chrome on Android drops the decoded frame
-    // while keeping the metadata (`videoWidth` intact, `readyState` back to 1),
-    // wiped the picture and drew nothing over it. The editor came back to a
-    // black rectangle with the boxes still on it, reported from a phone.
-    //
-    // Leaving the last good frame up is right on its own terms too: it is what
-    // was on screen, it is still what the export will contain, and a stale
-    // frame is a far smaller lie than a black one.
-    if (v.readyState < 2) return
-    const clip = { width: current.info.width, height: current.info.height }
-    const now = previewTime()
-
-    if (mode === 'crop') {
-      // The whole picture, at the clip's own shape, with everything outside the
-      // crop dimmed rather than gone. The rectangle's own outline is drawn by
-      // the DOM overlay, which is also what you drag.
-      const fit = Math.min(1, PREVIEW_MAX / Math.max(clip.width, clip.height))
-      const shown = {
-        width: Math.max(2, Math.round(clip.width * fit)),
-        height: Math.max(2, Math.round(clip.height * fit)),
-      }
-      rc.width = shown.width
-      rc.height = shown.height
-      const ctx = rc.getContext('2d')
-      if (!ctx) return
-      ctx.clearRect(0, 0, shown.width, shown.height)
-      ctx.drawImage(v, 0, 0, shown.width, shown.height)
-      const bx = Math.round(cropBox.x * shown.width)
-      const by = Math.round(cropBox.y * shown.height)
-      const bw = Math.round(cropBox.w * shown.width)
-      const bh = Math.round(cropBox.h * shown.height)
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'
-      ctx.fillRect(0, 0, shown.width, by)
-      ctx.fillRect(0, by + bh, shown.width, shown.height - by - bh)
-      ctx.fillRect(0, by, bx, bh)
-      ctx.fillRect(bx + bw, by, shown.width - bx - bw, bh)
-      return
-    }
-
-    const k = Math.min(1, PREVIEW_MAX / Math.max(size.width, size.height))
-    const shown = { width: Math.max(2, Math.round(size.width * k)), height: Math.max(2, Math.round(size.height * k)) }
-    rc.width = shown.width
-    rc.height = shown.height
-    const ctx = rc.getContext('2d')
-    if (!ctx) return
+  /**
+   * Everything on top of the frame, at any destination size: the stage calls it
+   * at preview size and the still export at output size, so a saved frame is
+   * the picture on screen and not a second rendering of it.
+   */
+  const composeOutput = useCallback((
+    ctx: CanvasRenderingContext2D,
+    picture: CanvasImageSource,
+    clip: { width: number; height: number },
+    shown: { width: number; height: number },
+    now: number,
+    live: boolean,
+  ) => {
     // The SAME functions the worker calls, with the same crop and the same
     // boxes. Only the destination size differs, and everything on top is placed
     // by the same ratio — so the stage IS the export at stage size, not a
     // second opinion about what the export will look like. THIS IS THE ONLY
     // VIEW: there is no separate result preview to disagree with it.
-    drawFrame(ctx, v, clip, crop, shown)
-    const d = drawingRef.current
+    drawFrame(ctx, picture, clip, crop, shown)
+    const d = live ? drawingRef.current : null
     // One key, like every box that is not following something.
     const inProgress: Censor | null = d
       ? { id: d.id, mode: d.mode, keys: [{ t: 0, x: d.x, y: d.y, w: d.w, h: d.h }], from: 0, to: duration }
@@ -886,7 +904,7 @@ export default function VideoEditTool() {
       // over its box in the same colour and size, so drawing the bitmap under
       // it too shows the words twice, offset by however far the two disagree
       // about wrapping. The field is the picture while it is open.
-      if (mode === 'text' && c.id === pickedCaption) continue
+      if (live && mode === 'text' && c.id === pickedCaption) continue
       const drawn = bitmaps.current.get(c.id)
       if (!drawn) continue
       // The rect the RENDER produced, not the caption's own box: a caption
@@ -895,7 +913,83 @@ export default function VideoEditTool() {
       const r = captionRect(drawn.rect, shown)
       ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
-  }, [current, crop, cropBox, mode, size, captions, overlays, shownCensors, previewTime, pickedCaption, duration])
+  }, [crop, captions, overlays, shownCensors, pickedCaption, duration, mode])
+
+  /**
+   * The frame on screen, steadied when steadying is on — drawn into a scratch
+   * canvas at the clip's own size, so the crop and every box downstream read it
+   * exactly as they read the raw frame.
+   */
+  const scratch = useRef<HTMLCanvasElement | null>(null)
+  const steadied = useCallback((v: HTMLVideoElement, clip: { width: number; height: number }): CanvasImageSource => {
+    const st = current ? steadyBySlot[current.slot] : null
+    if (!st) return v
+    const c = scratch.current ?? (scratch.current = document.createElement('canvas'))
+    if (c.width !== clip.width || c.height !== clip.height) { c.width = clip.width; c.height = clip.height }
+    const ctx = c.getContext('2d')
+    if (!ctx) return v
+    drawStabilised(ctx, v, clip, correctionAt(st, v.currentTime), st.zoom, clip)
+    return c
+  }, [current, steadyBySlot])
+
+  const paint = useCallback(() => {
+    const v = videoRef.current
+    const rc = stageRef.current
+    if (!v || !rc || !current || !v.videoWidth) return
+    // NOTHING TO DRAW IS NOT THE SAME AS DRAW NOTHING, and the difference is a
+    // black screen. Setting `rc.width` below CLEARS the canvas, and
+    // `drawImage` of a video with no decoded frame is a silent no-op — so a
+    // moment of idle, after which Chrome on Android drops the decoded frame
+    // while keeping the metadata (`videoWidth` intact, `readyState` back to 1),
+    // wiped the picture and drew nothing over it. The editor came back to a
+    // black rectangle with the boxes still on it, reported from a phone.
+    //
+    // Leaving the last good frame up is right on its own terms too: it is what
+    // was on screen, it is still what the export will contain, and a stale
+    // frame is a far smaller lie than a black one.
+    if (v.readyState < 2) return
+    const clip = { width: current.info.width, height: current.info.height }
+    const now = previewTime()
+    // The steadied picture is the SOURCE, in crop mode and out of it — the same
+    // place the export worker applies it, before the crop and everything on top.
+    const picture = steadied(v, clip)
+
+    if (mode === 'crop') {
+      // The whole picture, at the clip's own shape, with everything outside the
+      // crop dimmed rather than gone. The rectangle's own outline is drawn by
+      // the DOM overlay, which is also what you drag.
+      const fit = Math.min(1, PREVIEW_MAX / Math.max(clip.width, clip.height))
+      const shown = {
+        width: Math.max(2, Math.round(clip.width * fit)),
+        height: Math.max(2, Math.round(clip.height * fit)),
+      }
+      rc.width = shown.width
+      rc.height = shown.height
+      const ctx = rc.getContext('2d')
+      if (!ctx) return
+      ctx.clearRect(0, 0, shown.width, shown.height)
+      ctx.drawImage(picture, 0, 0, shown.width, shown.height)
+      const bx = Math.round(cropBox.x * shown.width)
+      const by = Math.round(cropBox.y * shown.height)
+      const bw = Math.round(cropBox.w * shown.width)
+      const bh = Math.round(cropBox.h * shown.height)
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'
+      ctx.fillRect(0, 0, shown.width, by)
+      ctx.fillRect(0, by + bh, shown.width, shown.height - by - bh)
+      ctx.fillRect(0, by, bx, bh)
+      ctx.fillRect(bx + bw, by, shown.width - bx - bw, bh)
+      return
+    }
+
+    const k = Math.min(1, PREVIEW_MAX / Math.max(size.width, size.height))
+    const shown = { width: Math.max(2, Math.round(size.width * k)), height: Math.max(2, Math.round(size.height * k)) }
+    rc.width = shown.width
+    rc.height = shown.height
+    const ctx = rc.getContext('2d')
+    if (!ctx) return
+    composeOutput(ctx, picture, clip, shown, now, true)
+  }, [current, crop, cropBox, mode, size, previewTime, steadied, composeOutput])
+
 
   /**
    * Ask for the frame BACK when the tab returns.
@@ -1553,6 +1647,7 @@ export default function VideoEditTool() {
 
   async function doExport() {
     if (!clips.length) return
+    if (format === 'png') { await exportFrame(); return }
     setBusy('render')
     setError('')
     setProgress({ done: 0, total: 0 })
@@ -1589,6 +1684,7 @@ export default function VideoEditTool() {
       // Resolved, not raw: the worker has no crop-to-source projection of its
       // own and must not grow one. What the stage drew is what it encodes.
       censors: shownCensors,
+      steady: clips.map((c) => steadyBySlot[c.slot] ?? null),
     }
     const res = await ask(
       { kind: 'render', plan },
@@ -1602,10 +1698,98 @@ export default function VideoEditTool() {
     setBusy('')
     if (res.kind === 'error') { setError(s.errors[res.message] ?? s.errors.generic); return }
     if (res.kind !== 'rendered') return
+    let blob = res.blob
+    if (format === 'gif') {
+      setBusy('render')
+      try { blob = await mp4ToGif(res.blob) } catch {
+        setBusy('')
+        setError(s.errors.generic)
+        return
+      }
+      setBusy('')
+    }
     setOut((o) => {
       if (o) URL.revokeObjectURL(o.url)
-      return { url: URL.createObjectURL(res.blob), size: res.blob.size, audio: res.audio }
+      return { url: URL.createObjectURL(blob), size: blob.size, audio: res.audio, ext: format }
     })
+  }
+
+  /** The frame at the playhead, at the full output size, through the stage's own drawing. */
+  async function exportFrame() {
+    const v = videoRef.current
+    if (!v || !current) return
+    setBusy('render')
+    const clip = { width: current.info.width, height: current.info.height }
+    const canvas = document.createElement('canvas')
+    canvas.width = size.width
+    canvas.height = size.height
+    const ctx = canvas.getContext('2d')
+    // The captions on the stage are bitmaps at stage size; at output size they
+    // are drawn again, as the export worker draws them, so a saved frame is not
+    // a blown-up preview.
+    const own = new Map<string, { bitmap: ImageBitmap; rect: { x: number; y: number; w: number; h: number } }>()
+    for (const c of captions) {
+      const drawn = await renderCaption(c, size)
+      if (drawn) own.set(c.id, drawn)
+    }
+    if (ctx) {
+      const saved = bitmaps.current
+      bitmaps.current = own
+      try { composeOutput(ctx, steadied(v, clip), clip, size, previewTime(), false) } finally { bitmaps.current = saved }
+    }
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'))
+    setBusy('')
+    if (!blob) { setError(s.errors.generic); return }
+    setOut((o) => {
+      if (o) URL.revokeObjectURL(o.url)
+      return { url: URL.createObjectURL(blob), size: blob.size, audio: 'none', ext: 'png' }
+    })
+  }
+
+  /**
+   * A GIF of the export. The MP4 is made first, by the same worker and with
+   * everything the stage shows, and then sampled — so a GIF can never disagree
+   * with the video about a crop, a cut, a box or a caption.
+   */
+  async function mp4ToGif(src: Blob): Promise<Blob> {
+    const url = URL.createObjectURL(src)
+    const el = document.createElement('video')
+    el.muted = true
+    el.preload = 'auto'
+    el.src = url
+    try {
+      await new Promise<void>((ok, fail) => {
+        el.addEventListener('loadeddata', () => ok(), { once: true })
+        el.addEventListener('error', () => fail(new Error('gif-decode')), { once: true })
+      })
+      const dur = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : duration
+      // Small on purpose: a GIF is uncompressed in every way that matters, and
+      // 480px at 10 frames a second is already a few megabytes for a short clip.
+      const fps = Math.min(10, 300 / Math.max(dur, 0.1))
+      const scale = Math.min(1, 480 / Math.max(el.videoWidth, el.videoHeight))
+      const w = Math.max(2, Math.round(el.videoWidth * scale))
+      const h = Math.max(2, Math.round(el.videoHeight * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) throw new Error('no-canvas')
+      const frames: Uint8ClampedArray[] = []
+      const count = Math.max(1, Math.floor(dur * fps))
+      for (let i = 0; i < count; i++) {
+        const t = Math.min(dur - 0.001, i / fps)
+        if (Math.abs(el.currentTime - t) > 1e-3) {
+          await new Promise<void>((ok) => { el.addEventListener('seeked', () => ok(), { once: true }); el.currentTime = t })
+        }
+        ctx.drawImage(el, 0, 0, w, h)
+        frames.push(ctx.getImageData(0, 0, w, h).data)
+        setProgress({ done: i + 1, total: count })
+      }
+      await new Promise((r) => setTimeout(r, 16))
+      return encodeGif(frames, { width: w, height: h, delayCs: Math.round(100 / fps), colours: 256, loop: true })
+    } finally {
+      URL.revokeObjectURL(url)
+    }
   }
 
   function togglePlay() {
@@ -2223,7 +2407,7 @@ export default function VideoEditTool() {
                 wears the same dark chrome as the tools beside it, and the
                 download that replaces it is the only green on the frame. */}
             {out ? (
-              <a href={out.url} download={`edited-${(clips[0]?.file.name || 'video').replace(/\.[^.]*$/, '')}.mp4`} data-testid="ve-download"
+              <a href={out.url} download={`edited-${(clips[0]?.file.name || 'video').replace(/\.[^.]*$/, '')}.${out.ext}`} data-testid="ve-download"
                 title={`${s.download} · ${mb(out.size)}`}
                 aria-label={s.download}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
@@ -2572,6 +2756,46 @@ export default function VideoEditTool() {
               <p className="text-[0.8rem] text-ink-faint rtl:font-ar">
                 <span className="font-mono" data-testid="ve-out-size">{size.width}×{size.height}</span>
                 {' — '}{s.noUpscale}
+              </p>
+            </div>
+
+            {/* WHAT THE EXPORT BUTTON MAKES. Video to GIF and Video to Image were
+                apps of their own until November 2026; both are this editor's
+                export now, so a GIF or a still carries the crop, the cut, the
+                boxes and the captions exactly as the video would. */}
+            <Field label={s.saveAs}>
+              <Seg>
+                {(['mp4', 'gif', 'png'] as const).map((f) => (
+                  <SegButton key={f} active={format === f} data-testid={`ve-format-${f}`} onClick={() => setFormat(f)}>
+                    {s.formats[f]}
+                  </SegButton>
+                ))}
+              </Seg>
+            </Field>
+            {format !== 'mp4' && (
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar -mt-3" data-testid="ve-format-note">
+                {format === 'gif' ? s.gifNote : s.pngNote}
+              </p>
+            )}
+
+            {/* STEADYING, which was the Video Stabilizer. It reads the camera
+                movement measured when the clip was opened, so moving the
+                slider costs three array passes and no decode — which is what
+                lets the price, the share of the picture kept, be live. */}
+            <div className="flex flex-col gap-1" data-testid="ve-steady-field">
+              <Field label={s.steady}>
+                <input type="range" min={0} max={2} step={0.1} value={steadySec} data-testid="ve-steady"
+                  disabled={!current || analysis[current.slot]?.state !== 'ready'}
+                  aria-valuetext={steadySec === 0 ? s.steadyOff : `${steadySec.toFixed(1)} s`}
+                  onChange={(e) => setSteadySec(Number(e.target.value))} />
+              </Field>
+              <p className="text-[0.8rem] text-ink-faint rtl:font-ar" data-testid="ve-steady-note"
+                data-kept={Math.round(steadyKept(steadyZoom) * 100)}>
+                {!current ? null
+                  : analysis[current.slot]?.state === 'failed' ? s.steadyFailed
+                    : analysis[current.slot]?.state !== 'ready' ? s.steadyMeasuring
+                      : steadySec === 0 ? s.steadyOff
+                        : s.steadyKeeps(Math.round(steadyKept(steadyZoom) * 100))}
               </p>
             </div>
 
