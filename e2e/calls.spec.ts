@@ -1147,3 +1147,60 @@ test('a DM message can be reacted to, and the reaction is sent and toggles', asy
   await expect(p.getByTestId('dm-reaction')).toHaveCount(0)
   await c.close()
 })
+
+// The video governor (videoGovernor.ts) is unit-tested; this pins the wiring:
+// a struggling link turns OUR camera off and says so, a healed one turns it back
+// on, and "anyway" wins for the rest of the call. Timings are shortened and the
+// link is injected, because a real bad link is not something CI can make.
+test('a struggling link pauses my video with a cool-off, and brings it back when it heals', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  await c.addInitScript(() => {
+    const w = window as unknown as { __CALL_GOV_LIMITS: unknown; __CALL_LINK_STATS: unknown }
+    w.__CALL_GOV_LIMITS = { poorForMs: 2000, healthyForMs: 2000, baseCoolMs: 3000 }
+    w.__CALL_LINK_STATS = [{ loss: 0, rttMs: 50, limited: false, fps: 24 }]
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  const camBtn = p.getByTestId('call-cam')
+  await camBtn.click()
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
+  await expect(p.getByTestId('call-video-paused')).toHaveCount(0)
+
+  await p.evaluate(() => { (window as unknown as { __CALL_LINK_STATS: unknown }).__CALL_LINK_STATS = [{ loss: 0.3, rttMs: 900, limited: true, fps: 4 }] })
+  await expect(p.getByTestId('call-video-paused')).toHaveAttribute('data-reason', 'quality', { timeout: 10_000 })
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'false')
+
+  await p.evaluate(() => { (window as unknown as { __CALL_LINK_STATS: unknown }).__CALL_LINK_STATS = [{ loss: 0, rttMs: 50, limited: false, fps: 24 }] })
+  await expect(p.getByTestId('call-video-paused')).toHaveCount(0, { timeout: 15_000 })
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
+  await c.close()
+})
+
+test('"Turn video on anyway" overrides the governor for the rest of the call', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  await c.addInitScript(() => {
+    const w = window as unknown as { __CALL_GOV_LIMITS: unknown; __CALL_LINK_STATS: unknown }
+    w.__CALL_GOV_LIMITS = { poorForMs: 2000, healthyForMs: 2000, baseCoolMs: 60_000 }
+    w.__CALL_LINK_STATS = [{ loss: 0.3, rttMs: 900, limited: true, fps: 4 }]
+  })
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-start').click()
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(p)
+  const camBtn = p.getByTestId('call-cam')
+  await camBtn.click()
+  await expect(p.getByTestId('call-video-paused')).toBeVisible({ timeout: 10_000 })
+  await p.getByTestId('call-video-anyway').click()
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
+  await expect(p.getByTestId('call-video-paused')).toHaveCount(0)
+  // The link is still bad; the camera must stay on regardless.
+  await p.waitForTimeout(5000)
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
+  await c.close()
+})

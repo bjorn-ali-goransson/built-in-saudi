@@ -7,6 +7,7 @@ import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
+import { LIMITS as GOV_LIMITS, initialGov, stepGov, type GovState, type LinkSample } from './videoGovernor'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
   NAME_KEY, HOST_KEY, code6, randName, isDefaultName, chime, osNotify, startRingtone,
@@ -133,6 +134,13 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  // Video governor: pause OUR outgoing video when the mesh is too crowded or the
+  // link is struggling, with a cool-off (videoGovernor.ts). autoOff marks a camera
+  // WE turned off, so only that one is turned back on; override means the person
+  // asked for video anyway, and the governor stops acting for the rest of the call.
+  const [gov, setGov] = useState<GovState>(initialGov)
+  const govRef = useRef<GovState>(initialGov()), autoOff = useRef(false), govOverride = useRef(false), camRef = useRef(false)
+  camRef.current = cam
   // Input/output device selection (camera, mic, speaker). Labels only populate once
   // permission is granted, so we re-enumerate whenever the cam/mic turn on.
   const [mediaDevices, setMediaDevices] = useState<MediaDeviceInfo[]>([])
@@ -820,7 +828,31 @@ export default function CallsTool() {
   // because the video grid lives in the dock, which may be closed or on the chat tab.
   const speakingIds = useSpeakingSet([...peers])
   const speakingNames = inCallPeers.filter(([id]) => speakingIds.has(id)).map(([, i]) => i.name || '•')
-  async function toggleCam() { const v = !cam; setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false) }
+  async function toggleCam() {
+    const v = !cam
+    if (v && govRef.current.paused) govOverride.current = true // asked for video anyway
+    if (!v) autoOff.current = false // their choice now, not ours to undo
+    setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false)
+  }
+  useEffect(() => {
+    if (phase !== 'live') return
+    const w = window as unknown as { __CALL_GOV_LIMITS?: Partial<typeof GOV_LIMITS>; __CALL_LINK_STATS?: LinkSample[] }
+    if (w.__CALL_GOV_LIMITS) Object.assign(GOV_LIMITS, w.__CALL_GOV_LIMITS) // test hook: shorter timings
+    let stop = false
+    const tick = async () => {
+      const r = rtc.current
+      if (!r || stop) return
+      const samples = w.__CALL_LINK_STATS ?? await r.linkSamples() // test hook: an injected link
+      const next = stepGov(govRef.current, Date.now(), r.inCallPeers(), samples)
+      govRef.current = next; setGov(next)
+      if (govOverride.current) return
+      if (next.paused && camRef.current) { autoOff.current = true; setCam(false); await r.toggleCam(false) }
+      else if (!next.paused && autoOff.current) { autoOff.current = false; setCam(true); if ((await r.toggleCam(true)) === false) setCam(false) }
+    }
+    const id = window.setInterval(() => { void tick() }, 2000)
+    return () => { stop = true; window.clearInterval(id) }
+  }, [phase])
+  async function videoAnyway() { govOverride.current = true; autoOff.current = false; setCam(true); if ((await rtc.current?.toggleCam(true)) === false) setCam(false) }
   function screenToast(msg: string) { setToast(msg); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 5000) }
   async function toggleScreen() {
     if (sharing) { rtc.current?.stopScreen(); setSharing(false); setScreenStream(null); return }
@@ -1512,6 +1544,16 @@ export default function CallsTool() {
           admit control used to live inside that dock, so a host on the chat tab (or
           with the dock closed) could neither see nor let anyone in (#217). This bar
           docks to the top edge and admits directly, whatever the dock is doing. */}
+      {gov.paused && autoOff.current && !govOverride.current && (
+        <div className="w-full bg-gold-500 text-ink px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-video-paused" data-reason={gov.reason ?? ''}>
+          <CamOffIcon className="w-5 h-5 shrink-0" />
+          <p className="min-w-0 flex-1 text-[0.85rem] font-semibold leading-snug">
+            {gov.reason === 'crowd' ? s.videoPausedCrowd : s.videoPausedQuality(Math.max(0, Math.ceil((gov.until - Date.now()) / 1000)))}
+          </p>
+          <button type="button" onClick={() => void videoAnyway()} data-testid="call-video-anyway"
+            className="shrink-0 h-8 px-3 rounded-md bg-ink text-sand-100 border border-ink text-[0.8rem] font-semibold cursor-pointer">{s.videoAnyway}</button>
+        </div>
+      )}
       {!isGuest && waiting.length > 0 && !showParticipants && !willAutoAdmit() && (
         <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-banner">
           <span className="shrink-0 [animation:bis-bounce-y_1.2s_ease-in-out_infinite]" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>

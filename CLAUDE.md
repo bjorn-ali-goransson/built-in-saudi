@@ -6957,7 +6957,17 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   Sawi Kalam embeds `CallsTool` itself: `src/tools/calls/host.ts`
   (`configureCalls`) sets the site and base path the invite links use and can
   turn the push-based call-me link off. Never hard-code `/apps/calls` or the
-  domain in the Calls code; read `callsHost()`. STUN is public; **no TURN** (strict NATs can't connect).
+  domain in the Calls code; read `callsHost()`.
+  **Video gives way before audio** (`src/tools/calls/videoGovernor.ts`, pure and
+  unit-tested): more than five others in the call pauses OUR camera at once and
+  brings it back the moment the room is smaller; a link poor for 10s (loss over
+  8%, RTT over 800ms, or an encoder starved below 10fps) pauses it for a
+  cool-off that doubles on each repeat (1, 2, 4, 8 min), and it resumes only
+  after 10s healthy. Only a camera the governor turned off is turned back on,
+  and "Turn video on anyway" ends its say for the call. `rtc.linkSamples()`
+  reads the receivers' reports (`remote-inbound-rtp`) for what we send. The e2e
+  injects the link through `window.__CALL_LINK_STATS` and shortens the timings
+  through `window.__CALL_GOV_LIMITS`, since CI cannot make a real bad link. STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
   **Knock visibility (#217):** the ONLY admit control used to live inside the

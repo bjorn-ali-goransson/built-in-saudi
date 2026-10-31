@@ -5,6 +5,7 @@
 // A data-only connection forms first (no camera/mic); media is added lazily via
 // renegotiation once the host admits a guest, so un-admitted guests never see or
 // send any media, and their names are exchanged peer-to-peer, not via the relay.
+import type { LinkSample } from './videoGovernor'
 const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGNAL?: string }).__CALL_SIGNAL) || 'https://us-central1-blitz-ksa.cloudfunctions.net/call-signal'
 
 // One lightweight probe of the relay before showing a guest the join controls:
@@ -511,6 +512,39 @@ export class CallRoom {
       this.emitPreview()
     }
     this.broadcastInfo(); return true
+  }
+  /** Others in the call proper (not waiting in the lobby). */
+  inCallPeers(): number {
+    let n = 0
+    for (const p of this.peers.values()) if (p.info?.inCall) n++
+    return n
+  }
+  /** How the link to each in-call peer is doing, for the video governor.
+   *  Loss and delay come from the peer's receiver reports (remote-inbound-rtp),
+   *  which is what tells us how what WE send is arriving; the limitation reason
+   *  and frame rate from our own video encoder. */
+  async linkSamples(): Promise<LinkSample[]> {
+    const out: LinkSample[] = []
+    for (const p of this.peers.values()) {
+      if (!p.info?.inCall) continue
+      try {
+        const stats = await p.pc.getStats()
+        let loss = 0, rttMs: number | null = null, limited = false, fps: number | null = null
+        stats.forEach((r: Record<string, unknown>) => {
+          if (r.type === 'remote-inbound-rtp') {
+            if (typeof r.fractionLost === 'number') loss = Math.max(loss, r.fractionLost)
+            if (typeof r.roundTripTime === 'number') rttMs = Math.max(rttMs ?? 0, r.roundTripTime * 1000)
+          } else if (r.type === 'outbound-rtp' && r.kind === 'video') {
+            if (r.qualityLimitationReason === 'bandwidth' || r.qualityLimitationReason === 'cpu') limited = true
+            if (typeof r.framesPerSecond === 'number') fps = r.framesPerSecond
+          } else if (r.type === 'candidate-pair' && r.nominated && typeof r.currentRoundTripTime === 'number' && rttMs == null) {
+            rttMs = r.currentRoundTripTime * 1000
+          }
+        })
+        out.push({ loss, rttMs, limited, fps })
+      } catch { /* a closing pc: skip it */ }
+    }
+    return out
   }
   /** Switch the active microphone. Remembered for the next unmute; applied live via
    *  replaceTrack (no renegotiation) when the mic is currently on. */

@@ -51,7 +51,7 @@ export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, 
 // A borderless toolbar icon button: shaded on hover, extra-shaded when active.
 export function IconBtn({ onClick, title, active, danger, children, testid, badge, big, flash }: { onClick: () => void; title: string; active?: boolean; danger?: boolean; children: ReactNode; testid?: string; badge?: number; big?: boolean; flash?: boolean }) {
   return (
-    <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testid}
+    <button type="button" onClick={onClick} title={title} aria-label={title} aria-pressed={active} data-testid={testid}
       className={`relative grid place-items-center h-9 min-w-9 px-2 rounded-md border-0 cursor-pointer transition-colors ${big ? '[&_svg]:w-[23px] [&_svg]:h-[23px]' : '[&_svg]:w-[18px] [&_svg]:h-[18px]'} ${
         flash ? 'bg-[color-mix(in_srgb,var(--color-green-500)_28%,transparent)] text-green-700 ring-2 ring-green-500 [animation:mic-pulse_0.9s_ease-in-out_infinite]'
           : danger ? 'bg-transparent text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_15%,transparent)]'
