@@ -19,9 +19,13 @@ export interface CallsHost {
    *  "start your own call" and "new call" go there rather than opening a room
    *  nobody owns. null keeps them in the lobby, as built-in-saudi does. */
   newMeetingPath: string | null
+  /** A room the embedder KNOWS is a real meeting, though nobody may be in it yet
+   *  (Sawi Kalam's server records meetings). An empty room is then "not started",
+   *  not "ended", and a guest can knock and wait for the organiser. */
+  pendingRoom: string | null
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null }
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
 export const callsHost = (): CallsHost => host

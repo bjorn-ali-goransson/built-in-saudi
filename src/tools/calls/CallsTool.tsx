@@ -720,8 +720,8 @@ export default function CallsTool() {
     let alive = true
     roomStatus(initialRoom).then((st) => {
       if (!alive) return
-      // A scheduled meeting nobody has started yet is an empty room, not an ended one.
-      if (st === 'open' || (st === 'missing' && startsAt)) setChecking(false)
+      // A scheduled or known meeting nobody has started yet is an empty room, not an ended one.
+      if (st === 'open' || (st === 'missing' && (startsAt || callsHost().pendingRoom === initialRoom))) setChecking(false)
       else { setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
     })
     return () => { alive = false }
