@@ -19,7 +19,8 @@
 // transient rather than doubled. The price is one extra parse per job, which is
 // a fraction of a pass that decodes every frame anyway.
 
-import { demuxMp4, type DemuxTrack } from '../../lib/mp4Demux'
+import type { DemuxTrack } from '../../lib/mp4Demux'
+import { demuxVideo } from '../../lib/videoDemux'
 import { estimateSteps, followBox } from '../../lib/frameScan'
 import type { Box, Estimate, TrackPoint } from '../../lib/motion'
 
@@ -45,7 +46,7 @@ export type Res =
 let cancelled = false
 
 async function videoOf(file: File): Promise<DemuxTrack> {
-  const session = await demuxMp4(await file.arrayBuffer())
+  const session = await demuxVideo(await file.arrayBuffer())
   const v = session.tracks.find((t) => t.kind === 'video')
   if (!v) throw new Error('no-video')
   return v

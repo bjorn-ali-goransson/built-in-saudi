@@ -1871,6 +1871,65 @@ test('the mute button says when a clip has no sound at all', async ({ page }) =>
 })
 
 // ---------------------------------------------------------------------------
+// WEBM AND MKV. The editor re-encodes everything it draws, so the container it
+// reads from is only a question of whether we can get the frames out — and a
+// WebM's VP8/VP9 decodes in every Chromium, proprietary codecs or not. These
+// fixtures are the sample clip remuxed by ffmpeg: `recorded.webm` in its live
+// mode (an unknown-size Segment and no Duration, which is how MediaRecorder
+// writes), and `vorbis.mkv` with a sound an MP4 cannot carry.
+// ---------------------------------------------------------------------------
+
+const WEBM = fileURLToPath(new URL('./fixtures/recorded.webm', import.meta.url))
+const MKV = fileURLToPath(new URL('./fixtures/vorbis.mkv', import.meta.url))
+
+test('a WebM recording opens, at its real length, with its sound', async ({ page }) => {
+  await load(page)
+  // An EMPTY type, as Android hands files over — the container is decided by
+  // the bytes, never by the label.
+  await page.getByTestId('ve-file').setInputFiles({ name: 'Screen recording.webm', mimeType: '', buffer: readFileSync(WEBM) })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
+  // The length comes from the blocks: the file states none, and the element
+  // would report Infinity for it.
+  await expect(page.getByTestId('ve-total')).toContainText('0:06', { timeout: 30_000 })
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('data-sound', 'on')
+
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await page.getByTestId('ve-export').click()
+  await expect(page.getByTestId('ve-download')).toBeVisible({ timeout: 180_000 })
+  // An MP4 comes out, named as one, and the Opus came across in it.
+  await expect(page.getByTestId('ve-download')).toHaveAttribute('download', 'edited-Screen recording.mp4')
+  const out = await decodeExport(page)
+  expect(Math.abs(out.d - 6)).toBeLessThan(0.3)
+  // The default 9:16 crop of a 320×240 clip; the frames were decoded and redrawn.
+  expect(out.h).toBe(240)
+  const href = await page.getByTestId('ve-download').getAttribute('href')
+  const hasOpus = await page.evaluate(async (url) => {
+    const buf = new Uint8Array(await (await fetch(url!)).arrayBuffer())
+    let text = ''
+    for (let i = 0; i < buf.length; i += 1) text += String.fromCharCode(buf[i])
+    return text.includes('Opus') && text.includes('dOps')
+  }, href)
+  expect(hasOpus).toBe(true)
+})
+
+test('an MKV with Vorbis sound opens, and the sound button says why it cannot keep it', async ({ page }) => {
+  await load(page)
+  await page.getByTestId('ve-file').setInputFiles({ name: 'clip.mkv', mimeType: 'video/x-matroska', buffer: readFileSync(MKV) })
+  await expect(page.getByTestId('ve-stage')).toBeVisible({ timeout: 30_000 })
+  // There IS a sound track, so "this clip has no sound" would be false; the
+  // button names the codec that cannot be carried instead.
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('data-sound', 'none')
+  await expect(page.getByTestId('ve-mute')).toHaveAttribute('title', /Vorbis/)
+})
+
+test('a file that is not a video is still named as such', async ({ page }) => {
+  await load(page)
+  await page.getByTestId('ve-file').setInputFiles({ name: 'notes.webm', mimeType: 'video/webm', buffer: Buffer.from('this is not a video at all') })
+  await expect(page.getByText('It opens MP4, MOV, WebM and MKV files.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ve-stage')).toHaveCount(0)
+})
+
+// ---------------------------------------------------------------------------
 // A PICTURE LAID ON THE VIDEO — a logo, a watermark, a still.
 //
 // By the time it reaches the worker it is the SAME type as a caption: a bitmap,

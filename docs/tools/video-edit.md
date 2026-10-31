@@ -2,7 +2,8 @@
 
 - **Slug:** `/apps/video-edit` · **Category:** Files · **Priority:** Tier 1
 - **Runs:** 100% client-side · **Status:** Live
-- **Libraries:** WebCodecs (`VideoDecoder`/`VideoEncoder`), `mp4box` for demuxing,
+- **Libraries:** WebCodecs (`VideoDecoder`/`VideoEncoder`), `mp4box` (MP4) and
+  `lib/webmDemux.ts` (WebM/MKV) for demuxing,
   `src/lib/mp4Writer.ts` for muxing. No new dependency.
 
 ## Why
@@ -142,7 +143,7 @@ and a *second* player for the result. Five decisions:
   than watch an export fail.
 
 ## Inputs → Outputs
-One or more MP4/MOV files + a crop shape + captions + censor boxes → one
+One or more MP4/MOV/WebM/MKV files + a crop shape + captions + censor boxes → one
 progressive MP4.
 
 ## Requirements (v1)
@@ -241,8 +242,9 @@ progressive MP4.
   what many differently-aligned frames give back; one frame gave back nothing.
   `image-redact`'s pixelate default is therefore not condemned by it, and should
   not be changed on the strength of it.
-- **MP4/MOV in, MP4 out.** WebM and MKV are different containers; `mp4box` does
-  not read them.
+- **MP4, MOV, WebM or MKV in; MP4 out.** WebM/MKV are read by `lib/webmDemux.ts`
+  (VP8, VP9, AV1, H.264); Opus sound is copied, Vorbis cannot ride an MP4 and the
+  export is silent, with the reason on the sound button.
 - **Clips whose sound is stored differently cannot be joined with sound.** The
   alternative is re-encoding audio, which is not available everywhere (above).
 - **Baseline H.264**, so no B-frames. Slightly less efficient at a given

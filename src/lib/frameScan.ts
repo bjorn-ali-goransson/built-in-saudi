@@ -18,6 +18,7 @@
 // subject. That is what makes either pass safe on a phone, where retaining
 // decoded frames is not.
 
+import { decoderDescription } from './videoDemux'
 import { displaySize, type DemuxTrack } from './mp4Demux'
 import { uprightFrame } from './mp4Encode'
 import {
@@ -135,7 +136,7 @@ export async function scanGrayFrames(
 
   decoder.configure({
     codec: v.codec,
-    description: v.config.subarray(8),
+    description: decoderDescription(v),
     codedWidth: v.width,
     codedHeight: v.height,
   })

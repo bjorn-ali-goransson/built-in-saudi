@@ -23,7 +23,8 @@
 // closed inside the output callback, and the feed loop waits whenever either
 // queue runs ahead.
 
-import { demuxMp4, displaySize, type Demuxed, type DemuxTrack } from '../../lib/mp4Demux'
+import { displaySize, type DemuxTrack } from '../../lib/mp4Demux'
+import { decoderDescription, demuxVideo, type AnyDemuxed as Demuxed } from '../../lib/videoDemux'
 import { writeMp4, type WriterSample, type WriterTrack } from '../../lib/mp4Writer'
 import { avcCBox, codecFor, smallest, uprightFrame } from '../../lib/mp4Encode'
 import { activeAt, applyCensors, captionRect, drawFrame, type Censor, type Crop } from '../../lib/frameCompose'
@@ -59,6 +60,9 @@ export interface ProbeInfo {
   sampleCount: number
   retainedBytes: number
   audio: AudioInfo | null
+  /** A sound track an MP4 cannot carry without re-encoding (Vorbis), by codec name. */
+  uncopyableAudio?: string
+  container: 'mp4' | 'webm'
 }
 
 /**
@@ -158,7 +162,7 @@ const idle = () => new Promise((r) => setTimeout(r, 4))
 
 async function probe(slot: number, file: File): Promise<ProbeInfo> {
   const data = await file.arrayBuffer()
-  const session = await demuxMp4(data)
+  const session = await demuxVideo(data)
   const v = videoTrack(session)
   if (!v) throw new Error('no-video')
   sessions.set(slot, session)
@@ -169,7 +173,7 @@ async function probe(slot: number, file: File): Promise<ProbeInfo> {
   try {
     const s = await VideoDecoder.isConfigSupported({
       codec: v.codec,
-      description: v.config.subarray(8),
+      description: decoderDescription(v),
       codedWidth: v.width,
       codedHeight: v.height,
     })
@@ -191,6 +195,8 @@ async function probe(slot: number, file: File): Promise<ProbeInfo> {
     decodable,
     sampleCount: session.tracks.reduce((n, t) => n + t.samples.length, 0),
     retainedBytes: session.tracks.reduce((n, t) => n + t.samples.reduce((m, x) => m + x.data.length, 0), 0),
+    uncopyableAudio: session.uncopyableAudio,
+    container: session.container,
     audio: a ? { codec: a.codec, sampleRate: a.sampleRate ?? 0, channels: a.channels ?? 0, fingerprint: fingerprint(a) } : null,
   }
 }
@@ -341,7 +347,7 @@ async function render(id: number, plan: RenderPlan): Promise<{ blob: Blob; audio
 
     decoder.configure({
       codec: v.codec,
-      description: v.config.subarray(8),
+      description: decoderDescription(v),
       codedWidth: v.width,
       codedHeight: v.height,
     })

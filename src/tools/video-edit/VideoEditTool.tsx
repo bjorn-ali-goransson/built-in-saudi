@@ -106,6 +106,7 @@ const STR = {
     audioMixed: 'These clips store their sound differently, so it cannot be joined without re-encoding — which this browser cannot do. The export will be silent.',
     audioMissing: 'One of these clips has no sound, so the joined video would have a silent stretch. The export will be silent.',
     audioNone: 'This clip has no sound track.',
+    audioVorbis: 'This clip\'s sound is Vorbis, which an MP4 cannot carry without re-encoding it — and this browser cannot. The export will be silent.',
     exportBtn: 'Export',
     exporting: 'Encoding…',
     cancel: 'Cancel',
@@ -117,7 +118,8 @@ const STR = {
     trimLink: 'Trim a video instead',
     undecodable: 'This browser has no decoder for this clip, so it cannot be re-encoded here.',
     errors: {
-      'not-mp4': 'This does not look like an MP4. Only MP4 and MOV files can be edited here — a WebM or MKV uses a different container that this tool cannot read.',
+      'not-mp4': 'This does not look like a video this editor can read. It opens MP4, MOV, WebM and MKV files.',
+      'mkv-encoded': 'This MKV stores its frames compressed or encrypted inside the container, which this editor does not unpack. Remuxing it with a current mkvmerge, or saving it as MP4, will make it open.',
       'no-video': 'No video track was found in this file.',
       'no-tracks': 'No video or audio tracks were found in this file.',
       'no-encoder': 'This browser refused to encode at that size. Try a smaller output.',
@@ -194,6 +196,7 @@ const STR = {
     audioMixed: 'تخزّن هذه المقاطع صوتها بصيغ مختلفة، فلا يمكن دمجه دون إعادة ترميز، وهذا ما لا يقدر عليه هذا المتصفح. سيخرج المقطع صامتًا.',
     audioMissing: 'أحد هذه المقاطع بلا صوت، فسيكون في الفيديو المدموج فراغ صامت. سيخرج المقطع صامتًا.',
     audioNone: 'لا يحتوي هذا المقطع على مسار صوت.',
+    audioVorbis: 'صوت هذا المقطع بصيغة Vorbis، ولا يحمله ملف MP4 دون إعادة ترميز، وهذا ما لا يقدر عليه هذا المتصفح. سيخرج المقطع صامتًا.',
     exportBtn: 'تصدير',
     exporting: 'يجري الترميز…',
     cancel: 'إلغاء',
@@ -205,7 +208,8 @@ const STR = {
     trimLink: 'اقتطع فيديو بدل ذلك',
     undecodable: 'لا يملك هذا المتصفح فاكّ ترميز لهذا المقطع، فلا يمكن إعادة ترميزه هنا.',
     errors: {
-      'not-mp4': 'لا يبدو هذا ملف MP4. ولا يمكن هنا تحرير سوى ملفات MP4 وMOV — أما WebM أو MKV فحاويةٌ أخرى لا تقرأها هذه الأداة.',
+      'not-mp4': 'لا يبدو هذا فيديو يستطيع هذا المحرر قراءته. فهو يفتح ملفات MP4 وMOV وWebM وMKV.',
+      'mkv-encoded': 'يخزّن ملف MKV هذا إطاراته مضغوطةً أو مشفّرةً داخل الحاوية، وهذا ما لا يفكّه المحرر. إعادة تغليفه بإصدار حديث من mkvmerge، أو حفظه بصيغة MP4، تجعله يُفتح.',
       'no-video': 'لم يُعثر على مسار صورة في هذا الملف.',
       'no-tracks': 'لم يُعثر على مسارات صورة أو صوت في هذا الملف.',
       'no-encoder': 'رفض هذا المتصفح الترميز بهذا المقاس. جرّب مقاسًا أصغر.',
@@ -662,6 +666,9 @@ export default function VideoEditTool() {
   /** Which of the three audio outcomes this set of clips is heading for. */
   const audioPlan = useMemo(() => {
     if (!clips.length) return 'none' as const
+    // A sound track that exists and cannot be copied is not "no sound", and
+    // saying it was would send somebody looking for a mute switch.
+    if (clips.some((c) => c.info.uncopyableAudio)) return 'vorbis' as const
     if (clips.some((c) => !c.info.audio)) return clips.every((c) => !c.info.audio) ? 'none' as const : 'missing' as const
     const prints = new Set(clips.map((c) => c.info.audio?.fingerprint))
     return prints.size === 1 ? 'copy' as const : 'mixed' as const
@@ -679,6 +686,7 @@ export default function VideoEditTool() {
   const canKeepAudio = audioPlan === 'copy'
   const audioWhy = audioPlan === 'copy' ? null
     : audioPlan === 'mixed' ? s.audioMixed
+      : audioPlan === 'vorbis' ? s.audioVorbis
       : clips.length > 1 && audioPlan === 'missing' ? s.audioMissing
         : s.audioNone
 
@@ -2218,7 +2226,7 @@ export default function VideoEditTool() {
                 wears the same dark chrome as the tools beside it, and the
                 download that replaces it is the only green on the frame. */}
             {out ? (
-              <a href={out.url} download={`edited-${clips[0]?.file.name || 'video.mp4'}`} data-testid="ve-download"
+              <a href={out.url} download={`edited-${(clips[0]?.file.name || 'video').replace(/\.[^.]*$/, '')}.mp4`} data-testid="ve-download"
                 title={`${s.download} · ${mb(out.size)}`}
                 aria-label={s.download}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
@@ -2581,9 +2589,9 @@ export default function VideoEditTool() {
                 {s.audioCopied}
               </p>
             )}
-            {(audioPlan === 'mixed' || audioPlan === 'missing') && (
+            {(audioPlan === 'mixed' || audioPlan === 'missing' || audioPlan === 'vorbis') && (
               <p className="text-[0.8rem] text-gold-700 rtl:font-ar" data-testid="ve-audio-note">
-                {audioPlan === 'mixed' ? s.audioMixed : s.audioMissing}
+                {audioPlan === 'mixed' ? s.audioMixed : audioPlan === 'vorbis' ? s.audioVorbis : s.audioMissing}
               </p>
             )}
 

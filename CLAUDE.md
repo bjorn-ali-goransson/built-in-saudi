@@ -4211,6 +4211,22 @@ fix: **a gesture tested once is a gesture whose second use is untested**, and
 `setPointerCapture` on anything but the event's own target is a way to find that
 out expensively.
 
+**It opens WebM and MKV too** (`lib/webmDemux.ts`, behind `lib/videoDemux.ts`,
+which picks the reader from the BYTES). The editor re-encodes every frame, so the
+container is only a question of getting the frames out, and VP8/VP9 decode in
+every Chromium. No dependency: Matroska is EBML, six element kinds. Three things
+carry it, all in what MediaRecorder writes: the Segment and Clusters may have
+**unknown size**, so the reader steps INTO them rather than over; there is **no
+Duration**, so it comes from the blocks (the `<video>` element says `Infinity`);
+and block times are whole milliseconds, so an Opus packet's length is read off
+its **TOC** and a block landing within a couple of ms of the last packet's end is
+taken as contiguous. **Opus is copied** into the MP4 as `Opus` + a `dOps` built
+from OpusHead (little-endian → big-endian, version 0); **Vorbis cannot ride an
+MP4**, so it is named (`uncopyableAudio`) and the sound button says so rather
+than "no sound track". `webmDemux.test.ts` counts packets against ffprobe and has
+ffprobe/ffmpeg decode the Opus MP4 we write. The trimmer and stabiliser still take
+MP4 only.
+
 ## The video editor, for the one-frame case (`image-edit`)
 
 The image family could crop (`image-cropper`), hide (`image-redact`), caption
