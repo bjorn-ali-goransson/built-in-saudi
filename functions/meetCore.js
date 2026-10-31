@@ -149,8 +149,12 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     async login({ challengeId, response }) {
       const c = await takeChallenge(challengeId, 'auth')
       const credId = String(response?.id || '')
-      const stored = await live('meetCredentials', credId)
-      const org = stored ? await live('meetOrganisers', stored.uid) : null
+      // The account is read through the passkey before either is checked for
+      // expiry, so a forgotten pair is deleted together rather than leaving the
+      // account for the TTL sweep.
+      const raw = credId ? await store.get('meetCredentials', credId) : null
+      const org = raw ? await live('meetOrganisers', raw.uid) : null
+      const stored = raw ? await live('meetCredentials', credId) : null
       if (!stored || !org) throw new MeetError(401, 'unknown passkey')
       let v
       try {
