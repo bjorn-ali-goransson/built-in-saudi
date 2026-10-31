@@ -1,7 +1,6 @@
 import type { Tool } from './types'
 import { imageCompressorTool } from './image-compressor/meta'
 import { imageEditTool } from './image-edit/meta'
-import { imagesToPdfTool } from './images-to-pdf/meta'
 import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfToImagesTool } from './pdf-to-images/meta'
@@ -107,7 +106,6 @@ import { activityScheduleTool } from './activity-schedule/meta'
 import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
 import { nameSpellingTool } from './name-spelling/meta'
-import { pdfOrganiseTool } from './pdf-organise/meta'
 import { pdfOcrTool } from './pdf-ocr/meta'
 import { stopwatchTool } from './stopwatch/meta'
 
@@ -191,9 +189,7 @@ export const tools: Tool[] = [
   imageCompressorTool,
   imageEditTool,
   docScanTool,
-  imagesToPdfTool,
   pdfMergeTool,
-  pdfOrganiseTool,
   pdfOcrTool,
   stopwatchTool,
   pdfToImagesTool,

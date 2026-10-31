@@ -335,10 +335,11 @@ test('the launcher corrects a typo the same way', async ({ page }) => {
 
 test('a typo that found the wrong tool is corrected, not just an empty one', async ({ page }) => {
   // "pdf mrege" used to rank pdf-merge SEVENTH behind pdf-edit, because the
-  // query did return something and the fallback therefore never ran.
-  await search(page, 'pdf mrege')
-  await expect(top(page)).toContainText(/Merge/i)
-  await expect(page.getByTestId('search-corrected')).toContainText('pdf merge')
+  // query did return something and the fallback therefore never ran. (Merge
+  // PDF now finds itself even misspelt; "pdf comprses" is the same shape.)
+  await search(page, 'pdf comprses')
+  await expect(top(page)).toContainText(/Compress/i)
+  await expect(page.getByTestId('search-corrected')).toContainText('pdf compress')
 })
 
 test('two edits is a different word, not a typo', async ({ page }) => {
@@ -431,7 +432,7 @@ test.describe('a converter wins its own direction', () => {
   }
 
   test('images and pdf, both ways', async ({ page }) => {
-    await opens(page, 'images to pdf', 'images-to-pdf')
+    await opens(page, 'images to pdf', 'pdf-merge')
     await opens(page, 'pdf to images', 'pdf-to-images')
   })
 })
@@ -557,7 +558,7 @@ test('and so do the formats that returned nothing at all', async ({ page }) => {
 
 test('a converter wins its own direction, and so does its inverse', async ({ page }) => {
   await search(page, 'jpg to pdf')
-  await expect(top(page)).toHaveAttribute('data-testid', 'tool-images-to-pdf')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-merge')
 
   // The other half matters as much: without it, a tool that simply always
   // flipped the top two would pass the first assertion.

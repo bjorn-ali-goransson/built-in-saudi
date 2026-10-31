@@ -23,7 +23,7 @@ const STR = {
     perspBody: 'A camera is never square to the paper, so the page arrives as a quadrilateral: the far edge is shorter than the near one. Cropping cannot fix that, and neither can rotating. It needs a projective transform, which is the only one that can map an arbitrary four-sided shape onto a rectangle — that is what the corners here are for.',
     manualTitle: 'You place the corners, and that is deliberate',
     manualBody: 'Automatic edge detection is what makes a scanner app feel magic and what makes it fail silently on a patterned tablecloth, a dark desk or a page with a photograph on it. Four handles you can see and nudge cannot be wrong without you seeing it.',
-    next: 'Several pages into one file: Images to PDF',
+    next: 'Several pages into one file: Merge PDF',
     ocr: 'Get the text out: Image to Text (OCR)',
   },
   ar: {
@@ -42,7 +42,7 @@ const STR = {
     perspBody: 'الكاميرا لا تكون عمودية على الورق أبدًا، فتصل الصفحة رباعيًا: حافتها البعيدة أقصر من القريبة. والقصّ لا يصلح ذلك، ولا التدوير. بل يحتاج تحويلًا إسقاطيًا، وهو الوحيد القادر على مطابقة شكل رباعي أيًّا كان على مستطيل — ولهذا وُجدت الزوايا هنا.',
     manualTitle: 'أنت من يضع الزوايا، وهذا مقصود',
     manualBody: 'الكشف التلقائي للحواف هو ما يجعل تطبيق المسح يبدو سحريًا، وهو ما يجعله يفشل صامتًا على مفرش مزخرف أو مكتب داكن أو صفحة فيها صورة. أما أربع مقابض تراها وتحرّكها فلا يمكن أن تخطئ دون أن ترى.',
-    next: 'عدة صفحات في ملف واحد: صور إلى PDF',
+    next: 'عدة صفحات في ملف واحد: دمج PDF',
     ocr: 'استخرج النص: صورة إلى نص',
   },
 }
@@ -211,7 +211,7 @@ export default function DocScanTool() {
       </Panel>
 
       <p className="text-sm flex flex-wrap gap-4">
-        <a href={localePath(locale, '/apps/images-to-pdf')}>{s.next}</a>
+        <a href={localePath(locale, '/apps/pdf-merge')}>{s.next}</a>
         <a href={localePath(locale, '/apps/image-to-text')}>{s.ocr}</a>
       </p>
     </Stack>

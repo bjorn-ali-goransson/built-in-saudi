@@ -116,18 +116,11 @@ test.describe('tools', () => {
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
   })
 
-  test('images to pdf: renders the dropzone', async ({ page }) => {
-    await page.goto('/en/tools/images-to-pdf')
-    await expect(page.getByTestId('images-to-pdf')).toBeVisible()
-    await expect(page.getByTestId('i2p-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
-  })
-
   test('pdf merge: renders the dropzone', async ({ page }) => {
     await page.goto('/en/tools/pdf-merge')
     await expect(page.getByTestId('pdf-merge')).toBeVisible()
     await expect(page.getByTestId('pm-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
+    await expect(page.getByText(/leaves your device/i).first()).toBeVisible()
   })
 
   test('qr reader: decodes a real code and flags a deceptive link', async ({ page }) => {
@@ -773,7 +766,7 @@ test.describe('to-do lists', () => {
 // tool re-introduces an image-only `accept` (which hides Downloads on Android).
 const HEIC = () => readFileSync('e2e/fixtures/sample.heic')
 
-for (const tool of [ 'image-compressor', 'image-to-ascii', 'images-to-pdf',
+for (const tool of [ 'image-compressor', 'image-to-ascii', 'pdf-merge',
   'remove-background', 'steganography',
 ]) {
   test(`${tool}: accepts a real HEIC, and the picker isn't image-only`, async ({ page }) => {

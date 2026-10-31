@@ -68,7 +68,7 @@ export const UNTUNED8 = [
   ['remove the background and resize for instagram', ['remove-background']],
   ['take a screenshot and blur a name in it', 'image-edit'],
   ['record my screen and trim the video', ['video-edit']],
-  ['turn photos into a pdf and merge with another', ['images-to-pdf', 'pdf-merge']],
+  ['turn photos into a pdf and merge with another', 'pdf-merge'],
   ['count the words and check how long it takes to read', ['word-counter']],
 ]
 

@@ -1,6 +1,7 @@
 // Promise client for pdfOps.worker.ts (#154) — same shape as ImageEncoder:
 // one worker per tool instance, dispose on unmount, null = failed/locked.
-import type { PdfRequest, PdfResponse, PdfFailure } from './pdfOps.worker'
+import type { PdfRequest, PdfResponse, PdfFailure, PageSource, OutPage, ImageFit } from './pdfOps.worker'
+export type { PageSource, OutPage, ImageFit } from './pdfOps.worker'
 
 export class PdfOps {
   private worker: Worker | null = null
@@ -24,43 +25,27 @@ export class PdfOps {
         this.pending.get(e.data.id)?.(e.data)
         this.pending.delete(e.data.id)
       }
+      // A worker that dies posts nothing; answer everything still waiting, or
+      // the page sits on "saving" for ever with nothing to report or retry.
+      this.worker.onerror = () => {
+        this.lastFailure = 'unreadable'
+        for (const [id, done] of this.pending) done({ id, op: 'organise', blob: null, why: 'unreadable' })
+        this.pending.clear()
+      }
     }
     this.pending.set(req.id, resolve)
     this.worker.postMessage(req)
   }
 
-  /** Page count, or null if the PDF is locked/unreadable. */
-  pageCount(file: File): Promise<number | null> {
-    const id = ++this.seq
-    return new Promise((res) => this.post({ id, op: 'pageCount', file }, (r) => res(r.op === 'pageCount' ? r.pages : null)))
-  }
-
-  merge(files: File[]): Promise<Blob | null> {
-    const id = ++this.seq
-    return new Promise((res) => this.post({ id, op: 'merge', files }, (r) => res(r.op === 'merge' ? r.blob : null)))
-  }
-
-  /** Extract the given 0-based page indices into a new PDF. */
-  extract(file: File, indices: number[]): Promise<Blob | null> {
-    const id = ++this.seq
-    return new Promise((res) => this.post({ id, op: 'extract', file, indices }, (r) => res(r.op === 'extract' ? r.blob : null)))
-  }
-
   /**
-   * Reorder, rotate and drop pages in one pass.
+   * Build one PDF from pages of several sources, in one pass.
    *
-   * `pages` is the OUTPUT order: each entry names the source index it came from
-   * and how much further to turn it. A deleted page is simply not in the list.
+   * `pages` is the OUTPUT order: each entry names its source, the page within
+   * it, and how much further to turn it. A deleted page is simply not listed.
    */
-  organise(file: File, pages: { from: number; rotate: number }[]): Promise<Blob | null> {
+  organise(sources: PageSource[], pages: OutPage[], fit: ImageFit): Promise<Blob | null> {
     const id = ++this.seq
-    return new Promise((res) => this.post({ id, op: 'organise', file, pages }, (r) => res(r.op === 'organise' ? r.blob : null)))
-  }
-
-  /** Split into one PDF per page; resolves the raw bytes per page. */
-  burst(file: File): Promise<ArrayBuffer[] | null> {
-    const id = ++this.seq
-    return new Promise((res) => this.post({ id, op: 'burst', file }, (r) => res(r.op === 'burst' ? r.pages : null)))
+    return new Promise((res) => this.post({ id, op: 'organise', sources, pages, fit }, (r) => res(r.blob)))
   }
 
   dispose() { this.worker?.terminate(); this.worker = null; this.pending.clear() }

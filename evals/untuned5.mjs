@@ -39,7 +39,7 @@ export const UNTUNED5 = [
   ['.md', ['word-editor']],
   ['pdf to jpg', 'pdf-to-images'],
   ['pdf to docx', 'pdf-to-word'],
-  ['jpg to pdf', 'images-to-pdf'],
+  ['jpg to pdf', 'pdf-merge'],
 
   // --- tabular and data ------------------------------------------------------
   ['.xlsx', ['excel-editor']],

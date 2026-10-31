@@ -10,17 +10,15 @@ import { test, expect } from '@playwright/test'
 //
 // The fixture is a real HEIF still; ffmpeg cannot make one (see CLAUDE.md).
 
-test('images to PDF: a HEIC survives to the export, not just the list', async ({ page }) => {
-  await page.goto('/en/apps/images-to-pdf')
-  await page.getByTestId('i2p-drop').locator('input[type="file"]')
-    .setInputFiles('e2e/fixtures/sample.heic')
-  await expect(page.getByTestId('i2p-list')).toBeVisible({ timeout: 30_000 })
+test('merge PDF: a HEIC picture survives to the export, not just the list', async ({ page }) => {
+  await page.goto('/en/apps/pdf-merge')
+  await page.getByTestId('pm-file').setInputFiles('e2e/fixtures/sample.heic')
+  await expect(page.getByTestId('pm-grid')).toBeVisible({ timeout: 30_000 })
 
   // The export is where it used to throw: `toPngBytes` called
   // `createImageBitmap` directly while the pick path used the decoder.
   const dl = page.waitForEvent('download', { timeout: 60_000 })
-  await page.getByTestId('i2p-create').click()
-  await page.getByTestId('i2p-download').click()
+  await page.getByTestId('pm-save').click()
   const file = await dl
   expect(file.suggestedFilename()).toMatch(/\.pdf$/)
 })
@@ -46,13 +44,11 @@ test('an ordinary PNG still never fetches the HEIC decoder', async ({ page }) =>
   // could have been "always use the heavy path".
   const heic: string[] = []
   page.on('request', (r) => { if (/libheif|heic/i.test(r.url())) heic.push(r.url()) })
-  await page.goto('/en/apps/images-to-pdf')
-  await page.getByTestId('i2p-drop').locator('input[type="file"]')
-    .setInputFiles('e2e/fixtures/diff-small.png')
-  await expect(page.getByTestId('i2p-list')).toBeVisible({ timeout: 20_000 })
+  await page.goto('/en/apps/pdf-merge')
+  await page.getByTestId('pm-file').setInputFiles('e2e/fixtures/diff-small.png')
+  await expect(page.getByTestId('pm-grid')).toBeVisible({ timeout: 20_000 })
   const dl = page.waitForEvent('download', { timeout: 30_000 })
-  await page.getByTestId('i2p-create').click()
-  await page.getByTestId('i2p-download').click()
+  await page.getByTestId('pm-save').click()
   await dl
   expect(heic, 'the HEIC decoder was fetched for a PNG').toEqual([])
 })

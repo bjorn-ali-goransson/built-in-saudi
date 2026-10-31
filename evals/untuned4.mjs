@@ -31,7 +31,7 @@ export const UNTUNED4 = [
   // xlsx-convert gets the data out. Neither is a wrong reading of the symptom.
   ['someone sent me a spreadsheet i cannot open', ['excel-editor']],
   ['my phone photos are heic and will not open', 'image-compressor'],
-  ['the pdf pages are in the wrong order', 'pdf-organise'],
+  ['the pdf pages are in the wrong order', 'pdf-merge'],
   ['i need to sign this without printing it', 'pdf-sign'],
 
   // --- text that arrived wrong ---------------------------------------------

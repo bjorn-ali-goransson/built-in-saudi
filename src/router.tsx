@@ -74,6 +74,8 @@ export const router = createBrowserRouter([
       // contested question the catalogue abstains from rather than takes a side
       // on. Withdrawn August 2026.
       { path: 'apps/tuner', element: <RetiredToolRedirect /> },
+      { path: 'apps/pdf-organise', element: <RenamedToolRedirect to="pdf-merge" /> },
+      { path: 'apps/images-to-pdf', element: <RenamedToolRedirect to="pdf-merge" /> },
       // November 2026: the catalogue was cut from 244 tools to about 100. A
       // MERGED tool redirects to the one that now does its job; a WITHDRAWN one
       // (it encoded a regulation, was a health calculator, or nobody used it)

@@ -40,8 +40,9 @@ const asPdf = (name: string, buffer: Buffer) => ({ name, mimeType: 'application/
 
 test('pdf merge counts pages and merges via the worker', async ({ page }) => {
   await page.goto('/en/apps/pdf-merge')
-  await page.setInputFiles('input[type=file]', [asPdf('a.pdf', await makePdf(3)), asPdf('b.pdf', await makePdf(2))])
-  await expect(page.getByTestId('pm-total')).toContainText('5')
-  await page.getByTestId('pm-merge').click()
-  await expect(page.getByTestId('pm-download')).toBeVisible()
+  await page.getByTestId('pm-file').setInputFiles([asPdf('a.pdf', await makePdf(3)), asPdf('b.pdf', await makePdf(2))])
+  await expect(page.getByTestId('pm-count')).toHaveText('5 of 5 pages')
+  const dl = page.waitForEvent('download')
+  await page.getByTestId('pm-save').click()
+  expect((await dl).suggestedFilename()).toBe('merged.pdf')
 })

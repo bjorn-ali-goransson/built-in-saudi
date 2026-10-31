@@ -892,6 +892,17 @@ is made by rendering the MP4 first and sampling it (≤480px, ≤10fps, ≤300
 frames) into `lib/gif.ts`; a still re-renders the captions at output size so it
 is sharp. The three ids redirect to `video-edit`.
 
+**PDF pages next (111 → 109).** Merge PDF took Images to PDF and Organise PDF
+Pages: add PDFs and pictures in any mix, then turn, reorder and drop pages, and
+save once. `pdfOps.worker.ts` is now ONE op over `sources[]` and `{src, from,
+rotate}` pages — copying every page wanted from a source in ONE `copyPages`
+call, because page-by-page copies duplicate the fonts and images pages share.
+The merged tool keeps the old names in `Tool.aliases`, scored like a name and
+read by the direction tie-break, so `images to pdf` and `jpg to pdf` still land
+on it rather than on PDF to Images. **Every word in a merged tool's Arabic
+tagline competes too**: «ملفات» in it took «ملف pdf إلى صور» off PDF to Images,
+and the tagline says «مستندات» for that reason.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

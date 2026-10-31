@@ -10,7 +10,7 @@
 //
 //   | query         | won                  | should have been          | gap  |
 //   |---------------|----------------------|---------------------------|------|
-//   | `jpg to pdf`  | pdf-to-images 360.9  | images-to-pdf 356.3       | 1.3% |
+//   | `jpg to pdf`  | pdf-to-images 360.9  | images-to-pdf 356.3 (now pdf-merge)       | 1.3% |
 //   | `xlsx to csv` | csv-to-xlsx 371.3    | xlsx-convert 361.5        | 2.7% |
 //
 // `Tool.inverse` has been declared on twelve pairs since the direction

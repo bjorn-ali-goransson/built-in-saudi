@@ -50,6 +50,13 @@ export interface Tool {
    * inverse is B, B must say A.
    */
   inverse?: string
+  /**
+   * Names of tools this one ABSORBED, in either language — Merge PDF does what
+   * Images to PDF did. Scored as a name (somebody who used the old tool types
+   * its name), and read by the direction tie-break (`lib/searchDirection.ts`)
+   * so `jpg to pdf` can still tell this tool from its inverse.
+   */
+  aliases?: string[]
   /** Arabic translations of the display fields (category is translated centrally). */
   ar?: { name: string; tagline: string; description: string }
 }

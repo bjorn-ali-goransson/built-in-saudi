@@ -152,19 +152,19 @@ test.describe('a locked PDF is named as such, and routed', () => {
     await expect(page.getByTestId('pm-to-text')).toBeVisible()
   })
 
-  test('pdf-organise names the lock, and does not blame a damaged file on one', async ({ page }) => {
-    // It cannot take the password even if asked: pdf-lib writes the rearranged
-    // file and cannot decrypt. So the honest move is the route, not a prompt.
-    await page.goto('/en/apps/pdf-organise')
-    await page.getByTestId('po-file').setInputFiles('e2e/fixtures/locked.pdf')
-    await expect(page.getByTestId('po-to-text')).toBeVisible()
+  test('pdf-merge does not blame a damaged file on a password', async ({ page }) => {
+    // It cannot take the password even if asked: pdf-lib writes the new file
+    // and cannot decrypt. So the honest move is the route, not a prompt.
+    await page.goto('/en/apps/pdf-merge')
+    await page.getByTestId('pm-file').setInputFiles('e2e/fixtures/locked.pdf')
+    await expect(page.getByTestId('pm-to-text')).toBeVisible()
     await expect(page.getByTestId('file-error')).toContainText('password-protected')
 
     // A file that is not a PDF at all must NOT be reported as locked — that was
     // the old copy's single message for every failure.
     await page.reload()
-    await page.getByTestId('po-file').setInputFiles('e2e/fixtures/diff-small.png')
+    await page.getByTestId('pm-file').setInputFiles({ name: 'broken.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 this is not really a pdf') })
     await expect(page.getByTestId('file-error')).toBeVisible()
-    await expect(page.getByTestId('po-to-text')).toHaveCount(0)
+    await expect(page.getByTestId('pm-to-text')).toHaveCount(0)
   })
 })

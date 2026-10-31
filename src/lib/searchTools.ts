@@ -16,7 +16,7 @@ function vocabFor(list: Tool[], locale: Locale): Set<string> {
   if (!v) {
     v = vocabulary(list.map((tool) => {
       const l = localizeTool(tool, locale)
-      return { name: tool.name, nameAr: l.name, tagline: `${l.tagline} ${tool.tagline}`, category: `${l.category} ${tool.category}`, keywords: tool.keywords }
+      return { name: tool.name, nameAr: l.name, tagline: `${l.tagline} ${tool.tagline}`, category: `${l.category} ${tool.category}`, keywords: tool.keywords, aliases: tool.aliases }
     }))
     byLocale.set(locale, v)
   }
@@ -135,6 +135,7 @@ function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; s
           tagline: `${l.tagline} ${tool.tagline}`,
           category: `${l.category} ${tool.category}`,
           keywords: tool.keywords,
+          aliases: tool.aliases,
         }),
       }
     })
@@ -152,7 +153,7 @@ function scoreList(query: string, list: Tool[], locale: Locale): { tool: Tool; s
     query,
     shown.map((r) => ({
       id: r.tool.id,
-      names: [r.tool.name, localizeTool(r.tool, locale).name],
+      names: [r.tool.name, localizeTool(r.tool, locale).name, ...(r.tool.aliases ?? [])],
       inverse: r.tool.inverse,
       score: r.score,
       r,

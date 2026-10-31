@@ -186,6 +186,8 @@ export interface Searchable {
   keywords: string[]
   /** The Arabic display name, when the tool has one. */
   nameAr?: string
+  /** Names of tools this one absorbed; scored like a name. */
+  aliases?: string[]
 }
 
 interface Field { text: string; weight: number }
@@ -197,6 +199,7 @@ function fieldsOf(tool: Searchable): Field[] {
     // whose Arabic name is exactly what was typed ranked below one that merely
     // listed the word.
     { text: tool.nameAr ?? '', weight: 3 },
+    ...(tool.aliases ?? []).map((text) => ({ text, weight: 3 })),
     { text: tool.category, weight: 1.5 },
     { text: tool.tagline, weight: 1.2 },
     // The long `description` is deliberately NOT indexed, and that was measured
@@ -393,7 +396,7 @@ export function vocabulary(tools: Searchable[]): Set<string> {
     for (const w of foldArabic(s.toLowerCase()).split(/[^\p{L}\p{N}]+/u)) if (w.length > 2) out.add(w)
   }
   for (const t of tools) {
-    add(t.name); add(t.nameAr); add(t.tagline); add(t.category)
+    add(t.name); add(t.nameAr); for (const a of t.aliases ?? []) add(a); add(t.tagline); add(t.category)
     for (const k of t.keywords ?? []) add(k)
   }
   return out

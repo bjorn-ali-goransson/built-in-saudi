@@ -200,8 +200,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'pdf-merge',
-    en: { name: 'Merge PDF', description: 'Merge several PDFs into one in the order you choose — reorder, remove, see the page count. Runs in your browser; your documents are never uploaded.' },
-    ar: { name: 'دمج PDF', description: 'ادمج عدة ملفات PDF في ملف واحد بالترتيب — إعادة ترتيب وحذف وعدد صفحات. يعمل داخل متصفحك؛ لا تُرفع مستنداتك أبدًا.' },
+    en: { name: 'Merge PDF', description: 'Combine PDFs and pictures into one PDF, then rotate, reorder and remove pages. Runs in your browser; your documents are never uploaded.' },
+    ar: { name: 'دمج PDF', description: 'اجمع ملفات PDF والصور في ملف واحد، ثم أدر الصفحات ورتّبها واحذف ما لا تريد. يعمل داخل متصفحك؛ لا تُرفع مستنداتك أبدًا.' },
   },
   {
     id: 'pdf-sign',
@@ -237,11 +237,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'pdf-to-images',
     en: { name: 'PDF to Images', description: 'Convert a PDF to images — one PNG, JPG or WebP per page, at screen, print or high-DPI resolution. Pick pages, save each or all as a ZIP. Never uploaded.' },
     ar: { name: 'PDF إلى صور', description: 'حوّل PDF إلى صور — ملف PNG أو JPG أو WebP لكل صفحة، بدقة الشاشة أو الطباعة أو عالية. اختر الصفحات واحفظها منفردة أو في ZIP. لا تُرفع أبدًا.' },
-  },
-  {
-    id: 'images-to-pdf',
-    en: { name: 'Images to PDF', description: 'Combine JPG/PNG images into a single PDF, one per page — reorder, fit-to-image or A4/Letter with a margin. Built in your browser; never uploaded.' },
-    ar: { name: 'الصور إلى PDF', description: 'ادمج صور JPG/PNG في PDF واحد، صورة لكل صفحة — إعادة ترتيب، وملاءمة الصورة أو A4/Letter بهامش. داخل متصفحك؛ لا تُرفع أبدًا.' },
   },
   {
     id: 'image-compressor',
@@ -612,11 +607,6 @@ export const liveToolSeo: ToolSeo[] = [
     id: 'name-spelling',
     en: { name: 'Name in English Letters', description: 'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.' },
     ar: { name: 'كتابة الاسم بالإنجليزية', description: 'اكتب اسمًا عربيًا بحروف لاتينية، جزءًا جزءًا، مختارًا بين الكتابات التي تظهر فعلًا في الوثائق هنا. ولا جواب صحيح واحد — فمحمد تُكتب Mohammed وMuhammad وMohamed وMohammad وMuhammed في خمسة جوازات لأسرة واحدة — ولذلك تعرض الأداة الخيارات ولا تدّعي حكمًا، وتنصحك بنسخ جوازك إن كان لديك واحد.' },
-  },
-  {
-    id: 'pdf-organise',
-    en: { name: 'Organise PDF Pages', description: 'Turn sideways pages the right way up, drag them into the right order, and drop the ones you do not want — all on one screen, then save. Pages are copied rather than re-drawn, so text stays text and a scan stays exactly the scan it was. The file never leaves your device.' },
-    ar: { name: 'ترتيب صفحات PDF', description: 'اضبط اتجاه الصفحات المائلة، واسحبها إلى ترتيبها الصحيح، واحذف ما لا تريده — كل ذلك في شاشة واحدة، ثم احفظ. وتُنسخ الصفحات ولا يُعاد رسمها، فيبقى النص نصًا وتبقى الصورة الممسوحة كما هي تمامًا. ولا يغادر الملف جهازك.' },
   },
   {
     id: 'pdf-ocr',

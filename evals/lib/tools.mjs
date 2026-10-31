@@ -97,6 +97,7 @@ for (const d of dirs) {
     keywords,
     // Read from the COMMENT-STRIPPED source, like everything else here.
     inverse: /\binverse: '([a-z0-9-]+)'/.exec(src)?.[1],
+    aliases: [.../\baliases: \[([^\]]*)\]/.exec(src)?.[1]?.matchAll(/'([^']+)'/g) ?? []].map((m) => m[1]),
   })
 }
 

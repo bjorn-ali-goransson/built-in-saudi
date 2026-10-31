@@ -34,7 +34,7 @@ function rank(rawQuery, wanted) {
   const query = stripArabicPrefixes(normaliseQuery(rawQuery), VOCAB)
   const want = Array.isArray(wanted) ? wanted : [wanted]
   const score = (q) => tools
-    .map((t) => ({ id: t.id, score: scoreTool(q, t), names: [t.name, t.nameAr].filter(Boolean), inverse: t.inverse }))
+    .map((t) => ({ id: t.id, score: scoreTool(q, t), names: [t.name, t.nameAr, ...(t.aliases ?? [])].filter(Boolean), inverse: t.inverse }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
   // FAITHFUL: `scoreList` applies the relevance FLOOR before anything else

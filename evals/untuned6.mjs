@@ -31,7 +31,7 @@ export const UNTUNED6 = [
   ['ترجم جملة', 'translate'],
   ['احسب الزكاة', 'zakat-calculator'],
   ['حساب الزكاة', 'zakat-calculator'],
-  ['ادمج الصور', 'images-to-pdf'],
+  ['ادمج الصور', 'pdf-merge'],
   ['اضغط الصورة', 'image-compressor'],
   ['ضغط الصورة', 'image-compressor'],
   ['حوّل التاريخ', 'hijri-calendar'],
@@ -70,5 +70,5 @@ export const UNTUNED6 = [
   // --- possessive and prepositional prefixes ---------------------------------
   ['بالهجري', 'hijri-calendar'],
   ['كمستند وورد', 'word-editor'],
-  ['بصيغة pdf', ['images-to-pdf', 'word-editor', 'pdf-to-images']],
+  ['بصيغة pdf', ['pdf-merge', 'word-editor', 'pdf-to-images']],
 ]
