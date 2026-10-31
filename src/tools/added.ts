@@ -79,7 +79,6 @@ export const ADDED: Record<string, string> = {
   'steganography': '2026-07-13',
   'tier-list': '2026-07-13',
   'typing-test': '2026-07-13',
-  'url-encoder': '2026-07-13',
   'zakat-calculator': '2026-07-13',
   'calls': '2026-07-12',
   'pdf-compress': '2026-07-12',

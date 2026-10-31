@@ -23,7 +23,7 @@ const htmlDecode = (s: string) => {
   return el.value
 }
 
-export default function UrlEncoderTool() {
+export default function Encoder() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [mode, setMode] = useState<'url' | 'html'>('url')

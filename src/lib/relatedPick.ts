@@ -57,10 +57,10 @@ export const CLUSTERS: string[][] = [
   ['pdf-merge', 'pdf-compress', 'pdf-to-images'],
   ['pdf-ocr', 'image-to-text', 'pdf-to-word'],
   ['uuid-generator', 'fake-data', 'readme-generator'],
-  ['jwt-decoder', 'cert-decoder', 'url-encoder', 'url-parser'],
+  ['jwt-decoder', 'cert-decoder', 'url-parser'],
   ['case-converter', 'char-finder', 'readable-text'],
   ['audio-spectrum', 'audio-convert', 'metronome'],
-  ['link-shortener', 'url-parser', 'url-encoder'],
+  ['link-shortener', 'url-parser'],
   ['csv-json', 'csv-vcard', 'excel-editor'],
 ]
 

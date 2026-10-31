@@ -99,7 +99,6 @@ export const VIEWS: Record<string, number> = {
   'translate': 23,
   'typing-test': 7,
   'unit-converter': 23,
-  'url-encoder': 4,
   'url-parser': 4,
   'uuid-generator': 3,
   'video-edit': 169,

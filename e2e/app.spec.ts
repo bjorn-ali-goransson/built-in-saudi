@@ -373,7 +373,9 @@ test.describe('tools', () => {
   })
 
   test('url encoder: percent-encodes a component', async ({ page }) => {
+    // Through the OLD address: it must open the URL tool on its encode mode.
     await page.goto('/en/apps/url-encoder')
+    await expect(page).toHaveURL(/\/en\/apps\/url-parser\?mode=encode$/)
     await page.getByTestId('ue-input').fill('a b&c=d')
     await expect(page.getByTestId('ue-output')).toHaveValue('a%20b%26c%3Dd')
   })

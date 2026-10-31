@@ -75,6 +75,7 @@ export const router = createBrowserRouter([
       // contested question the catalogue abstains from rather than takes a side
       // on. Withdrawn August 2026.
       { path: 'apps/tuner', element: <RetiredToolRedirect /> },
+      { path: 'apps/url-encoder', element: <RenamedToolRedirect to="url-parser" mode="encode" /> },
       { path: 'apps/barcode', element: <RenamedToolRedirect to="qr-code" mode="barcode" /> },
       { path: 'apps/team-maker', element: <RenamedToolRedirect to="spin-wheel" /> },
       { path: 'apps/dice-roller', element: <RenamedToolRedirect to="spin-wheel" /> },

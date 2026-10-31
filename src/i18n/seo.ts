@@ -79,11 +79,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مفكّك رموز JWT', description: 'الصق رمز JSON Web Token لفكّ ترويسته وحمولته إلى JSON مقروء، مع أوقات الانتهاء والإصدار بالتوقيت المحلي. يتم الفكّ بالكامل في متصفحك — لا يُرفع الرمز ولا يُتحقَّق من التوقيع.' },
   },
   {
-    id: 'url-encoder',
-    en: { name: 'URL & HTML Encoder', description: 'Encode or decode text for URLs (percent-encoding, whole-URL or component) and HTML (entities like &amp; and &#39;), both directions, as you type. Runs entirely in your browser — nothing is uploaded.' },
-    ar: { name: 'مُرمِّز الروابط وHTML', description: 'رمِّز أو فُكّ ترميز النص للروابط (ترميز النسبة المئوية، رابط كامل أو جزء) ولـHTML (كيانات مثل &amp; و&#39;) في الاتجاهين أثناء الكتابة. يعمل بالكامل في متصفحك — لا يُرفع أي شيء.' },
-  },
-  {
     id: 'base-converter',
     en: { name: 'Number Base Converter', description: 'Convert a number between binary, octal, decimal, hexadecimal and any base from 2 to 36, all at once and in real time. Arbitrary-precision, so large values stay exact. Runs entirely in your browser.' },
     ar: { name: 'محوّل أنظمة الأعداد', description: 'حوّل عددًا بين الثنائي والثماني والعشري والست عشري وأي أساس من 2 إلى 36 دفعةً واحدة وفي الوقت الحقيقي، بدقة عالية للقيم الكبيرة. يعمل بالكامل في متصفحك.' },

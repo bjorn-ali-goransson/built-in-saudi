@@ -38,7 +38,6 @@ import { wordEditorTool } from './word-editor/meta'
 import { powerpointEditorTool } from './powerpoint-editor/meta'
 import { promptAnalyzerTool } from './prompt-analyzer/meta'
 import { jwtDecoderTool } from './jwt-decoder/meta'
-import { urlEncoderTool } from './url-encoder/meta'
 import { baseConverterTool } from './base-converter/meta'
 import { csvJsonTool } from './csv-json/meta'
 import { splitBillTool } from './split-bill/meta'
@@ -135,7 +134,6 @@ export const tools: Tool[] = [
   certDecoderTool,
   cronBuilderTool,
   jsonDiffTool,
-  urlEncoderTool,
   urlParserTool,
   baseConverterTool,
   csvJsonTool,

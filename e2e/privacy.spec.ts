@@ -289,6 +289,8 @@ export interface TextCase {
    *  `pdf-stamp` lesson, which this half of the harness hit on its first run
    *  with `totp`. */
   act?: (page: import('@playwright/test').Page) => Promise<void>
+  /** For a field behind a mode: run after the page loads, before typing. */
+  before?: (page: import('@playwright/test').Page) => Promise<void>
 }
 
 export const TEXT_CASES: TextCase[] = [
@@ -297,6 +299,12 @@ export const TEXT_CASES: TextCase[] = [
   {
     id: 'jwt-decoder', testid: 'jwt-input', output: 'jwt-payload',
     text: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify({ sub: TOKEN })).toString('base64url')}.c2ln`,
+  },
+  // The URL encoder, now a mode of the URL tool. A query string routinely
+  // carries a token or a signed parameter.
+  {
+    id: 'url-parser', testid: 'ue-input', output: 'ue-output',
+    before: async (page) => { await page.getByTestId('ut-mode-encode').click() },
   },
 ]
 
@@ -313,6 +321,7 @@ for (const c of TEXT_CASES) {
     })
 
     await page.goto(`/en/apps/${c.id}`)
+    if (c.before) await c.before(page)
     await page.getByTestId(c.testid).fill(c.text ?? TOKEN)
     if (c.act) await c.act(page)
 
