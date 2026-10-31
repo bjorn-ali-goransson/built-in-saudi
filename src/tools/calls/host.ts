@@ -1,6 +1,6 @@
-// Where the Calls app lives. built-in-saudi hosts it at /apps/calls on its own
-// domain; Sawi Kalam (sawikalam.com) embeds the same component under its own
-// domain and path. Invite links, QR codes and in-app navigation all read this,
+// Where the Calls and Messages apps live. built-in-saudi hosts them at
+// /apps/calls and /apps/messages on its own domain; Sawi Kalam (sawikalam.com)
+// embeds the same components under its own domain and paths. Invite links, QR codes and in-app navigation all read this,
 // so an embedding app sets it once before rendering and nothing else changes.
 //
 // `callMe` gates the personal "call me" link, which rings an owner by Web Push.
@@ -9,10 +9,12 @@
 export interface CallsHost {
   site: string
   base: string
+  /** Messages' own path, for its invite links. */
+  messagesBase: string
   callMe: boolean
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', callMe: true }
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', callMe: true }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
 export const callsHost = (): CallsHost => host

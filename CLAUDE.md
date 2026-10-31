@@ -6956,8 +6956,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   wire protocol breaks that app too, so treat it as shared.
   Sawi Kalam embeds `CallsTool` itself: `src/tools/calls/host.ts`
   (`configureCalls`) sets the site and base path the invite links use and can
-  turn the push-based call-me link off. Never hard-code `/apps/calls` or the
-  domain in the Calls code; read `callsHost()`.
+  turn the push-based call-me link off. Messages reads the same module
+  (`messagesBase`), as do the call cards in a thread and `lib/shareIntent.ts`.
+  Never hard-code `/apps/calls`, `/apps/messages` or the domain in that code;
+  read `callsHost()`.
   **Video gives way before audio** (`src/tools/calls/videoGovernor.ts`, pure and
   unit-tested): more than five others in the call pauses OUR camera at once and
   brings it back the moment the room is smaller; a link poor for 10s (loss over

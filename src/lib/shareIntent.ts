@@ -11,6 +11,7 @@
 // version another part of the site (or the service worker) has opened. An
 // intent is TAKEN — read and deleted — so a reload of the Messages tab does not
 // offer to send it twice, and anything older than ten minutes is discarded.
+import { callsHost } from '../tools/calls/host'
 const DB = 'bis-share'
 const STORE = 'intents'
 const MAX_AGE = 10 * 60_000
@@ -78,7 +79,7 @@ export function sendToMessages(locale: 'en' | 'ar', make: () => Promise<ShareInt
   void (async () => {
     try {
       const id = await putIntent(await make())
-      w.location.href = `/${locale}/apps/messages/?share=${id}`
+      w.location.href = `/${locale}${callsHost().messagesBase}/?share=${id}`
     } catch { w.close() }
   })()
   return true

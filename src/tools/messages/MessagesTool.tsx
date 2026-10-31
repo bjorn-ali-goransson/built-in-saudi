@@ -5,6 +5,7 @@
 // at a time on a phone. All state lives in the MessageStore (IndexedDB) and every
 // change re-renders through one subscription, so a message arriving by push in a
 // background tab, peer-to-peer in this one, or typed here all show up the same way.
+import { callsHost } from '../calls/host'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocale } from '../../i18n'
 import { STR, type Str } from './strings'
@@ -363,7 +364,7 @@ function Thread({ conv, store, s, locale, tx, onBack, onInfo, onToast, onOpenCon
     // A group call is a room: post the invitation, then host it.
     const room = 'g' + newCallCode()
     store.sendCall(conv.id, room, video)
-    location.assign(`/${locale}/apps/calls/join?code=${room}&host=1`)
+    location.assign(`/${locale}${callsHost().base}/join?code=${room}&host=1`)
   }
 
   let lastDay = ''

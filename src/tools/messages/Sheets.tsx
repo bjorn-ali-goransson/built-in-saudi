@@ -1,5 +1,6 @@
 // The dialogs Messages opens: new chat, groups, chat info, settings, polls,
 // forwarding, message info.
+import { callsHost } from '../calls/host'
 import { useEffect, useMemo, useState } from 'react'
 import { Sheet, SheetTitle, SheetActions, Button, Input, Check } from '../../components/ui'
 import type { ChangeEvent, ReactNode } from 'react'
@@ -18,7 +19,7 @@ function Toggle({ checked, onChange, children, ...rest }: { checked: boolean; on
 
 export function inviteUrl(store: MessageStore, locale: string): string {
   const p = new URLSearchParams({ add: store.me, n: store.name || '', k: store.pub })
-  return `${location.origin}/${locale}/apps/messages?${p}`
+  return `${location.origin}/${locale}${callsHost().messagesBase}?${p}`
 }
 
 function Row({ children, onClick, testid, active }: { children: React.ReactNode; onClick?: () => void; testid?: string; active?: boolean }) {
@@ -228,11 +229,11 @@ export function SettingsSheet({ store, s, locale, onClose, onRelisten }: { store
         </div>
         <input readOnly value={url} className="text-[0.7rem] font-mono w-full bg-transparent border-0 text-ink-faint" dir="ltr" data-testid="invite-url" onFocus={(e) => e.currentTarget.select()} />
       </div>
-      <div className="rounded-md border border-[color:var(--line)] p-3 flex flex-col gap-2">
+      {callsHost().callMe && <div className="rounded-md border border-[color:var(--line)] p-3 flex flex-col gap-2">
         <span className="font-semibold text-[0.9rem]">{s.offline}</span>
         <p className="text-[0.8rem] text-ink-soft" data-testid="offline-state">{hasLink ? s.offlineOn : s.offlineOff}</p>
         {!hasLink && <Button variant="primary" onClick={() => void enableOffline()} data-testid="offline-enable">{s.offlineEnable}</Button>}
-      </div>
+      </div>}
       <div className="flex flex-col gap-1.5">
         <Toggle checked={store.settings.readReceipts} onChange={(e) => void store.setSettings({ readReceipts: e.target.checked })} data-testid="set-read">{s.readReceipts}</Toggle>
         <Toggle checked={store.settings.typing} onChange={(e) => void store.setSettings({ typing: e.target.checked })} data-testid="set-typing">{s.typingIndicators}</Toggle>

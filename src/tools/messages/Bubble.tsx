@@ -1,4 +1,5 @@
 // One message in a thread.
+import { callsHost } from '../calls/host'
 import { useEffect, useState, type ReactNode } from 'react'
 import { RichText } from './RichText'
 import { isJumboEmoji } from './format'
@@ -80,7 +81,7 @@ export function Bubble({ m, store, s, mine, names, group, showName, highlight, a
       <span className="grid place-items-center w-10 h-10 rounded-full bg-[color-mix(in_srgb,currentColor_14%,transparent)] [&_svg]:w-5 [&_svg]:h-5">{m.call.video ? <VideoCallIcon /> : <PhoneIcon />}</span>
       <span className="flex flex-col gap-1"><span className="font-semibold">{s.callInvite(m.call.video)}</span>
         <a data-testid="msg-call-join" className={`inline-flex items-center justify-center rounded-md px-2.5 py-1 text-[0.8rem] font-semibold no-underline ${mine ? 'bg-sand-100 text-green-900' : 'bg-green-600 text-sand-100'}`}
-          href={`/${locale}/apps/calls/join?code=${encodeURIComponent(m.call.room)}${mine ? '&host=1' : ''}`}>{s.joinCall}</a></span>
+          href={`/${locale}${callsHost().base}/join?code=${encodeURIComponent(m.call.room)}${mine ? '&host=1' : ''}`}>{s.joinCall}</a></span>
     </div>
   )
   else if (m.kind === 'doc' && m.doc) body = (
