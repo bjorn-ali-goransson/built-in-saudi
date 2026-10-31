@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('barcode', () => {
+  // The Barcode Generator became the QR code tool's second kind in November
+  // 2026. The first case goes through the OLD address, which must land on the
+  // barcode rather than on a QR code.
   test('calculates the EAN-13 check digit', async ({ page }) => {
     await page.goto('/en/apps/barcode')
+    await expect(page).toHaveURL(/\/en\/apps\/qr-code\?mode=barcode$/)
     // 629104150021 → the published check digit for this GS1 example is 3.
     await page.getByTestId('bc-value').fill('629104150021')
     await expect(page.getByTestId('bc-check')).toContainText('3')
@@ -10,7 +14,7 @@ test.describe('barcode', () => {
   })
 
   test('asks for the right number of digits per symbology', async ({ page }) => {
-    await page.goto('/en/apps/barcode')
+    await page.goto('/en/apps/qr-code?mode=barcode')
     await page.getByTestId('bc-value').fill('123')
     await expect(page.getByTestId('bc-error')).toContainText('12 digits')
     await page.getByTestId('bc-type').selectOption('ean8')
@@ -18,7 +22,7 @@ test.describe('barcode', () => {
   })
 
   test('Code 128 accepts text and rejects what it cannot encode', async ({ page }) => {
-    await page.goto('/en/apps/barcode')
+    await page.goto('/en/apps/qr-code?mode=barcode')
     await page.getByTestId('bc-type').selectOption('code128')
     await page.getByTestId('bc-value').fill('SHIP-4471/A')
     await expect(page.getByTestId('bc-canvas')).toBeVisible()
@@ -27,7 +31,7 @@ test.describe('barcode', () => {
   })
 
   test('downloads a PNG named after the code', async ({ page }) => {
-    await page.goto('/en/apps/barcode')
+    await page.goto('/en/apps/qr-code?mode=barcode')
     await page.getByTestId('bc-value').fill('629104150021')
     const dl = page.waitForEvent('download')
     await page.getByTestId('bc-download').click()

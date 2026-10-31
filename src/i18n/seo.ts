@@ -464,11 +464,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقارنة ملفات JSON', description: 'المقارنة السطرية لملفات JSON عديمة الجدوى تقريبًا: إعادة التنسيق تجعل كل سطر يبدو متغيّرًا والبيانات نفسها. تقارن هذه الأداة القيم بالمسار وتسرد ما أُضيف وما حُذف وما تغيّر، مع خيار التعامل مع المصفوفات كغير مرتّبة.' },
   },
   {
-    id: 'barcode',
-    en: { name: 'Barcode Generator', description: 'Generate a real, scannable barcode — EAN-13 and EAN-8 for retail, UPC-A for North America, and Code 128 for any text on a shipping or shelf label. The check digit is calculated for you and the quiet zone is included, because without it a scanner cannot find the code.' },
-    ar: { name: 'مولّد الباركود', description: 'ولّد باركود حقيقيًا قابلًا للمسح — EAN-13 وEAN-8 للتجزئة، وUPC-A لأمريكا الشمالية، وCode 128 لأي نص على ملصق شحن أو رف. يُحسب رقم التحقق نيابةً عنك، ويُضمَّن الهامش الصامت لأن الماسح لا يجد الرمز بدونه.' },
-  },
-  {
     id: 'coordinates',
     en: { name: 'Coordinate Converter', description: 'Paste coordinates in any common form — decimal, degrees-minutes-seconds, or degrees and decimal minutes — and get every other form back, including UTM and MGRS for survey and field maps. Add a second point for the distance and bearing between them.' },
     ar: { name: 'محوّل الإحداثيات', description: 'الصق إحداثيات بأي صيغة شائعة — عشرية أو درجات ودقائق وثوانٍ أو درجات ودقائق عشرية — لتحصل على بقية الصيغ، بما فيها UTM وMGRS لخرائط المساحة والميدان. أضف نقطة ثانية لتعرف المسافة والاتجاه بينهما.' },

@@ -31,7 +31,7 @@ const CASES = [
   ['calender', 'calendar', 'hijri-calendar'],
   ['hijri calender', 'hijri calendar', 'hijri-calendar'],
   ['excel to csv converter', 'excel to csv converter', 'excel-editor'],
-  ['barcod', 'barcode', 'barcode'],
+  ['barcod', 'barcode', 'qr-code'],
   ['zakat calculater', 'zakat calculator', 'zakat-calculator'],
   ['remove backgroud', 'remove background', 'remove-background'],
   ['unit converer', 'unit converter', 'unit-converter'],

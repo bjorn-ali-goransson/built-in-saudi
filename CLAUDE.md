@@ -918,6 +918,13 @@ generator's third mode. Random Team Maker and Dice Roller became modes of the
 Wheel of Names, which remembers the mode (`bis-random-mode`) because a teacher
 who makes teams every lesson should come back to the teams.
 
+The Barcode Generator became the QR tool's second kind. Both were already
+named «مولّد الباركود» in Arabic, which is the one own-name loss `ownname.mjs`
+had ever recorded — it is gone now (204/204). `RenamedToolRedirect` takes a
+`mode`, so `/apps/barcode` lands on `/apps/qr-code?mode=barcode` rather than on
+a QR code: **a merged tool's old address should open the part that does its
+job**, not the survivor's front page.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

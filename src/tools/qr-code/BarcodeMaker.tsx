@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
 import { Button, Input, Select, Stack, Check, Panel } from '../../components/ui'
 import { DownloadIcon, CopyIcon, ScanQrIcon } from '../../components/icons'
-import { encode, draw, eanCheckDigit, SPECS, type Symbology } from './encode'
+import { encode, draw, eanCheckDigit, SPECS, type Symbology } from './barcodeEncode'
 
 const ORDER: Symbology[] = ['ean13', 'ean8', 'upca', 'code128']
 
@@ -33,7 +33,7 @@ const STR = {
   },
 }
 
-export default function BarcodeTool() {
+export default function BarcodeMaker() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [symbology, setSymbology] = useState<Symbology>('ean13')

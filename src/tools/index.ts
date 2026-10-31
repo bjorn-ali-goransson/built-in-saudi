@@ -73,7 +73,6 @@ import { audioSpectrumTool } from './audio-spectrum/meta'
 import { pdfToWordTool } from './pdf-to-word/meta'
 import { spinWheelTool } from './spin-wheel/meta'
 import { cronBuilderTool } from './cron-builder/meta'
-import { barcodeTool } from './barcode/meta'
 import { coordinatesTool } from './coordinates/meta'
 import { urlParserTool } from './url-parser/meta'
 import { jsonDiffTool } from './json-diff/meta'
@@ -177,7 +176,6 @@ export const tools: Tool[] = [
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
-  barcodeTool,
   imageCompressorTool,
   imageEditTool,
   docScanTool,

@@ -20,9 +20,10 @@ function AppsRedirect() {
 
 /** Renamed tools keep their old /apps/<old-id> URL working with a redirect to
  *  the new id (cv-generator → ats-cv-optimizer). */
-function RenamedToolRedirect({ to }: { to: string }) {
+function RenamedToolRedirect({ to, mode }: { to: string; mode?: string }) {
   const { lang } = useParams()
-  return <Navigate to={`/${lang}/apps/${to}`} replace />
+  // `mode` opens the survivor on the part that does the old tool's job.
+  return <Navigate to={`/${lang}/apps/${to}${mode ? `?mode=${mode}` : ''}`} replace />
 }
 
 /** A category folded into another one: its old address lands on the survivor. */
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
       // contested question the catalogue abstains from rather than takes a side
       // on. Withdrawn August 2026.
       { path: 'apps/tuner', element: <RetiredToolRedirect /> },
+      { path: 'apps/barcode', element: <RenamedToolRedirect to="qr-code" mode="barcode" /> },
       { path: 'apps/team-maker', element: <RenamedToolRedirect to="spin-wheel" /> },
       { path: 'apps/dice-roller', element: <RenamedToolRedirect to="spin-wheel" /> },
       { path: 'apps/passphrase', element: <RenamedToolRedirect to="password-generator" /> },

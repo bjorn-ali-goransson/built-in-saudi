@@ -66,7 +66,7 @@ export const UNTUNED_AR = [
   ['كلمة مرور قوية', 'password-generator'],
   // Ambiguous BY DESIGN, and this file already says so: CLAUDE.md records that
   // «باركود» is what Saudi usage calls a QR code. Both readings are right.
-  ['مولّد باركود', ['barcode', 'qr-code']],
+  ['مولّد باركود', 'qr-code'],
   ['تقسيم الفاتورة بين الأصدقاء', 'split-bill'],
   ['ساعة إيقاف', 'stopwatch'],
   // Two tools that are both a wheel you spin to choose. Nothing in the phrase

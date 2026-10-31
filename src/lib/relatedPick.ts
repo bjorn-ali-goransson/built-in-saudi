@@ -43,7 +43,7 @@ export const CLUSTERS: string[][] = [
   // `check-orphans` fails the build when a tool ends up pointed at by nothing.
   // The QR generator's row must lead with the reader (related-tools.spec.ts
   // pins it): a cluster is symmetric, so qr-code goes in exactly one group.
-  ['qr-code', 'qr-reader', 'barcode'],
+  ['qr-code', 'qr-reader'],
   ['prayer-times', 'qibla', 'hijri-calendar', 'adhkar'],
   ['hajj-umrah', 'qibla', 'prayer-times'],
   ['islamic-calendar', 'hijri-calendar', 'hijri-age', 'khatma'],
@@ -61,7 +61,6 @@ export const CLUSTERS: string[][] = [
   ['case-converter', 'char-finder', 'readable-text'],
   ['audio-spectrum', 'audio-convert', 'metronome'],
   ['link-shortener', 'url-parser', 'url-encoder'],
-  ['barcode', 'qr-reader'],
   ['csv-json', 'csv-vcard', 'excel-editor'],
 ]
 

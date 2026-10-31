@@ -19,7 +19,6 @@ export const VIEWS: Record<string, number> = {
   'attendance-sheet': 4,
   'audio-convert': 3,
   'audio-spectrum': 3,
-  'barcode': 5,
   'base-converter': 3,
   'batch-watermark': 3,
   'book-me': 20,

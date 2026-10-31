@@ -32,7 +32,6 @@ export const ADDED: Record<string, string> = {
   'translate': '2026-08-06',
   'arabic-normalize': '2026-08-05',
   'arabic-numerals': '2026-08-05',
-  'barcode': '2026-08-05',
   'batch-watermark': '2026-08-05',
   'bpm-tap': '2026-08-05',
   'certificate': '2026-08-05',

@@ -42,7 +42,7 @@ const CASES = [
   ['background-remover', 'remove-background'],
   ['qr-generator', 'qr-code'],
   ['qrcode', 'qr-code'],
-  ['barcode-generator', 'barcode'],
+  ['barcode-generator', 'qr-code'],
   ['password-gen', 'password-generator'],
   ['uuid', 'uuid-generator'],
   ['jwt', 'jwt-decoder'],

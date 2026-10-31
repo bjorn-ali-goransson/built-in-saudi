@@ -60,7 +60,7 @@ export const UNTUNED = [
   ['how old am i', 'date-diff'],
   ['days between two dates', 'date-diff'],
   ['stopwatch', 'stopwatch'],
-  ['barcode', 'barcode'],
+  ['barcode', 'qr-code'],
   ['meme', 'image-edit'],
   ['blur a face', 'image-edit'],
   ['srt', 'subtitle-editor'],
