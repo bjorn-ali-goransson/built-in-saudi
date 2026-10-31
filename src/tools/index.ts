@@ -42,10 +42,7 @@ import { urlEncoderTool } from './url-encoder/meta'
 import { baseConverterTool } from './base-converter/meta'
 import { csvJsonTool } from './csv-json/meta'
 import { splitBillTool } from './split-bill/meta'
-import { pomodoroTool } from './pomodoro/meta'
 import { zakatCalculatorTool } from './zakat-calculator/meta'
-import { ageCalculatorTool } from './age-calculator/meta'
-import { workingDaysTool } from './working-days/meta'
 import { cubicBezierTool } from './cubic-bezier/meta'
 import { readableTextTool } from './readable-text/meta'
 import { diceRollerTool } from './dice-roller/meta'
@@ -148,14 +145,14 @@ export const tools: Tool[] = [
   csvJsonTool,
   colourBlindTool,
   splitBillTool,
-  pomodoroTool,
   metronomeTool,
   bpmTapTool,
   zakatCalculatorTool,
-  ageCalculatorTool,
   hijriCalendarTool,
+  // Before hijri-age: «حاسبة العمر» ties the two exactly, and a bare
+  // "age calculator" means the ordinary one.
+  dateDiffTool,
   hijriAgeTool,
-  workingDaysTool,
   coordinatesTool,
   cubicBezierTool,
   readmeGeneratorTool,
@@ -223,7 +220,6 @@ export const tools: Tool[] = [
   translateTool,
   languageDetectTool,
   unitConverterTool,
-  dateDiffTool,
   csvVcardTool,
 
 ]

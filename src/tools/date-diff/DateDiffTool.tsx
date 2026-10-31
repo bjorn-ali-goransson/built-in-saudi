@@ -6,7 +6,9 @@ import {
   gregorianToHijri, hijriToGregorian, daysInHijriMonth, HIJRI_MONTHS, type Hijri,
 } from '../prayer-times/islamic'
 
-type Mode = 'greg' | 'hijri'
+// Age and working days were their own apps until November 2026; both are a
+// difference between two dates, so they are a tab and a line here.
+type Mode = 'greg' | 'hijri' | 'age'
 
 const STR = {
   en: {
@@ -17,6 +19,10 @@ const STR = {
     years: 'years', months: 'months', days: 'days',
     year: 'year', month: 'month', day: 'day',
     fieldDay: 'Day', fieldMonth: 'Month', fieldYear: 'Year',
+    ageTab: 'Age', birth: 'Date of birth', age: 'Your age', future: 'That date is in the future.',
+    totalMonths: 'Total months', bornOn: 'Born on a', next: 'Next birthday in',
+    working: 'Working days', weekendDays: 'Weekend days', inclusive: 'both dates counted',
+    weekend: 'Weekend', friSat: 'Fri–Sat (Saudi)', satSun: 'Sat–Sun',
   },
   ar: {
     gregorianCal: 'ميلادي', hijriCal: 'هجري',
@@ -26,6 +32,10 @@ const STR = {
     years: 'سنوات', months: 'أشهر', days: 'أيام',
     year: 'سنة', month: 'شهر', day: 'يوم',
     fieldDay: 'اليوم', fieldMonth: 'الشهر', fieldYear: 'السنة',
+    ageTab: 'العمر', birth: 'تاريخ الميلاد', age: 'عمرك', future: 'هذا التاريخ في المستقبل.',
+    totalMonths: 'إجمالي الأشهر', bornOn: 'وُلدت يوم', next: 'الميلاد القادم بعد',
+    working: 'أيام العمل', weekendDays: 'أيام العطلة', inclusive: 'يُحتسب التاريخان معًا',
+    weekend: 'نهاية الأسبوع', friSat: 'الجمعة–السبت (السعودية)', satSun: 'السبت–الأحد',
   },
 }
 
@@ -51,6 +61,16 @@ function ymd(a: { y: number; m: number; d: number }, b: { y: number; m: number; 
 }
 const gregPrevMonthDays = (y: number, m: number) => new Date(m === 12 ? y + 1 : y, m === 12 ? 0 : m, 0).getDate()
 
+/** Working and weekend days from a to b, both counted. */
+function workingDays(a: Date, b: Date, friSat: boolean) {
+  const off = friSat ? [5, 6] : [6, 0] // getDay: Sun 0 … Sat 6
+  let working = 0, weekend = 0
+  for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) {
+    if (off.includes(d.getDay())) weekend++; else working++
+  }
+  return { working, weekend }
+}
+
 export default function DateDiffTool() {
   const { locale } = useLocale()
   const s = STR[locale]
@@ -61,6 +81,8 @@ export default function DateDiffTool() {
   const [gTo, setGTo] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 30); return toISO(d) })
   const [hFrom, setHFrom] = useState<Hijri>(nowH)
   const [hTo, setHTo] = useState<Hijri>(nowH)
+  const [birth, setBirth] = useState('')
+  const [friSat, setFriSat] = useState(true)
 
   const fromDate = mode === 'greg' ? parse(gFrom) : hijriToGregorian(hFrom.y, hFrom.m, hFrom.d)
   const toDate = mode === 'greg' ? parse(gTo) : hijriToGregorian(hTo.y, hTo.m, hTo.d)
@@ -72,9 +94,28 @@ export default function DateDiffTool() {
     const breakdown = mode === 'greg'
       ? ymd({ y: a.getFullYear(), m: a.getMonth() + 1, d: a.getDate() }, { y: b.getFullYear(), m: b.getMonth() + 1, d: b.getDate() }, gregPrevMonthDays)
       : ymd(gregorianToHijri(a), gregorianToHijri(b), daysInHijriMonth)
-    return { ...breakdown, totalDays, totalWeeks: Math.floor(totalDays / 7) }
+    return { ...breakdown, totalDays, totalWeeks: Math.floor(totalDays / 7), ...workingDays(a, b, friSat) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate?.getTime(), toDate?.getTime(), mode])
+  }, [fromDate?.getTime(), toDate?.getTime(), mode, friSat])
+
+  const nf = (n: number) => n.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')
+
+  const ageRes = useMemo(() => {
+    const b = birth ? parse(birth) : null
+    if (!b) return null
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    if (b > today) return { future: true as const }
+    const r = ymd({ y: b.getFullYear(), m: b.getMonth() + 1, d: b.getDate() }, { y: today.getFullYear(), m: today.getMonth() + 1, d: today.getDate() }, gregPrevMonthDays)
+    const totalDays = Math.round((today.getTime() - b.getTime()) / 86400000)
+    let nb = new Date(today.getFullYear(), b.getMonth(), b.getDate())
+    if (nb < today) nb = new Date(today.getFullYear() + 1, b.getMonth(), b.getDate())
+    return {
+      future: false as const, ...r, totalDays, totalWeeks: Math.floor(totalDays / 7), totalMonths: r.y * 12 + r.m,
+      nextDays: Math.round((nb.getTime() - today.getTime()) / 86400000),
+      weekday: new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long' }).format(b),
+    }
+  }, [birth, locale])
 
   const phrase = useMemo(() => {
     if (!result) return ''
@@ -93,13 +134,42 @@ export default function DateDiffTool() {
   return (
     <Stack data-testid="date-diff">
       <Seg role="group" aria-label="Calendar">
-        {(['greg', 'hijri'] as Mode[]).map((m) => (
+        {(['greg', 'hijri', 'age'] as Mode[]).map((m) => (
           <SegButton key={m} active={mode === m}
             aria-pressed={mode === m} data-testid={`dd-cal-${m}`} onClick={() => setMode(m)}>
-            {m === 'greg' ? s.gregorianCal : s.hijriCal}
+            {m === 'greg' ? s.gregorianCal : m === 'hijri' ? s.hijriCal : s.ageTab}
           </SegButton>
         ))}
       </Seg>
+
+      {mode === 'age' && (
+        <>
+          <Field label={s.birth} className="max-w-xs">
+            <Input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} className="font-mono" data-testid="age-input" />
+          </Field>
+          {ageRes?.future && <p className="text-[color:var(--danger)] text-[0.9rem]">{s.future}</p>}
+          {ageRes && !ageRes.future && (
+            <>
+              <div className="text-center p-[1.3rem] bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md">
+                <p className="text-[0.82rem] text-ink-faint">{s.age}</p>
+                <p className="font-display text-[clamp(1.5rem,5vw,2.3rem)] text-green-700 rtl:font-ar" data-testid="age-result">
+                  {nf(ageRes.y)} {s.years} · {nf(ageRes.m)} {s.months} · {nf(ageRes.d)} {s.days}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3 text-center">
+                {([[ageRes.totalMonths, s.totalMonths], [ageRes.totalWeeks, s.totalWeeks], [ageRes.totalDays, s.totalDays]] as [number, string][]).map(([v, label]) => (
+                  <div key={label} className="border border-[color:var(--line-soft)] rounded-md bg-[var(--surface)] p-3">
+                    <p className="text-[1.4rem] font-bold text-ink font-mono">{nf(v)}</p><p className="text-[0.8rem] text-ink-faint">{label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[0.9rem] text-ink-soft">{s.bornOn} <b className="text-ink">{ageRes.weekday}</b>. {s.next} <b className="text-ink" data-testid="age-next">{nf(ageRes.nextDays)}</b> {s.days}.</p>
+            </>
+          )}
+        </>
+      )}
+
+      {mode !== 'age' && (<>
 
       <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-lg shadow-[var(--shadow-sm)] p-[1.3rem] grid grid-cols-[1fr_auto_1fr] gap-[0.8rem] items-end max-[560px]:grid-cols-1">
         {mode === 'greg' ? (
@@ -128,8 +198,18 @@ export default function DateDiffTool() {
             <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="dd-total-days">{result.totalDays}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.totalDays}</span></div>
             <div className="bg-[var(--surface)] border border-[color:var(--line-soft)] rounded-md px-4 py-[0.9rem] text-center"><span className="block font-display text-[1.7rem] text-green-700 leading-none rtl:font-ar" data-testid="dd-total-weeks">{result.totalWeeks}</span><span className="block mt-[0.35rem] text-[0.78rem] text-ink-faint">{s.totalWeeks}</span></div>
           </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.9rem] text-ink-soft">
+            <span>{s.working}: <b className="text-ink font-mono" data-testid="dd-working">{nf(result.working)}</b></span>
+            <span>{s.weekendDays}: <b className="text-ink font-mono" data-testid="dd-weekend">{nf(result.weekend)}</b></span>
+            <span className="text-[0.8rem] text-ink-faint">({s.inclusive})</span>
+            <Seg role="group" aria-label={s.weekend}>
+              <SegButton active={friSat} onClick={() => setFriSat(true)} data-testid="dd-frisat">{s.friSat}</SegButton>
+              <SegButton active={!friSat} onClick={() => setFriSat(false)} data-testid="dd-satsun">{s.satSun}</SegButton>
+            </Seg>
+          </div>
         </>
       )}
+      </>)}
     </Stack>
   )
 }

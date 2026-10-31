@@ -50,12 +50,12 @@ export const UNTUNED2 = [
   ['fake names for testing', 'fake-data'],
   ['paste from word into markdown', 'word-editor'],
   ['random teams', 'team-maker'],
-  ['working days between', 'working-days'],
+  ['working days between', 'date-diff'],
   ['what language is this', 'detect-language'],
   // Arabic, written the same way — from the list, not from any miss.
   ['أضف الحركات', 'diacritize'],
   ['تصريف فعل عربي', 'arabic-verbs'],
   ['ملف pdf إلى صور', 'pdf-to-images'],
-  ['حاسبة العمر', 'age-calculator'],
+  ['حاسبة العمر', 'date-diff'],
   ['خطة ختمة', 'khatma'],
 ]

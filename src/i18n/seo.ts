@@ -99,24 +99,9 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'مقسّم الفاتورة', description: 'قسّم فاتورة مطعم أو مجموعة بإنصاف: أضف نسبة بقشيش اختيارية، وحدّد عدد الدافعين، وشاهد نصيب كل شخص والمجموع الكلي. تعمل بالكامل في متصفحك.' },
   },
   {
-    id: 'pomodoro',
-    en: { name: 'Pomodoro Timer', description: 'A distraction-free Pomodoro timer: work in focused sprints, take short and long breaks, and let it cycle automatically with a gentle chime and a round counter. Custom lengths are remembered on your device. Runs entirely in your browser.' },
-    ar: { name: 'مؤقّت بومودورو', description: 'مؤقّت بومودورو خالٍ من التشتيت: اعمل في جلسات مركّزة، وخذ فترات راحة قصيرة وطويلة، ودعه يتنقّل تلقائيًا مع نغمة لطيفة وعدّاد جولات. تُحفظ مدّتك المخصّصة على جهازك. يعمل بالكامل في متصفحك.' },
-  },
-  {
     id: 'zakat-calculator',
     en: { name: 'Zakat Calculator', description: 'Add up your zakatable assets — cash, gold and silver, trade goods and money owed to you — subtract short-term debts, and see 2.5% due once your net wealth is above the niṣāb and held for a lunar year. A helping estimate, not a fatwa. Runs in your browser.' },
     ar: { name: 'حاسبة الزكاة', description: 'اجمع أموالك الزكوية — النقد والذهب والفضة وعروض التجارة والديون المرجوّة لك — واطرح الديون قصيرة الأجل، لترى 2.5% الواجبة متى بلغ صافي مالك النصاب وحال عليه الحول. تقدير مُعين وليس فتوى. يعمل في متصفحك.' },
-  },
-  {
-    id: 'age-calculator',
-    en: { name: 'Age Calculator', description: 'Enter a birth date to see the exact age in years, months and days, the totals in months, weeks and days, the weekday you were born on, and a countdown to the next birthday. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة العمر', description: 'أدخل تاريخ الميلاد لترى العمر بدقّة بالسنوات والأشهر والأيام، والمجاميع بالأشهر والأسابيع والأيام، ويوم الأسبوع الذي وُلدت فيه، وعدًّا تنازليًا للميلاد القادم. تعمل بالكامل في متصفحك.' },
-  },
-  {
-    id: 'working-days',
-    en: { name: 'Working Days Calculator', description: 'Count the working days between two dates, excluding the weekend — Friday–Saturday for Saudi Arabia or Saturday–Sunday elsewhere — with totals for calendar days and weekend days. Runs entirely in your browser.' },
-    ar: { name: 'حاسبة أيام العمل', description: 'احسب أيام العمل بين تاريخين باستثناء نهاية الأسبوع — الجمعة والسبت للسعودية أو السبت والأحد لغيرها — مع مجاميع للأيام الكلية وأيام العطلة. تعمل بالكامل في متصفحك.' },
   },
   {
     id: 'cubic-bezier',
@@ -700,14 +685,9 @@ export const categorySeo: CategorySeo[] = [
     ar: { name: 'أدوات اللغة العربية', description: 'وحّد الهمزات وصور الألف، وحوّل بين الأرقام الهندية والعربية، واكتب الأرقام تفقيطًا، وصرّف فعلًا، وأضف التشكيل، واكتب الاسم بالإنجليزية، واقرأ العربيزي.' },
   },
   {
-    slug: 'time', category: 'Time & Date',
-    en: { name: 'Free time and date tools', description: 'Work out an age, the days between two dates, working days around the Saudi weekend and holidays, a timesheet with overtime, sunrise and golden hour, a time-zone planner, plus a stopwatch, timer and Pomodoro. Free, no sign-up, all in your browser.' },
-    ar: { name: 'أدوات الوقت والتاريخ مجانًا', description: 'احسب العمر، والمدة بين تاريخين، وأيام العمل حول نهاية الأسبوع والإجازات السعودية، وجدول ساعات العمل مع الإضافي، والشروق والساعة الذهبية، ومخطط المناطق الزمنية، مع ساعة إيقاف ومؤقّت وبومودورو. مجانًا دون تسجيل وداخل متصفحك.' },
-  },
-  {
     slug: 'calculators', category: 'Calculators',
-    en: { name: 'Free online calculators', description: 'Percentages, VAT, zakat, dates and working days, unit and currency conversion, early loan settlement, admission score, calorie and water needs, and a bill split. No sign-up and no adverts.' },
-    ar: { name: 'حاسبات مجانية على الإنترنت', description: 'النِّسب، وضريبة القيمة المضافة، والزكاة، والتواريخ وأيام العمل، وتحويل الوحدات والعملات، والسداد المبكر، والنسبة الموزونة، والسعرات والماء، وتقسيم الفاتورة. بلا تسجيل وبلا إعلانات.' },
+    en: { name: 'Free online calculators', description: 'Units and currency, map coordinates, the days between two dates with working days and an exact age, a stopwatch, timer and pomodoro, a tempo tap and a bill split. No sign-up and no adverts.' },
+    ar: { name: 'حاسبات مجانية على الإنترنت', description: 'الوحدات والعملات، والإحداثيات، والمدة بين تاريخين مع أيام العمل والعمر بدقة، وساعة إيقاف ومؤقّت وبومودورو، وعدّاد الإيقاع، وتقسيم الفاتورة. بلا تسجيل وبلا إعلانات.' },
   },
   {
     slug: 'text', category: 'Text',

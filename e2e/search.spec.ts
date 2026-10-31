@@ -697,8 +697,8 @@ test('a substring inside another word is not a match', async ({ page }) => {
   // "old" is inside "Golden Hour" — the mid-word penalty keeps the age
   // calculator first for this.
   await search(page, 'how old am i')
-  await expect(page.getByTestId('tool-age-calculator')).toBeVisible()
-  await expect(top(page)).toContainText(/age/i)
+  await expect(page.getByTestId('tool-date-diff')).toBeVisible()
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-date-diff')
 })
 
 test('British and American spellings both find the tool', async ({ page }) => {

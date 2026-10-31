@@ -90,7 +90,6 @@ const CATEGORY_LABELS: Record<string, Record<Locale, string>> = {
   // measurably the reason «حاسبة» was an 18-way tie: a BMI calculator and a VAT
   // calculator share the word "calculator" and nothing else. Health is a
   // subject and so is time; "calculator" is a shape.
-  'Time & Date': { en: 'Time & Date', ar: 'الوقت والتاريخ' },
   Islamic: { en: 'Islamic', ar: 'إسلاميات' },
   Arabic: { en: 'Arabic', ar: 'العربية' },
   'Saudi / Local': { en: 'Saudi / Local', ar: 'أدوات سعودية' },

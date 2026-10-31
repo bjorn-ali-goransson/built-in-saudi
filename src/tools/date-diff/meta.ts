@@ -5,21 +5,25 @@ import { CalendarIcon } from '../../components/icons'
 export const dateDiffTool: Tool = {
   id: 'date-diff',
   name: 'Date Diff',
-  tagline: 'How long between two dates — years, months, days.',
+  tagline: 'How long between two dates, how many of them are working days, and how old you are.',
   description:
-    'Find the exact duration between two dates: years, months and days, plus total days and weeks. Great for ages, deadlines and durations. Runs entirely in your browser.',
-  category: 'Time & Date',
-  // The whole phrase, so the query has something to match as one string. Term
-  // scoring alone let "two" match noise elsewhere and the working-days
-  // calculator took the query.
-  keywords: ['days between two dates', 'date', 'difference', 'duration', 'days between', 'age', 'how many days', 'الفرق بين تاريخين'],
+    'Find the exact duration between two dates in the Gregorian or Hijri calendar: years, months and days, total days and weeks, and how many of them are working days (with a Friday–Saturday or Saturday–Sunday weekend). The Age tab takes a date of birth and gives the exact age, the weekday you were born on and the days to your next birthday. Runs entirely in your browser.',
+  category: 'Calculators',
+  // The whole phrase, so the query has something to match as one string.
+  keywords: [
+    'days between two dates', 'date', 'difference', 'duration', 'days between', 'how many days', 'الفرق بين تاريخين',
+    // Merged in from the Age Calculator and the Working Days Calculator (November 2026).
+    'age', 'birthday', 'how old', 'عمر', 'ميلاد', 'حساب العمر',
+    'working days', 'business days', 'weekday', 'weekend', 'أيام العمل', 'أيام الدوام', 'عطلة',
+  ],
+  aliases: ['Age Calculator', 'Working Days Calculator', 'حاسبة العمر', 'حاسبة أيام العمل'],
   status: 'stable',
   Icon: CalendarIcon,
   component: lazyTool(() => import('./DateDiffTool')),
   ar: {
     name: 'الفرق بين تاريخين',
-    tagline: 'كم المدة بين تاريخين — سنوات وأشهر وأيام.',
+    tagline: 'كم المدة بين تاريخين، وكم منها أيام عمل، وكم عمرك.',
     description:
-      'احسب المدة الدقيقة بين تاريخين: سنوات وأشهر وأيام، بالإضافة إلى إجمالي الأيام والأسابيع. مناسب للأعمار والمواعيد والمدد. يعمل بالكامل داخل متصفحك.',
+      'احسب المدة الدقيقة بين تاريخين بالتقويم الميلادي أو الهجري: سنوات وأشهر وأيام، وإجمالي الأيام والأسابيع، وكم منها أيام عمل (مع عطلة الجمعة والسبت أو السبت والأحد). وفي تبويب العمر أدخل تاريخ الميلاد لترى عمرك بدقة، ويوم الأسبوع الذي وُلدت فيه، والأيام الباقية لميلادك القادم. يعمل بالكامل داخل متصفحك.',
   },
 }

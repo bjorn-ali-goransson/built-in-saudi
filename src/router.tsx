@@ -74,6 +74,9 @@ export const router = createBrowserRouter([
       // contested question the catalogue abstains from rather than takes a side
       // on. Withdrawn August 2026.
       { path: 'apps/tuner', element: <RetiredToolRedirect /> },
+      { path: 'apps/pomodoro', element: <RenamedToolRedirect to="stopwatch" /> },
+      { path: 'apps/age-calculator', element: <RenamedToolRedirect to="date-diff" /> },
+      { path: 'apps/working-days', element: <RenamedToolRedirect to="date-diff" /> },
       { path: 'apps/pdf-organise', element: <RenamedToolRedirect to="pdf-merge" /> },
       { path: 'apps/images-to-pdf', element: <RenamedToolRedirect to="pdf-merge" /> },
       // November 2026: the catalogue was cut from 244 tools to about 100. A
@@ -222,6 +225,7 @@ export const router = createBrowserRouter([
       // Categories folded into others in the November 2026 cut. Old links land
       // where their tools went, or on the catalogue when they scattered.
       { path: 'c/web', element: <CategoryRedirect to="developer" /> },
+      { path: 'c/time', element: <CategoryRedirect to="calculators" /> },
       { path: 'c/design', element: <RetiredToolRedirect /> },
       { path: 'c/converters', element: <RetiredToolRedirect /> },
       { path: 'c/health', element: <RetiredToolRedirect /> },

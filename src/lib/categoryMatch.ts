@@ -47,7 +47,6 @@
  */
 const CATEGORY_TERMS: Record<string, string[]> = {
   Calculators: ['calculator', 'calc', 'maths', 'math', 'حاسبة', 'حاسبات', 'حساب', 'حاسبه'],
-  'Time & Date': ['time', 'date', 'clock', 'وقت', 'زمن', 'تاريخ', 'ساعة'],
   Images: ['image', 'photo', 'picture', 'pic', 'صورة', 'صور', 'صوره'],
   PDF: ['pdf'],
   Text: ['text', 'نص', 'نصوص', 'كتابة'],

@@ -423,8 +423,9 @@ test.describe('tools', () => {
     await expect(page.getByTestId('sb-per')).toHaveText('60.00')
   })
 
-  test('pomodoro: renders the timer at 25:00', async ({ page }) => {
-    await page.goto('/en/apps/pomodoro')
+  test('pomodoro: the third mode of the stopwatch starts at 25:00', async ({ page }) => {
+    await page.goto('/en/apps/stopwatch')
+    await page.getByTestId('sw-pomodoro').click()
     await expect(page.getByTestId('pom-time')).toHaveText('25:00')
     await expect(page.getByTestId('pom-toggle')).toBeVisible()
   })
@@ -437,19 +438,30 @@ test.describe('tools', () => {
   })
 
   test('age calculator: computes an age from a birth date', async ({ page }) => {
-    await page.goto('/en/apps/age-calculator')
+    await page.goto('/en/apps/date-diff')
+    await page.getByTestId('dd-cal-age').click()
     await page.getByTestId('age-input').fill('2000-01-01')
     await expect(page.getByTestId('age-result')).toContainText('years')
     await expect(page.getByTestId('age-next')).toBeVisible()
   })
 
   test('working days: a Mon–Fri week is 5 working days (Sat–Sun weekend)', async ({ page }) => {
-    await page.goto('/en/apps/working-days')
-    await page.getByTestId('wd-satsun').click()
-    await page.getByTestId('wd-from').fill('2026-07-06') // Monday
-    await page.getByTestId('wd-to').fill('2026-07-10')   // Friday
-    await expect(page.getByTestId('wd-working')).toHaveText('5')
+    await page.goto('/en/apps/date-diff')
+    await page.getByTestId('dd-satsun').click()
+    await page.getByTestId('dd-from').fill('2026-07-06') // Monday
+    await page.getByTestId('dd-to').fill('2026-07-10')   // Friday
+    await expect(page.getByTestId('dd-working')).toHaveText('5')
+    // The Saudi weekend takes the Friday out.
+    await page.getByTestId('dd-frisat').click()
+    await expect(page.getByTestId('dd-working')).toHaveText('4')
   })
+
+  for (const [from, to] of [['age-calculator', 'date-diff'], ['working-days', 'date-diff'], ['pomodoro', 'stopwatch']]) {
+    test(`${from} now lives in ${to}`, async ({ page }) => {
+      await page.goto(`/en/apps/${from}`)
+      await expect(page).toHaveURL(new RegExp(`/en/apps/${to}/?$`))
+    })
+  }
 
   test('cubic bezier: preset updates the CSS value', async ({ page }) => {
     await page.goto('/en/apps/cubic-bezier')

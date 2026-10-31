@@ -290,34 +290,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/zakat-calculator"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/age-calculator/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/age-calculator"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/age-calculator"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/age-calculator"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/age-calculator/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/age-calculator"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/age-calculator"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/age-calculator"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/en/apps/working-days/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/working-days"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/working-days"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/working-days"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/working-days/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/working-days"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/working-days"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/working-days"/>
-  </url>
-  <url>
     <loc>https://built-in-saudi.com/en/apps/split-bill/</loc>
     <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
@@ -330,20 +302,6 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/split-bill"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/split-bill"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/en/apps/pomodoro/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/pomodoro/</loc>
-    <lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/pomodoro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/pomodoro"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/pomodoro"/>
   </url>
   <url>
     <loc>https://built-in-saudi.com/en/apps/url-encoder/</loc>
@@ -1722,20 +1680,6 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/teaching/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/teaching/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/teaching/"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/en/c/time/</loc>
-    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/time/"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/time/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/time/"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/c/time/</loc>
-    <lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/c/time/"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/c/time/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/c/time/"/>
   </url>
   <url>
     <loc>https://built-in-saudi.com/en/c/security/</loc>

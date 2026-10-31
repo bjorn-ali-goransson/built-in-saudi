@@ -903,6 +903,14 @@ on it rather than on PDF to Images. **Every word in a merged tool's Arabic
 tagline competes too**: «ملفات» in it took «ملف pdf إلى صور» off PDF to Images,
 and the tagline says «مستندات» for that reason.
 
+**Then time and dates (109 → 106).** Date Diff took the Age Calculator (an
+"Age" tab) and the Working Days Calculator (a working/weekend-days line under
+every result, with the weekend switchable); Stopwatch & Timer took the Pomodoro
+as a third mode. That left Time & Date with two tools, so it folded back into
+Calculators and `/c/time/` redirects. Date Diff sits before `hijri-age` in the
+registry because «حاسبة العمر» ties the two exactly, and the plain question
+means the ordinary age.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

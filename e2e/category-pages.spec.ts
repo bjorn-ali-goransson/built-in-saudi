@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 // type, and the only page answering it was home, which lists all 207 tools and
 // is therefore about nothing in particular.
 
-const SLUGS = ['pdf', 'images', 'saudi', 'islamic', 'arabic', 'calculators', 'time', 'text',
+const SLUGS = ['pdf', 'images', 'saudi', 'islamic', 'arabic', 'calculators', 'text',
   'developer', 'files', 'generators', 'business', 'communication', 'office']
 
 test('every category is prerendered in both locales with its OWN description', async () => {

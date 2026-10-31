@@ -32,7 +32,7 @@ export const UNTUNED7 = [
 
   // --- counts, spans and repeats --------------------------------------------
   ['every 5 minutes cron', ['cron-builder']],
-  ['25 minute timer', ['pomodoro', 'stopwatch']],
+  ['25 minute timer', ['stopwatch', 'stopwatch']],
   ['how many days between two dates', 'date-diff'],
 
   // --- technical numbers ------------------------------------------------------

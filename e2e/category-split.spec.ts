@@ -15,13 +15,15 @@ import { test, expect } from '@playwright/test'
 // the redaction tools out of the format families people actually hunt in. A
 // collection says "these are all privacy tools" without moving any of them.
 
-test('the time and date tools are their own group now', async ({ page }) => {
+test('the time and date tools went back to Calculators once there were two', async ({ page }) => {
+  // Time & Date was split out at nine tools. The November 2026 merges left two
+  // (the date calculator and the stopwatch), and two tools are not a group.
   await page.goto('/en/c/time/')
+  await expect(page).toHaveURL(/\/en\/c\/calculators\/?$/)
   const ids = await page.locator('[data-testid^="tool-"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('tool-', '')))
-  expect(ids).toContain('working-days')
+  expect(ids).toContain('date-diff')
   expect(ids).toContain('stopwatch')
-  expect(ids).toContain('pomodoro')
 })
 
 test('a security collection exists WITHOUT moving anything out of its category', async ({ page }) => {
@@ -52,7 +54,7 @@ test('a bare noun still goes to the tool that MAKES the thing', async ({ page })
 })
 
 test('the new groups are offered from search', async ({ page }) => {
-  for (const [q, slug] of [['time', 'time'], ['security', 'security'], ['privacy', 'security']] as const) {
+  for (const [q, slug] of [['calculator', 'calculators'], ['security', 'security'], ['privacy', 'security']] as const) {
     await page.goto('/en')
     await page.getByRole('searchbox').fill(q)
     await expect(page.getByTestId('category-offer'), q).toHaveAttribute('data-category', slug)
@@ -106,12 +108,7 @@ test('a query that matches nothing AND names nothing stays empty', async ({ page
   await expect(page.locator('[data-testid^="tool-"]')).toHaveCount(0)
 })
 
-test('the split groups appear on the home catalogue', async ({ page }) => {
-  await page.goto('/en')
-  await expect(page.getByTestId('section-Time & Date')).toBeVisible()
-})
-
-test('it works in Arabic', async ({ page }) => {
+test('the old address works in Arabic too', async ({ page }) => {
   await page.goto('/ar/c/time/')
-  await expect(page.getByTestId('category-title')).toContainText('الوقت')
+  await expect(page).toHaveURL(/\/ar\/c\/calculators\/?$/)
 })

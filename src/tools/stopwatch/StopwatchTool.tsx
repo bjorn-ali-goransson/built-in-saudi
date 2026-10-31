@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocale } from '../../i18n'
+import Pomodoro from './Pomodoro'
 import { Button, Field, Input, Stack, Panel, Seg, SegButton } from '../../components/ui'
 import { elapsed, format, splits, durationMs, type Running } from './time'
 
 const STR = {
   en: {
     intro: 'A stopwatch that counts up and a timer that counts down. Both keep time from the clock rather than by counting ticks, so switching tabs or locking the phone does not lose the minutes in between — which is what usually goes wrong with a timer in a browser.',
-    mode: 'Mode', up: 'Stopwatch', down: 'Timer',
+    mode: 'Mode', up: 'Stopwatch', down: 'Timer', pomo: 'Pomodoro',
     start: 'Start', stop: 'Stop', resume: 'Resume', reset: 'Reset', lap: 'Lap',
     minutes: 'Minutes', seconds: 'Seconds',
     laps: 'Laps', lapNo: 'Lap', split: 'Split', total: 'Total',
@@ -15,7 +16,7 @@ const STR = {
   },
   ar: {
     intro: 'ساعة إيقاف تعدّ تصاعديًا ومؤقّت يعدّ تنازليًا. وكلاهما يقيس الوقت من الساعة نفسها لا بعدّ النبضات، فلا تضيع الدقائق حين تنتقل بين التبويبات أو تُقفل الهاتف — وهذا ما يفسد المؤقّتات في المتصفح عادةً.',
-    mode: 'الوضع', up: 'ساعة إيقاف', down: 'مؤقّت',
+    mode: 'الوضع', up: 'ساعة إيقاف', down: 'مؤقّت', pomo: 'بومودورو',
     start: 'ابدأ', stop: 'أوقف', resume: 'تابع', reset: 'صفّر', lap: 'لفة',
     minutes: 'دقائق', seconds: 'ثوانٍ',
     laps: 'اللفّات', lapNo: 'لفة', split: 'الفارق', total: 'الإجمالي',
@@ -46,7 +47,9 @@ export default function StopwatchTool() {
   const { locale } = useLocale()
   const s = STR[locale]
 
-  const [mode, setMode] = useState<'up' | 'down'>('up')
+  // The pomodoro was its own app until November 2026; it is a third way of
+  // timing something, so it is a third mode here.
+  const [mode, setMode] = useState<'up' | 'down' | 'pomo'>('up')
   const [running, setRunning] = useState<Running | null>(null)
   const [banked, setBanked] = useState(0)
   const [now, setNow] = useState(0)
@@ -96,16 +99,23 @@ export default function StopwatchTool() {
 
   const rows = splits(marks)
 
+  const modes = (
+    <Field label={s.mode}>
+      <Seg data-testid="sw-mode">
+        <SegButton active={mode === 'up'} data-testid="sw-up" onClick={() => { setMode('up'); reset() }}>{s.up}</SegButton>
+        <SegButton active={mode === 'down'} data-testid="sw-down" onClick={() => { setMode('down'); reset() }}>{s.down}</SegButton>
+        <SegButton active={mode === 'pomo'} data-testid="sw-pomodoro" onClick={() => { setMode('pomo'); reset() }}>{s.pomo}</SegButton>
+      </Seg>
+    </Field>
+  )
+
+  if (mode === 'pomo') return <Stack data-testid="stopwatch">{modes}<Pomodoro /></Stack>
+
   return (
     <Stack data-testid="stopwatch">
       <p className="text-[0.95rem] text-ink-soft rtl:font-ar">{s.intro}</p>
 
-      <Field label={s.mode}>
-        <Seg data-testid="sw-mode">
-          <SegButton active={mode === 'up'} data-testid="sw-up" onClick={() => { setMode('up'); reset() }}>{s.up}</SegButton>
-          <SegButton active={mode === 'down'} data-testid="sw-down" onClick={() => { setMode('down'); reset() }}>{s.down}</SegButton>
-        </Seg>
-      </Field>
+      {modes}
 
       {mode === 'down' && (
         <div className="grid gap-3 grid-cols-2 min-[620px]:grid-cols-4">

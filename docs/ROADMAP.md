@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **109 tools are live.** This
+The backlog, and an honest account of what exists. **106 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -32,8 +32,7 @@ registry disagree.
 | Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
 | Saudi / Local | 6 | plates, iqama and ID expiry, phone numbers, IBAN, short address, weather |
 | Files | 4 | the video editor (cut, crop, join, caption, censor, mute, steady the shake, save as MP4, GIF or a still), audio spectrum and conversion, spreadsheet to contacts |
-| Calculators | 5 | units, currency, coordinates, split bill, tempo tap |
-| Time & Date | 5 | date difference, age, working days, stopwatch & timer, pomodoro |
+| Calculators | 7 | units, currency, coordinates, split bill, tempo tap, date difference (with age and working days), stopwatch & timer (with pomodoro) |
 | Business | 3 | CV optimizer, Book Me, certificates |
 | Office | 3 | **presentation editor** — pptx/md outline in a worker, themes, presenter view, live co-editing; **spreadsheet editor** — xlsx/ods/csv in a worker, formulas, charts, live co-editing; **document editor** — docx/odt/md/html, styles, tables, footnotes, prosemirror-collab |
 | Communication | 2 | Calls — P2P video, whiteboard; Messages — P2P team chat |

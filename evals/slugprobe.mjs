@@ -65,7 +65,7 @@ const CASES = [
   // is that a row of three READS as a guess. Which calculator wins is
   // arbitrary, so the row lists the honest set, as the bench does for a query
   // with several right answers.
-  ['calcualtor', ['age-calculator']],
+  ['calcualtor', ['date-diff']],
   // Genuinely nothing: the suggestion must be withheld, not invented.
   ['buy-bitcoin', null],
   ['order-pizza', null],

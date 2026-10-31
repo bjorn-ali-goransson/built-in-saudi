@@ -10,7 +10,6 @@ export const MEASURED = { from: '2026-08-12', to: '2026-10-28' } as const
 export const VIEWS: Record<string, number> = {
   'activity-schedule': 23,
   'adhkar': 52,
-  'age-calculator': 4,
   'arabic-handwriting': 4,
   'arabic-normalize': 6,
   'arabic-numerals': 8,
@@ -78,7 +77,6 @@ export const VIEWS: Record<string, number> = {
   'pdf-to-images': 15,
   'pdf-to-word': 26,
   'photo-booth': 8,
-  'pomodoro': 11,
   'prayer-times': 264,
   'prompt-analyzer': 8,
   'qibla': 21,
@@ -110,7 +108,6 @@ export const VIEWS: Record<string, number> = {
   'uuid-generator': 3,
   'video-edit': 169,
   'weather': 5,
-  'working-days': 4,
   'worksheets': 4,
   'zakat-calculator': 10,
 }

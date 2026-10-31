@@ -31,7 +31,8 @@ function chime() {
   } catch { /* no audio */ }
 }
 
-export default function PomodoroTool() {
+/** The pomodoro mode of the stopwatch (it was its own app until November 2026). */
+export default function Pomodoro() {
   const { locale } = useLocale()
   const s = STR[locale]
   const [lengths, setLengths] = useState(() => {

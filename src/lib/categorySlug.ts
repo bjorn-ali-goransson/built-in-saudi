@@ -17,7 +17,6 @@ export const CATEGORY_SLUGS: Record<string, string> = {
   Arabic: 'arabic',
   Text: 'text',
   Calculators: 'calculators',
-  'Time & Date': 'time',
   Images: 'images',
   PDF: 'pdf',
   Files: 'files',

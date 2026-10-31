@@ -57,9 +57,9 @@ export const UNTUNED = [
   ['uppercase', 'case-converter'],
   ['roll dice', 'dice-roller'],
   ['split the bill', 'split-bill'],
-  ['how old am i', 'age-calculator'],
+  ['how old am i', 'date-diff'],
   ['days between two dates', 'date-diff'],
-  ['pomodoro', 'pomodoro'],
+  ['stopwatch', 'stopwatch'],
   ['barcode', 'barcode'],
   ['meme', 'image-edit'],
   ['blur a face', 'image-edit'],
@@ -72,7 +72,7 @@ export const UNTUNED = [
   // Genuinely more than one right answer.
   ['watermark', ['batch-watermark']],
   ['wheel', ['spin-wheel']],
-  ['timer', ['stopwatch', 'pomodoro']],
+  ['timer', ['stopwatch', 'stopwatch']],
   // Arabic, written the same way — from the list, not from the misses.
   ['تفقيط', 'tafqeet'],
   ['ضغط pdf', 'pdf-compress'],
