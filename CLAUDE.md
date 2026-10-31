@@ -6970,6 +6970,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   reads the receivers' reports (`remote-inbound-rtp`) for what we send. The e2e
   injects the link through `window.__CALL_LINK_STATS` and shortens the timings
   through `window.__CALL_GOV_LIMITS`, since CI cannot make a real bad link.
+  **Each link in a call has a safety code** (`safety.ts`, the shield on a
+  participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
+  from the settled SDP. The SDP crosses our relay, so a relay could swap in its
+  own certificates and sit in the middle with the call still encrypted and
+  working — but then the two people would be shown different codes, which is
+  what reading them aloud checks. No new keys and nothing new on the wire. The
+  e2e asserts two real browsers see the same code, and is verified to fail when
+  a side hashes only its own fingerprint.
   **A live document can be shared into a call** when `callsHost().docs` names
   where the editors live (null, the default, hides it). The view menu opens the
   editor in a NEW tab with `?call=<room>` (leaving would end the call);

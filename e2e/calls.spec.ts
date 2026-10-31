@@ -1204,3 +1204,39 @@ test('"Turn video on anyway" overrides the governor for the rest of the call', a
   await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
   await c.close()
 })
+
+// The safety code (safety.ts) is unit-tested, including that a relay swapping in
+// its own certificate shows the two sides different codes. This pins that two
+// real browsers on a real connection are shown the SAME four groups.
+test('both people in a call are shown the same safety code for their link', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await closeShare(pa)
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+
+  const codeOf = async (p: import('@playwright/test').Page, other: string) => {
+    const panel = p.getByTestId('call-participants-panel')
+    await expect(panel).toContainText(other, { timeout: 25_000 })
+    await panel.getByTestId('call-verify').first().click()
+    const sheet = p.getByTestId('call-verify-sheet')
+    await expect(sheet).toContainText(other)
+    const code = p.getByTestId('call-safety-code')
+    await expect(code).toHaveText(/^\d{4} \d{4} \d{4} \d{4}$/, { timeout: 15_000 })
+    const t = (await code.textContent()) || ''
+    await p.keyboard.press('Escape')
+    return t
+  }
+  const [ca, cb] = await Promise.all([codeOf(pa, 'Bob'), codeOf(pb, 'Alice')])
+  expect(ca).toBe(cb)
+  await a.close(); await b.close()
+})

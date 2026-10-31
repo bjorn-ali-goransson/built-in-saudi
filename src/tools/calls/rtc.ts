@@ -6,6 +6,7 @@
 // renegotiation once the host admits a guest, so un-admitted guests never see or
 // send any media, and their names are exchanged peer-to-peer, not via the relay.
 import type { LinkSample } from './videoGovernor'
+import { fingerprintOf, safetyCode } from './safety'
 const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGNAL?: string }).__CALL_SIGNAL) || 'https://us-central1-blitz-ksa.cloudfunctions.net/call-signal'
 
 // One lightweight probe of the relay before showing a guest the join controls:
@@ -512,6 +513,13 @@ export class CallRoom {
       this.emitPreview()
     }
     this.broadcastInfo(); return true
+  }
+  /** The code both ends of the link to this peer can read aloud (safety.ts);
+   *  null until the connection has settled on both descriptions. */
+  async safetyCode(id: string): Promise<string | null> {
+    const pc = this.peers.get(id)?.pc
+    const mine = fingerprintOf(pc?.currentLocalDescription?.sdp), theirs = fingerprintOf(pc?.currentRemoteDescription?.sdp)
+    return mine && theirs ? safetyCode(mine, theirs) : null
   }
   /** Others in the call proper (not waiting in the lobby). */
   inCallPeers(): number {

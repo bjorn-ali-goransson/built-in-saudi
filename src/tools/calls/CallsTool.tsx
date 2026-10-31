@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Spinner } from '../../components/ui'
+import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon } from '../../components/icons'
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
@@ -963,6 +963,13 @@ export default function CallsTool() {
     setPins((ps) => [...ps, pin]); rtc.current?.broadcast({ t: 'pin', ...pin })
   }
   function removePin(id: string) { setPins((ps) => ps.filter((p) => p.id !== id)); rtc.current?.broadcast({ t: 'pin-remove', id }) }
+  // Reading a code aloud is how two people rule out a relay in the middle (safety.ts).
+  const [verify, setVerify] = useState<{ name: string; code: string | null } | null>(null)
+  async function openVerify(id: string) {
+    setVerify({ name: nameOf(id), code: null })
+    const code = await rtc.current?.safetyCode(id) ?? null
+    setVerify((v) => v && { ...v, code: code ?? '' })
+  }
   function forceMute(id: string) { rtc.current?.forceMute(id); setToast(`${name || s.you} ${s.mutedBy} ${nameOf(id)}`); setTimeout(() => setToast(''), 3500) }
   const seenPanel = (m: 'p' | 'c' | 'r') => { if (m === 'p') setUnseen((u) => ({ ...u, p: 0 })); else if (m === 'c') setUnseen((u) => ({ ...u, c: 0 })) }
   // Open a dock mode (participants / chat / reactions), or close it if it's already showing.
@@ -1897,7 +1904,7 @@ export default function CallsTool() {
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} speaking={speaking && mic} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} onVerify={() => void openVerify(id)} verifyLabel={s.verify} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
                   onAdd={() => addOrAskContact(id, info)} added={!!info.link && contactCodes.has(info.link)}
                   pending={!info.link && requestedIds.has(id)} pendingLabel={s.contactAsked}
                   addLabel={info.link ? s.addContact : s.askToSave} addedLabel={s.savedContact} />
@@ -1905,6 +1912,16 @@ export default function CallsTool() {
             </div>
             {debug && <div className="shrink-0 p-2.5"><DebugPanel diag={diag} mic={mic} cam={cam} /></div>}
           </aside>
+        )}
+        {verify && (
+          <Sheet onClose={() => setVerify(null)} data-testid="call-verify-sheet">
+            <SheetTitle>{s.verifyTitle(verify.name)}</SheetTitle>
+            <p className="text-[0.92rem] text-ink-soft">{s.verifyBody(verify.name)}</p>
+            <p dir="ltr" className="my-4 text-center font-mono text-[1.6rem] tracking-[0.12em] text-ink" data-testid="call-safety-code">
+              {verify.code === null ? <Spinner /> : verify.code || s.verifyNotYet}
+            </p>
+            <p className="text-[0.82rem] text-ink-faint">{s.verifyNote}</p>
+          </Sheet>
         )}
         {showChat && (
           <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-chat-panel">
