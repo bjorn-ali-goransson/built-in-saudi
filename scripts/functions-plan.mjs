@@ -25,11 +25,12 @@ export const FUNCTIONS = {
   'call.js': [['call-signal', 'callSignal'], ['call-register', 'callRegister'], ['call-ring', 'callRing'], ['call-delete', 'callDelete'], ['call-missed', 'callMissed'], ['call-dm', 'callDm'], ['call-msg', 'callMsg']],
   'prompt.js': [['analyze-prompt', 'analyzePrompt'], ['improve-prompt', 'improvePrompt']],
   'diacritize.js': [['diacritize', 'diacritize']],
+  'meet.js': [['meet', 'meet']],
   'todo.js': [['todo-sync', 'todoSync'], ['todo-mine', 'todoMine'], ['todo-share', 'todoShare'], ['todo-delete', 'todoDelete']],
 }
 
 /** Modules imported by another module, so a change to one redeploys the importer. */
-const USED_BY = { 'cvPrompts.js': ['cv.js'], 'cvText.js': ['cv.js'], 'cvShape.js': ['cv.js'] }
+const USED_BY = { 'cvPrompts.js': ['cv.js'], 'cvText.js': ['cv.js'], 'cvShape.js': ['cv.js'], 'meetCore.js': ['meet.js'] }
 
 /** Changes that touch nothing deployed. */
 const INERT = new Set(['functions/README.md'])

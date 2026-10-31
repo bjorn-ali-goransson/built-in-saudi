@@ -14,9 +14,14 @@ export interface CallsHost {
   /** Where the office editors live, to share a live document into a call; null hides it. */
   docs: { word: string; excel: string; slides: string } | null
   callMe: boolean
+  /** Where a NEW meeting is made, when that is not this app's own lobby. Sawi
+   *  Kalam makes meetings on its front page, owned by a signed-in organiser, so
+   *  "start your own call" and "new call" go there rather than opening a room
+   *  nobody owns. null keeps them in the lobby, as built-in-saudi does. */
+  newMeetingPath: string | null
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true }
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
 export const callsHost = (): CallsHost => host

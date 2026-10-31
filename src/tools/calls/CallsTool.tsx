@@ -613,7 +613,7 @@ export default function CallsTool() {
     if (target.mode === 'screen') { try { window.location.assign(localePath(locale, callsHost().base)) } catch { /* */ } }
   }
   // Escape a stale ?room= link: drop the room, become a host, clean the URL.
-  function startOwnCall() { setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
+  function startOwnCall() { if (callsHost().newMeetingPath != null) { newCall(); return } setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
   function askToJoin() {
     saveName()
@@ -795,7 +795,7 @@ export default function CallsTool() {
       askToJoin()
     } else startHost()
   }
-  const newCall = () => window.location.assign(localePath(locale, callsHost().base))
+  const newCall = () => window.location.assign(localePath(locale, callsHost().newMeetingPath ?? callsHost().base))
   // Ghosted by a call link (#211): claim a call link of OUR own, then re-send the
   // missed call carrying it. The owner's missed-call list turns into a "Call back"
   // button that simply rings us on our link — the roles swap, no new plumbing.

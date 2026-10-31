@@ -19,6 +19,8 @@ import './diacritize.js'
 // To-do lists (todoSync/todoMine/todoShare/todoDelete) — the OPTIONAL cloud half;
 // a list is local-only until the user turns sync on for it.
 import './todo.js'
+// Sawi Kalam organisers: passkey sign-in and the meetings they own (meet).
+import './meet.js'
 
 const { Firestore } = firestore
 const db = new Firestore()
