@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **99 tools are live.** This
+The backlog, and an honest account of what exists. **98 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -25,10 +25,10 @@ registry disagree.
 |---|---|---|
 | Generators | 12 | QR codes and barcodes, passwords and passphrases (with diceware), a wheel of names with teams and dice, worksheets, quizzes, Arabic handwriting sheets, seating charts, attendance sheets, school timetables, illustrated activity schedules, metronome (with tap tempo), tier list |
 | Developer | 14 | JWT, X.509 certificates, cron (build **and** explain), number bases, UUIDs, fake data, JSON diff, Markdown tables, READMEs, CSV ⇄ JSON, URLs (parse, build, encode), link shortener, cubic bezier, prompt analyzer |
-| Images | 12 | the image editor (crop, censor, caption, cut and compose), compress and convert, background removal, OCR, QR reader, document-scan correction, passport photos, photo booth, steganography, ASCII art, batch watermark, colour-blindness simulator |
+| Images | 11 | the image editor (crop, censor, caption, cut and compose), compress and convert, background removal, QR reader, document-scan correction, passport photos, photo booth, steganography, ASCII art, batch watermark, colour-blindness simulator |
 | Text | 12 | kanban and to-do lists, on-device translator and language detector, typing test, password strength with the k-anonymous breach check, character finder, readable text, Arabic poetry meters, case converter, flashcards, subtitles |
 | Islamic | 11 | prayer times, qibla, Hijri and Islamic calendars, Hijri age, adhkar, Hisn al-Muslim, istikhara, khatma planner, zakat, hajj & umrah |
-| PDF | 8 | sign, compress, →Word, →images, merge (PDFs and pictures, with the page organiser), edit, PDF to text (with OCR for scans), fill forms |
+| PDF | 8 | sign, compress, →Word, →images, merge (PDFs and pictures, with the page organiser), edit, PDF and photos to text (OCR), fill forms |
 | Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
 | Saudi / Local | 6 | plates, iqama and ID expiry, phone numbers, IBAN, short address, weather |
 | Files | 3 | the video editor (cut, crop, join, caption, censor, mute, steady the shake, save as MP4, GIF or a still), audio conversion (with the spectrum), spreadsheet to contacts |

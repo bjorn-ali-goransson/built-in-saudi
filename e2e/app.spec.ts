@@ -187,7 +187,9 @@ test.describe('tools', () => {
       return route.continue()
     })
 
+    // Through the OLD address, which must open the picture mode.
     await page.goto('/en/apps/image-to-text')
+    await expect(page).toHaveURL(/\/en\/apps\/pdf-ocr\?mode=picture$/)
     await expect(page.getByTestId('image-to-text')).toBeVisible()
     await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
 
@@ -206,7 +208,7 @@ test.describe('tools', () => {
   })
 
   test('image to text: the picker is not image-only and a bad file explains itself', async ({ page }) => {
-    await page.goto('/en/apps/image-to-text')
+    await page.goto('/en/apps/pdf-ocr?mode=picture')
     const input = page.locator('input[type=file]').first()
     // #225: an image-only accept hides Downloads in Android's gallery picker.
     await expect(input).not.toHaveAttribute('accept', /image/)

@@ -55,7 +55,7 @@ export const CLUSTERS: string[][] = [
   ['typing-test', 'stopwatch', 'spin-wheel'],
   ['word-editor', 'excel-editor', 'powerpoint-editor', 'pdf-to-word'],
   ['pdf-merge', 'pdf-compress', 'pdf-to-images'],
-  ['pdf-ocr', 'image-to-text', 'pdf-to-word'],
+  ['pdf-ocr', 'pdf-to-word'],
   ['uuid-generator', 'fake-data', 'readme-generator'],
   ['jwt-decoder', 'cert-decoder', 'url-parser'],
   ['case-converter', 'char-finder', 'readable-text'],

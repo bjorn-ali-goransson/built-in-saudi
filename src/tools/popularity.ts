@@ -49,7 +49,6 @@ export const VIEWS: Record<string, number> = {
   'image-compressor': 15,
   'image-edit': 95,
   'image-to-ascii': 5,
-  'image-to-text': 4,
   'islamic-calendar': 7,
   'istikhara': 17,
   'json-diff': 3,

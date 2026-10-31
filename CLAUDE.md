@@ -931,6 +931,9 @@ BPM a mode of the Metronome, each old address opening its mode. **A tool with
 two intake paths needs a privacy row per path** — `Case.label` titles the second
 one — because the spectrum reads the file through its own worker.
 
+Image to Text joined PDF to Text (99 → 98): one reader, one engine
+(`lib/ocr.ts`), two modes, and `/apps/image-to-text` opens the picture mode.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

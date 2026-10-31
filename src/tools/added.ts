@@ -53,7 +53,6 @@ export const ADDED: Record<string, string> = {
   'url-parser': '2026-08-05',
   'weather': '2026-08-05',
   'worksheets': '2026-08-05',
-  'image-to-text': '2026-08-04',
   'pdf-to-images': '2026-08-04',
   'qr-reader': '2026-08-04',
   'hajj-umrah': '2026-07-30',

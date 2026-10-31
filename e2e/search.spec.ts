@@ -73,9 +73,12 @@ test('a query nothing matches still says so rather than showing everything', asy
 test('a new tool must not capture a generic term from the established one', async ({ page }) => {
   // "PDF to Text" was first called "OCR a Scanned PDF", which starts
   // with OCR and therefore outscored "Image to Text (OCR)" on a bare "ocr" —
-  // a query that means the general tool, not the PDF one.
+  // a query that means the general tool, not the PDF one. Since November 2026
+  // the two are one tool, so "ocr" must land on it, in its picture half too.
   await search(page, 'ocr')
-  await expect(top(page)).toContainText(/image to text/i)
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-ocr')
+  await search(page, 'text from image')
+  await expect(top(page)).toHaveAttribute('data-testid', 'tool-pdf-ocr')
   // ...while the specific query still reaches the specific tool.
   await search(page, 'scanned pdf')
   await expect(top(page)).toContainText(/PDF to Text/i)
@@ -406,7 +409,7 @@ test.describe('held-out set #3 fixes', () => {
   test('a query about a PHOTO does not go to the scanned-PDF tool', async ({ page }) => {
     // `pdf-ocr` carried the keyword `photocopy`, which begins with "photo" and
     // therefore scored as a word-boundary substring on every photo query.
-    await wins(page, 'read the text in a photo', 'image-to-text')
+    await wins(page, 'read the text in a photo', 'pdf-ocr')
   })
 
   test('«مسربة» reaches the tool that checks for a leak', async ({ page }) => {

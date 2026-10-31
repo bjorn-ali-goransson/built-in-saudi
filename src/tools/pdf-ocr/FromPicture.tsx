@@ -43,7 +43,7 @@ const STR = {
   },
 }
 
-export default function ImageToTextTool() {
+export default function FromPicture() {
   const { locale } = useLocale()
   const s = STR[locale]
   const fileRef = useRef<HTMLInputElement>(null)

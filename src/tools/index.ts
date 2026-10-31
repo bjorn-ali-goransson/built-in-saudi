@@ -4,7 +4,6 @@ import { imageEditTool } from './image-edit/meta'
 import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfToImagesTool } from './pdf-to-images/meta'
-import { imageToTextTool } from './image-to-text/meta'
 import { qrReaderTool } from './qr-reader/meta'
 import { pdfSignTool } from './pdf-sign/meta'
 import { pdfFillTool } from './pdf-fill/meta'
@@ -178,7 +177,6 @@ export const tools: Tool[] = [
   stopwatchTool,
   pdfToImagesTool,
   pdfToWordTool,
-  imageToTextTool,
   qrReaderTool,
   pdfSignTool,
   pdfFillTool,

@@ -249,7 +249,8 @@ ${TOKEN}
   // which is exactly why it was left until last — but those are same-origin
   // GETs with no body, so the guard's two assertions still hold and the only
   // cost is time. If it ever goes off-origin, `e2e/ocr.spec.ts` fails first.
-  { id: 'image-to-text', testid: 'ocr-drop', within: true, name: 'scan.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
+  { id: 'pdf-ocr', label: 'pdf-ocr (picture)', testid: 'ocr-drop', within: true, name: 'scan.png', mime: 'image/png', make: () => pngWithToken(TOKEN),
+    reveal: async (page) => { await page.getByTestId('tr-mode-picture').click() } },
   { id: 'colour-blind', testid: 'cb-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN),
     reveal: (page) => page.getByTestId('cb-mode-image').click() },
   { id: 'passport-photo', testid: 'pp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },

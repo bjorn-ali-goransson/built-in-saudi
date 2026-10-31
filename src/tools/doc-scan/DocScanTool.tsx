@@ -212,7 +212,7 @@ export default function DocScanTool() {
 
       <p className="text-sm flex flex-wrap gap-4">
         <a href={localePath(locale, '/apps/pdf-merge')}>{s.next}</a>
-        <a href={localePath(locale, '/apps/image-to-text')}>{s.ocr}</a>
+        <a href={localePath(locale, '/apps/pdf-ocr?mode=picture')}>{s.ocr}</a>
       </p>
     </Stack>
   )
