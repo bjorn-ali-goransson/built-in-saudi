@@ -7,6 +7,7 @@ import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
+import { formatAt, parseAt, atParam } from './meeting'
 import { LIMITS as GOV_LIMITS, initialGov, stepGov, type GovState, type LinkSample } from './videoGovernor'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
@@ -41,6 +42,8 @@ export default function CallsTool() {
   const s = STR[locale]
   // Captured once at mount — we later rewrite the URL to /join?code=…, which must
   // not flip this (it determines host vs guest). `room=` is accepted for old links.
+  // A scheduled meeting's start time, from its link: shown, never enforced.
+  const [startsAt] = useState(() => parseAt(window.location.search))
   const [initialRoom] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('code') || p.get('room') || '' })
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
@@ -525,7 +528,7 @@ export default function CallsTool() {
   // URL for an in-call / invite link vs the bare start page. When the host is
   // debugging, carry ?debug=1 into the invite so a (non-technical) guest lands with
   // diagnostics already on — no need to ask them to tap the bug button.
-  const joinPath = (code: string) => `${localePath(locale, callsHost().base)}/join?code=${code}${debug ? '&debug=1' : ''}`
+  const joinPath = (code: string) => `${localePath(locale, callsHost().base)}/join?code=${code}${startsAt && code === initialRoom ? `&at=${atParam(startsAt)}` : ''}${debug ? '&debug=1' : ''}`
   const lobbyPath = () => localePath(locale, callsHost().base)
 
   // Host: start the call right away (others still need to be let in).
@@ -684,7 +687,9 @@ export default function CallsTool() {
   useEffect(() => {
     // A host reload re-enters immediately; a fresh ring (ownerHost + incomingLink)
     // instead shows the ringing screen and waits for Answer.
-    if ((isHostReturn || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; startHost() }
+    // A scheduled meeting waits for its organiser to press Start: opening the link
+    // early is to look at it, not to open the room.
+    if (((isHostReturn && !startsAt) || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; startHost() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // Hardening (#188): the /join route only makes sense with a code (or a host/ring/
@@ -715,7 +720,8 @@ export default function CallsTool() {
     let alive = true
     roomStatus(initialRoom).then((st) => {
       if (!alive) return
-      if (st === 'open') setChecking(false)
+      // A scheduled meeting nobody has started yet is an empty room, not an ended one.
+      if (st === 'open' || (st === 'missing' && startsAt)) setChecking(false)
       else { setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
     })
     return () => { alive = false }
@@ -1310,6 +1316,9 @@ export default function CallsTool() {
       <div className={`${greenWrap} ${ringing ? '[animation:bis-call-flash_2.2s_ease-in-out_infinite]' : ''}`} data-testid="calls">
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
+          {startsAt && !checking && !(incomingLink && !answered) && (
+            <p className="text-center text-[0.95rem] text-sand-100/90" data-testid="call-starts-at">{s.startsAt(formatAt(startsAt, locale))}</p>
+          )}
           {checking ? (
             <div className="flex flex-col items-center gap-3" data-testid="call-checking">
               <span className="w-7 h-7 rounded-full border-2 border-sand-100/25 border-t-sand-100 animate-spin" />

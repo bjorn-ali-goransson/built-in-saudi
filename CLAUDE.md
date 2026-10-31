@@ -6970,6 +6970,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   reads the receivers' reports (`remote-inbound-rtp`) for what we send. The e2e
   injects the link through `window.__CALL_LINK_STATS` and shortens the timings
   through `window.__CALL_GOV_LIMITS`, since CI cannot make a real bad link.
+  **A meeting can be made ahead of time** (`meeting.ts`): `createMeeting()`
+  remembers a fresh code as hosted here, and `meetingUrl` builds its link with an
+  optional start time (`at=`, UTC to the minute). The time is SHOWN on the call
+  screen (`call-starts-at`), never enforced: the organiser opening a scheduled
+  link sees Start rather than auto-entering, and a guest who arrives first finds
+  an empty room treated as not started rather than ended, knocks, and is let in
+  when the organiser starts. Verified to fail without that empty-room rule.
   **Each link in a call has a safety code** (`safety.ts`, the shield on a
   participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
   from the settled SDP. The SDP crosses our relay, so a relay could swap in its

@@ -1240,3 +1240,36 @@ test('both people in a call are shown the same safety code for their link', asyn
   expect(ca).toBe(cb)
   await a.close(); await b.close()
 })
+
+// A meeting made ahead of time (meeting.ts): the link carries its start time,
+// the call screen shows it, and a guest who arrives before the organiser is
+// let in once they start — an empty room is "not started", not "ended".
+test('a scheduled meeting shows its start time, and an early guest is let in once the organiser starts', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  // Built site: make the meeting the way the page does — a code this browser hosts.
+  const code = 'sched' + Math.random().toString(36).slice(2, 6)
+  await pa.evaluate((c) => localStorage.setItem('bis-call-host', c), code)
+  const at = '2030-01-15T09:30Z'
+
+  await pb.goto(`/en/apps/calls/join?code=${code}&at=${at}`)
+  await expect(pb.getByTestId('call-starts-at')).toContainText('15 Jan', { timeout: 10_000 })
+  await expect(pb.getByTestId('call-ended')).toHaveCount(0)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pb.getByTestId('call-waiting')).toBeVisible({ timeout: 10_000 })
+
+  await pa.goto(`/en/apps/calls/join?code=${code}&at=${at}`)
+  await expect(pa.getByTestId('call-starts-at')).toBeVisible()
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pa)
+  // The share link the organiser hands out still carries the time.
+  expect(new URL(pa.url()).searchParams.get('at')).toBe(at)
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 20_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await a.close(); await b.close()
+})
