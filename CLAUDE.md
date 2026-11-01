@@ -7002,9 +7002,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   document only if it is on this site (`liveDoc`). STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
-  `makeInvite(url, code, ar, { meeting, at })` draws a meeting's invitation
-  ("Join my meeting", the start time with the sharer's time zone, in the picture
-  and in its caption). Its canvas is never on the page, so it inherits no text
+  `makeInvite(url, code, ar, { meeting, at })` draws a meeting's invitation:
+  the title, the start time, the QR and the link, and nothing else. The time
+  names its zone unless it is Saudi time (UTC+3), in the picture and in its
+  caption. `brand.font` sets every invite picture in the host's one typeface,
+  loaded before drawing (a canvas never redraws). Its canvas is never on the page, so it inherits no text
   direction: Arabic is set right to left by hand, the code and link left to
   right, and a long link is shrunk to fit rather than cut off.
   **Knock visibility (#217):** the ONLY admit control used to live inside the
