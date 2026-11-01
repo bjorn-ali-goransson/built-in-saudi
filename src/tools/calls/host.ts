@@ -33,6 +33,9 @@ export interface CallsHost {
   brand: {
     name: { en: string; ar: string }
     bg: string; ink: string; soft: string; accent: string; qr: string
+    /** The typeface a meeting's invitation is set in, as a CSS family list;
+     *  the page must load it. Unset draws in the system's own sans-serif. */
+    font?: string
   }
 }
 

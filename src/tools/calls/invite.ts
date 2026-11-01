@@ -11,11 +11,21 @@ import { callsHost } from './host'
 // picture (one carrying a start time) is set smaller rather than cut off.
 type Ctx = CanvasRenderingContext2D
 function words(x: Ctx, ar: boolean) { x.direction = ar ? 'rtl' : 'ltr' }
-function link(x: Ctx, text: string, cx: number, y: number, maxW: number) {
+function link(x: Ctx, text: string, cx: number, y: number, maxW: number, family = 'ui-monospace, monospace', start = 16) {
   x.direction = 'ltr'
-  let size = 16
-  do { x.font = `${size}px ui-monospace, monospace` } while (x.measureText(text).width > maxW && --size > 9)
+  let size = start
+  do { x.font = `${size}px ${family}` } while (x.measureText(text).width > maxW && --size > 9)
   x.fillText(text, cx, y)
+}
+
+/** The host's typeface, loaded before anything is drawn: a canvas draws with
+ *  whatever is ready and never redraws, so an unloaded face is a fallback face
+ *  baked into the picture. Capped, because a font host that does not answer
+ *  must not stop the picture being made. */
+async function fontsReady(family: string, text: string) {
+  if (typeof document === 'undefined' || !document.fonts) return
+  const want = Promise.all(['400', '600', '700'].map((w) => document.fonts.load(`${w} 20px ${family}`, text)))
+  await Promise.race([want, new Promise((r) => setTimeout(r, 2000))]).catch(() => {})
 }
 
 const loadImg = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src })
@@ -27,31 +37,70 @@ export interface InviteOptions {
   at?: Date | null
 }
 
+/** The faces a picture is set in: the host's one typeface for everything when
+ *  it names one (Sawi Kalam uses IBM Plex and nothing else), else the original
+ *  serif title, sans text and monospace code and link. */
+function faces(font?: string) {
+  return font ? { title: font, sans: font, mono: font } : { title: 'Georgia, serif', sans: 'system-ui, sans-serif', mono: 'ui-monospace, monospace' }
+}
+
 /** The start time as the picture carries it. The picture is read wherever it is
- *  forwarded to, so it names the sharer's time zone; the call screen, by
- *  contrast, shows each viewer their own local time. */
+ *  forwarded to, so a time zone other than Saudi time is named; Saudi time
+ *  (UTC+3, no daylight saving) is what anybody reading it here assumes, and
+ *  naming it is noise. The call screen shows each viewer their own local time. */
 function atLine(at: Date, ar: boolean) {
-  return new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).format(at)
+  const ksa = at.getTimezoneOffset() === -180
+  return new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', ...(ksa ? {} : { timeZoneName: 'short' }) }).format(at)
+}
+
+/** A meeting's invitation: the title, the start time if there is one, the QR
+ *  and the link. Nothing else — the picture is read at a glance in a chat, and
+ *  the QR and the link say how to join without being told. */
+async function drawMeeting(url: string, ar: boolean, when: string): Promise<HTMLCanvasElement> {
+  const b = callsHost().brand
+  const family = b.font || 'system-ui, sans-serif'
+  const title = ar ? 'انضم إلى اجتماعي' : 'Join my meeting'
+  if (b.font) await fontsReady(b.font, title + when + url)
+  const W = 620, qs = 360, qx = (W - qs) / 2
+  const qy = when ? 186 : 140
+  const H = qy + qs + 96
+  const c = document.createElement('canvas'); c.width = W; c.height = H
+  const x = c.getContext('2d')!
+  x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
+  x.textAlign = 'center'
+  words(x, ar)
+  x.fillStyle = b.ink
+  x.font = `700 44px ${family}`; x.fillText(title, W / 2, 86)
+  if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136) }
+  const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: b.qr, light: '#ffffff' } })
+  x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
+  x.drawImage(await loadImg(qr), qx, qy, qs, qs)
+  x.fillStyle = b.accent
+  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 62, W - 40, family, 18)
+  return c
 }
 
 export async function makeInvite(url: string, code: string, ar = false, opts: InviteOptions = {}): Promise<Blob> {
   const at = opts.at && !Number.isNaN(opts.at.getTime()) ? opts.at : null
   const when = at ? atLine(at, ar) : ''
+  if (opts.meeting) return finish(await drawMeeting(url, ar, when), url, ar, true, when)
   // A start time takes a line of its own between the title and the QR.
   const drop = when ? 44 : 0
   const W = 620, H = 780 + drop
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
   const b = callsHost().brand
+  const f = faces(b.font)
+  if (b.font) await fontsReady(b.font, 'Join انضم ' + url)
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   x.textAlign = 'center'
   words(x, ar)
   x.fillStyle = b.ink
   const title = opts.meeting ? (ar ? 'انضم إلى اجتماعي' : 'Join my meeting') : (ar ? 'انضم إلى مكالمتي' : 'Join my call')
-  x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
-  x.font = '18px system-ui, sans-serif'; x.fillStyle = b.soft
+  x.font = `bold 42px ${f.title}`; x.fillText(title, W / 2, 92)
+  x.font = `18px ${f.sans}`; x.fillStyle = b.soft
   x.fillText(ar ? 'خاص · مباشر بين الأجهزة · دون رفع' : 'Private · peer-to-peer · nothing uploaded', W / 2, 126)
-  if (when) { x.font = 'bold 22px system-ui, sans-serif'; x.fillStyle = b.ink; x.fillText(when, W / 2, 168) }
+  if (when) { x.font = `bold 22px ${f.sans}`; x.fillStyle = b.ink; x.fillText(when, W / 2, 168) }
 
   const qs = 360, qx = (W - qs) / 2, qy = 168 + drop
   const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: b.qr, light: '#ffffff' } })
@@ -60,15 +109,22 @@ export async function makeInvite(url: string, code: string, ar = false, opts: In
 
   x.fillStyle = b.ink
   x.direction = 'ltr'
-  x.font = 'bold 34px ui-monospace, monospace'; x.fillText(code, W / 2, qy + qs + 78)
+  x.font = `bold 34px ${f.mono}`; x.fillText(code, W / 2, qy + qs + 78)
   words(x, ar)
-  x.font = '17px system-ui, sans-serif'; x.fillStyle = b.soft
+  x.font = `17px ${f.sans}`; x.fillStyle = b.soft
   x.fillText(ar ? 'امسح الرمز أو افتح:' : 'Scan the code, or open:', W / 2, qy + qs + 118)
   x.fillStyle = b.accent
-  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 148, W - 40)
+  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 148, W - 40, f.mono)
 
-  const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
-  const what = opts.meeting ? (ar ? 'اجتماعي' : 'meeting') : (ar ? 'مكالمتي' : 'call')
+  return finish(c, url, ar, false, when)
+}
+
+/** The PNG, with the invitation and the link in it as text, so the link
+ *  survives the picture being forwarded on its own. */
+async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: boolean, when: string): Promise<Blob> {
+  const b = callsHost().brand
+  const blob: Blob = await new Promise((res) => c.toBlob((x) => res(x!), 'image/png'))
+  const what = meeting ? (ar ? 'اجتماعي' : 'meeting') : (ar ? 'مكالمتي' : 'call')
   const caption = (ar ? `انضم إلى ${what} في «${b.name.ar}»${when ? ` (${when})` : ''}: ` : `Join my ${b.name.en} ${what}${when ? ` (${when})` : ''}: `) + url
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
 }
@@ -81,13 +137,15 @@ export async function makeCallLinkImage(url: string, name: string, ar = false): 
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
   const b = callsHost().brand
+  const f = faces(b.font)
+  if (b.font) await fontsReady(b.font, 'Join انضم ' + url)
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   x.textAlign = 'center'
   words(x, ar)
   x.fillStyle = b.ink
   const title = name ? (ar ? `اتصل بـ ${name}` : `Call ${name}`) : (ar ? 'اتصل بي' : 'Call me')
-  x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
-  x.font = '18px system-ui, sans-serif'; x.fillStyle = b.soft
+  x.font = `bold 42px ${f.title}`; x.fillText(title, W / 2, 92)
+  x.font = `18px ${f.sans}`; x.fillStyle = b.soft
   x.fillText(ar ? 'خاص · مباشر بين الأجهزة · دون تطبيق' : 'Private · peer-to-peer · no app', W / 2, 126)
 
   const qs = 360, qx = (W - qs) / 2, qy = 168
@@ -95,10 +153,10 @@ export async function makeCallLinkImage(url: string, name: string, ar = false): 
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
   x.drawImage(await loadImg(qr), qx, qy, qs, qs)
 
-  x.font = '17px system-ui, sans-serif'; x.fillStyle = b.soft
+  x.font = `17px ${f.sans}`; x.fillStyle = b.soft
   x.fillText(ar ? 'امسح الرمز أو افتح:' : 'Scan the code, or open:', W / 2, qy + qs + 70)
   x.fillStyle = b.accent
-  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 104, W - 40)
+  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 104, W - 40, f.mono)
 
   const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
   const caption = (name ? (ar ? `اتصل بـ ${name}: ` : `Call ${name}: `) : (ar ? 'اتصل بي: ' : 'Call me: ')) + url
