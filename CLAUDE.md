@@ -6963,6 +6963,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   The same goes for what LEAVES the app: `callsHost().brand` names the app and
   colours the invite picture, its caption and every QR, so a link shared from
   Sawi Kalam does not say "Built in Saudi" or come out green.
+  `askNameFirst: false` drops the name field before the call: the person starts
+  or knocks at once and is asked their name while waiting or in the call
+  (`call-name-ask`), remembered under `bis-call-name`. A rename mid-call goes
+  to everyone through `rtc.setName` — before that the name was sent once, on
+  entering, so the header's rename only ever changed your own screen.
   **Video gives way before audio** (`src/tools/calls/videoGovernor.ts`, pure and
   unit-tested): more than five others in the call pauses OUR camera at once and
   brings it back the moment the room is smaller; a link poor for 10s (loss over

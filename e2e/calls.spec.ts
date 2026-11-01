@@ -39,7 +39,8 @@ test.afterAll(() => server?.close())
 // A host start now auto-opens the Share modal; close it before driving the call UI.
 async function closeShare(p: import('@playwright/test').Page) {
   const x = p.getByTestId('call-share-close')
-  if (await x.count()) await x.click()
+  // A knock closes the share window by itself, so it may vanish under the click.
+  if (await x.count()) await x.click({ timeout: 3000 }).catch(() => {})
 }
 
 async function ctx(browser: Browser, signal: string) {
