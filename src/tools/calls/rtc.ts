@@ -433,6 +433,8 @@ export class CallRoom {
     }
   }
   /** Publish our own call-link code to in-call peers so they can save us (#221). */
+  /** A rename mid-call: everyone connected hears it now, not at the next heartbeat. */
+  setName(name: string) { if (name && name !== this.name) { this.name = name; if (this.active) this.broadcastInfo() } }
   setMyLink(code: string) { if (code !== this.myLink) { this.myLink = code || ''; this.broadcastInfo() } }
   private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn, aspect: this.aspect, link: this.myLink || undefined } as Ctrl)) }
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }

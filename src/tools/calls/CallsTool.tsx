@@ -63,6 +63,20 @@ export default function CallsTool() {
   const nameCustom = name.trim() !== '' && !isDefaultName(name)
   // The current name was loaded from this browser's storage (a remembered name).
   const savedName = !!storedName && name === storedName
+  // An embedder may skip the name field before the call and ask once the person
+  // is waiting or in it (askNameFirst: false). Not asked again once answered.
+  const nameFirst = callsHost().askNameFirst
+  const [nameAsk, setNameAsk] = useState(() => {
+    if (nameFirst || storedName) return false
+    try { if (new URLSearchParams(window.location.search).has('knock') && sessionStorage.getItem('bis-call-guest-name')) return false } catch { /* */ }
+    return true
+  })
+  const [nameDraft, setNameDraft] = useState('')
+  function answerName() {
+    const n = nameDraft.trim().slice(0, 60); if (!n) return
+    setName(n); setRemember(true); setNameAsk(false)
+    try { localStorage.setItem(NAME_KEY, n) } catch { /* */ }
+  }
   function saveName() { try { if (remember && nameCustom) localStorage.setItem(NAME_KEY, name); else localStorage.removeItem(NAME_KEY) } catch { /* */ } }
   // Forget the stored name and drop back to a fresh random suggestion.
   function clearSavedName() { try { localStorage.removeItem(NAME_KEY) } catch { /* */ } setRemember(false); setName(randName(locale === 'ar', gender === 'f')) }
@@ -159,6 +173,13 @@ export default function CallsTool() {
   const [camId, setCamId] = useState(''), [micId, setMicId] = useState(''), [spkId, setSpkId] = useState('')
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
   const [editingName, setEditingName] = useState(false)
+  // A rename reaches the others too, not only this screen; settled briefly so
+  // typing does not send one update per keystroke.
+  useEffect(() => {
+    const t = window.setTimeout(() => rtc.current?.setName(name.trim() || s.you), 300)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name])
   // Open by default on every size: desktop shows the side dock, mobile the bottom
   // split. (Mobile used to start whiteboard-fullscreen; now it starts split.)
   // The dock has three modes now: participants, chat, and reactions (null = closed).
@@ -1230,6 +1251,22 @@ export default function CallsTool() {
   // vertical padding, so the green panel reaches every edge between header + footer.
   const greenWrap = 'bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-14 w-screen mx-[calc(50%-50vw)] my-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
   const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
+  // The name, asked once the person is waiting or in the call (askNameFirst: false).
+  // 'dark' sits on the waiting panel; 'bar' is docked under the call's toolbar.
+  const nameForm = (tone: 'dark' | 'bar') => (
+    <form data-testid="call-name-ask" onSubmit={(e) => { e.preventDefault(); answerName() }}
+      className={tone === 'dark' ? 'w-full max-w-[22rem] flex flex-col gap-2' : 'flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,var(--color-green-400)_14%,var(--surface))]'}>
+      <label htmlFor="call-name-ask-input" className={tone === 'dark' ? 'text-[0.85rem] text-sand-100/85 text-center' : 'text-[0.9rem] font-medium text-ink'}>{s.askName}</label>
+      <div className={`flex gap-2 ${tone === 'dark' ? 'w-full' : 'flex-1 min-w-[14rem]'}`}>
+        <input id="call-name-ask-input" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={s.yourName} autoComplete="name" maxLength={60} data-testid="call-name-ask-input"
+          className="flex-1 min-w-0 h-10 px-3 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink text-[0.95rem]" />
+        <button type="submit" disabled={!nameDraft.trim()} data-testid="call-name-ask-save"
+          className={`h-10 px-4 rounded-md border-0 font-semibold text-[0.9rem] cursor-pointer disabled:opacity-50 ${tone === 'dark' ? 'bg-sand-100 text-green-700' : 'bg-green-600 text-sand-50'}`}>{s.saveName}</button>
+        <button type="button" onClick={() => setNameAsk(false)} data-testid="call-name-ask-dismiss"
+          className={`h-10 px-3 rounded-md bg-transparent border-0 text-[0.85rem] cursor-pointer ${tone === 'dark' ? 'text-sand-100/70 hover:text-sand-100' : 'text-ink-soft hover:text-ink'}`}>{s.notNow}</button>
+      </div>
+    </form>
+  )
   const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
   const ringing = !!incomingLink && !answered
   // Incoming screen: the phone bounces instead of pulsing (#189). Other green
@@ -1332,6 +1369,7 @@ export default function CallsTool() {
               {/* Halfway through each poll wait, show we're checking the relay again. */}
               <span className={`w-5 h-5 rounded-full border-2 border-sand-100/25 border-t-sand-100 transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
               {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
+              {nameAsk && nameForm('dark')}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
           ) : incomingLink && !answered ? (
@@ -1353,7 +1391,7 @@ export default function CallsTool() {
             <>
               <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
               <div className="w-full flex flex-col gap-3">
-                <label className="flex flex-col gap-1">
+                {nameFirst && <label className="flex flex-col gap-1">
                   <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
                   <div className="relative">
                     <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className={`${!savedName && !nameCustom ? 'pe-[4.75rem]' : 'pe-11'} h-12`} />
@@ -1388,7 +1426,7 @@ export default function CallsTool() {
                       </div>
                     )}
                   </div>
-                </label>
+                </label>}
                 {isGuest ? (
                   <>
                     <button className={cream} disabled={busy} onClick={askToJoin} data-testid="call-join">{busy ? s.joining : s.askJoin}</button>
@@ -1693,6 +1731,7 @@ export default function CallsTool() {
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
+      {nameAsk && nameForm('bar')}
 
       {/* Explain-first notifications: rationale + Enable (which is the ONLY place we
           call requestPermission). Edge-docked bar under the toolbar; dismissible. */}

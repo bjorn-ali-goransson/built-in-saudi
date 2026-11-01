@@ -23,6 +23,10 @@ export interface CallsHost {
    *  (Sawi Kalam's server records meetings). An empty room is then "not started",
    *  not "ended", and a guest can knock and wait for the organiser. */
   pendingRoom: string | null
+  /** Ask for a name BEFORE the call (built-in-saudi's start screen). false
+   *  starts or knocks with no name field, and asks once the person is waiting or
+   *  in the call instead; the answer is remembered for next time. */
+  askNameFirst: boolean
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
    *  (soft is the small print, accent the link); qr is the ink of every QR. */
@@ -32,7 +36,7 @@ export interface CallsHost {
   }
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null,
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true,
   brand: { name: { en: 'Built in Saudi', ar: 'بُنِيَ في السعودية' }, bg: '#0e5a3f', ink: '#faf7f0', soft: 'rgba(250,247,240,0.82)', accent: '#d6a33f', qr: '#0e5a3f' } }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
