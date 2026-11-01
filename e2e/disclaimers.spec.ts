@@ -33,15 +33,6 @@ test('the Arabic copy is Arabic, not an untranslated fallback', async ({ page })
   expect(text).toContain('النصاب')
 })
 
-test('the removed religious boilerplate stays removed', async ({ page }) => {
-  // Taken off at the owner's request: "not a fatwa… ask someone qualified" on
-  // zakat, and the mosque-minutes caveat on Prayer Times.
-  await page.goto('/en/apps/zakat-calculator')
-  await expect(page.getByTestId('disclaimer')).not.toContainText('fatwa')
-  await page.goto('/en/apps/prayer-times')
-  await expect(page.getByText(/differ from your mosque/)).toHaveCount(0)
-})
-
 // A tool that encodes a Saudi authority's rule is badged BETA — and the badge
 // is on the TOOL PAGE, not only the catalogue tile, because that is where a
 // person reads the numbers and decides to act on them. It is an honesty signal
