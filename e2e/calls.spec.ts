@@ -387,11 +387,20 @@ test('mobile: dock — title dropdown switches panels, header X closes, footer i
   await p.getByTestId('call-dock-pick-c').click()
   await expect(p.getByTestId('call-chat-panel')).toBeVisible()
   await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
-  // The X on the dock header closes it; the footer dock icon reopens the last panel (chat).
+  // The dock icon on its header puts it away: its title bar stays, docked
+  // just above the toolbar, and tapping it opens the last panel (chat) again.
+  // The toolbar has no dock button of its own.
+  await expect(p.getByTestId('call-dock-toggle')).toHaveCount(0)
   await p.getByTestId('call-dock-close').click()
   await expect(p.getByTestId('call-chat-panel')).toHaveCount(0)
-  await p.getByTestId('call-dock-toggle').click()
+  const bar = p.getByTestId('call-dock-bar')
+  await expect(bar).toBeVisible()
+  await expect(bar).toContainText('Chat')
+  const box = (await bar.boundingBox())!, foot = (await p.locator('footer').last().boundingBox())!
+  expect(Math.round(box.y + box.height)).toBe(Math.round(foot.y))
+  await bar.click()
   await expect(p.getByTestId('call-chat-panel')).toBeVisible()
+  await expect(bar).toHaveCount(0)
   await c.close()
 })
 

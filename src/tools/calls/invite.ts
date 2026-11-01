@@ -46,6 +46,9 @@ export interface InviteOptions {
    *  The words sit on panels of the brand's own colour so they stay readable on
    *  whatever it is; a picture that will not load is simply left out. */
   background?: string
+  /** An emoji set in the middle of the QR. The code is then made with the
+   *  highest error correction, which is what lets a scanner read through it. */
+  emoji?: string
 }
 
 /** The faces a picture is set in: the host's one typeface for everything when
@@ -90,14 +93,14 @@ function cover(x: Ctx, img: HTMLImageElement, W: number, H: number) {
 /** A meeting's invitation: the title, the start time if there is one, the QR
  *  and the link. Nothing else — the picture is read at a glance in a chat, and
  *  the QR and the link say how to join without being told. */
-function meetingTitle(ar: boolean, host = '', custom = '') {
+export function meetingTitle(ar: boolean, host = '', custom = '') {
   if (custom.trim()) return custom.trim()
   host = host.trim()
   if (!host) return ar ? 'انضم للاجتماع' : 'Join my meeting'
   return ar ? `انضم إلى اجتماع ${host}` : `Join ${host}’s meeting`
 }
 
-async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = ''): Promise<HTMLCanvasElement> {
+async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = '', emoji = ''): Promise<HTMLCanvasElement> {
   const b = callsHost().brand
   const family = b.font || 'system-ui, sans-serif'
   const title = meetingTitle(ar, host, custom)
@@ -119,9 +122,19 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
   x.fillStyle = b.ink
   fit(x, title, W / 2, 86, W - 72, '700', family, 44)
   if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136) }
-  const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: b.qr, light: '#ffffff' } })
+  const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, errorCorrectionLevel: emoji ? 'H' : 'M', color: { dark: b.qr, light: '#ffffff' } })
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
   x.drawImage(await loadImg(qr), qx, qy, qs, qs)
+  if (emoji) {
+    // A fifth of the width: well inside what level H recovers (30% of the
+    // code), with the finder patterns in the corners untouched.
+    const e = Math.round(qs * 0.22), ex = qx + (qs - e) / 2, ey = qy + (qs - e) / 2
+    x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(ex, ey, e, e, 12); x.fill()
+    x.save(); x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'ltr'
+    x.font = `${Math.round(e * 0.72)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`
+    x.fillText(emoji, qx + qs / 2, qy + qs / 2 + e * 0.04)
+    x.restore()
+  }
   x.fillStyle = b.accent
   link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 62, W - 40, family, 18)
   return c
@@ -130,7 +143,7 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
 export async function makeInvite(url: string, code: string, ar = false, opts: InviteOptions = {}): Promise<Blob> {
   const at = opts.at && !Number.isNaN(opts.at.getTime()) ? opts.at : null
   const when = at ? atLine(at, ar, opts.meeting ? opts.minutes : 0) : ''
-  if (opts.meeting) return finish(await drawMeeting(url, ar, when, opts.host, opts.background, opts.title), url, ar, true, when, opts.host, opts.title)
+  if (opts.meeting) return finish(await drawMeeting(url, ar, when, opts.host, opts.background, opts.title, opts.emoji), url, ar, true, when, opts.host, opts.title)
   // A start time takes a line of its own between the title and the QR.
   const drop = when ? 44 : 0
   const W = 620, H = 780 + drop

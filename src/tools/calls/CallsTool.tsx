@@ -7,7 +7,8 @@ import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
-import { formatAt, parseAt, atParam } from './meeting'
+import { formatAt, parseAt, atParam, parseDetails, formatWhen, formatMinutes, type MeetingDetails } from './meeting'
+import { meetingTitle } from './invite'
 import { LIMITS as GOV_LIMITS, initialGov, stepGov, type GovState, type LinkSample } from './videoGovernor'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
@@ -44,6 +45,7 @@ export default function CallsTool() {
   // not flip this (it determines host vs guest). `room=` is accepted for old links.
   // A scheduled meeting's start time, from its link: shown, never enforced.
   const [startsAt] = useState(() => parseAt(window.location.search))
+  const [details] = useState<MeetingDetails>(() => parseDetails(window.location.search))
   const [initialRoom] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('code') || p.get('room') || '' })
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
@@ -204,7 +206,7 @@ export default function CallsTool() {
   useEffect(() => { try { localStorage.setItem('bis-call-dock-w', String(dockW)) } catch { /* */ } }, [dockW])
   const dockDrag = useRef<{ startY: number; startH: number; max: number } | null>(null)
   const [maximized, setMaximized] = useState(false) // dock filling the whole mobile view
-  const lastPanel = useRef<'p' | 'c' | 'r'>('p') // reopen this mode from the footer dock icon
+  const lastPanel = useRef<'p' | 'c' | 'r'>('p') // reopen this mode from the put-away dock bar
   // Explain-first notifications: show an in-call banner rationale, and only call the
   // browser's requestPermission() when the user clicks Enable (never auto-prompt).
   const [notifyBar, setNotifyBar] = useState(() => {
@@ -557,7 +559,18 @@ export default function CallsTool() {
   // URL for an in-call / invite link vs the bare start page. When the host is
   // debugging, carry ?debug=1 into the invite so a (non-technical) guest lands with
   // diagnostics already on — no need to ask them to tap the bug button.
-  const joinPath = (code: string) => `${localePath(locale, callsHost().base)}/join?code=${code}${startsAt && code === initialRoom ? `&at=${atParam(startsAt)}` : ''}${debug ? '&debug=1' : ''}`
+  const joinPath = (code: string) => {
+    const q = new URLSearchParams({ code })
+    // This meeting's own link keeps what it says about the meeting.
+    if (code === initialRoom) {
+      if (startsAt) q.set('at', atParam(startsAt))
+      if (details.minutes) q.set('dur', String(details.minutes))
+      if (details.title) q.set('title', details.title)
+      if (details.by) q.set('by', details.by)
+    }
+    if (debug) q.set('debug', '1')
+    return `${localePath(locale, callsHost().base)}/join?${q.toString().replace(/%3A/g, ':')}`
+  }
   const lobbyPath = () => localePath(locale, callsHost().base)
 
   // Host: start the call right away (others still need to be let in).
@@ -1281,6 +1294,8 @@ export default function CallsTool() {
   // Incoming screen: the phone bounces instead of pulsing (#189). Other green
   // screens (ended/waiting) keep it still — `ringing` is only true while an
   // unanswered ring is on screen.
+  // A meeting's screen says what the meeting is and nothing else (host.ts).
+  const splash = callsHost().meetingSplash && !!initialRoom
   const phoneLogo = <EndCallIcon className={`w-24 h-24 text-sand-100 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
@@ -1375,8 +1390,13 @@ export default function CallsTool() {
       <div className={`${greenWrap} ${ringing ? '[animation:bis-call-flash_2.2s_ease-in-out_infinite]' : ''}`} data-testid="calls">
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
-          {startsAt && !checking && !(incomingLink && !answered) && (
-            <p className="text-center text-[0.95rem] text-sand-100/90" data-testid="call-starts-at">{s.startsAt(formatAt(startsAt, locale))}</p>
+          {splash && !checking && !(incomingLink && !answered) && (
+            <h1 className="m-0 text-center text-[1.6rem] leading-tight text-sand-100 [overflow-wrap:anywhere]" data-testid="call-meeting-title">{meetingTitle(locale === 'ar', details.by, details.title)}</h1>
+          )}
+          {(startsAt || (splash && details.minutes)) && !checking && !(incomingLink && !answered) && (
+            <p className="text-center text-[0.95rem] text-sand-100/90" data-testid="call-starts-at">
+              {startsAt ? s.startsAt(splash ? formatWhen(startsAt, locale, details.minutes) : formatAt(startsAt, locale)) : formatMinutes(details.minutes!, locale)}
+            </p>
           )}
           {checking ? (
             <div className="flex flex-col items-center gap-3" data-testid="call-checking">
@@ -1411,7 +1431,7 @@ export default function CallsTool() {
             </>
           ) : (
             <>
-              <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>
+              {!splash && <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>}
               <div className="w-full flex flex-col gap-3">
                 {nameFirst && <label className="flex flex-col gap-1">
                   <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
@@ -1460,8 +1480,8 @@ export default function CallsTool() {
                   // still start a fresh meeting and invite people to it (#194).
                   <div className="flex gap-3">
                     <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
-                    <button type="button" onClick={() => openShareModal()} data-testid="call-share"
-                      className="flex-1 h-12 rounded-md bg-white/10 text-sand-100 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>
+                    {!splash && <button type="button" onClick={() => openShareModal()} data-testid="call-share"
+                      className="flex-1 h-12 rounded-md bg-white/10 text-sand-100 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>}
                   </div>
                 )}
               </div>
@@ -1484,7 +1504,7 @@ export default function CallsTool() {
                 </div>
               )}
               {/* Hidden once a personal call link is published — that panel is the focus. */}
-              {!hasCallLink && <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5" data-testid="call-privacy"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>}
+              {!hasCallLink && !splash && <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5" data-testid="call-privacy"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>}
             </>
           )}
 
@@ -1595,8 +1615,8 @@ export default function CallsTool() {
       <div className="flex items-center" onPointerDown={stopDrag}>
         <button type="button" onClick={() => setMaximized((m) => !m)} data-testid="call-dock-max" aria-label={maximized ? s.restore : s.maximize} title={maximized ? s.restore : s.maximize}
           className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[16px] [&_svg]:h-[16px]"><ExpandIcon /></button>
-        <button type="button" onClick={() => { setDockMode(null); setMaximized(false) }} data-testid="call-dock-close" aria-label={s.close}
-          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer text-[1.15rem] leading-none">✕</button>
+        <button type="button" onClick={() => { setDockMode(null); setMaximized(false) }} data-testid="call-dock-close" aria-label={s.dock} title={s.dock}
+          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[18px] [&_svg]:h-[18px]"><DockIcon /></button>
       </div>
     </div>
   )
@@ -2057,9 +2077,12 @@ export default function CallsTool() {
                 )
               })}
             </div>
-            <div className="flex gap-2 p-2 border-t border-[color:var(--line)]">
-              <Input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} className="flex-1" />
-              <Button variant="primary" onClick={sendChat}>{s.send}</Button>
+            {/* The field and the button ARE the bar: no frame, no gaps. */}
+            <div className="flex items-stretch shrink-0 h-12 border-t border-[color:var(--line)]" data-testid="call-chat-compose">
+              <input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} aria-label={s.typeMsg} data-testid="call-chat-input"
+                className="flex-1 min-w-0 h-full px-3.5 border-0 rounded-none bg-transparent text-ink text-[0.95rem] outline-none placeholder:text-ink-faint" />
+              <button type="button" onClick={sendChat} data-testid="call-chat-send"
+                className="shrink-0 h-full px-5 border-0 rounded-none bg-green-600 text-sand-50 font-semibold text-[0.92rem] cursor-pointer hover:bg-green-700">{s.send}</button>
             </div>
           </aside>
         )}
@@ -2072,11 +2095,24 @@ export default function CallsTool() {
         )}
       </div>
 
+      {/* ---- mobile: the dock, put away ----
+          Putting the dock away leaves its title bar docked above the toolbar,
+          so it is found again where it went rather than behind an icon. The
+          bar opens it again on the panel it showed last. */}
+      {!dockMode && (
+        <button type="button" onClick={toggleDock} data-testid="call-dock-bar" aria-label={s.dock}
+          className="hidden max-[640px]:flex items-center justify-between shrink-0 h-11 ps-3.5 pe-1.5 border-0 border-t border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer">
+          <span className="flex items-center gap-1.5 text-[0.82rem] font-semibold [&_svg]:w-[16px] [&_svg]:h-[16px]">
+            (lastPanel.current === 'r' ? <span className="text-[1rem] leading-none">🙂</span> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />)
+            <span>{lastPanel.current === 'r' ? s.reactions : lastPanel.current === 'c' ? s.chat : s.participants}</span>
+            {(unseen.p + unseen.c) > 0 && <span data-testid="call-dock-bar-badge" className="min-w-5 h-5 px-1.5 grid place-items-center rounded-full bg-green-600 text-sand-50 text-[0.7rem] leading-none">{unseen.p + unseen.c}</span>}
+          </span>
+          <span className="grid place-items-center w-8 h-8 [&_svg]:w-[18px] [&_svg]:h-[18px]" aria-hidden="true"><DockIcon /></span>
+        </button>
+      )}
+
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
-        {/* A docking icon toggles the dock (reopening the last panel); the panel
-            CHOICE now lives in the dock's own title dropdown. */}
-        <IconBtn onClick={toggleDock} active={!!dockMode} title={s.dock} testid="call-dock-toggle" badge={(unseen.p + unseen.c) || undefined}><DockIcon /></IconBtn>
         <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><span className="text-[1.2rem] leading-none">🙂</span></IconBtn>
         <div className="flex-1" />
         {deviceMenu(true)}

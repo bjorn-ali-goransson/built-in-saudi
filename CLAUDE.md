@@ -6985,6 +6985,18 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   link sees Start rather than auto-entering, and a guest who arrives first finds
   an empty room treated as not started rather than ended, knocks, and is let in
   when the organiser starts. Verified to fail without that empty-room rule.
+  The link can also carry the meeting's length, a title of its own and the
+  organiser's name (`dur`, `title`, `by`; `meetingUrl`'s fourth argument,
+  read back by `parseDetails`), and the invitation can take an emoji in the
+  middle of its QR (`emoji`, which raises error correction to H).
+  `meetingSplash` (host.ts) makes the screen before a meeting's call show the
+  title, time and length and nothing else: no blurb, no privacy line, no
+  invite button. `start=1` on a host's own meeting starts it by itself, behind
+  a connecting spinner (`call-connecting`) rather than the start screen.
+  **On a phone the dock is put away, not closed**: the dock icon on its header
+  leaves its title bar (`call-dock-bar`) just above the toolbar, which opens
+  it again; the toolbar has no dock button. The chat composer is a bare field
+  and a flush send button, with no frame around them.
   **Each link in a call has a safety code** (`safety.ts`, the shield on a
   participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
   from the settled SDP. The SDP crosses our relay, so a relay could swap in its

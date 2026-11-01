@@ -27,6 +27,11 @@ export interface CallsHost {
    *  starts or knocks with no name field, and asks once the person is waiting or
    *  in the call instead; the answer is remembered for next time. */
   askNameFirst: boolean
+  /** The screen before a meeting's call says what the meeting is — its title,
+   *  time and length from the link — and nothing else: no blurb about how calls
+   *  work, no privacy line and no invite button (the invitation is made before
+   *  the call). false keeps built-in-saudi's start screen. */
+  meetingSplash: boolean
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
    *  (soft is the small print, accent the link); qr is the ink of every QR. */
@@ -39,7 +44,7 @@ export interface CallsHost {
   }
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true,
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false,
   brand: { name: { en: 'Built in Saudi', ar: 'بُنِيَ في السعودية' }, bg: '#0e5a3f', ink: '#faf7f0', soft: 'rgba(250,247,240,0.82)', accent: '#d6a33f', qr: '#0e5a3f' } }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
