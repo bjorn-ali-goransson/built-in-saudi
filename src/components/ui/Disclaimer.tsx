@@ -26,10 +26,10 @@ const TEXT: Record<DisclaimerKind, { en: string; ar: string }> = {
     en: 'Informational only, not legal advice. Rules change and individual cases turn on details this cannot see. Check with the authority concerned, or a lawyer, before you rely on it.',
     ar: 'للاطّلاع فقط، وليست استشارة نظامية. الأنظمة تتغيّر، والحالات الفردية تتوقّف على تفاصيل لا تراها هذه الأداة. راجع الجهة المختصة أو محاميًا قبل الاعتماد عليها.',
   },
-  religious: {
-    en: 'A helping estimate, not a fatwa. Rulings differ between scholars and turn on circumstances — ask someone qualified about your own case.',
-    ar: 'تقدير مُعين وليس فتوى. تختلف الأقوال بين أهل العلم وتتوقّف على الأحوال — فاسأل مختصًا عن حالتك.',
-  },
+  // No standing text, at the owner's request: the tool's own note (the niṣāb
+  // and the ḥawl) is what a reader needs, and a caveat about scholars on top
+  // of it was the boilerplate nobody reads.
+  religious: { en: '', ar: '' },
   official: {
     en: 'Worked out from what you entered. Always confirm the real figure with the official source before you act on it.',
     ar: 'محسوب مما أدخلته. تأكّد دائمًا من الرقم الرسمي من مصدره قبل التصرّف بناءً عليه.',
@@ -66,9 +66,11 @@ export function Disclaimer({
           : 'border-[color:var(--line)]')
       }
     >
-      <span className={`text-[0.88rem] leading-snug rtl:font-ar ${strong ? 'text-ink' : 'text-ink-faint'}`}>
-        {TEXT[kind][locale]}
-      </span>
+      {TEXT[kind][locale] && (
+        <span className={`text-[0.88rem] leading-snug rtl:font-ar ${strong ? 'text-ink' : 'text-ink-faint'}`}>
+          {TEXT[kind][locale]}
+        </span>
+      )}
       {children && (
         <span className="text-[0.85rem] text-ink-soft leading-snug rtl:font-ar">{children}</span>
       )}

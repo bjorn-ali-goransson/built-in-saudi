@@ -10,7 +10,6 @@ const NEEDS: { id: string; kind: string }[] = [
   { id: 'passport-photo', kind: 'official' },
   // Found by scripts/check-disclaimers.mjs: each of these had a guarded twin
   // carrying the same class of caveat while it carried none.
-  { id: 'prayer-times', kind: 'religious' },
   { id: 'currency-converter', kind: 'financial' },
 ]
 
@@ -31,7 +30,16 @@ test('the Arabic copy is Arabic, not an untranslated fallback', async ({ page })
   await page.goto('/ar/apps/zakat-calculator')
   const text = await page.getByTestId('disclaimer').innerText()
   expect(/[؀-ۿ]/.test(text)).toBe(true)
-  expect(text).toContain('فتوى')
+  expect(text).toContain('النصاب')
+})
+
+test('the removed religious boilerplate stays removed', async ({ page }) => {
+  // Taken off at the owner's request: "not a fatwa… ask someone qualified" on
+  // zakat, and the mosque-minutes caveat on Prayer Times.
+  await page.goto('/en/apps/zakat-calculator')
+  await expect(page.getByTestId('disclaimer')).not.toContainText('fatwa')
+  await page.goto('/en/apps/prayer-times')
+  await expect(page.getByText(/differ from your mosque/)).toHaveCount(0)
 })
 
 // A tool that encodes a Saudi authority's rule is badged BETA — and the badge
