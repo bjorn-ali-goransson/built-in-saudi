@@ -11,6 +11,18 @@ const editor = (p: Page) => p.getByTestId('wd-editor')
 /** The document's text, without the name labels on collaborators' cursors (widgets, not text). */
 const docText = (p: Page) => editor(p).evaluate((el) => { const c = el.cloneNode(true) as HTMLElement; c.querySelectorAll('.wd-caret').forEach((x) => x.remove()); return c.innerText.trim() })
 
+/**
+ * Wait until the EDITOR's selection, not just the browser's caret, is at the end
+ * of the document. ProseMirror picks up a caret moved by a key or a click a
+ * moment later, so under load an Enter pressed straight after Ctrl+End splits
+ * the document at the old selection. CI caught exactly that: the guest's
+ * paragraph landed ABOVE the owner's, about once in sixty runs at eight workers.
+ */
+async function atDocEnd(p: Page) {
+  const end = Number(await editor(p).getAttribute('data-end'))
+  await expect(editor(p)).toHaveAttribute('data-sel', `${end - 1}-${end - 1}`)
+}
+
 async function newBlank(p: Page, locale = 'en') {
   await p.goto(`/${locale}/apps/word-editor/`)
   await p.getByTestId('office-new').click()
@@ -507,12 +519,14 @@ test.describe('live co-writing, with the owner as the truth', () => {
     const { owner, guest } = await hostAndJoin(browser)
     await editor(guest).click()
     await guest.keyboard.press('Control+End')
+    await atDocEnd(guest)
     await guest.keyboard.press('Enter')
     await guest.keyboard.type('from-guest')
     await expect(editor(owner)).toContainText('from-guest')
     // Both type at once, in different places: neither loses anything.
     await editor(owner).locator('p').first().click({ position: { x: 1, y: 4 } })
     await owner.keyboard.press('Home')
+    await expect(editor(owner)).toHaveAttribute('data-sel', '1-1')
     await Promise.all([owner.keyboard.type('AAA '), guest.keyboard.type(' BBB')])
     await expect(editor(owner)).toContainText('AAA secret-owner-text')
     await expect(editor(owner)).toContainText('from-guest BBB')

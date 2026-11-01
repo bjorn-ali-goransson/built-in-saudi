@@ -6368,6 +6368,15 @@ through a line") is verified to fail when the slicer ignores block boundaries.
   cell by double-click was dead while every single-click case passed. It now asks
   `elementsFromPoint`. **Verified to fail**: restoring `e.target` reddens exactly
   the shape and table cases.
+- **The browser's caret is not the editor's selection.** ProseMirror reads a
+  caret moved by a click or a key a moment LATER, so under load an Enter
+  pressed straight after Ctrl+End split the document at the old selection, and
+  the guest's paragraph landed above the owner's: about one run in sixty at
+  eight workers, red on CI. It was found by recording each step in a probe
+  (the DOM caret said offset 17, the split came at 0) after logging the
+  session's messages had ruled out a reload. The editor now publishes its own
+  selection as `data-sel` (and `data-end`), and a spec that types at a position
+  waits on that first: 200 of 200 after.
 - **Leaving a show lands on the slide it reached**, as every presentation app
   does; the case drives the show past a hidden slide and back before Escape.
 

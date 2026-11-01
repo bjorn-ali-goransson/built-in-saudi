@@ -137,7 +137,11 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
     const view = new EditorView(mount.current!, {
       state,
       editable: () => editable.current,
-      attributes: { 'data-testid': 'wd-editor', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Document' },
+      // `data-sel` is where the EDITOR thinks the selection is, which is not
+      // always where the browser's caret is: ProseMirror reads a caret moved by
+      // a key or a click a moment later, and an Enter landing in between splits
+      // at the old place. A spec waits on this before typing at a position.
+      attributes: (st) => ({ 'data-testid': 'wd-editor', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Document', 'data-sel': `${st.selection.from}-${st.selection.to}`, 'data-end': String(st.doc.content.size) }),
       nodeViews: { image: (n, v, getPos) => imageView(v, getPos, n, () => editable.current), page_break: () => pageBreakView() },
       dispatchTransaction(tr) {
         const v = viewRef.current!
