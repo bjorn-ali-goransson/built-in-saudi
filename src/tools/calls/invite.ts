@@ -28,6 +28,15 @@ async function fontsReady(family: string, text: string) {
   await Promise.race([want, new Promise((r) => setTimeout(r, 2000))]).catch(() => {})
 }
 
+/** The link as a person reads it: an Arabic name or title in it is printed in
+ *  Arabic rather than as %D8%B3…, and a + as a space. The QR and the caption
+ *  keep the encoded form, which is what a scanner and a chat app need. */
+function readable(url: string) {
+  let u = url.replace(/^https?:\/\//, '')
+  try { u = decodeURIComponent(u.replace(/\+/g, ' ')) } catch { /* leave it as it is */ }
+  return u
+}
+
 const loadImg = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src })
 
 export interface InviteOptions {
@@ -136,7 +145,7 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
     x.restore()
   }
   x.fillStyle = b.accent
-  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 62, W - 40, family, 18)
+  link(x, readable(url), W / 2, qy + qs + 62, W - 40, family, 18)
   return c
 }
 
