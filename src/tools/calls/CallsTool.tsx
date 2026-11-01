@@ -48,6 +48,14 @@ export default function CallsTool() {
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
   const [isHostReturn] = useState(() => { try { return !!initialRoom && localStorage.getItem(HOST_KEY) === initialRoom } catch { return false } })
+  // `start=1` on a host's own meeting: they already chose to start it (Sawi
+  // Kalam's "Start the meeting"), so even a scheduled one starts by itself.
+  const [startParam] = useState(() => { try { return new URLSearchParams(window.location.search).get('start') === '1' } catch { return false } })
+  // While a host's call starts by itself, the screen is the conference view's
+  // frame with a spinner rather than the start screen with its button: they
+  // have already said to start. Set from the first render, so the start screen
+  // never flashes.
+  const [autoStarting, setAutoStarting] = useState(() => { try { return isHostReturn && (startParam || !new URLSearchParams(window.location.search).get('at')) } catch { return false } })
   // Only remember a name the user actually TYPED. A stored value that's just the
   // random "Abu …" default (saved by the old behaviour) is ignored → fresh suggestion.
   const storedName = (() => { try { const st = localStorage.getItem(NAME_KEY); return st && !isDefaultName(st) ? st : '' } catch { return '' } })()
@@ -710,7 +718,8 @@ export default function CallsTool() {
     // instead shows the ringing screen and waits for Answer.
     // A scheduled meeting waits for its organiser to press Start: opening the link
     // early is to look at it, not to open the room.
-    if (((isHostReturn && !startsAt) || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; startHost() }
+    if (((isHostReturn && (!startsAt || startParam)) || (ownerHost && !incomingLink)) && !autoStarted.current) { autoStarted.current = true; void startHost().finally(() => setAutoStarting(false)) }
+    else setAutoStarting(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // Hardening (#188): the /join route only makes sense with a code (or a host/ring/
@@ -1272,7 +1281,7 @@ export default function CallsTool() {
   // Incoming screen: the phone bounces instead of pulsing (#189). Other green
   // screens (ended/waiting) keep it still — `ringing` is only true while an
   // unanswered ring is on screen.
-  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-green-500 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
+  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-sand-100 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
@@ -1293,6 +1302,19 @@ export default function CallsTool() {
   // A call-link caller retries by CALLING the owner again (named, if known) — a plain
   // "Rejoin/Call again" for anyone else (#199, #193).
   const callAgainLabel = ringCode && linkOwnerName ? s.callNameAgain(linkOwnerName) : s.callAgain
+
+  // Starting by itself: the conference view's frame, with a spinner, until the
+  // call is live. Should starting fail (no microphone), the start screen below
+  // takes over with its message, as it would after a press.
+  if (autoStarting && phase !== 'live' && phase !== 'ended') {
+    return createPortal(
+      <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-[var(--bg)] text-ink" data-testid="call-connecting">
+        <span className="w-9 h-9 rounded-full border-[3px] border-[color:var(--line)] border-t-[color:var(--green-600)] animate-spin" aria-hidden="true" />
+        <p className="text-[1rem] text-ink-soft" role="status">{s.connectingCall}</p>
+      </div>,
+      document.body,
+    )
+  }
 
   if (phase === 'ended') {
     return (

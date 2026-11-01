@@ -2,7 +2,7 @@
 export const STR = {
   en: {
     title: 'Private call', openMessages: 'Messages', lead: 'Secure meetings — video, whiteboard, chat and files go straight between browsers. Only the initial handshake, never any data, touches our server.',
-    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', shareInvite: 'Share invite',
+    yourName: 'Your name', start: 'Start call', askJoin: 'Ask to join', startOwn: 'Start your own call instead', shuffle: 'Random name', rememberName: 'Tick to remember your name', joining: 'Connecting…', checkingMeeting: 'Checking meeting…', connectingCall: 'Connecting the call…', shareInvite: 'Share invite',
     mic: 'Mic', cam: 'Camera', screen: 'Share screen', stopScreen: 'Stop sharing', screenUnsupported: 'Screen sharing isn’t supported on this device', screenFailed: 'Screen share failed', board: 'Whiteboard', chat: 'Chat', invite: 'Invite', leave: 'Leave',
     you: 'You', waiting: 'Waiting for others to join — share the invite.', clear: 'Clear', typeMsg: 'Message…', send: 'Send', noMessages: 'No messages yet', close: 'Close', reconnecting: 'Quiet — reconnecting…', dropFiles: 'Drop files to send, or tap',
     maximize: 'Maximise', restore: 'Restore', reactions: 'Reactions', dock: 'Panel', tags: 'Tags', addTag: 'Add a tag…', whoReacted: 'Reactions',
@@ -74,7 +74,7 @@ export const STR = {
   },
   ar: {
     openMessages: 'الرسائل', title: 'مكالمة خاصة', lead: 'اجتماعات آمنة — الفيديو والسبورة والدردشة والملفات تنتقل مباشرةً بين المتصفحات. فقط المصافحة الأولى، ولا أي بيانات، تمر بخادمنا.',
-    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', shareInvite: 'مشاركة الدعوة',
+    yourName: 'اسمك', start: 'ابدأ مكالمة', askJoin: 'اطلب الانضمام', startOwn: 'ابدأ مكالمتك الخاصة بدلًا من ذلك', shuffle: 'اسم عشوائي', rememberName: 'حدّد لتذكّر اسمك', joining: 'جارٍ الاتصال…', checkingMeeting: 'جارٍ التحقق من الاجتماع…', connectingCall: 'جارٍ توصيل المكالمة…', shareInvite: 'مشاركة الدعوة',
     mic: 'المايك', cam: 'الكاميرا', screen: 'مشاركة الشاشة', stopScreen: 'إيقاف المشاركة', screenUnsupported: 'مشاركة الشاشة غير مدعومة على هذا الجهاز', screenFailed: 'فشلت مشاركة الشاشة', board: 'السبورة', chat: 'الدردشة', invite: 'دعوة', leave: 'مغادرة',
     you: 'أنت', waiting: 'بانتظار انضمام آخرين — شارك الدعوة.', clear: 'مسح', typeMsg: 'رسالة…', send: 'إرسال', noMessages: 'لا رسائل بعد', close: 'إغلاق', reconnecting: 'صامت — إعادة الاتصال…', dropFiles: 'أفلت ملفات للإرسال أو اضغط',
     maximize: 'تكبير', restore: 'استعادة', reactions: 'تفاعلات', dock: 'اللوحة', tags: 'كلمات', addTag: 'أضف كلمة…', whoReacted: 'التفاعلات',
