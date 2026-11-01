@@ -6,19 +6,39 @@ import { callsHost } from './host'
 
 const loadImg = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src })
 
-export async function makeInvite(url: string, code: string, ar = false): Promise<Blob> {
-  const W = 620, H = 780
+export interface InviteOptions {
+  /** A meeting made ahead of time ("Join my meeting") rather than a call now. */
+  meeting?: boolean
+  /** Its start time, printed under the title and carried in the caption. */
+  at?: Date | null
+}
+
+/** The start time as the picture carries it. The picture is read wherever it is
+ *  forwarded to, so it names the sharer's time zone; the call screen, by
+ *  contrast, shows each viewer their own local time. */
+function atLine(at: Date, ar: boolean) {
+  return new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).format(at)
+}
+
+export async function makeInvite(url: string, code: string, ar = false, opts: InviteOptions = {}): Promise<Blob> {
+  const at = opts.at && !Number.isNaN(opts.at.getTime()) ? opts.at : null
+  const when = at ? atLine(at, ar) : ''
+  // A start time takes a line of its own between the title and the QR.
+  const drop = when ? 44 : 0
+  const W = 620, H = 780 + drop
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
   const b = callsHost().brand
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   x.textAlign = 'center'
   x.fillStyle = b.ink
-  x.font = 'bold 42px Georgia, serif'; x.fillText(ar ? 'انضم إلى مكالمتي' : 'Join my call', W / 2, 92)
+  const title = opts.meeting ? (ar ? 'انضم إلى اجتماعي' : 'Join my meeting') : (ar ? 'انضم إلى مكالمتي' : 'Join my call')
+  x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
   x.font = '18px system-ui, sans-serif'; x.fillStyle = b.soft
   x.fillText(ar ? 'خاص · مباشر بين الأجهزة · دون رفع' : 'Private · peer-to-peer · nothing uploaded', W / 2, 126)
+  if (when) { x.font = 'bold 22px system-ui, sans-serif'; x.fillStyle = b.ink; x.fillText(when, W / 2, 168) }
 
-  const qs = 360, qx = (W - qs) / 2, qy = 168
+  const qs = 360, qx = (W - qs) / 2, qy = 168 + drop
   const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: b.qr, light: '#ffffff' } })
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
   x.drawImage(await loadImg(qr), qx, qy, qs, qs)
@@ -31,7 +51,8 @@ export async function makeInvite(url: string, code: string, ar = false): Promise
   x.fillText(url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 148)
 
   const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
-  const caption = (ar ? `انضم إلى مكالمتي في «${b.name.ar}»: ` : `Join my ${b.name.en} call: `) + url
+  const what = opts.meeting ? (ar ? 'اجتماعي' : 'meeting') : (ar ? 'مكالمتي' : 'call')
+  const caption = (ar ? `انضم إلى ${what} في «${b.name.ar}»${when ? ` (${when})` : ''}: ` : `Join my ${b.name.en} ${what}${when ? ` (${when})` : ''}: `) + url
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
 }
 
