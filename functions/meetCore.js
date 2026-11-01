@@ -106,11 +106,14 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   return {
     /** Sign up, step 1: options for navigator.credentials.create. */
     async registerOptions({ name }) {
+      // A name is optional: an organiser can start with the passkey alone and
+      // be asked what to be called in the call. The passkey still needs a label
+      // in the device's password manager, so it carries the app's name then.
       const display = clean(name, 60)
-      if (!display) throw new MeetError(400, 'name required')
+      const label = display || rp.name
       const uid = b64u(crypto.randomBytes(16))
       const options = await generateRegistrationOptions({
-        rpName: rp.name, rpID: rp.id, userID: Buffer.from(uid), userName: display, userDisplayName: display,
+        rpName: rp.name, rpID: rp.id, userID: Buffer.from(uid), userName: label, userDisplayName: label,
         attestationType: 'none',
         // Discoverable, so signing in later needs no username; verified, so the
         // device itself asks for the face, finger or screen lock.

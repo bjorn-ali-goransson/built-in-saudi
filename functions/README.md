@@ -93,3 +93,5 @@ Passkey sign-up/sign-in and meeting ownership for sawikalam.com. `meet.js` is th
 HTTP + Firestore shell; all logic is in `meetCore.js`, which takes its store as an
 argument so Sawi Kalam's e2e runs it in memory. POST `{ action, ... }` with action one
 of `registerOptions`, `register`, `loginOptions`, `login`, `create`, `info`, `claim`.
+`registerOptions` takes an optional `name`; without one the passkey is labelled with
+the app's name and the organiser's name is asked in the call instead.
