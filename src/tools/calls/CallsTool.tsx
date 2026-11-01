@@ -1198,7 +1198,7 @@ export default function CallsTool() {
     if (!code) { code = code6(); setRoom(code); rememberHost(code); ensureRoom(code).enterLobby(name || s.you, true); setPhase('hosting') }
     const url = `${callsHost().site}${joinPath(code)}`
     setShareUrl(url); setShareQr(''); setCopiedShare(false); setShareOpen(true)
-    try { const QR = (await import('qrcode')).default; setShareQr(await QR.toDataURL(url, { margin: 1, width: 320, color: { dark: '#0e5a3f', light: '#ffffff' } })) } catch { /* offline */ }
+    try { const QR = (await import('qrcode')).default; setShareQr(await QR.toDataURL(url, { margin: 1, width: 320, color: { dark: callsHost().brand.qr, light: '#ffffff' } })) } catch { /* offline */ }
   }
   async function copyShareUrl() { try { await navigator.clipboard.writeText(shareUrl); setCopiedShare(true); setTimeout(() => setCopiedShare(false), 1500) } catch { /* */ } }
   const invite = () => openShareModal()

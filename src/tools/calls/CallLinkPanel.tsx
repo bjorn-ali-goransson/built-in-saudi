@@ -7,6 +7,7 @@ import { PhoneIcon, CopyIcon, CheckIcon, TrashIcon, ShareIcon } from '../../comp
 import { pushSupported } from '../../lib/push'
 import { claimCallLink, deleteCallLink, getMyCallLink } from '../../lib/callLink'
 import { makeCallLinkImage } from './invite'
+import { callsHost } from './host'
 import { renderQR } from '../qr-code/qrRender'
 
 // A QR of the "add this device" URL — scanning it on a second device links that
@@ -25,7 +26,7 @@ const T = {
     blurb: 'Share one link and people can call you right here — your device gets a notification to answer, even when this tab is closed.',
     denied: 'Notifications are blocked — allow them in your browser settings, then try again.',
     failed: 'Couldn’t set up the link. Try again.',
-    copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on Built in Saudi',
+    copy: 'Copy', copied: 'Copied', share: 'Share', shareText: 'Call me on',
     includeName: 'include name in call',
     codeTip: 'Your private link code — anyone who has it can call you, so share it only with people you trust.',
     nameTip: 'Your name, shown to whoever opens the link. Untick “include name in call” to leave it out.',
@@ -40,7 +41,7 @@ const T = {
     blurb: 'شارك رابطًا واحدًا ليتصل بك الناس هنا مباشرةً — يصل جهازك إشعار للرد، حتى عندما تكون هذه النافذة مغلقة.',
     denied: 'الإشعارات محظورة — فعّلها من إعدادات المتصفح ثم أعد المحاولة.',
     failed: 'تعذّر إعداد الرابط. حاول مرة أخرى.',
-    copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر Built in Saudi',
+    copy: 'نسخ', copied: 'تم النسخ', share: 'مشاركة', shareText: 'اتصل بي عبر',
     includeName: 'أدرج الاسم في المكالمة',
     codeTip: 'رمز رابطك الخاص — أي شخص يملكه يستطيع الاتصال بك، فشاركه فقط مع من تثق بهم.',
     nameTip: 'اسمك، ويظهر لمن يفتح الرابط. أزل تحديد «أدرج الاسم في المكالمة» لإخفائه.',
@@ -108,7 +109,8 @@ export function CallLinkPanel({ locale, name, site, onLinkChange }: { locale: 'e
         return
       }
     } catch { /* fall through */ }
-    try { await navigator.share({ title: t.shareText, text: t.shareText, url }) } catch { /* cancelled / unsupported */ }
+    const text = `${t.shareText} ${callsHost().brand.name[locale === 'ar' ? 'ar' : 'en']}`
+    try { await navigator.share({ title: text, text, url }) } catch { /* cancelled / unsupported */ }
   }
 
   return (

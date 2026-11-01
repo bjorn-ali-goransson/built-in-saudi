@@ -197,7 +197,7 @@ export function SettingsSheet({ store, s, locale, onClose, onRelisten }: { store
   const [est, setEst] = useState<{ usage: number; quota: number } | null>(null)
   const [hasLink, setHasLink] = useState(() => !!getMyCallLink())
   const url = inviteUrl(store, locale)
-  useEffect(() => { void import('qrcode').then((Q) => Q.toDataURL(url, { margin: 1, width: 220, color: { dark: '#0b3d2e', light: '#ffffff' } })).then(setQr).catch(() => {}) }, [url])
+  useEffect(() => { void import('qrcode').then((Q) => Q.toDataURL(url, { margin: 1, width: 220, color: { dark: callsHost().brand.qr, light: '#ffffff' } })).then(setQr).catch(() => {}) }, [url])
   useEffect(() => { void storageEstimate().then(setEst) }, [])
   async function enableOffline() {
     const code = await linkThisDevice(store.me, store.name || name)

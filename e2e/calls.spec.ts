@@ -60,6 +60,27 @@ test('share button opens a modal with a QR before joining a call', async ({ brow
   await c.close()
 })
 
+test('the invite picture is built-in-saudi green and names it, unless an embedder brands it', async ({ browser }) => {
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  await p.goto('/en/apps/calls')
+  await p.evaluate(() => { Object.defineProperty(navigator, 'canShare', { value: () => false }) })
+  await p.getByTestId('call-name').fill('Host')
+  await p.getByTestId('call-share').click()
+  await expect(p.getByTestId('call-share-qr')).toBeVisible({ timeout: 10_000 })
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.getByTestId('call-share-do').click()])
+  const png = await (await import('node:fs/promises')).readFile(await dl.path())
+  expect(png.toString('latin1')).toContain('Join my Built in Saudi call: https://built-in-saudi.com/en/apps/calls/join?code=')
+  const corner = await p.evaluate(async (b64) => {
+    const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode()
+    const cv = document.createElement('canvas'); cv.width = i.width; cv.height = i.height
+    const x = cv.getContext('2d')!; x.drawImage(i, 0, 0)
+    return Array.from(x.getImageData(4, 4, 1, 1).data.slice(0, 3))
+  }, png.toString('base64'))
+  expect(corner).toEqual([0x0e, 0x5a, 0x3f])
+  await c.close()
+})
+
 test('the browser Back button leaves an active call and returns to a clean lobby', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
