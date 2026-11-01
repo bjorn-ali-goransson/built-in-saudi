@@ -4,6 +4,20 @@
 import QRCode from 'qrcode'
 import { callsHost } from './host'
 
+// A canvas that is never added to the page has no direction to inherit, so it
+// lays Arabic out left to right: the colon lands on the wrong end and a time
+// zone ends up before the date. Words take the language's direction; a code
+// and a link are always left to right. A link that is too long for the
+// picture (one carrying a start time) is set smaller rather than cut off.
+type Ctx = CanvasRenderingContext2D
+function words(x: Ctx, ar: boolean) { x.direction = ar ? 'rtl' : 'ltr' }
+function link(x: Ctx, text: string, cx: number, y: number, maxW: number) {
+  x.direction = 'ltr'
+  let size = 16
+  do { x.font = `${size}px ui-monospace, monospace` } while (x.measureText(text).width > maxW && --size > 9)
+  x.fillText(text, cx, y)
+}
+
 const loadImg = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src })
 
 export interface InviteOptions {
@@ -31,6 +45,7 @@ export async function makeInvite(url: string, code: string, ar = false, opts: In
   const b = callsHost().brand
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   x.textAlign = 'center'
+  words(x, ar)
   x.fillStyle = b.ink
   const title = opts.meeting ? (ar ? 'انضم إلى اجتماعي' : 'Join my meeting') : (ar ? 'انضم إلى مكالمتي' : 'Join my call')
   x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
@@ -44,11 +59,13 @@ export async function makeInvite(url: string, code: string, ar = false, opts: In
   x.drawImage(await loadImg(qr), qx, qy, qs, qs)
 
   x.fillStyle = b.ink
+  x.direction = 'ltr'
   x.font = 'bold 34px ui-monospace, monospace'; x.fillText(code, W / 2, qy + qs + 78)
+  words(x, ar)
   x.font = '17px system-ui, sans-serif'; x.fillStyle = b.soft
   x.fillText(ar ? 'امسح الرمز أو افتح:' : 'Scan the code, or open:', W / 2, qy + qs + 118)
-  x.font = '16px ui-monospace, monospace'; x.fillStyle = b.accent
-  x.fillText(url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 148)
+  x.fillStyle = b.accent
+  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 148, W - 40)
 
   const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
   const what = opts.meeting ? (ar ? 'اجتماعي' : 'meeting') : (ar ? 'مكالمتي' : 'call')
@@ -66,6 +83,7 @@ export async function makeCallLinkImage(url: string, name: string, ar = false): 
   const b = callsHost().brand
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   x.textAlign = 'center'
+  words(x, ar)
   x.fillStyle = b.ink
   const title = name ? (ar ? `اتصل بـ ${name}` : `Call ${name}`) : (ar ? 'اتصل بي' : 'Call me')
   x.font = 'bold 42px Georgia, serif'; x.fillText(title, W / 2, 92)
@@ -79,8 +97,8 @@ export async function makeCallLinkImage(url: string, name: string, ar = false): 
 
   x.font = '17px system-ui, sans-serif'; x.fillStyle = b.soft
   x.fillText(ar ? 'امسح الرمز أو افتح:' : 'Scan the code, or open:', W / 2, qy + qs + 70)
-  x.font = '16px ui-monospace, monospace'; x.fillStyle = b.accent
-  x.fillText(url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 104)
+  x.fillStyle = b.accent
+  link(x, url.replace(/^https?:\/\//, ''), W / 2, qy + qs + 104, W - 40)
 
   const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), 'image/png'))
   const caption = (name ? (ar ? `اتصل بـ ${name}: ` : `Call ${name}: `) : (ar ? 'اتصل بي: ' : 'Call me: ')) + url
