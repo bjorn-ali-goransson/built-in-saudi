@@ -35,6 +35,14 @@ export interface InviteOptions {
   meeting?: boolean
   /** Its start time, printed under the title and carried in the caption. */
   at?: Date | null
+  /** How long it runs: the time line then reads as a range ("09:30–10:30"). */
+  minutes?: number
+  /** The organiser's name, which turns the title into "Join <name>'s meeting". */
+  host?: string
+  /** A picture (any URL an <img> takes) laid behind the invitation, for looks.
+   *  The words sit on panels of the brand's own colour so they stay readable on
+   *  whatever it is; a picture that will not load is simply left out. */
+  background?: string
 }
 
 /** The faces a picture is set in: the host's one typeface for everything when
@@ -48,29 +56,64 @@ function faces(font?: string) {
  *  forwarded to, so a time zone other than Saudi time is named; Saudi time
  *  (UTC+3, no daylight saving) is what anybody reading it here assumes, and
  *  naming it is noise. The call screen shows each viewer their own local time. */
-function atLine(at: Date, ar: boolean) {
+function atLine(at: Date, ar: boolean, minutes = 0) {
   const ksa = at.getTimezoneOffset() === -180
-  return new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', ...(ksa ? {} : { timeZoneName: 'short' }) }).format(at)
+  const f = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', ...(ksa ? {} : { timeZoneName: 'short' }) })
+  // formatRange is in every engine this runs in; the lib target predates it.
+  return minutes > 0 ? (f as Intl.DateTimeFormat & { formatRange(a: Date, b: Date): string }).formatRange(at, new Date(at.getTime() + minutes * 60_000)) : f.format(at)
+}
+
+/** Text that may be longer than the picture is wide (a long name in the title)
+ *  is set smaller rather than run off the edge. */
+function fit(x: Ctx, text: string, cx: number, y: number, maxW: number, weight: string, family: string, start: number) {
+  let size = start
+  do { x.font = `${weight} ${size}px ${family}` } while (x.measureText(text).width > maxW && --size > 16)
+  x.fillText(text, cx, y)
+}
+
+function panel(x: Ctx, px: number, py: number, w: number, h: number, colour: string) {
+  x.save(); x.globalAlpha = 0.9; x.fillStyle = colour
+  x.beginPath(); x.roundRect(px, py, w, h, 16); x.fill(); x.restore()
+}
+
+/** Cover the picture with an image, cropped from its middle as CSS
+ *  `object-fit: cover` would. */
+function cover(x: Ctx, img: HTMLImageElement, W: number, H: number) {
+  const s = Math.max(W / img.naturalWidth, H / img.naturalHeight)
+  const w = img.naturalWidth * s, h = img.naturalHeight * s
+  x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
 }
 
 /** A meeting's invitation: the title, the start time if there is one, the QR
  *  and the link. Nothing else — the picture is read at a glance in a chat, and
  *  the QR and the link say how to join without being told. */
-async function drawMeeting(url: string, ar: boolean, when: string): Promise<HTMLCanvasElement> {
+function meetingTitle(ar: boolean, host = '') {
+  host = host.trim()
+  if (!host) return ar ? 'انضم إلى اجتماعي' : 'Join my meeting'
+  return ar ? `انضم إلى اجتماع ${host}` : `Join ${host}’s meeting`
+}
+
+async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = ''): Promise<HTMLCanvasElement> {
   const b = callsHost().brand
   const family = b.font || 'system-ui, sans-serif'
-  const title = ar ? 'انضم إلى اجتماعي' : 'Join my meeting'
+  const title = meetingTitle(ar, host)
   if (b.font) await fontsReady(b.font, title + when + url)
+  const bg = background ? await loadImg(background).catch(() => null) : null
   const W = 620, qs = 360, qx = (W - qs) / 2
   const qy = when ? 186 : 140
   const H = qy + qs + 96
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
+  if (bg) {
+    cover(x, bg, W, H)
+    panel(x, 24, 32, W - 48, qy - 64, b.bg)
+    panel(x, 24, qy + qs + 26, W - 48, 52, b.bg)
+  }
   x.textAlign = 'center'
   words(x, ar)
   x.fillStyle = b.ink
-  x.font = `700 44px ${family}`; x.fillText(title, W / 2, 86)
+  fit(x, title, W / 2, 86, W - 72, '700', family, 44)
   if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136) }
   const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, color: { dark: b.qr, light: '#ffffff' } })
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
@@ -82,8 +125,8 @@ async function drawMeeting(url: string, ar: boolean, when: string): Promise<HTML
 
 export async function makeInvite(url: string, code: string, ar = false, opts: InviteOptions = {}): Promise<Blob> {
   const at = opts.at && !Number.isNaN(opts.at.getTime()) ? opts.at : null
-  const when = at ? atLine(at, ar) : ''
-  if (opts.meeting) return finish(await drawMeeting(url, ar, when), url, ar, true, when)
+  const when = at ? atLine(at, ar, opts.meeting ? opts.minutes : 0) : ''
+  if (opts.meeting) return finish(await drawMeeting(url, ar, when, opts.host, opts.background), url, ar, true, when, opts.host)
   // A start time takes a line of its own between the title and the QR.
   const drop = when ? 44 : 0
   const W = 620, H = 780 + drop
@@ -121,11 +164,13 @@ export async function makeInvite(url: string, code: string, ar = false, opts: In
 
 /** The PNG, with the invitation and the link in it as text, so the link
  *  survives the picture being forwarded on its own. */
-async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: boolean, when: string): Promise<Blob> {
+async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: boolean, when: string, host = ''): Promise<Blob> {
   const b = callsHost().brand
   const blob: Blob = await new Promise((res) => c.toBlob((x) => res(x!), 'image/png'))
-  const what = meeting ? (ar ? 'اجتماعي' : 'meeting') : (ar ? 'مكالمتي' : 'call')
-  const caption = (ar ? `انضم إلى ${what} في «${b.name.ar}»${when ? ` (${when})` : ''}: ` : `Join my ${b.name.en} ${what}${when ? ` (${when})` : ''}: `) + url
+  const who = host.trim()
+  const what = meeting ? (ar ? (who ? `اجتماع ${who}` : 'اجتماعي') : 'meeting') : (ar ? 'مكالمتي' : 'call')
+  const mine = who ? `${who}’s` : 'my'
+  const caption = (ar ? `انضم إلى ${what} في «${b.name.ar}»${when ? ` (${when})` : ''}: ` : `Join ${mine} ${b.name.en} ${what}${when ? ` (${when})` : ''}: `) + url
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
 }
 
