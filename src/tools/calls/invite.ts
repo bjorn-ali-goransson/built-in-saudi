@@ -94,7 +94,7 @@ function meetingTitle(ar: boolean, host = '', custom = '') {
   if (custom.trim()) return custom.trim()
   host = host.trim()
   if (!host) return ar ? 'انضم للاجتماع' : 'Join my meeting'
-  return ar ? `انضم لاجتماع ${host}` : `Join ${host}’s meeting`
+  return ar ? `انضم إلى اجتماع ${host}` : `Join ${host}’s meeting`
 }
 
 async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = ''): Promise<HTMLCanvasElement> {
@@ -174,7 +174,7 @@ async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: b
   const who = host.trim()
   const at = when ? ` (${when})` : ''
   const join = ar
-    ? (meeting ? (who ? `انضم لاجتماع ${who}` : 'انضم للاجتماع') : 'انضم إلى مكالمتي') + ` في «${b.name.ar}»`
+    ? (meeting ? (who ? `انضم إلى اجتماع ${who}` : 'انضم للاجتماع') : 'انضم إلى مكالمتي') + ` في «${b.name.ar}»`
     : `Join ${who ? `${who}’s` : 'my'} ${b.name.en} ${meeting ? 'meeting' : 'call'}`
   const caption = `${custom.trim() || join}${at}: ${url}`
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
