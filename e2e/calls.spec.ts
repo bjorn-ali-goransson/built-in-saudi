@@ -395,7 +395,7 @@ test('mobile: dock — title dropdown switches panels, header X closes, footer i
   await expect(p.getByTestId('call-chat-panel')).toHaveCount(0)
   const bar = p.getByTestId('call-dock-bar')
   await expect(bar).toBeVisible()
-  await expect(bar).toContainText('Chat')
+  await expect(bar).toHaveText('Chat')
   const box = (await bar.boundingBox())!, foot = (await p.locator('footer').last().boundingBox())!
   expect(Math.round(box.y + box.height)).toBe(Math.round(foot.y))
   await bar.click()

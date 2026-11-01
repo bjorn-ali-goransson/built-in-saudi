@@ -2103,7 +2103,7 @@ export default function CallsTool() {
         <button type="button" onClick={toggleDock} data-testid="call-dock-bar" aria-label={s.dock}
           className="hidden max-[640px]:flex items-center justify-between shrink-0 h-11 ps-3.5 pe-1.5 border-0 border-t border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer">
           <span className="flex items-center gap-1.5 text-[0.82rem] font-semibold [&_svg]:w-[16px] [&_svg]:h-[16px]">
-            (lastPanel.current === 'r' ? <span className="text-[1rem] leading-none">🙂</span> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />)
+            {lastPanel.current === 'r' ? <span className="text-[1rem] leading-none">🙂</span> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />}
             <span>{lastPanel.current === 'r' ? s.reactions : lastPanel.current === 'c' ? s.chat : s.participants}</span>
             {(unseen.p + unseen.c) > 0 && <span data-testid="call-dock-bar-badge" className="min-w-5 h-5 px-1.5 grid place-items-center rounded-full bg-green-600 text-sand-50 text-[0.7rem] leading-none">{unseen.p + unseen.c}</span>}
           </span>
