@@ -32,6 +32,9 @@ export interface CallsHost {
    *  work, no privacy line and no invite button (the invitation is made before
    *  the call). false keeps built-in-saudi's start screen. */
   meetingSplash: boolean
+  /** Offer, in the call, to notify when somebody joins while the tab is in
+   *  the background. false never shows the offer. */
+  notifyPrompt: boolean
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
    *  (soft is the small print, accent the link); qr is the ink of every QR. */
@@ -44,7 +47,7 @@ export interface CallsHost {
   }
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false,
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false, notifyPrompt: true,
   brand: { name: { en: 'Built in Saudi', ar: 'بُنِيَ في السعودية' }, bg: '#0e5a3f', ink: '#faf7f0', soft: 'rgba(250,247,240,0.82)', accent: '#d6a33f', qr: '#0e5a3f' } }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }

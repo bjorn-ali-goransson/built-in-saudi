@@ -6063,6 +6063,17 @@ JSON.** `{ hidden: undefined }` arrives as `{}` and the receiver keeps the old
 value, so "show this slide again" silently did nothing for a guest. `wire(op)`
 moves undefined keys into an `unset` list before anything is sent.
 
+### Everybody's screen, dimmed where it is not common (`CommonView`)
+
+In a live session each editor dims the part of its DOCUMENT area — never the
+ribbon — that is not on everybody's screen: the clear rectangle is the
+narrowest and shortest document area in the session, like the call's
+whiteboard fade. Each person's area rides on their presence as `vw`, merged in
+by `useCollab`'s `sendPresence` (presence replaces itself per person, so a
+separate message would wipe the selection). A page is centred across and starts
+at the top; a sheet starts at the top and the start; a slide is centred.
+`e2e/office-common-view.spec.ts` drives two screen sizes through all three.
+
 ### The mesh dropped one join in twelve
 
 `lib/p2p/mesh.ts` is the Calls engine with media and lobbies removed: a data-only
@@ -6997,6 +7008,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   leaves its title bar (`call-dock-bar`) just above the toolbar, which opens
   it again; the toolbar has no dock button. The chat composer is a bare field
   and a flush send button, with no frame around them.
+  `notifyPrompt: false` (host.ts) never offers notifications in the call.
+  **A picture can go behind the whiteboard** (`wb-bg`, beside the colour): it
+  clears the board, is drawn on its own canvas under the drawing one so the
+  eraser cannot cut it, travels to everyone in 60KB pieces (`wb-bg` messages;
+  one data-channel message is capped at 256KB) and to a late joiner with the
+  board, and Clear removes it. Its shorter side spans the board's unit square,
+  so it sits in the same place on every screen.
   **Each link in a call has a safety code** (`safety.ts`, the shield on a
   participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
   from the settled SDP. The SDP crosses our relay, so a relay could swap in its

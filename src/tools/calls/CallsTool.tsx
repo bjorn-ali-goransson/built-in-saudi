@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon } from '../../components/icons'
+import { decodeImage } from '../../lib/decodeImage'
+import { whyUnreadable } from '../../lib/imageInput'
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
@@ -210,6 +212,7 @@ export default function CallsTool() {
   // Explain-first notifications: show an in-call banner rationale, and only call the
   // browser's requestPermission() when the user clicks Enable (never auto-prompt).
   const [notifyBar, setNotifyBar] = useState(() => {
+    if (!callsHost().notifyPrompt) return false
     try { return typeof Notification !== 'undefined' && Notification.permission === 'default' && localStorage.getItem('bis-call-notify-off') !== '1' } catch { return false }
   })
   function enableNotify() { try { Notification.requestPermission().catch(() => {}) } catch { /* */ } setNotifyBar(false) }
@@ -257,6 +260,12 @@ export default function CallsTool() {
   // whiteboard (object model synced P2P). Each context — the pure board, each
   // shared file, and a screen-share — has its OWN board, keyed below.
   const wbRef = useRef<HTMLCanvasElement>(null)
+  // A picture behind a board, on its own canvas so the eraser (which cuts
+  // through the drawing canvas) never erases it. Per board, like the drawing.
+  const wbBgRef = useRef<HTMLCanvasElement>(null)
+  const bgs = useRef(new Map<string, { id: string; url: string; img?: HTMLImageElement }>())
+  const bgParts = useRef(new Map<string, string[]>())
+  const bgFileRef = useRef<HTMLInputElement>(null)
   const objects = useRef<Map<string, WbObj[]>>(new Map()) // board key → objects (z-order)
   const myStack = useRef<Map<string, string[]>>(new Map()) // board key → ids I added (undo)
   const drawing = useRef<{ board: string; obj: Extract<WbObj, { kind: 'stroke' }> } | null>(null)
@@ -418,6 +427,7 @@ export default function CallsTool() {
     if (!isGuest && n > prevInCall.current) {
       const boards = [...objects.current.entries()].filter(([, o]) => o.length) as [string, WbObj[]][]
       if (boards.length) rtc.current?.broadcast({ t: 'wb-sync', boards })
+      for (const [b, bg] of bgs.current) sendBg(b, bg.id, bg.url)
     }
     // Re-share existing pins to a fresh joiner (#235) — positions re-broadcast
     // continuously on their own, but a pin is one-shot, so a late arrival would miss
@@ -440,11 +450,21 @@ export default function CallsTool() {
     }
     else if (m.t === 'wb') {
       const bk = m.b || 'board'; const active = bk === boardKeyRef.current
-      if (m.op === 'clear') { objects.current.set(bk, []); if (active) redraw() }
+      if (m.op === 'clear') { objects.current.set(bk, []); bgs.current.delete(bk); if (active) redraw() }
       else if (m.op === 'start') { boardOf(bk).push({ id: m.id, kind: 'stroke', pts: [...m.pt], color: m.color, width: m.width, erase: m.erase, wds: [m.w ?? m.width] }); if (active) redraw() }
       else if (m.op === 'point') { const o = boardOf(bk).find((x) => x.id === m.id); if (o && o.kind === 'stroke') { o.pts.push(...m.pt); (o.wds ||= []).push(m.w ?? o.width); if (active) drawLastSeg(o) } }
       else if (m.op === 'text') { boardOf(bk).push(m.obj); if (active) redraw() }
       else if (m.op === 'remove') { objects.current.set(bk, boardOf(bk).filter((x) => x.id !== m.id)); if (active) redraw() }
+    }
+    else if (m.t === 'wb-bg') {
+      // Pieces of one picture, keyed by its id; a newer picture replaces it.
+      const key = `${m.b}|${m.id}`; let parts = bgParts.current.get(key)
+      if (!parts) { parts = []; bgParts.current.set(key, parts) }
+      parts[m.i] = m.part
+      if (parts.filter((x) => x != null).length === m.n) {
+        bgParts.current.delete(key)
+        if (bgs.current.get(m.b)?.id !== m.id) setBg(m.b, m.id, parts.join(''))
+      }
     }
     else if (m.t === 'wb-sync') { // a full board snapshot for us (we joined late) — merge by id
       for (const [k, objs] of m.boards) { const arr = boardOf(k); const have = new Set(arr.map((o) => o.id)); for (const o of objs) if (!have.has(o.id)) arr.push(o) }
@@ -1111,8 +1131,51 @@ export default function CallsTool() {
   const boardOf = (key: string) => { let a = objects.current.get(key); if (!a) { a = []; objects.current.set(key, a) } return a }
   const stackOf = (key: string) => { let a = myStack.current.get(key); if (!a) { a = []; myStack.current.set(key, a) } return a }
   function redraw() {
+    drawBg()
     const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
     const m = mapper(c); x.clearRect(0, 0, c.width, c.height); for (const o of boardOf(boardKeyRef.current)) drawObj(x, m, o)
+  }
+  // The picture's SHORTER side spans the board's unit [-0.5, 0.5], so it covers
+  // the square every screen shows, in the same place on every screen; what
+  // runs past that is cut off on narrower screens, as the fade says.
+  function drawBg() {
+    const c = wbBgRef.current, w = wbRef.current; if (!c || !w) return
+    if (c.width !== w.width || c.height !== w.height) { c.width = w.width; c.height = w.height }
+    const x = c.getContext('2d'); if (!x) return
+    x.clearRect(0, 0, c.width, c.height)
+    const bg = bgs.current.get(boardKeyRef.current); const img = bg?.img
+    if (!img || !img.complete || !img.naturalWidth) return
+    const m = mapper(c), a = img.naturalWidth / img.naturalHeight
+    const hw = a >= 1 ? a / 2 : 0.5, hh = a >= 1 ? 0.5 : 0.5 / a
+    x.drawImage(img, m.px(-hw), m.py(-hh), m.px(hw) - m.px(-hw), m.py(hh) - m.py(-hh))
+  }
+  function setBg(board: string, id: string, url: string) {
+    if (!url) { bgs.current.delete(board); drawBg(); return }
+    const img = new Image(); img.onload = () => { if (bgs.current.get(board)?.id === id) drawBg() }; img.src = url
+    bgs.current.set(board, { id, url, img })
+    drawBg()
+  }
+  const BG_PART = 60_000
+  function sendBg(board: string, id: string, url: string, to?: string) {
+    const n = Math.max(1, Math.ceil(url.length / BG_PART))
+    for (let i = 0; i < n; i++) {
+      const msg: DataMsg = { t: 'wb-bg', b: board, id, i, n, part: url.slice(i * BG_PART, (i + 1) * BG_PART) }
+      if (to) rtc.current?.sendTo(to, msg); else rtc.current?.broadcast(msg)
+    }
+  }
+  // A picture as the board's background: the board is cleared first (a new
+  // background is a new page), then the picture is shrunk to what a board can
+  // show and sent to everyone in the call.
+  async function pickBoardBg(f: File | undefined) {
+    if (!f) return
+    const bmp = await decodeImage(f)
+    if (!bmp) { setToast(await whyUnreadable(f, locale)); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 4000); return }
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height))
+    const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k)
+    cv.getContext('2d')!.drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close()
+    const url = cv.toDataURL('image/jpeg', 0.82), board = boardKeyRef.current, id = oid()
+    clearBoard()
+    setBg(board, id, url); sendBg(board, id, url)
   }
   // Drop an editable text box on the board (commit any open one first).
   function placeText(u: number, v: number) { finishDraft(); setTool('text'); setDraft({ u, v, size: textSize, rot: 0, w: DEFAULT_TW, text: '' }) }
@@ -1194,7 +1257,7 @@ export default function CallsTool() {
     const size = Math.min(0.14, Math.max(0.014, d.size + delta)); setTextSize(size); upd({ size })
   }
   function undo() { const board = boardKeyRef.current; const id = stackOf(board).pop(); if (!id) return; objects.current.set(board, boardOf(board).filter((o) => o.id !== id)); redraw(); rtc.current?.broadcast({ t: 'wb', op: 'remove', id, b: board }) }
-  function clearBoard(broadcast = true) { const board = boardKeyRef.current; objects.current.set(board, []); myStack.current.set(board, []); redraw(); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear', b: board }) }
+  function clearBoard(broadcast = true) { const board = boardKeyRef.current; objects.current.set(board, []); myStack.current.set(board, []); bgs.current.delete(board); redraw(); if (broadcast) rtc.current?.broadcast({ t: 'wb', op: 'clear', b: board }) }
   // Size the whiteboard to its container in the live layout, and on resize.
   useEffect(() => {
     if (phase !== 'live') return
@@ -1911,7 +1974,8 @@ export default function CallsTool() {
                 ...[...geos].map(([id, g]) => ({ id, lat: g.lat, lng: g.lng, acc: g.acc, label: nameOf(id) })),
               ]} />
           )}
-          <canvas ref={wbRef} className={`absolute inset-0 w-full h-full touch-pinch-zoom ${view === 'loc' ? 'hidden' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
+          <canvas ref={wbBgRef} aria-hidden="true" data-testid="wb-bg-layer" className={`absolute inset-0 w-full h-full pointer-events-none ${view === 'loc' ? 'hidden' : ''}`} />
+          <canvas ref={wbRef} data-testid="wb-canvas" className={`absolute inset-0 w-full h-full touch-pinch-zoom ${view === 'loc' ? 'hidden' : ''} ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`} onPointerDown={wbDown} onPointerMove={wbMove} onPointerUp={wbUp} onPointerLeave={wbUp} onPointerCancel={wbUp} />
           {showFade && <div className="absolute pointer-events-none" style={{ left: `${fadeX}%`, right: `${fadeX}%`, top: `${fadeY}%`, bottom: `${fadeY}%`, boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink) 38%, transparent)' }} data-testid="call-fade" />}
           {draft && (() => {
             const pos = b2s(draft.u, draft.v); const fontPx = draft.size * pos.sc
@@ -1964,6 +2028,15 @@ export default function CallsTool() {
                 ))}
               </div>
             </Menu>
+            {/* A picture behind the board: beside the colour, as another thing
+                that sets what the board looks like. Not on a file or a shared
+                screen, which are their own background. */}
+            {boardKeyRef.current === 'board' && <>
+              <button type="button" onClick={() => bgFileRef.current?.click()} title={s.boardPicture} aria-label={s.boardPicture} data-testid="wb-bg"
+                className="grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] [&_svg]:w-[18px] [&_svg]:h-[18px]"><ImageIcon /></button>
+              {/* No accept: on Android it opens the gallery, which cannot see Downloads. */}
+              <input ref={bgFileRef} type="file" className="hidden" data-testid="wb-bg-input" onChange={(e) => { void pickBoardBg(e.target.files?.[0]); e.target.value = '' }} />
+            </>}
             <span className="w-px h-5 bg-[color:var(--line)] mx-0.5 shrink-0" />
             <button type="button" onClick={() => setTool('eraser')} title="Eraser" aria-label="Eraser" data-testid="wb-eraser"
               className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 [&_svg]:w-[18px] [&_svg]:h-[18px] ${tool === 'eraser' ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-ink' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}><EraserIcon /></button>

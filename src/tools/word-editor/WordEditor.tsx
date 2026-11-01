@@ -15,6 +15,7 @@ import { EditorShell, LossDialog } from '../../components/office/EditorShell'
 import { usePersistence, useCollab } from '../../components/office/hooks'
 import type { EditorProps } from '../../components/office/OfficeApp'
 import { RItem } from '../../components/office/Ribbon'
+import { CommonView } from '../../components/office/CommonView'
 import { OFFICE_STR } from '../../components/office/strings'
 import { pictureFromFile } from '../../lib/office/picture'
 import { PrintPreview } from '../../components/office/PrintPreview'
@@ -485,6 +486,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
             ))}
           </aside>
         )}
+        <CommonView collab={collab} anchor={{ x: 'center', y: 'start' }} className="flex-1 min-w-0 flex">
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-auto bg-[color-mix(in_srgb,var(--ink)_7%,var(--bg))]" data-testid="wd-scroll" onMouseDown={(e) => { if (e.target === e.currentTarget) viewRef.current?.focus() }}>
           <div data-zoom={zoom} style={{ zoom }} className={pageView ? 'py-6 px-3 w-fit min-w-full' : 'py-6 px-3 max-[560px]:px-0 max-[560px]:py-0'}>
             <div
@@ -540,6 +542,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
             </div>
           </div>
         </div>
+        </CommonView>
       </div>
       <footer className="flex-none flex items-center gap-4 px-3 h-7 border-t border-[color:var(--line-soft)] bg-[var(--surface)] text-[0.76rem] text-ink-faint" data-testid="wd-status">
         <span data-testid="wd-pages">{s.pageN(caretPage, totalPages)}</span>

@@ -3,6 +3,7 @@
 // routes it through the owner so every browser applies the same edits in the
 // same order. Undo is by inverse op, so it takes back MY change and leaves a
 // colleague's alone.
+import { CommonView } from '../../components/office/CommonView'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { EditorShell, LossDialog } from '../../components/office/EditorShell'
 import { usePersistence, useCollab } from '../../components/office/hooks'
@@ -679,6 +680,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
         <FindBar s={s} replace={find.replace} count={matches.list.length} index={matches.i} readOnly={readOnly} message={matches.msg}
           onSearch={search} onStep={step} onReplace={replaceOne} onReplaceAll={replaceAll} onClose={() => { setFind(null); setFocusTick((x) => x + 1) }} />
       )}
+      <CommonView collab={collab} anchor={{ x: 'start', y: 'start' }} className="flex-1 min-h-0 flex flex-col">
       <Grid
         model={model}
         rev={rev}
@@ -697,6 +699,7 @@ export default function ExcelEditor({ locale, kit, doc, joinRoom, onBack, onSave
         marquee={marquee && marquee.sheet === name ? marquee.box : null}
         filterRow={af ? { row: af.r0, c0: af.c0, c1: af.c1, active: sheetFilters.filter((f) => f.keep.length).map((f) => f.col) } : undefined}
       />
+      </CommonView>
       <div className="flex-none flex items-center gap-1 px-1 border-t border-[color:var(--line-soft)] bg-[var(--surface)] min-h-[34px]" data-testid="xl-tabs">
         <button type="button" aria-label={s.addSheet} title={s.addSheet} data-testid="xl-add-sheet" disabled={readOnly} onClick={addSheet} className="grid place-items-center size-7 rounded-sm border-0 bg-transparent cursor-pointer text-[1.1rem] hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] disabled:opacity-40">＋</button>
         <div className="flex-1 min-w-0 flex items-stretch overflow-x-auto [scrollbar-width:none]">

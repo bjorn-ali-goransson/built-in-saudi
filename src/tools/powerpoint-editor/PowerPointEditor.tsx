@@ -3,6 +3,7 @@
 // routes it through the owner so every browser applies the same edits in the
 // same order. Undo is by inverse op, so it takes back MY change and leaves a
 // colleague's alone.
+import { CommonView } from '../../components/office/CommonView'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { PlayIcon } from '../../components/icons'
@@ -550,6 +551,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
           onMenu={(e, id) => setMenu({ x: e.clientX, y: e.clientY, slide: id })} readOnly={readOnly} horizontal={narrow}
           peers={peerList.map((p) => ({ client: p.client, name: p.name, color: p.color, slide: p.slide }) as RailPeer)} />
         <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+          <CommonView collab={collab} anchor={{ x: 'center', y: 'center' }} className="flex-1 min-w-0 min-h-0 flex flex-col">
           <SlideCanvas
             deck={deck} slide={slide} number={number}
             selection={sel} onSelect={(ids) => { setSel(ids); if (editing && !ids.includes(editing.id)) setEditing(null) }}
@@ -565,6 +567,7 @@ export default function PowerPointEditor({ locale, kit, doc, joinRoom, onBack, o
             ctx={{ prompts: s.words }}
             onContext={(e, id) => { if (id && !sel.includes(id)) setSel([id]); setMenu({ x: e.clientX, y: e.clientY, el: id }) }}
           />
+          </CommonView>
           {showNotes && (
             <NotesPane key={slide.id} s={s} value={slide.notes || ''} readOnly={readOnly} onChange={(v) => run([{ k: 'slide-set', id: slide.id, patch: { notes: v || undefined } }], false)} />
           )}

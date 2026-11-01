@@ -357,14 +357,25 @@ export function useCollab(opts: { adapter: Bindable | null; kind: DocKind; title
 
   const lastPresence = useRef(0)
   const pendingPresence = useRef<number>()
+  // The size of our document area rides on every presence message (`vw`), so
+  // the others can dim what is not on everybody's screen (CommonView). Presence
+  // replaces itself per person, so it is merged in rather than sent apart.
+  const viewSize = useRef<[number, number] | null>(null)
+  const lastSent = useRef<Record<string, unknown>>({})
   const sendPresence = useCallback((d: unknown) => {
     const s = sessRef.current
+    lastSent.current = d && typeof d === 'object' ? (d as Record<string, unknown>) : {}
     if (!s) return
+    const out = viewSize.current ? { ...lastSent.current, vw: viewSize.current } : lastSent.current
     const now = Date.now()
     window.clearTimeout(pendingPresence.current)
-    if (now - lastPresence.current > 120) { lastPresence.current = now; s.presence(d) }
-    else pendingPresence.current = window.setTimeout(() => { lastPresence.current = Date.now(); s.presence(d) }, 120)
+    if (now - lastPresence.current > 120) { lastPresence.current = now; s.presence(out) }
+    else pendingPresence.current = window.setTimeout(() => { lastPresence.current = Date.now(); s.presence(out) }, 120)
   }, [])
+  const setViewSize = useCallback((w: number, h: number) => {
+    viewSize.current = [w, h]
+    sendPresence(lastSent.current)
+  }, [sendPresence])
 
   const setName = useCallback((n: string) => { setNameState(n); rememberName(n) }, [])
 
@@ -376,6 +387,7 @@ export function useCollab(opts: { adapter: Bindable | null; kind: DocKind; title
     kick: (c: string) => sessRef.current?.kick(c),
     sendChat: (t: string) => sessRef.current?.chat(t),
     sendPresence,
+    setViewSize,
     resnapshot: () => sessRef.current?.resnapshot(),
     canEdit: !sessRef.current || sessRef.current.canEdit || state === 'owner-left' || state === 'ended' || state === 'kicked',
     isGuest: !!sessRef.current && !sessRef.current.isOwner,

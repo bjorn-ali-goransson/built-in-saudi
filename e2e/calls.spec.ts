@@ -130,11 +130,11 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
   // (a trial click runs actionability checks, incl. "not covered", without clicking).
   await p.getByTestId('call-file-dl-main').click({ trial: true })
   const ink = () => p.evaluate(() => {
-    const cv = document.querySelector('[data-testid=calls-live] canvas') as HTMLCanvasElement
+    const cv = document.querySelector('[data-testid=wb-canvas]') as HTMLCanvasElement
     const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data
     let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++; return n
   })
-  const box = (await p.locator('[data-testid=calls-live] canvas').boundingBox())!
+  const box = (await p.locator('[data-testid=wb-canvas]').boundingBox())!
   await p.mouse.move(box.x + 80, box.y + 80); await p.mouse.down(); await p.mouse.move(box.x + 180, box.y + 150); await p.mouse.up()
   expect(await ink()).toBeGreaterThan(0) // drew on the file's board
   await p.getByTestId('call-view').click(); await p.getByTestId('view-board').click()
@@ -142,6 +142,68 @@ test('each shared file gets its own whiteboard (separate from the pure board)', 
   await p.getByTestId('call-filelist').getByTestId('call-file-open').click() // desktop docked panel
   await expect.poll(ink).toBeGreaterThan(0) // back on the file → its drawing persists
   await c.close()
+})
+
+test('a picture can be put behind the whiteboard: it clears the board, reaches everyone, survives the eraser, and Clear removes it', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await closeShare(pa)
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+
+  const count = (p: import('@playwright/test').Page, id: string) => p.evaluate((id) => {
+    const cv = document.querySelector(`[data-testid=${id}]`) as HTMLCanvasElement
+    const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++; return n
+  }, id)
+  // A scribble first, so clearing it can be seen.
+  const box = (await pa.getByTestId('wb-canvas').boundingBox())!
+  await pa.mouse.move(box.x + 60, box.y + 60); await pa.mouse.down(); await pa.mouse.move(box.x + 160, box.y + 140); await pa.mouse.up()
+  await expect.poll(() => count(pb, 'wb-canvas')).toBeGreaterThan(0)
+
+  // The button sits right beside the colour, with no separator between them.
+  const order = await pa.getByTestId('wb-bg').evaluate((el) => {
+    const prev = el.previousElementSibling as HTMLElement | null
+    const colourBefore = !!prev && (prev.dataset.testid === 'wb-color' || !!prev.querySelector('[data-testid=wb-color]'))
+    let n = el.nextElementSibling; while (n && n.tagName === 'INPUT') n = n.nextElementSibling
+    return { colourBefore, separatorAfter: !!n?.className.includes('w-px') }
+  })
+  expect(order).toEqual({ colourBefore: true, separatorAfter: true })
+  // A real photo-sized picture, so it has to travel in pieces.
+  const png = await pa.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 1400; c.height = 900
+    const x = c.getContext('2d')!
+    for (let i = 0; i < 4000; i++) { x.fillStyle = `hsl(${(i * 37) % 360} 70% 50%)`; x.fillRect((i * 97) % 1400, (i * 53) % 900, 30, 30) }
+    const b = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), 'image/png'))
+    return Array.from(new Uint8Array(await b.arrayBuffer()))
+  })
+  await pa.getByTestId('wb-bg-input').setInputFiles({ name: 'room.png', mimeType: 'image/png', buffer: Buffer.from(png) })
+  await expect.poll(() => count(pa, 'wb-bg-layer')).toBeGreaterThan(10_000)
+  await expect.poll(() => count(pb, 'wb-bg-layer'), { timeout: 10_000 }).toBeGreaterThan(10_000)
+  // The board was cleared, on both sides.
+  expect(await count(pa, 'wb-canvas')).toBe(0)
+  await expect.poll(() => count(pb, 'wb-canvas')).toBe(0)
+
+  // The eraser cuts the drawing, not the picture.
+  const bgBefore = await count(pa, 'wb-bg-layer')
+  await pa.getByTestId('wb-eraser').click()
+  await pa.mouse.move(box.x + 40, box.y + 40); await pa.mouse.down(); await pa.mouse.move(box.x + 200, box.y + 160); await pa.mouse.up()
+  expect(await count(pa, 'wb-bg-layer')).toBe(bgBefore)
+
+  // Clear takes the picture away too, for everyone.
+  await pa.getByTestId('wb-clear').click()
+  await expect.poll(() => count(pa, 'wb-bg-layer')).toBe(0)
+  await expect.poll(() => count(pb, 'wb-bg-layer')).toBe(0)
+  await a.close(); await b.close()
 })
 
 test('mobile: file bar docks under the toolbar and the view dropdown stays on screen', async ({ browser }) => {
@@ -225,7 +287,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
   await closeShare(pa) // the host's auto-opened share dialog
 
   // A scribbles on the whiteboard BEFORE anyone else is admitted.
-  const boxA = (await pa.locator('[data-testid=calls-live] canvas').boundingBox())!
+  const boxA = (await pa.locator('[data-testid=wb-canvas]').boundingBox())!
   await pa.mouse.move(boxA.x + 60, boxA.y + 60); await pa.mouse.down(); await pa.mouse.move(boxA.x + 160, boxA.y + 140); await pa.mouse.up()
 
   // B asks to join → lands in the waiting lobby, NOT in the call yet
@@ -248,7 +310,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
 
   // Whiteboard history: B (admitted above) should have received A's earlier scribble.
   const inkB = () => pb.evaluate(() => {
-    const cv = document.querySelector('[data-testid=calls-live] canvas') as HTMLCanvasElement
+    const cv = document.querySelector('[data-testid=wb-canvas]') as HTMLCanvasElement
     const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data
     let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++; return n
   })
@@ -296,7 +358,7 @@ test('guest waits in the lobby, host admits, then they connect and chat', async 
     inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }))
   })
   await expect(pb.locator('[data-testid=calls-live] main img')).toBeVisible({ timeout: 10_000 }) // B received + auto-opened it
-  const boxA2 = (await pa.locator('[data-testid=calls-live] canvas').boundingBox())!
+  const boxA2 = (await pa.locator('[data-testid=wb-canvas]').boundingBox())!
   await pa.mouse.move(boxA2.x + 70, boxA2.y + 70); await pa.mouse.down(); await pa.mouse.move(boxA2.x + 170, boxA2.y + 150); await pa.mouse.up()
   await expect.poll(inkB, { timeout: 10_000 }).toBeGreaterThan(0) // B sees A's drawing on the file's board
 

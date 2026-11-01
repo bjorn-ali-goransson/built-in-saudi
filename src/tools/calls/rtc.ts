@@ -78,6 +78,9 @@ export type DataMsg =
   | { t: 'wb'; op: 'clear'; b?: string }
   // Full whiteboard snapshot sent to a peer who joined after drawing began.
   | { t: 'wb-sync'; boards: [string, WbObj[]][] }
+  // A picture behind a board, as a data URL sent in pieces: one data-channel
+  // message is capped (256KB in Chromium) and a photo can be more than that.
+  | { t: 'wb-bg'; b: string; id: string; i: number; n: number; part: string }
   | { t: 'file-start'; id: string; name: string; size: number; mime: string }
   | { t: 'file-end'; id: string }
   // Switch the shared main stage for everyone: a file id, or '' for the whiteboard.
