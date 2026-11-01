@@ -91,6 +91,7 @@ import { timetableTool } from './timetable/meta'
 import { activityScheduleTool } from './activity-schedule/meta'
 import { attendanceSheetTool } from './attendance-sheet/meta'
 import { csvVcardTool } from './csv-vcard/meta'
+import { archivesTool } from './archives/meta'
 import { nameSpellingTool } from './name-spelling/meta'
 import { pdfOcrTool } from './pdf-ocr/meta'
 import { stopwatchTool } from './stopwatch/meta'
@@ -199,6 +200,7 @@ export const tools: Tool[] = [
   languageDetectTool,
   unitConverterTool,
   csvVcardTool,
+  archivesTool,
 
 ]
 

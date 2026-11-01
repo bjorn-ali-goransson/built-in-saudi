@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { deflateRawSync, deflateSync, crc32 } from 'node:zlib'
+import { deflateRawSync, deflateSync, crc32, gzipSync } from 'node:zlib'
 import { readFileSync } from 'node:fs'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { ANALYTICS } from './helpers'
@@ -201,6 +201,11 @@ export const CASES: Case[] = [
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
   { id: 'doc-scan', testid: 'ds-file', name: 'page.png', mime: 'image/png', make: pngWithToken },
   { id: 'pdf-ocr', testid: 'pk-file', name: 'scan.pdf', mime: 'application/pdf', make: tokenPdf },
+  // Two intake paths, two rows: opening reads an archive, making one reads the files put in it.
+  { id: 'archives', testid: 'ar-file', name: 'notes.txt.gz', mime: 'application/gzip', make: () => gzipSync(Buffer.from(`${TOKEN}\n`)) },
+  { id: 'archives', label: 'archives (make)', testid: 'ar-add', name: 'notes.txt', mime: 'text/plain', make: () => Buffer.from(`${TOKEN}\n`),
+    reveal: async (page) => { await page.getByTestId('ar-mode-create').click() },
+    act: async (page) => { await page.getByTestId('ar-make').click() } },
   { id: 'csv-vcard', testid: 'cv-file', name: 'rows.csv', mime: 'text/csv', make: () => Buffer.from(`name,phone\n${TOKEN},0501234567\n`) },
   // Found missing by the code sweep that wired this tool to the shared table
   // reader: it has always taken a file and was never in this list. Which is the

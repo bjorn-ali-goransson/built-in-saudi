@@ -23,6 +23,7 @@ export const ADDED: Record<string, string> = {
   'attendance-sheet': '2026-08-07',
   'cert-decoder': '2026-08-07',
   'csv-vcard': '2026-08-07',
+  'archives': '2026-11-01',
   'name-spelling': '2026-08-07',
   'pdf-ocr': '2026-08-07',
   'seating-chart': '2026-08-07',

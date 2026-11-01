@@ -534,6 +534,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'جدول إلى جهات اتصال', description: 'حوّل قائمة أشخاص في ملف CSV أو إكسل إلى ملف ‎.vcf‎ يستورده هاتفك — أسماء وأرقام وبُرد إلكترونية وشركات ومسمّيات وظيفية. تُطابَق الأعمدة من عناوينها ويمكنك تصحيحها. وتُعاد كتابة الأرقام السعودية بالصيغة الدولية، لأن 0512345678 يفقد معناه متى خرج الهاتف من البلد. ولا يُرفع شيء.' },
   },
   {
+    id: 'archives',
+    en: { name: 'ZIP, RAR & GZIP Archives', description: 'Open ZIP, RAR, GZIP, TAR and .tar.gz archives in your browser — see what is inside, take out one file or all of them, and open a password-protected RAR. Make .zip, .tar.gz, .tar and .gz archives from your own files or a whole folder. Nothing is uploaded.' },
+    ar: { name: 'ملفات ZIP وRAR وGZIP المضغوطة', description: 'افتح ملفات ZIP وRAR وGZIP وTAR و‎.tar.gz‎ في متصفحك — اطّلع على ما فيها، واستخرج ملفًا واحدًا أو كلها، وافتح ملف RAR المحمي بكلمة مرور. واصنع ملفات ‎.zip‎ و‎.tar.gz‎ و‎.tar‎ و‎.gz‎ من ملفاتك أو من مجلد كامل. ولا يُرفع شيء.' },
+  },
+  {
     id: 'name-spelling',
     en: { name: 'Name in English Letters', description: 'Write an Arabic name in Latin letters, one part at a time, choosing between the spellings that actually appear on documents here. There is no correct answer — محمد is Mohammed, Muhammad, Mohamed, Mohammad and Muhammed on five passports in the same family — so this shows the options rather than pretending to a verdict, and tells you to copy your passport if you already have one.' },
     ar: { name: 'كتابة الاسم بالإنجليزية', description: 'اكتب اسمًا عربيًا بحروف لاتينية، جزءًا جزءًا، مختارًا بين الكتابات التي تظهر فعلًا في الوثائق هنا. ولا جواب صحيح واحد — فمحمد تُكتب Mohammed وMuhammad وMohamed وMohammad وMuhammed في خمسة جوازات لأسرة واحدة — ولذلك تعرض الأداة الخيارات ولا تدّعي حكمًا، وتنصحك بنسخ جوازك إن كان لديك واحد.' },

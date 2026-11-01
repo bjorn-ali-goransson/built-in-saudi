@@ -947,6 +947,43 @@ past second place now** — a merged tool's extra words put Edit PDF between
 Merge PDF and PDF to Images for «ملف pdf إلى صور», and a tie-break that only
 compared the top two silently stopped applying.
 
+## Archives: ZIP, RAR, GZIP and TAR, both directions (`archives`)
+
+Asked for directly, with the name spelled out so it is found by every one of
+those words: «ملفات ZIP وRAR وGZIP المضغوطة». It replaces the two halves the
+November cut withdrew for no traffic — `archive-inspector` (open) and
+`zip-create` (make) — and because they went for TRAFFIC rather than subject,
+their ids are now `RenamedToolRedirect`s to it (`zip-create` opening the make
+mode), not retirements. A capability coming back under one name is a merge.
+
+- **Everything runs in `archive.worker.ts`**, and the opened archive STAYS
+  there: the page gets names and sizes and asks for one entry's bytes when it is
+  downloaded. A tar or RAR entry is a view into the whole archive, so it is
+  `.slice()`d before being transferred — transferring the view's buffer would
+  detach every other entry with it.
+- **The bytes decide the format, never the extension** (`formats.ts` `sniff`),
+  and 7-Zip, bzip2, xz and zstd are recognised so the refusal NAMES them rather
+  than saying "unknown". A `.tar.gz` opens as its files, not as one `.tar`.
+- **ZIP and GZIP need no dependency** (`lib/unzip.ts`, `lib/zip.ts`,
+  `CompressionStream('gzip')`); **tar is hand-written**, and reads both long-name
+  dialects (GNU `L`, pax `x`) and writes pax for a name over 100 BYTES — which an
+  Arabic path reaches in fifty letters.
+- **RAR reads through `node-unrar-js`** (MIT wrapper around RARLAB's unrar
+  source, whose own licence permits extraction and forbids writing a RAR
+  compressor — not GPL). The 200KB wasm is a hashed same-origin asset, fetched
+  only when a RAR is opened. **RAR is never MADE**, and the make screen says why.
+  A password-protected RAR asks for its password; ZipCrypto/AES zip entries are
+  named per entry, not decrypted.
+- **`e2e/fixtures/sample.rar` is written by `scripts/make-rar-fixture.mjs`**:
+  no tool here makes RAR, but a STORED entry needs only the block layout and two
+  CRCs, and unrar refuses any header whose CRC is wrong, so reading it back
+  proves the layout. There is NO encrypted-RAR fixture — RAR encryption needs a
+  real compressor's key derivation — so the password path is untested.
+- **What it makes is read back by somebody else's code**: Node's zlib for zip
+  and gzip, the system `tar` for tar.gz (walking the extracted tree, because
+  `tar -t` escapes non-ASCII names as octal under a C locale). Verified to fail:
+  dropping the pax header reddens exactly the long-Arabic-name case.
+
 ## Design system
 
 Warm Najdi-craft editorial aesthetic. Tokens in `src/styles/theme.css`

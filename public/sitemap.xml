@@ -1248,6 +1248,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/csv-vcard"/>
   </url>
   <url>
+    <loc>https://built-in-saudi.com/en/apps/archives/</loc>
+    <lastmod>2026-11-01</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/archives"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/archives"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/archives"/>
+  </url>
+  <url>
+    <loc>https://built-in-saudi.com/ar/apps/archives/</loc>
+    <lastmod>2026-11-01</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/archives"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/archives"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/archives"/>
+  </url>
+  <url>
     <loc>https://built-in-saudi.com/en/apps/name-spelling/</loc>
     <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/name-spelling"/>

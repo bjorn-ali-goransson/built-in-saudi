@@ -1,6 +1,6 @@
 # Built in Saudi — Roadmap
 
-The backlog, and an honest account of what exists. **95 tools are live.** This
+The backlog, and an honest account of what exists. **96 tools are live.** This
 file was badly stale before August 2026 — it listed shipped tools as unbuilt
 ideas — so it is now organised around what is *true* rather than what was once
 planned.
@@ -31,7 +31,7 @@ registry disagree.
 | PDF | 6 | compress, →Word, →images, merge (PDFs and pictures, with the page organiser), edit (sign, fill forms, add text), PDF and photos to text (OCR) |
 | Arabic | 7 | normalisation, numerals, Franco, verb conjugation, diacritizer, name spelling, tafqeet |
 | Saudi / Local | 6 | plates, iqama and ID expiry, phone numbers, IBAN, short address, weather |
-| Files | 3 | the video editor (cut, crop, join, caption, censor, mute, steady the shake, save as MP4, GIF or a still), audio conversion (with the spectrum), spreadsheet to contacts |
+| Files | 4 | ZIP, RAR, GZIP and TAR archives (open and make), the video editor (cut, crop, join, caption, censor, mute, steady the shake, save as MP4, GIF or a still), audio conversion (with the spectrum), spreadsheet to contacts |
 | Calculators | 6 | units, currency, coordinates, split bill, date difference (with age and working days), stopwatch & timer (with pomodoro) |
 | Business | 3 | CV optimizer, Book Me, certificates |
 | Office | 3 | **presentation editor** — pptx/md outline in a worker, themes, presenter view, live co-editing; **spreadsheet editor** — xlsx/ods/csv in a worker, formulas, charts, live co-editing; **document editor** — docx/odt/md/html, styles, tables, footnotes, prosemirror-collab |
