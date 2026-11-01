@@ -7002,6 +7002,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   document only if it is on this site (`liveDoc`). STUN is public; **no TURN** (strict NATs can't connect).
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
+  `makeInvite(url, code, ar, { meeting, at })` draws a meeting's invitation
+  ("Join my meeting", the start time with the sharer's time zone, in the picture
+  and in its caption). Its canvas is never on the page, so it inherits no text
+  direction: Arabic is set right to left by hand, the code and link left to
+  right, and a long link is shrunk to fit rather than cut off.
   **Knock visibility (#217):** the ONLY admit control used to live inside the
   participants dock, so a host on the chat tab (or with the dock closed) got a chime
   and nothing else. A knock now also badges the dock + toasts (`notify('p', …)`) and
