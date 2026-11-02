@@ -6192,6 +6192,13 @@ All four used to be in the loss ledger; a real workbook carried all four at once
   Dark and the accent cycle) under the cell's own formatting, and written back as
   a table part whose column names are the header cells' text (Excel "repairs" a
   file where they differ).
+- **Picking a reference reads the INPUT, and a deferred caret reset checks it still applies.**
+  After a click writes `A1`, a frame-later `setSelectionRange` put the caret back after it — and
+  a `*` typed within that frame was already in the input, so the caret landed BEFORE it. The
+  next click then read `=A1` up to the caret, did not count as a pick, and committed `=A1*`
+  (`#VALUE!`). One run in thirty under load, red on CI; the probe that found it logged the
+  formula bar after each step. The reset now runs only if the input still holds what it wrote,
+  and the pick test reads the input's own value rather than state that may lag a keystroke.
 - **A `filterColumn` with no criteria is not a filter** — Excel writes one just to
   hide a button. Real value lists open applied (`savedFilter`) and are written back.
 

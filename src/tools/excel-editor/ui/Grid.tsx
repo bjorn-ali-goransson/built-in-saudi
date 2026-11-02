@@ -222,15 +222,19 @@ export function Grid(p: Props) {
   const [listOpen, setListOpen] = useState(false)
   useEffect(() => setListOpen(false), [sel.a.row, sel.a.col])
   const selBox = useMemo(() => expandForMerges(normBox(sel.a, sel.f), merges), [sel, merges])
-  const isFormulaEdit = !!edit && edit.text.startsWith('=')
   const pickRef = useRef<{ start: number; end: number; anchor: Addr } | null>(null)
 
   /** While typing a formula, a click on a cell writes its reference at the caret. */
   const canPick = () => {
-    if (!isFormulaEdit || !edit) return false
+    if (!edit) return false
     const ta = edit.from === 'bar' ? (document.querySelector('[data-testid="xl-formula-input"]') as HTMLTextAreaElement | null) : keyRef.current
-    const pos = ta?.selectionStart ?? edit.text.length
-    const before = edit.text.slice(0, pos).trimEnd()
+    // The INPUT's own value, not `edit.text`: a key typed a moment ago is in the input before it is
+    // in state, so reading state here took "=A1*" for "=A1", decided this was not a pick, and
+    // committed the half-typed formula (#VALUE!) instead of writing the clicked reference.
+    const live = ta?.value ?? edit.text
+    const pos = ta?.selectionStart ?? live.length
+    if (!live.startsWith('=')) return false
+    const before = live.slice(0, pos).trimEnd()
     return pickRef.current !== null || /[=(,+\-*/^&<>:;%]$/.test(before)
   }
   const insertRef = (a: Addr, f: Addr) => {
@@ -239,15 +243,24 @@ export function Grid(p: Props) {
     const b = normBox(a, f)
     const ref = b.r0 === b.r1 && b.c0 === b.c1 ? `${colToLetters(b.c0)}${b.r0 + 1}` : `${colToLetters(b.c0)}${b.r0 + 1}:${colToLetters(b.c1)}${b.r1 + 1}`
     const prev = pickRef.current
-    const start = prev ? prev.start : ta?.selectionStart ?? edit.text.length
-    const end = prev ? prev.end : ta?.selectionEnd ?? edit.text.length
-    const text = edit.text.slice(0, start) + ref + edit.text.slice(end)
+    const live = ta?.value ?? edit.text
+    const start = prev ? prev.start : ta?.selectionStart ?? live.length
+    const end = prev ? prev.end : ta?.selectionEnd ?? live.length
+    const text = live.slice(0, start) + ref + live.slice(end)
     pickRef.current = { start, end: start + ref.length, anchor: a }
     ctl.setEditText(text)
     // Into the input NOW, not after the render: the next keystroke reads the input's own value, and a
     // key typed before the mirroring effect ran turned "=A1" back into "=" plus the key ("=*B1").
     if (ta) { ta.value = text; ta.setSelectionRange(start + ref.length, start + ref.length) }
-    requestAnimationFrame(() => { if (ta) { ta.focus(); ta.setSelectionRange(start + ref.length, start + ref.length) } })
+    // Only if nothing was typed in between. A key pressed before this frame (the '*' of "=A1*")
+    // is already in the input, and putting the caret back after "A1" moved it before that key —
+    // so the next click read "=A1" up to the caret, did not count as a pick, and committed the
+    // half-typed formula. About one run in thirty under load.
+    requestAnimationFrame(() => {
+      if (!ta) return
+      ta.focus()
+      if (ta.value === text) ta.setSelectionRange(start + ref.length, start + ref.length)
+    })
   }
   useEffect(() => { if (!edit) pickRef.current = null }, [edit])
 
