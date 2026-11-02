@@ -36,9 +36,9 @@ export const UNTUNED_AR = [
   ['توقيع مستند pdf', 'pdf-edit'],
   ['استخراج النص من ملف pdf', 'pdf-ocr'],
   // Images
-  ['إزالة الخلفية من الصورة', 'remove-background'],
+  ['إزالة الخلفية من الصورة', 'image-edit'],
   ['قص الصورة', 'image-edit'],
-  ['تصغير حجم الصورة', 'image-compressor'],
+  ['تصغير حجم الصورة', 'image-edit'],
   ['صورة شخصية للجواز', 'passport-photo'],
   // EXPECTATION WAS WRONG. «إخفاء معلومات في صورة» is literally "hiding
   // information inside an image", which IS steganography — the tool that won.

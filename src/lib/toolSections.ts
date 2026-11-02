@@ -20,8 +20,8 @@ import { categoryLabel, type Locale } from '../i18n'
  *
  * Now eight, chosen so the big families each show one: `pdf-to-word` because
  * PDF-to-Word is recorded here as the most-requested PDF task on the web,
- * `image-compressor` because making a photo smaller is the commonest thing
- * anybody asks of an image, `gosi-salary` for the Saudi wedge, `translate`
+ * `image-edit` because making a photo smaller is the commonest thing
+ * anybody asks of an image and the editor does it, `gosi-salary` for the Saudi wedge, `translate`
  * because on-device AI is the clearest statement of the privacy stance.
  *
  * **Developer stays out on purpose.** It is the largest family and the one
@@ -34,7 +34,7 @@ import { categoryLabel, type Locale } from '../i18n'
  * categories, so `book-me`, `islamic-calendar` and `qibla` simply move back
  * into their own sections, and the Duʿāʾ row is untouched.
  */
-const RECOMMENDED = ['ats-cv-optimizer', 'prayer-times', 'pdf-to-word', 'image-compressor',
+const RECOMMENDED = ['ats-cv-optimizer', 'prayer-times', 'pdf-to-word', 'image-edit',
   'word-editor', 'qr-code', 'translate', 'calls']
 const DUA = ['istikhara', 'adhkar', 'hisn-al-muslim']
 const CATEGORY_ORDER = ['Saudi / Local', 'Islamic', 'Arabic', 'Office', 'Text', 'Calculators',

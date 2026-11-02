@@ -261,7 +261,7 @@ test('a description is not indexed, and the compress query proves why', async ({
   // description is full of compression vocabulary. Frozen here so the idea
   // cannot be re-added on the strength of it sounding reasonable.
   await search(page, 'ضغط صورة', 'ar')
-  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(page.getByTestId('tool-image-edit')).toBeVisible()
   await expect(top(page)).toContainText(/صور/)
 })
 
@@ -468,14 +468,14 @@ test.describe('the query survives its shape', () => {
   })
 
   test('a full stop does not either', async ({ page }) => {
-    await opens(page, 'compress image.', 'image-compressor')
+    await opens(page, 'compress image.', 'image-edit')
   })
 
   test('quotes of every family are decoration, not part of the word', async ({ page }) => {
     await opens(page, '"merge pdf"', 'pdf-merge')
     // Guillemets are how Arabic quotes a term — including in this repo's own
     // writing — and they used to return nothing at all.
-    await opens(page, '«ضغط الصور»', 'image-compressor', 'ar')
+    await opens(page, '«ضغط الصور»', 'image-edit', 'ar')
   })
 
   test('a tool id is a query, because somebody saw it in a URL', async ({ page }) => {
@@ -537,7 +537,7 @@ test('PDF written phonetically in Arabic finds the PDF tools', async ({ page }) 
 
 test('a format typed as a file extension finds the tool that handles it', async ({ page }) => {
   await search(page, '.heic')
-  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(page.getByTestId('tool-image-edit')).toBeVisible()
 })
 
 test('and so do the formats that returned nothing at all', async ({ page }) => {
@@ -644,7 +644,7 @@ test('a cached fold cannot leak between queries', async ({ page }) => {
 
 test('a product name resolves to the tool that does the same job', async ({ page }) => {
   await search(page, 'tinypng')
-  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(page.getByTestId('tool-image-edit')).toBeVisible()
 })
 
 test('and so does one written the Arabic way', async ({ page }) => {
@@ -675,7 +675,7 @@ test('a query that already works is untouched by the alias layer', async ({ page
   // that own it must keep it.
   await search(page, 'meeting')
   const first = page.locator('[data-testid^="tool-"]').first()
-  await expect(first).not.toHaveAttribute('data-testid', 'tool-image-compressor')
+  await expect(first).not.toHaveAttribute('data-testid', 'tool-image-edit')
 })
 
 // --- Mechanism cases kept through the November 2026 cut. Each used to be
@@ -695,7 +695,7 @@ test('a shipped capability is findable by its name', async ({ page }) => {
   // The site decodes HEIC everywhere an image is taken (#226); the query an
   // iPhone owner on Android actually types has to find a tool.
   await search(page, 'heic')
-  await expect(page.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(page.getByTestId('tool-image-edit')).toBeVisible()
 })
 
 test('a substring inside another word is not a match', async ({ page }) => {
@@ -714,7 +714,7 @@ test('British and American spellings both find the tool', async ({ page }) => {
 test('a format this site does not handle still finds nothing', async ({ page }) => {
   // The adware move is to always show something; AVIF is read by no tool here.
   await search(page, 'avif')
-  await expect(page.getByTestId('tool-image-compressor')).toHaveCount(0)
+  await expect(page.getByTestId('tool-image-edit')).toHaveCount(0)
 })
 
 test('Arabic particles stick to the front of the word, and are stripped', async ({ page }) => {
@@ -739,7 +739,7 @@ test('and the diacritic fold still applies after many other searches', async ({ 
 
 test('what a merged tool did is still findable in the tool that took it over', async ({ page }) => {
   for (const [q, id] of [
-    ['crop image', 'image-edit'], ['convert to webp', 'image-compressor'],
+    ['crop image', 'image-edit'], ['convert to webp', 'image-edit'],
     ['markdown to word', 'word-editor'], ['csv to excel', 'excel-editor'],
     ['pdf to text', 'pdf-ocr'], ['trim video', 'video-edit'],
   ] as const) {

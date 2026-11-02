@@ -194,16 +194,6 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'PDF إلى صور', description: 'حوّل PDF إلى صور — ملف PNG أو JPG أو WebP لكل صفحة، بدقة الشاشة أو الطباعة أو عالية. اختر الصفحات واحفظها منفردة أو في ZIP. لا تُرفع أبدًا.' },
   },
   {
-    id: 'image-compressor',
-    en: { name: 'Image Compressor', description: 'Compress and resize JPG/PNG/WebP images in your browser — quality + max-width, before→after size and % saved. The image is never uploaded.' },
-    ar: { name: 'ضاغط الصور', description: 'اضغط الصور وغيّر حجمها داخل متصفحك — الجودة وأقصى عرض، والحجم قبل وبعد ونسبة التوفير. لا تُرفع الصورة أبدًا.' },
-  },
-  {
-    id: 'remove-background',
-    en: { name: 'Remove Background', description: 'Automatically remove the background from a photo in your browser and download a transparent PNG. The AI model runs on your device — the image is never uploaded.' },
-    ar: { name: 'إزالة الخلفية', description: 'أزل خلفية الصورة تلقائيًا داخل متصفحك ونزّلها بصيغة PNG شفافة. يعمل نموذج الذكاء الاصطناعي على جهازك — لا تُرفع الصورة أبدًا.' },
-  },
-  {
     id: 'qr-code',
     en: {
       name: 'QR Code Generator',
@@ -495,8 +485,8 @@ export const liveToolSeo: ToolSeo[] = [
   },
   {
     id: 'image-edit',
-    en: { name: 'Image Editor', description: 'The video editor’s screen, for the one-frame case: crop a picture to the shape a platform wants, draw a box over anything that should not be in it, and type a caption straight onto the frame — in your browser, with nothing uploaded. It shows what a crop costs before you commit to it, and the rectangle is dragged over the WHOLE picture so you can see what is being thrown away rather than watching the result appear to zoom. A dragged corner snaps onto 9:16, 1:1, 4:5 or 16:9 when it gets close and lets go again when it does not, so an arbitrary shape is still expressible. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left. The box that hides something offers pixelate, solid or blur, with what that choice costs written next to it. HEIC from an iPhone is read here too. And there is a control that tilts every picture one degree clockwise, on by default, because somebody asked for it that way.' },
-    ar: { name: 'محرّر الصور', description: 'شاشة محرّر الفيديو نفسها، لحالة الإطار الواحد: اقتصّ الصورة بالشكل الذي تطلبه المنصّة، وارسم مربّعًا فوق ما لا ينبغي أن يظهر، واكتب النص على الصورة مباشرة — داخل متصفحك دون رفع شيء. وتريك الأداة ثمن الاقتصاص قبل أن تلتزم به، ويُسحب المستطيل فوق الصورة كاملةً لترى ما يُستبعد بدل أن ترى النتيجة وكأنها تتقرّب. والزاوية المسحوبة تلتقط ٩:١٦ أو ١:١ أو ٤:٥ أو ١٦:٩ إذا اقتربت منها وتتركها إذا ابتعدت، فتبقى النِّسَب الحرّة ممكنة. وتُرسم النصوص بخطوط هذه الصفحة نفسها، فتتصل الحروف العربية وتجري من اليمين إلى اليسار. ويقدّم مربّع الإخفاء بكسلةً أو حجبًا كاملًا أو تمويهًا، وإلى جانبها ثمن هذا الاختيار. وتُقرأ هنا أيضًا صور HEIC من الآيفون. وفيها خيار يُميل كل صورة درجةً واحدة مع عقارب الساعة، مفعَّلٌ تلقائيًّا، لأن أحدهم طلبه هكذا.' },
+    en: { name: 'Image Editor', description: 'The video editor’s screen, for the one-frame case: crop a picture to the shape a platform wants, draw a box over anything that should not be in it, and type a caption straight onto the frame — in your browser, with nothing uploaded. It shows what a crop costs before you commit to it, and the rectangle is dragged over the WHOLE picture so you can see what is being thrown away rather than watching the result appear to zoom. A dragged corner snaps onto 9:16, 1:1, 4:5 or 16:9 when it gets close and lets go again when it does not, so an arbitrary shape is still expressible. Captions are drawn with this page’s own fonts, so Arabic joins up and runs right to left. The box that hides something offers pixelate, solid or blur, with what that choice costs written next to it. It takes the background out, on your device, and keeps the cut-out under every other edit. It compresses too: pick JPEG, WebP or PNG, a quality and a largest side, and see what the file will weigh against the one you picked. HEIC from an iPhone is read here too. And there is a control that tilts every picture one degree clockwise, on by default, because somebody asked for it that way.' },
+    ar: { name: 'محرّر الصور', description: 'شاشة محرّر الفيديو نفسها، لحالة الإطار الواحد: اقتصّ الصورة بالشكل الذي تطلبه المنصّة، وارسم مربّعًا فوق ما لا ينبغي أن يظهر، واكتب النص على الصورة مباشرة — داخل متصفحك دون رفع شيء. وتريك الأداة ثمن الاقتصاص قبل أن تلتزم به، ويُسحب المستطيل فوق الصورة كاملةً لترى ما يُستبعد بدل أن ترى النتيجة وكأنها تتقرّب. والزاوية المسحوبة تلتقط ٩:١٦ أو ١:١ أو ٤:٥ أو ١٦:٩ إذا اقتربت منها وتتركها إذا ابتعدت، فتبقى النِّسَب الحرّة ممكنة. وتُرسم النصوص بخطوط هذه الصفحة نفسها، فتتصل الحروف العربية وتجري من اليمين إلى اليسار. ويقدّم مربّع الإخفاء بكسلةً أو حجبًا كاملًا أو تمويهًا، وإلى جانبها ثمن هذا الاختيار. وتزيل الخلفية على جهازك، ويبقى المقصوص تحت كل تعديل آخر. وتضغط الصورة أيضًا: اختر JPEG أو WebP أو PNG والجودة وأطول ضلع، وشاهد وزن الملف مقارنةً بالملف الذي اخترته. وتُقرأ هنا أيضًا صور HEIC من الآيفون. وفيها خيار يُميل كل صورة درجةً واحدة مع عقارب الساعة، مفعَّلٌ تلقائيًّا، لأن أحدهم طلبه هكذا.' },
   },
   {
     id: 'video-edit',

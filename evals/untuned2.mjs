@@ -31,8 +31,8 @@
 //   ملف pdf إلى صور            rank 2  the direction problem again, in Arabic
 export const UNTUNED2 = [
   // Everyday phrasings, English.
-  ['shrink a photo for whatsapp', 'image-compressor'],
-  ['cut out the background', 'remove-background'],
+  ['shrink a photo for whatsapp', 'image-edit'],
+  ['cut out the background', 'image-edit'],
   ['split a restaurant bill', 'split-bill'],
   ['what does this cron mean', 'cron-builder'],
   ['convert csv to json', 'csv-json'],

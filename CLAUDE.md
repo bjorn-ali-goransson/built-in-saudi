@@ -1038,7 +1038,7 @@ Because the picker is unrestricted, a bad pick **must** report why — a bare `r
 turns "wrong file" into a dead UI. Use `whyUnreadable(file, locale)` from
 `src/lib/imageInput.ts` (which sniffs the ISO-BMFF brand, so HEIC is recognised even
 with no MIME) and render `<FileError message={…} />` from `components/ui`. Tools that
-decode later in a worker (remove-background, steganography) must still verify with
+decode later in a worker (steganography) must still verify with
 `createImageBitmap` at **pick time**, or the failure surfaces far from the cause.
 
 ## HEIC (#226)
@@ -3873,6 +3873,33 @@ filled (`lib/frameCompose.ts`: `Crop.outside`, `Crop.fill`, `dragCrop`,
 three fill cases and nothing else. One existing case changed, honestly: the
 free-proportion drag also pulled 12% past the BOTTOM, which used to be clamped
 and is now an outside pull — it drags sideways only now.
+
+**The compressor and the background remover live here now** (November 2026,
+asked for: "one app per job" had been done for video and PDF and not for
+images). Their old addresses open the part that does their job —
+`/apps/image-compressor` is `?mode=compress`, `/apps/remove-background` is
+`?mode=cutout` — and both land on the settings screen after the pick. Four
+decisions:
+
+- **The size is an ACTUAL encode, shown while choosing** (`ie-estimate`), through
+  the same `renderBlob` the download uses, so the figure is the file's. The case
+  asserts the download weighs exactly what was shown.
+- **A cut-out REPLACES the picture at the bottom of the stack** (`cutout`), so the
+  tilt, the pieces, the crop and every box work on it unchanged, and putting the
+  background back is dropping it rather than undoing a chain of edits. It turns
+  JPEG into PNG, because JPEG would paint the transparency black. The model is
+  NOT started on arrival: it is a download of several megabytes and waits for a
+  tap, as it did. `window.__BIS_REMOVE_BG` stands in for it in the e2e only.
+- **The download is invalidated by the cut-out too.** It was not, at first: the
+  effect that drops a stale file listed the crop, the boxes and the settings,
+  and putting the background back left the cut-out's file on the green button.
+  Found by the restore case, **verified to fail** with `cutout` out of the list.
+- **A visit through an old app's address starts with the tilt OFF.** Somebody
+  shrinking a photo or cutting one out must get it back true; an ordinary visit
+  keeps the joke on, and there is a case for each.
+
+The compressor's own worker (`lib/imageEncoder.ts`, `imageEncode.worker.ts`) had
+no other caller and went with it. Canvas `toBlob` is already asynchronous.
 
 ## A picture laid on the video, and two vacuous greens (`video-edit`)
 

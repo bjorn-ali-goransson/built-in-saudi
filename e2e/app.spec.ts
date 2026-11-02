@@ -111,11 +111,10 @@ test.describe('tools', () => {
     await expect(page.getByTestId('case-snake')).toHaveText('hello_world')
   })
 
-  test('image compressor: renders the dropzone', async ({ page }) => {
+  test('image compressor: its old address opens the image editor ready to compress', async ({ page }) => {
     await page.goto('/en/tools/image-compressor')
-    await expect(page.getByTestId('image-compressor')).toBeVisible()
-    await expect(page.getByTestId('imgcomp-drop')).toBeVisible()
-    await expect(page.getByText(/never uploaded|never leaves/i)).toBeVisible()
+    await expect(page).toHaveURL(/\/en\/apps\/image-edit\?mode=compress$/)
+    await expect(page.getByTestId('ie-file')).toBeAttached()
   })
 
   test('pdf merge: renders the dropzone', async ({ page }) => {
@@ -358,13 +357,13 @@ test.describe('tools', () => {
     await expect.poll(() => page.locator('[data-testid^="hisn-ch-"]').count()).toBeGreaterThanOrEqual(1)
   })
 
-  test('remove background: loads a dropzone; picking a file reveals the Remove button', async ({ page }) => {
+  test('remove background: its old address opens the image editor with the button ready', async ({ page }) => {
     await page.goto('/en/apps/remove-background')
-    await expect(page.getByTestId('remove-background')).toBeVisible()
-    await expect(page.getByTestId('rmbg-drop')).toBeVisible()
-    // Selecting an image shows the run button (we don't run the model in CI — heavy).
-    await page.setInputFiles('input[type=file]', { name: 'x.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64') })
-    await expect(page.getByTestId('rmbg-run')).toBeVisible()
+    await expect(page).toHaveURL(/\/en\/apps\/image-edit\?mode=cutout$/)
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'x.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64') })
+    // The model is not started on arrival — it is a download, and it waits for a tap.
+    await expect(page.getByTestId('ie-bg-remove')).toBeVisible()
+    await expect(page.getByTestId('ie-bg-busy')).toHaveCount(0)
   })
 
   test('jwt decoder: decodes header and payload', async ({ page }) => {
@@ -784,8 +783,8 @@ test.describe('to-do lists', () => {
 // tool re-introduces an image-only `accept` (which hides Downloads on Android).
 const HEIC = () => readFileSync('e2e/fixtures/sample.heic')
 
-for (const tool of [ 'image-compressor', 'image-to-ascii', 'pdf-merge',
-  'remove-background', 'steganography',
+for (const tool of [ 'image-edit', 'image-to-ascii', 'pdf-merge',
+  'steganography',
 ]) {
   test(`${tool}: accepts a real HEIC, and the picker isn't image-only`, async ({ page }) => {
     await page.goto(`/en/apps/${tool}`)
@@ -842,20 +841,20 @@ test.describe('update gate', () => {
     // the real version.json wins.
     await page.route('**/version.json*', (r) =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NEWER) }))
-    await page.goto('/en/apps/image-compressor')
+    await page.goto('/en/apps/image-edit')
     // Load a real image so the tool declares work in progress.
-    await page.locator('input[type=file]').setInputFiles({
+    await page.locator('input[type=file]').first().setInputFiles({
       name: 'x.png', mimeType: 'image/png',
       buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'),
     })
-    await expect(page.getByTestId('imgcomp-download')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('ie-stage')).toBeVisible({ timeout: 20_000 })
 
     await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
     // Offered, not applied: the work survives and the page did not reload.
     await expect(page.getByTestId('update-offered')).toBeVisible({ timeout: 10_000 })
     await expect(page.getByTestId('update-reloading')).toHaveCount(0)
-    await expect(page.getByTestId('imgcomp-download')).toBeVisible()
+    await expect(page.getByTestId('ie-stage')).toBeVisible()
     // And the user can take it when ready.
     await expect(page.getByTestId('update-reload-now')).toBeVisible()
   })

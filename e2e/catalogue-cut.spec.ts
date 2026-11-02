@@ -12,7 +12,6 @@ const MERGED: [string, string][] = [
   ['pptx-to-text', 'powerpoint-editor'],
   ['video-trim', 'video-edit'],
   ['image-cropper', 'image-edit'], ['image-redact', 'image-edit'], ['meme-generator', 'image-edit'],
-  ['image-format-converter', 'image-compressor'],
   ['pdf-to-text', 'pdf-ocr'],
   ['cron-explainer', 'cron-builder'],
   ['random-picker', 'spin-wheel'],

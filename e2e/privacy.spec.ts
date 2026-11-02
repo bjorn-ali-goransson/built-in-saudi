@@ -221,9 +221,7 @@ export const CASES: Case[] = [
   // --- Second batch off the UNVERIFIED list. These twenty reach the input
   // through the dropzone that wraps it, which is what let the batch be this
   // size without touching twenty product files.
-  { id: 'image-compressor', testid: 'imgcomp-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'image-to-ascii', testid: 'ascii-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
-  { id: 'remove-background', testid: 'rmbg-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'steganography', testid: 'stego-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'qr-reader', testid: 'qr-drop', within: true, name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'pdf-compress', testid: 'cmp-drop', within: true, name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },

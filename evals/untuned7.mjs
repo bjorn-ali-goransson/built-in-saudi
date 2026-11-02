@@ -21,8 +21,8 @@
 
 export const UNTUNED7 = [
   // --- dimensions and sizes -------------------------------------------------
-  ['resize to 800px wide', 'image-compressor'],
-  ['make it under 2mb', 'image-compressor'],
+  ['resize to 800px wide', 'image-edit'],
+  ['make it under 2mb', 'image-edit'],
   ['compress pdf under 5mb', 'pdf-compress'],
 
   // --- rates and money -------------------------------------------------------

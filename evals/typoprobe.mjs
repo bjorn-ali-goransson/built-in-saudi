@@ -24,8 +24,8 @@ const CASES = [
   // [typed, correct spelling, the tool it means]
   ['pdf mrege', 'pdf merge', 'pdf-merge'],
   ['merge pdf fiels', 'merge pdf files', 'pdf-merge'],
-  ['compres image', 'compress image', 'image-compressor'],
-  ['immage compressor', 'image compressor', 'image-compressor'],
+  ['compres image', 'compress image', 'image-edit'],
+  ['immage compressor', 'image compressor', 'image-edit'],
   ['qr generater', 'qr generator', 'qr-code'],
   ['passowrd generator', 'password generator', 'password-generator'],
   ['calender', 'calendar', 'hijri-calendar'],
@@ -33,12 +33,12 @@ const CASES = [
   ['excel to csv converter', 'excel to csv converter', 'excel-editor'],
   ['barcod', 'barcode', 'qr-code'],
   ['zakat calculater', 'zakat calculator', 'zakat-calculator'],
-  ['remove backgroud', 'remove background', 'remove-background'],
+  ['remove backgroud', 'remove background', 'image-edit'],
   ['unit converer', 'unit converter', 'unit-converter'],
   ['prayer tmies', 'prayer times', 'prayer-times'],
   // Arabic: a dropped letter and a common hamza slip.
   ['حاسبه الزكاة', 'حاسبة الزكاة', 'zakat-calculator'],
-  ['ضغط صوره', 'ضغط صورة', 'image-compressor'],
+  ['ضغط صوره', 'ضغط صورة', 'image-edit'],
   ['مواقيت الصلاه', 'مواقيت الصلاة', 'prayer-times'],
 ]
 

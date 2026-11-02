@@ -32,8 +32,8 @@ export const UNTUNED6 = [
   ['احسب الزكاة', 'zakat-calculator'],
   ['حساب الزكاة', 'zakat-calculator'],
   ['ادمج الصور', 'pdf-merge'],
-  ['اضغط الصورة', 'image-compressor'],
-  ['ضغط الصورة', 'image-compressor'],
+  ['اضغط الصورة', 'image-edit'],
+  ['ضغط الصورة', 'image-edit'],
   ['حوّل التاريخ', 'hijri-calendar'],
   ['قص الفيديو', 'video-edit'],
   ['اقتصاص صورة', 'image-edit'],
@@ -54,7 +54,7 @@ export const UNTUNED6 = [
   ['المدقق اللغوي للعربية', 'diacritize'],
   ['الحاسبة الهجرية', 'hijri-age'],
   ['المولّد العشوائي', 'spin-wheel'],
-  ['الضاغط', 'image-compressor'],
+  ['الضاغط', 'image-edit'],
 
   // --- the same subject, several shapes -------------------------------------
   ['موقّع pdf', 'pdf-edit'],

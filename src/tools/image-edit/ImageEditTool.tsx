@@ -90,6 +90,13 @@ const STR = {
     modeCensor: 'Hide something',
     modeText: 'Caption',
     modeMore: 'Output settings',
+    background: 'Background',
+    removeBg: 'Remove the background',
+    restoreBg: 'Put the background back',
+    bgLoading: 'Loading the model…',
+    bgWorking: (n: number) => `Removing the background… ${n}%`,
+    bgFailed: 'The background could not be removed from this picture.',
+    bgNote: 'It runs on your device and the picture is never uploaded. The model it uses, a few megabytes, downloads once the first time.',
     free: 'Free',
     addBox: 'Drag on the picture to draw a box.',
     addCaptionBox: 'Drag on the picture to draw a text box.',
@@ -111,6 +118,10 @@ const STR = {
     format: 'Format',
     quality: 'Quality',
     lossless: 'PNG is lossless, so there is no quality to choose. It is bigger.',
+    estimate: (a: string, b: string) => `${a} → ${b}`,
+    saves: (n: number) => `${n}% smaller`,
+    grows: 'larger than the file you picked',
+    measuring: 'Measuring…',
     tilt: `Tilt it ${TILT_DEG}° clockwise — the only correct amount`,
     exportBtn: 'Export',
     download: 'Download',
@@ -140,6 +151,13 @@ const STR = {
     modeCensor: 'إخفاء جزء',
     modeText: 'نص',
     modeMore: 'إعدادات المُخرَج',
+    background: 'الخلفية',
+    removeBg: 'أزل الخلفية',
+    restoreBg: 'أعد الخلفية',
+    bgLoading: 'جارٍ تحميل النموذج…',
+    bgWorking: (n: number) => `جارٍ إزالة الخلفية… ${n}٪`,
+    bgFailed: 'تعذّرت إزالة الخلفية من هذه الصورة.',
+    bgNote: 'يعمل على جهازك ولا تُرفع الصورة. يُنزَّل النموذج الذي يستعمله، بضعة ميغابايت، مرة واحدة في أول استخدام.',
     free: 'حرّ',
     addBox: 'اسحب على الصورة لترسم مربّعًا.',
     addCaptionBox: 'اسحب على الصورة لترسم مربّع نص.',
@@ -161,6 +179,10 @@ const STR = {
     format: 'الصيغة',
     quality: 'الجودة',
     lossless: 'صيغة PNG بلا فقد، فلا جودة تُختار. وهي أكبر حجمًا.',
+    estimate: (a: string, b: string) => `${a} ← ${b}`,
+    saves: (n: number) => `أصغر بنسبة ${n}٪`,
+    grows: 'أكبر من الملف الذي اخترته',
+    measuring: 'جارٍ القياس…',
     tilt: `أملها ${arNum(TILT_DEG)}° مع عقارب الساعة — المقدار الصحيح الوحيد`,
     exportBtn: 'تصدير',
     download: 'تنزيل',
@@ -189,6 +211,8 @@ const FORMATS = [
 /** 0 means "as big as the crop is" — never upscale, the honesty `print-size`
  *  applies to paper and `video-edit` to frames. */
 const SIDES = [0, 4096, 2048, 1600, 1080, 720]
+
+const fmtBytes = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`
 
 type Mode = 'crop' | 'cut' | 'censor' | 'text'
 
@@ -337,6 +361,17 @@ export default function ImageEditTool() {
   const s = STR[locale]
 
   const [img, setImg] = useState<ImageBitmap | null>(null)
+  /**
+   * The picture with its background taken out, when somebody asked for that.
+   * It REPLACES the picture at the bottom of the stack rather than being drawn
+   * on top, so the tilt, the pieces, the crop and everything after it work on
+   * the cut-out exactly as they did on the photo — and putting the background
+   * back is dropping this, not undoing a chain of edits.
+   */
+  const [cutout, setCutout] = useState<ImageBitmap | null>(null)
+  /** null when idle, else the model's progress in per cent (-1: loading). */
+  const [bgBusy, setBgBusy] = useState<number | null>(null)
+  const [bgError, setBgError] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'' | 'read' | 'export'>('')
@@ -368,11 +403,31 @@ export default function ImageEditTool() {
   const [fill, setFill] = useState('#ffffff')
   const [boxPanel, setBoxPanel] = useState(false)
 
-  const [format, setFormat] = useState<string>('image/png')
-  const [quality, setQuality] = useState(0.9)
+  // A compress visit starts where the compressor did: JPEG at 80%. PNG is the
+  // editor's default because it loses nothing, and that is the wrong default
+  // for somebody whose whole aim is a smaller file.
+  const [format, setFormat] = useState<string>(() => {
+    try { return new URLSearchParams(window.location.search).get('mode') === 'compress' ? 'image/jpeg' : 'image/png' } catch { return 'image/png' }
+  })
+  const [quality, setQuality] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('mode') === 'compress' ? 0.8 : 0.9 } catch { return 0.9 }
+  })
   const [maxSide, setMaxSide] = useState(0)
-  /** The joke, and it is ON. See `TILT` above for why it is a real control. */
-  const [tilt, setTilt] = useState(true)
+  /**
+   * How somebody ARRIVED: the old addresses of the apps folded in here
+   * (`/apps/image-compressor` and friends) open the part that does that job.
+   * Read once — it is where the visit started, not a setting.
+   */
+  const [entry] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('mode') } catch { return null }
+  })
+  /** The joke, and it is ON — except for somebody who came to do a specific
+   *  job to a photo (shrink it, cut it out, straighten a page, make an ID
+   *  photo), whose file must come out true. See `TILT` above. */
+  const [tilt, setTilt] = useState(!entry)
+  /** The size of the file picked, so the export can say what it saves. */
+  const [srcBytes, setSrcBytes] = useState(0)
+  const [estimate, setEstimate] = useState<number | null>(null)
 
   const [out, setOut] = useState<{ url: string; size: number } | null>(null)
 
@@ -442,9 +497,10 @@ export default function ImageEditTool() {
    * and is the price of `drawFrame` staying the single implementation of the
    * crop. Rebuilt only when the picture or the switch changes, never per frame.
    */
+  const pic = cutout ?? img
   const base = useMemo<CanvasImageSource | null>(() => {
-    if (!img) return null
-    if (!tilt) return img
+    if (!pic) return null
+    if (!tilt) return pic
     const c = document.createElement('canvas')
     c.width = dim.width
     c.height = dim.height
@@ -455,9 +511,9 @@ export default function ImageEditTool() {
     ctx.rotate(TILT)
     ctx.scale(k, k)
     ctx.translate(-dim.width / 2, -dim.height / 2)
-    ctx.drawImage(img, 0, 0, dim.width, dim.height)
+    ctx.drawImage(pic, 0, 0, dim.width, dim.height)
     return c
-  }, [img, tilt, dim])
+  }, [pic, tilt, dim])
 
   /**
    * THE PICTURE EVERY VIEW DRAWS FROM: the base, plus whatever has been cut out
@@ -614,7 +670,7 @@ export default function ImageEditTool() {
    */
   useEffect(() => {
     setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
-  }, [crop, censors, captions, tilt, format, quality, maxSide])
+  }, [crop, censors, captions, tilt, cutout, format, quality, maxSide])
 
   /**
    * Draw the output. THE ONE FUNCTION, called for the stage and for the export.
@@ -760,7 +816,15 @@ export default function ImageEditTool() {
       return
     }
     setImg((old) => { old?.close(); return bitmap })
+    setCutout((old) => { old?.close(); return null })
+    setBgError(false)
+    // A compress or cut-out visit lands on the settings screen, which holds
+    // the whole of what those two apps were. The model is NOT started for the
+    // cut-out: it is a download of several megabytes, and it waits for a tap,
+    // as it did in the app it came from.
+    if (entry === 'compress' || entry === 'cutout') setSettings(true)
     setName(f.name)
+    setSrcBytes(f.size)
     setAspectId('source')
     setFreeAspect(0)
     setZoom(1)
@@ -814,8 +878,56 @@ export default function ImageEditTool() {
     setMode('cut')
   }
 
+  /**
+   * Take the background out, with the model the Remove Background app used —
+   * on this device, lazily imported so nobody pays for it until they ask.
+   *
+   * `window.__BIS_REMOVE_BG` replaces the model in the e2e only: CI cannot
+   * fetch a model of several megabytes on every run, and what the editor does
+   * WITH a cut-out (keeps it under every other edit, exports its transparency,
+   * gives the background back) is what can break here.
+   */
+  async function removeBg(from: ImageBitmap | null = img) {
+    if (!from || bgBusy !== null) return
+    setBgBusy(-1)
+    setBgError(false)
+    try {
+      const c = document.createElement('canvas')
+      c.width = from.width
+      c.height = from.height
+      c.getContext('2d')!.drawImage(from, 0, 0)
+      const png = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'))
+      if (!png) throw new Error('encode')
+      const stub = (window as unknown as { __BIS_REMOVE_BG?: (b: Blob) => Promise<Blob> }).__BIS_REMOVE_BG
+      let out: Blob
+      if (stub) out = await stub(png)
+      else {
+        const { removeBackground } = await import('@imgly/background-removal')
+        out = await removeBackground(png, {
+          output: { format: 'image/png' },
+          progress: (_k, cur, tot) => { if (tot > 0) setBgBusy(Math.round((cur / tot) * 100)) },
+        })
+      }
+      // Back to the picture's own size: what comes out is a cut-out OF it, and
+      // every coordinate in this editor is a fraction of that picture.
+      const raw = await createImageBitmap(out)
+      const bm = raw.width === from.width && raw.height === from.height
+        ? raw
+        : await createImageBitmap(raw, { resizeWidth: from.width, resizeHeight: from.height })
+      if (bm !== raw) raw.close()
+      setCutout((old) => { old?.close(); return bm })
+      // A cut-out is transparency, and JPEG has none: it would come out black.
+      setFormat((f) => (f === 'image/jpeg' ? 'image/png' : f))
+    } catch {
+      setBgError(true)
+    } finally {
+      setBgBusy(null)
+    }
+  }
+
   function discard() {
     setImg((old) => { old?.close(); return null })
+    setCutout((old) => { old?.close(); return null })
     setCensors([])
     setCaptions([])
     closePieces()
@@ -828,21 +940,40 @@ export default function ImageEditTool() {
     setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
   }
 
-  async function doExport() {
-    if (!img) return
-    setBusy('export')
-    setError('')
+  /** The file, exactly as the download will be. Used for the export AND for
+   *  the size shown while choosing, so the figure is the file's, not a guess. */
+  const renderBlob = useCallback(async (): Promise<Blob | null> => {
     const canvas = document.createElement('canvas')
     canvas.width = size.width
     canvas.height = size.height
     const ctx = canvas.getContext('2d')
-    if (!ctx) { setBusy(''); setError(s.errors.encode); return }
+    if (!ctx) return null
     // THE SAME FUNCTION the stage just ran, at a different size. There is no
     // second renderer to disagree with what is on screen.
     compose(ctx, size)
-    const blob = await new Promise<Blob | null>((resolve) => {
+    return new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, format, format === 'image/png' ? undefined : quality)
     })
+  }, [compose, size, format, quality])
+
+  // While the export settings are open, encode for real and say how big it
+  // comes out — the compressor's one job, kept. Debounced, because a quality
+  // slider moves sixty times a second and an encode is not free.
+  useEffect(() => {
+    if (!settings || !img) return
+    let live = true
+    setEstimate(null)
+    const t = window.setTimeout(() => {
+      void renderBlob().then((b) => { if (live && b) setEstimate(b.size) })
+    }, 250)
+    return () => { live = false; window.clearTimeout(t) }
+  }, [settings, img, renderBlob])
+
+  async function doExport() {
+    if (!img) return
+    setBusy('export')
+    setError('')
+    const blob = await renderBlob()
     setBusy('')
     if (!blob) { setError(s.errors.encode); return }
     setOut((o) => {
@@ -1686,6 +1817,23 @@ export default function ImageEditTool() {
               </button>
             </div>
 
+            <Field label={s.background}>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {cutout ? (
+                    <Button data-testid="ie-bg-restore" onClick={() => setCutout((old) => { old?.close(); return null })}>{s.restoreBg}</Button>
+                  ) : (
+                    <Button data-testid="ie-bg-remove" disabled={bgBusy !== null} onClick={() => { void removeBg() }}>
+                      {bgBusy === null ? s.removeBg : bgBusy < 0 ? s.bgLoading : s.bgWorking(bgBusy)}
+                    </Button>
+                  )}
+                  {bgBusy !== null && <span data-testid="ie-bg-busy" className="text-[0.85rem] text-ink-faint">…</span>}
+                </div>
+                {bgError && <p className="text-[0.85rem] text-[var(--danger)] rtl:font-ar" data-testid="ie-bg-error">{s.bgFailed}</p>}
+                <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.bgNote}</p>
+              </div>
+            </Field>
+
             <Field label={s.format}>
               <Select value={format} data-testid="ie-format" onChange={(e) => setFormat(e.target.value)}>
                 {FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -1711,6 +1859,21 @@ export default function ImageEditTool() {
                 <span className="font-mono" data-testid="ie-out-size">{size.width}×{size.height}</span>
               </p>
             </div>
+
+            {/* What the file will weigh, from an actual encode — the
+                compressor's whole job, and the number it existed to show. */}
+            <p className="text-[0.9rem] text-ink rtl:font-ar" data-testid="ie-estimate"
+              data-bytes={estimate ?? ''} aria-live="polite">
+              {estimate === null ? s.measuring : (
+                <>
+                  <span className="font-mono">{s.estimate(fmtBytes(srcBytes), fmtBytes(estimate))}</span>
+                  {' · '}
+                  <span className={estimate < srcBytes ? 'text-green-600 font-semibold' : 'text-ink-faint'}>
+                    {estimate < srcBytes ? s.saves(Math.round((1 - estimate / srcBytes) * 100)) : s.grows}
+                  </span>
+                </>
+              )}
+            </p>
 
           </div>
         </div>

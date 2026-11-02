@@ -37,9 +37,9 @@ const CASES = [
   ['pdf-combine', 'pdf-merge'],
   ['combine-pdf', 'pdf-merge'],
   ['compress-pdf', 'pdf-compress'],
-  ['image-resize', 'image-compressor'],
-  ['photo-compress', 'image-compressor'],
-  ['background-remover', 'remove-background'],
+  ['image-resize', 'image-edit'],
+  ['photo-compress', 'image-edit'],
+  ['background-remover', 'image-edit'],
   ['qr-generator', 'qr-code'],
   ['qrcode', 'qr-code'],
   ['barcode-generator', 'qr-code'],
@@ -58,7 +58,7 @@ const CASES = [
   ['markdown-to-word', 'word-editor'],
   // Typos.
   ['pdf-mrege', 'pdf-merge'],
-  ['imagecompressor', 'image-compressor'],
+  ['imagecompressor', 'image-edit'],
   // Was expected to suggest NOTHING, sitting under "Typos" next to
   // `pdf-mrege`, which is expected to resolve — an inconsistent row. Somebody
   // who types /apps/calcualtor wants a calculator, and this page's whole design

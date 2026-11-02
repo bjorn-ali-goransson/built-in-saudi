@@ -9,14 +9,14 @@ export const BENCH_QUERIES = [
   ['pdf merge', 'pdf-merge'],
   ['merge pdf', 'pdf-merge'],
   ['combine pdfs', 'pdf-merge'],
-  ['compress image', 'image-compressor'],
-  ['make picture smaller', 'image-compressor'],
+  ['compress image', 'image-edit'],
+  ['make picture smaller', 'image-edit'],
   // The expectation here was WRONG, and the bench was scoring the right answer
   // as a failure. The cropper never changes an image's dimensions — it returns
   // the pixels inside the box — while the compressor takes a max width. So the
   // compressor is what "resize photo" means, and the cropper's `resize` keyword
   // (which described dragging the crop box) has been removed.
-  ['resize photo', 'image-compressor'],
+  ['resize photo', 'image-edit'],
   ['qr', 'qr-code'],
   ['scan qr', 'qr-reader'],
   ['password', 'password-generator'],
@@ -50,7 +50,7 @@ export const BENCH_QUERIES = [
   ['resume', 'ats-cv-optimizer'],
   ['book meeting', 'book-me'],
   ['video call', 'calls'],
-  ['background remove', 'remove-background'],
+  ['background remove', 'image-edit'],
   ['ocr', 'pdf-ocr'],
   ['text from image', 'pdf-ocr'],
   ['jwt', 'jwt-decoder'],
@@ -61,7 +61,7 @@ export const BENCH_QUERIES = [
   ['قبلة', 'qibla'],
   ['مواقيت', 'prayer-times'],
   ['زكاة', 'zakat-calculator'],
-  ['ضغط صورة', 'image-compressor'],
+  ['ضغط صورة', 'image-edit'],
   ['ترجمة', 'translate'],
   // The file tools added in the code-sweep batch. A tool nobody can find is a
   // tool that does not exist, so each one is benched on the words a person

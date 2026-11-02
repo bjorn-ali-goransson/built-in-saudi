@@ -70,7 +70,7 @@ export default function SteganographyTool() {
     workerRef.current.postMessage({ ...req, id: ++reqRef.current } as StegoRequest)
   }
 
-  // Same as remove-background: the worker decodes later, so verify readability now
+  // The worker decodes later, so verify readability now
   // rather than failing opaquely afterwards (#225).
   async function onFile(f: File | undefined) {
     if (!f) return

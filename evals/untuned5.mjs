@@ -22,13 +22,13 @@
 
 export const UNTUNED5 = [
   // --- images ---------------------------------------------------------------
-  ['jpg to png', 'image-compressor'],
-  ['png to jpg', 'image-compressor'],
-  ['webp to jpg', 'image-compressor'],
-  ['.heic', 'image-compressor'],
-  ['heic to jpeg', 'image-compressor'],
-  ['avif', 'image-compressor'],
-  ['svg to png', 'image-compressor'],
+  ['jpg to png', 'image-edit'],
+  ['png to jpg', 'image-edit'],
+  ['webp to jpg', 'image-edit'],
+  ['.heic', 'image-edit'],
+  ['heic to jpeg', 'image-edit'],
+  ['avif', 'image-edit'],
+  ['svg to png', 'image-edit'],
 
   // --- documents -------------------------------------------------------------
   ['.docx', ['word-editor']],
@@ -63,7 +63,7 @@ export const UNTUNED5 = [
   ['.pem', 'cert-decoder'],
 
   // --- Arabic, same axis -----------------------------------------------------
-  ['تحويل jpg إلى png', 'image-compressor'],
+  ['تحويل jpg إلى png', 'image-edit'],
   // «open an xlsx file» — the spreadsheet editor opens it, xlsx-convert reads it out.
   ['فتح ملف xlsx', ['excel-editor']],
   ['تحويل pdf إلى صور', 'pdf-to-images'],

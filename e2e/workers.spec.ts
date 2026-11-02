@@ -8,12 +8,6 @@ const PNG = Buffer.from(
 )
 const file = { name: 'tiny.png', mimeType: 'image/png', buffer: PNG }
 
-test('image compressor encodes via the worker', async ({ page }) => {
-  await page.goto('/en/apps/image-compressor')
-  await page.setInputFiles('input[type=file]', file)
-  await expect(page.getByTestId('imgcomp-result')).toBeVisible()
-})
-
 test('steganography hides and reveals via the worker', async ({ page }) => {
   await page.goto('/en/apps/steganography')
   await page.setInputFiles('input[type=file]', file)

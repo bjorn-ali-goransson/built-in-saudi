@@ -122,7 +122,7 @@ test('the recommended row shows the big families, not one corner of the site', a
   // PDF, images and the office editors are the families this site has invested
   // most in, and a visitor who does not know what to ask for learns them here.
   await expect(rec.getByTestId('tool-pdf-to-word')).toBeVisible()
-  await expect(rec.getByTestId('tool-image-compressor')).toBeVisible()
+  await expect(rec.getByTestId('tool-image-edit')).toBeVisible()
   await expect(rec.getByTestId('tool-word-editor')).toBeVisible()
 })
 

@@ -942,8 +942,11 @@ async function pickHalves(page: Page) {
   await page.getByTestId('ie-file').setInputFiles({ name: 'halves.png', mimeType: 'image/png', buffer: halvesPng(400, 300, RED, BLUE) })
   await expect(page.getByTestId('ie-stage')).toBeVisible({ timeout: 20_000 })
   // Square, so a pixel read at a fraction of the output is the colour planned.
-  await page.getByTestId('ie-tilt').click()
-  await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'false')
+  // (A visit through an old app's address already starts square.)
+  if ((await page.getByTestId('ie-tilt').getAttribute('aria-pressed')) === 'true') {
+    await page.getByTestId('ie-tilt').click()
+    await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'false')
+  }
 }
 
 test('a crop pulled PAST the picture fills with the colour of the edge it was pulled from', async ({ page }) => {
@@ -1005,4 +1008,120 @@ test('an edge pulled a hair past the picture lands ON it, and fills nothing', as
   await expect(page.getByTestId('ie-crop-box')).toHaveAttribute('data-outside', 'false')
   await expect(page.getByTestId('ie-pad-fill')).toHaveCount(0)
   await expect(page.getByTestId('ie-kept')).toContainText('400×300')
+})
+
+// ---------------------------------------------------------------------------
+// THE COMPRESSOR LIVES HERE NOW (November 2026). Its old address opens the
+// editor ready to compress, and the size it existed to show is an ACTUAL
+// encode, so the figure is the file's rather than a guess.
+// ---------------------------------------------------------------------------
+
+test('the compressor\'s old address opens the export settings, square, in JPEG', async ({ page }) => {
+  await page.goto('/en/apps/image-compressor')
+  await expect(page).toHaveURL(/\/en\/apps\/image-edit\?mode=compress$/)
+  await pick(page)
+  await expect(page.getByTestId('ie-settings-panel')).toBeVisible()
+  await expect(page.getByTestId('ie-format')).toHaveValue('image/jpeg')
+  // Somebody shrinking a photo gets the photo back true: the tilt is off.
+  await page.getByTestId('ie-settings-close').click()
+  await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('the size shown while choosing is what the download weighs, and moves with quality', async ({ page }) => {
+  await page.goto('/en/apps/image-edit?mode=compress')
+  await pick(page)
+  const est = page.getByTestId('ie-estimate')
+  await expect(est).toHaveAttribute('data-bytes', /^\d+$/, { timeout: 15_000 })
+  const high = Number(await est.getAttribute('data-bytes'))
+  await page.getByTestId('ie-quality').fill('0.3')
+  // Positive AND lower: while it re-measures the attribute is empty, and an
+  // empty string reads as 0, which is lower than anything.
+  let low = 0
+  await expect.poll(async () => {
+    low = Number(await est.getAttribute('data-bytes') || 0)
+    return low > 0 && low < high
+  }, { timeout: 15_000 }).toBe(true)
+  await page.getByTestId('ie-settings-close').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  const href = await page.getByTestId('ie-download').getAttribute('href')
+  const size = await page.evaluate(async (u) => (await (await fetch(u!)).blob()).size, href)
+  expect(size).toBe(low)
+})
+
+test('an ordinary visit keeps the editor\'s own defaults', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await expect(page.getByTestId('ie-settings-panel')).toHaveCount(0)
+  await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'true')
+})
+
+// ---------------------------------------------------------------------------
+// REMOVE BACKGROUND LIVES HERE NOW. CI cannot fetch the model on every run, so
+// it is replaced by a stub that clears the LEFT HALF — what is under test is
+// what the editor does with a cut-out, not the model.
+// ---------------------------------------------------------------------------
+
+async function stubRemover(page: Page) {
+  await page.addInitScript(() => {
+    ;(window as unknown as { __BIS_REMOVE_BG: (b: Blob) => Promise<Blob> }).__BIS_REMOVE_BG = async (b: Blob) => {
+      const bm = await createImageBitmap(b)
+      const c = document.createElement('canvas')
+      c.width = bm.width; c.height = bm.height
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(bm, 0, 0)
+      ctx.clearRect(0, 0, bm.width / 2, bm.height)
+      return new Promise<Blob>((r) => c.toBlob((x) => r(x!), 'image/png'))
+    }
+  })
+}
+
+/** Alpha of one pixel of the exported file. */
+async function exportedAlphaAt(page: Page, fx: number, fy: number) {
+  const href = await page.getByTestId('ie-download').getAttribute('href')
+  return page.evaluate(async ([url, x, y]) => {
+    const bm = await createImageBitmap(await (await fetch(String(url))).blob())
+    const c = document.createElement('canvas')
+    c.width = bm.width; c.height = bm.height
+    const ctx = c.getContext('2d', { willReadFrequently: true })!
+    ctx.drawImage(bm, 0, 0)
+    return ctx.getImageData(Math.round(Number(x) * (bm.width - 1)), Math.round(Number(y) * (bm.height - 1)), 1, 1).data[3]
+  }, [href as string, fx, fy] as const)
+}
+
+test('a removed background is transparent in the file, and comes back on ask', async ({ page }) => {
+  await stubRemover(page)
+  await page.goto('/en/apps/image-edit?mode=cutout')
+  await pickHalves(page)
+  // The cut-out visit lands on the settings, with the format the editor
+  // starts in, and nothing running yet.
+  await expect(page.getByTestId('ie-bg-remove')).toBeVisible()
+  await page.getByTestId('ie-bg-remove').click()
+  await expect(page.getByTestId('ie-bg-restore')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('ie-settings-close').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  expect(await exportedAlphaAt(page, 0.1, 0.5)).toBe(0)
+  expect(await exportedAlphaAt(page, 0.9, 0.5)).toBe(255)
+
+  // Putting it back is dropping the cut-out, not undoing a chain of edits.
+  await page.getByTestId('ie-settings').click()
+  await page.getByTestId('ie-bg-restore').click()
+  // And the cut-out's file goes with it: a download that is not the picture on
+  // screen is the one lie this editor refuses.
+  await expect(page.getByTestId('ie-download')).toHaveCount(0)
+  await page.getByTestId('ie-settings-close').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  expect(await exportedAlphaAt(page, 0.1, 0.5)).toBe(255)
+})
+
+test('a cut-out turns JPEG into PNG, since JPEG would paint the transparency black', async ({ page }) => {
+  await stubRemover(page)
+  await page.goto('/en/apps/image-edit?mode=compress')
+  await pickHalves(page)
+  await expect(page.getByTestId('ie-format')).toHaveValue('image/jpeg')
+  await page.getByTestId('ie-bg-remove').click()
+  await expect(page.getByTestId('ie-bg-restore')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('ie-format')).toHaveValue('image/png')
 })

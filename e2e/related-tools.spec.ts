@@ -18,7 +18,7 @@ test('a related link actually goes there', async ({ page }) => {
 })
 
 test('it shows at most four, so it stays a short list', async ({ page }) => {
-  await page.goto('/en/apps/image-compressor')
+  await page.goto('/en/apps/image-edit')
   const links = row(page).locator('[data-testid^="related-"]')
   await expect(links).toHaveCount(4)
 })
@@ -55,7 +55,7 @@ test('a category sibling fills the row, it does not take it over', async ({ page
 test('the row is still capped rather than listing a whole category', async ({ page }) => {
   // The crawlable block below already links to every tool; this row exists
   // because a list of 200 is the same as no list.
-  await page.goto('/en/apps/image-compressor')
+  await page.goto('/en/apps/image-edit')
   // `count()` does NOT auto-wait — same family as the documented `allInnerTexts()`
   // hazard. On a lazily-loaded tool it returns 0 before the row has rendered, so
   // `toBeGreaterThan(0)` fails as though the tool had no related row at all. That

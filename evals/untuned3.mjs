@@ -27,9 +27,9 @@ export const UNTUNED3 = [
   ['حوّل ماركداون إلى صفحة', 'word-editor'],
 
   // --- everyday phrasings for older tools ----------------------------------
-  ['make a photo smaller to email it', 'image-compressor'],
-  ['أريد تصغير حجم الصورة', 'image-compressor'],
-  ['take the background out of a picture', 'remove-background'],
+  ['make a photo smaller to email it', 'image-edit'],
+  ['أريد تصغير حجم الصورة', 'image-edit'],
+  ['take the background out of a picture', 'image-edit'],
   ['put my signature on a contract', 'pdf-edit'],
   ['وقّع على عقد', 'pdf-edit'],
   ['read the text in a photo', 'pdf-ocr'],

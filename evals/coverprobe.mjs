@@ -101,7 +101,7 @@ console.log(`=> It would caveat ${realDead.length} of ${real.length} real querie
 const SPELLING = [
   ['normalise', 'arabic-normalize'],
   ['optimise my cv', 'ats-cv-optimizer'],
-  ['optimise an image', 'image-compressor'],
+  ['optimise an image', 'image-edit'],
   ['romanization', 'name-spelling'],
   ['optimise a pdf', 'pdf-compress'],
   ['rasterise', 'pdf-to-images'],

@@ -1,5 +1,4 @@
 import type { Tool } from './types'
-import { imageCompressorTool } from './image-compressor/meta'
 import { imageEditTool } from './image-edit/meta'
 import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
@@ -53,7 +52,6 @@ import { markdownTableTool } from './markdown-table/meta'
 import { fakeDataTool } from './fake-data/meta'
 import { arabicVerbsTool } from './arabic-verbs/meta'
 import { diacritizeTool } from './diacritize/meta'
-import { removeBackgroundTool } from './remove-background/meta'
 import { currencyConverterTool } from './currency-converter/meta'
 import { subtitleEditorTool } from './subtitle-editor/meta'
 import { arabicNumeralsTool } from './arabic-numerals/meta'
@@ -109,7 +107,6 @@ export const tools: Tool[] = [
   excelEditorTool,
   wordEditorTool,
   powerpointEditorTool,
-  removeBackgroundTool,
   passportPhotoTool,
   weatherTool,
   audioConvertTool,
@@ -167,7 +164,6 @@ export const tools: Tool[] = [
   cvGeneratorTool,
   linkShortenerTool,
   qrCodeTool,
-  imageCompressorTool,
   imageEditTool,
   docScanTool,
   pdfMergeTool,
