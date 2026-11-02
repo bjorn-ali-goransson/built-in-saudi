@@ -10,7 +10,8 @@ import { setWorkInProgress } from '../../lib/workInProgress'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import {
-  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, drawFrame, outputSize,
+  ASPECTS, activeAt, applyCensors, boxAt, captionRect, cropFromDrag, cropRect, cropView, dragCrop, drawFrame,
+  edgeColour, insidePicture, isExpanded, outputSize, SNAP_TOL,
   projectPath, resizePath, shiftPath, SEGMENTS, thinPath, timeline,
   totalDuration, type Caption, type Censor, type CensorMode, type ClipInfo, type Crop, type Rect,
 } from '../../lib/frameCompose'
@@ -68,6 +69,8 @@ const STR = {
     cutHead: 'Cut everything before here',
     cutTail: 'Cut everything after here',
     free: 'Free',
+    padFill: 'Fill outside',
+    padAuto: 'Edge colour',
     addBox: 'Drag on the video to draw a box.',
     deleteBox: 'Delete this box',
     addCaptionBox: 'Drag on the video to draw a text box.',
@@ -166,6 +169,8 @@ const STR = {
     cutHead: 'احذف ما قبل هذه النقطة',
     cutTail: 'احذف ما بعد هذه النقطة',
     free: 'حرّ',
+    padFill: 'لون الامتداد',
+    padAuto: 'لون الحافة',
     addBox: 'اسحب على الفيديو لترسم مربّعًا.',
     deleteBox: 'احذف هذا المربّع',
     addCaptionBox: 'اسحب على الفيديو لترسم مربّع نص.',
@@ -346,6 +351,14 @@ export default function VideoEditTool() {
   const snappedRef = useRef(false)
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
+  // The crop has been pulled past the picture (see `Crop.outside`), the fill
+  // somebody picked (null: the average of the edge being expanded), and crop
+  // mode's view held still while a crop is dragged — a view that grew under
+  // the finger would map the same finger further out, and grow again.
+  const [outside, setOutside] = useState(false)
+  const [padPick, setPadPick] = useState<string | null>(null)
+  const [padAuto, setPadAuto] = useState<string | null>(null)
+  const [frozenView, setFrozenView] = useState<Rect | null>(null)
   const [captions, setCaptions] = useState<Caption[]>([])
   const [censors, setCensors] = useState<Censor[]>([])
   const [pickedBox, setPickedBox] = useState<string | null>(null)
@@ -635,7 +648,12 @@ export default function VideoEditTool() {
     [sourceAspect],
   )
 
-  const crop: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom }), [aspect, centre, zoom])
+  const geom: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom, outside }), [aspect, centre, zoom, outside])
+  const padFill = padPick ?? padAuto ?? '#000000'
+  // ONE colour for the whole export, not one per frame: a fill that followed
+  // each frame's edge would flicker. It is lifted from the frame on screen
+  // when the crop is pulled out, and the worker paints exactly this.
+  const crop: Crop = useMemo(() => ({ ...geom, fill: padFill }), [geom, padFill])
   const size = useMemo(() => outputSize(infos, crop, maxHeight), [infos, crop, maxHeight])
   const spans = useMemo(() => timeline(infos), [infos])
   const duration = useMemo(() => totalDuration(infos), [infos])
@@ -838,14 +856,29 @@ export default function VideoEditTool() {
    */
   const cropBox = useMemo(() => {
     if (!current) return { x: 0, y: 0, w: 1, h: 1 }
-    const r = cropRect({ width: current.info.width, height: current.info.height }, crop)
+    const r = cropRect({ width: current.info.width, height: current.info.height }, geom)
     return {
       x: r.x / current.info.width,
       y: r.y / current.info.height,
       w: r.w / current.info.width,
       h: r.h / current.info.height,
     }
-  }, [current, crop])
+  }, [current, geom])
+
+  const expanded = !!current && isExpanded({ width: current.info.width, height: current.info.height }, geom)
+  /** Crop mode's window onto the picture, in fractions of it; the picture alone elsewhere. */
+  const view: Rect = mode === 'crop' ? (frozenView ?? cropView(cropBox)) : { x: 0, y: 0, w: 1, h: 1 }
+  /** The crop box in the OVERLAY's fractions, which are the view's. */
+  const boxShown = {
+    x: (cropBox.x - view.x) / view.w, y: (cropBox.y - view.y) / view.h,
+    w: cropBox.w / view.w, h: cropBox.h / view.h,
+  }
+  useEffect(() => {
+    const v = videoRef.current
+    if (!current || !expanded || !v || v.readyState < 2) return
+    const c = edgeColour(v, { width: current.info.width, height: current.info.height }, cropBox)
+    if (c) setPadAuto(c)
+  }, [current, cropBox, expanded])
 
   /**
    * A DOWNLOAD THAT IS NOT WHAT IS ON SCREEN IS THE ONE LIE THIS TOOL REFUSES.
@@ -958,21 +991,30 @@ export default function VideoEditTool() {
       // The whole picture, at the clip's own shape, with everything outside the
       // crop dimmed rather than gone. The rectangle's own outline is drawn by
       // the DOM overlay, which is also what you drag.
-      const fit = Math.min(1, PREVIEW_MAX / Math.max(clip.width, clip.height))
+      // That is the VIEW: the picture plus room around it to pull the crop
+      // into, with the fill where the crop reaches past the picture.
+      const vw = view.w * clip.width
+      const vh = view.h * clip.height
+      const fit = Math.min(1, PREVIEW_MAX / Math.max(vw, vh))
       const shown = {
-        width: Math.max(2, Math.round(clip.width * fit)),
-        height: Math.max(2, Math.round(clip.height * fit)),
+        width: Math.max(2, Math.round(vw * fit)),
+        height: Math.max(2, Math.round(vh * fit)),
       }
       rc.width = shown.width
       rc.height = shown.height
       const ctx = rc.getContext('2d')
       if (!ctx) return
-      ctx.clearRect(0, 0, shown.width, shown.height)
-      ctx.drawImage(picture, 0, 0, shown.width, shown.height)
-      const bx = Math.round(cropBox.x * shown.width)
-      const by = Math.round(cropBox.y * shown.height)
-      const bw = Math.round(cropBox.w * shown.width)
-      const bh = Math.round(cropBox.h * shown.height)
+      const px = (fx: number) => Math.round(((fx - view.x) / view.w) * shown.width)
+      const py = (fy: number) => Math.round(((fy - view.y) / view.h) * shown.height)
+      ctx.fillStyle = '#1c1c1c'
+      ctx.fillRect(0, 0, shown.width, shown.height)
+      ctx.fillStyle = padFill
+      ctx.fillRect(px(cropBox.x), py(cropBox.y), px(cropBox.x + cropBox.w) - px(cropBox.x), py(cropBox.y + cropBox.h) - py(cropBox.y))
+      ctx.drawImage(picture, px(0), py(0), px(1) - px(0), py(1) - py(0))
+      const bx = px(cropBox.x)
+      const by = py(cropBox.y)
+      const bw = px(cropBox.x + cropBox.w) - bx
+      const bh = py(cropBox.y + cropBox.h) - by
       ctx.fillStyle = 'rgba(0,0,0,0.55)'
       ctx.fillRect(0, 0, shown.width, by)
       ctx.fillRect(0, by + bh, shown.width, shown.height - by - bh)
@@ -988,7 +1030,7 @@ export default function VideoEditTool() {
     const ctx = rc.getContext('2d')
     if (!ctx) return
     composeOutput(ctx, picture, clip, shown, now, true)
-  }, [current, crop, cropBox, mode, size, previewTime, steadied, composeOutput])
+  }, [current, crop, cropBox, view.x, view.y, view.w, view.h, padFill, mode, size, previewTime, steadied, composeOutput])
 
 
   /**
@@ -1304,6 +1346,7 @@ export default function VideoEditTool() {
     // gesture people try first on a picture with a frame on it.
     if (mode === 'crop') {
       const raw = atRaw(e)
+      setFrozenView(view)
       dragRef.current = {
         kind: 'crop-seg',
         id: 'move',
@@ -1332,22 +1375,12 @@ export default function VideoEditTool() {
       // while the finger is still comfortably inside the picture. It is also
       // the only version that does not jump the moment you touch a segment
       // anywhere but on its own boundary.
-      const r = { ...d.rect }
-      const dx = pr.x - d.px, dy = pr.y - d.py
-      if (d.id === 'move') {
-        const w = r.x1 - r.x0, h = r.y1 - r.y0
-        const cx = Math.min(Math.max((r.x0 + r.x1) / 2 + dx, w / 2), 1 - w / 2)
-        const cy = Math.min(Math.max((r.y0 + r.y1) / 2 + dy, h / 2), 1 - h / 2)
-        r.x0 = cx - w / 2; r.x1 = cx + w / 2
-        r.y0 = cy - h / 2; r.y1 = cy + h / 2
-      } else {
-        // Clamped on the RESULT rather than on the pointer: the rectangle may
-        // not leave the picture, and the finger may.
-        if (d.id.includes('n')) r.y0 = clamp01(d.rect.y0 + dy)
-        if (d.id.includes('s')) r.y1 = clamp01(d.rect.y1 + dy)
-        if (d.id.includes('w')) r.x0 = clamp01(d.rect.x0 + dx)
-        if (d.id.includes('e')) r.x1 = clamp01(d.rect.x1 + dx)
-      }
+      // The overlay is the VIEW, so a delta across it is scaled into the
+      // picture's fractions, which is what the crop is stored in. Past the
+      // picture's edge the crop reaches outside and the rest is fill.
+      const r = dragCrop(d.rect, d.id, (pr.x - d.px) * view.w, (pr.y - d.py) * view.h)
+      const past = !insidePicture(r)
+      setOutside(past)
       // MOVING is a translate, and it stops here: it reshapes nothing, so it
       // must not be able to change which format is selected or what the zoom
       // is. Every segment used to run the free-proportion arithmetic, and
@@ -1355,7 +1388,7 @@ export default function VideoEditTool() {
       // already had, the selection jumped off 9:16 and onto Free for a gesture
       // that had changed no proportion at all.
       if (d.id === 'move') {
-        setCentre({ x: clamp01((r.x0 + r.x1) / 2), y: clamp01((r.y0 + r.y1) / 2) })
+        setCentre({ x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 })
         return
       }
 
@@ -1363,7 +1396,7 @@ export default function VideoEditTool() {
       // shape, the zoom and the centre — is one pure function, so the preview,
       // the export and `evals/cropsnap.mjs` all read the same arithmetic.
       const clip = { width: current.info.width, height: current.info.height }
-      const out = cropFromDrag(r, d.id, formats, clip)
+      const out = cropFromDrag(r, d.id, formats, clip, SNAP_TOL, past)
       // The point of asking: the format a drag settles on is the one lit up in
       // the bar, so a rectangle dragged to square by eye says 1:1 rather than
       // "Free". The free shape is kept live here even while snapped, because a
@@ -1481,6 +1514,7 @@ export default function VideoEditTool() {
     const d = dragRef.current
     dragRef.current = null
     if (overlayRef.current?.hasPointerCapture(e.pointerId)) overlayRef.current.releasePointerCapture(e.pointerId)
+    if (d?.kind === 'crop-seg') setFrozenView(null)
 
     // A drag that ENDED on a format leaves no free shape behind. Any drag
     // between two formats crosses the ground between them, so `freeAspect` is
@@ -2175,8 +2209,8 @@ export default function VideoEditTool() {
                 // this overlay; what changes is that the browser's own implicit
                 // release at pointerup now applies to the element that took the
                 // capture.
-                <div data-testid="ve-crop-box" dir="ltr"
-                  style={{ left: `${cropBox.x * 100}%`, top: `${cropBox.y * 100}%`, width: `${cropBox.w * 100}%`, height: `${cropBox.h * 100}%` }}
+                <div data-testid="ve-crop-box" dir="ltr" data-outside={expanded ? 'true' : 'false'}
+                  style={{ left: `${boxShown.x * 100}%`, top: `${boxShown.y * 100}%`, width: `${boxShown.w * 100}%`, height: `${boxShown.h * 100}%` }}
                   className="absolute border-2 border-green-400 grid grid-cols-3 grid-rows-3">
                   {/* Nine cells, and the lines between them are the rule-of-
                       thirds guides every camera draws — so the thing you use to
@@ -2190,6 +2224,7 @@ export default function VideoEditTool() {
                         e.stopPropagation()
                         e.currentTarget.setPointerCapture(e.pointerId)
                         const q = atRaw(e)
+                        setFrozenView(view)
                         dragRef.current = {
                           kind: 'crop-seg',
                           id: seg.id,
@@ -2458,6 +2493,23 @@ export default function VideoEditTool() {
                         aspectId === 'free' ? 'bg-green-600 border-green-700' : 'bg-transparent border-white/25 hover:bg-white/10'}`}>
                       {s.free}
                     </button>
+                  )}
+                  {/* Only once the crop reaches past the picture: before
+                      that there is nothing for it to be the colour of. */}
+                  {expanded && (
+                    <label className="flex items-center gap-2 text-[0.8rem] opacity-85 rtl:font-ar">
+                      {s.padFill}
+                      <input type="color" value={padFill} data-testid="ve-pad-fill"
+                        data-auto={padPick === null ? 'true' : 'false'}
+                        onChange={(e) => setPadPick(e.target.value)}
+                        className="w-8 h-7 rounded border border-white/30 bg-transparent p-0 cursor-pointer" />
+                      {padPick !== null && (
+                        <button type="button" data-testid="ve-pad-auto" onClick={() => setPadPick(null)}
+                          className="rounded px-2 py-0.5 text-[0.75rem] border border-white/25 bg-transparent text-white cursor-pointer hover:bg-white/10">
+                          {s.padAuto}
+                        </button>
+                      )}
+                    </label>
                   )}
                 </div>
               )}

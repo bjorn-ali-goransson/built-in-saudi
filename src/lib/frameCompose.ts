@@ -30,9 +30,42 @@ export interface Crop {
   /** Where the middle of the kept rectangle sits, as a fraction of the frame. */
   cx: number
   cy: number
-  /** 1 keeps as much as the aspect allows; 2 keeps half the width and height. */
+  /**
+   * 1 keeps as much as the aspect allows; 2 keeps half the width and height.
+   * BELOW 1 the rectangle is bigger than the picture and the rest is `fill`.
+   */
   zoom: number
+  /**
+   * What fills the part of the output the picture does not reach, once the
+   * crop has been pulled outside it. Unset reads as black; the editors set it
+   * to the average of the edge being expanded (`edgeColour`) unless somebody
+   * picked one.
+   */
+  fill?: string
+  /**
+   * The crop has been pulled past the picture, so it may reach into the band
+   * around it. Unset, it is clamped inside exactly as it always was — which is
+   * what keeps an aspect change, a nudge or a second clip of another shape
+   * from painting fill nobody asked for.
+   */
+  outside?: boolean
 }
+
+/**
+ * How far past the picture a crop may reach, in multiples of the picture on
+ * each side. Bounded so a stray drag cannot make a canvas nine times the area
+ * of the photo, and so the crop always keeps SOME of the picture.
+ */
+export const REACH = 1
+/** The smallest zoom: a crop at most four times the fitted size. */
+export const MIN_ZOOM = 0.25
+/**
+ * Within this of the picture's edge, a dragged crop edge lands ON the edge.
+ * A crop may now go past the picture, so without it the obvious drag — pull
+ * the edge to the edge — would overshoot by a few pixels and paint a sliver
+ * of fill down one side.
+ */
+export const EDGE_SNAP = 0.02
 
 /**
  * A caption is a BOX, exactly like a censor, and that is the point.
@@ -298,12 +331,23 @@ export function fitRect(w: number, h: number, aspect: number): { w: number; h: n
  */
 export function cropRect(clip: { width: number; height: number }, crop: Crop): Rect {
   const fit = fitRect(clip.width, clip.height, crop.aspect)
-  const w = Math.min(clip.width, fit.w / Math.max(1, crop.zoom))
-  const h = Math.min(clip.height, fit.h / Math.max(1, crop.zoom))
-  // Clamped rather than allowed off the edge: dragging to the corner should
-  // stop at the corner, not start filling the frame with nothing.
-  const x = Math.min(Math.max(crop.cx * clip.width - w / 2, 0), clip.width - w)
-  const y = Math.min(Math.max(crop.cy * clip.height - h / 2, 0), clip.height - h)
+  if (!crop.outside) {
+    const w = Math.min(clip.width, fit.w / Math.max(1, crop.zoom))
+    const h = Math.min(clip.height, fit.h / Math.max(1, crop.zoom))
+    // Clamped rather than allowed off the edge: a crop nobody pulled outside
+    // stays inside, so an aspect change or a nudge never starts painting fill.
+    const x = Math.min(Math.max(crop.cx * clip.width - w / 2, 0), clip.width - w)
+    const y = Math.min(Math.max(crop.cy * clip.height - h / 2, 0), clip.height - h)
+    return { x, y, w, h }
+  }
+  let w = fit.w / Math.max(MIN_ZOOM, crop.zoom)
+  let h = fit.h / Math.max(MIN_ZOOM, crop.zoom)
+  // Never wider than the band it may sit in, keeping the shape.
+  const k = Math.min(1, ((1 + 2 * REACH) * clip.width) / w, ((1 + 2 * REACH) * clip.height) / h)
+  w *= k
+  h *= k
+  const x = Math.min(Math.max(crop.cx * clip.width - w / 2, -REACH * clip.width), (1 + REACH) * clip.width - w)
+  const y = Math.min(Math.max(crop.cy * clip.height - h / 2, -REACH * clip.height), (1 + REACH) * clip.height - h)
   return { x, y, w, h }
 }
 
@@ -318,7 +362,135 @@ export function cropRect(clip: { width: number; height: number }, crop: Crop): R
  */
 export function keptShare(clip: { width: number; height: number }, crop: Crop): number {
   const r = cropRect(clip, crop)
-  return (r.w * r.h) / (clip.width * clip.height)
+  // The part of the picture INSIDE the crop: a crop pulled past the edge keeps
+  // all of the picture on that side and adds fill, which is not "more kept".
+  const w = Math.max(0, Math.min(r.x + r.w, clip.width) - Math.max(r.x, 0))
+  const h = Math.max(0, Math.min(r.y + r.h, clip.height) - Math.max(r.y, 0))
+  return (w * h) / (clip.width * clip.height)
+}
+
+/** Does this crop reach past the picture anywhere? */
+export function isExpanded(clip: { width: number; height: number }, crop: Crop): boolean {
+  const r = cropRect(clip, crop)
+  const e = 0.5
+  return r.x < -e || r.y < -e || r.x + r.w > clip.width + e || r.y + r.h > clip.height + e
+}
+
+/**
+ * The colour to fill with: the AVERAGE of the picture's edge on each side the
+ * crop is pulled past, along the stretch of that edge the crop covers.
+ *
+ * Averaged rather than smeared or mirrored, because a smear of the last row is
+ * a streaky stripe and a mirror is a second copy of somebody's face. A flat
+ * colour lifted from the edge reads as "the background went on", which is
+ * what padding a photo to a square is for.
+ *
+ * `box` is the crop in FRACTIONS of the picture. Null when nothing is
+ * expanded, or there is no 2D canvas to read with.
+ */
+export function edgeColour(source: CanvasImageSource, clip: { width: number; height: number }, box: Rect): string | null {
+  const e = 0.001
+  const sides = {
+    n: box.y < -e, s: box.y + box.h > 1 + e, w: box.x < -e, e: box.x + box.w > 1 + e,
+  }
+  if (!sides.n && !sides.s && !sides.w && !sides.e) return null
+  // Small: an average needs no detail, and a 4K frame read back whole is
+  // tens of megabytes for one colour.
+  const k = Math.min(1, 128 / Math.max(clip.width, clip.height))
+  const W = Math.max(1, Math.round(clip.width * k))
+  const H = Math.max(1, Math.round(clip.height * k))
+  let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
+  if (typeof OffscreenCanvas !== 'undefined') ctx = new OffscreenCanvas(W, H).getContext('2d', { willReadFrequently: true })
+  else if (typeof document !== 'undefined') {
+    const c = document.createElement('canvas')
+    c.width = W; c.height = H
+    ctx = c.getContext('2d', { willReadFrequently: true })
+  }
+  if (!ctx) return null
+  try { ctx.drawImage(source, 0, 0, W, H) } catch { return null }
+  const px = ctx.getImageData(0, 0, W, H).data
+  let r = 0, g = 0, b = 0, n = 0
+  const add = (x: number, y: number) => {
+    const i = (y * W + x) * 4
+    if (px[i + 3] === 0) return
+    r += px[i]; g += px[i + 1]; b += px[i + 2]; n++
+  }
+  // The stretch of each edge the crop covers, so a crop pulled out below the
+  // left half of a photo takes the colour of the left half of its bottom row.
+  const span = (a: number, len: number, size: number) => {
+    const lo = Math.max(0, Math.floor(Math.max(0, a) * size))
+    const hi = Math.min(size, Math.ceil(Math.min(1, a + len) * size))
+    return hi > lo ? [lo, hi] : [0, size]
+  }
+  const [x0, x1] = span(box.x, box.w, W)
+  const [y0, y1] = span(box.y, box.h, H)
+  if (sides.n) for (let x = x0; x < x1; x++) add(x, 0)
+  if (sides.s) for (let x = x0; x < x1; x++) add(x, H - 1)
+  if (sides.w) for (let y = y0; y < y1; y++) add(0, y)
+  if (sides.e) for (let y = y0; y < y1; y++) add(W - 1, y)
+  if (!n) return null
+  const hex = (v: number) => Math.round(v / n).toString(16).padStart(2, '0')
+  return `#${hex(r)}${hex(g)}${hex(b)}`
+}
+
+/**
+ * What crop mode shows, in fractions of the picture: the picture alone while
+ * the crop is inside it — exactly the screen it always was — and, once the
+ * crop reaches past it, the picture and the crop plus a margin to pull into.
+ * The first pull goes past the picture into the letterbox; from then on there
+ * is room on screen to see what is being filled and to pull further.
+ */
+export const VIEW_PAD = 0.1
+export function cropView(box: Rect): Rect {
+  const e = 0.001
+  if (box.x >= -e && box.y >= -e && box.x + box.w <= 1 + e && box.y + box.h <= 1 + e) return { x: 0, y: 0, w: 1, h: 1 }
+  const x0 = Math.min(0, box.x) - VIEW_PAD
+  const y0 = Math.min(0, box.y) - VIEW_PAD
+  const x1 = Math.max(1, box.x + box.w) + VIEW_PAD
+  const y1 = Math.max(1, box.y + box.h) + VIEW_PAD
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+}
+
+/**
+ * One step of a crop drag, in fractions of the picture: `start` is the
+ * rectangle when the finger went down and (dx, dy) how far it has gone.
+ *
+ * Moving translates; anything else moves the edges its segment names. Either
+ * way the result stays inside the band a crop may reach, and an edge that
+ * lands within `EDGE_SNAP` of the picture's edge lands ON it — in both
+ * directions, so pulling back from outside stops at the picture again.
+ */
+export function dragCrop(
+  start: { x0: number; y0: number; x1: number; y1: number },
+  id: string,
+  dx: number,
+  dy: number,
+): { x0: number; y0: number; x1: number; y1: number } {
+  const band = (v: number) => Math.min(1 + REACH, Math.max(-REACH, v))
+  const snap = (v: number) => (Math.abs(v) < EDGE_SNAP ? 0 : Math.abs(v - 1) < EDGE_SNAP ? 1 : v)
+  const r = { ...start }
+  if (id === 'move') {
+    const w = r.x1 - r.x0
+    const h = r.y1 - r.y0
+    let x0 = Math.min(Math.max(r.x0 + dx, -REACH), 1 + REACH - w)
+    let y0 = Math.min(Math.max(r.y0 + dy, -REACH), 1 + REACH - h)
+    // Whichever edge is nearer the picture's edge decides the snap.
+    const sx = snap(x0) !== x0 ? snap(x0) - x0 : snap(x0 + w) !== x0 + w ? snap(x0 + w) - x0 - w : 0
+    const sy = snap(y0) !== y0 ? snap(y0) - y0 : snap(y0 + h) !== y0 + h ? snap(y0 + h) - y0 - h : 0
+    x0 += sx; y0 += sy
+    return { x0, y0, x1: x0 + w, y1: y0 + h }
+  }
+  if (id.includes('n')) r.y0 = snap(band(start.y0 + dy))
+  if (id.includes('s')) r.y1 = snap(band(start.y1 + dy))
+  if (id.includes('w')) r.x0 = snap(band(start.x0 + dx))
+  if (id.includes('e')) r.x1 = snap(band(start.x1 + dx))
+  return r
+}
+
+/** Is a rectangle, in fractions of the picture, inside it? */
+export function insidePicture(r: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  const e = 1e-4
+  return r.x0 >= -e && r.y0 >= -e && r.x1 <= 1 + e && r.y1 <= 1 + e
 }
 
 /**
@@ -377,6 +549,26 @@ export function drawFrame(
 ): void {
   const r = cropRect(clip, crop)
   ctx.clearRect(0, 0, out.width, out.height)
+  if (r.x < -0.5 || r.y < -0.5 || r.x + r.w > clip.width + 0.5 || r.y + r.h > clip.height + 0.5) {
+    // Pulled past the picture: the fill first, then the part of the picture
+    // the crop still covers, at the place it sits in the output.
+    ctx.fillStyle = crop.fill ?? '#000000'
+    ctx.fillRect(0, 0, out.width, out.height)
+    const sx = Math.max(0, r.x)
+    const sy = Math.max(0, r.y)
+    const ex = Math.min(clip.width, r.x + r.w)
+    const ey = Math.min(clip.height, r.y + r.h)
+    if (ex <= sx || ey <= sy) return
+    const kx = out.width / r.w
+    const ky = out.height / r.h
+    ctx.drawImage(
+      source,
+      Math.round(sx), Math.round(sy), Math.round(ex - sx), Math.round(ey - sy),
+      Math.round((sx - r.x) * kx), Math.round((sy - r.y) * ky),
+      Math.round((ex - sx) * kx), Math.round((ey - sy) * ky),
+    )
+    return
+  }
   // Rounded, because a fractional source rectangle makes the browser resample
   // half a pixel and every frame shimmers against the next one.
   ctx.drawImage(
@@ -641,6 +833,7 @@ export function cropFromDrag(
   formats: { id: string; aspect: number }[],
   frame: { width: number; height: number },
   tol: number = SNAP_TOL,
+  outside = false,
 ): DragCrop {
   const x0 = Math.min(rect.x0, rect.x1)
   const y0 = Math.min(rect.y0, rect.y1)
@@ -657,16 +850,18 @@ export function cropFromDrag(
     aspect = format.aspect
   }
   // The zoom that reproduces this width, since a crop is stored as an aspect
-  // and a centre rather than as a rectangle. Never below 1: `cropRect` treats
-  // that as "as much as the aspect allows" and a drag past the edge should
-  // stop at the biggest fit rather than invent picture that is not there.
+  // and a centre rather than as a rectangle. Inside the picture it is never
+  // below 1, so a drag at the edge stops at the biggest fit; a crop pulled
+  // OUTSIDE (`outside`) may go under it, and the rest is fill.
   const fit = fitRect(frame.width, frame.height, aspect)
-  const zoom = Math.max(1, fit.w / ((box.x1 - box.x0) * frame.width))
+  const zoom = Math.max(outside ? MIN_ZOOM : 1, fit.w / ((box.x1 - box.x0) * frame.width))
+  const lo = outside ? -REACH : 0
+  const hi = outside ? 1 + REACH : 1
   return {
     format,
     aspect,
     zoom,
-    cx: Math.min(1, Math.max(0, (box.x0 + box.x1) / 2)),
-    cy: Math.min(1, Math.max(0, (box.y0 + box.y1) / 2)),
+    cx: Math.min(hi, Math.max(lo, (box.x0 + box.x1) / 2)),
+    cy: Math.min(hi, Math.max(lo, (box.y0 + box.y1) / 2)),
   }
 }

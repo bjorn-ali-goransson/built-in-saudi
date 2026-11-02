@@ -899,3 +899,110 @@ test('a selected box has a move handle with an icon, and it moves the box', asyn
   expect(b1.y).toBeGreaterThan(b0.y + 10)
   expect(b1.width).toBeCloseTo(b0.width, 0)
 })
+
+// ---------------------------------------------------------------------------
+// A CROP CAN BE PULLED OUTSIDE THE PICTURE, and the rest is filled.
+// ---------------------------------------------------------------------------
+
+/** Left half one colour, right half another: the only picture on which "the
+ *  colour of the edge being expanded" can be told apart from "the picture's
+ *  average", which is the property the default fill rests on. */
+function halvesPng(w: number, h: number, left: [number, number, number], right: [number, number, number]): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0)
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body) >>> 0, 0)
+    return Buffer.concat([len, body, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8; ihdr[9] = 2
+  const raw = Buffer.alloc(h * (w * 3 + 1))
+  for (let y = 0; y < h; y++) {
+    const row = y * (w * 3 + 1)
+    for (let x = 0; x < w; x++) {
+      const o = row + 1 + x * 3
+      const c = x < w / 2 ? left : right
+      raw[o] = c[0]; raw[o + 1] = c[1]; raw[o + 2] = c[2]
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ])
+}
+
+const RED: [number, number, number] = [200, 40, 40]
+const BLUE: [number, number, number] = [40, 40, 200]
+const hexOf = (c: number[]) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+const near = (a: number[], b: number[], tol = 14) => a.every((v, i) => Math.abs(v - b[i]) <= tol)
+const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+
+async function pickHalves(page: Page) {
+  await page.getByTestId('ie-file').setInputFiles({ name: 'halves.png', mimeType: 'image/png', buffer: halvesPng(400, 300, RED, BLUE) })
+  await expect(page.getByTestId('ie-stage')).toBeVisible({ timeout: 20_000 })
+  // Square, so a pixel read at a fraction of the output is the colour planned.
+  await page.getByTestId('ie-tilt').click()
+  await expect(page.getByTestId('ie-tilt')).toHaveAttribute('aria-pressed', 'false')
+}
+
+test('a crop pulled PAST the picture fills with the colour of the edge it was pulled from', async ({ page }) => {
+  await load(page)
+  await pickHalves(page)
+  await expect(page.getByTestId('ie-pad-fill')).toHaveCount(0)
+  await dragSeg(page, 'e', 0.3, 0)
+  await expect(page.getByTestId('ie-crop-box')).toHaveAttribute('data-outside', 'true')
+  // The EAST edge is blue, so the fill is blue — not the picture's average,
+  // which would be purple. That is the difference the fixture exists for.
+  const fill = page.getByTestId('ie-pad-fill')
+  await expect(fill).toHaveAttribute('data-auto', 'true')
+  expect(near(rgbOf((await fill.inputValue())), BLUE), await fill.inputValue()).toBe(true)
+
+  // Wider than the picture, at the picture's own resolution.
+  await page.getByTestId('ie-settings').click()
+  const size = (await page.getByTestId('ie-out-size').textContent()) ?? ''
+  const [w, h] = size.split('×').map(Number)
+  // (It may snap to 16:9 on the way, which takes a few rows off the height.)
+  expect(h).toBeGreaterThan(280)
+  expect(w).toBeGreaterThan(450)
+  await page.getByTestId('ie-settings-close').click()
+
+  // And it is IN THE FILE: the far east is fill, the west is still picture.
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  expect(near(await exportedPixelAt(page, 0.98, 0.5), BLUE)).toBe(true)
+  expect(near(await exportedPixelAt(page, 0.02, 0.5), RED)).toBe(true)
+
+  // A picked colour wins, reaches the file, and the edge colour comes back on ask.
+  await fill.fill('#10a050')
+  await expect(fill).toHaveAttribute('data-auto', 'false')
+  await expect(page.getByTestId('ie-download')).toHaveCount(0)
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  expect(near(await exportedPixelAt(page, 0.98, 0.5), [0x10, 0xa0, 0x50])).toBe(true)
+  await page.getByTestId('ie-pad-auto').click()
+  await expect(fill).toHaveAttribute('data-auto', 'true')
+  expect(near(rgbOf(await fill.inputValue()), BLUE)).toBe(true)
+})
+
+test('pulled out to the WEST, the fill is the west edge\'s colour', async ({ page }) => {
+  await load(page)
+  await pickHalves(page)
+  await dragSeg(page, 'w', -0.3, 0)
+  await expect(page.getByTestId('ie-crop-box')).toHaveAttribute('data-outside', 'true')
+  const v = await page.getByTestId('ie-pad-fill').inputValue()
+  expect(near(rgbOf(v), RED), v).toBe(true)
+  // Leaving crop mode shows the OUTPUT: fill on the west, the picture east.
+  await page.getByTestId('ie-mode-censor').click()
+  await expect.poll(async () => near(await pixelAt(page, 0.02, 0.5), RED)).toBe(true)
+  await expect.poll(async () => hexOf(await pixelAt(page, 0.98, 0.5))).toBe(hexOf(BLUE))
+})
+
+test('an edge pulled a hair past the picture lands ON it, and fills nothing', async ({ page }) => {
+  await load(page)
+  await pickHalves(page)
+  await dragSeg(page, 'e', 0.005, 0)
+  await expect(page.getByTestId('ie-crop-box')).toHaveAttribute('data-outside', 'false')
+  await expect(page.getByTestId('ie-pad-fill')).toHaveCount(0)
+  await expect(page.getByTestId('ie-kept')).toContainText('400×300')
+})

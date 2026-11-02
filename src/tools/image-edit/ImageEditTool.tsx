@@ -11,7 +11,8 @@ import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { renderCaption } from '../../lib/captionBitmap'
 import {
-  ASPECTS, applyCensors, captionRect, cropFromDrag, cropRect, drawFrame, keptShare, SEGMENTS,
+  ASPECTS, applyCensors, captionRect, cropFromDrag, cropRect, cropView, dragCrop, drawFrame, edgeColour,
+  insidePicture, isExpanded, keptShare, SEGMENTS, SNAP_TOL,
   type Caption, type Censor, type CensorMode, type Crop, type Rect,
 } from '../../lib/frameCompose'
 
@@ -84,6 +85,8 @@ const STR = {
     turnPiece: 'Turn it',
     addPieceHint: 'Drag on the picture to cut a piece out, then move, turn or resize it. Or add another picture with the button above.',
     fillLeft: 'Fill left behind',
+    padFill: 'Fill outside',
+    padAuto: 'Edge colour',
     modeCensor: 'Hide something',
     modeText: 'Caption',
     modeMore: 'Output settings',
@@ -132,6 +135,8 @@ const STR = {
     turnPiece: 'أدِره',
     addPieceHint: 'اسحب على الصورة لاقتطاع جزء، ثم حرّكه أو أدِره أو غيّر حجمه. أو أضِف صورة أخرى بالزر أعلاه.',
     fillLeft: 'لون الفراغ',
+    padFill: 'لون الامتداد',
+    padAuto: 'لون الحافة',
     modeCensor: 'إخفاء جزء',
     modeText: 'نص',
     modeMore: 'إعدادات المُخرَج',
@@ -344,6 +349,15 @@ export default function ImageEditTool() {
   const snappedRef = useRef(false)
   const [zoom, setZoom] = useState(1)
   const [centre, setCentre] = useState({ x: 0.5, y: 0.5 })
+  // The crop has been pulled past the picture (see `Crop.outside`).
+  const [outside, setOutside] = useState(false)
+  // A fill somebody picked; null means the average of the edge being expanded.
+  const [padPick, setPadPick] = useState<string | null>(null)
+  const [padAuto, setPadAuto] = useState<string | null>(null)
+  // What crop mode shows, held still while a crop is being dragged: the view
+  // grows with the crop, and a view that grew under the finger would map the
+  // same finger to a point further out, and grow again.
+  const [frozenView, setFrozenView] = useState<Rect | null>(null)
 
   const [censors, setCensors] = useState<Censor[]>([])
   const [captions, setCaptions] = useState<Caption[]>([])
@@ -507,7 +521,10 @@ export default function ImageEditTool() {
     [sourceAspect],
   )
 
-  const crop: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom }), [aspect, centre, zoom])
+  const geom: Crop = useMemo(() => ({ aspect, cx: centre.x, cy: centre.y, zoom, outside }), [aspect, centre, zoom, outside])
+  const padFill = padPick ?? padAuto ?? '#000000'
+  const crop: Crop = useMemo(() => ({ ...geom, fill: padFill }), [geom, padFill])
+  const expanded = useMemo(() => isExpanded(dim, geom), [dim, geom])
 
   /** The output, in pixels. Capped, never upscaled. */
   const size = useMemo(() => {
@@ -536,9 +553,26 @@ export default function ImageEditTool() {
    * outside the rectangle.
    */
   const cropBox = useMemo(() => {
-    const r = cropRect(dim, crop)
+    const r = cropRect(dim, geom)
     return { x: r.x / dim.width, y: r.y / dim.height, w: r.w / dim.width, h: r.h / dim.height }
-  }, [dim, crop])
+  }, [dim, geom])
+
+  /** Crop mode's window onto the picture, in fractions of it; the picture alone elsewhere. */
+  const view: Rect = mode === 'crop' ? (frozenView ?? cropView(cropBox)) : { x: 0, y: 0, w: 1, h: 1 }
+  /** The crop box in the OVERLAY's fractions, which are the view's. */
+  const boxShown = {
+    x: (cropBox.x - view.x) / view.w, y: (cropBox.y - view.y) / view.h,
+    w: cropBox.w / view.w, h: cropBox.h / view.h,
+  }
+
+  // The fill follows the edge being pulled out, unless somebody picked one —
+  // and is read off `source`, so it is the colour of the edge as tilted and
+  // cut, the picture everything else is drawn from.
+  useEffect(() => {
+    if (!source || !expanded) return
+    const c = edgeColour(source, dim, cropBox)
+    if (c) setPadAuto(c)
+  }, [source, dim, cropBox, expanded])
 
   // Caption bitmaps, rebuilt when what they say or how big the frame is
   // changes. They are the thing composited on the stage AND in the export, so
@@ -642,23 +676,36 @@ export default function ImageEditTool() {
       // The whole picture, at its own shape, with everything outside the crop
       // dimmed rather than gone. The rectangle's outline is the DOM overlay,
       // which is also what you drag.
-      const fit = Math.min(1, PREVIEW_MAX / Math.max(dim.width, dim.height))
+      // In crop mode that is the VIEW — the picture plus room around it to pull
+      // the crop into; in cut mode it is the picture itself.
+      const vw = view.w * dim.width
+      const vh = view.h * dim.height
+      const fit = Math.min(1, PREVIEW_MAX / Math.max(vw, vh))
       const shown = {
-        width: Math.max(2, Math.round(dim.width * fit)),
-        height: Math.max(2, Math.round(dim.height * fit)),
+        width: Math.max(2, Math.round(vw * fit)),
+        height: Math.max(2, Math.round(vh * fit)),
       }
       rc.width = shown.width
       rc.height = shown.height
       const ctx = rc.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, shown.width, shown.height)
+      const px = (fx: number) => Math.round(((fx - view.x) / view.w) * shown.width)
+      const py = (fy: number) => Math.round(((fy - view.y) / view.h) * shown.height)
+      if (mode === 'crop') {
+        // The room around the picture, and the fill where the crop reaches it.
+        ctx.fillStyle = '#1c1c1c'
+        ctx.fillRect(0, 0, shown.width, shown.height)
+        ctx.fillStyle = padFill
+        ctx.fillRect(px(cropBox.x), py(cropBox.y), px(cropBox.x + cropBox.w) - px(cropBox.x), py(cropBox.y + cropBox.h) - py(cropBox.y))
+      }
       // `source`, not `img` — this is the branch that used to miss the tilt,
       // and the rectangle below is dragged over whatever is drawn here.
-      ctx.drawImage(source, 0, 0, shown.width, shown.height)
-      const bx = Math.round(cropBox.x * shown.width)
-      const by = Math.round(cropBox.y * shown.height)
-      const bw = Math.round(cropBox.w * shown.width)
-      const bh = Math.round(cropBox.h * shown.height)
+      ctx.drawImage(source, px(0), py(0), px(1) - px(0), py(1) - py(0))
+      const bx = px(cropBox.x)
+      const by = py(cropBox.y)
+      const bw = px(cropBox.x + cropBox.w) - bx
+      const bh = py(cropBox.y + cropBox.h) - by
       // Lighter while cutting: there the dim is only saying where the frame is,
       // and a piece dragged outside it still has to be visible enough to drag
       // back. In crop mode the dim IS the answer, so it is strong.
@@ -679,7 +726,7 @@ export default function ImageEditTool() {
     const ctx = rc.getContext('2d')
     if (!ctx) return
     compose(ctx, shown, mode === 'text' ? pickedCaption : null)
-  }, [source, mode, dim, cropBox, size, compose, pickedCaption])
+  }, [source, mode, dim, cropBox, view.x, view.y, view.w, view.h, padFill, size, compose, pickedCaption])
 
   useEffect(() => {
     let raf = 0
@@ -718,6 +765,9 @@ export default function ImageEditTool() {
     setFreeAspect(0)
     setZoom(1)
     setCentre({ x: 0.5, y: 0.5 })
+    setOutside(false)
+    setPadPick(null)
+    setPadAuto(null)
     setCensors([])
     setCaptions([])
     closePieces()
@@ -842,6 +892,7 @@ export default function ImageEditTool() {
       return
     }
     const raw = atRaw(e)
+    setFrozenView(view)
     dragRef.current = {
       kind: 'crop-seg',
       id: 'move',
@@ -873,26 +924,18 @@ export default function ImageEditTool() {
       // to where it is: a segment is a THIRD of the rectangle, so a delta keeps
       // whatever offset it was grabbed at and the edge arrives while the finger
       // is still inside the picture.
-      const r = { ...d.rect }
-      const dx = pr.x - d.px
-      const dy = pr.y - d.py
+      // The overlay is the VIEW, so a delta across it is scaled into the
+      // picture's fractions, which is what the crop is stored in.
+      const r = dragCrop(d.rect, d.id, (pr.x - d.px) * view.w, (pr.y - d.py) * view.h)
+      // Past the picture's edge the crop reaches outside and the rest is fill;
+      // dragged back inside it, it is clamped there again as it always was.
+      const out = !insidePicture(r)
+      setOutside(out)
       if (d.id === 'move') {
-        const w = r.x1 - r.x0
-        const h = r.y1 - r.y0
-        const cx = Math.min(Math.max((r.x0 + r.x1) / 2 + dx, w / 2), 1 - w / 2)
-        const cy = Math.min(Math.max((r.y0 + r.y1) / 2 + dy, h / 2), 1 - h / 2)
-        r.x0 = cx - w / 2; r.x1 = cx + w / 2
-        r.y0 = cy - h / 2; r.y1 = cy + h / 2
-        setCentre({ x: clamp01((r.x0 + r.x1) / 2), y: clamp01((r.y0 + r.y1) / 2) })
+        setCentre({ x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 })
         return
       }
-      // Clamped on the RESULT rather than on the pointer: the rectangle may not
-      // leave the picture, and the finger may.
-      if (d.id.includes('n')) r.y0 = clamp01(d.rect.y0 + dy)
-      if (d.id.includes('s')) r.y1 = clamp01(d.rect.y1 + dy)
-      if (d.id.includes('w')) r.x0 = clamp01(d.rect.x0 + dx)
-      if (d.id.includes('e')) r.x1 = clamp01(d.rect.x1 + dx)
-      const next = cropFromDrag(r, d.id, formats, dim)
+      const next = cropFromDrag(r, d.id, formats, dim, SNAP_TOL, out)
       snappedRef.current = !!next.format
       if (next.format) setAspectId(next.format.id)
       else { setFreeAspect(next.aspect); setAspectId('free') }
@@ -1021,6 +1064,7 @@ export default function ImageEditTool() {
     // between two formats crosses the ground between them, so the Free chip
     // would otherwise stay on the bar offering a proportion nobody chose.
     if (d?.kind === 'crop-seg' && snappedRef.current) setFreeAspect(0)
+    if (d?.kind === 'crop-seg') setFrozenView(null)
 
     if (d?.kind === 'draw') {
       const box = drawingRef.current
@@ -1256,8 +1300,8 @@ export default function ImageEditTool() {
                 // this overlay; what changes is that the browser's own implicit
                 // release at pointerup now applies to the element that took the
                 // capture.
-                <div data-testid="ie-crop-box" dir="ltr"
-                  style={{ left: `${cropBox.x * 100}%`, top: `${cropBox.y * 100}%`, width: `${cropBox.w * 100}%`, height: `${cropBox.h * 100}%` }}
+                <div data-testid="ie-crop-box" dir="ltr" data-outside={expanded ? 'true' : 'false'}
+                  style={{ left: `${boxShown.x * 100}%`, top: `${boxShown.y * 100}%`, width: `${boxShown.w * 100}%`, height: `${boxShown.h * 100}%` }}
                   className="absolute border-2 border-green-400 grid grid-cols-3 grid-rows-3">
                   {SEGMENTS.map((seg, i) => (
                     <div key={seg.id} data-testid={`ie-crop-${seg.id}`}
@@ -1266,6 +1310,7 @@ export default function ImageEditTool() {
                         e.stopPropagation()
                         e.currentTarget.setPointerCapture(e.pointerId)
                         const q = atRaw(e)
+                        setFrozenView(view)
                         dragRef.current = {
                           kind: 'crop-seg',
                           id: seg.id,
@@ -1551,9 +1596,28 @@ export default function ImageEditTool() {
                   rectangle over the whole picture already SHOWS it, and this
                   is the one number that shape cannot say by itself. */}
               {mode === 'crop' && (
-                <span className="block text-[0.8rem] opacity-85 font-mono" data-testid="ie-kept">
-                  {s.kept(pct(keptPct))} · {size.width}×{size.height}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="block text-[0.8rem] opacity-85 font-mono" data-testid="ie-kept">
+                    {s.kept(pct(keptPct))} · {size.width}×{size.height}
+                  </span>
+                  {/* Only once the crop reaches past the picture: before
+                      that there is nothing for it to be the colour of. */}
+                  {expanded && (
+                    <label className="flex items-center gap-2 text-[0.8rem] opacity-85 rtl:font-ar">
+                      {s.padFill}
+                      <input type="color" value={padFill} data-testid="ie-pad-fill"
+                        data-auto={padPick === null ? 'true' : 'false'}
+                        onChange={(e) => setPadPick(e.target.value)}
+                        className="w-8 h-7 rounded border border-white/30 bg-transparent p-0 cursor-pointer" />
+                      {padPick !== null && (
+                        <button type="button" data-testid="ie-pad-auto" onClick={() => setPadPick(null)}
+                          className="rounded px-2 py-0.5 text-[0.75rem] border border-white/25 bg-transparent text-white cursor-pointer hover:bg-white/10">
+                          {s.padAuto}
+                        </button>
+                      )}
+                    </label>
+                  )}
+                </div>
               )}
             </div>
           </div>

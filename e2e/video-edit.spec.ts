@@ -479,7 +479,9 @@ test('a corner SEGMENT sets a FREE proportion', async ({ page }) => {
   const handle = (await page.getByTestId('ve-crop-se').boundingBox())!
   await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
   await page.mouse.down()
-  await page.mouse.move(b.x + b.width * 0.7, b.y + b.height * 0.95, { steps: 6 })
+  // Sideways only: a pull past the BOTTOM used to stop at the frame and now
+  // reaches outside it, which is a different gesture with its own case.
+  await page.mouse.move(b.x + b.width * 0.7, handle.y + handle.height / 2, { steps: 6 })
   await page.mouse.up()
 
   await expect(page.getByTestId('ve-aspect-free')).toBeVisible()
@@ -568,7 +570,8 @@ test('a drag NEAR a format SNAPS onto it, and the bar says which', async ({ page
   // rectangle is 249×240 — a proportion of 1.04, which is 4% off square and
   // therefore inside the 6% band. Nobody drags to an exact ratio by eye; the
   // point of the snap is that they do not have to.
-  await dragSeg(page, 'se', -0.22, 0.15)
+  // Sideways only: a pull past the bottom now reaches outside the frame.
+  await dragSeg(page, 'se', -0.22, 0)
 
   await expect(page.getByTestId('ve-aspect-1:1')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('ve-aspect-source')).toHaveAttribute('aria-pressed', 'false')
@@ -2171,4 +2174,28 @@ test('THE DOWNLOAD GOES when a picture is added under it', async ({ page }) => {
   await addPicture(page)
   await expect(page.getByTestId('ve-download')).toHaveCount(0)
   await expect(page.getByTestId('ve-export')).toBeVisible()
+})
+
+test('a crop pulled PAST the frame fills the rest with the edge\'s colour, in the output', async ({ page }) => {
+  await load(page)
+  test.skip(!(await canEncode(page)), 'no H.264 encoder in this browser')
+  await pick(page)
+  await page.getByTestId('ve-aspect-source').click()
+  await expect(page.getByTestId('ve-pad-fill')).toHaveCount(0)
+  await dragSeg(page, 'e', 0.3, 0)
+  await expect(page.getByTestId('ve-crop-box')).toHaveAttribute('data-outside', 'true')
+  const fill = page.getByTestId('ve-pad-fill')
+  await expect(fill).toHaveAttribute('data-auto', 'true')
+  const { w, h } = await outSize(page)
+  // (It may snap to 16:9 on the way, which takes a few rows off the height.)
+  expect(h).toBeGreaterThan(220)
+  expect(w).toBeGreaterThan(360)
+  // Out of crop mode the stage IS the output: its east edge is the fill.
+  const want = await fill.inputValue()
+  await page.getByTestId('ve-mode-censor').click()
+  const px = () => page.getByTestId('ve-result').evaluate((c: HTMLCanvasElement) => {
+    const d = c.getContext('2d', { willReadFrequently: true })!.getImageData(c.width - 2, Math.round(c.height / 2), 1, 1).data
+    return `#${[d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+  })
+  await expect.poll(px).toBe(want)
 })

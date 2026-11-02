@@ -221,5 +221,35 @@ console.log('\na snap that asks for more picture than there is stops at the fram
   check(near(r.px.w / r.px.h, out.aspect, 0.002), 'and keeps the snapped shape', (r.px.w / r.px.h).toFixed(4))
 }
 
+// ── Pulled outside the picture ───────────────────────────────────────────────
+//
+// A crop may now reach past the picture, and the rest is fill. Three things
+// make that safe: an edge dragged to within EDGE_SNAP of the picture's edge
+// lands ON it (so the obvious drag does not paint a sliver of fill), a crop
+// nobody pulled outside is still clamped inside, and the reach is bounded.
+console.log('\na crop pulled past the picture reaches outside it')
+{
+  const start = { x0: 0, y0: 0, x1: 1, y1: 1 }
+  const near = C.dragCrop(start, 'e', C.EDGE_SNAP / 2, 0)
+  check(near.x1 === 1, 'an edge pulled a hair past the picture lands on it', near.x1.toFixed(4))
+  check(C.insidePicture(near), 'and the crop counts as inside', String(C.insidePicture(near)))
+  const back = C.dragCrop({ x0: 0, y0: 0, x1: 1.3, y1: 1 }, 'e', -0.3 + C.EDGE_SNAP / 2, 0)
+  check(back.x1 === 1, 'pulled back from outside, it stops on the edge again', back.x1.toFixed(4))
+  const far = C.dragCrop(start, 'e', 0.5, 0)
+  check(!C.insidePicture(far), 'pulled half a picture further, it is outside', far.x1.toFixed(3))
+  const out = C.cropFromDrag(far, 'e', FORMATS, FRAME, C.SNAP_TOL, true)
+  const r = C.cropRect(FRAME, { aspect: out.aspect, cx: out.cx, cy: out.cy, zoom: out.zoom, outside: true })
+  check(r.w > FRAME.width * 1.2, 'and the crop is wider than the picture', r.w.toFixed(1))
+  check(Math.abs(r.x) < 1, 'still starting at the picture\'s west edge', r.x.toFixed(2))
+  check(C.isExpanded(FRAME, { aspect: out.aspect, cx: out.cx, cy: out.cy, zoom: out.zoom, outside: true }),
+    'and it reports itself expanded', 'yes')
+  check(Math.abs(C.keptShare(FRAME, { aspect: out.aspect, cx: out.cx, cy: out.cy, zoom: out.zoom, outside: true }) - 1) < 0.01,
+    'keeping ALL of the picture rather than "more than all"', '1.00')
+  const same = { aspect: out.aspect, cx: out.cx, cy: out.cy, zoom: out.zoom }
+  check(!C.isExpanded(FRAME, same), 'the same numbers without `outside` are clamped inside', 'clamped')
+  const huge = C.dragCrop(start, 'se', 9, 9)
+  check(huge.x1 <= 1 + C.REACH && huge.y1 <= 1 + C.REACH, 'and the reach is bounded', `${huge.x1},${huge.y1}`)
+}
+
 console.log(`\n${failed ? `${failed} FAILED` : 'all checks passed'}`)
 process.exit(failed ? 1 : 0)

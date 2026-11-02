@@ -3845,6 +3845,35 @@ with an icon at the top-start corner, because a selected caption's inside is
 the text field. **Verified to fail**: putting the size coupling back reddens
 the size case.
 
+**A crop can be pulled OUTSIDE the picture, in both editors**, and the rest is
+filled (`lib/frameCompose.ts`: `Crop.outside`, `Crop.fill`, `dragCrop`,
+`edgeColour`, `cropView`). Four decisions:
+
+- **`outside` is STATE, not derived.** Without it, `cropRect` clamps inside
+  exactly as before, so an aspect change, a nudge or a second clip of another
+  shape cannot start painting fill nobody asked for. A drag sets it from
+  whether the dragged rectangle left the picture, and a drag back inside clears
+  it. Reach is bounded (`REACH`: one picture each side, `MIN_ZOOM` 0.25).
+- **An edge within `EDGE_SNAP` (2%) of the picture's edge lands ON it**, both
+  ways. Without that the obvious drag — pull the edge to the edge — overshoots
+  by a few pixels and paints a sliver of fill.
+- **The default fill is the average of the edge being pulled out**, over the
+  stretch of it the crop covers — not the picture's average, which on a photo
+  with a dark side and a light side is a colour neither edge has. The spec's
+  fixture is two halves for exactly that reason. A picked colour wins; "Edge
+  colour" brings the average back. The video export uses ONE colour, sampled
+  from the frame on screen when the crop changes: a per-frame fill flickers.
+- **Crop mode's view grows to show the fill, and is FROZEN while dragging.**
+  While the crop is inside, the view is the picture, the screen it always was;
+  once outside, it is the picture plus the crop plus a 10% margin. A view that
+  grew under the finger would map the same finger further out and grow again,
+  so it is held for the gesture and updates on release.
+
+**Verified to fail**: painting the fill black regardless of `fill` reddens the
+three fill cases and nothing else. One existing case changed, honestly: the
+free-proportion drag also pulled 12% past the BOTTOM, which used to be clamped
+and is now an outside pull — it drags sideways only now.
+
 ## A picture laid on the video, and two vacuous greens (`video-edit`)
 
 The second half of the merge: the video editor takes a picture too — a logo, a
