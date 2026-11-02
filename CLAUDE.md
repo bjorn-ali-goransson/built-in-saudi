@@ -1273,7 +1273,19 @@ different font. The canvas route in `printPdf.ts` renders Arabic correctly and
 produces no text layer at all, so it is not a fallback for a document — it is a
 different product.
 
-## A photo of a page is not a big scan (`doc-scan`)
+## A photo of a page is not a big scan (`doc-scan`, now inside `image-edit`)
+
+**It lives in the image editor since November 2026** (`?mode=scan`, the old
+address redirects there): "Straighten a page" on the settings screen, four
+corner buttons on the photo, a clean-up slider and Straighten. The result
+REPLACES the photo, so the crop, the boxes and the export work on the flat page,
+and "Use the photo as it was" gives the original back. The size claim is read
+off the editor's own estimate. One thing was added on the way: **a sliver is
+refused before the solver sees it** — exactly collinear corners the elimination
+refuses by itself, but a quadrilateral covering under a hundredth of the photo
+was warped into a page a dozen pixels high. The case is that sliver, and is
+verified to fail without the check. The notes below are about the
+transform and the claim, and still hold.
 
 Found by sweeping what people download APPS for rather than what they search the
 web for — a different source, and it points at device capabilities this site
@@ -3897,6 +3909,11 @@ decisions:
 - **A visit through an old app's address starts with the tilt OFF.** Somebody
   shrinking a photo or cutting one out must get it back true; an ordinary visit
   keeps the joke on, and there is a case for each.
+
+**The download is invalidated by `source`, not by a list of what feeds it.** The
+list missed the cut-out first, and then the straightened page and the
+cut-and-compose pieces, which had been leaving a stale file on the button since
+the scissors shipped. `source` is the one value every one of those changes.
 
 The compressor's own worker (`lib/imageEncoder.ts`, `imageEncode.worker.ts`) had
 no other caller and went with it. Canvas `toBlob` is already asynchronous.

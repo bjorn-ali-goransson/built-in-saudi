@@ -7,6 +7,7 @@ import {
   MoveIcon, TiltIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
+import type { ScanReq, ScanRes } from './scan.worker'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { renderCaption } from '../../lib/captionBitmap'
@@ -90,6 +91,16 @@ const STR = {
     modeCensor: 'Hide something',
     modeText: 'Caption',
     modeMore: 'Output settings',
+    pageTitle: 'Page',
+    straighten: 'Straighten a page',
+    unstraighten: 'Use the photo as it was',
+    corners: 'Drag the four corners onto the page’s corners, or select one and nudge it with the arrow keys.',
+    clean: 'Clean-up',
+    apply: 'Straighten',
+    cancel: 'Cancel',
+    working: 'Straightening…',
+    degenerate: 'Those four corners do not make a shape — move them apart.',
+    pageNote: 'A camera is never square to the paper, so the far edge is shorter than the near one; this maps the four corners you place onto a rectangle. The clean-up makes the paper white and the ink black, which is also what makes the file small.',
     background: 'Background',
     removeBg: 'Remove the background',
     restoreBg: 'Put the background back',
@@ -151,6 +162,16 @@ const STR = {
     modeCensor: 'إخفاء جزء',
     modeText: 'نص',
     modeMore: 'إعدادات المُخرَج',
+    pageTitle: 'الصفحة',
+    straighten: 'عدّل ميل صفحة',
+    unstraighten: 'استخدم الصورة كما كانت',
+    corners: 'اسحب الزوايا الأربع إلى زوايا الصفحة، أو حدّد زاوية وحرّكها بمفاتيح الأسهم.',
+    clean: 'التنظيف',
+    apply: 'عدّل الميل',
+    cancel: 'إلغاء',
+    working: 'جارٍ التعديل…',
+    degenerate: 'هذه الزوايا الأربع لا تكوّن شكلًا — باعد بينها.',
+    pageNote: 'الكاميرا لا تكون عمودية على الورق أبدًا، فتكون الحافة البعيدة أقصر من القريبة؛ وهذا يطابق الزوايا الأربع التي تضعها على مستطيل. والتنظيف يجعل الورق أبيض والحبر أسود، وهو ما يصغّر الملف أيضًا.',
     background: 'الخلفية',
     removeBg: 'أزل الخلفية',
     restoreBg: 'أعد الخلفية',
@@ -214,7 +235,9 @@ const SIDES = [0, 4096, 2048, 1600, 1080, 720]
 
 const fmtBytes = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`
 
-type Mode = 'crop' | 'cut' | 'censor' | 'text'
+type Mode = 'crop' | 'cut' | 'censor' | 'text' | 'page'
+
+const CORNERS = ['tl', 'tr', 'br', 'bl'] as const
 
 /**
  * A rectangle lifted out of the picture, or a picture laid on top of it.
@@ -372,6 +395,20 @@ export default function ImageEditTool() {
   /** null when idle, else the model's progress in per cent (-1: loading). */
   const [bgBusy, setBgBusy] = useState<number | null>(null)
   const [bgError, setBgError] = useState(false)
+  /**
+   * STRAIGHTENING A PAGE (the Photo to Scan app, folded in): four corners in
+   * FRACTIONS of the photo, the clean-up strength, and the photo as it was so
+   * the straightening can be taken back. The result REPLACES the photo, so the
+   * crop, the boxes and the export all work on the flat page.
+   */
+  const [corners, setCorners] = useState<{ x: number; y: number }[]>([])
+  const [activeCorner, setActiveCorner] = useState(0)
+  const [clean, setClean] = useState(1)
+  const [unwarped, setUnwarped] = useState<ImageBitmap | null>(null)
+  const [pageBusy, setPageBusy] = useState(false)
+  const [pageError, setPageError] = useState('')
+  const scanRef = useRef<Worker | null>(null)
+  useEffect(() => () => { scanRef.current?.terminate() }, [])
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'' | 'read' | 'export'>('')
@@ -407,10 +444,11 @@ export default function ImageEditTool() {
   // editor's default because it loses nothing, and that is the wrong default
   // for somebody whose whole aim is a smaller file.
   const [format, setFormat] = useState<string>(() => {
-    try { return new URLSearchParams(window.location.search).get('mode') === 'compress' ? 'image/jpeg' : 'image/png' } catch { return 'image/png' }
+    // A straightened page is mostly flat white, which JPEG compresses best.
+    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' || m === 'scan' ? 'image/jpeg' : 'image/png' } catch { return 'image/png' }
   })
   const [quality, setQuality] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get('mode') === 'compress' ? 0.8 : 0.9 } catch { return 0.9 }
+    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' ? 0.8 : m === 'scan' ? 0.85 : 0.9 } catch { return 0.9 }
   })
   const [maxSide, setMaxSide] = useState(0)
   /**
@@ -670,7 +708,7 @@ export default function ImageEditTool() {
    */
   useEffect(() => {
     setOut((o) => { if (o) URL.revokeObjectURL(o.url); return null })
-  }, [crop, censors, captions, tilt, cutout, format, quality, maxSide])
+  }, [crop, censors, captions, source, format, quality, maxSide])
 
   /**
    * Draw the output. THE ONE FUNCTION, called for the stage and for the export.
@@ -728,7 +766,7 @@ export default function ImageEditTool() {
     // cannot be judged without the thing it is taken out of, and a piece is
     // placed on the picture — it can be dragged in from outside the frame, and
     // its hole can be outside it too. The dimming says which part survives.
-    if (mode === 'crop' || mode === 'cut') {
+    if (mode === 'crop' || mode === 'cut' || mode === 'page') {
       // The whole picture, at its own shape, with everything outside the crop
       // dimmed rather than gone. The rectangle's outline is the DOM overlay,
       // which is also what you drag.
@@ -757,7 +795,20 @@ export default function ImageEditTool() {
       }
       // `source`, not `img` — this is the branch that used to miss the tilt,
       // and the rectangle below is dragged over whatever is drawn here.
-      ctx.drawImage(source, px(0), py(0), px(1) - px(0), py(1) - py(0))
+      // Page mode shows the PHOTO itself: the corners are placed on it, and it
+      // is what gets warped, before any tilt or cut-out.
+      ctx.drawImage(mode === 'page' && img ? img : source, px(0), py(0), px(1) - px(0), py(1) - py(0))
+      if (mode === 'page') {
+        if (corners.length === 4) {
+          ctx.strokeStyle = '#4ade80'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          corners.forEach((c, i) => (i ? ctx.lineTo(px(c.x), py(c.y)) : ctx.moveTo(px(c.x), py(c.y))))
+          ctx.closePath()
+          ctx.stroke()
+        }
+        return
+      }
       const bx = px(cropBox.x)
       const by = py(cropBox.y)
       const bw = px(cropBox.x + cropBox.w) - bx
@@ -782,7 +833,7 @@ export default function ImageEditTool() {
     const ctx = rc.getContext('2d')
     if (!ctx) return
     compose(ctx, shown, mode === 'text' ? pickedCaption : null)
-  }, [source, mode, dim, cropBox, view.x, view.y, view.w, view.h, padFill, size, compose, pickedCaption])
+  }, [source, img, corners, mode, dim, cropBox, view.x, view.y, view.w, view.h, padFill, size, compose, pickedCaption])
 
   useEffect(() => {
     let raf = 0
@@ -823,6 +874,8 @@ export default function ImageEditTool() {
     // cut-out: it is a download of several megabytes, and it waits for a tap,
     // as it did in the app it came from.
     if (entry === 'compress' || entry === 'cutout') setSettings(true)
+    setUnwarped((old) => { old?.close(); return null })
+    setPageError('')
     setName(f.name)
     setSrcBytes(f.size)
     setAspectId('source')
@@ -835,7 +888,75 @@ export default function ImageEditTool() {
     setCensors([])
     setCaptions([])
     closePieces()
+    // A scan visit goes straight to placing the corners.
+    if (entry === 'scan') startPage(); else setMode('crop')
+  }
+
+  /** Into page mode, corners inset by a tenth: a page photographed on a desk
+   *  almost never fills the frame, and corners on the very edge would all
+   *  have to be moved. */
+  function startPage() {
+    setCorners([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.9 }, { x: 0.1, y: 0.9 }])
+    setActiveCorner(0)
+    setPageError('')
+    setSettings(false)
+    setMode('page')
+  }
+
+  /** Warp the photo onto a rectangle and clean it, off the main thread. */
+  async function applyPage() {
+    if (!img || corners.length !== 4 || pageBusy) return
+    // Refused HERE, not left to the solver: four corners on a line, or crossed
+    // into a bow tie, still give the elimination numbers to work with, and the
+    // result is a page a pixel high. Shoelace area, in the photo's own
+    // proportions, against a hundredth of the photo — and a crossed quad's
+    // signed halves cancel, so it is caught by the same test.
+    const area = Math.abs(corners.reduce((a, c, i) => {
+      const n = corners[(i + 1) % 4]
+      return a + (c.x * n.y - n.x * c.y)
+    }, 0)) / 2
+    if (area < 0.01) { setPageError(s.degenerate); return }
+    setPageBusy(true)
+    setPageError('')
+    const w = scanRef.current ?? (scanRef.current = new Worker(new URL('./scan.worker.ts', import.meta.url), { type: 'module' }))
+    const id = Date.now()
+    const photo = img
+    const res = await new Promise<ScanRes>((resolve) => {
+      const on = (ev: MessageEvent<ScanRes>) => { if (ev.data.id === id) { w.removeEventListener('message', on); resolve(ev.data) } }
+      w.addEventListener('message', on)
+      // A copy, because posting a bitmap with a transfer list hands it over.
+      void createImageBitmap(photo).then((bitmap) => {
+        const req: ScanReq = { id, bitmap, corners: corners.map((c) => ({ x: c.x * photo.width, y: c.y * photo.height })), clean }
+        w.postMessage(req, [bitmap])
+      })
+    })
+    setPageBusy(false)
+    if (res.error || !res.blob) { setPageError(s.degenerate); return }
+    const flat = await createImageBitmap(res.blob)
+    // The photo as it FIRST was is kept, so straightening twice and then
+    // taking it back returns the original rather than the first attempt.
+    setUnwarped((old) => old ?? photo)
+    setImg(flat)
+    setCutout((old) => { old?.close(); return null })
+    setAspectId('source')
+    setFreeAspect(0)
+    setZoom(1)
+    setCentre({ x: 0.5, y: 0.5 })
+    setOutside(false)
+    closePieces()
+    setPickedPiece(null)
     setMode('crop')
+  }
+
+  function undoPage() {
+    if (!unwarped) return
+    setImg(unwarped)
+    setUnwarped(null)
+    setAspectId('source')
+    setFreeAspect(0)
+    setZoom(1)
+    setCentre({ x: 0.5, y: 0.5 })
+    setOutside(false)
   }
 
   /**
@@ -928,6 +1049,7 @@ export default function ImageEditTool() {
   function discard() {
     setImg((old) => { old?.close(); return null })
     setCutout((old) => { old?.close(); return null })
+    setUnwarped((old) => { old?.close(); return null })
     setCensors([])
     setCaptions([])
     closePieces()
@@ -998,6 +1120,8 @@ export default function ImageEditTool() {
 
   function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
+    // Page mode is driven by its four corners alone.
+    if (mode === 'page') return
     const p = at(e)
     e.currentTarget.setPointerCapture(e.pointerId)
     if (mode === 'censor') {
@@ -1457,6 +1581,40 @@ export default function ImageEditTool() {
                 </div>
               )}
 
+              {/* PAGE MODE: four corners on the photo. Each is a real button,
+                  so it can be focused and nudged with the arrow keys — the
+                  accessible answer and the reason this is testable at all —
+                  and dragged, with the capture on the button itself. */}
+              {mode === 'page' && corners.map((c, i) => (
+                <button key={CORNERS[i]} type="button" data-testid={`ie-corner-${CORNERS[i]}`}
+                  aria-label={CORNERS[i]} aria-pressed={activeCorner === i}
+                  style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
+                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 bg-white/90 cursor-move touch-none ${
+                    activeCorner === i ? 'border-green-600' : 'border-gold-500'}`}
+                  onFocus={() => setActiveCorner(i)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    setActiveCorner(i)
+                  }}
+                  onPointerMove={(e) => {
+                    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+                    const p = at(e)
+                    setCorners((cs) => cs.map((q, j) => (j === i ? p : q)))
+                  }}
+                  onKeyDown={(e) => {
+                    const step = e.shiftKey ? 0.05 : 0.01
+                    const by: Record<string, [number, number]> = {
+                      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+                    }
+                    const d = by[e.key]
+                    if (!d) return
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setCorners((cs) => cs.map((q, j) => (j === i ? { x: clamp01(q.x + d[0]), y: clamp01(q.y + d[1]) } : q)))
+                  }} />
+              ))}
+
               {mode === 'cut' && pieces.map((q, i) => (
                 <div key={q.id} data-testid={`ie-piece-${i}`}
                   onPointerDown={(e) => {
@@ -1705,6 +1863,27 @@ export default function ImageEditTool() {
               {mode === 'censor' && !picked && (
                 <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-censor-hint">{s.addBox}</span>
               )}
+              {mode === 'page' && (
+                <div className="flex flex-col gap-2 max-w-[34rem]" data-testid="ie-page-bar">
+                  <span className="text-[0.8rem] opacity-85 rtl:font-ar whitespace-normal">{s.corners}</span>
+                  <div className="flex flex-wrap items-center gap-3 whitespace-nowrap">
+                    <label className="flex items-center gap-2 text-[0.8rem] rtl:font-ar">
+                      {s.clean}
+                      <input type="range" min={0} max={1} step={0.1} value={clean} data-testid="ie-clean"
+                        onChange={(e) => setClean(Number(e.target.value))} />
+                    </label>
+                    <button type="button" data-testid="ie-page-apply" disabled={pageBusy} onClick={() => { void applyPage() }}
+                      className="rounded px-3 py-1 text-[0.85rem] border border-green-700 bg-green-600 text-[color:var(--primary-ink)] cursor-pointer disabled:opacity-60 rtl:font-ar">
+                      {pageBusy ? s.working : s.apply}
+                    </button>
+                    <button type="button" data-testid="ie-page-cancel" onClick={() => setMode('crop')}
+                      className="rounded px-3 py-1 text-[0.85rem] border border-white/25 bg-transparent text-white cursor-pointer hover:bg-white/10 rtl:font-ar">
+                      {s.cancel}
+                    </button>
+                  </div>
+                  {pageError && <span className="text-[0.85rem] text-red-300 rtl:font-ar" data-testid="ie-page-error">{pageError}</span>}
+                </div>
+              )}
               {mode === 'text' && captions.length === 0 && (
                 <span className="block text-[0.8rem] opacity-85 rtl:font-ar" data-testid="ie-caption-hint">{s.addCaptionBox}</span>
               )}
@@ -1816,6 +1995,16 @@ export default function ImageEditTool() {
                 <CloseIcon className="w-4 h-4" />
               </button>
             </div>
+
+            <Field label={s.pageTitle}>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button data-testid="ie-page" onClick={startPage}>{s.straighten}</Button>
+                  {unwarped && <Button data-testid="ie-page-undo" onClick={undoPage}>{s.unstraighten}</Button>}
+                </div>
+                <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.pageNote}</p>
+              </div>
+            </Field>
 
             <Field label={s.background}>
               <div className="flex flex-col gap-2">

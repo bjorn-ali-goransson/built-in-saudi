@@ -49,40 +49,63 @@ async function pagePhoto(page: Page): Promise<string> {
   })
 }
 
+// Photo to Scan lives in the image editor now (November 2026): its old
+// address opens the editor on the four corners, the result REPLACES the photo,
+// and the size claim is read off the editor's own estimate — an actual encode.
+
 const load = async (page: Page, locale = 'en') => {
   await page.goto(`/${locale}/apps/doc-scan`)
-  await expect(page.getByTestId('doc-scan')).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/${locale}/apps/image-edit\\?mode=scan$`))
   const b64 = await pagePhoto(page)
-  await page.getByTestId('ds-file').setInputFiles({
+  await page.getByTestId('ie-file').setInputFiles({
     name: 'page.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(b64, 'base64'),
   })
-  await expect(page.getByTestId('ds-preview')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('ie-page-bar')).toBeVisible({ timeout: 30_000 })
+  for (const k of ['tl', 'tr', 'br', 'bl']) await expect(page.getByTestId(`ie-corner-${k}`)).toBeVisible()
 }
 
-const kb = async (page: Page) => {
-  const t = await page.getByTestId('ds-size').innerText()
-  const m = t.match(/([\d,]+)\s*KB\s*→\s*([\d,]+)\s*KB/)
-  return m ? [Number(m[1].replace(/,/g, '')), Number(m[2].replace(/,/g, ''))] : [0, 0]
+/** Straighten, then read what the export would weigh from the settings. */
+async function straightenAndWeigh(page: Page): Promise<number> {
+  await page.getByTestId('ie-page-apply').click()
+  await expect(page.getByTestId('ie-page-bar')).toHaveCount(0, { timeout: 30_000 })
+  await page.getByTestId('ie-settings').click()
+  const est = page.getByTestId('ie-estimate')
+  let n = 0
+  await expect.poll(async () => { n = Number(await est.getAttribute('data-bytes') || 0); return n > 0 }, { timeout: 30_000 }).toBe(true)
+  return n
 }
+
+test('a scan visit lands on the corners, and straightening maps them onto a rectangle', async ({ page }) => {
+  await load(page)
+  await page.getByTestId('ie-page-apply').click()
+  await expect(page.getByTestId('ie-page-bar')).toHaveCount(0, { timeout: 30_000 })
+  // The default corners are inset by a tenth of a 900×1200 photo, so the
+  // page that comes out is 720×960 — the quadrilateral's own size.
+  await page.getByTestId('ie-settings').click()
+  await expect(page.getByTestId('ie-out-size')).toHaveText('720×960')
+  // And it can be taken back to the photo as it was.
+  await page.getByTestId('ie-page-undo').click()
+  await expect(page.getByTestId('ie-out-size')).toHaveText('900×1200')
+})
 
 test('the cleaned page is a fraction of the size of the photo', async ({ page }) => {
   // The measured claim the tool is built on: a phone photo of a document is
   // large because the paper is not white, not because of detail.
   await load(page)
-  const [before, after] = await kb(page)
-  expect(before).toBeGreaterThan(0)
-  expect(after).toBeLessThan(before)
-  await expect(page.getByTestId('ds-size')).toContainText('smaller')
+  await straightenAndWeigh(page)
+  await expect(page.getByTestId('ie-estimate')).toContainText('smaller')
 })
 
 test('and turning the clean-up off gives that saving back', async ({ page }) => {
   // Without this, the case above would pass against a tool that simply
   // re-encoded everything smaller — the saving has to come from the clean-up.
   await load(page)
-  const [, cleaned] = await kb(page)
-  await page.getByTestId('ds-clean').fill('0')
-  await expect.poll(async () => (await kb(page))[1], { timeout: 30_000 })
-    .toBeGreaterThan(cleaned)
+  const cleaned = await straightenAndWeigh(page)
+  await page.getByTestId('ie-page-undo').click()
+  await page.getByTestId('ie-page').click()
+  await page.getByTestId('ie-clean').fill('0')
+  const raw = await straightenAndWeigh(page)
+  expect(raw).toBeGreaterThan(cleaned)
 })
 
 test('a corner can be moved with the keyboard, which is what makes it checkable', async ({ page }) => {
@@ -90,33 +113,32 @@ test('a corner can be moved with the keyboard, which is what makes it checkable'
   // makes it fail silently on a patterned tablecloth. Four handles you can see
   // — and reach without a mouse — cannot be wrong without you seeing it.
   await load(page)
-  const before = await page.getByTestId('ds-corner-tl').boundingBox()
-  await page.getByTestId('ds-corner-tl').focus()
+  const before = await page.getByTestId('ie-corner-tl').boundingBox()
+  await page.getByTestId('ie-corner-tl').focus()
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight')
-  const after = await page.getByTestId('ds-corner-tl').boundingBox()
+  const after = await page.getByTestId('ie-corner-tl').boundingBox()
   expect(after!.x).toBeGreaterThan(before!.x)
 })
 
-test('four corners in a line are refused rather than rendered as noise', async ({ page }) => {
+test('corners that make no shape are refused rather than rendered as noise', async ({ page }) => {
   // A degenerate quadrilateral has no transform. Dividing by zero and drawing
   // the result is the alternative.
   await load(page)
-  await page.getByTestId('ds-corner-tl').focus()
-  for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowDown')
-  await page.getByTestId('ds-corner-tr').focus()
-  for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowDown')
-  // Either it still produced a page, or it said the corners are degenerate —
-  // what it must never do is show a previous result as though it were current.
-  await expect(page.getByTestId('ds-preview').or(page.getByTestId('file-error'))).toBeVisible()
-})
-
-test('it states the two things it is built on', async ({ page }) => {
-  await page.goto('/en/apps/doc-scan')
-  await expect(page.getByTestId('ds-persp')).toContainText('projective')
-  await expect(page.getByTestId('ds-manual')).toContainText('fail silently')
+  // A SLIVER, not a line: the top corners on the top edge and the bottom ones
+  // a hundredth below. Exactly collinear corners the solver refuses by itself;
+  // a sliver it would happily warp into a page a dozen pixels high.
+  for (const [k, n] of [['tl', 20], ['tr', 20], ['br', 89], ['bl', 89]] as const) {
+    await page.getByTestId(`ie-corner-${k}`).focus()
+    for (let i = 0; i < n; i++) await page.keyboard.press('ArrowUp')
+  }
+  await page.getByTestId('ie-page-apply').click()
+  await expect(page.getByTestId('ie-page-error')).toBeVisible({ timeout: 30_000 })
+  // Still placing corners: nothing was replaced with a picture of nothing.
+  await expect(page.getByTestId('ie-page-bar')).toBeVisible()
 })
 
 test('it works in Arabic', async ({ page }) => {
   await load(page, 'ar')
-  await expect(page.getByTestId('ds-size')).toContainText('أصغر')
+  await straightenAndWeigh(page)
+  await expect(page.getByTestId('ie-estimate')).toContainText('أصغر')
 })

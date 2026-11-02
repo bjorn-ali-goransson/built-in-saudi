@@ -1,6 +1,5 @@
 import type { Tool } from './types'
 import { imageEditTool } from './image-edit/meta'
-import { docScanTool } from './doc-scan/meta'
 import { pdfMergeTool } from './pdf-merge/meta'
 import { pdfToImagesTool } from './pdf-to-images/meta'
 import { qrReaderTool } from './qr-reader/meta'
@@ -165,7 +164,6 @@ export const tools: Tool[] = [
   linkShortenerTool,
   qrCodeTool,
   imageEditTool,
-  docScanTool,
   pdfMergeTool,
   pdfOcrTool,
   stopwatchTool,

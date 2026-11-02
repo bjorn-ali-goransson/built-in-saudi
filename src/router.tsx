@@ -117,6 +117,7 @@ export const router = createBrowserRouter([
       { path: 'apps/image-format-converter', element: <RenamedToolRedirect to="image-edit" mode="compress" /> },
       { path: 'apps/image-compressor', element: <RenamedToolRedirect to="image-edit" mode="compress" /> },
       { path: 'apps/remove-background', element: <RenamedToolRedirect to="image-edit" mode="cutout" /> },
+      { path: 'apps/doc-scan', element: <RenamedToolRedirect to="image-edit" mode="scan" /> },
       { path: 'apps/pdf-to-text', element: <RenamedToolRedirect to="pdf-ocr" /> },
       { path: 'apps/cron-explainer', element: <RenamedToolRedirect to="cron-builder" /> },
       { path: 'apps/random-picker', element: <RenamedToolRedirect to="spin-wheel" /> },

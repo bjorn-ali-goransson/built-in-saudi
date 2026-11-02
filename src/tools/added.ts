@@ -14,7 +14,6 @@ export const ADDED: Record<string, string> = {
   'activity-schedule': '2026-09-26',
   'image-edit': '2026-09-12',
   'video-edit': '2026-09-04',
-  'doc-scan': '2026-08-11',
   'readable-text': '2026-08-11',
   'timetable': '2026-08-11',
   'pdf-to-word': '2026-08-10',

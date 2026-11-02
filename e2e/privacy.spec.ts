@@ -199,7 +199,6 @@ function mp4WithToken(token: string): Buffer {
 // a second list is how a guard and its audit stop agreeing.
 export const CASES: Case[] = [
   { id: 'pdf-to-word', testid: 'ptw-file', name: 'doc.pdf', mime: 'application/pdf', make: tokenPdf },
-  { id: 'doc-scan', testid: 'ds-file', name: 'page.png', mime: 'image/png', make: pngWithToken },
   { id: 'pdf-ocr', testid: 'pk-file', name: 'scan.pdf', mime: 'application/pdf', make: tokenPdf },
   // Two intake paths, two rows: opening reads an archive, making one reads the files put in it.
   { id: 'archives', testid: 'ar-file', name: 'notes.txt.gz', mime: 'application/gzip', make: () => gzipSync(Buffer.from(`${TOKEN}\n`)) },

@@ -63,7 +63,7 @@ export const UNTUNED8 = [
   // --- compound tasks: two jobs in one sentence -----------------------------
   ['compress a photo and change its format', ['image-edit']],
   ['sign a pdf and send it', 'pdf-edit'],
-  ['scan a receipt and get the text', ['pdf-ocr', 'doc-scan']],
+  ['scan a receipt and get the text', ['pdf-ocr', 'image-edit']],
   ['split a pdf then merge the parts', ['pdf-merge']],
   ['remove the background and resize for instagram', ['image-edit']],
   ['take a screenshot and blur a name in it', 'image-edit'],

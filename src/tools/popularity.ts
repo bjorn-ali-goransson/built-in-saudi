@@ -36,7 +36,6 @@ export const VIEWS: Record<string, number> = {
   'date-diff': 14,
   'detect-language': 3,
   'diacritize': 11,
-  'doc-scan': 8,
   'fake-data': 3,
   'flashcards': 3,
   'franco-arabic': 8,
