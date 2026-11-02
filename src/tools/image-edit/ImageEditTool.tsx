@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
 import { Button, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
   BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, ImageIcon, MosaicIcon, ScissorsIcon, TextIcon,
-  TiltIcon, TrashIcon,
+  MoveIcon, TiltIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import { decodeImage } from '../../lib/decodeImage'
@@ -91,6 +91,9 @@ const STR = {
     addBox: 'Drag on the picture to draw a box.',
     addCaptionBox: 'Drag on the picture to draw a text box.',
     deleteBox: 'Delete this box',
+    moveBox: 'Move',
+    smaller: 'Smaller text',
+    bigger: 'Bigger text',
     boxSettings: 'This box',
     close: 'Close',
     text: 'Text',
@@ -136,6 +139,9 @@ const STR = {
     addBox: 'اسحب على الصورة لترسم مربّعًا.',
     addCaptionBox: 'اسحب على الصورة لترسم مربّع نص.',
     deleteBox: 'احذف هذا المربّع',
+    moveBox: 'انقل',
+    smaller: 'نص أصغر',
+    bigger: 'نص أكبر',
     boxSettings: 'هذا المربّع',
     close: 'إغلاق',
     text: 'النص',
@@ -223,6 +229,72 @@ const FIT = 0.4
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 const mb = (b: number) => (b < 1048576 ? `${Math.round(b / 1024)} KB` : `${(b / 1048576).toFixed(1)} MB`)
 
+/** Which side of a box a handle pulls. The corner pulls two at once. */
+type Edge = 'n' | 's' | 'e' | 'w' | 'se'
+
+/**
+ * A box pulled by one of its handles. Each handle moves ONLY its own side(s),
+ * so the opposite edge stays where it was put — which is what a top or left
+ * handle is for, and what the single corner grip could not do. Clamped to the
+ * frame and to a minimum size, so a pulled edge stops rather than flipping
+ * the box inside out.
+ */
+function pullEdge(b: { x: number; y: number; w: number; h: number }, edge: Edge, p: { x: number; y: number }, minW: number, minH: number) {
+  let x0 = b.x, y0 = b.y, x1 = b.x + b.w, y1 = b.y + b.h
+  if (edge === 'n') y0 = Math.max(0, Math.min(y1 - minH, p.y))
+  if (edge === 's' || edge === 'se') y1 = Math.min(1, Math.max(y0 + minH, p.y))
+  if (edge === 'w') x0 = Math.max(0, Math.min(x1 - minW, p.x))
+  if (edge === 'e' || edge === 'se') x1 = Math.min(1, Math.max(x0 + minW, p.x))
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+}
+
+/** A caption's text size is a fraction of the frame's height, stepped by +/−. */
+const SIZE_STEP = 1.2
+const SIZE_MIN = 0.02
+const SIZE_MAX = 0.4
+
+/**
+ * The field a caption is typed into, over its box. A component of its own so
+ * its measuring runs only when what it measures changes: as an inline ref it
+ * forced a layout (`scrollHeight`) on EVERY render of the editor, and a
+ * multi-line caption re-rendered the editor on every keystroke and every
+ * bitmap rebuild, which is the slowdown that was reported.
+ */
+function CaptionField({ c, index, stageH, placeholder, onText }: {
+  c: Caption; index: number; stageH: number; placeholder: string; onText: (t: string) => void
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const fontPx = Math.max(8, c.size * stageH)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // IT GROWS, IT DOES NOT SCROLL. A textarea clips its content, so a caption
+    // one line taller than its box would be cut off while being typed and
+    // whole in the file — the field disagreeing with the picture it produces.
+    el.style.paddingTop = '0px'
+    el.style.height = 'auto'
+    const content = el.scrollHeight
+    const box = el.parentElement?.clientHeight ?? 0
+    el.style.paddingTop = `${Math.max(0, (box - content) / 2)}px`
+    el.style.height = `${Math.max(box, content)}px`
+  }, [c.text, fontPx, c.w, c.h, stageH])
+  return (
+    <textarea
+      ref={ref}
+      data-testid={`ie-caption-text-${index}`}
+      value={c.text}
+      placeholder={placeholder}
+      dir="auto"
+      spellCheck={false}
+      onPointerDown={(e) => e.stopPropagation()}
+      onChange={(e) => onText(e.target.value)}
+      style={{ boxSizing: 'border-box', color: c.colour, fontSize: `${fontPx}px`, lineHeight: 1.3 }}
+      className="absolute start-0 top-1/2 -translate-y-1/2 w-full resize-none bg-transparent border-0 outline-none
+        text-center p-0 overflow-hidden font-sans font-semibold
+        placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
+  )
+}
+
 /** What the pointer is doing to the picture right now — the same vocabulary as
  *  the video editor, because they are the same gestures on the same stage. */
 type Drag =
@@ -230,9 +302,9 @@ type Drag =
   | { kind: 'draw'; fx: number; fy: number }
   | { kind: 'draw-text'; fx: number; fy: number }
   | { kind: 'move'; id: string; ox: number; oy: number }
-  | { kind: 'resize'; id: string }
+  | { kind: 'resize'; id: string; edge: Edge }
   | { kind: 'caption'; id: string; ox: number; oy: number }
-  | { kind: 'caption-resize'; id: string }
+  | { kind: 'caption-resize'; id: string; edge: Edge }
   | { kind: 'draw-cut'; fx: number; fy: number }
   | { kind: 'piece'; id: string; ox: number; oy: number }
   | { kind: 'piece-resize'; id: string; w0: number; h0: number; d0: number }
@@ -489,7 +561,9 @@ export default function ImageEditTool() {
     // settle: awaiting `document.fonts.ready` first makes a caption invisible
     // until every font on the page has resolved.
     void build()
-    void document.fonts?.ready.then(() => { if (live) void build() })
+    // Only while fonts are still loading: once they are, `ready` resolves at
+    // once and every keystroke would build every caption twice.
+    if (document.fonts && document.fonts.status !== 'loaded') void document.fonts.ready.then(() => { if (live) void build() })
     return () => { live = false }
   }, [captions, size.width, size.height, repaint])
 
@@ -915,15 +989,7 @@ export default function ImageEditTool() {
       setCensors((list) => list.map((c) => {
         if (c.id !== d.id) return c
         const b = c.keys[0]
-        return {
-          ...c,
-          keys: [{
-            t: 0,
-            x: b.x,
-            y: b.y,
-            w: Math.max(0.02, Math.min(1 - b.x, p.x - b.x)),
-            h: Math.max(0.02, Math.min(1 - b.y, p.y - b.y)),
-          }],
+        return { ...c, keys: [{ t: 0, ...pullEdge(b, d.edge, p, 0.02, 0.02) }],
         }
       }))
       return
@@ -937,16 +1003,11 @@ export default function ImageEditTool() {
     if (d.kind === 'caption-resize') {
       setCaptions((list) => list.map((c) => {
         if (c.id !== d.id) return c
-        const h = Math.max(0.04, Math.min(1 - c.y, p.y - c.y))
-        return {
-          ...c,
-          w: Math.max(0.05, Math.min(1 - c.x, p.x - c.x)),
-          h,
-          // The box IS the size control: a rectangle dragged twice as tall
-          // whose text stayed put would be a resize doing half of what it looks
-          // like it is doing.
-          size: Math.max(0.03, Math.min(0.3, h * 0.45)),
-        }
+        // The box sets where the caption sits and how wide its lines run; the
+        // TEXT SIZE is its own control (+/− beside the colour). Tying the size
+        // to the box height made a multi-line caption impossible: every line
+        // the box grew to make room for grew the letters too.
+        return { ...c, ...pullEdge(c, d.edge, p, 0.05, 0.04) }
       }))
     }
   }
@@ -1098,36 +1159,8 @@ export default function ImageEditTool() {
    *  open, which is what makes "click once to select, again to edit" cost no
    *  rule at all. */
   const captionField = (c: Caption) => (
-    <textarea
-      data-testid={`ie-caption-text-${captions.indexOf(c)}`}
-      value={c.text}
-      placeholder={s.text}
-      dir="auto"
-      spellCheck={false}
-      onPointerDown={(e) => e.stopPropagation()}
-      onChange={(e) => setCaption(c.id, { text: e.target.value })}
-      // IT GROWS, IT DOES NOT SCROLL. A textarea clips its content, so a
-      // caption one line taller than its box is cut off while being typed and
-      // whole in the file — the field disagreeing with the picture it is
-      // producing.
-      ref={(el) => {
-        if (!el) return
-        el.style.paddingTop = '0px'
-        el.style.height = 'auto'
-        const content = el.scrollHeight
-        const box = el.parentElement?.clientHeight ?? 0
-        el.style.paddingTop = `${Math.max(0, (box - content) / 2)}px`
-        el.style.height = `${Math.max(box, content)}px`
-      }}
-      style={{
-        boxSizing: 'border-box',
-        color: c.colour,
-        fontSize: `${Math.max(8, c.size * (stageRef.current?.clientHeight || 0))}px`,
-        lineHeight: 1.3,
-      }}
-      className="absolute start-0 top-1/2 -translate-y-1/2 w-full resize-none bg-transparent border-0 outline-none
-        text-center p-0 overflow-hidden font-sans font-semibold
-        placeholder:text-white/60 [text-shadow:0_0_3px_rgba(0,0,0,0.8)]" />
+    <CaptionField c={c} index={captions.indexOf(c)} stageH={stageRef.current?.clientHeight || 0}
+      placeholder={s.text} onText={(t) => setCaption(c.id, { text: t })} />
   )
 
   /** A box handle on the stage — the same affordance for a censor and a caption. */
@@ -1135,7 +1168,7 @@ export default function ImageEditTool() {
     key: string, testid: string, box: { x: number; y: number; w: number; h: number },
     selected: boolean,
     onGrab: (e: React.PointerEvent) => void,
-    onDelete: () => void, onResize: (e: React.PointerEvent) => void,
+    onDelete: () => void, onResize: (e: React.PointerEvent, edge: Edge) => void,
     onInfo?: () => void, corner?: React.ReactNode, inside?: React.ReactNode,
   ) => (
     <div key={key} data-testid={testid} onPointerDown={onGrab}
@@ -1156,8 +1189,26 @@ export default function ImageEditTool() {
               <CogIcon className="w-3.5 h-3.5" />
             </button>
           )}
-          <span data-testid={`${testid}-resize`} onPointerDown={onResize}
-            className="absolute -bottom-2 -end-2 w-4 h-4 rounded-sm bg-green-400 border border-green-700 cursor-nwse-resize" />
+          {/* A move handle of its own, because once a caption is selected its
+              inside is the text field, and pressing there places the caret. */}
+          <span data-testid={`${testid}-move`} title={s.moveBox} aria-label={s.moveBox} role="img"
+            onPointerDown={onGrab}
+            className="absolute -top-3 -start-3 grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white cursor-move">
+            <MoveIcon className="w-4 h-4" />
+          </span>
+          {/* One handle per side, so a box can be pulled from any edge and the
+              opposite edge stays put. Physical sides on purpose: a picture does
+              not mirror under RTL, so neither do its handles. */}
+          <span data-testid={`${testid}-edge-n`} onPointerDown={(e) => onResize(e, 'n')}
+            style={{ left: '50%' }} className="absolute -top-1.5 -ml-2.5 w-5 h-3 rounded-sm bg-green-400 border border-green-700 cursor-ns-resize" />
+          <span data-testid={`${testid}-edge-s`} onPointerDown={(e) => onResize(e, 's')}
+            style={{ left: '50%' }} className="absolute -bottom-1.5 -ml-2.5 w-5 h-3 rounded-sm bg-green-400 border border-green-700 cursor-ns-resize" />
+          <span data-testid={`${testid}-edge-w`} onPointerDown={(e) => onResize(e, 'w')}
+            style={{ top: '50%', left: 0 }} className="absolute -ml-1.5 -mt-2.5 w-3 h-5 rounded-sm bg-green-400 border border-green-700 cursor-ew-resize" />
+          <span data-testid={`${testid}-edge-e`} onPointerDown={(e) => onResize(e, 'e')}
+            style={{ top: '50%', right: 0 }} className="absolute -mr-1.5 -mt-2.5 w-3 h-5 rounded-sm bg-green-400 border border-green-700 cursor-ew-resize" />
+          <span data-testid={`${testid}-resize`} onPointerDown={(e) => onResize(e, 'se')}
+            style={{ right: 0, bottom: 0 }} className="absolute -mr-2 -mb-2 w-4 h-4 rounded-sm bg-green-400 border border-green-700 cursor-nwse-resize" />
           {corner}
         </>
       )}
@@ -1299,10 +1350,10 @@ export default function ImageEditTool() {
                   setPickedBox(c.id)
                 },
                 () => { setCensors((l) => l.filter((x) => x.id !== c.id)); setPickedBox(null) },
-                (e) => {
+                (e, edge) => {
                   e.stopPropagation()
                   e.currentTarget.setPointerCapture(e.pointerId)
-                  dragRef.current = { kind: 'resize', id: c.id }
+                  dragRef.current = { kind: 'resize', id: c.id, edge }
                 },
                 () => setBoxPanel(true),
               ))}
@@ -1317,20 +1368,36 @@ export default function ImageEditTool() {
                   setPickedCaption(c.id)
                 },
                 () => { setCaptions((l) => l.filter((x) => x.id !== c.id)); setPickedCaption(null) },
-                (e) => {
+                (e, edge) => {
                   e.stopPropagation()
                   e.currentTarget.setPointerCapture(e.pointerId)
-                  dragRef.current = { kind: 'caption-resize', id: c.id }
+                  dragRef.current = { kind: 'caption-resize', id: c.id, edge }
                 },
                 undefined,
-                <label key="colour" data-testid={`ie-caption-colour-${i}`}
+                <div key="colour" onPointerDown={(e) => e.stopPropagation()}
+                  className="absolute -bottom-3 -start-3 flex items-center gap-1">
+                  <label data-testid={`ie-caption-colour-${i}`}
                   title={s.colour} aria-label={s.colour}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="absolute -bottom-3 -start-3 grid place-items-center w-7 h-7 rounded-full border border-white/40 cursor-pointer overflow-hidden"
+                  className="grid place-items-center w-7 h-7 rounded-full border border-white/40 cursor-pointer overflow-hidden"
                   style={{ background: c.colour }}>
                   <input type="color" value={c.colour} className="opacity-0 w-full h-full cursor-pointer"
                     onChange={(e) => setCaption(c.id, { colour: e.target.value })} />
-                </label>,
+                </label>
+                  {/* The text size, by hand. It used to follow the box's height,
+                      which made a multi-line caption fight its own box. */}
+                  {(['smaller', 'bigger'] as const).map((k) => {
+                    const next = Math.min(SIZE_MAX, Math.max(SIZE_MIN, k === 'bigger' ? c.size * SIZE_STEP : c.size / SIZE_STEP))
+                    return (
+                      <button key={k} type="button" title={s[k]} aria-label={s[k]} data-testid={`ie-caption-${k}-${i}`}
+                        disabled={next === c.size}
+                        onClick={() => setCaption(c.id, { size: next })}
+                        className="grid place-items-center w-7 h-7 rounded-full bg-black/80 border border-white/40 text-white text-[1rem] leading-none font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-default">
+                        {k === 'bigger' ? '+' : '−'}
+                      </button>
+                    )
+                  })}
+                </div>,
                 pickedCaption === c.id ? captionField(c) : null,
               ))}
 

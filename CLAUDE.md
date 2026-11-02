@@ -3829,6 +3829,22 @@ stashed out of the registry, and own names went 477/478 → 479/480. Sixth
 application of the rule, and the documented fix: **wrapping a generic word in a
 phrase does not remove it.**
 
+**A caption's text size is its own control now, not the box's height.**
+Resizing the box set `size = h * 0.45`, so a multi-line caption could never
+fit: every line the box grew to make room for grew the letters with it. The
+size is a `+`/`−` pair beside the colour (×1.2 a step, 2%–40% of the frame),
+and the box only decides where the caption sits and how wide it wraps. Two
+smaller things went with it: the text field measured itself (`scrollHeight`)
+in an inline ref, so on EVERY render of the editor, and the bitmaps were
+built twice per keystroke because `document.fonts.ready` resolves at once
+when fonts are loaded. The field is `CaptionField` with a layout effect keyed
+on what it measures, and the second build only runs while fonts load. Every
+box (caption and censor) has a handle per side (`-edge-n/s/e/w`, physical
+sides because a picture does not mirror) plus the corner, and a move handle
+with an icon at the top-start corner, because a selected caption's inside is
+the text field. **Verified to fail**: putting the size coupling back reddens
+the size case.
+
 ## A picture laid on the video, and two vacuous greens (`video-edit`)
 
 The second half of the merge: the video editor takes a picture too — a logo, a

@@ -1198,3 +1198,11 @@ export function SlidesIcon({ className }: P) {
     </svg>
   )
 }
+
+export function MoveIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5" />
+    </svg>
+  )
+}

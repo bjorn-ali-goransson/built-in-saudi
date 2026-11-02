@@ -812,3 +812,90 @@ test('ON A PHONE THE TOOL DOCK DOES NOT COVER THE WAY OUT', async ({ page }) => 
   const stage = (await page.getByTestId('ie-stage').boundingBox())!
   expect(tools.x).toBeGreaterThanOrEqual(stage.x - 1)
 })
+
+// ---------------------------------------------------------------------------
+// A caption's text size is its own control, and its box has a handle per side
+// and a move handle. The size used to follow the box's height, so a multi-line
+// caption could never fit: every line the box grew to make room for grew the
+// letters too, and the field re-measured itself on every render of the editor.
+
+/** Drag the centre of one element by (dx, dy) screen pixels. */
+async function dragBy(page: Page, testid: string, dx: number, dy: number) {
+  const b = await page.getByTestId(testid).boundingBox()
+  if (!b) throw new Error(`no ${testid}`)
+  const x = b.x + b.width / 2, y = b.y + b.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 4 })
+  await page.mouse.move(x + dx, y + dy, { steps: 4 })
+  await page.mouse.up()
+}
+
+const fontPx = (page: Page) => page.getByTestId('ie-caption-text-0')
+  .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+
+async function captionReady(page: Page) {
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ie-aspect-source').click()
+  await page.getByTestId('ie-mode-text').click()
+  await drawBox(page, [0.1, 0.36], [0.6, 0.56])
+  await expect(page.getByTestId('ie-caption-text-0')).toBeVisible()
+}
+
+test('a caption keeps its text size when its box is resized, and + / − change it', async ({ page }) => {
+  await captionReady(page)
+  const field = page.getByTestId('ie-caption-text-0')
+  await field.fill('one\ntwo\nthree')
+  const before = await fontPx(page)
+  await dragBy(page, 'ie-caption-box-0-edge-s', 0, 60)
+  // Read back through the box: it did grow, and the letters did not.
+  await expect.poll(async () => (await page.getByTestId('ie-caption-box-0').boundingBox())?.height ?? 0).toBeGreaterThan(0)
+  expect(await fontPx(page)).toBeCloseTo(before, 0)
+
+  await page.getByTestId('ie-caption-bigger-0').click()
+  await expect.poll(() => fontPx(page)).toBeGreaterThan(before * 1.1)
+  await page.getByTestId('ie-caption-smaller-0').click()
+  await page.getByTestId('ie-caption-smaller-0').click()
+  await expect.poll(() => fontPx(page)).toBeLessThan(before * 0.95)
+})
+
+test('a multi-line caption settles: the field stops re-measuring once typed', async ({ page }) => {
+  await captionReady(page)
+  await page.getByTestId('ie-caption-text-0').fill('first line\nsecond line\nthird line\nfourth')
+  const h = () => page.getByTestId('ie-caption-text-0').evaluate((el) => (el as HTMLElement).offsetHeight)
+  await page.waitForTimeout(300)
+  const a = await h()
+  await page.waitForTimeout(600)
+  expect(await h()).toBe(a)
+})
+
+test('each side of a box has its own handle, and the opposite side stays put', async ({ page }) => {
+  await captionReady(page)
+  const box = () => page.getByTestId('ie-caption-box-0').boundingBox()
+  const b0 = (await box())!
+  await dragBy(page, 'ie-caption-box-0-edge-n', 0, -30)
+  const b1 = (await box())!
+  expect(b1.y).toBeLessThan(b0.y - 15)
+  expect(b1.y + b1.height).toBeCloseTo(b0.y + b0.height, 0)
+  await dragBy(page, 'ie-caption-box-0-edge-w', -20, 0)
+  const b2 = (await box())!
+  expect(b2.x).toBeLessThan(b1.x - 10)
+  expect(b2.x + b2.width).toBeCloseTo(b1.x + b1.width, 0)
+  await dragBy(page, 'ie-caption-box-0-edge-e', 20, 0)
+  const b3 = (await box())!
+  expect(b3.x).toBeCloseTo(b2.x, 0)
+  expect(b3.width).toBeGreaterThan(b2.width + 10)
+})
+
+test('a selected box has a move handle with an icon, and it moves the box', async ({ page }) => {
+  await captionReady(page)
+  const move = page.getByTestId('ie-caption-box-0-move')
+  await expect(move.locator('svg')).toHaveCount(1)
+  const b0 = (await page.getByTestId('ie-caption-box-0').boundingBox())!
+  await dragBy(page, 'ie-caption-box-0-move', 25, 20)
+  const b1 = (await page.getByTestId('ie-caption-box-0').boundingBox())!
+  expect(b1.x).toBeGreaterThan(b0.x + 15)
+  expect(b1.y).toBeGreaterThan(b0.y + 10)
+  expect(b1.width).toBeCloseTo(b0.width, 0)
+})
