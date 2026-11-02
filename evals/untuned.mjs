@@ -64,7 +64,7 @@ export const UNTUNED = [
   ['meme', 'image-edit'],
   ['blur a face', 'image-edit'],
   ['srt', 'subtitle-editor'],
-  ['passport photo', 'passport-photo'],
+  ['passport photo', 'image-edit'],
   ['typing speed', 'typing-test'],
   ['kanban', 'kanban'],
   ['flashcards', 'flashcards'],

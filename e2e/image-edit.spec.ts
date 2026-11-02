@@ -1125,3 +1125,87 @@ test('a cut-out turns JPEG into PNG, since JPEG would paint the transparency bla
   await expect(page.getByTestId('ie-bg-restore')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByTestId('ie-format')).toHaveValue('image/png')
 })
+
+// ---------------------------------------------------------------------------
+// PASSPORT AND ID PHOTOS live here now (the Passport Photo app, folded in).
+// An ID size locks the crop's shape, fixes the output to the spec's exact
+// pixels, and puts white behind anything transparent.
+// ---------------------------------------------------------------------------
+
+/** A 600×600 head-and-shoulders stand-in, larger than a 300dpi 35×45mm frame. */
+async function pickPortrait(page: Page) {
+  const dataUrl = await page.evaluate(() => {
+    const c = document.createElement('canvas')
+    c.width = 600; c.height = 600
+    const ctx = c.getContext('2d')!
+    ctx.fillStyle = '#c8b89a'; ctx.fillRect(0, 0, 600, 600)
+    ctx.fillStyle = '#3b2f22'; ctx.beginPath(); ctx.arc(300, 260, 120, 0, Math.PI * 2); ctx.fill()
+    return c.toDataURL('image/png')
+  })
+  await page.getByTestId('ie-file').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: Buffer.from(dataUrl.split(',')[1], 'base64') })
+  await expect(page.getByTestId('ie-settings-panel')).toBeVisible({ timeout: 20_000 })
+}
+
+test('the passport app\'s address opens an ID photo at the spec\'s exact pixels', async ({ page }) => {
+  await page.goto('/en/apps/passport-photo')
+  await expect(page).toHaveURL(/\/en\/apps\/image-edit\?mode=passport$/)
+  await pickPortrait(page)
+  // Saudi 4×6cm at 300dpi = 472 × 709 px.
+  await expect(page.getByTestId('ie-id-spec')).toHaveValue('saudi-4x6')
+  await expect(page.getByTestId('ie-out-size')).toHaveText('472×709')
+  await page.getByTestId('ie-id-spec').selectOption('passport-35x45')
+  await expect(page.getByTestId('ie-out-size')).toHaveText('413×531')
+  await page.getByTestId('ie-id-dpi').selectOption('600')
+  await expect(page.getByTestId('ie-out-size')).toHaveText('827×1063')
+})
+
+test('the exported ID photo is exactly the spec, with the spec\'s name', async ({ page }) => {
+  await page.goto('/en/apps/image-edit?mode=passport')
+  await pickPortrait(page)
+  await page.getByTestId('ie-settings-close').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByTestId('ie-download')).toHaveAttribute('download', 'photo-saudi-4x6.jpg')
+  const m = await decodeExport(page)
+  expect([m.w, m.h]).toEqual([472, 709])
+})
+
+test('it says how many copies fit on a print sheet, and downloads one', async ({ page }) => {
+  await page.goto('/en/apps/image-edit?mode=passport')
+  await pickPortrait(page)
+  // 4×6in print is 152×102mm; a 40×60mm photo with a 2mm gap tiles 3 across, 1 down.
+  await expect(page.getByTestId('ie-id-percount')).toContainText('3 copies')
+  await page.getByTestId('ie-id-sheet').selectOption('a4')
+  await expect(page.getByTestId('ie-id-percount')).toContainText('20 copies')
+  const dl = page.waitForEvent('download')
+  await page.getByTestId('ie-id-sheet-download').click()
+  expect((await dl).suggestedFilename()).toBe('photo-sheet-a4.jpg')
+})
+
+test('it warns when the crop is too small to print', async ({ page }) => {
+  await page.goto('/en/apps/image-edit?mode=passport')
+  await page.getByTestId('ie-file').setInputFiles({ name: 'tiny.png', mimeType: 'image/png', buffer: solidPng(40, 60, [200, 180, 160]) })
+  await expect(page.getByTestId('ie-id-lowres')).toBeVisible({ timeout: 20_000 })
+})
+
+test('a cut-out ID photo has a WHITE background, not black', async ({ page }) => {
+  await stubRemover(page)
+  await page.goto('/en/apps/image-edit?mode=passport')
+  await pickPortrait(page)
+  await page.getByTestId('ie-bg-remove').click()
+  await expect(page.getByTestId('ie-bg-restore')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('ie-settings-close').click()
+  await page.getByTestId('ie-export').click()
+  await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+  // The stub cleared the left half; in an ID photo that is white.
+  const px = await exportedPixelAt(page, 0.05, 0.5)
+  expect(px.every((v) => v > 240), px.join(',')).toBe(true)
+})
+
+test('an ID photo is a choice, not the default', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ie-settings').click()
+  await expect(page.getByTestId('ie-id-spec')).toHaveValue('')
+  await expect(page.getByTestId('ie-id-percount')).toHaveCount(0)
+})

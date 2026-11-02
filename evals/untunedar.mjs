@@ -39,7 +39,7 @@ export const UNTUNED_AR = [
   ['إزالة الخلفية من الصورة', 'image-edit'],
   ['قص الصورة', 'image-edit'],
   ['تصغير حجم الصورة', 'image-edit'],
-  ['صورة شخصية للجواز', 'passport-photo'],
+  ['صورة شخصية للجواز', 'image-edit'],
   // EXPECTATION WAS WRONG. «إخفاء معلومات في صورة» is literally "hiding
   // information inside an image", which IS steganography — the tool that won.
   // The Arabic for redaction is «طمس», so that is what the redactor is benched

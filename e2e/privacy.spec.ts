@@ -257,7 +257,6 @@ ${TOKEN}
     reveal: async (page) => { await page.getByTestId('tr-mode-picture').click() } },
   { id: 'colour-blind', testid: 'cb-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN),
     reveal: (page) => page.getByTestId('cb-mode-image').click() },
-  { id: 'passport-photo', testid: 'pp-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   { id: 'batch-watermark', testid: 'bw-file', name: 'shot.png', mime: 'image/png', make: () => pngWithToken(TOKEN) },
   {
     id: 'subtitle-editor', testid: 'sub-file', name: 'movie.srt', mime: 'text/plain',

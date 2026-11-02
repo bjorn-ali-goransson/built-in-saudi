@@ -856,20 +856,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/password-strength"/>
   </url>
   <url>
-    <loc>https://built-in-saudi.com/en/apps/passport-photo/</loc>
-    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/passport-photo"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/passport-photo"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/passport-photo"/>
-  </url>
-  <url>
-    <loc>https://built-in-saudi.com/ar/apps/passport-photo/</loc>
-    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/passport-photo"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://built-in-saudi.com/ar/apps/passport-photo"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://built-in-saudi.com/en/apps/passport-photo"/>
-  </url>
-  <url>
     <loc>https://built-in-saudi.com/en/apps/spin-wheel/</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://built-in-saudi.com/en/apps/spin-wheel"/>

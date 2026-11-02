@@ -59,7 +59,6 @@ import { arabicNormalizeTool } from './arabic-normalize/meta'
 import { weatherTool } from './weather/meta'
 import { idExpiryTool } from './id-expiry/meta'
 import { passwordStrengthTool } from './password-strength/meta'
-import { passportPhotoTool } from './passport-photo/meta'
 import { audioConvertTool } from './audio-convert/meta'
 import { pdfToWordTool } from './pdf-to-word/meta'
 import { spinWheelTool } from './spin-wheel/meta'
@@ -106,7 +105,6 @@ export const tools: Tool[] = [
   excelEditorTool,
   wordEditorTool,
   powerpointEditorTool,
-  passportPhotoTool,
   weatherTool,
   audioConvertTool,
   videoEditTool,

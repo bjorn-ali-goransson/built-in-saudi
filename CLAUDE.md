@@ -3910,6 +3910,20 @@ decisions:
   shrinking a photo or cutting one out must get it back true; an ordinary visit
   keeps the joke on, and there is a case for each.
 
+**And the Passport Photo app** (`?mode=passport`, `idSpecs.ts`). An ID size on
+the settings screen locks the crop to the spec's proportion (every resize
+snaps to it), fixes the output to the spec's exact pixels at the chosen DPI,
+draws the head band and eye line inside the crop, warns when the crop is
+smaller than the print needs, and tiles a print sheet. **White goes UNDER
+everything** (`destination-over`) whenever a spec is chosen, because a removed
+background is transparent and JPEG paints transparency black — verified to
+fail without it, reading 0,0,0. Its official disclaimer shows on the intake
+screen of an ID visit and beside the size, and `disclaimers.spec.ts` visits
+that address (`PATH`). **A state initialiser runs in order during the first
+render**: the ID size first read `entry`, declared further down, and the whole
+editor failed to mount — tsc cannot see that through a closure, and 42 cases
+went red at once.
+
 **The download is invalidated by `source`, not by a list of what feeds it.** The
 list missed the cut-out first, and then the straightened page and the
 cut-and-compose pieces, which had been leaving a stale file on the button since

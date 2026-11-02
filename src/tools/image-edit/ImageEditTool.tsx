@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '../../i18n'
-import { Button, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
+import { Button, Disclaimer, Field, FileError, Input, Seg, SegButton, Select, Spinner, Stack } from '../../components/ui'
 import {
   BackIcon, CloseIcon, CogIcon, CropIcon, DownloadIcon, ImageIcon, MosaicIcon, ScissorsIcon, TextIcon,
   MoveIcon, TiltIcon, TrashIcon,
 } from '../../components/icons'
 import { setWorkInProgress } from '../../lib/workInProgress'
 import type { ScanReq, ScanRes } from './scan.worker'
+import { SPECS, SHEETS, DPI_CHOICES, pixelSize, tileCount, drawSheet } from './idSpecs'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { renderCaption } from '../../lib/captionBitmap'
@@ -91,6 +92,15 @@ const STR = {
     modeCensor: 'Hide something',
     modeText: 'Caption',
     modeMore: 'Output settings',
+    idTitle: 'ID or passport photo',
+    idNone: 'Not an ID photo',
+    idDpi: 'Print quality',
+    idSheet: 'Print sheet',
+    idSheetDownload: 'Download a print sheet',
+    idSheetOf: (n: number, name: string) => `${n} copies on ${name}`,
+    idLowRes: 'This crop is smaller than the print needs — it will look soft. Crop less, or use a larger original.',
+    idGuide: 'In the crop, fit the top of the head and the chin between the two green lines, and the eyes on the dashed one.',
+    idDisclaimer: 'These are the published dimensions. Requirements change, and the office accepting your application has the final say — check theirs before you print a sheet of them.',
     pageTitle: 'Page',
     straighten: 'Straighten a page',
     unstraighten: 'Use the photo as it was',
@@ -162,6 +172,15 @@ const STR = {
     modeCensor: 'إخفاء جزء',
     modeText: 'نص',
     modeMore: 'إعدادات المُخرَج',
+    idTitle: 'صورة هوية أو جواز',
+    idNone: 'ليست صورة هوية',
+    idDpi: 'جودة الطباعة',
+    idSheet: 'ورقة الطباعة',
+    idSheetDownload: 'نزّل ورقة طباعة',
+    idSheetOf: (n: number, name: string) => `${n.toLocaleString('ar')} نسخة على ${name}`,
+    idLowRes: 'هذا الاقتصاص أصغر مما تتطلبه الطباعة — سيبدو غير حاد. اقتصّ أقل، أو استخدم أصلًا أكبر.',
+    idGuide: 'في الاقتصاص، اجعل أعلى الرأس والذقن بين الخطين الأخضرين، والعينين على الخط المتقطّع.',
+    idDisclaimer: 'هذه هي المقاسات المنشورة. تتغيّر المتطلبات، والجهة التي تستقبل معاملتك هي صاحبة القرار — راجع متطلباتها قبل طباعة ورقة كاملة منها.',
     pageTitle: 'الصفحة',
     straighten: 'عدّل ميل صفحة',
     unstraighten: 'استخدم الصورة كما كانت',
@@ -408,6 +427,21 @@ export default function ImageEditTool() {
   const [pageBusy, setPageBusy] = useState(false)
   const [pageError, setPageError] = useState('')
   const scanRef = useRef<Worker | null>(null)
+  /**
+   * AN ID OR PASSPORT PHOTO (the Passport Photo app, folded in). A spec locks
+   * the crop to its proportion, fixes the output to its exact pixels at the
+   * chosen DPI, draws the head and eye guides inside the crop, and puts white
+   * behind anything transparent — which is what a removed background is.
+   */
+  // Read from the URL here rather than from `entry`, which is declared further
+  // down: a state initialiser runs during the first render, in order.
+  const [idSpecId, setIdSpecId] = useState<string | null>(() => {
+    try { return new URLSearchParams(window.location.search).get('mode') === 'passport' ? SPECS[0].id : null } catch { return null }
+  })
+  const [idDpi, setIdDpi] = useState<number>(300)
+  const [idSheetId, setIdSheetId] = useState(SHEETS[0].id)
+  const idSpec = idSpecId ? SPECS.find((x) => x.id === idSpecId) ?? null : null
+  const idSheet = SHEETS.find((x) => x.id === idSheetId) ?? SHEETS[0]
   useEffect(() => () => { scanRef.current?.terminate() }, [])
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -445,10 +479,10 @@ export default function ImageEditTool() {
   // for somebody whose whole aim is a smaller file.
   const [format, setFormat] = useState<string>(() => {
     // A straightened page is mostly flat white, which JPEG compresses best.
-    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' || m === 'scan' ? 'image/jpeg' : 'image/png' } catch { return 'image/png' }
+    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' || m === 'scan' || m === 'passport' ? 'image/jpeg' : 'image/png' } catch { return 'image/png' }
   })
   const [quality, setQuality] = useState(() => {
-    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' ? 0.8 : m === 'scan' ? 0.85 : 0.9 } catch { return 0.9 }
+    try { const m = new URLSearchParams(window.location.search).get('mode'); return m === 'compress' ? 0.8 : m === 'scan' ? 0.85 : m === 'passport' ? 0.95 : 0.9 } catch { return 0.9 }
   })
   const [maxSide, setMaxSide] = useState(0)
   /**
@@ -606,10 +640,11 @@ export default function ImageEditTool() {
   }, [base, pieces, fill, dim])
   const sourceAspect = dim.width / dim.height
   const aspect = useMemo(() => {
+    if (idSpec) return idSpec.wmm / idSpec.hmm
     if (aspectId === 'free' && freeAspect) return freeAspect
     const found = ASPECTS.find((a) => a.id === aspectId)
     return found && found.aspect ? found.aspect : sourceAspect
-  }, [aspectId, freeAspect, sourceAspect])
+  }, [aspectId, freeAspect, sourceAspect, idSpec])
   const formats = useMemo(
     () => ASPECTS.map((a) => ({ id: a.id, aspect: a.aspect || sourceAspect })),
     [sourceAspect],
@@ -622,10 +657,13 @@ export default function ImageEditTool() {
 
   /** The output, in pixels. Capped, never upscaled. */
   const size = useMemo(() => {
+    // An ID photo is EXACTLY its spec's pixels: an office asks for 35×45mm at
+    // a resolution, not for "about that shape".
+    if (idSpec) { const p = pixelSize(idSpec, idDpi); return { width: p.w, height: p.h } }
     const r = cropRect(dim, crop)
     const k = maxSide > 0 ? Math.min(1, maxSide / Math.max(r.w, r.h)) : 1
     return { width: Math.max(1, Math.round(r.w * k)), height: Math.max(1, Math.round(r.h * k)) }
-  }, [dim, crop, maxSide])
+  }, [dim, crop, maxSide, idSpec, idDpi])
 
   /**
    * What the crop throws away — the number this family exists to put on screen.
@@ -742,7 +780,16 @@ export default function ImageEditTool() {
       const r = captionRect(drawn.rect, o)
       ctx.drawImage(drawn.bitmap, r.x, r.y, r.w, r.h)
     }
-  }, [source, dim, crop, censors, captions])
+    // An ID photo has a WHITE background, and a removed one is transparent:
+    // white goes UNDER everything already drawn, so nothing on top changes.
+    if (idSpec) {
+      ctx.save()
+      ctx.globalCompositeOperation = 'destination-over'
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, o.width, o.height)
+      ctx.restore()
+    }
+  }, [source, dim, crop, censors, captions, idSpec])
 
   /**
    * Draw the stage — from an ANIMATION FRAME, not from an effect on the state
@@ -821,6 +868,27 @@ export default function ImageEditTool() {
       ctx.fillRect(0, by + bh, shown.width, shown.height - by - bh)
       ctx.fillRect(0, by, bx, bh)
       ctx.fillRect(bx + bw, by, shown.width - bx - bw, bh)
+      // The guides an office actually checks, inside the crop: the head band
+      // (crown to chin) centred on the eye line, as the Passport Photo app drew
+      // them, now over the rectangle being positioned.
+      if (mode === 'crop' && idSpec) {
+        const eyeY = by + idSpec.eyes * bh
+        const headH = ((idSpec.head[0] + idSpec.head[1]) / 2) * bh
+        const crown = eyeY - headH * 0.42
+        const chin = crown + headH
+        ctx.strokeStyle = 'rgba(74,222,128,0.95)'
+        ctx.lineWidth = 2
+        ctx.beginPath(); ctx.moveTo(bx, crown); ctx.lineTo(bx + bw, crown); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(bx, chin); ctx.lineTo(bx + bw, chin); ctx.stroke()
+        ctx.strokeStyle = 'rgba(226,190,120,0.95)'
+        ctx.setLineDash([6, 5])
+        ctx.beginPath(); ctx.moveTo(bx, eyeY); ctx.lineTo(bx + bw, eyeY); ctx.stroke()
+        ctx.setLineDash([])
+        ctx.strokeStyle = 'rgba(74,222,128,0.45)'
+        ctx.beginPath()
+        ctx.ellipse(bx + bw / 2, (crown + chin) / 2, headH * 0.34, headH / 2, 0, 0, Math.PI * 2)
+        ctx.stroke()
+      }
       return
     }
     const k = Math.min(1, PREVIEW_MAX / Math.max(size.width, size.height))
@@ -833,7 +901,7 @@ export default function ImageEditTool() {
     const ctx = rc.getContext('2d')
     if (!ctx) return
     compose(ctx, shown, mode === 'text' ? pickedCaption : null)
-  }, [source, img, corners, mode, dim, cropBox, view.x, view.y, view.w, view.h, padFill, size, compose, pickedCaption])
+  }, [source, img, corners, mode, dim, cropBox, view.x, view.y, view.w, view.h, padFill, size, compose, pickedCaption, idSpec])
 
   useEffect(() => {
     let raf = 0
@@ -873,7 +941,9 @@ export default function ImageEditTool() {
     // the whole of what those two apps were. The model is NOT started for the
     // cut-out: it is a download of several megabytes, and it waits for a tap,
     // as it did in the app it came from.
-    if (entry === 'compress' || entry === 'cutout') setSettings(true)
+    // An ID visit too: the size is chosen there, then the face is placed in
+    // the crop with the guides on.
+    if (entry === 'compress' || entry === 'cutout' || entry === 'passport') setSettings(true)
     setUnwarped((old) => { old?.close(); return null })
     setPageError('')
     setName(f.name)
@@ -1091,6 +1161,26 @@ export default function ImageEditTool() {
     return () => { live = false; window.clearTimeout(t) }
   }, [settings, img, renderBlob])
 
+  /** The print sheet: the photo exactly as the download would be, tiled. */
+  async function downloadSheet() {
+    if (!idSpec || !img) return
+    const photo = document.createElement('canvas')
+    photo.width = size.width
+    photo.height = size.height
+    const ctx = photo.getContext('2d')
+    if (!ctx) return
+    compose(ctx, size)
+    const sheet = drawSheet(photo, idSpec, idSheet, idDpi, 2)
+    const blob = await new Promise<Blob | null>((r) => sheet.toBlob(r, 'image/jpeg', 0.95))
+    if (!blob) { setError(s.errors.encode); return }
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `photo-sheet-${idSheet.id}.jpg`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   async function doExport() {
     if (!img) return
     setBusy('export')
@@ -1190,10 +1280,15 @@ export default function ImageEditTool() {
         setCentre({ x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 })
         return
       }
-      const next = cropFromDrag(r, d.id, formats, dim, SNAP_TOL, out)
+      // An ID photo's shape is the spec's, so every resize snaps to it.
+      const next = idSpec
+        ? cropFromDrag(r, d.id, [{ id: 'id', aspect: idSpec.wmm / idSpec.hmm }], dim, Infinity, out)
+        : cropFromDrag(r, d.id, formats, dim, SNAP_TOL, out)
       snappedRef.current = !!next.format
-      if (next.format) setAspectId(next.format.id)
-      else { setFreeAspect(next.aspect); setAspectId('free') }
+      if (!idSpec) {
+        if (next.format) setAspectId(next.format.id)
+        else { setFreeAspect(next.aspect); setAspectId('free') }
+      }
       setZoom(next.zoom)
       setCentre({ x: next.cx, y: next.cy })
       return
@@ -1433,6 +1528,9 @@ export default function ImageEditTool() {
           </div>
         </div>
         {error && <FileError message={error} />}
+        {/* Said before the photo is taken, too: somebody about to have one
+            printed for an application needs it before, not after. */}
+        {entry === 'passport' && <Disclaimer kind="official" locale={locale}>{s.idDisclaimer}</Disclaimer>}
       </Stack>
     )
   }
@@ -1812,7 +1910,7 @@ export default function ImageEditTool() {
                 is nothing to download. */}
             {out ? (
               <a href={out.url} data-testid="ie-download"
-                download={`edited-${name.replace(/\.[^.]+$/, '')}.${FORMATS.find((f) => f.id === format)?.ext ?? 'png'}`}
+                download={idSpec ? `photo-${idSpec.id}.${FORMATS.find((f) => f.id === format)?.ext ?? 'jpg'}` : `edited-${name.replace(/\.[^.]+$/, '')}.${FORMATS.find((f) => f.id === format)?.ext ?? 'png'}`}
                 title={`${s.download} · ${mb(out.size)}`} aria-label={s.download}
                 className="grid place-items-center w-10 h-10 rounded-md border bg-green-600 border-green-700 text-[color:var(--primary-ink)] cursor-pointer no-underline">
                 <DownloadIcon className="w-5 h-5" />
@@ -1995,6 +2093,44 @@ export default function ImageEditTool() {
                 <CloseIcon className="w-4 h-4" />
               </button>
             </div>
+
+            <Field label={s.idTitle}>
+              <div className="flex flex-col gap-2" data-testid="ie-id">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Select value={idSpecId ?? ''} data-testid="ie-id-spec" onChange={(e) => setIdSpecId(e.target.value || null)}>
+                    <option value="">{s.idNone}</option>
+                    {SPECS.map((x) => <option key={x.id} value={x.id}>{locale === 'ar' ? x.ar : x.en}</option>)}
+                  </Select>
+                  {idSpec && (
+                    <Select value={idDpi} data-testid="ie-id-dpi" aria-label={s.idDpi} onChange={(e) => setIdDpi(Number(e.target.value))}>
+                      {DPI_CHOICES.map((d) => <option key={d} value={d}>{d} DPI</option>)}
+                    </Select>
+                  )}
+                </div>
+                {idSpec && (
+                  <>
+                    {idSpec.note && <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{idSpec.note[locale]}</p>}
+                    <p className="text-[0.8rem] text-ink-faint rtl:font-ar">{s.idGuide}</p>
+                    {(cropRect(dim, crop).w < size.width || cropRect(dim, crop).h < size.height) && (
+                      <p className="text-[0.85rem] text-gold-500 rtl:font-ar" data-testid="ie-id-lowres">{s.idLowRes}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Select value={idSheetId} data-testid="ie-id-sheet" aria-label={s.idSheet} onChange={(e) => setIdSheetId(e.target.value)}>
+                        {SHEETS.map((x) => <option key={x.id} value={x.id}>{locale === 'ar' ? x.ar : x.en}</option>)}
+                      </Select>
+                      <Button data-testid="ie-id-sheet-download" onClick={() => { void downloadSheet() }}
+                        disabled={tileCount(idSheet, idSpec, 2).cols * tileCount(idSheet, idSpec, 2).rows === 0}>
+                        {s.idSheetDownload}
+                      </Button>
+                      <span className="text-[0.85rem] text-ink-faint rtl:font-ar" data-testid="ie-id-percount">
+                        {s.idSheetOf(tileCount(idSheet, idSpec, 2).cols * tileCount(idSheet, idSpec, 2).rows, locale === 'ar' ? idSheet.ar : idSheet.en)}
+                      </span>
+                    </div>
+                    <Disclaimer kind="official" locale={locale}>{s.idDisclaimer}</Disclaimer>
+                  </>
+                )}
+              </div>
+            </Field>
 
             <Field label={s.pageTitle}>
               <div className="flex flex-col gap-2">

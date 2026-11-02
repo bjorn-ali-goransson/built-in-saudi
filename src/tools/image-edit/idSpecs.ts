@@ -81,3 +81,36 @@ export function tileCount(sheet: Sheet, spec: Spec, gapMm: number): { cols: numb
   const rows = Math.floor((sheet.hmm + gapMm) / (spec.hmm + gapMm))
   return { cols: Math.max(0, cols), rows: Math.max(0, rows) }
 }
+
+/**
+ * Tile the finished photo across a print sheet, with cut gaps. A print sheet is
+ * the cheapest way to get the copies an application asks for: one 4×6in print
+ * at a photo counter holds three Saudi 4×6cm photos.
+ */
+export function drawSheet(photo: HTMLCanvasElement, spec: Spec, sheet: Sheet, dpi: number, gapMm: number): HTMLCanvasElement {
+  const mmToPx = (mm: number) => Math.round((mm / 25.4) * dpi)
+  const canvas = document.createElement('canvas')
+  canvas.width = mmToPx(sheet.wmm)
+  canvas.height = mmToPx(sheet.hmm)
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  const { cols, rows } = tileCount(sheet, spec, gapMm)
+  const pw = mmToPx(spec.wmm)
+  const ph = mmToPx(spec.hmm)
+  const gap = mmToPx(gapMm)
+  const originX = Math.round((canvas.width - (cols * pw + (cols - 1) * gap)) / 2)
+  const originY = Math.round((canvas.height - (rows * ph + (rows - 1) * gap)) / 2)
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = originX + c * (pw + gap)
+      const y = originY + r * (ph + gap)
+      ctx.drawImage(photo, x, y, pw, ph)
+      // Hairline cut guides — without them people cut by eye and lose the margin.
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1)
+    }
+  }
+  return canvas
+}

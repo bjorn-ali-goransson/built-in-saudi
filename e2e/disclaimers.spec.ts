@@ -7,16 +7,22 @@ import { test, expect } from '@playwright/test'
 const NEEDS: { id: string; kind: string }[] = [
   { id: 'zakat-calculator', kind: 'religious' },
   { id: 'id-expiry', kind: 'official' },
-  { id: 'passport-photo', kind: 'official' },
+  // The Passport Photo app's caveat, now in the image editor. It shows on the
+  // intake screen of an ID visit (and with an ID size chosen), so the guard
+  // visits that address.
+  { id: 'image-edit', kind: 'official' },
   // Found by scripts/check-disclaimers.mjs: each of these had a guarded twin
   // carrying the same class of caveat while it carried none.
   { id: 'currency-converter', kind: 'financial' },
 ]
 
+/** Where a tool shows its disclaimer, when that is not its plain address. */
+const PATH: Record<string, string> = { 'image-edit': 'image-edit?mode=passport' }
+
 for (const { id, kind } of NEEDS) {
   for (const locale of ['en', 'ar'] as const) {
     test(`${id} carries its ${kind} disclaimer (${locale})`, async ({ page }) => {
-      await page.goto(`/${locale}/apps/${id}`)
+      await page.goto(`/${locale}/apps/${PATH[id] ?? id}`)
       const note = page.getByTestId('disclaimer')
       await expect(note.first()).toBeVisible()
       await expect(note.first()).toHaveAttribute('data-kind', kind)

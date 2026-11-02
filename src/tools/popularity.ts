@@ -57,7 +57,6 @@ export const VIEWS: Record<string, number> = {
   'markdown-table': 3,
   'metronome': 8,
   'name-spelling': 4,
-  'passport-photo': 8,
   'password-generator': 38,
   'password-strength': 6,
   'pdf-compress': 33,
