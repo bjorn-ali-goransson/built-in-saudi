@@ -7405,7 +7405,14 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `info` returns the slot and `you` (invitee / other / none); a dead
   subscription (404/410) is dropped. The server is the truth; links carry
   `ok=o|g|og` only to mirror it. Calls' `splashExtra` host field is where the
-  embedder draws its panel on the pre-call screen.
+  embedder draws its panel on the pre-call screen; its `holdJoin(true)` keeps
+  a guest's "Ask to join" back while that panel asks them something first.
+  **The screens before and after a call take their colours from `--sp-*`**
+  (`--sp-bg`, `--sp-fg`, `--sp-cta`, `--sp-cta-fg`, `--sp-cta-hover`, defaults
+  in `theme.css`: green with cream, as always). Sawi Kalam re-sets them to its
+  cream page with one coral button, because a full screen of coral reads as
+  an alarm. Verified pixel-identical here after the change, apart from the
+  random guest name.
   Calls gained two host fields for it: `newMeetingPath` (where "new call" and
   "start your own" go instead of an unowned lobby) and `pendingRoom` (a known
   meeting nobody has started is waited in, not shown as ended).

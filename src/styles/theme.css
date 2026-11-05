@@ -55,6 +55,15 @@
   --shadow-lg: 0 20px 50px rgba(11, 61, 46, 0.16);
 
   --wrap: 1120px;
+
+  /* The screens before and after a call (Calls' start, waiting and ended
+     screens). Built-in-saudi paints them deep green with cream; an embedder
+     re-sets these to paint them its own way. */
+  --sp-bg: var(--green-700);
+  --sp-fg: var(--sand-100);
+  --sp-cta: var(--sand-100);
+  --sp-cta-fg: var(--green-700);
+  --sp-cta-hover: #ffffff;
 }
 
 /* Arabic / RTL: swap the display + body fonts to the Arabic face (Fraunces and

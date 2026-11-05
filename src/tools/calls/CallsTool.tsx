@@ -48,6 +48,9 @@ export default function CallsTool() {
   // A scheduled meeting's start time, from its link: shown, never enforced.
   const [startsAt] = useState(() => parseAt(window.location.search))
   const [details] = useState<MeetingDetails>(() => parseDetails(window.location.search))
+  // The embedder's pre-call panel can ask a guest something first (agree a
+  // time) and keep "Ask to join" out of the way until it is answered.
+  const [joinHeld, setJoinHeld] = useState(false)
   const [initialRoom] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('code') || p.get('room') || '' })
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
@@ -1334,32 +1337,32 @@ export default function CallsTool() {
   // at least the viewport minus the sticky header (68px desktop / 60px mobile).
   // Full-bleed: break out of ToolPage's centred `.wrap` (horizontal) and cancel its
   // vertical padding, so the green panel reaches every edge between header + footer.
-  const greenWrap = 'bg-green-700 text-sand-100 flex flex-col items-center justify-center px-6 py-14 w-screen mx-[calc(50%-50vw)] my-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
-  const cream = 'w-full h-12 rounded-md bg-sand-100 text-green-700 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white disabled:opacity-60 disabled:hover:bg-sand-100 border-0 cursor-pointer transition-colors'
+  const greenWrap = 'bg-[var(--sp-bg)] text-[color:var(--sp-fg)] flex flex-col items-center justify-center px-6 py-14 w-screen mx-[calc(50%-50vw)] my-[calc(clamp(1.5rem,4vw,2.5rem)*-1)] min-h-[calc(100dvh-68px)] max-[560px]:min-h-[calc(100dvh-60px)]'
+  const cream = 'w-full h-12 rounded-md bg-[var(--sp-cta)] text-[color:var(--sp-cta-fg)] font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-[var(--sp-cta-hover)] disabled:opacity-60 disabled:hover:bg-[var(--sp-cta)] border-0 cursor-pointer transition-colors'
   // The name, asked once the person is waiting or in the call (askNameFirst: false).
   // 'dark' sits on the waiting panel; 'bar' is docked under the call's toolbar.
   const nameForm = (tone: 'dark' | 'bar') => (
     <form data-testid="call-name-ask" onSubmit={(e) => { e.preventDefault(); answerName() }}
       className={tone === 'dark' ? 'w-full max-w-[22rem] flex flex-col gap-2' : 'flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,var(--color-green-400)_14%,var(--surface))]'}>
-      <label htmlFor="call-name-ask-input" className={tone === 'dark' ? 'text-[0.85rem] text-sand-100/85 text-center' : 'text-[0.9rem] font-medium text-ink'}>{s.askName}</label>
+      <label htmlFor="call-name-ask-input" className={tone === 'dark' ? 'text-[0.85rem] text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)] text-center' : 'text-[0.9rem] font-medium text-ink'}>{s.askName}</label>
       <div className={`flex gap-2 ${tone === 'dark' ? 'w-full' : 'flex-1 min-w-[14rem]'}`}>
         <input id="call-name-ask-input" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={s.yourName} autoComplete="name" maxLength={60} data-testid="call-name-ask-input"
           className="flex-1 min-w-0 h-10 px-3 rounded-md border border-[color:var(--line)] bg-[var(--surface)] text-ink text-[0.95rem]" />
         <button type="submit" disabled={!nameDraft.trim()} data-testid="call-name-ask-save"
-          className={`h-10 px-4 rounded-md border-0 font-semibold text-[0.9rem] cursor-pointer disabled:opacity-50 ${tone === 'dark' ? 'bg-sand-100 text-green-700' : 'bg-green-600 text-sand-50'}`}>{s.saveName}</button>
+          className={`h-10 px-4 rounded-md border-0 font-semibold text-[0.9rem] cursor-pointer disabled:opacity-50 ${tone === 'dark' ? 'bg-[var(--sp-cta)] text-[color:var(--sp-cta-fg)]' : 'bg-green-600 text-sand-50'}`}>{s.saveName}</button>
         <button type="button" onClick={() => setNameAsk(false)} data-testid="call-name-ask-dismiss"
-          className={`h-10 px-3 rounded-md bg-transparent border-0 text-[0.85rem] cursor-pointer ${tone === 'dark' ? 'text-sand-100/70 hover:text-sand-100' : 'text-ink-soft hover:text-ink'}`}>{s.notNow}</button>
+          className={`h-10 px-3 rounded-md bg-transparent border-0 text-[0.85rem] cursor-pointer ${tone === 'dark' ? 'text-[color:color-mix(in_srgb,var(--sp-fg)_70%,transparent)] hover:text-[color:var(--sp-fg)]' : 'text-ink-soft hover:text-ink'}`}>{s.notNow}</button>
       </div>
     </form>
   )
-  const ghost = 'w-full h-11 rounded-md bg-white/10 text-sand-100 font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors'
+  const ghost = 'w-full h-11 rounded-md bg-[color-mix(in_srgb,var(--sp-fg)_10%,transparent)] text-[color:var(--sp-fg)] font-medium text-[0.9rem] flex items-center justify-center gap-2 hover:bg-[color-mix(in_srgb,var(--sp-fg)_20%,transparent)] border border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] cursor-pointer transition-colors'
   const ringing = !!incomingLink && !answered
   // Incoming screen: the phone bounces instead of pulsing (#189). Other green
   // screens (ended/waiting) keep it still — `ringing` is only true while an
   // unanswered ring is on screen.
   // A meeting's screen says what the meeting is and nothing else (host.ts).
   const splash = callsHost().meetingSplash && !!initialRoom
-  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-sand-100 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
+  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-[color:var(--sp-fg)] shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null
@@ -1402,7 +1405,7 @@ export default function CallsTool() {
           {ended.reason === 'left' ? (
             <>
               <p className="text-[1.2rem] font-display">{s.youEnded}</p>
-              {ended.count > 0 && <p className="text-[0.9rem] text-sand-100/75">{s.stillThere(ended.count)}</p>}
+              {ended.count > 0 && <p className="text-[0.9rem] text-[color:color-mix(in_srgb,var(--sp-fg)_75%,transparent)]">{s.stillThere(ended.count)}</p>}
               <div className="w-full flex flex-col gap-3">
                 <button className={cream} onClick={rejoin} data-testid="call-rejoin">{ringCode ? callAgainLabel : s.rejoin}</button>
                 <button className={ghost} onClick={newCall}>{s.createAnother}</button>
@@ -1412,7 +1415,7 @@ export default function CallsTool() {
             // The link owner declined this caller — show their note as the reason.
             <>
               <p className="text-[1.2rem] font-display" data-testid="call-declined">{s.declinedTitle}</p>
-              <p className="text-[0.95rem] text-sand-100/85 leading-relaxed" data-testid="call-declined-msg">{ended.message?.trim() ? `“${ended.message.trim()}”` : s.declinedGeneric}</p>
+              <p className="text-[0.95rem] text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)] leading-relaxed" data-testid="call-declined-msg">{ended.message?.trim() ? `“${ended.message.trim()}”` : s.declinedGeneric}</p>
               <button className={cream} onClick={newCall}>{s.createNew}</button>
             </>
           ) : ended.reason === 'notadmitted' ? (
@@ -1426,7 +1429,7 @@ export default function CallsTool() {
                 <button className={cream} onClick={rejoin} data-testid="call-again">{callAgainLabel}</button>
                 {/* Ghosted → ask to be called back instead of chasing them (#211). */}
                 {ringCode && (callBackState === 'done' ? (
-                  <p className="text-[0.85rem] text-sand-100/80 text-center leading-relaxed" data-testid="call-back-asked">{s.askedCallBack}</p>
+                  <p className="text-[0.85rem] text-[color:color-mix(in_srgb,var(--sp-fg)_80%,transparent)] text-center leading-relaxed" data-testid="call-back-asked">{s.askedCallBack}</p>
                 ) : (
                   <>
                     <button className={`${ghost} disabled:opacity-60 [&_svg]:w-4 [&_svg]:h-4`} onClick={askCallBack} disabled={callBackState === 'busy'} data-testid="call-back-ask">
@@ -1454,26 +1457,26 @@ export default function CallsTool() {
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
           {splash && !checking && !(incomingLink && !answered) && (
-            <h1 className="m-0 text-center text-[1.6rem] leading-tight text-sand-100 [overflow-wrap:anywhere]" data-testid="call-meeting-title">{meetingTitle(locale === 'ar', details.by, details.title)}</h1>
+            <h1 className="m-0 text-center text-[1.6rem] leading-tight text-[color:var(--sp-fg)] [overflow-wrap:anywhere]" data-testid="call-meeting-title">{meetingTitle(locale === 'ar', details.by, details.title)}</h1>
           )}
           {(startsAt || (splash && details.minutes)) && !checking && !(incomingLink && !answered) && (
-            <p className="text-center text-[0.95rem] text-sand-100/90" data-testid="call-starts-at">
+            <p className="text-center text-[0.95rem] text-[color:color-mix(in_srgb,var(--sp-fg)_90%,transparent)]" data-testid="call-starts-at">
               {startsAt ? s.startsAt(splash ? formatWhen(startsAt, locale, details.minutes) : formatAt(startsAt, locale)) : formatMinutes(details.minutes!, locale)}
             </p>
           )}
-          {splash && !checking && !(incomingLink && !answered) && callsHost().splashExtra?.()}
+          {splash && !checking && !(incomingLink && !answered) && callsHost().splashExtra?.({ holdJoin: setJoinHeld })}
           {checking ? (
             <div className="flex flex-col items-center gap-3" data-testid="call-checking">
-              <span className="w-7 h-7 rounded-full border-2 border-sand-100/25 border-t-sand-100 animate-spin" />
-              <p className="text-sand-100/80 text-[0.95rem]">{s.checkingMeeting}</p>
+              <span className="w-7 h-7 rounded-full border-2 border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] border-t-[color:var(--sp-fg)] animate-spin" />
+              <p className="text-[color:color-mix(in_srgb,var(--sp-fg)_80%,transparent)] text-[0.95rem]">{s.checkingMeeting}</p>
             </div>
           ) : phase === 'waiting' ? (
             <>
-              <p className="text-center text-[1rem] leading-relaxed text-sand-100/90 flex items-center gap-2" data-testid="call-waiting">
+              <p className="text-center text-[1rem] leading-relaxed text-[color:color-mix(in_srgb,var(--sp-fg)_90%,transparent)] flex items-center gap-2" data-testid="call-waiting">
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}
               </p>
               {/* Halfway through each poll wait, show we're checking the relay again. */}
-              <span className={`w-5 h-5 rounded-full border-2 border-sand-100/25 border-t-sand-100 transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
+              <span className={`w-5 h-5 rounded-full border-2 border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] border-t-[color:var(--sp-fg)] transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
               {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
               {nameAsk && nameForm('dark')}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
@@ -1484,7 +1487,7 @@ export default function CallsTool() {
             // + lets the caller in.
             <>
               <div className="flex flex-col items-center gap-2">
-                <p className="text-[0.72rem] uppercase tracking-[0.22em] text-sand-100/60">{s.incomingCall}</p>
+                <p className="text-[0.72rem] uppercase tracking-[0.22em] text-[color:color-mix(in_srgb,var(--sp-fg)_60%,transparent)]">{s.incomingCall}</p>
                 <p className="text-center text-[1.5rem] font-display leading-tight" data-testid="call-incoming-title">{incomingName ? s.isCalling(incomingName) : s.someoneCalling}</p>
               </div>
               <div className="w-full flex flex-col gap-3">
@@ -1495,10 +1498,10 @@ export default function CallsTool() {
             </>
           ) : (
             <>
-              {!splash && <p className="text-center text-[0.95rem] leading-relaxed text-sand-100/85">{s.lead}</p>}
+              {!splash && <p className="text-center text-[0.95rem] leading-relaxed text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)]">{s.lead}</p>}
               <div className="w-full flex flex-col gap-3">
                 {nameFirst && <label className="flex flex-col gap-1">
-                  <span className="text-[0.8rem] font-medium text-sand-100/80 ps-0.5">{s.yourName}:</span>
+                  <span className="text-[0.8rem] font-medium text-[color:color-mix(in_srgb,var(--sp-fg)_80%,transparent)] ps-0.5">{s.yourName}:</span>
                   <div className="relative">
                     <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={s.yourName} aria-label={s.yourName} data-testid="call-name" className={`${!savedName && !nameCustom ? 'pe-[4.75rem]' : 'pe-11'} h-12`} />
                     {savedName ? (
@@ -1533,11 +1536,11 @@ export default function CallsTool() {
                     )}
                   </div>
                 </label>}
-                {isGuest ? (
+                {isGuest ? (joinHeld ? null :
                   <>
                     <button className={cream} disabled={busy} onClick={askToJoin} data-testid="call-join">{busy ? s.joining : s.askJoin}</button>
                     <button type="button" onClick={startOwnCall} data-testid="call-start-own"
-                      className="text-[0.82rem] text-sand-100/70 hover:text-sand-100 bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
+                      className="text-[0.82rem] text-[color:color-mix(in_srgb,var(--sp-fg)_70%,transparent)] hover:text-[color:var(--sp-fg)] bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
                   </>
                 ) : (
                   // Always available — even with a personal call link published, you can
@@ -1545,7 +1548,7 @@ export default function CallsTool() {
                   <div className="flex gap-3">
                     <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
                     {!splash && <button type="button" onClick={() => openShareModal()} data-testid="call-share"
-                      className="flex-1 h-12 rounded-md bg-white/10 text-sand-100 font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-white/20 border border-sand-100/25 cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>}
+                      className="flex-1 h-12 rounded-md bg-[color-mix(in_srgb,var(--sp-fg)_10%,transparent)] text-[color:var(--sp-fg)] font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-[color-mix(in_srgb,var(--sp-fg)_20%,transparent)] border border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>}
                   </div>
                 )}
               </div>
@@ -1554,21 +1557,21 @@ export default function CallsTool() {
               {callsHost().callMe && !isGuest && !initialRoom && !incomingLink && (
                 <div className="w-full flex flex-col gap-1.5">
                   {/* "receive calls" separator above the Call Me box (#196). */}
-                  <div className="flex items-center gap-2.5 my-0.5 text-sand-100/45" data-testid="call-receive-sep">
-                    <span className="h-px flex-1 bg-sand-100/20" />
+                  <div className="flex items-center gap-2.5 my-0.5 text-[color:color-mix(in_srgb,var(--sp-fg)_45%,transparent)]" data-testid="call-receive-sep">
+                    <span className="h-px flex-1 bg-[color-mix(in_srgb,var(--sp-fg)_20%,transparent)]" />
                     <span className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]">{s.receiveCalls}</span>
-                    <span className="h-px flex-1 bg-sand-100/20" />
+                    <span className="h-px flex-1 bg-[color-mix(in_srgb,var(--sp-fg)_20%,transparent)]" />
                   </div>
                   {/* Who called while you didn't pick up — plus a Call back button
                       for anyone who asked to be rung back (#210/#211). */}
                   <Contacts s={s} contacts={contacts} onRemove={removeContact} myName={name} />
                   <MissedCalls locale={locale} s={s} />
-                  {hasCallLink && <p className="text-[0.82rem] font-semibold text-sand-100/85 ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
+                  {hasCallLink && <p className="text-[0.82rem] font-semibold text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)] ps-0.5" data-testid="call-link-set-note">{s.callLinkSet}</p>}
                   <CallLinkPanel locale={locale} name={name} site={callsHost().site} onLinkChange={setHasCallLink} />
                 </div>
               )}
               {/* Hidden once a personal call link is published — that panel is the focus. */}
-              {!hasCallLink && !splash && <p className="text-[0.78rem] text-sand-100/70 flex items-start gap-1.5" data-testid="call-privacy"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>}
+              {!hasCallLink && !splash && <p className="text-[0.78rem] text-[color:color-mix(in_srgb,var(--sp-fg)_70%,transparent)] flex items-start gap-1.5" data-testid="call-privacy"><LockIcon className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{s.privacy}</span></p>}
             </>
           )}
 
@@ -1582,7 +1585,7 @@ export default function CallsTool() {
               driven purely by ?debug=1 in the URL, which the host's invite carries, so
               a non-technical guest lands with it on and nothing to tap. */}
           {debug && (phase === 'waiting' || phase === 'hosting') && (
-            <div className="w-full [&_[data-testid=call-debug]]:bg-black/20 [&_[data-testid=call-debug]]:border-sand-100/15 [&_*]:!text-sand-100/85" data-testid="call-debug-wait">
+            <div className="w-full [&_[data-testid=call-debug]]:bg-black/20 [&_[data-testid=call-debug]]:border-[color:color-mix(in_srgb,var(--sp-fg)_15%,transparent)] [&_*]:!text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)]" data-testid="call-debug-wait">
               <DebugPanel diag={diag} mic={mic} cam={cam} />
             </div>
           )}

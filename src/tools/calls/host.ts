@@ -37,8 +37,10 @@ export interface CallsHost {
    *  the background. false never shows the offer. */
   notifyPrompt: boolean
   /** Something the embedder draws on a meeting's pre-call screen, under its
-   *  time (Sawi Kalam's agree-a-time panel). Shown only with `meetingSplash`. */
-  splashExtra: (() => ReactNode) | null
+   *  time (Sawi Kalam's agree-a-time panel). Shown only with `meetingSplash`.
+   *  `holdJoin(true)` hides a guest's "Ask to join" while the panel is asking
+   *  them something else first. */
+  splashExtra: ((api: { holdJoin: (held: boolean) => void }) => ReactNode) | null
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
    *  (soft is the small print, accent the link); qr is the ink of every QR. */
