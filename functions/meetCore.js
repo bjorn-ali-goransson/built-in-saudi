@@ -35,6 +35,9 @@ const SESSION_MS = 30 * 86400000 // a sign-in lasts a month, then the passkey is
 // treated as gone here and deleted when read; Firestore's TTL policy on
 // `expiresAt` (set by the deploy workflow) removes the ones nobody reads.
 const IDLE_MS = 30 * 86400000
+// A background picture, as a data URL: about 450KB of JPEG, well inside a
+// Firestore document and a request body.
+const BG_MAX = 600_000
 const CODE = 'abcdefghjkmnpqrstuvwxyz23456789' // the Calls room alphabet: no 0/o, 1/l/i
 
 export class MeetError extends Error {
@@ -333,6 +336,26 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       return { ok: true }
     },
 
+    /** The organiser's background picture for the screen before the call,
+     *  kept apart from the meeting so the polled `info` stays small. A JPEG
+     *  data URL; null removes it. */
+    async setBackground({ token, code, image }) {
+      const { id } = await ownMeeting(token, code)
+      if (image == null || image === '') { await store.del('meetBackgrounds', id); return { ok: true } }
+      if (typeof image !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)) throw new MeetError(400, 'image')
+      if (image.length > BG_MAX) throw new MeetError(413, 'image too large')
+      await store.set('meetBackgrounds', id, { image, expiresAt: now() + IDLE_MS })
+      return { ok: true }
+    },
+
+    /** Anybody with the code may see the picture: it is on the invitation too. */
+    async background({ code }) {
+      const id = clean(code, 20)
+      if (!(await live('meetings', id))) return { image: null }
+      const b = await live('meetBackgrounds', id)
+      return { image: b?.image || null }
+    },
+
     /** Is the signed-in organiser this meeting's owner? Starting it is a use, so
      *  the meeting and its organiser get another month. */
     async claim({ token, code }) {
@@ -349,4 +372,4 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 }
 
 /** The routes, so the function and the tests dispatch identically. */
-export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe']
+export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe', 'setBackground', 'background']

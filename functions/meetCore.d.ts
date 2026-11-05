@@ -5,7 +5,7 @@ export interface MeetStore {
   set(col: string, id: string, obj: Record<string, unknown>): Promise<void>
   del(col: string, id: string): Promise<void>
 }
-export type MeetAction = 'registerOptions' | 'register' | 'loginOptions' | 'login' | 'create' | 'info' | 'claim' | 'schedule' | 'respond' | 'confirm' | 'subscribe'
+export type MeetAction = 'registerOptions' | 'register' | 'loginOptions' | 'login' | 'create' | 'info' | 'claim' | 'schedule' | 'respond' | 'confirm' | 'subscribe' | 'setBackground' | 'background'
 export const MEET_ACTIONS: MeetAction[]
 export function meetService(opts: { store: MeetStore; secret: string; rp: { id: string; name: string }; origins: string[]; now?: () => number
   /** Sends one web push; throws with `statusCode` 404/410 for a subscription that is gone. */
