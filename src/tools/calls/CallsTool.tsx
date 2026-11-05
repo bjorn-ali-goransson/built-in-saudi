@@ -10,7 +10,7 @@ import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
 import { formatAt, parseAt, atParam, parseDetails, formatWhen, formatMinutes, type MeetingDetails } from './meeting'
-import { meetingTitle } from './invite'
+import { meetingName } from './invite'
 import { LIMITS as GOV_LIMITS, initialGov, stepGov, type GovState, type LinkSample } from './videoGovernor'
 import {
   oid, WB_COLORS, EMOJI, TAGS_EN, TAGS_AR, TAGS_KEY, isTag, WB_FONT, TXT_PAD, wrapLines,
@@ -1457,7 +1457,7 @@ export default function CallsTool() {
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5">
           {phoneLogo}
           {splash && !checking && !(incomingLink && !answered) && (
-            <h1 className="m-0 text-center text-[1.6rem] leading-tight text-[color:var(--sp-fg)] [overflow-wrap:anywhere]" data-testid="call-meeting-title">{meetingTitle(locale === 'ar', details.by, details.title)}</h1>
+            <h1 className="m-0 text-center text-[1.6rem] leading-tight text-[color:var(--sp-fg)] [overflow-wrap:anywhere]" data-testid="call-meeting-title">{meetingName(locale === 'ar', details.by, details.title)}</h1>
           )}
           {(startsAt || (splash && details.minutes)) && !checking && !(incomingLink && !answered) && (
             <p className="text-center text-[0.95rem] text-[color:color-mix(in_srgb,var(--sp-fg)_90%,transparent)]" data-testid="call-starts-at">

@@ -109,6 +109,16 @@ export function meetingTitle(ar: boolean, host = '', custom = '') {
   return ar ? `انضم إلى اجتماع ${host}` : `Join ${host}’s meeting`
 }
 
+/** What a meeting is called where somebody is about to join it: its own
+ *  title, else the organiser's meeting, else simply a meeting. The invitation
+ *  asks ("Join my meeting"); the screen it leads to names what you are joining. */
+export function meetingName(ar: boolean, host = '', custom = '') {
+  if (custom.trim()) return custom.trim()
+  host = host.trim()
+  if (!host) return ar ? 'اجتماع' : 'Meeting'
+  return ar ? `اجتماع ${host}` : `${host}’s meeting`
+}
+
 async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = '', emoji = ''): Promise<HTMLCanvasElement> {
   const b = callsHost().brand
   const family = b.font || 'system-ui, sans-serif'
