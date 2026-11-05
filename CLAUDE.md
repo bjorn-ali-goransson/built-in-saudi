@@ -7395,6 +7395,17 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `my-data` (no Google `sub`); deleting an organiser is still to build. Hosting is
   decided by the embedder from `claim` before Calls mounts; the relay itself does
   not yet refuse a non-owner who forges the host role.
+  **A meeting can carry an agreed time slot, with one invitee** (`schedule`,
+  `respond`, `confirm`, `subscribe`): the organiser proposes a time for the
+  guest to confirm, or lets the guest pick; answering confirms your own side,
+  and the other side is told by web push (`notify`, injected, so the tests
+  capture it; `meet.js` sends through `web-push` with the shared VAPID keys).
+  The first guest to answer is the invitee, held by a browser secret stored as
+  a hash, so anybody else with the link reads the status and cannot answer.
+  `info` returns the slot and `you` (invitee / other / none); a dead
+  subscription (404/410) is dropped. The server is the truth; links carry
+  `ok=o|g|og` only to mirror it. Calls' `splashExtra` host field is where the
+  embedder draws its panel on the pre-call screen.
   Calls gained two host fields for it: `newMeetingPath` (where "new call" and
   "start your own" go instead of an unowned lobby) and `pendingRoom` (a known
   meeting nobody has started is waited in, not shown as ended).

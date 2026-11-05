@@ -1461,6 +1461,7 @@ export default function CallsTool() {
               {startsAt ? s.startsAt(splash ? formatWhen(startsAt, locale, details.minutes) : formatAt(startsAt, locale)) : formatMinutes(details.minutes!, locale)}
             </p>
           )}
+          {splash && !checking && !(incomingLink && !answered) && callsHost().splashExtra?.()}
           {checking ? (
             <div className="flex flex-col items-center gap-3" data-testid="call-checking">
               <span className="w-7 h-7 rounded-full border-2 border-sand-100/25 border-t-sand-100 animate-spin" />

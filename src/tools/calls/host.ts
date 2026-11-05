@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 // Where the Calls and Messages apps live. built-in-saudi hosts them at
 // /apps/calls and /apps/messages on its own domain; Sawi Kalam (sawikalam.com)
 // embeds the same components under its own domain and paths. Invite links, QR codes and in-app navigation all read this,
@@ -35,6 +36,9 @@ export interface CallsHost {
   /** Offer, in the call, to notify when somebody joins while the tab is in
    *  the background. false never shows the offer. */
   notifyPrompt: boolean
+  /** Something the embedder draws on a meeting's pre-call screen, under its
+   *  time (Sawi Kalam's agree-a-time panel). Shown only with `meetingSplash`. */
+  splashExtra: (() => ReactNode) | null
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
    *  (soft is the small print, accent the link); qr is the ink of every QR. */
@@ -47,7 +51,7 @@ export interface CallsHost {
   }
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false, notifyPrompt: true,
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false, notifyPrompt: true, splashExtra: null,
   brand: { name: { en: 'Built in Saudi', ar: 'بُنِيَ في السعودية' }, bg: '#0e5a3f', ink: '#faf7f0', soft: 'rgba(250,247,240,0.82)', accent: '#d6a33f', qr: '#0e5a3f' } }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }

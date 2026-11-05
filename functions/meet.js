@@ -9,6 +9,7 @@
 // challenge. Firestore's TTL policy on that field deletes them.
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
+import webpush from 'web-push'
 import { meetService, MeetError, MEET_ACTIONS } from './meetCore.js'
 
 const { Firestore } = firestore
@@ -35,6 +36,9 @@ const service = meetService({
   secret: process.env.SENDER_SECRET,
   rp: { id: 'sawikalam.com', name: 'Sawi Kalam' },
   origins: [SITE],
+  // The VAPID keys are set once for every function, in index.js. A push the
+  // service refuses throws with its statusCode, which meetCore reads.
+  notify: (sub, payload) => webpush.sendNotification(sub, JSON.stringify(payload)),
 })
 
 http('meet', async (req, res) => {

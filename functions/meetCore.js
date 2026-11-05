@@ -10,6 +10,14 @@
 // organiser. That is what lets the organiser start it from any device they
 // have a passkey on, and what stops somebody else claiming to be its host.
 //
+// A meeting can carry a TIME SLOT both sides agree on, with one invitee: the
+// organiser proposes a time for the guest to confirm, or lets the guest pick
+// one. Whoever answers confirms their own side by answering, and the other is
+// told by web push that it is their turn. The first guest to answer becomes THE
+// invitee, held by a secret only their browser has (stored here as a hash), so
+// somebody else holding the link can read the status and cannot answer for
+// them. The server is the truth for who has confirmed; a link only mirrors it.
+//
 // This file has no Firestore and no HTTP in it: the store is passed in, so the
 // deployed function (meet.js) and Sawi Kalam's tests run the same code, the
 // tests against a store in memory.
@@ -47,7 +55,8 @@ function code7() {
  * rp: { id: 'sawikalam.com', name: 'Sawi Kalam' }; origins: the page origins a
  * ceremony may come from. secret signs sessions.
  */
-export function meetService({ store, secret, rp, origins, now = () => Date.now() }) {
+export function meetService({ store, secret, rp, origins, now = () => Date.now(), notify = async () => {}, site }) {
+  const SITE = site || origins[0]
   if (!secret) throw new Error('meetService needs a secret')
 
   function sign(payload) {
@@ -101,6 +110,79 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     if (!org) throw new MeetError(401, 'sign in')
     return { s, org }
   }
+  const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('base64url')
+  const isGuestSecret = (g) => typeof g === 'string' && g.length >= 16 && g.length <= 128
+  /** What anybody may know about a slot: the time, its length, how it is being
+   *  agreed, and who has confirmed. Never the secrets or the subscriptions. */
+  const publicSlot = (m) => (m.slot ? { at: m.slot.at, minutes: m.slot.minutes, mode: m.slot.mode, organiser: !!m.slot.org, guest: !!m.slot.guest, title: m.slot.title || '', by: m.slot.by || '' } : null)
+  /** The address a notification opens: the meeting's own link for the guest,
+   *  the schedule page for the organiser, each carrying the status as it is. */
+  function linkFor(code, m, role) {
+    const q = new URLSearchParams({ code })
+    const sl = m.slot
+    if (sl?.at) q.set('at', new Date(sl.at).toISOString().slice(0, 16) + 'Z')
+    if (sl?.minutes) q.set('dur', String(sl.minutes))
+    if (sl?.title) q.set('title', sl.title)
+    if (sl?.by && role === 'guest') q.set('by', sl.by)
+    const ok = (sl?.org ? 'o' : '') + (sl?.guest ? 'g' : '')
+    if (ok) q.set('ok', ok)
+    return `${SITE}${role === 'guest' ? '/call/join' : '/schedule'}?${q.toString().replace(/%3A/g, ':')}`
+  }
+  const TEXT = {
+    en: {
+      proposed: (by) => [`${by || 'The organiser'} proposed a time`, 'Open the invitation to confirm it.'],
+      pick: (by) => [`${by || 'The organiser'} asks you to pick a time`, 'Open the invitation to choose one.'],
+      picked: (g) => [`${g || 'Your guest'} picked a time`, 'Open the meeting to confirm it.'],
+      agreed: (g) => [`${g || 'Your guest'} confirmed the time`, 'The meeting is agreed.'],
+      confirmed: (by) => [`${by || 'The organiser'} confirmed the time`, 'The meeting is agreed.'],
+    },
+    ar: {
+      proposed: (by) => [`${by || 'المنظّم'} اقترح موعدًا`, 'افتح الدعوة لتأكيده.'],
+      pick: (by) => [`${by || 'المنظّم'} يطلب منك اختيار موعد`, 'افتح الدعوة لتختار موعدًا.'],
+      picked: (g) => [`${g || 'ضيفك'} اختار موعدًا`, 'افتح الاجتماع لتأكيده.'],
+      agreed: (g) => [`${g || 'ضيفك'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
+      confirmed: (by) => [`${by || 'المنظّم'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
+    },
+  }
+  // A push to every device the other side gave us. A subscription the push
+  // service says is gone (404/410) is dropped, so a dead phone is not asked
+  // forever.
+  async function tell(code, m, role, kind, who) {
+    const key = role === 'guest' ? 'guestSubs' : 'orgSubs'
+    const subs = m[key] || []
+    if (!subs.length) return m
+    const keep = []
+    for (const s of subs) {
+      const [title, body] = (TEXT[s.locale] || TEXT.en)[kind](who)
+      try {
+        await notify(s.sub, { title, body, url: linkFor(code, m, role), tag: `sk-${code}` })
+        keep.push(s)
+      } catch (e) { if (!(e && (e.statusCode === 404 || e.statusCode === 410))) keep.push(s) }
+    }
+    if (keep.length !== subs.length) { m = { ...m, [key]: keep }; await store.set('meetings', code, m) }
+    return m
+  }
+  const cleanSub = (sub) => (sub && typeof sub.endpoint === 'string' && sub.keys && typeof sub.keys.p256dh === 'string' && typeof sub.keys.auth === 'string')
+    ? { endpoint: sub.endpoint.slice(0, 1000), keys: { p256dh: sub.keys.p256dh.slice(0, 200), auth: sub.keys.auth.slice(0, 100) } } : null
+  const cleanAt = (at) => { const t = Number(at); return Number.isFinite(t) && t > 0 ? Math.floor(t / 60000) * 60000 : null }
+  const cleanMinutes = (n) => { const v = Math.round(Number(n)); return v > 0 && v <= 24 * 60 ? v : 0 }
+  async function ownMeeting(token, code) {
+    const { s, org } = await organiser(token)
+    const id = clean(code, 20)
+    const m = await live('meetings', id)
+    if (!m) throw new MeetError(404, 'no such meeting')
+    if (m.owner !== s.uid) throw new MeetError(403, 'not yours')
+    return { id, m, s, org }
+  }
+  async function guestMeeting(code, guest) {
+    if (!isGuestSecret(guest)) throw new MeetError(400, 'guest')
+    const id = clean(code, 20)
+    const m = await live('meetings', id)
+    if (!m) throw new MeetError(404, 'no such meeting')
+    if (m.guestKey && m.guestKey !== sha(guest)) throw new MeetError(403, 'somebody else answered')
+    return { id, m }
+  }
+
   const issue = (uid, name) => ({ token: sign({ uid, name, exp: now() + SESSION_MS }), name })
 
   return {
@@ -186,10 +268,69 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     },
 
     /** What anybody may know about a meeting: that it exists, and whose it is. */
-    async info({ code }) {
+    async info({ code, guest }) {
       const m = await live('meetings', clean(code, 20))
       if (!m) return { exists: false }
-      return { exists: true, organiser: m.ownerName }
+      // `you`: whether the asking browser is the invitee, somebody else is, or
+      // nobody has answered yet — so the page knows whether to offer to answer.
+      const you = !m.guestKey ? 'none' : isGuestSecret(guest) && m.guestKey === sha(guest) ? 'invitee' : 'other'
+      return { exists: true, organiser: m.ownerName, slot: publicSlot(m), you }
+    },
+
+    /** The organiser sets the slot: a time for the guest to confirm (the
+     *  organiser's side is confirmed by proposing it), or the length alone
+     *  for the guest to pick a time. Either way the guest has to answer again. */
+    async schedule({ token, code, at, minutes, mode, title, by }) {
+      const { id, m } = await ownMeeting(token, code)
+      const md = mode === 'pick' ? 'pick' : 'confirm'
+      const t = md === 'confirm' ? cleanAt(at) : null
+      if (md === 'confirm' && !t) throw new MeetError(400, 'a time')
+      let next = { ...m, slot: { at: t, minutes: cleanMinutes(minutes), mode: md, org: md === 'confirm', guest: false, title: clean(title, 60), by: clean(by, 40) }, expiresAt: now() + IDLE_MS }
+      await store.set('meetings', id, next)
+      next = await tell(id, next, 'guest', md === 'pick' ? 'pick' : 'proposed', next.slot.by)
+      return { slot: publicSlot(next) }
+    },
+
+    /** The guest answers: with a time (picking one, or suggesting another),
+     *  which confirms their side and asks the organiser; or without one, which
+     *  confirms the organiser's proposal. The first guest to answer is the
+     *  invitee from then on. */
+    async respond({ code, guest, at, name }) {
+      const { id, m } = await guestMeeting(code, guest)
+      if (!m.slot) throw new MeetError(409, 'no time to answer')
+      const t = at == null ? null : cleanAt(at)
+      if (at != null && !t) throw new MeetError(400, 'a time')
+      if (!t && !m.slot.at) throw new MeetError(409, 'pick a time')
+      const gname = clean(name, 40) || m.guestName || ''
+      const slot = t && t !== m.slot.at ? { ...m.slot, at: t, guest: true, org: false } : { ...m.slot, guest: true }
+      let next = { ...m, slot, guestKey: m.guestKey || sha(guest), guestName: gname }
+      await store.set('meetings', id, next)
+      next = await tell(id, next, 'organiser', slot.org ? 'agreed' : 'picked', gname)
+      return { slot: publicSlot(next) }
+    },
+
+    /** The organiser accepts the time the guest picked. */
+    async confirm({ token, code }) {
+      const { id, m } = await ownMeeting(token, code)
+      if (!m.slot?.at) throw new MeetError(409, 'no time to confirm')
+      let next = { ...m, slot: { ...m.slot, org: true } }
+      await store.set('meetings', id, next)
+      next = await tell(id, next, 'guest', 'confirmed', m.slot.by || m.ownerName)
+      return { slot: publicSlot(next) }
+    },
+
+    /** A device that wants to be told: the organiser's (with their session) or
+     *  the invitee's (with their secret, which a first subscribe claims). */
+    async subscribe({ token, code, guest, sub, locale }) {
+      const clean1 = cleanSub(sub)
+      if (!clean1) throw new MeetError(400, 'subscription')
+      const entry = { sub: clean1, locale: locale === 'ar' ? 'ar' : 'en' }
+      let id, m, key
+      if (token) { ({ id, m } = await ownMeeting(token, code)); key = 'orgSubs' }
+      else { ({ id, m } = await guestMeeting(code, guest)); key = 'guestSubs'; if (!m.guestKey) m = { ...m, guestKey: sha(guest) } }
+      const list = (m[key] || []).filter((x) => x.sub.endpoint !== clean1.endpoint)
+      await store.set('meetings', id, { ...m, [key]: [...list, entry].slice(-5) })
+      return { ok: true }
     },
 
     /** Is the signed-in organiser this meeting's owner? Starting it is a use, so
@@ -208,4 +349,4 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 }
 
 /** The routes, so the function and the tests dispatch identically. */
-export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim']
+export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe']
