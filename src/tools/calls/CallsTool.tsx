@@ -1539,8 +1539,8 @@ export default function CallsTool() {
                 {isGuest ? (joinHeld ? null :
                   <>
                     <button className={cream} disabled={busy} onClick={askToJoin} data-testid="call-join">{busy ? s.joining : s.askJoin}</button>
-                    <button type="button" onClick={startOwnCall} data-testid="call-start-own"
-                      className="text-[0.82rem] text-[color:color-mix(in_srgb,var(--sp-fg)_70%,transparent)] hover:text-[color:var(--sp-fg)] bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>
+                    {callsHost().startOwn && <button type="button" onClick={startOwnCall} data-testid="call-start-own"
+                      className="text-[0.82rem] text-[color:color-mix(in_srgb,var(--sp-fg)_70%,transparent)] hover:text-[color:var(--sp-fg)] bg-transparent border-0 cursor-pointer underline underline-offset-2">{s.startOwn}</button>}
                   </>
                 ) : (
                   // Always available — even with a personal call link published, you can
