@@ -1362,7 +1362,10 @@ export default function CallsTool() {
   // unanswered ring is on screen.
   // A meeting's screen says what the meeting is and nothing else (host.ts).
   const splash = callsHost().meetingSplash && !!initialRoom
-  const phoneLogo = <EndCallIcon className={`w-24 h-24 text-[color:var(--sp-fg)] shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
+  const splashLogo = callsHost().splashLogo
+  const phoneLogo = splashLogo
+    ? <img src={splashLogo} alt="" width={96} height={96} data-testid="call-splash-logo" className={`w-24 h-24 shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
+    : <EndCallIcon className={`w-24 h-24 text-[color:var(--sp-fg)] shrink-0 ${ringing ? '[animation:bis-bounce-y_1s_ease-in-out_infinite]' : ''}`} />
   const declineComposerEl = declineTarget ? (
     <DeclineComposer title={s.declineMsgTitle} canned={s.cannedDecline} placeholder={s.customMsgPh} sendLabel={s.sendAndDecline} justLabel={s.justDecline} cancelLabel={s.cancel} onSend={sendDecline} onCancel={() => setDeclineTarget(null)} />
   ) : null

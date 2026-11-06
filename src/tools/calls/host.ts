@@ -39,6 +39,9 @@ export interface CallsHost {
   /** Under a guest's "Ask to join", a link to start a call of their own
    *  instead. false leaves it out (the embedder offers its own way home). */
   startOwn: boolean
+  /** A picture for the screens before and after a call, in place of the
+   *  handset drawn there (the embedder's own app icon). null keeps the handset. */
+  splashLogo: string | null
   /** Something the embedder draws on a meeting's pre-call screen, under its
    *  time (Sawi Kalam's agree-a-time panel). Shown only with `meetingSplash`.
    *  `holdJoin(true)` holds back the screen's own button — a guest's "Ask to
@@ -57,7 +60,7 @@ export interface CallsHost {
   }
 }
 
-let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false, notifyPrompt: true, startOwn: true, splashExtra: null,
+let host: CallsHost = { site: 'https://built-in-saudi.com', base: '/apps/calls', messagesBase: '/apps/messages', docs: null, callMe: true, newMeetingPath: null, pendingRoom: null, askNameFirst: true, meetingSplash: false, notifyPrompt: true, startOwn: true, splashLogo: null, splashExtra: null,
   brand: { name: { en: 'Built in Saudi', ar: 'بُنِيَ في السعودية' }, bg: '#0e5a3f', ink: '#faf7f0', soft: 'rgba(250,247,240,0.82)', accent: '#d6a33f', qr: '#0e5a3f' } }
 
 export function configureCalls(h: Partial<CallsHost>) { host = { ...host, ...h } }
