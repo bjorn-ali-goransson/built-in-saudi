@@ -1546,7 +1546,7 @@ export default function CallsTool() {
                   // Always available — even with a personal call link published, you can
                   // still start a fresh meeting and invite people to it (#194).
                   <div className="flex gap-3">
-                    <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>
+                    {!joinHeld && <button className={`${cream} flex-1`} disabled={busy} onClick={startHost} data-testid="call-start">{busy ? s.joining : s.start}</button>}
                     {!splash && <button type="button" onClick={() => openShareModal()} data-testid="call-share"
                       className="flex-1 h-12 rounded-md bg-[color-mix(in_srgb,var(--sp-fg)_10%,transparent)] text-[color:var(--sp-fg)] font-semibold text-[0.95rem] flex items-center justify-center gap-2 hover:bg-[color-mix(in_srgb,var(--sp-fg)_20%,transparent)] border border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] cursor-pointer transition-colors [&_svg]:w-4 [&_svg]:h-4"><UserPlusIcon /> {s.invite}</button>}
                   </div>

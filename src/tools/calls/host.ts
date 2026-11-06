@@ -41,8 +41,9 @@ export interface CallsHost {
   startOwn: boolean
   /** Something the embedder draws on a meeting's pre-call screen, under its
    *  time (Sawi Kalam's agree-a-time panel). Shown only with `meetingSplash`.
-   *  `holdJoin(true)` hides a guest's "Ask to join" while the panel is asking
-   *  them something else first. */
+   *  `holdJoin(true)` holds back the screen's own button — a guest's "Ask to
+   *  join", or the host's Start — while the panel asks something else first
+   *  or the meeting is not due yet. */
   splashExtra: ((api: { holdJoin: (held: boolean) => void }) => ReactNode) | null
   /** The hosting app's name and colours, for what leaves the app: the invite
    *  picture, its caption, and the QR codes. bg/ink/soft/accent paint the picture
