@@ -7188,6 +7188,11 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   screen. Merging the package into one video comes next, and recording the
   document editors (in their own tab) with it. The spec reads the package with
   Python's zipfile as well as ours.
+  **Who is speaking and who is typing** show as small see-through pills at the
+  bottom start of the stage (`call-speaking`, `call-typing`), over whatever is
+  on it, each with its icon. Typing is a `typing` message sent at most every
+  2.5 s while somebody types in the chat and forgotten 4 s after the last (or
+  at once when their message arrives); a recording leaves it out.
   **Each link in a call has a safety code** (`safety.ts`, the shield on a
   participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
   from the settled SDP. The SDP crosses our relay, so a relay could swap in its

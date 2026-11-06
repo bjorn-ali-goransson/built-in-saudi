@@ -107,6 +107,9 @@ export type DataMsg =
   // every few seconds while it runs, so a late joiner is told too; `on: false`
   // when it stops. Everybody in the call shows it.
   | { t: 'rec'; on: boolean; name: string }
+  // Somebody is typing in the chat: sent at most every few seconds while they
+  // type, and forgotten by everybody a few seconds after the last one.
+  | { t: 'typing'; name: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =

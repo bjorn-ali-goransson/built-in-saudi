@@ -1437,3 +1437,37 @@ test('the host records the meeting as its separate parts: everybody is told, and
   expect(events.map((e) => e.t)).toEqual([...events.map((e) => e.t)].sort((x, y) => x - y))
   await a.close(); await b.close()
 })
+
+test('a see-through pill in the corner of the stage says who is speaking and who is typing in the chat', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await closeShare(pa)
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+
+  // Typing in the chat: the other side is told, and it goes once the message is sent.
+  await pb.getByTestId('call-chat').click()
+  await pb.getByTestId('call-chat-input').pressSequentially('on my way')
+  const typing = pa.getByTestId('call-typing')
+  await expect(typing).toHaveText('Bob is typing…', { timeout: 10_000 })
+  // Semi-transparent, a pill, at the bottom start of the stage.
+  expect(await typing.evaluate((el) => { const c = getComputedStyle(el); return [c.backgroundColor, c.borderTopLeftRadius] })).toEqual([expect.stringMatching(/\/ 0\.4\)$|, 0\.4\)$/), expect.stringMatching(/px$/)])
+  expect(await typing.locator('svg').count()).toBe(1)
+  await pb.getByTestId('call-chat-input').press('Enter')
+  await expect(typing).toHaveCount(0, { timeout: 5_000 })
+  // Speaking: the fake microphone beeps, so unmuted it is heard as speech.
+  await pb.getByTestId('call-mic').click()
+  const speaking = pa.getByTestId('call-speaking')
+  await expect(speaking).toHaveText('Bob is speaking', { timeout: 15_000 })
+  expect(await speaking.locator('svg').count()).toBe(1)
+  await a.close(); await b.close()
+})

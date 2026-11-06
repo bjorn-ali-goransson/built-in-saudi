@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
@@ -183,6 +183,9 @@ export default function CallsTool() {
   const [recFinishing, setRecFinishing] = useState(false)
   const [recPkg, setRecPkg] = useState<{ url: string; size: number; file: string } | null>(null)
   const [recBy, setRecBy] = useState<Map<string, { name: string; at: number }>>(new Map())
+  // Who is typing in the chat, by peer, with when they last said so.
+  const [typingBy, setTypingBy] = useState<Map<string, { name: string; at: number }>>(new Map())
+  const typingSent = useRef(0)
   // Video governor: pause OUR outgoing video when the mesh is too crowded or the
   // link is struggling, with a cool-off (videoGovernor.ts). autoOff marks a camera
   // WE turned off, so only that one is turned back on; override means the person
@@ -449,8 +452,9 @@ export default function CallsTool() {
   }, [inCallPeers.length, isGuest])
 
   function onData(id: string, m: DataMsg) {
-    if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text, doc: liveDoc(m.doc) }]); notify('c', `${m.name}: ${m.text}`) }
+    if (m.t === 'chat') { setTypingBy((r) => { if (!r.has(id)) return r; const n = new Map(r); n.delete(id); return n }); setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text, doc: liveDoc(m.doc) }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'react') addFloat(m.emoji, m.name)
+    else if (m.t === 'typing') setTypingBy((r) => new Map(r).set(id, { name: m.name, at: Date.now() }))
     else if (m.t === 'rec') setRecBy((r) => { const n = new Map(r); if (m.on) n.set(id, { name: m.name, at: Date.now() }); else n.delete(id); return n })
     else if (m.t === 'msg-react') {
       // A remote reaction toggled on a message → notify (like a chat) if chat is closed,
@@ -856,7 +860,7 @@ export default function CallsTool() {
     rec.event('wb-sync', 'me', { boards: [...objects.current.entries()] })
     for (const [b, bg] of bgs.current) rec.event('wb-bg-full', 'me', { b, id: bg.id, url: bg.url })
     rec.event('view', 'me', { view, file: selected })
-    r.tap = (from, m) => { if (m.t !== 'rec' && m.t !== 'msg-react') recRef.current?.event(m.t, from, m) }
+    r.tap = (from, m) => { if (m.t !== 'rec' && m.t !== 'msg-react' && m.t !== 'typing') recRef.current?.event(m.t, from, m) }
     r.setRecordFloor(640)
     r.broadcast({ t: 'rec', on: true, name: name || s.you })
     setRecording(true)
@@ -901,6 +905,16 @@ export default function CallsTool() {
     const iv = window.setInterval(() => setRecBy((m) => { const n = new Map([...m].filter(([, v]) => Date.now() - v.at < 12_000)); return n.size === m.size ? m : n }), 2000)
     return () => window.clearInterval(iv)
   }, [recBy.size])
+  // Typing is said again at most every 2.5 s, and forgotten 4 s after the last.
+  function sayTyping(v: string) {
+    if (!v.trim() || Date.now() - typingSent.current < 2500) return
+    typingSent.current = Date.now(); rtc.current?.broadcast({ t: 'typing', name: name || s.you })
+  }
+  useEffect(() => {
+    if (!typingBy.size) return
+    const iv = window.setInterval(() => setTypingBy((m) => { const n = new Map([...m].filter(([, v]) => Date.now() - v.at < 4000)); return n.size === m.size ? m : n }), 1000)
+    return () => window.clearInterval(iv)
+  }, [typingBy.size])
   function saveRecordingDone() { setRecPkg((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }
   // The finished recording, to save: in the call, and on the screen after it.
   const recSaveBar = (where: 'bar' | 'ended') => recPkg && (
@@ -2036,10 +2050,23 @@ export default function CallsTool() {
               The video tiles live in the dock, so this is the only on-stage cue when
               the dock is closed or showing chat. Self is excluded — you know when
               you're the one talking; the mic button already pulses. */}
-          {speakingNames.length > 0 && (
-            <div className="absolute bottom-3 start-3 z-30 flex items-center gap-1.5 max-w-[70%] px-2.5 h-8 rounded-md bg-black/60 text-sand-100 text-[0.8rem] pointer-events-none" data-testid="call-speaking">
-              <MicIcon className="w-3.5 h-3.5 text-green-300 shrink-0 [animation:mic-pulse_0.9s_ease-in-out_infinite]" />
-              <span className="truncate font-medium">{speakingNames.join(', ')}</span>
+          {/* And who is typing in the chat, so a message on its way is seen
+              without opening the chat. Both are small see-through pills over the
+              corner of whatever is on the stage, never in the way of it. */}
+          {(speakingNames.length > 0 || typingBy.size > 0) && (
+            <div className="absolute bottom-3 start-3 z-30 flex flex-col items-start gap-1.5 max-w-[70%] pointer-events-none">
+              {speakingNames.length > 0 && (
+                <div className="flex items-center gap-1.5 max-w-full px-3 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white text-[0.78rem]" data-testid="call-speaking">
+                  <MicIcon className="w-3.5 h-3.5 shrink-0 [animation:mic-pulse_0.9s_ease-in-out_infinite]" />
+                  <span className="truncate font-medium">{s.speakingNow(speakingNames)}</span>
+                </div>
+              )}
+              {typingBy.size > 0 && (
+                <div className="flex items-center gap-1.5 max-w-full px-3 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white text-[0.78rem]" data-testid="call-typing">
+                  <KeyboardIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate font-medium">{s.typingNow([...typingBy.values()].map((v) => v.name || '•'))}</span>
+                </div>
+              )}
             </div>
           )}
           {dragOver && (
@@ -2255,7 +2282,7 @@ export default function CallsTool() {
             </div>
             {/* The field and the button ARE the bar: no frame, no gaps. */}
             <div className="flex items-stretch shrink-0 h-12 border-t border-[color:var(--line)]" data-testid="call-chat-compose">
-              <input value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }} placeholder={s.typeMsg} aria-label={s.typeMsg} data-testid="call-chat-input"
+              <input value={msg} onChange={(e) => { setMsg(e.target.value); sayTyping(e.target.value) }} onKeyDown={(e) => { if (e.key === 'Enter') { typingSent.current = 0; sendChat() } }} placeholder={s.typeMsg} aria-label={s.typeMsg} data-testid="call-chat-input"
                 className="flex-1 min-w-0 h-full px-3.5 border-0 rounded-none bg-transparent text-ink text-[0.95rem] outline-none placeholder:text-ink-faint" />
               <button type="button" onClick={sendChat} data-testid="call-chat-send"
                 className="shrink-0 h-full px-5 border-0 rounded-none bg-green-600 text-sand-50 font-semibold text-[0.92rem] cursor-pointer hover:bg-green-700">{s.send}</button>
