@@ -103,6 +103,10 @@ export type DataMsg =
   | { t: 'vn-start'; id: string; mime: string; dur: number; size: number }
   | { t: 'vn-end'; id: string }
   | { t: 'vn-ack'; id: string }
+  // Somebody is recording the meeting (recorder.ts): sent when it starts and
+  // every few seconds while it runs, so a late joiner is told too; `on: false`
+  // when it stops. Everybody in the call shows it.
+  | { t: 'rec'; on: boolean; name: string }
 
 // Control messages (JSON, `c`) — lobby presence, admission, force-mute; all P2P.
 type Ctrl =
@@ -155,6 +159,7 @@ interface Peer {
   wantW?: number // device px this peer says it renders OUR video at (0 = not on screen)
   videoPaused?: boolean // they told us they aren't rendering us — we send them NO video
   sentWantW?: number // the last width WE asked this peer for (dedupes the control msg)
+  reqPx?: number // the width we are actually painting them at, before any recording floor
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -187,6 +192,13 @@ export class CallRoom {
   // when a device is already live, switched immediately via switchMic/switchCamera.
   private micId: string | undefined
   private camId: string | undefined
+
+  /** Sees every app message we broadcast (`from` 'me') and every one we get,
+   *  so a recording can keep the whiteboard and chat as events. */
+  tap: ((from: string, msg: DataMsg) => void) | null = null
+  // While recording, ask everyone for video at least this wide, whatever size
+  // their tile is here (or none at all): the recording is drawn later, larger.
+  private recFloor = 0
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
@@ -404,7 +416,17 @@ export class CallRoom {
     const peer = this.peers.get(id)
     if (!peer || peer.dc?.readyState !== 'open') return
     const dpr = typeof devicePixelRatio === 'number' ? Math.min(devicePixelRatio, 2) : 1
-    const px = Math.round(cssPx * dpr)
+    peer.reqPx = Math.round(cssPx * dpr)
+    this.sendWant(peer)
+  }
+  /** Video at least `px` wide from everyone while recording; 0 lifts it. */
+  setRecordFloor(px: number) {
+    this.recFloor = Math.max(0, px)
+    for (const p of this.peers.values()) if (p.dc?.readyState === 'open') this.sendWant(p)
+  }
+  private sendWant(peer: Peer) {
+    if (peer.dc?.readyState !== 'open') return
+    const px = Math.max(peer.reqPx ?? 0, this.recFloor)
     // 0 means "you're not on my screen at all" — the sender stops sending video
     // entirely. Otherwise snap onto the ladder the sender scales down to.
     const bucket = px <= 0 ? 0 : px <= 160 ? 160 : px <= 240 ? 240 : px <= 320 ? 320 : px <= 480 ? 480 : px <= 640 ? 640 : 960
@@ -432,7 +454,7 @@ export class CallRoom {
         else this.tuneVideo()
       }
       else if (m.c === 'fmute') { const target = String(m.target || ''); const me = target === this.me; if (me) this.toggleMic(false); this.h.onMuteNotice?.(String(m.by || ''), target, me) }
-      else if (typeof m.t === 'string') this.h.onData?.(id, m as unknown as DataMsg)
+      else if (typeof m.t === 'string') { this.tap?.(id, m as unknown as DataMsg); this.h.onData?.(id, m as unknown as DataMsg) }
     }
   }
   /** Publish our own call-link code to in-call peers so they can save us (#221). */
@@ -443,7 +465,13 @@ export class CallRoom {
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
 
   // ---- app-facing send (only to peers actually in the call) ------------------
-  broadcast(msg: DataMsg) { const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
+  broadcast(msg: DataMsg) { this.tap?.('me', msg); const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
+  /** Our own live tracks, as the others receive them: the screen while sharing,
+   *  else the camera (the call sends both down the one video track). */
+  myTracks(): { audio: MediaStreamTrack | null; video: MediaStreamTrack | null } {
+    const screen = this.screenOn ? this.screen?.getVideoTracks()[0] ?? null : null
+    return { audio: this.audioTrack, video: screen || this.videoTrack }
+  }
   /** Send an app data message to ONE peer — the contact-request handshake (#229). */
   sendTo(id: string, msg: DataMsg) { const p = this.peers.get(id); if (p?.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(JSON.stringify(msg)) }
 

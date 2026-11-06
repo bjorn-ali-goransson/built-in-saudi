@@ -9,6 +9,7 @@ import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
+import { MeetingRecorder, canRecord, type RecSource } from './recorder'
 import { formatAt, parseAt, atParam, parseDetails, formatWhen, formatMinutes, type MeetingDetails } from './meeting'
 import { meetingName } from './invite'
 import { LIMITS as GOV_LIMITS, initialGov, stepGov, type GovState, type LinkSample } from './videoGovernor'
@@ -175,6 +176,13 @@ export default function CallsTool() {
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Map<string, MediaStream>>(new Map())
   const [mic, setMic] = useState(false), [cam, setCam] = useState(false), [sharing, setSharing] = useState(false)
+  // Recording (recorder.ts): ours, while it runs and once it is ready to save;
+  // and anybody else's, which everybody is shown.
+  const recRef = useRef<MeetingRecorder | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [recFinishing, setRecFinishing] = useState(false)
+  const [recPkg, setRecPkg] = useState<{ url: string; size: number; file: string } | null>(null)
+  const [recBy, setRecBy] = useState<Map<string, { name: string; at: number }>>(new Map())
   // Video governor: pause OUR outgoing video when the mesh is too crowded or the
   // link is struggling, with a cool-off (videoGovernor.ts). autoOff marks a camera
   // WE turned off, so only that one is turned back on; override means the person
@@ -443,6 +451,7 @@ export default function CallsTool() {
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text, doc: liveDoc(m.doc) }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'react') addFloat(m.emoji, m.name)
+    else if (m.t === 'rec') setRecBy((r) => { const n = new Map(r); if (m.on) n.set(id, { name: m.name, at: Date.now() }); else n.delete(id); return n })
     else if (m.t === 'msg-react') {
       // A remote reaction toggled on a message → notify (like a chat) if chat is closed,
       // but only when it ADDS (not when they remove their reaction).
@@ -831,8 +840,82 @@ export default function CallsTool() {
     rtc.current?.requestSize(id, Math.max(cur.tile, cur.stage))
   }, [])
 
+  // ---- recording ------------------------------------------------------------
+  // The recorder is told, once a second, everybody's current tracks; a state
+  // change (mute, camera, sharing, a name) or somebody arriving or leaving is
+  // an event on its clock. The whiteboard and chat arrive through the room's tap.
+  const peersRef = useRef(peers); peersRef.current = peers
+  const meRef = useRef({ name, mic, cam, sharing }); meRef.current = { name, mic, cam, sharing }
+  const recState = useRef(new Map<string, string>())
+  async function startRecording() {
+    const r = rtc.current; if (!r || recRef.current) return
+    const rec = new MeetingRecorder(r.room, name || s.you)
+    await rec.start()
+    recRef.current = rec; recState.current.clear()
+    // Where the whiteboard already is, so it can be redrawn from the start.
+    rec.event('wb-sync', 'me', { boards: [...objects.current.entries()] })
+    for (const [b, bg] of bgs.current) rec.event('wb-bg-full', 'me', { b, id: bg.id, url: bg.url })
+    rec.event('view', 'me', { view, file: selected })
+    r.tap = (from, m) => { if (m.t !== 'rec' && m.t !== 'msg-react') recRef.current?.event(m.t, from, m) }
+    r.setRecordFloor(640)
+    r.broadcast({ t: 'rec', on: true, name: name || s.you })
+    setRecording(true)
+  }
+  async function stopRecording() {
+    const rec = recRef.current; if (!rec) return
+    recRef.current = null; setRecording(false); setRecFinishing(true)
+    const r = rtc.current
+    if (r) { r.tap = null; r.setRecordFloor(0); r.broadcast({ t: 'rec', on: false, name: name || s.you }) }
+    try {
+      const { blob } = await rec.stop()
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
+      setRecPkg((old) => { if (old) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), size: blob.size, file: `meeting-${stamp}.zip` } })
+    } finally { setRecFinishing(false) }
+  }
+  useEffect(() => {
+    if (!recording) return
+    const tick = () => {
+      const rec = recRef.current, r = rtc.current; if (!rec || !r) return
+      const me = meRef.current, mine = r.myTracks()
+      const sources: RecSource[] = [{ who: 'me', name: me.name || s.you, audio: me.mic ? mine.audio : null, video: mine.video }]
+      const states = new Map<string, string>([['me', JSON.stringify({ name: me.name, muted: !me.mic, cam: me.cam, sharing: me.sharing })]])
+      for (const [id, st] of peersRef.current) {
+        const info = rosterRef.current.get(id); if (!info?.inCall) continue
+        sources.push({ who: id, name: info.name, audio: st.getAudioTracks()[0] ?? null, video: st.getVideoTracks()[0] ?? null })
+        states.set(id, JSON.stringify({ name: info.name, muted: info.muted, cam: info.cam, sharing: info.sharing }))
+      }
+      for (const [who, st] of states) if (recState.current.get(who) !== st) { rec.event(recState.current.has(who) ? 'state' : 'join', who, JSON.parse(st)); recState.current.set(who, st) }
+      for (const who of [...recState.current.keys()]) if (!states.has(who)) { rec.event('leave', who); recState.current.delete(who) }
+      rec.sync(sources)
+    }
+    tick()
+    const iv = window.setInterval(tick, 1000)
+    // Said again every few seconds, so somebody who joins later is told too.
+    const say = window.setInterval(() => rtc.current?.broadcast({ t: 'rec', on: true, name: meRef.current.name || s.you }), 5000)
+    return () => { window.clearInterval(iv); window.clearInterval(say) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording])
+  // Somebody else's recording is shown while they keep saying so.
+  useEffect(() => {
+    if (!recBy.size) return
+    const iv = window.setInterval(() => setRecBy((m) => { const n = new Map([...m].filter(([, v]) => Date.now() - v.at < 12_000)); return n.size === m.size ? m : n }), 2000)
+    return () => window.clearInterval(iv)
+  }, [recBy.size])
+  function saveRecordingDone() { setRecPkg((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }
+  // The finished recording, to save: in the call, and on the screen after it.
+  const recSaveBar = (where: 'bar' | 'ended') => recPkg && (
+    <div className={where === 'bar' ? 'flex items-center gap-2.5 px-3 py-2 border-b border-[color:var(--line)] bg-[var(--surface)]' : 'w-full flex items-center gap-2.5 rounded-md px-3 py-2 bg-[color-mix(in_srgb,var(--sp-fg)_10%,transparent)]'} data-testid="call-rec-ready">
+      <span className={`text-[0.85rem] leading-snug flex-1 ${where === 'bar' ? 'text-ink' : ''}`}>{s.recReady(`${(recPkg.size / 1e6).toFixed(1)} MB`)}</span>
+      <a href={recPkg.url} download={recPkg.file} data-testid="call-rec-save"
+        className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-green-600 text-sand-50 text-[0.82rem] font-semibold no-underline hover:bg-green-700">{s.recSave}</a>
+      <button type="button" onClick={saveRecordingDone} aria-label={s.close} data-testid="call-rec-dismiss"
+        className="flex-none grid place-items-center w-8 h-8 rounded-md bg-transparent border-0 cursor-pointer text-[1.05rem] leading-none opacity-70 hover:opacity-100">✕</button>
+    </div>
+  )
+
   function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
   function hangup() {
+    if (recRef.current) void stopRecording() // what was recorded is kept, offered after the call
     if (!isGuest) {
       // Host leaving ends the meeting for everyone (the relay is marked closed, so
       // every peer's poll returns closed → they're dropped into the ended screen).
@@ -1405,6 +1488,8 @@ export default function CallsTool() {
       <div className={greenWrap} data-testid="calls">
         <div className="w-full max-w-[22rem] flex flex-col items-center gap-5 text-center" data-testid="call-ended">
           {phoneLogo}
+          {recFinishing && <p className="text-[0.9rem]" data-testid="call-rec-finishing">{s.recFinishing}</p>}
+          {recSaveBar('ended')}
           {ended.reason === 'left' ? (
             <>
               <p className="text-[1.2rem] font-display">{s.youEnded}</p>
@@ -1824,6 +1909,8 @@ export default function CallsTool() {
           {canShareScreen && <MenuItem icon={<ScreenShareIcon />} label={sharing ? s.stopScreen : s.screen} onClick={toggleScreen} active={sharing} />}
           <MenuItem icon={<UploadIcon />} label={s.sendFiles} onClick={() => fileRef.current?.click()} testid="call-upload" />
           <MenuItem icon={<CompassIcon />} label={s.location} onClick={openLocation} active={view === 'loc'} testid="view-location" />
+          {/* The host records; everybody in the call is shown that it is happening. */}
+          {!isGuest && canRecord() && <MenuItem icon={<span className="block w-3 h-3 m-0.5 rounded-full bg-[#d33]" />} label={recording ? s.stopRecording : s.record} onClick={() => void (recording ? stopRecording() : startRecording())} active={recording} testid="call-record" />}
           {callsHost().docs && (['word', 'excel', 'slides'] as const).map((k) => (
             <MenuItem key={k} icon={<FileIcon />} label={s.shareDoc[k]} onClick={() => openDoc(k)} testid={`call-doc-${k}`} />
           ))}
@@ -1844,6 +1931,15 @@ export default function CallsTool() {
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
       {nameAsk && nameForm('bar')}
+      {(recording || recFinishing || recBy.size > 0) && (
+        <div className="flex items-center gap-2.5 px-3 py-2 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,#d33_10%,var(--surface))]" data-testid="call-rec-bar">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#d33] shrink-0 animate-pulse" aria-hidden="true" />
+          <span className="text-[0.85rem] text-ink leading-snug flex-1" data-testid="call-rec-who">{recFinishing ? s.recFinishing : recording ? s.recordingYou : s.recordingBy([...recBy.values()][0]?.name || '')}</span>
+          {recording && <button type="button" onClick={() => void stopRecording()} data-testid="call-rec-stop"
+            className="flex-none inline-flex items-center h-8 px-3 rounded-md bg-[var(--surface)] text-ink text-[0.82rem] font-semibold border border-[color:var(--line)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--ink)_6%,var(--surface))]">{s.stopRecording}</button>}
+        </div>
+      )}
+      {recPkg && recSaveBar('bar')}
 
       {/* Explain-first notifications: rationale + Enable (which is the ONLY place we
           call requestPermission). Edge-docked bar under the toolbar; dismissible. */}

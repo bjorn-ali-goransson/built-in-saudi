@@ -1366,3 +1366,74 @@ test('a scheduled meeting shows its start time, and an early guest is let in onc
   await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
   await a.close(); await b.close()
 })
+
+test('the host records the meeting as its separate parts: everybody is told, and the package holds each person’s sound and video and the whiteboard and chat as events', async ({ browser }) => {
+  const { zipEntries } = await import('./helpers')
+  const { execFileSync } = await import('node:child_process')
+  const { writeFileSync, mkdtempSync } = await import('node:fs')
+  const { join } = await import('node:path')
+  const { tmpdir } = await import('node:os')
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await closeShare(pa)
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  for (const p of [pa, pb]) { await p.getByTestId('call-cam').click(); await p.getByTestId('call-mic').click() }
+
+  // Only the host is offered it; the guest is told the moment it starts.
+  await pb.getByTestId('call-view').click()
+  await expect(pb.getByTestId('call-record')).toHaveCount(0)
+  await pb.keyboard.press('Escape')
+  await pa.getByTestId('call-view').click()
+  await pa.getByTestId('call-record').click()
+  await expect(pa.getByTestId('call-rec-who')).toHaveText('You are recording this meeting')
+  await expect(pb.getByTestId('call-rec-who')).toHaveText('Alice is recording this meeting', { timeout: 10_000 })
+
+  // A stroke on the board and a chat message, from the guest.
+  const box = (await pb.getByTestId('wb-canvas').boundingBox())!
+  await pb.mouse.move(box.x + 60, box.y + 60); await pb.mouse.down(); await pb.mouse.move(box.x + 160, box.y + 140); await pb.mouse.up()
+  await pb.getByTestId('call-chat').click()
+  await pb.getByTestId('call-chat-input').fill('hello from Bob')
+  await pb.getByTestId('call-chat-input').press('Enter')
+  await pa.waitForTimeout(4000)
+
+  await pa.getByTestId('call-rec-stop').click()
+  await expect(pa.getByTestId('call-rec-ready')).toBeVisible({ timeout: 20_000 })
+  await expect(pb.getByTestId('call-rec-bar')).toHaveCount(0, { timeout: 10_000 })
+  const [dl] = await Promise.all([pa.waitForEvent('download'), pa.getByTestId('call-rec-save').click()])
+  expect(dl.suggestedFilename()).toMatch(/^meeting-\d{12}\.zip$/)
+  const buf = Buffer.from(await (await dl.createReadStream()).toArray().then((c) => Buffer.concat(c as Buffer[])))
+
+  // Somebody else's reader opens it and finds every entry intact.
+  const dir = mkdtempSync(join(tmpdir(), 'rec-')); const file = join(dir, 'm.zip'); writeFileSync(file, buf)
+  expect(execFileSync('python3', ['-I', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip())', file]).toString().trim()).toBe('None')
+
+  const entries = new Map(zipEntries(buf).map((e) => [e.name, e.data]))
+  const manifest = JSON.parse(entries.get('manifest.json')!.toString())
+  const people = Object.values(manifest.people as Record<string, { name: string }>).map((p) => p.name).sort()
+  expect(people).toEqual(['Alice', 'Bob'])
+  const bobId = Object.entries(manifest.people as Record<string, { name: string }>).find(([, p]) => p.name === 'Bob')![0]
+  for (const who of ['me', bobId]) for (const kind of ['audio', 'video']) {
+    const seg = (manifest.segments as { who: string; kind: string; file: string; bytes: number; start: number; end: number }[]).find((x) => x.who === who && x.kind === kind)
+    expect(seg, `${who} ${kind}`).toBeTruthy()
+    expect(seg!.bytes, `${who} ${kind}`).toBeGreaterThan(1000)
+    expect(entries.get(seg!.file)!.length).toBe(seg!.bytes)
+    expect(seg!.end).toBeGreaterThan(seg!.start)
+  }
+  const events = entries.get('events.jsonl')!.toString().trim().split('\n').map((l) => JSON.parse(l))
+  expect(events.some((e) => e.kind === 'join' && e.who === bobId && e.data.cam === true)).toBe(true)
+  expect(events.some((e) => e.kind === 'wb' && e.who === bobId && e.data.op === 'start')).toBe(true)
+  expect(events.some((e) => e.kind === 'chat' && e.data.text === 'hello from Bob')).toBe(true)
+  // On one clock, in order.
+  expect(events.map((e) => e.t)).toEqual([...events.map((e) => e.t)].sort((x, y) => x - y))
+  await a.close(); await b.close()
+})

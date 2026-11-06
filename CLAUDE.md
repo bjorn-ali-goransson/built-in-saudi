@@ -7171,6 +7171,23 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   one data-channel message is capped at 256KB) and to a late joiner with the
   board, and Clear removes it. Its shorter side spans the board's unit square,
   so it sits in the same place on every screen.
+  **The host can record the meeting, as its separate parts** (`recorder.ts`,
+  "Record the meeting" in the view menu). No server ever has the media, so the
+  recording is made in the host's browser: one MediaRecorder per person per
+  track (their sound, and their video — camera or screen, since the call sends
+  both down one track and the `sharing` flag says which), a new SEGMENT each
+  time a track changes, and everything else — whiteboard strokes, chat, the
+  view, who came, went, muted or shared — as EVENTS on the same clock
+  (`CallRoom.tap` sees every app message both ways). Media goes to OPFS as it
+  arrives (memory where OPFS cannot write), and the package is a stored ZIP
+  (manifest.json, events.jsonl, the segments) built from the stored Blobs, so
+  an hour never sits in memory. While it runs everybody asks for video at least
+  640 wide (`setRecordFloor`), and everybody is shown who is recording (`rec`
+  messages, repeated every 5 s for late joiners; `call-rec-bar`). Stopping, or
+  ending the meeting, offers the file to save, in the call or on the ended
+  screen. Merging the package into one video comes next, and recording the
+  document editors (in their own tab) with it. The spec reads the package with
+  Python's zipfile as well as ours.
   **Each link in a call has a safety code** (`safety.ts`, the shield on a
   participant's tile): a hash of BOTH ends' DTLS certificate fingerprints, read
   from the settled SDP. The SDP crosses our relay, so a relay could swap in its
