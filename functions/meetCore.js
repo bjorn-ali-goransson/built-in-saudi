@@ -117,7 +117,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   const isGuestSecret = (g) => typeof g === 'string' && g.length >= 16 && g.length <= 128
   /** What anybody may know about a slot: the time, its length, how it is being
    *  agreed, and who has confirmed. Never the secrets or the subscriptions. */
-  const publicSlot = (m) => (m.slot ? { at: m.slot.at, minutes: m.slot.minutes, mode: m.slot.mode, organiser: !!m.slot.org, guest: !!m.slot.guest, title: m.slot.title || '', by: m.slot.by || '' } : null)
+  const publicSlot = (m) => (m.slot ? { at: m.slot.at, minutes: m.slot.minutes, mode: m.slot.mode, organiser: !!m.slot.org, guest: !!m.slot.guest, title: m.slot.title || '', by: m.slot.by || '', hours: m.slot.hours || null } : null)
   /** The address a notification opens: the meeting's own link for the guest,
    *  the schedule page for the organiser, each carrying the status as it is. */
   function linkFor(code, m, role) {
@@ -169,6 +169,24 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     ? { endpoint: sub.endpoint.slice(0, 1000), keys: { p256dh: sub.keys.p256dh.slice(0, 200), auth: sub.keys.auth.slice(0, 100) } } : null
   const cleanAt = (at) => { const t = Number(at); return Number.isFinite(t) && t > 0 ? Math.floor(t / 60000) * 60000 : null }
   const cleanMinutes = (n) => { const v = Math.round(Number(n)); return v > 0 && v <= 24 * 60 ? v : 0 }
+  /** The hours a guest may pick in: weekdays (0 = Sunday), and a span of the
+   *  day in minutes, on the organiser's wall clock in their time zone. */
+  function cleanHours(h) {
+    if (!h || typeof h !== 'object') return null
+    const days = [...new Set((Array.isArray(h.days) ? h.days : []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b)
+    const from = Math.round(Number(h.from)), to = Math.round(Number(h.to))
+    const tz = clean(h.tz, 64)
+    if (!days.length || !(from >= 0 && to <= 24 * 60 && from < to) || !tz) return null
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }) } catch { return null }
+    return { days, from, to, tz }
+  }
+  /** Whether a meeting starting at `t` and lasting `minutes` is inside the hours. */
+  function withinHours(h, t, minutes) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: h.tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((p) => [p.type, p.value]))
+    const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
+    const start = Number(parts.hour) * 60 + Number(parts.minute)
+    return h.days.includes(day) && start >= h.from && start + (minutes || 0) <= h.to
+  }
   async function ownMeeting(token, code) {
     const { s, org } = await organiser(token)
     const id = clean(code, 20)
@@ -282,13 +300,14 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 
     /** The organiser sets the slot: a time for the guest to confirm (the
      *  organiser's side is confirmed by proposing it), or the length alone
-     *  for the guest to pick a time. Either way the guest has to answer again. */
-    async schedule({ token, code, at, minutes, mode, title, by }) {
+     *  for the guest to pick a time, within the organiser's hours if given.
+     *  Either way the guest has to answer again. */
+    async schedule({ token, code, at, minutes, mode, title, by, hours }) {
       const { id, m } = await ownMeeting(token, code)
       const md = mode === 'pick' ? 'pick' : 'confirm'
       const t = md === 'confirm' ? cleanAt(at) : null
       if (md === 'confirm' && !t) throw new MeetError(400, 'a time')
-      let next = { ...m, slot: { at: t, minutes: cleanMinutes(minutes), mode: md, org: md === 'confirm', guest: false, title: clean(title, 60), by: clean(by, 40) }, expiresAt: now() + IDLE_MS }
+      let next = { ...m, slot: { at: t, minutes: cleanMinutes(minutes), mode: md, org: md === 'confirm', guest: false, title: clean(title, 60), by: clean(by, 40), hours: md === 'pick' ? cleanHours(hours) : null }, expiresAt: now() + IDLE_MS }
       await store.set('meetings', id, next)
       next = await tell(id, next, 'guest', md === 'pick' ? 'pick' : 'proposed', next.slot.by)
       return { slot: publicSlot(next) }
@@ -304,6 +323,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       const t = at == null ? null : cleanAt(at)
       if (at != null && !t) throw new MeetError(400, 'a time')
       if (!t && !m.slot.at) throw new MeetError(409, 'pick a time')
+      if (t && t !== m.slot.at && m.slot.hours && !withinHours(m.slot.hours, t, m.slot.minutes)) throw new MeetError(400, 'outside the hours')
       const gname = clean(name, 40) || m.guestName || ''
       const slot = t && t !== m.slot.at ? { ...m.slot, at: t, guest: true, org: false } : { ...m.slot, guest: true }
       let next = { ...m, slot, guestKey: m.guestKey || sha(guest), guestName: gname }

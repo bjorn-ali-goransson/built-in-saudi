@@ -7434,7 +7434,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   capture it; `meet.js` sends through `web-push` with the shared VAPID keys).
   The first guest to answer is the invitee, held by a browser secret stored as
   a hash, so anybody else with the link reads the status and cannot answer.
-  `info` returns the slot and `you` (invitee / other / none); a dead
+  A pick can carry the organiser's `hours` (weekdays, 0 = Sunday, and a span
+  of the day in minutes, on their wall clock in their IANA zone); `respond`
+  refuses a picked time outside them (`withinHours`, through `Intl`, so
+  daylight saving is the zone's own). `info` returns the slot and `you` (invitee / other / none); a dead
   subscription (404/410) is dropped. The server is the truth; links carry
   `ok=o|g|og` only to mirror it. Calls' `splashExtra` host field is where the
   embedder draws its panel on the pre-call screen; its `holdJoin(true)` keeps
