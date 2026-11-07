@@ -7217,7 +7217,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   caption. `brand.font` sets every invite picture in the host's one typeface,
   loaded before drawing (a canvas never redraws). Its canvas is never on the page, so it inherits no text
   direction: Arabic is set right to left by hand, the code and link left to
-  right, and a long link is shrunk to fit rather than cut off.
+  right, and a long link is shrunk to fit rather than cut off. With `ask`
+  ("Please confirm", "Pick a time") the picture is the question instead: that
+  line above, the meeting NAMED under it (`meetingName`), the time, the QR to
+  the confirm or pick link; the caption opens with the question. Sawi Kalam
+  sends it with the line and link when the organiser asks a guest to agree a
+  time, so the message shows what is asked before anybody opens the link (a
+  static link preview cannot know the meeting).
   **Knock visibility (#217):** the ONLY admit control used to live inside the
   participants dock, so a host on the chat tab (or with the dock closed) got a chime
   and nothing else. A knock now also badges the dock + toasts (`notify('p', …)`) and

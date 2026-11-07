@@ -58,6 +58,11 @@ export interface InviteOptions {
   /** An emoji set in the middle of the QR. The code is then made with the
    *  highest error correction, which is what lets a scanner read through it. */
   emoji?: string
+  /** What the guest is asked ("Please confirm", "Pick a time"), on a line of
+   *  its own above the meeting. The title then NAMES the meeting ("Sara's
+   *  meeting") rather than inviting to it, so the picture reads as the
+   *  question, and the caption opens with it. */
+  ask?: string
 }
 
 /** The faces a picture is set in: the host's one typeface for everything when
@@ -119,14 +124,16 @@ export function meetingName(ar: boolean, host = '', custom = '') {
   return ar ? `اجتماع ${host}` : `${host}’s meeting`
 }
 
-async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = '', emoji = ''): Promise<HTMLCanvasElement> {
+async function drawMeeting(url: string, ar: boolean, when: string, host = '', background = '', custom = '', emoji = '', ask = ''): Promise<HTMLCanvasElement> {
   const b = callsHost().brand
   const family = b.font || 'system-ui, sans-serif'
-  const title = meetingTitle(ar, host, custom)
-  if (b.font) await fontsReady(b.font, title + when + url)
+  const title = ask ? meetingName(ar, host, custom) : meetingTitle(ar, host, custom)
+  if (b.font) await fontsReady(b.font, ask + title + when + url)
   const bg = background ? await loadImg(background).catch(() => null) : null
   const W = 620, qs = 360, qx = (W - qs) / 2
-  const qy = when ? 186 : 140
+  // The question takes a line of its own above the title.
+  const down = ask ? 44 : 0
+  const qy = (when ? 186 : 140) + down
   const H = qy + qs + 96
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
@@ -138,9 +145,10 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
   }
   x.textAlign = 'center'
   words(x, ar)
+  if (ask) { x.fillStyle = b.soft; fit(x, ask, W / 2, 80, W - 72, '600', family, 28) }
   x.fillStyle = b.ink
-  fit(x, title, W / 2, 86, W - 72, '700', family, 44)
-  if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136) }
+  fit(x, title, W / 2, 86 + down, W - 72, '700', family, 44)
+  if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136 + down) }
   const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, errorCorrectionLevel: emoji ? 'H' : 'M', color: { dark: b.qr, light: '#ffffff' } })
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)
   x.drawImage(await loadImg(qr), qx, qy, qs, qs)
@@ -162,7 +170,7 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
 export async function makeInvite(url: string, code: string, ar = false, opts: InviteOptions = {}): Promise<Blob> {
   const at = opts.at && !Number.isNaN(opts.at.getTime()) ? opts.at : null
   const when = at ? atLine(at, ar, opts.meeting ? opts.minutes : 0) : ''
-  if (opts.meeting) return finish(await drawMeeting(url, ar, when, opts.host, opts.background, opts.title, opts.emoji), url, ar, true, when, opts.host, opts.title)
+  if (opts.meeting) return finish(await drawMeeting(url, ar, when, opts.host, opts.background, opts.title, opts.emoji, opts.ask?.trim()), url, ar, true, when, opts.host, opts.title, opts.ask?.trim())
   // A start time takes a line of its own between the title and the QR.
   const drop = when ? 44 : 0
   const W = 620, H = 780 + drop
@@ -200,7 +208,7 @@ export async function makeInvite(url: string, code: string, ar = false, opts: In
 
 /** The PNG, with the invitation and the link in it as text, so the link
  *  survives the picture being forwarded on its own. */
-async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: boolean, when: string, host = '', custom = ''): Promise<Blob> {
+async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: boolean, when: string, host = '', custom = '', ask = ''): Promise<Blob> {
   const b = callsHost().brand
   const blob: Blob = await new Promise((res) => c.toBlob((x) => res(x!), 'image/png'))
   const who = host.trim()
@@ -208,7 +216,9 @@ async function finish(c: HTMLCanvasElement, url: string, ar: boolean, meeting: b
   const join = ar
     ? (meeting ? (who ? `انضم إلى اجتماع ${who}` : 'انضم للاجتماع') : 'انضم إلى مكالمتي') + ` في «${b.name.ar}»`
     : `Join ${who ? `${who}’s` : 'my'} ${b.name.en} ${meeting ? 'meeting' : 'call'}`
-  const caption = `${custom.trim() || join}${at}: ${url}`
+  const caption = ask
+    ? `${ask}: ${meetingName(ar, host, custom)}${at}: ${url}`
+    : `${custom.trim() || join}${at}: ${url}`
   return addPngText(await blob.arrayBuffer(), 'Description', caption)
 }
 
