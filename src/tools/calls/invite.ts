@@ -59,8 +59,8 @@ export interface InviteOptions {
    *  highest error correction, which is what lets a scanner read through it. */
   emoji?: string
   /** What the guest is asked ("Please confirm", "Pick a time"), on a line of
-   *  its own above the meeting. The title then NAMES the meeting ("Sara's
-   *  meeting") rather than inviting to it, so the picture reads as the
+   *  its own as the headline. The meeting is NAMED under it, smaller
+   *  ("Sara's meeting") rather than invited to, so the picture reads as the
    *  question, and the caption opens with it. */
   ask?: string
 }
@@ -145,9 +145,12 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
   }
   x.textAlign = 'center'
   words(x, ar)
-  if (ask) { x.fillStyle = b.soft; fit(x, ask, W / 2, 80, W - 72, '600', family, 28) }
   x.fillStyle = b.ink
-  fit(x, title, W / 2, 86 + down, W - 72, '700', family, 44)
+  // Asking, the question is the headline and the meeting it is about the line under it.
+  if (ask) {
+    fit(x, ask, W / 2, 86, W - 72, '700', family, 44)
+    x.fillStyle = b.soft; fit(x, title, W / 2, 86 + down, W - 72, '600', family, 28); x.fillStyle = b.ink
+  } else fit(x, title, W / 2, 86, W - 72, '700', family, 44)
   if (when) { x.font = `600 24px ${family}`; x.fillText(when, W / 2, 136 + down) }
   const qr = await QRCode.toDataURL(url, { margin: 1, width: qs, errorCorrectionLevel: emoji ? 'H' : 'M', color: { dark: b.qr, light: '#ffffff' } })
   x.fillStyle = '#ffffff'; x.fillRect(qx - 16, qy - 16, qs + 32, qs + 32)

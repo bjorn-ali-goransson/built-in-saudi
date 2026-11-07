@@ -7219,7 +7219,7 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   direction: Arabic is set right to left by hand, the code and link left to
   right, and a long link is shrunk to fit rather than cut off. With `ask`
   ("Please confirm", "Pick a time") the picture is the question instead: that
-  line above, the meeting NAMED under it (`meetingName`), the time, the QR to
+  line as the headline, the meeting NAMED under it in smaller type (`meetingName`), the time, the QR to
   the confirm or pick link; the caption opens with the question. Sawi Kalam
   sends it with the line and link when the organiser asks a guest to agree a
   time, so the message shows what is asked before anybody opens the link (a
