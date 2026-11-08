@@ -702,6 +702,15 @@ export function ExpandIcon({ className }: P) {
   )
 }
 
+// ExpandIcon's opposite: arrows pointing in (restore from full size).
+export function ShrinkIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M20 4l-6 6M14 4v6h6M4 20l6-6M10 20v-6H4" />
+    </svg>
+  )
+}
+
 export function SignatureIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden="true">

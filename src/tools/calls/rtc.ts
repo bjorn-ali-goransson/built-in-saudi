@@ -11,15 +11,17 @@ const FN = (typeof window !== 'undefined' && (window as unknown as { __CALL_SIGN
 
 // One lightweight probe of the relay before showing a guest the join controls:
 //  open    – the room exists and a host has posted (seq > 0)
-//  closed  – the host ended it
+//  ended   – the organiser ended it (hung up with "End for everyone")
+//  closed  – it ended otherwise (the host's disconnect grace ran out)
 //  missing – never created / expired (no messages ever)
 // A network error returns 'open' so a hiccup never blocks a real meeting.
-export async function roomStatus(room: string): Promise<'open' | 'closed' | 'missing'> {
+export type EndedBy = 'host' | 'other'
+export async function roomStatus(room: string): Promise<'open' | 'ended' | 'closed' | 'missing'> {
   try {
     const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'probe' + Math.random().toString(36).slice(2, 8), action: 'poll', since: -1 }) })
     if (!r.ok) return 'open'
     const d = await r.json()
-    if (d.closed) return 'closed'
+    if (d.closed) return d.endedBy === 'host' ? 'ended' : 'closed'
     return d.seq && d.seq > 0 ? 'open' : 'missing'
   } catch { return 'open' }
 }
@@ -206,7 +208,7 @@ export interface CallHandlers {
   /** Someone muted someone (by name → target id). If target is us, we're muted too. */
   onMuteNotice?(by: string, targetId: string, targetIsMe: boolean): void
   /** The meeting was closed (host ended it, or it was nuked after a disconnect). */
-  onClosed?(): void
+  onClosed?(by: EndedBy): void
   /** A waiting caller was told (by the link owner, over the relay) to join another
    *  room instead — the owner is busy and chose to add them to their current call. */
   onRedirect?(room: string): void
@@ -358,11 +360,11 @@ export class CallRoom {
     if (p?.dc?.readyState === 'open') p.dc.send(JSON.stringify({ c: 'admit' } as Ctrl))
   }
 
-  /** Nuke the meeting: mark the room closed on the relay (future joins → not found). */
-  async close(): Promise<void> { try { await this.post('close', {}) } catch { /* */ } this.leave() }
+  /** Nuke the meeting: mark the room closed on the relay, saying who ended it. */
+  async close(by: EndedBy = 'other'): Promise<void> { try { await this.post('close', { by }) } catch { /* */ } this.leave() }
 
   // ---- signaling relay (handshake + presence trigger only) -------------------
-  private async post(action: 'send' | 'poll' | 'close', extra: Record<string, unknown>): Promise<{ msgs?: { from: string; type: string; payload: unknown; seq: number }[]; closed?: boolean }> {
+  private async post(action: 'send' | 'poll' | 'close', extra: Record<string, unknown>): Promise<{ msgs?: { from: string; type: string; payload: unknown; seq: number }[]; closed?: boolean; endedBy?: string }> {
     const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action, ...extra }) })
     return r.ok ? r.json() : {}
   }
@@ -373,7 +375,7 @@ export class CallRoom {
       let got = 0
       try {
         const d = await this.post('poll', { since: this.since })
-        if (d.closed) { this.h.onClosed?.(); this.leave(); break }
+        if (d.closed) { this.h.onClosed?.(d.endedBy === 'host' ? 'host' : 'other'); this.leave(); break }
         const msgs = d.msgs || []; got = msgs.length
         for (const m of msgs) { await this.onSignal(m.from, m.type, m.payload); if (m.seq > this.since) this.since = m.seq }
       } catch { /* transient */ }

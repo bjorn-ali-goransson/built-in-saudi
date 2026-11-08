@@ -129,10 +129,14 @@ http('callSignal', async (req, res) => {
     const now = Date.now()
 
     // Host (or the last guest after a disconnect grace) nukes the meeting. We keep
-    // a short-lived tombstone so anyone still on the link learns it's over.
+    // a tombstone so anyone still on the link learns it's over, and WHO ended it:
+    // "the organiser ended this meeting" is a fact a guest can act on, where
+    // "ended or can't be found" made them wonder whether the link was wrong. A
+    // day, so the link opened from a chat that evening still says so.
     if (b.action === 'close') {
-      await ref.set({ closed: true, expiresAt: new Date(now + 15 * 60000), msgs: [] }, { merge: true }).catch(() => {})
-      return res.json({ ok: true, closed: true })
+      const endedBy = b.by === 'host' ? 'host' : 'other'
+      await ref.set({ closed: true, endedBy, expiresAt: new Date(now + 24 * 3600000), msgs: [] }, { merge: true }).catch(() => {})
+      return res.json({ ok: true, closed: true, endedBy })
     }
 
     if (b.action === 'poll') {
@@ -141,7 +145,7 @@ http('callSignal', async (req, res) => {
       if (!snap.exists) return res.json({ ok: true, seq: 0, msgs: [] })
       const d = snap.data()
       if ((d.expiresAt && d.expiresAt.toMillis() < now)) { ref.delete().catch(() => {}); return res.json({ ok: true, seq: 0, msgs: [] }) }
-      if (d.closed) return res.json({ ok: true, closed: true, seq: 0, msgs: [] })
+      if (d.closed) return res.json({ ok: true, closed: true, endedBy: d.endedBy || 'other', seq: 0, msgs: [] })
       const all = d.msgs || []
       const msgs = all.filter((m) => m.seq > since && m.from !== from && (m.to === 'all' || m.to === from))
       return res.json({ ok: true, seq: d.count || 0, msgs })
@@ -150,7 +154,7 @@ http('callSignal', async (req, res) => {
     // default: send
     {
       const snapPre = await ref.get()
-      if (snapPre.exists && snapPre.data().closed) return res.json({ ok: true, closed: true })
+      if (snapPre.exists && snapPre.data().closed) return res.json({ ok: true, closed: true, endedBy: snapPre.data().endedBy || 'other' })
     }
     const to = clean(b.to, 40) || 'all'
     const type = clean(b.type, 24)

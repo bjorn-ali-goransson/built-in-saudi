@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
-import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
+import { Button, Input, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, ShrinkIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { CallRoom, canCall, lockdownLikely, reportNoWebrtc, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
@@ -122,7 +122,8 @@ export default function CallsTool() {
   const [roster, setRoster] = useState<Map<string, PeerInfo>>(new Map())
   const [graceEndsAt, setGraceEndsAt] = useState<number | null>(null) // host-disconnect deadline
   const hadHost = useRef(false)
-  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'gone' | 'declined' | 'notadmitted'; count: number; message?: string }>({ reason: 'gone', count: 0 })
+  const [confirmEnd, setConfirmEnd] = useState(false)
+  const [ended, setEnded] = useState<{ reason: 'left' | 'ended' | 'hostEnded' | 'closed' | 'gone' | 'declined' | 'notadmitted'; count: number; message?: string }>({ reason: 'gone', count: 0 })
   // Busy-call handling: a ring that arrives while we're in a call surfaces as a
   // banner (not a takeover). `declineTarget` opens the "send a note" composer.
   const [incomingRing, setIncomingRing] = useState<{ room: string; caller: string } | null>(null)
@@ -608,7 +609,7 @@ export default function CallsTool() {
       },
       // The relay closed. If WE already hung up (phase 'ended'), leave that screen
       // as-is — don't overwrite "you left / you ended" with "meeting can't be found".
-      onClosed: () => { rtc.current = null; if (phaseRef.current === 'ended') return; setEnded({ reason: 'gone', count: 0 }); setPhase('ended') },
+      onClosed: (by) => { rtc.current = null; if (phaseRef.current === 'ended') return; setEnded({ reason: by === 'host' ? 'hostEnded' : 'closed', count: 0 }); setPhase('ended') },
       // Waiting caller: the busy owner told us to join their current call instead —
       // re-knock in that room (our name is already in sessionStorage).
       onRedirect: (dest) => { try { window.location.assign(`${localePath(locale, callsHost().base)}?code=${dest}&knock=1`) } catch { /* */ } },
@@ -843,7 +844,7 @@ export default function CallsTool() {
       if (!alive) return
       // A scheduled or known meeting nobody has started yet is an empty room, not an ended one.
       if (st === 'open' || (st === 'missing' && (startsAt || callsHost().pendingRoom === initialRoom))) setChecking(false)
-      else { setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
+      else { setEnded({ reason: st === 'ended' ? 'hostEnded' : st === 'closed' ? 'closed' : 'gone', count: 0 }); setPhase('ended') }
     })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -970,12 +971,17 @@ export default function CallsTool() {
   )
 
   function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed(false) }
-  function hangup() {
+  // `confirmed`: the host has agreed to end it for everyone. With nobody else
+  // there (in the call or waiting) there is nobody to end it for, so no question.
+  function hangup(confirmed = false) {
+    if (!isGuest && !confirmed && (inCallPeers.length > 0 || waiting.length > 0)) { setConfirmEnd(true); return }
+    setConfirmEnd(false)
     if (recRef.current) void stopRecording() // what was recorded is kept, offered after the call
     if (!isGuest) {
       // Host leaving ends the meeting for everyone (the relay is marked closed, so
-      // every peer's poll returns closed → they're dropped into the ended screen).
-      rtc.current?.close(); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }
+      // every peer's poll returns closed → they're dropped into the ended screen,
+      // told it was the organiser who ended it).
+      rtc.current?.close('host'); try { localStorage.removeItem(HOST_KEY) } catch { /* */ }
       setEnded({ reason: 'ended', count: 0 }); rtc.current = null; resetLive(); setPhase('ended')
       history.replaceState(null, '', lobbyPath()) // clean URL: a reload (e.g. deploy) lands on the host lobby, not ?code= guest mode
     } else {
@@ -1033,7 +1039,7 @@ export default function CallsTool() {
   useEffect(() => {
     if (graceEndsAt == null) return
     const iv = window.setInterval(() => {
-      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setEnded({ reason: 'gone', count: 0 }); setPhase('ended') }
+      if (Date.now() >= graceEndsAt) { window.clearInterval(iv); rtc.current?.close(); rtc.current = null; setGraceEndsAt(null); setEnded({ reason: 'closed', count: 0 }); setPhase('ended') }
       else setGraceTick((t) => t + 1)
     }, 1000)
     return () => window.clearInterval(iv)
@@ -1588,8 +1594,8 @@ export default function CallsTool() {
             </>
           ) : (
             <>
-              <p className="text-[1.15rem] font-display leading-relaxed">{ended.reason === 'ended' ? s.youEndedMeeting : s.ended}</p>
-              <button className={cream} onClick={newCall}>{s.createNew}</button>
+              <p className="text-[1.15rem] font-display leading-relaxed" data-testid="call-ended-why" data-reason={ended.reason}>{ended.reason === 'ended' ? s.youEndedMeeting : ended.reason === 'hostEnded' ? s.hostEndedMeeting : ended.reason === 'closed' ? s.meetingEnded : s.ended}</p>
+              <button className={cream} onClick={newCall} data-testid="call-ended-new">{s.createNew}</button>
             </>
           )}
         </div>
@@ -1636,7 +1642,7 @@ export default function CallsTool() {
                 </>
               )}
               {nameAsk && nameForm('dark')}
-              <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
+              <button className={ghost} onClick={() => hangup()} data-testid="call-cancel">{s.cancel}</button>
             </>
           ) : incomingLink && !answered ? (
             // Incoming ring — a prominent, phone-style "someone is calling" screen that
@@ -1858,9 +1864,9 @@ export default function CallsTool() {
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-[3px] pointer-events-none" aria-hidden="true"><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /></span>
       <div className="flex items-center" onPointerDown={stopDrag}>
         <button type="button" onClick={() => setMaximized((m) => !m)} data-testid="call-dock-max" aria-label={maximized ? s.restore : s.maximize} title={maximized ? s.restore : s.maximize}
-          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[16px] [&_svg]:h-[16px]"><ExpandIcon /></button>
+          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[16px] [&_svg]:h-[16px]">{maximized ? <ShrinkIcon /> : <ExpandIcon />}</button>
         <button type="button" onClick={() => { setDockMode(null); setMaximized(false) }} data-testid="call-dock-close" aria-label={s.dock} title={s.dock}
-          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[18px] [&_svg]:h-[18px]"><DockIcon /></button>
+          className="grid place-items-center w-8 h-8 rounded-md text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] bg-transparent border-0 cursor-pointer [&_svg]:w-[18px] [&_svg]:h-[18px]"><DockIcon className="-scale-y-100" /></button>
       </div>
     </div>
   )
@@ -2018,11 +2024,12 @@ export default function CallsTool() {
           <IconBtn onClick={() => toggleMode('p')} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
           <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} testid="call-chat" badge={unseen.c || undefined}><ChatIcon /></IconBtn>
           <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react"><span className="text-[1.15rem] leading-none">🙂</span></IconBtn>
-          <span className="w-px h-6 bg-[color:var(--line)] mx-0.5" />
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
           {deviceMenu()}
-          <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
+          {/* Ending the call sits apart: a mis-tap aimed at the mic must not hang up. */}
+          <span className="w-px h-6 bg-[color:var(--line)] ms-3 me-1.5" />
+          <IconBtn onClick={() => hangup()} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
@@ -2305,6 +2312,16 @@ export default function CallsTool() {
             <p className="text-[0.82rem] text-ink-faint">{s.verifyNote}</p>
           </Sheet>
         )}
+        {confirmEnd && (
+          <Sheet onClose={() => setConfirmEnd(false)} data-testid="call-end-confirm">
+            <SheetTitle>{s.endForAllTitle}</SheetTitle>
+            <p className="text-[0.92rem] text-ink-soft leading-relaxed">{s.endForAllBody(Math.max(1, inCallPeers.length + waiting.length))}</p>
+            <SheetActions>
+              <button type="button" onClick={() => setConfirmEnd(false)} data-testid="call-end-cancel" className="h-11 rounded-md border border-[color:var(--line)] bg-transparent text-ink font-semibold cursor-pointer">{s.keepMeeting}</button>
+              <button type="button" onClick={() => hangup(true)} data-testid="call-end-all" className="h-11 rounded-md border-0 bg-red-600 hover:bg-red-700 text-white font-semibold cursor-pointer">{s.endForAll}</button>
+            </SheetActions>
+          </Sheet>
+        )}
         {showChat && (
           <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-chat-panel">
             <DockResizer width={dockW} onWidth={setDockW} />
@@ -2406,11 +2423,12 @@ export default function CallsTool() {
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
         <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><span className="text-[1.2rem] leading-none">🙂</span></IconBtn>
-        <div className="flex-1" />
-        {deviceMenu(true)}
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
-        <IconBtn onClick={hangup} title={isGuest ? s.hangUp : s.endMeeting} danger big>{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
+        {deviceMenu(true)}
+        {/* Ending the call sits apart, across the bar from the mic. */}
+        <div className="flex-1" />
+        <IconBtn onClick={() => hangup()} title={isGuest ? s.hangUp : s.endMeeting} danger big>{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
       </footer>
 
       {toast && <div className="fixed bottom-16 max-[640px]:bottom-20 left-1/2 -translate-x-1/2 z-[90] bg-green-700 text-sand-100 px-4 py-2 rounded-md shadow-[var(--shadow-md)] text-[0.9rem]">{toast}</div>}

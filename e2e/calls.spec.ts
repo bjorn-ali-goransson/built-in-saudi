@@ -7,7 +7,7 @@ test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-
 // A tiny in-memory stand-in for the signaling Cloud Function (same protocol),
 // with permissive CORS so the localhost preview can reach it.
 let server: Server, base: string
-const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown }[] }>()
+const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown }[]; endedBy?: string }>()
 // What `ice` answers (the real one mints TURN credentials), per room; and every
 // `diag` report a browser sent, so a spec can read what the relay would log.
 const turnFor = new Map<string, unknown[]>()
@@ -27,6 +27,9 @@ test.beforeAll(async () => {
       if (b.action === 'ice') return res.end(JSON.stringify({ ok: true, turn: turnFor.get('*') || [] }))
       if (b.action === 'diag') { diags.push({ room: b.room, payload: b.payload || {} }); return res.end(JSON.stringify({ ok: true })) }
       let r = rooms.get(b.room); if (!r) { r = { count: 0, msgs: [] }; rooms.set(b.room, r) }
+      // Closing leaves a tombstone naming who ended it, as functions/call.js does.
+      if (b.action === 'close') { r.endedBy = b.by === 'host' ? 'host' : 'other'; r.msgs = []; return res.end(JSON.stringify({ ok: true, closed: true, endedBy: r.endedBy })) }
+      if (r.endedBy) return res.end(JSON.stringify({ ok: true, closed: true, endedBy: r.endedBy, seq: 0, msgs: [] }))
       if (b.action === 'poll') {
         const msgs = r.msgs.filter((m) => m.seq > (b.since || 0) && m.from !== b.from && (m.to === 'all' || m.to === b.from))
         res.end(JSON.stringify({ ok: true, seq: r.count, msgs }))
@@ -390,6 +393,46 @@ test('a guest who leaves the lobby stays in the list, marked "left" (no admit bu
   await expect(pa.getByTestId('call-lobby-left')).toContainText('left')
   await expect(pa.getByTestId('call-admit')).toHaveCount(0)
   await ca.close()
+})
+
+// Ending a meeting is asked first when anyone else is there, and the people in it
+// are told it was the organiser who ended it — not "ended or can't be found",
+// which read like a wrong link. So is anyone who opens the link afterwards.
+test('the organiser is asked before ending for everyone, and guests are told the organiser ended it', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
+  await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+
+  // Hang up → asked. Cancel keeps the meeting going.
+  await pa.getByTestId('call-hangup').click()
+  const ask = pa.getByTestId('call-end-confirm')
+  await expect(ask).toContainText('End the meeting for everyone?')
+  await expect(ask).toContainText('The other participant will be disconnected')
+  await pa.getByTestId('call-end-cancel').click()
+  await expect(ask).toHaveCount(0)
+  await expect(pa.getByTestId('calls-live')).toBeVisible()
+  await expect(pb.getByTestId('calls-live')).toBeVisible()
+
+  // Confirmed → ended for everyone, and the guest is told who ended it.
+  await pa.getByTestId('call-hangup').click()
+  await pa.getByTestId('call-end-all').click()
+  await expect(pa.getByTestId('call-ended-why')).toHaveAttribute('data-reason', 'ended')
+  const why = pb.getByTestId('call-ended-why')
+  await expect(why).toHaveAttribute('data-reason', 'hostEnded', { timeout: 15_000 })
+  await expect(why).toHaveText('The organiser ended this meeting.')
+  await expect(pb.getByTestId('call-ended-new')).toBeVisible()
+
+  // Someone opening the link later is told the same, not "can't be found".
+  const c = await ctx(browser, base); const pc = await c.newPage()
+  await pc.goto(`/en/apps/calls?code=${room}`)
+  await expect(pc.getByTestId('call-ended-why')).toHaveAttribute('data-reason', 'hostEnded', { timeout: 10_000 })
+  await expect(pc.getByTestId('call-join')).toHaveCount(0)
+  await a.close(); await b.close(); await c.close()
 })
 
 test('guest waits in the lobby, host admits, then they connect and chat', async ({ browser }) => {

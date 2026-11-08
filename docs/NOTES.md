@@ -7269,6 +7269,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     a photo, so it stays right in both languages. Inside an in-app browser it
     says to open Safari first. The drawings follow the user's own screenshot of
     iOS Safari; they have not been compared with a real phone beyond that.
+  - **Who ended a meeting is recorded.** `close` takes `by: 'host'` (the
+    organiser's End for everyone) or anything else (the disconnect grace ran
+    out); the tombstone keeps `endedBy` for a day (was 15 minutes, which then
+    fell through to "ended or can't be found" — read as a wrong link). Guests
+    in the call and anyone opening the link later see "The organiser ended this
+    meeting." with Create a new meeting; a grace close says "This meeting has
+    ended."; only a room that never existed keeps "ended or can't be found".
+    The organiser's hang-up asks "End the meeting for everyone?" when anyone
+    else is in the call or waiting; alone, it just ends (nobody to end it for,
+    and Sawi Kalam's deploy-reload spec hangs up alone).
+  - **Call controls:** camera, mic and devices sit with the emoji button; End
+    call stands apart (a divider on desktop, the far end of the mobile bar), so
+    a tap aimed at the mic cannot hang up. In the open dock the dock icon is
+    mirrored (it puts the dock away), and Maximize shows inward arrows once
+    maximized.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call
     screen, the call-link page): "no data touches our servers" stopped being
     true for a relayed call. It is still end-to-end encrypted — the relay carries
