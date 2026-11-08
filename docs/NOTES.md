@@ -7241,6 +7241,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     logged to Cloud Logging (`message: call-connect`, room hashed, whitelisted
     fields only — never an address), as is every successful connection's path,
     so a failed call can be explained afterwards from the logs.
+  - **Two relayed phones meet relay-to-relay, at the TURN box's own address.**
+    coturn denied that address (to keep the relay off the box's other
+    services), so with both sides relayed every call failed at once with
+    `blocked · ours relay · theirs relay`. It is allowed now — safe only because
+    that relay carries UDP alone (`no-tcp-relay`); the reasoning lives in the
+    ali-web-services CLAUDE.md. Verified on the live site: two browsers forced
+    relay-only connect and both log `connected · path relay`.
+    `user-quota` there is 24: one credential per room per hour, a mesh of five
+    holds up to four relayed legs each.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call
     screen, the call-link page): "no data touches our servers" stopped being
     true for a relayed call. It is still end-to-end encrypted — the relay carries
