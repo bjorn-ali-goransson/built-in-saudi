@@ -70,7 +70,9 @@ jobs:
         env:
           # Prayer-alert vars + Book With Me vars (Google OAuth / Resend / Telegram).
           # GOOGLE_OAUTH_CLIENT_ID is public (repo variable); the rest are secrets.
-          ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }},GOOGLE_OAUTH_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID }},GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }},RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          # TURN_SECRET is coturn's static-auth-secret on turn.ali-web-services.com
+          # (call.js `ice`); it is hex, so it cannot collide with the comma delimiter.
+          ENVV: VAPID_PUBLIC=${{ secrets.VAPID_PUBLIC }},VAPID_PRIVATE=${{ secrets.VAPID_PRIVATE }},SENDER_SECRET=${{ secrets.SENDER_SECRET }},GOOGLE_OAUTH_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID }},GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }},RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},TURN_SECRET=${{ secrets.TURN_SECRET }}
           PROJECT: ${{ vars.GCP_PROJECT }}
         run: |
           set -e

@@ -40,8 +40,8 @@ export const staticPageSeo: ToolSeo[] = [
 export const liveToolSeo: ToolSeo[] = [
   {
     id: 'calls',
-    en: { name: 'Calls', description: 'Secure peer-to-peer voice/video/teams calling between browsers — no data touches our servers. Share one invite link and let people in from a waiting room; video, screen-share, a shared whiteboard, chat and file-drop all go straight between browsers over WebRTC, with only the initial handshake passing through a tiny relay that never sees your call.' },
-    ar: { name: 'مكالمات', description: 'مكالمات صوت وفيديو وفرق آمنة بين المتصفحات مباشرةً — لا تمر أي بيانات بخوادمنا. شارك رابط دعوة واحدًا واسمح للناس بالدخول من غرفة انتظار؛ الفيديو ومشاركة الشاشة والسبورة والدردشة وإرسال الملفات تنتقل مباشرة عبر WebRTC، وفقط المصافحة الأولى تمر بمُرحِّل صغير لا يرى مكالمتك.' },
+    en: { name: 'Calls', description: 'Secure peer-to-peer voice/video/teams calling between browsers, end-to-end encrypted. Share one invite link and let people in from a waiting room; video, screen-share, a shared whiteboard, chat and file-drop all go straight between browsers over WebRTC — and when a network blocks that, the voice goes through our relay, which carries the encrypted call and cannot hear it.' },
+    ar: { name: 'مكالمات', description: 'مكالمات صوت وفيديو وفرق آمنة بين المتصفحات، مشفّرة من طرف إلى طرف. شارك رابط دعوة واحدًا واسمح للناس بالدخول من غرفة انتظار؛ الفيديو ومشاركة الشاشة والسبورة والدردشة وإرسال الملفات تنتقل مباشرة عبر WebRTC — وإن منعت الشبكة ذلك يمرّ الصوت عبر خادم الترحيل لدينا، فينقل المكالمة المشفّرة ولا يستطيع سماعها.' },
   },
   {
     id: 'messages',
@@ -651,7 +651,7 @@ export const categorySeo: CategorySeo[] = [
   },
   {
     slug: 'communication', category: 'Communication',
-    en: { name: 'Free communication tools', description: 'Browser-to-browser calls with no app and no account, and a personal link people can call you on. The audio and video go straight between the two devices.' },
-    ar: { name: 'أدوات تواصل مجانية', description: 'مكالمات من متصفح إلى متصفح بلا تطبيق وبلا حساب، ورابط شخصي يتصل بك الناس عليه. ويمرّ الصوت والصورة مباشرة بين الجهازين.' },
+    en: { name: 'Free communication tools', description: 'Browser-to-browser calls with no app and no account, and a personal link people can call you on. The audio and video go straight between the two devices, or the voice through our relay when a network blocks that — end-to-end encrypted either way.' },
+    ar: { name: 'أدوات تواصل مجانية', description: 'مكالمات من متصفح إلى متصفح بلا تطبيق وبلا حساب، ورابط شخصي يتصل بك الناس عليه. ويمرّ الصوت والصورة مباشرة بين الجهازين، أو الصوت عبر خادم الترحيل لدينا حين تمنع الشبكة ذلك — مشفّرًا من طرف إلى طرف في الحالتين.' },
   },
 ]

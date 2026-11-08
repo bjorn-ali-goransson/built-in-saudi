@@ -8,6 +8,10 @@ test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-
 // with permissive CORS so the localhost preview can reach it.
 let server: Server, base: string
 const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown }[] }>()
+// What `ice` answers (the real one mints TURN credentials), per room; and every
+// `diag` report a browser sent, so a spec can read what the relay would log.
+const turnFor = new Map<string, unknown[]>()
+const diags: { room: string; payload: Record<string, unknown> }[] = []
 
 test.beforeAll(async () => {
   server = createServer((req, res) => {
@@ -19,6 +23,9 @@ test.beforeAll(async () => {
     req.on('data', (c) => (body += c))
     req.on('end', () => {
       const b = JSON.parse(body || '{}')
+      // Like the real relay, neither of these touches the room.
+      if (b.action === 'ice') return res.end(JSON.stringify({ ok: true, turn: turnFor.get('*') || [] }))
+      if (b.action === 'diag') { diags.push({ room: b.room, payload: b.payload || {} }); return res.end(JSON.stringify({ ok: true })) }
       let r = rooms.get(b.room); if (!r) { r = { count: 0, msgs: [] }; rooms.set(b.room, r) }
       if (b.action === 'poll') {
         const msgs = r.msgs.filter((m) => m.seq > (b.since || 0) && m.from !== b.from && (m.to === 'all' || m.to === b.from))
@@ -253,6 +260,82 @@ test('a waiting guest only knocks to the host — it cannot see the other partic
   // …but the host DOES see Carol knocking.
   await expect(pa.getByTestId('call-lobby-live')).toContainText('Carol', { timeout: 10_000 })
   await ca.close(); await cb.close(); await cc.close()
+})
+
+// A connection that cannot form, made so deterministically: every peer connection
+// in the context may use relay candidates only, so with no reachable TURN server
+// it gathers nothing and never connects — the position of two phones behind
+// carrier NAT with STUN alone. The deadline is shortened so the spec is quick.
+async function unreachable(c: import('@playwright/test').BrowserContext) {
+  await c.addInitScript(() => {
+    const w = window as unknown as { RTCPeerConnection: typeof RTCPeerConnection; __CALL_CONNECT_TIMEOUT: number }
+    w.__CALL_CONNECT_TIMEOUT = 5000
+    const P = w.RTCPeerConnection
+    w.RTCPeerConnection = class extends P { constructor(cfg?: RTCConfiguration) { super({ ...(cfg || {}), iceTransportPolicy: 'relay' }) } }
+  })
+}
+
+// The failure that sent this in: a guest on a phone read "waiting for the host to
+// let you in" for ever, over a connection that had never formed, and the host saw
+// nothing at all. Both ends must now say so, with why.
+test('a connection that cannot form is said out loud on both ends, with why, and can be retried', async ({ browser }) => {
+  turnFor.delete('*') // no relay on offer: the STUN-only position
+  const ca = await ctx(browser, base), cb = await ctx(browser, base)
+  await unreachable(ca); await unreachable(cb)
+  const pa = await ca.newPage(), pb = await cb.newPage()
+  await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
+
+  // The guest is told the step it is on, and it is NOT "waiting to be let in":
+  // the knock travels over the connection that is still forming.
+  await expect(pb.getByTestId('call-waiting')).toHaveAttribute('data-stage', /none|connecting/, { timeout: 10_000 })
+  await expect(pb.getByTestId('call-waiting')).not.toContainText('let you in')
+
+  // Then the failure, in words, with the technical line a screenshot carries.
+  const fail = pb.getByTestId('call-conn-fail')
+  await expect(fail).toBeVisible({ timeout: 15_000 })
+  await expect(fail).toHaveAttribute('data-reason', 'no-relay')
+  await expect(fail).toContainText('Couldn’t connect to the host')
+  await expect(pb.getByTestId('call-conn-fail-detail')).toContainText('relay no')
+  await expect(pb.getByTestId('call-waiting')).toHaveCount(0)
+
+  // The host is told someone tried — before, it saw nothing, since the guest's
+  // name arrives over the very connection that failed.
+  await expect(pa.getByTestId('call-conn-fail')).toContainText('Someone tried to join but couldn’t connect', { timeout: 15_000 })
+
+  // The relay heard about it, as candidate types and a reason — never an address.
+  await expect.poll(() => diags.some((d) => d.room === room && d.payload.kind === 'fail' && d.payload.reason === 'no-relay'), { timeout: 5000 }).toBe(true)
+  for (const d of diags.filter((x) => x.room === room)) expect(JSON.stringify(d.payload)).not.toMatch(/\d+\.\d+\.\d+\.\d+/)
+
+  // Try again knocks afresh: the panel gives way to the steps, and (the network
+  // still being what it is) the failure comes back rather than a silent wait.
+  await pb.getByTestId('call-conn-retry').click()
+  await expect(pb.getByTestId('call-waiting')).toBeVisible()
+  await expect(pb.getByTestId('call-conn-fail')).toBeVisible({ timeout: 15_000 })
+  await ca.close(); await cb.close()
+})
+
+test('a relay that this network cannot reach is named as the cause', async ({ browser }) => {
+  // The relay offers TURN — at an address nothing answers on — so the browser
+  // tries it and gathers no relay candidate: the "this network blocks our relay"
+  // case, which tells the person to try another network.
+  turnFor.set('*', [{ urls: ['turn:127.0.0.1:9?transport=udp'], username: '0:test', credential: 'x' }])
+  const ca = await ctx(browser, base), cb = await ctx(browser, base)
+  await unreachable(ca); await unreachable(cb)
+  const pa = await ca.newPage(), pb = await cb.newPage()
+  try {
+    await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+    await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+    const room = new URL(pa.url()).searchParams.get('code') || ''
+    await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
+    const fail = pb.getByTestId('call-conn-fail')
+    await expect(fail).toBeVisible({ timeout: 20_000 })
+    await expect(fail).toHaveAttribute('data-reason', 'relay-unreachable')
+    await expect(fail).toContainText('blocks our relay server')
+    await expect(pb.getByTestId('call-conn-fail-detail')).toContainText('relay yes')
+  } finally { turnFor.delete('*'); await ca.close(); await cb.close() }
 })
 
 test('a guest who leaves the lobby stays in the list, marked "left" (no admit button)', async ({ browser }) => {

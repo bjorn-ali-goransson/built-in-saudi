@@ -7208,7 +7208,43 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   `useCollab` sees that, starts a session once the document is ready, and posts
   the join link on `BroadcastChannel('bis-call-<room>')`; the call tab sends it
   to everyone as a chat message with a `doc` field, and a link is drawn as a
-  document only if it is on this site (`liveDoc`). STUN is public; **no TURN** (strict NATs can't connect).
+  document only if it is on this site (`liveDoc`).
+  **There is a TURN relay now (2026-11-08), and the reason is a real failed
+  call:** an Android and an iPhone on mobile data exchanged ~110 signalling
+  messages (all 200) and never formed a connection — STUN alone cannot cross
+  carrier NAT on both ends — while the guest read "waiting for the host to let
+  you in" for ever and the host saw nothing, since the knock's name travels over
+  the connection that never formed. What changed:
+  - **`call-signal` answers `action:'ice'`** with short-lived TURN credentials
+    for `turn.ali-web-services.com` (coturn on the Ali Web Services VPS,
+    `use-auth-secret`): `<expiry>:<name>` with an HMAC-SHA1 password under
+    `TURN_SECRET`, a repo secret that must equal coturn's `static-auth-secret`.
+    A mismatch fails silently server-side; the client sees it as
+    `relay-unreachable` with `401` in `turnErrors`. The name is a keyed hash of
+    the room (coturn logs usernames; the code is the link), shared per room per
+    hour so coturn's `user-quota` bounds a room. `ice` never creates a room.
+  - **`rtc.ts` waits for those servers before the first knock** (5 s bound, then
+    STUN alone), watches the SELECTED pair every 2 s, and treats one relayed leg
+    as a relayed call: video stops going out, the camera is released (not left
+    lit sending nothing) and cannot be turned on, screen share is refused. The
+    relay is capped per session in coturn (`max-bps`) for voice; the client half
+    makes that graceful rather than a frozen picture.
+  - **A connection that does not come up is reported, never dropped quietly:**
+    our own 25 s deadline (browsers wait ~30 s, Safari longer), then
+    `onPeerFail` with a `ConnectFailure` — candidate TYPES each side gathered,
+    TURN error codes, ICE states — and `failReason` turns that into one of four
+    causes a person can act on (`no-answer`, `no-relay`, `relay-unreachable`,
+    `blocked`). The guest's waiting screen names its step (reaching → connecting
+    → waiting to be let in) and swaps to a red panel with Try again (re-knocks)
+    and Copy details; the host gets "Someone tried to join but couldn't
+    connect". The same report goes to `call-signal` as `action:'diag'` and is
+    logged to Cloud Logging (`message: call-connect`, room hashed, whitelisted
+    fields only — never an address), as is every successful connection's path,
+    so a failed call can be explained afterwards from the logs.
+  - **The privacy copy changed with it** (privacy page, meta, seo, the call
+    screen, the call-link page): "no data touches our servers" stopped being
+    true for a relayed call. It is still end-to-end encrypted — the relay carries
+    it and cannot hear it — but it does see both devices' network addresses.
   The invite is a shareable image (QR + code + PNG-metadata) from
   `src/tools/calls/invite.ts`.
   `makeInvite(url, code, ar, { meeting, at })` draws a meeting's invitation:

@@ -3,6 +3,7 @@
 // room — it never sees audio, video, whiteboard, chat or files (those flow
 // directly peer-to-peer). Rooms are keyed by a client-chosen random code, live
 // in Firestore for 2 hours, and are polled. No auth (public by code); no deps.
+import { createHmac, createHash } from 'node:crypto'
 import { http } from '@google-cloud/functions-framework'
 import firestore from '@google-cloud/firestore'
 import webpush from 'web-push' // VAPID is configured once in index.js (shared singleton)
@@ -49,6 +50,59 @@ function rateLimited(req) {
   return e.n > RL_MAX
 }
 
+// ---- TURN credentials -------------------------------------------------------
+// Two phones behind mobile-carrier NAT usually cannot reach each other directly,
+// and with STUN alone such a call never connects. The relay is coturn on
+// turn.ali-web-services.com (the Ali Web Services VPS), run with
+// `use-auth-secret`: a credential is `<expiry>:<name>` with an HMAC-SHA1 password
+// under the shared secret, so nothing is stored and nothing needs revoking.
+//  - TURN_SECRET is coturn's `static-auth-secret`, byte for byte. A mismatch is
+//    not an error anywhere: the browser just gathers no relay candidate (and the
+//    client reports `relay-unreachable` with a 401 in turnErrors).
+//  - The name is a keyed hash of the room, never the room code itself: coturn
+//    writes the username to syslog on every allocation, and the code is the link.
+//  - Everybody in a room within an hour shares one credential, so coturn's
+//    per-user quota bounds a room rather than one request; it lives four hours
+//    past the hour, because coturn checks the time on every refresh and an expiry
+//    mid-call drops whoever needed the relay.
+//  - The relay is capped per session on the server (max-bps), sized for voice;
+//    the client stops sending video while relayed.
+const TURN_HOST = process.env.TURN_HOST || 'turn.ali-web-services.com'
+const TURN_TTL_S = 4 * 3600
+const TURN_BUCKET_S = 3600
+function turnFor(room) {
+  const secret = String(process.env.TURN_SECRET || '').trim()
+  if (!secret || secret === 'REPLACE_ME') return []
+  const now = Math.floor(Date.now() / 1000)
+  const expiry = Math.floor(now / TURN_BUCKET_S) * TURN_BUCKET_S + TURN_BUCKET_S + TURN_TTL_S
+  const name = createHmac('sha256', secret).update('bis-room:' + room).digest('hex').slice(0, 16)
+  const username = `${expiry}:${name}`
+  const credential = createHmac('sha1', secret).update(username).digest('base64')
+  return [{
+    urls: [`turn:${TURN_HOST}:3478?transport=udp`, `turn:${TURN_HOST}:3478?transport=tcp`, `turns:${TURN_HOST}:5349?transport=tcp`],
+    username, credential,
+  }]
+}
+
+// A connection report from a browser (rtc.ts `diagPost`): candidate TYPES and
+// states only. Written to Cloud Logging and nowhere else, so a call that did not
+// connect can be explained afterwards. Anything not on this list is dropped, and
+// the room is hashed so the log never holds a working link.
+const DIAG_STR = ['kind', 'why', 'role', 'reason', 'gathering', 'dc', 'path']
+const DIAG_BOOL = ['inCall', 'relayConfigured', 'heardFrom']
+const DIAG_LIST = ['local', 'remote', 'turnErrors', 'ice']
+function diagOf(p) {
+  const out = {}
+  if (!p || typeof p !== 'object') return out
+  for (const k of DIAG_STR) if (p[k] != null) out[k] = clean(p[k], 24)
+  for (const k of DIAG_BOOL) if (p[k] != null) out[k] = !!p[k]
+  for (const k of DIAG_LIST) if (Array.isArray(p[k])) out[k] = p[k].slice(0, 20).map((v) => clean(v, 24).replace(/[^\w@ .:-]/g, ''))
+  if (Number.isFinite(Number(p.ms))) out.ms = Math.max(0, Math.min(3600000, Math.round(Number(p.ms))))
+  return out
+}
+
+// POST { room, action:'ice', from }                      → { ok, turn: [RTCIceServer] }
+// POST { room, action:'diag', from, payload }            → { ok }
 // POST { room, action:'send', from, to, type, payload }  → { ok, seq }
 // POST { room, action:'poll', from, since }              → { ok, seq, msgs }
 // `to` = a specific peerId or 'all'. Messages are relayed verbatim; the server
@@ -63,6 +117,14 @@ http('callSignal', async (req, res) => {
     const room = clean(b.room, 40).replace(/[^a-zA-Z0-9_-]/g, '')
     const from = clean(b.from, 40)
     if (!room || !from) return res.status(400).json({ error: 'room and from required' })
+    // Neither of these touches the room: an `ice` or `diag` must never create one,
+    // or a probe would make a meeting look started.
+    if (b.action === 'ice') return res.json({ ok: true, turn: turnFor(room) })
+    if (b.action === 'diag') {
+      const ua = clean(req.headers && req.headers['user-agent'], 200)
+      console.log(JSON.stringify({ severity: b.payload && b.payload.kind === 'fail' ? 'WARNING' : 'INFO', message: 'call-connect', room: createHash('sha256').update(room).digest('hex').slice(0, 12), ua, ...diagOf(b.payload) }))
+      return res.json({ ok: true })
+    }
     const ref = db.collection(ROOMS).doc(room)
     const now = Date.now()
 

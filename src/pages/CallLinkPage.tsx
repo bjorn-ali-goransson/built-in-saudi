@@ -14,7 +14,7 @@ const T = {
   en: {
     title: 'Start a call', blurb: 'Call the person who shared this link. They’ll get a notification to answer — this stays a private, browser-to-browser call.',
     yourName: 'Your name', call: 'Call', calling: 'Calling…', shuffle: 'Random name',
-    privacy: 'Private and peer-to-peer — only the connection handshake uses our server.',
+    privacy: 'Private and peer-to-peer — our server only connects you, or relays the encrypted voice when a network blocks a direct connection.',
     noCode: 'This call link is invalid.', home: 'Go to Built in Saudi',
     addTitle: 'Link this device', addBlurb: 'This device will ring for the same calls, so you can pick up from either one.',
     addBtn: 'Link this device', adding: 'Linking…', addDone: 'Done — this device will now ring for these calls.',
@@ -23,7 +23,7 @@ const T = {
   ar: {
     title: 'ابدأ مكالمة', blurb: 'اتصل بمن شارك هذا الرابط. سيصله إشعار للرد — تبقى المكالمة خاصة ومباشرة بين المتصفحين.',
     yourName: 'اسمك', call: 'اتصال', calling: 'جارٍ الاتصال…', shuffle: 'اسم عشوائي',
-    privacy: 'خاصة ومباشرة بين الأجهزة — فقط مصافحة الاتصال تستخدم خادمنا.',
+    privacy: 'خاصة ومباشرة بين الأجهزة — خادمنا يصل بينكم فقط، أو يمرّر الصوت المشفّر حين تمنع الشبكة الاتصال المباشر.',
     noCode: 'رابط المكالمة غير صالح.', home: 'اذهب إلى Built in Saudi',
     addTitle: 'اربط هذا الجهاز', addBlurb: 'سيرنّ هذا الجهاز للمكالمات نفسها، لتردّ من أيّ جهاز.',
     addBtn: 'اربط هذا الجهاز', adding: 'جارٍ الربط…', addDone: 'تم — سيرنّ هذا الجهاز لهذه المكالمات الآن.',

@@ -44,16 +44,57 @@ const CAM: MediaTrackConstraints = {
 // fewer pixels than 960px, so it has no business carrying a 700 kbps stream.
 const bitrateFor = (w: number) => (w <= 160 ? 60 : w <= 240 ? 100 : w <= 320 ? 160 : w <= 480 ? 300 : w <= 640 ? 450 : 700)
 
+// Public STUN only finds each side's public address. Two phones behind carrier
+// NAT (the ordinary case for a mobile in Saudi) usually cannot reach each other
+// that way at all, so the relay also hands out short-lived TURN credentials per
+// room (`ice` in functions/call.js); with those, a pair that cannot connect
+// directly is relayed instead of failing. Without them (the function down, an
+// older deploy) this list is what we have, and the failure is reported loudly.
 const ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
 ]
 
+// How long a connection may take to come up before we call it failed. Browsers
+// declare `failed` on their own after ~30s, and Safari can sit in `checking` far
+// longer, so without our own deadline a guest just waits. Specs shorten it.
+const connectTimeout = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_CONNECT_TIMEOUT?: number }).__CALL_CONNECT_TIMEOUT) || 25_000
+
+/** How the media to and from the other side travels: straight there, or through
+ *  our TURN relay (either side's relay candidate counts — the bytes cross it). */
+export type Path = 'unknown' | 'direct' | 'relay'
+
+/** Everything we know about a connection that did not come up — shown on screen
+ *  (Copy details) and logged by the relay, so a failure can be diagnosed after
+ *  the fact. Candidate TYPES only, never addresses. */
+export interface ConnectFailure {
+  why: 'timeout' | 'failed'
+  ms: number // since the attempt began
+  role: Role
+  inCall: boolean
+  relayConfigured: boolean // we had TURN credentials
+  heardFrom: boolean // the other side answered over signalling at all
+  local: string[] // candidate types WE gathered: host, srflx, relay
+  remote: string[] // candidate types THEY sent us
+  turnErrors: string[] // icecandidateerror codes, e.g. "701" (relay unreachable)
+  ice: string[] // ICE state changes, "checking@1200"
+  gathering: string
+  dc: string
+}
+/** The one-line cause a person can act on. */
+export type FailReason = 'no-answer' | 'relay-unreachable' | 'no-relay' | 'blocked'
+export function failReason(f: ConnectFailure): FailReason {
+  if (!f.heardFrom) return 'no-answer' // the other device never replied: closed tab, asleep, offline
+  if (!f.relayConfigured) return 'no-relay' // direct was blocked and we had no relay to fall back on
+  if (!f.local.includes('relay')) return 'relay-unreachable' // this network blocks our relay server
+  return 'blocked' // even the relay did not get through — likely the other side's network
+}
+
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
-export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string }
-export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; peers: DiagPeer[] }
+export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string; path: Path; local: string; remote: string }
+export interface DiagSnapshot { me: string; role: Role; inCall: boolean; muted: boolean; mic: string; cam: string; relay: boolean; path: Path; peers: DiagPeer[] }
 
 // A whiteboard object (a pen/eraser stroke or a text label). Coords are in the
 // centred, aspect-preserving board space; width/size are fractions of the board.
@@ -127,6 +168,12 @@ export interface CallHandlers {
   onLocal?(stream: MediaStream): void
   onPeerStream?(id: string, stream: MediaStream): void
   onPeer?(id: string, state: PeerState): void
+  /** A connection did not come up (or broke and could not recover). Fired once,
+   *  before the peer is dropped, with what we know — `onPeer(…,'failed')` too. */
+  onPeerFail?(id: string, f: ConnectFailure): void
+  /** The media path changed. `relay` means the call goes through our TURN server,
+   *  which carries voice only: video is withheld and the camera turned off. */
+  onPath?(path: Path, from: Path): void
   onLeave?(id: string): void
   onData?(id: string, msg: DataMsg): void
   onFileChunk?(id: string, chunk: ArrayBuffer): void
@@ -163,6 +210,16 @@ interface Peer {
   videoPaused?: boolean // they told us they aren't rendering us — we send them NO video
   sentWantW?: number // the last width WE asked this peer for (dedupes the control msg)
   reqPx?: number // the width we are actually painting them at, before any recording floor
+  // Connection diagnostics (see ConnectFailure).
+  born: number
+  local: Set<string>
+  remote: Set<string>
+  turnErrors: Set<string>
+  iceLog: string[]
+  heardFrom: boolean
+  timer?: number
+  done?: boolean // connected once, or reported failed — the deadline no longer applies
+  path: Path
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -203,20 +260,49 @@ export class CallRoom {
   // their tile is here (or none at all): the recording is drawn later, larger.
   private recFloor = 0
 
+  private ice: RTCIceServer[] = ICE
+  /** We hold TURN credentials, so a pair that cannot connect directly is relayed. */
+  relayConfigured = false
+  private iceReady: Promise<void> | null = null
+  /** The worst media path across in-call peers (one relayed leg = a relayed call). */
+  path: Path = 'unknown'
+
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
+
+  // TURN credentials for this room, once. Bounded: a slow or missing answer must
+  // never hold the call up, so after a few seconds we go on with STUN alone.
+  private loadIce(): Promise<void> {
+    if (!this.iceReady) this.iceReady = (async () => {
+      const ctl = new AbortController(); const t = window.setTimeout(() => ctl.abort(), 5000)
+      try {
+        const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action: 'ice' }), signal: ctl.signal })
+        const d = r.ok ? await r.json() as { turn?: RTCIceServer[] } : {}
+        const turn = (Array.isArray(d.turn) ? d.turn : []).filter((s) => s && s.urls && typeof s.username === 'string' && typeof s.credential === 'string')
+        if (turn.length) { this.ice = [...ICE, ...turn]; this.relayConfigured = true }
+      } catch { /* STUN only — reported as `no-relay` if a connection then fails */ }
+      finally { window.clearTimeout(t) }
+    })()
+    return this.iceReady
+  }
 
   /** Enter the room: start signalling and form data-only connections with anyone
    *  present. No camera/mic yet. Hosts wait for guests; guests knock over the
    *  data channel once connected. */
   enterLobby(name: string, asHost: boolean): void {
     this.name = name; this.role = asHost ? 'host' : 'guest'
-    if (!this.active) { this.active = true; this.pollLoop() }
+    // Nothing connects before the ICE servers are known: a peer built with STUN
+    // alone would never be relayed, however long it tried.
+    if (!this.active) { this.active = true; void this.loadIce().then(() => this.pollLoop()) }
     // A guest only KNOCKS (only the host answers) — so a waiting guest is connected
     // to the host alone and never sees the other participants until admitted. The
     // host announces itself with JOIN, and admitted peers JOIN to mesh (enableMedia).
-    this.send(asHost ? 'join' : 'knock', 'all')
-    this.heartbeat = window.setInterval(() => this.broadcastInfo(), 2000)
+    void this.loadIce().then(() => { if (this.active) this.send(asHost ? 'join' : 'knock', 'all') })
+    this.heartbeat = window.setInterval(() => { this.broadcastInfo(); void this.watchPath() }, 2000)
   }
+
+  /** Guest: knock again after a connection to the host failed. The failed peer is
+   *  already dropped, so the host's answer builds a fresh connection. */
+  retryKnock(): void { if (this.active && !this.inCall) this.send('knock', 'all') }
 
   /** Join the call. Privacy-first: we open NO device here — we start muted with the
    *  camera off, so nothing is acquired until the user actually turns mic/cam on. */
@@ -288,7 +374,11 @@ export class CallRoom {
     else if (type === 'join') { if (this.role === 'host' || this.inCall) { this.send('hello', from); this.connect(from) } }
     else if (type === 'hello') this.connect(from)
     else if (type === 'offer' || type === 'answer') await this.onDesc(from, payload as RTCSessionDescriptionInit, type)
-    else if (type === 'ice') { const c = payload as RTCIceCandidateInit; const p = this.peers.get(from); if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c) }
+    else if (type === 'ice') {
+      const c = payload as RTCIceCandidateInit; const p = this.peers.get(from)
+      const typ = / typ (\w+)/.exec(c?.candidate || '')?.[1]; if (p && typ) p.remote.add(typ)
+      if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c)
+    }
     else if (type === 'leave') this.drop(from)
     // Owner→waiting-caller control (sent from another room via signalRoom).
     else if (type === 'redirect') { const r = String((payload as { room?: string })?.room || ''); if (r) this.h.onRedirect?.(r) }
@@ -299,20 +389,33 @@ export class CallRoom {
   private connect(other: string) { if (!this.peers.has(other)) this.mkPeer(other, this.me > other) }
 
   private mkPeer(id: string, initiator: boolean): Peer {
-    const pc = new RTCPeerConnection({ iceServers: ICE })
-    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false }
+    const pc = new RTCPeerConnection({ iceServers: this.ice })
+    const born = Date.now()
+    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false, born, local: new Set(), remote: new Set(), turnErrors: new Set(), iceLog: [], heardFrom: false, path: 'unknown' }
     pc.onnegotiationneeded = async () => {
       try { peer.makingOffer = true; await pc.setLocalDescription(); this.send('offer', id, pc.localDescription) }
       catch { /* */ } finally { peer.makingOffer = false }
     }
-    pc.onicecandidate = (e) => { if (e.candidate) this.send('ice', id, e.candidate.toJSON()) }
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) return
+      const typ = e.candidate.type || / typ (\w+)/.exec(e.candidate.candidate)?.[1]; if (typ) peer.local.add(typ)
+      this.send('ice', id, e.candidate.toJSON())
+    }
+    // A relay we could not reach or that refused us says so here, and nowhere else.
+    pc.onicecandidateerror = (e) => { const ev = e as RTCPeerConnectionIceErrorEvent; if (ev.url && /^turns?:/.test(ev.url)) peer.turnErrors.add(`${ev.errorCode}${ev.url.startsWith('turns:') ? ' tls' : ''}`) }
+    pc.oniceconnectionstatechange = () => { if (peer.iceLog.length < 20) peer.iceLog.push(`${pc.iceConnectionState}@${Date.now() - born}`) }
     pc.ontrack = (e) => { peer.stream = e.streams[0]; this.h.onPeerStream?.(id, e.streams[0]) }
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
-      if (s === 'connected') this.h.onPeer?.(id, 'connected')
-      else if (s === 'failed') this.h.onPeer?.(id, 'failed')
-      if (s === 'failed' || s === 'closed') this.drop(id)
+      if (s === 'connected') {
+        if (!peer.done) { peer.done = true; window.clearTimeout(peer.timer); void this.reportConnected(peer) }
+        this.h.onPeer?.(id, 'connected')
+      } else if (s === 'failed') { this.fail(id, 'failed'); return }
+      if (s === 'closed') this.drop(id)
     }
+    // Our own deadline for the FIRST connection; a call that was up and then broke
+    // is `failed` above. Without it a guest waits on a spinner indefinitely.
+    peer.timer = window.setTimeout(() => { if (!peer.done && this.peers.get(id) === peer) this.fail(id, 'timeout') }, connectTimeout())
     pc.ondatachannel = (e) => this.bindDc(id, peer, e.channel)
     if (initiator) this.bindDc(id, peer, pc.createDataChannel('bis', { ordered: true }))
     this.peers.set(id, peer)
@@ -320,9 +423,84 @@ export class CallRoom {
     return peer
   }
 
+  private failure(peer: Peer, why: ConnectFailure['why']): ConnectFailure {
+    return {
+      why, ms: Date.now() - peer.born, role: this.role, inCall: this.inCall, relayConfigured: this.relayConfigured,
+      heardFrom: peer.heardFrom, local: [...peer.local], remote: [...peer.remote], turnErrors: [...peer.turnErrors],
+      ice: peer.iceLog, gathering: peer.pc.iceGatheringState, dc: peer.dc?.readyState || 'none',
+    }
+  }
+  // Report, then drop. Exactly once per peer: the deadline and the browser's own
+  // `failed` can both fire for the same attempt.
+  private fail(id: string, why: ConnectFailure['why']) {
+    const peer = this.peers.get(id)
+    if (!peer) return // already reported and dropped
+    if (why === 'timeout' && peer.done) return // it came up after all
+    const f = this.failure(peer, why)
+    peer.done = true; window.clearTimeout(peer.timer)
+    this.h.onPeerFail?.(id, f)
+    this.h.onPeer?.(id, 'failed')
+    void this.diagPost('fail', { ...f, reason: failReason(f) })
+    this.drop(id)
+  }
+  // The relay logs these (functions/call.js `diag`): candidate types and states,
+  // never an address, a name or anything said. It is how a call that "just didn't
+  // connect" can be explained afterwards.
+  private async diagPost(kind: 'fail' | 'connected', data: Record<string, unknown>) {
+    try { await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action: 'diag', payload: { kind, ...data } }) }) } catch { /* best effort */ }
+  }
+  private async reportConnected(peer: Peer) {
+    await sleep(1500) // let the selected pair settle so the path is real
+    await this.readPath(peer)
+    void this.diagPost('connected', { ms: Date.now() - peer.born, role: this.role, relayConfigured: this.relayConfigured, path: peer.path, local: [...peer.local], remote: [...peer.remote], turnErrors: [...peer.turnErrors] })
+  }
+
+  // Which way the bytes actually go: the SELECTED pair, never "a relay candidate
+  // exists" — nearly every peer behind NAT gathers one and almost none use it.
+  private async readPath(peer: Peer) {
+    if (peer.pc.connectionState !== 'connected') return
+    try {
+      const stats = await peer.pc.getStats()
+      let sel = ''
+      const pairs = new Map<string, Record<string, unknown>>(), cands = new Map<string, Record<string, unknown>>()
+      stats.forEach((r: Record<string, unknown>) => {
+        if (r.type === 'transport' && typeof r.selectedCandidatePairId === 'string') sel = r.selectedCandidatePairId
+        else if (r.type === 'candidate-pair') pairs.set(String(r.id), r)
+        else if (r.type === 'local-candidate' || r.type === 'remote-candidate') cands.set(String(r.id), r)
+      })
+      // Safari reports no transport selection: the nominated, succeeded pair is it.
+      if (!sel) for (const [k, p] of pairs) if (p.state === 'succeeded' && (p.nominated || p.selected)) { sel = k; break }
+      const pair = pairs.get(sel)
+      if (!pair) return
+      const lt = cands.get(String(pair.localCandidateId))?.candidateType, rt = cands.get(String(pair.remoteCandidateId))?.candidateType
+      if (lt || rt) peer.path = lt === 'relay' || rt === 'relay' ? 'relay' : 'direct'
+    } catch { /* a closing pc */ }
+  }
+  // Watched, not sampled once: ICE can move to the relay mid-call (wifi → mobile).
+  private async watchPath() {
+    let worst: Path = 'unknown'
+    for (const p of this.peers.values()) {
+      if (!p.info?.inCall) continue
+      await this.readPath(p)
+      if (p.path === 'relay') worst = 'relay'
+      else if (p.path === 'direct' && worst !== 'relay') worst = 'direct'
+    }
+    if (!this.inCall || worst === this.path) return
+    const from = this.path
+    this.path = worst
+    // The relay carries voice only (it is capped well below what video needs),
+    // so video stops going out — and the camera is released rather than left lit
+    // sending nothing. Coming back to direct does NOT turn it on again: that is
+    // the person's choice to make.
+    if (worst === 'relay') { if (this.cam) await this.toggleCam(false); if (this.screenOn) this.stopScreen() }
+    this.applyVideoAll()
+    this.h.onPath?.(worst, from)
+  }
+
   // Perfect negotiation: tolerate simultaneous (re)negotiation from both sides.
   private async onDesc(id: string, desc: RTCSessionDescriptionInit, kind: 'offer' | 'answer') {
     const peer = this.peers.get(id) || this.mkPeer(id, false)
+    peer.heardFrom = true
     const pc = peer.pc
     const collision = kind === 'offer' && (peer.makingOffer || pc.signalingState !== 'stable')
     if (collision && !peer.polite) return // impolite peer ignores a colliding offer
@@ -346,6 +524,9 @@ export class CallRoom {
 
   /** The video track we'd be sending right now, if anyone wanted it. */
   private wantedVideoTrack(): MediaStreamTrack | null {
+    // The one place that decides what video reaches the wire, so the relay rule
+    // cannot be forgotten by a fifth caller.
+    if (this.path === 'relay') return null
     if (this.screenOn) return this.screen?.getVideoTracks()[0] || null
     return this.cam ? this.videoTrack : null
   }
@@ -533,6 +714,9 @@ export class CallRoom {
   }
   /** Camera on → acquire and route it; off → stop it (releases the camera). */
   async toggleCam(on: boolean): Promise<boolean> {
+    // Refused rather than opened and not sent: a lit camera indicator with nothing
+    // going out is the one thing a private call must not do.
+    if (on && this.path === 'relay') return false
     if (on) {
       if (!this.videoTrack) {
         try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, ...CAM } }); this.videoTrack = s.getVideoTracks()[0] }
@@ -620,6 +804,7 @@ export class CallRoom {
   // Throws on failure (the caller surfaces the reason) instead of swallowing it —
   // a silent null made mobile screen-share failures impossible to diagnose.
   async shareScreen(): Promise<MediaStream> {
+    if (this.path === 'relay') throw new DOMException('The call goes through the relay, which carries voice only', 'RelayVoiceOnly')
     this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
     const track = this.screen.getVideoTracks()[0]
     this.screenOn = true // set BEFORE wiring, so tuneVideo picks the screen ceiling
@@ -635,8 +820,9 @@ export class CallRoom {
     const t = (tr?: MediaStreamTrack | null) => (tr ? `${tr.readyState}${tr.enabled ? '' : ' off'}${tr.muted ? ' muted' : ''}` : '—')
     return {
       me: this.me.slice(0, 5), role: this.role, inCall: this.inCall, muted: this.muted,
-      mic: t(this.audioTrack), cam: t(this.videoTrack),
+      mic: t(this.audioTrack), cam: t(this.videoTrack), relay: this.relayConfigured, path: this.path,
       peers: [...this.peers.entries()].map(([id, p]) => ({
+        path: p.path, local: [...p.local].join(',') || '—', remote: [...p.remote].join(',') || '—',
         id: id.slice(0, 5), name: p.info?.name || '?', theirInCall: !!p.info?.inCall,
         conn: p.pc.connectionState, ice: p.pc.iceConnectionState, dc: p.dc?.readyState || '—',
         sendMic: t(p.aSender?.track), sendCam: t(p.vSender?.track),
@@ -646,13 +832,13 @@ export class CallRoom {
     }
   }
 
-  private drop(id: string) { const p = this.peers.get(id); if (!p) return; try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
+  private drop(id: string) { const p = this.peers.get(id); if (!p) return; window.clearTimeout(p.timer); try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
   leave() {
     if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false
     window.clearInterval(this.heartbeat)
     this.stopScreen()
-    this.peers.forEach((p) => { try { p.pc.close() } catch { /* */ } }); this.peers.clear()
+    this.peers.forEach((p) => { window.clearTimeout(p.timer); try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())
     this.audioTrack?.stop(); this.videoTrack?.stop(); this.audioTrack = null; this.videoTrack = null
   }

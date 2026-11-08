@@ -4,8 +4,44 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from '../../components/ui'
 import { UsersIcon, MicIcon, MicOffIcon, UserPlusIcon, CheckIcon, ClockIcon, ShieldIcon } from '../../components/icons'
-import type { DiagSnapshot, PeerInfo } from './rtc'
+import { failReason, type ConnectFailure, type DiagSnapshot, type PeerInfo } from './rtc'
 import { initials } from './helpers'
+
+/** One line a person can paste into a message to us: what this side tried and
+ *  what came back. Candidate types only (host / srflx / relay), never addresses. */
+export function failSummary(f: ConnectFailure): string {
+  const l = (a: string[]) => a.length ? a.join('/') : 'none'
+  return `${failReason(f)} · ${f.why} after ${Math.round(f.ms / 1000)}s · ours ${l(f.local)} · theirs ${l(f.remote)} · relay ${f.relayConfigured ? 'yes' : 'no'}${f.turnErrors.length ? ` (${f.turnErrors.join(', ')})` : ''}`
+}
+
+// A connection that did not come up, said out loud: the cause in words, the
+// technical line under it (so a screenshot is enough to diagnose it), and what to
+// do. Never a toast — a toast is gone before anybody reads it.
+export function ConnFailPanel({ title, f, reasons, retry, dismiss, labels, dark }: {
+  title: string; f: ConnectFailure; reasons: Record<string, string>
+  retry?: () => void; dismiss?: () => void; dark?: boolean
+  labels: { tryAgain: string; copyDetails: string; copiedDetails: string; dismiss: string }
+}) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    const text = JSON.stringify({ ...f, reason: failReason(f), at: new Date().toISOString(), ua: navigator.userAgent }, null, 1)
+    try { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 2500) } catch { /* no clipboard: the line on screen still says it */ }
+  }
+  const btn = 'h-9 px-3 rounded-md text-[0.85rem] font-semibold cursor-pointer border'
+  return (
+    <div role="alert" data-testid="call-conn-fail" data-reason={failReason(f)}
+      className={`w-full rounded-lg border-2 px-3.5 py-3 flex flex-col gap-2 text-start ${dark ? 'border-[#ff8a7a] bg-[color-mix(in_srgb,#d33_28%,transparent)] text-[color:var(--sp-fg,#fff)]' : 'border-[#d33] bg-[color-mix(in_srgb,#d33_10%,var(--surface))] text-ink'}`}>
+      <p className="m-0 text-[1rem] font-semibold leading-snug flex items-center gap-2"><span aria-hidden="true">⚠</span> {title}</p>
+      <p className="m-0 text-[0.9rem] leading-relaxed" data-testid="call-conn-fail-why">{reasons[failReason(f)]}</p>
+      <p className="m-0 font-mono text-[0.68rem] leading-snug opacity-75 break-all" data-testid="call-conn-fail-detail" dir="ltr">{failSummary(f)}</p>
+      <div className="flex flex-wrap gap-2 pt-0.5">
+        {retry && <button type="button" onClick={retry} data-testid="call-conn-retry" className={`${btn} ${dark ? 'bg-sand-100 text-green-800 border-sand-100' : 'bg-green-700 text-sand-100 border-green-700'}`}>{labels.tryAgain}</button>}
+        <button type="button" onClick={() => void copy()} data-testid="call-conn-copy" className={`${btn} bg-transparent ${dark ? 'border-sand-100/40' : 'border-[color:var(--line)]'}`}>{copied ? labels.copiedDetails : labels.copyDetails}</button>
+        {dismiss && <button type="button" onClick={dismiss} data-testid="call-conn-dismiss" className={`${btn} bg-transparent border-transparent opacity-80`}>{labels.dismiss}</button>}
+      </div>
+    </div>
+  )
+}
 
 export function StreamVideo({ stream, className, muted, mirror, onSize }: { stream: MediaStream; className?: string; muted?: boolean; mirror?: boolean; onSize?: (cssPx: number) => void }) {
   const ref = useRef<HTMLVideoElement>(null)
@@ -252,11 +288,13 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
         <>
           <p className={line}>me {diag.me} · {diag.role} · inCall {String(diag.inCall)} · muted {String(diag.muted)}</p>
           <p className={line}>myMic [{diag.mic}] · myCam [{diag.cam}]</p>
+          <p className={line}>relay configured {String(diag.relay)} · path <b>{diag.path}</b></p>
           {diag.peers.length === 0 && <p className={line}>no peers connected</p>}
           {diag.peers.map((p) => (
             <div key={p.id} className={`${line} border-t border-[color:var(--line-soft)] pt-1`}>
               <div>▸ {p.name} ({p.id}) theirInCall {String(p.theirInCall)}</div>
-              <div>conn <b>{p.conn}</b> · ice {p.ice} · dc {p.dc}</div>
+              <div>conn <b>{p.conn}</b> · ice {p.ice} · dc {p.dc} · path {p.path}</div>
+              <div>cands ours [{p.local}] · theirs [{p.remote}]</div>
               <div>sendMic [{p.sendMic}] · sendCam [{p.sendCam}]</div>
               <div>recvAudio [{p.recvAudio}] · recvVideo [{p.recvVideo}]</div>
             </div>

@@ -40,7 +40,9 @@ export async function startRelay(): Promise<Relay> {
         return res.end(JSON.stringify({ ok: true, delivered: 1 }))
       }
       if (path.endsWith('/call-dm') || path.endsWith('/touch')) return res.end(JSON.stringify({ ok: true, delivered: 0 }))
-      // Signaling.
+      // Signaling. `ice` and `diag` never touch a room, like the real relay.
+      if (b.action === 'ice') return res.end(JSON.stringify({ ok: true, turn: [] }))
+      if (b.action === 'diag') return res.end(JSON.stringify({ ok: true }))
       const room = String(b.room || '')
       let r = rooms.get(room)
       if (!r) { r = { count: 0, msgs: [] }; rooms.set(room, r) }

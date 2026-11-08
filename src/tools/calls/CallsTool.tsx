@@ -5,7 +5,7 @@ import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
-import { CallRoom, roomStatus, signalRoom, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
@@ -19,7 +19,7 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer,
+  DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer, ConnFailPanel,
 } from './parts'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
@@ -122,6 +122,15 @@ export default function CallsTool() {
   // Someone we couldn't reach (or who dropped) who publishes a call-me link — we can
   // ring them back into this call instead of everyone giving up (#222).
   const [lostPeer, setLostPeer] = useState<{ name: string; link: string } | null>(null)
+  // Connection health, said out loud (rtc.ts ConnectFailure). A waiting guest's
+  // own link to the host, step by step; a connection that did not come up, with
+  // why; peers still connecting that have not told us who they are yet (the host
+  // sees "someone is connecting" instead of nothing); and whether the call has
+  // gone through the relay (voice only).
+  const [hostLink, setHostLink] = useState<'none' | 'connecting' | 'connected'>('none')
+  const [connFail, setConnFail] = useState<{ title: string; f: ConnectFailure } | null>(null)
+  const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set())
+  const [relayed, setRelayed] = useState(false)
   const [declineTarget, setDeclineTarget] = useState<{ room: string; mode: 'screen' | 'banner' } | null>(null)
   const addWindowRef = useRef(0) // admit knockers until this time (owner chose "Add to call")
 
@@ -363,7 +372,9 @@ export default function CallsTool() {
   useEffect(() => {
     if (phase !== 'waiting') { setWaitSlow(false); return }
     connectedOnce.current = false
-    const t = window.setTimeout(() => { if (!connectedOnce.current) setWaitSlow(true) }, 30_000)
+    // Only for a host that never answered at all: a connection that started and
+    // then failed is reported by onPeerFail, with its reason.
+    const t = window.setTimeout(() => { if (!connectedOnce.current) setWaitSlow(true) }, 12_000)
     return () => window.clearTimeout(t)
   }, [phase])
 
@@ -542,18 +553,39 @@ export default function CallsTool() {
           if (info && info.role === 'guest') setLeftWaiters((l) => l.some((w) => w.id === pid) ? l : [...l, { id: pid, name: info.name }])
         }
         setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }); setGeos((g) => { const n = new Map(g); n.delete(pid); return n })
+        setConnectingIds((c) => { if (!c.has(pid)) return c; const n = new Set(c); n.delete(pid); return n })
+        if (phaseRef.current === 'waiting' && !rtc.current?.inCall) setHostLink('none')
       },
       onData, onFileChunk,
       onPeer: (id, state) => {
-        if (state === 'connected') connectedOnce.current = true
+        // A waiting guest is connected to the host alone, so its only peer IS the
+        // host link, and the waiting screen says which step that link is on.
+        const guestWaiting = phaseRef.current === 'waiting' && !rtc.current?.inCall
+        setConnectingIds((c) => { const n = new Set(c); if (state === 'connecting') n.add(id); else n.delete(id); return n })
+        if (state === 'connected') { connectedOnce.current = true; if (guestWaiting) setHostLink('connected') }
+        else if (state === 'connecting') { if (guestWaiting) setHostLink('connecting') }
         else if (state === 'failed') {
-          // Surface the failure instead of silently dropping the peer — and if they
-          // publish a call-me link, offer to ring them back in rather than just
-          // reporting the bad news (#222).
+          // If they publish a call-me link, offer to ring them back in rather than
+          // just reporting the bad news (#222). The failure itself is onPeerFail.
           const info = rosterRef.current.get(id)
-          const who = info?.name || '•'
-          if (info?.link) setLostPeer({ name: who, link: info.link })
-          else { setToast(`${s.connectFail} ${who}`); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 6000) }
+          if (info?.link) setLostPeer({ name: info.name || '•', link: info.link })
+        }
+      },
+      // Said out loud, with why and what to try — never a toast, which is gone
+      // before anybody reads it, and never silence: a guest whose link to the host
+      // failed was left reading "waiting for the host to let you in" for ever.
+      onPeerFail: (id, f) => {
+        const info = rosterRef.current.get(id)
+        if (phaseRef.current === 'waiting' && !rtc.current?.inCall) { setHostLink('none'); setConnFail({ title: s.failTitle, f }); return }
+        if (info?.link && rtc.current?.inCall) return // the lost-peer banner offers to ring them back
+        setConnFail({ title: info?.name ? `${s.connectFail} ${info.name}` : s.failGuestTitle, f })
+      },
+      onPath: (p) => {
+        setRelayed(p === 'relay')
+        if (p === 'relay') {
+          // The engine has already released the camera and stopped any share.
+          setCam(false); setSharing(false); setScreenStream(null)
+          setToast(s.relayOn); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 8000)
         }
       },
       onPeerInfo: (id, info) => {
@@ -698,6 +730,7 @@ export default function CallsTool() {
     const code = room.trim(); if (!code) return
     missedIdRef.current = code6() // each knock is its own (possibly missed) call
     const r = ensureRoom(code); r.enterLobby(name || s.you, false)
+    setConnFail(null); setHostLink('none')
     setPhase('waiting')
   }
   // Host: let a specific waiting guest into the call (going live if needed).
@@ -927,7 +960,7 @@ export default function CallsTool() {
     </div>
   )
 
-  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear() }
+  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed(false) }
   function hangup() {
     if (recRef.current) void stopRecording() // what was recorded is kept, offered after the call
     if (!isGuest) {
@@ -1010,7 +1043,8 @@ export default function CallsTool() {
     const v = !cam
     if (v && govRef.current.paused) govOverride.current = true // asked for video anyway
     if (!v) autoOff.current = false // their choice now, not ours to undo
-    setCam(v); const ok = await rtc.current?.toggleCam(v); if (v && ok === false) setCam(false)
+    setCam(v); const ok = await rtc.current?.toggleCam(v)
+    if (v && ok === false) { setCam(false); if (rtc.current?.path === 'relay') screenToast(s.camRelay) }
   }
   useEffect(() => {
     if (phase !== 'live') return
@@ -1043,6 +1077,7 @@ export default function CallsTool() {
       const err = e as DOMException
       // The user dismissing the OS picker is not an error — stay quiet.
       if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return
+      if (err?.name === 'RelayVoiceOnly') { screenToast(s.screenRelay); return }
       // Otherwise surface the real reason (e.g. NotReadableError, NotSupportedError)
       // so mobile failures are diagnosable instead of silent.
       screenToast(`${s.screenFailed}: ${err?.name || err?.message || 'error'}`)
@@ -1574,12 +1609,23 @@ export default function CallsTool() {
             </div>
           ) : phase === 'waiting' ? (
             <>
-              <p className="text-center text-[1rem] leading-relaxed text-[color:color-mix(in_srgb,var(--sp-fg)_90%,transparent)] flex items-center gap-2" data-testid="call-waiting">
-                <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.waitingHost}
-              </p>
-              {/* Halfway through each poll wait, show we're checking the relay again. */}
-              <span className={`w-5 h-5 rounded-full border-2 border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] border-t-[color:var(--sp-fg)] transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
-              {waitSlow && <p className="max-w-[22rem] text-center text-[0.85rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.waitSlow}</p>}
+              {connFail ? (
+                <ConnFailPanel dark title={connFail.title} f={connFail.f} reasons={s.failReason}
+                  labels={{ tryAgain: s.tryAgain, copyDetails: s.copyDetails, copiedDetails: s.copiedDetails, dismiss: s.dismiss }}
+                  retry={() => { setConnFail(null); setHostLink('none'); rtc.current?.retryKnock() }} />
+              ) : (
+                <>
+                  {/* Which step the link to the host is on. "Waiting to be let in" is
+                      only true once we are actually connected to the host's device —
+                      the knock itself travels over that connection. */}
+                  <p className="text-center text-[1rem] leading-relaxed text-[color:color-mix(in_srgb,var(--sp-fg)_90%,transparent)] flex items-center gap-2" data-testid="call-waiting" data-stage={hostLink}>
+                    <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {hostLink === 'connected' ? s.waitingHost : hostLink === 'connecting' ? s.connectingHost : s.reachingHost}
+                  </p>
+                  {/* Halfway through each poll wait, show we're checking the relay again. */}
+                  <span className={`w-5 h-5 rounded-full border-2 border-[color:color-mix(in_srgb,var(--sp-fg)_25%,transparent)] border-t-[color:var(--sp-fg)] transition-opacity duration-200 ${recheck ? 'opacity-100 animate-spin' : 'opacity-0'}`} data-testid="call-recheck" aria-hidden={!recheck} />
+                  {waitSlow && hostLink === 'none' && <p className="max-w-[22rem] text-center text-[0.9rem] leading-relaxed text-[var(--gold-400)]" data-testid="call-wait-slow">{s.hostNotAnswering}</p>}
+                </>
+              )}
               {nameAsk && nameForm('dark')}
               <button className={ghost} onClick={hangup} data-testid="call-cancel">{s.cancel}</button>
             </>
@@ -1677,6 +1723,18 @@ export default function CallsTool() {
             </>
           )}
 
+          {/* Somebody knocked and their connection is still forming: their name
+              arrives over that connection, so until then they are "someone". */}
+          {!isGuest && phase === 'hosting' && [...connectingIds].some((id) => !roster.has(id)) && (
+            <p className="text-center text-[0.95rem] text-[color:color-mix(in_srgb,var(--sp-fg)_85%,transparent)] flex items-center gap-2" data-testid="call-someone-connecting">
+              <span className="inline-block w-2 h-2 rounded-full bg-[var(--gold-500)] animate-pulse" /> {s.someoneConnecting}
+            </p>
+          )}
+          {!isGuest && phase === 'hosting' && connFail && (
+            <ConnFailPanel dark title={connFail.title} f={connFail.f} reasons={s.failReason}
+              labels={{ tryAgain: s.tryAgain, copyDetails: s.copyDetails, copiedDetails: s.copiedDetails, dismiss: s.dismiss }}
+              dismiss={() => setConnFail(null)} />
+          )}
           {/* Host waiting list (people knocking). */}
           {!isGuest && phase === 'hosting' && waiting.length > 0 && !willAutoAdmit() && (
             <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} staleIds={staleIds} live /></div>
@@ -1865,6 +1923,13 @@ export default function CallsTool() {
           )}
         </div>
       )}
+      {connFail && (
+        <div className="w-full px-3 py-2 shrink-0 bg-[var(--surface)] border-b border-[color:var(--line)]">
+          <ConnFailPanel title={connFail.title} f={connFail.f} reasons={s.failReason}
+            labels={{ tryAgain: s.tryAgain, copyDetails: s.copyDetails, copiedDetails: s.copiedDetails, dismiss: s.dismiss }}
+            dismiss={() => setConnFail(null)} />
+        </div>
+      )}
       {/* We lost someone who publishes a call-me link — ring them back in rather
           than leaving the call a person short (#222). */}
       {lostPeer && (
@@ -1945,6 +2010,13 @@ export default function CallsTool() {
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
       {nameAsk && nameForm('bar')}
+      {/* The lasting record of the relay: the toast announces it, this stays,
+          because video stopping with no reason on screen reads as a broken call. */}
+      {relayed && (
+        <div className="flex items-center gap-2.5 px-3 py-1.5 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,var(--gold-500)_14%,var(--surface))] text-[0.82rem] text-ink leading-snug" data-testid="call-relay-bar">
+          <span className="w-2 h-2 rounded-full bg-[var(--gold-500)] shrink-0" aria-hidden="true" /> {s.relayOn}
+        </div>
+      )}
       {(recording || recFinishing || recBy.size > 0) && (
         <div className="flex items-center gap-2.5 px-3 py-2 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,#d33_10%,var(--surface))]" data-testid="call-rec-bar">
           <span className="w-2.5 h-2.5 rounded-full bg-[#d33] shrink-0 animate-pulse" aria-hidden="true" />
