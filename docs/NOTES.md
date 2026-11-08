@@ -7259,6 +7259,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     checked on load: Join/Start give way to `call-no-webrtc` (Lockdown Mode
     steps on Apple devices), and a `why: no-webrtc` diag is logged for the
     room. A host-side `no-answer` names Lockdown Mode as one possible cause.
+    On an Apple device the cause is taken to be Lockdown Mode
+    (`lockdownLikely()`: Apple UA + no `RTCPeerConnection`; every Apple
+    browser has had WebRTC since iOS 11, WebViews since 14.3), logged as
+    `reason: lockdown`, and "Show me how" opens `LockdownHelp`: four steps in
+    Apple's own words (support.apple.com/105120, en + ar-sa: "Page Menu button"
+    → "Website Settings…" → "Lockdown Mode"; Arabic «وضع التأمين», not «وضع
+    القفل»), each with a DRAWN picture (SVG, real host name, theme tokens), not
+    a photo, so it stays right in both languages. Inside an in-app browser it
+    says to open Safari first. The drawings follow the user's own screenshot of
+    iOS Safari; they have not been compared with a real phone beyond that.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call
     screen, the call-link page): "no data touches our servers" stopped being
     true for a relayed call. It is still end-to-end encrypted — the relay carries

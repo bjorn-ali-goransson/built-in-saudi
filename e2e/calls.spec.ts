@@ -338,7 +338,18 @@ test('a browser without WebRTC (Lockdown Mode) is told so before joining, and it
   await expect(panel).toContainText('This browser has calls turned off')
   await expect(panel).toContainText('Lockdown Mode')
   await expect(pb.getByTestId('call-join')).toHaveCount(0)
-  await expect.poll(() => diags.some((d) => d.room === room && d.payload.why === 'no-webrtc'), { timeout: 5000 }).toBe(true)
+  await expect.poll(() => diags.some((d) => d.room === room && d.payload.why === 'no-webrtc' && d.payload.reason === 'lockdown'), { timeout: 5000 }).toBe(true)
+  // The way out: a drawer with each step pictured, naming Apple's own buttons
+  // and this site's real address.
+  await pb.getByTestId('call-lockdown-how').click()
+  const help = pb.getByTestId('lockdown-help')
+  await expect(help.getByTestId('lockdown-step')).toHaveCount(4)
+  await expect(help.locator('svg[role=img]')).toHaveCount(4)
+  await expect(help).toContainText('Website Settings…')
+  await expect(help).toContainText('Turn off “Lockdown Mode”')
+  await expect(help.locator('svg').first()).toContainText(new URL(pb.url()).host)
+  await pb.getByTestId('sheet-close').click()
+  await expect(help).toHaveCount(0)
   await ca.close(); await cb.close()
 })
 

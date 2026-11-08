@@ -101,9 +101,15 @@ export function canCall(): boolean {
 export function isApple(): boolean {
   return typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && /Apple/.test(navigator.vendor || '')))
 }
+/**
+ * Lockdown Mode can't be asked about directly; this is its fingerprint. Every
+ * Apple browser has had WebRTC since iOS 11 / Safari 11 (in-app WebViews since
+ * iOS 14.3), and Lockdown Mode is what takes it away.
+ */
+export function lockdownLikely(): boolean { return isApple() && !canCall() }
 /** Logged like a connection failure, so a call that never could start is still explained. */
 export function reportNoWebrtc(room: string) {
-  void fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'no-webrtc', action: 'diag', payload: { kind: 'fail', why: 'no-webrtc', reason: 'no-webrtc' } }) }).catch(() => {})
+  void fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'no-webrtc', action: 'diag', payload: { kind: 'fail', why: 'no-webrtc', reason: lockdownLikely() ? 'lockdown' : 'no-webrtc' } }) }).catch(() => {})
 }
 
 export type PeerState = 'connecting' | 'connected' | 'failed'

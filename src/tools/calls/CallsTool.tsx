@@ -5,7 +5,7 @@ import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
-import { CallRoom, canCall, isApple, reportNoWebrtc, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, canCall, lockdownLikely, reportNoWebrtc, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
@@ -21,6 +21,7 @@ import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
   DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer, ConnFailPanel,
 } from './parts'
+import { LockdownHelp } from './LockdownHelp'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
 import { MissedCalls } from './MissedCalls'
 import { Contacts } from './Contacts'
@@ -56,6 +57,8 @@ export default function CallsTool() {
   // No WebRTC (iPhone Lockdown Mode): say so before anyone joins, and log it, rather
   // than knock into a connection that can never form (rtc.ts canCall).
   const [noRtc] = useState(() => !canCall())
+  const [lockdown] = useState(() => lockdownLikely())
+  const [lockdownOpen, setLockdownOpen] = useState(false)
   useEffect(() => { if (noRtc && initialRoom) reportNoWebrtc(initialRoom) }, [noRtc, initialRoom])
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
@@ -1693,7 +1696,10 @@ export default function CallsTool() {
                 {noRtc ? (
                   <div role="alert" data-testid="call-no-webrtc" className="rounded-md border border-[color:var(--gold-400)] bg-[color-mix(in_srgb,var(--gold-400)_12%,transparent)] px-4 py-3 text-[0.9rem] leading-relaxed">
                     <p className="font-semibold mb-1">{s.noWebrtcTitle}</p>
-                    <p>{isApple() ? s.noWebrtcApple : s.noWebrtc}</p>
+                    <p>{lockdown ? s.noWebrtcApple : s.noWebrtc}</p>
+                    {lockdown && <button type="button" onClick={() => setLockdownOpen(true)} data-testid="call-lockdown-how"
+                      className={`${cream} mt-3`}>{s.lockdownHow}</button>}
+                    {lockdownOpen && <LockdownHelp locale={locale} onClose={() => setLockdownOpen(false)} />}
                   </div>
                 ) : isGuest ? (joinHeld ? null :
                   <>
