@@ -90,6 +90,22 @@ export function failReason(f: ConnectFailure): FailReason {
   return 'blocked' // even the relay did not get through — likely the other side's network
 }
 
+// iPhone/Mac Lockdown Mode (and some locked-down browsers) remove WebRTC outright.
+// Without this check the guest's engine throws inside the signal handler when the
+// host answers, the error is swallowed, and the guest waits on "still trying" for
+// ever while the host times out having heard nothing.
+export function canCall(): boolean {
+  return typeof window !== 'undefined' && typeof window.RTCPeerConnection === 'function'
+}
+/** Apple browsers: the likely reason is Lockdown Mode, which the person can lift per site. */
+export function isApple(): boolean {
+  return typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && /Apple/.test(navigator.vendor || '')))
+}
+/** Logged like a connection failure, so a call that never could start is still explained. */
+export function reportNoWebrtc(room: string) {
+  void fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'no-webrtc', action: 'diag', payload: { kind: 'fail', why: 'no-webrtc', reason: 'no-webrtc' } }) }).catch(() => {})
+}
+
 export type PeerState = 'connecting' | 'connected' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
@@ -389,6 +405,7 @@ export class CallRoom {
   private connect(other: string) { if (!this.peers.has(other)) this.mkPeer(other, this.me > other) }
 
   private mkPeer(id: string, initiator: boolean): Peer {
+    if (!canCall()) throw new Error('NoWebRTC') // the screen already says why (CallsTool)
     const pc = new RTCPeerConnection({ iceServers: this.ice })
     const born = Date.now()
     const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false, born, local: new Set(), remote: new Set(), turnErrors: new Set(), iceLog: [], heardFrom: false, path: 'unknown' }

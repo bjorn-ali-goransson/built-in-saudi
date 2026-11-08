@@ -317,6 +317,31 @@ test('a connection that cannot form is said out loud on both ends, with why, and
   await ca.close(); await cb.close()
 })
 
+// The second failure that came in: an iPhone in Lockdown Mode has no WebRTC at all.
+// Its guest knocked into nothing and read "the host hasn't answered — we keep
+// trying" for ever. It must say so before the knock, as an Apple phone, and log it.
+test('a browser without WebRTC (Lockdown Mode) is told so before joining, and it is logged', async ({ browser }) => {
+  const ca = await ctx(browser, base)
+  const pa = await ca.newPage()
+  await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  const cb = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' })
+  await cb.addInitScript((u) => {
+    const w = window as unknown as Record<string, unknown>
+    w.__CALL_SIGNAL = u
+    delete w.RTCPeerConnection; w.RTCPeerConnection = undefined // what Lockdown Mode leaves
+  }, base)
+  const pb = await cb.newPage()
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  const panel = pb.getByTestId('call-no-webrtc')
+  await expect(panel).toContainText('This browser has calls turned off')
+  await expect(panel).toContainText('Lockdown Mode')
+  await expect(pb.getByTestId('call-join')).toHaveCount(0)
+  await expect.poll(() => diags.some((d) => d.room === room && d.payload.why === 'no-webrtc'), { timeout: 5000 }).toBe(true)
+  await ca.close(); await cb.close()
+})
+
 test('a relay that this network cannot reach is named as the cause', async ({ browser }) => {
   // The relay offers TURN — at an address nothing answers on — so the browser
   // tries it and gathers no relay candidate: the "this network blocks our relay"

@@ -7250,6 +7250,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     relay-only connect and both log `connected · path relay`.
     `user-quota` there is 24: one credential per room per hour, a mesh of five
     holds up to four relayed legs each.
+  - **iPhone Lockdown Mode removes WebRTC entirely** (Safari shows "Lockdown
+    Enabled" under the address). The guest's engine threw in `mkPeer` inside
+    the signal handler, the throw was swallowed, and the guest read "the host
+    hasn't answered — we keep trying" for ever. The host's log was the tell:
+    `no-answer`, `heardFrom false`, `gathering new`, no candidates (the guest
+    was the initiator, so the host side never negotiated). Now `canCall()` is
+    checked on load: Join/Start give way to `call-no-webrtc` (Lockdown Mode
+    steps on Apple devices), and a `why: no-webrtc` diag is logged for the
+    room. A host-side `no-answer` names Lockdown Mode as one possible cause.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call
     screen, the call-link page): "no data touches our servers" stopped being
     true for a relayed call. It is still end-to-end encrypted — the relay carries

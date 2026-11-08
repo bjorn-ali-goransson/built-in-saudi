@@ -5,7 +5,7 @@ import { Button, Input, Spinner, Sheet, SheetTitle } from '../../components/ui'
 import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
-import { CallRoom, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
+import { CallRoom, canCall, isApple, reportNoWebrtc, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
 import { setInCall } from '../../lib/inCall'
 import { STR } from './strings'
 import { callsHost } from './host'
@@ -53,6 +53,10 @@ export default function CallsTool() {
   // time) and keep "Ask to join" out of the way until it is answered.
   const [joinHeld, setJoinHeld] = useState(false)
   const [initialRoom] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('code') || p.get('room') || '' })
+  // No WebRTC (iPhone Lockdown Mode): say so before anyone joins, and log it, rather
+  // than knock into a connection that can never form (rtc.ts canCall).
+  const [noRtc] = useState(() => !canCall())
+  useEffect(() => { if (noRtc && initialRoom) reportNoWebrtc(initialRoom) }, [noRtc, initialRoom])
   // If this browser hosted this exact room, opening its ?room link means the host
   // is reconnecting (not a guest) — they can resume within the disconnect grace.
   const [isHostReturn] = useState(() => { try { return !!initialRoom && localStorage.getItem(HOST_KEY) === initialRoom } catch { return false } })
@@ -643,6 +647,7 @@ export default function CallsTool() {
 
   // Host: start the call right away (others still need to be let in).
   async function startHost() {
+    if (noRtc) return
     setBusy(true)
     const code = room || code6(); setRoom(code); rememberHost(code)
     const r = ensureRoom(code); r.enterLobby(name || s.you, true)
@@ -726,6 +731,7 @@ export default function CallsTool() {
   function startOwnCall() { if (callsHost().newMeetingPath != null) { newCall(); return } setForceHost(true); setRoom(''); try { history.replaceState(null, '', lobbyPath()) } catch { /* */ } }
   // Guest: knock and wait for the host to admit.
   function askToJoin() {
+    if (noRtc) return
     saveName()
     const code = room.trim(); if (!code) return
     missedIdRef.current = code6() // each knock is its own (possibly missed) call
@@ -1684,7 +1690,12 @@ export default function CallsTool() {
                     )}
                   </div>
                 </label>}
-                {isGuest ? (joinHeld ? null :
+                {noRtc ? (
+                  <div role="alert" data-testid="call-no-webrtc" className="rounded-md border border-[color:var(--gold-400)] bg-[color-mix(in_srgb,var(--gold-400)_12%,transparent)] px-4 py-3 text-[0.9rem] leading-relaxed">
+                    <p className="font-semibold mb-1">{s.noWebrtcTitle}</p>
+                    <p>{isApple() ? s.noWebrtcApple : s.noWebrtc}</p>
+                  </div>
+                ) : isGuest ? (joinHeld ? null :
                   <>
                     <button className={cream} disabled={busy} onClick={askToJoin} data-testid="call-join">{busy ? s.joining : s.askJoin}</button>
                     {callsHost().startOwn && <button type="button" onClick={startOwnCall} data-testid="call-start-own"
