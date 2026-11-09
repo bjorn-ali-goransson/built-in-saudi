@@ -309,7 +309,9 @@ export default function CallsTool() {
   // Text being placed/edited: an object with position, size (board units) and rotation.
   // Text being placed/edited — carries its own text + wrap width so a commit never
   // races with opening a new box (the "goes blank" bug).
-  type TextDraft = { u: number; v: number; size: number; rot: number; w: number; text: string }
+  // `id`: the placed text this draft reopened (tap it with the text tool), which
+  // the commit replaces; none for new text.
+  type TextDraft = { u: number; v: number; size: number; rot: number; w: number; text: string; id?: string }
   const [draft, setDraft] = useState<TextDraft | null>(null)
   const draftRef = useRef<TextDraft | null>(null) // mirror so we can commit from anywhere
   const [textSize, setTextSize] = useState(0.035) // remembered font size (board units)
@@ -1283,7 +1285,37 @@ export default function CallsTool() {
   function redraw() {
     drawBg()
     const c = wbRef.current; if (!c) return; const x = c.getContext('2d'); if (!x) return
-    const m = mapper(c); x.clearRect(0, 0, c.width, c.height); for (const o of boardOf(boardKeyRef.current)) drawObj(x, m, o)
+    // Text being edited is drawn by its editor, not twice.
+    const editing = draftRef.current?.id
+    const m = mapper(c); x.clearRect(0, 0, c.width, c.height); for (const o of boardOf(boardKeyRef.current)) if (o.id !== editing) drawObj(x, m, o)
+  }
+  // The placed text under a pointer, topmost first: its box as drawObj lays it
+  // out, rotated with it, and a few pixels of slack for a finger.
+  function textAt(e: React.PointerEvent): Extract<WbObj, { kind: 'text' }> | null {
+    const c = wbRef.current; const x = c?.getContext('2d'); if (!c || !x) return null
+    const r = c.getBoundingClientRect(), m = mapper(c), slack = e.pointerType === 'touch' ? 12 : 4
+    const arr = boardOf(boardKeyRef.current)
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const o = arr[i]; if (o.kind !== 'text') continue
+      const dx = e.clientX - r.left - m.px(o.u), dy = e.clientY - r.top - m.py(o.v)
+      const a = (-(o.rot || 0) * Math.PI) / 180
+      const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a)
+      const fs = Math.max(10, o.size * m.sc)
+      x.save(); x.font = `600 ${fs}px ${WB_FONT}`
+      const lines = wrapLines(x, o.text, o.w ? o.w * m.sc : Infinity)
+      const w = Math.max(...lines.map((ln) => x.measureText(ln).width)) + 2 * TXT_PAD
+      x.restore()
+      const h = lines.length * fs * 1.3 + 2 * TXT_PAD
+      if (lx >= -slack && lx <= w + slack && ly >= -slack && ly <= h + slack) return o
+    }
+    return null
+  }
+  // Reopen placed text in the editor: move, turn, resize, recolour or retype it.
+  // It stays on the board (and on everyone else's) until the edit is committed.
+  function editText(o: Extract<WbObj, { kind: 'text' }>) {
+    finishDraft(); setTool('text'); setPenColor(o.color)
+    const d: TextDraft = { u: o.u, v: o.v, size: o.size, rot: o.rot || 0, w: o.w || DEFAULT_TW, text: o.text, id: o.id }
+    draftRef.current = d; setDraft(d); setTextSize(o.size); redraw()
   }
   // The picture's SHORTER side spans the board's unit [-0.5, 0.5], so it covers
   // the square every screen shows, in the same place on every screen; what
@@ -1346,7 +1378,8 @@ export default function CallsTool() {
       // hands the gesture to the browser (canvas has touch-action: pinch-zoom).
       if (pointers.current.size > 1) { cancelStroke(); return }
     }
-    if (tool === 'text') { const p = wbPt(e); placeText(p.x, p.y); return }
+    // Text tool: a tap on placed text opens it again; anywhere else starts new text.
+    if (tool === 'text') { const hit = textAt(e); if (hit) { editText(hit); return } const p = wbPt(e); placeText(p.x, p.y); return }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const board = boardKeyRef.current
     const p = wbPt(e); const id = oid(); const erase = tool === 'eraser'
@@ -1372,13 +1405,26 @@ export default function CallsTool() {
   }
   function wbUp(e?: React.PointerEvent) { if (e) pointers.current.delete(e.pointerId); drawing.current = null }
   function commitDraft(d: TextDraft) {
-    const t = d.text.trim(); if (!t) return
+    const t = d.text.trim()
     const board = boardKeyRef.current
+    // An edit replaces the text it reopened, in its place in the stacking
+    // order; emptied, the text is gone. Peers hear remove-then-text, in order.
+    let at = -1
+    if (d.id) {
+      const arr = boardOf(board); at = arr.findIndex((o) => o.id === d.id)
+      if (at >= 0) arr.splice(at, 1)
+      const st = stackOf(board); const si = st.lastIndexOf(d.id); if (si >= 0) st.splice(si, 1)
+      rtc.current?.broadcast({ t: 'wb', op: 'remove', id: d.id, b: board })
+    }
+    if (!t) { redraw(); return }
     const o: WbObj = { id: oid(), kind: 'text', u: d.u, v: d.v, text: t, color: penColor, size: d.size, rot: d.rot, w: d.w }
-    boardOf(board).push(o); stackOf(board).push(o.id); rtc.current?.broadcast({ t: 'wb', op: 'text', obj: o, b: board }); redraw()
+    if (at >= 0) boardOf(board).splice(at, 0, o); else boardOf(board).push(o)
+    stackOf(board).push(o.id); rtc.current?.broadcast({ t: 'wb', op: 'text', obj: o, b: board }); redraw()
   }
   // Commit the current draft (if it has text) and close it. Called on blur / new box.
   function finishDraft() { const d = draftRef.current; draftRef.current = null; if (d) { commitDraft(d); setDraft(null) } }
+  // Escape: new text is dropped; reopened text goes back as it was.
+  function cancelDraft() { const reopened = !!draftRef.current?.id; draftRef.current = null; setDraft(null); if (reopened) redraw() }
   const upd = (patch: Partial<TextDraft>) => setDraft((d) => { if (!d) return d; const n = { ...d, ...patch }; draftRef.current = n; return n })
   // Board→screen (client px, relative to the canvas box) for positioning the text editor.
   function b2s(u: number, v: number) {
@@ -2224,7 +2270,7 @@ export default function CallsTool() {
                   className="absolute top-1/2 -translate-y-1/2 -right-3 w-2.5 h-8 rounded-full bg-green-600 border-2 border-[var(--surface)] shadow cursor-ew-resize touch-none" />
                 <textarea ref={textInputRef} value={draft.text} rows={1}
                   onChange={(e) => upd({ text: e.target.value })} onBlur={() => { if (textReady.current) finishDraft() }}
-                  onKeyDown={(e) => { if (e.key === 'Escape') { draftRef.current = null; setDraft(null) } }} data-testid="wb-textinput"
+                  onKeyDown={(e) => { if (e.key === 'Escape') cancelDraft() }} data-testid="wb-textinput"
                   style={{ width: boxW + 2 * TXT_PAD, fontSize: fontPx, color: penColor, lineHeight: 1.3, fontFamily: WB_FONT }}
                   className="block box-border resize-none overflow-hidden bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] rounded-[2px] outline-none font-semibold p-1 border border-dashed border-[color-mix(in_srgb,var(--ink)_45%,transparent)]" />
                 {/* font size, kept upright */}

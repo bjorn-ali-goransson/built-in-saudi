@@ -7285,6 +7285,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     aimed at the mic cannot hang up. In the open dock the dock icon is
     mirrored (it puts the dock away), and Maximize shows inward arrows once
     maximized.
+  - **Placed whiteboard text can be edited again** (reported by a user: once
+    committed it was only pixels). With the text tool, a tap on placed text
+    (`textAt`: drawObj's own layout, rotated, with finger slack) reopens it in
+    the editor with its words, size, turn, width and colour; it is not drawn
+    while open. The commit sends `remove` then `text` (a new id, in the old
+    one's place in the stacking order); emptied, it is deleted; Escape puts it
+    back as it was. Anybody's text can be reopened, as anybody's can be erased.
   - **A guest knocking before the organiser starts is seen from the meeting
     page.** A waiting guest repeats its `knock` every 15 s until a host says
     `hello`, with its name in the payload (and again at once on a rename, as

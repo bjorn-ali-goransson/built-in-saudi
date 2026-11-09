@@ -216,6 +216,64 @@ test('a picture can be put behind the whiteboard: it clears the board, reaches e
   await a.close(); await b.close()
 })
 
+test('placed whiteboard text can be opened again with the text tool: moved and retyped, for everyone, without a copy left behind', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await closeShare(pa)
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+
+  // Ink inside a rectangle given as fractions of the canvas, so both screens
+  // are asked about the same part of the board whatever their size.
+  const inkIn = (p: import('@playwright/test').Page, fx0: number, fy0: number, fx1: number, fy1: number) => p.evaluate(([fx0, fy0, fx1, fy1]) => {
+    const cv = document.querySelector('[data-testid=wb-canvas]') as HTMLCanvasElement
+    const x0 = Math.round(fx0 * cv.width), y0 = Math.round(fy0 * cv.height)
+    const d = cv.getContext('2d')!.getImageData(x0, y0, Math.max(1, Math.round(fx1 * cv.width) - x0), Math.max(1, Math.round(fy1 * cv.height) - y0)).data
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++; return n
+  }, [fx0, fy0, fx1, fy1])
+  const box = (await pa.getByTestId('wb-canvas').boundingBox())!
+  const at = (fx: number, fy: number) => [box.x + fx * box.width, box.y + fy * box.height] as const
+
+  // Place "Hello" near the top left, and commit it by picking the pen.
+  await pa.getByTestId('wb-text').click()
+  await pa.mouse.click(...at(0.1, 0.1))
+  await pa.getByTestId('wb-textinput').fill('Hello')
+  await pa.getByRole('button', { name: 'Pen 1' }).click()
+  await expect(pa.getByTestId('wb-textinput')).toHaveCount(0)
+  await expect.poll(() => inkIn(pb, 0.08, 0.08, 0.3, 0.25)).toBeGreaterThan(20)
+
+  // Text tool, then a tap on the placed text: it opens again, with its words.
+  await pa.getByTestId('wb-text').click()
+  await pa.getByTestId('wb-textinput').fill('') // the T button opens a fresh box; leave it empty
+  const [hx, hy] = at(0.1, 0.1)
+  await pa.mouse.click(hx + 14, hy + 10)
+  await expect(pa.getByTestId('wb-textinput')).toHaveValue('Hello')
+  // Move it to the lower right and add a word.
+  const grip = (await pa.getByTestId('wb-text-move').boundingBox())!
+  const [tx, ty] = at(0.55, 0.6)
+  await pa.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2); await pa.mouse.down()
+  await pa.mouse.move(tx, ty, { steps: 8 }); await pa.mouse.up()
+  await pa.getByTestId('wb-textinput').fill('Hello world')
+  await pa.getByRole('button', { name: 'Pen 1' }).click()
+  await expect(pa.getByTestId('wb-textinput')).toHaveCount(0)
+
+  // On both screens: gone from where it was, and there once where it went.
+  for (const p of [pa, pb]) {
+    await expect.poll(() => inkIn(p, 0.08, 0.08, 0.3, 0.25), { timeout: 10_000 }).toBe(0)
+    await expect.poll(() => inkIn(p, 0.45, 0.5, 1, 0.8), { timeout: 10_000 }).toBeGreaterThan(20)
+  }
+  await a.close(); await b.close()
+})
+
 test('mobile: file bar docks under the toolbar and the view dropdown stays on screen', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
