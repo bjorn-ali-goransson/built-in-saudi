@@ -409,7 +409,7 @@ export class CallRoom {
   async close(by: EndedBy = 'other'): Promise<void> { try { await this.post('close', { by }) } catch { /* */ } this.leave() }
 
   // ---- signaling relay (handshake + presence trigger only) -------------------
-  private async post(action: 'send' | 'poll' | 'close', extra: Record<string, unknown>): Promise<{ msgs?: { from: string; type: string; payload: unknown; seq: number }[]; closed?: boolean; endedBy?: string }> {
+  private async post(action: 'send' | 'poll' | 'close', extra: Record<string, unknown>): Promise<{ msgs?: { from: string; type: string; payload: unknown; seq: number; ts?: number }[]; closed?: boolean; endedBy?: string; now?: number }> {
     const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action, ...extra }) })
     return r.ok ? r.json() : {}
   }
@@ -422,7 +422,16 @@ export class CallRoom {
         const d = await this.post('poll', { since: this.since })
         if (d.closed) { this.h.onClosed?.(d.endedBy === 'host' ? 'host' : 'other'); this.leave(); break }
         const msgs = d.msgs || []; got = msgs.length
-        for (const m of msgs) { await this.onSignal(m.from, m.type, m.payload); if (m.seq > this.since) this.since = m.seq }
+        // A knock is only answered while it is fresh. Entering a room replays its
+        // whole history, and a guest who closed the page hours ago (no `leave`
+        // sent) left knocks behind: answering them showed a nameless "someone
+        // connecting" who vanished at once. A guest still waiting knocks again
+        // every KNOCK_EVERY, so nobody real is missed.
+        for (const m of msgs) {
+          const stale = m.type === 'knock' && typeof d.now === 'number' && typeof m.ts === 'number' && d.now - m.ts > KNOCK_FRESH
+          if (!stale) await this.onSignal(m.from, m.type, m.payload)
+          if (m.seq > this.since) this.since = m.seq
+        }
       } catch { /* transient */ }
       // Drain a handshake burst immediately; poll fast while (re)connecting or waiting
       // for someone (so knocks/joins land in well under a second); back off once

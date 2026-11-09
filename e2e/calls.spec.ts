@@ -7,7 +7,7 @@ test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-
 // A tiny in-memory stand-in for the signaling Cloud Function (same protocol),
 // with permissive CORS so the localhost preview can reach it.
 let server: Server, base: string
-const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown }[]; endedBy?: string }>()
+const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown; ts?: number }[]; endedBy?: string }>()
 // What `ice` answers (the real one mints TURN credentials), per room; and every
 // `diag` report a browser sent, so a spec can read what the relay would log.
 const turnFor = new Map<string, unknown[]>()
@@ -32,9 +32,10 @@ test.beforeAll(async () => {
       if (r.endedBy) return res.end(JSON.stringify({ ok: true, closed: true, endedBy: r.endedBy, seq: 0, msgs: [] }))
       if (b.action === 'poll') {
         const msgs = r.msgs.filter((m) => m.seq > (b.since || 0) && m.from !== b.from && (m.to === 'all' || m.to === b.from))
-        res.end(JSON.stringify({ ok: true, seq: r.count, msgs }))
+        res.end(JSON.stringify({ ok: true, seq: r.count, msgs, now: Date.now() }))
       } else {
-        r.msgs.push({ seq: r.count, from: b.from, to: b.to || 'all', type: b.type, payload: b.payload ?? null })
+        // `_age` (tests only) back-dates a message, as one left in a room hours ago.
+        r.msgs.push({ seq: r.count, from: b.from, to: b.to || 'all', type: b.type, payload: b.payload ?? null, ts: Date.now() - (Number(b._age) || 0) })
         r.count++
         res.end(JSON.stringify({ ok: true, seq: r.count - 1 }))
       }
@@ -435,7 +436,7 @@ test('a relay that this network cannot reach is named as the cause', async ({ br
   } finally { turnFor.delete('*'); await ca.close(); await cb.close() }
 })
 
-test('a guest who leaves the lobby stays in the list, marked "left" (no admit button)', async ({ browser }) => {
+test('a guest who leaves the lobby stays in the list, marked "left" with the time, and Let in greyed out', async ({ browser }) => {
   const ca = await ctx(browser, base), cb = await ctx(browser, base)
   const pa = await ca.newPage(), pb = await cb.newPage()
   await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
@@ -445,12 +446,55 @@ test('a guest who leaves the lobby stays in the list, marked "left" (no admit bu
   await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
   await expect(pa.getByTestId('call-lobby-live')).toContainText('Bob', { timeout: 15_000 })
   await expect(pa.getByTestId('call-admit')).toBeVisible()
-  // Bob leaves the lobby (closes the tab). He stays listed, but marked "left" with no admit button.
+  // Bob leaves the lobby (closes the tab). He stays listed, marked "left" at a
+  // time, and his Let in is there but cannot be pressed.
   await cb.close()
   await expect(pa.getByTestId('call-lobby-left')).toContainText('Bob', { timeout: 20_000 })
-  await expect(pa.getByTestId('call-lobby-left')).toContainText('left')
+  await expect(pa.getByTestId('call-lobby-left-when')).toHaveText(/^left \d\d:\d\d$/)
+  await expect(pa.getByTestId('call-lobby-left-admit')).toBeDisabled()
   await expect(pa.getByTestId('call-admit')).toHaveCount(0)
   await ca.close()
+})
+
+// With the participants panel closed, the bar at the top is all the host sees of
+// a knock; a guest who gives up stays on it, struck through, until dismissed.
+test('the knock bar keeps a guest who left, struck through with the time, until it is dismissed', async ({ browser }) => {
+  const ca = await ctx(browser, base), cb = await ctx(browser, base)
+  const pa = await ca.newPage(), pb = await cb.newPage()
+  await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  // Close the participants panel, so the bar is the only place a knock shows.
+  const parts = pa.getByTestId('call-participants')
+  if (await parts.getAttribute('aria-pressed') === 'true') await parts.click()
+  await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
+  await expect(pa.getByTestId('call-knock-who')).toHaveText('Bob', { timeout: 15_000 })
+  await cb.close()
+  await expect(pa.getByTestId('call-knock-left-who')).toHaveText('Bob', { timeout: 20_000 })
+  await expect(pa.getByTestId('call-knock-left')).toContainText(/left the lobby at \d\d:\d\d/)
+  await expect(pa.getByTestId('call-knock-left-admit')).toBeDisabled()
+  await pa.getByTestId('call-knock-left-dismiss').click()
+  await expect(pa.getByTestId('call-knock-left')).toHaveCount(0)
+  await ca.close()
+})
+
+// Entering a room replays its history. A knock from a guest who closed the page
+// long ago (no `leave` sent) used to be answered: a nameless "someone
+// connecting" appeared and vanished. A knock that old is not answered.
+test('an old knock left in the room is not answered when the host comes in', async ({ browser }) => {
+  const room = 'stale' + Math.random().toString(36).slice(2, 8)
+  await fetch(`${base}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'ghost1', to: 'all', action: 'send', type: 'knock', payload: { name: 'Ghost' }, _age: 10 * 60_000 }) })
+  const c = await ctx(browser, base)
+  const p = await c.newPage()
+  try { await p.goto('/en'); await p.evaluate((r) => localStorage.setItem('bis-call-host', r), room) } catch { /* */ }
+  await p.goto(`/en/apps/calls?code=${room}&host=1`)
+  await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  // Answering a knock is a `hello` sent to the knocker: none goes to the ghost.
+  await p.waitForTimeout(3000)
+  const answered = (rooms.get(room)?.msgs || []).filter((m) => m.type === 'hello' && m.to === 'ghost1')
+  expect(answered).toEqual([])
+  await expect(p.getByTestId('call-someone-connecting')).toHaveCount(0)
+  await c.close()
 })
 
 // Ending a meeting is asked first when anyone else is there, and the people in it

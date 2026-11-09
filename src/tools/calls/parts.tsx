@@ -60,7 +60,7 @@ export function StreamVideo({ stream, className, muted, mirror, onSize }: { stre
 }
 
 // The host's "Waiting in the lobby" list — a card of guests with a Let-in button.
-export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, left, live, staleIds }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; leftLabel: string; left?: { id: string; name: string }[]; live?: boolean; staleIds?: Set<string> }) {
+export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, leftAt, locale, left, live, staleIds }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; leftLabel: string; leftAt?: (at: number, locale: string) => string; locale?: string; left?: { id: string; name: string; at?: number }[]; live?: boolean; staleIds?: Set<string> }) {
   const gone = left || []
   if (waiting.length === 0 && gone.length === 0) return live ? null : <p className="max-w-[30rem] text-[0.85rem] text-ink-faint">{hint}</p>
   return (
@@ -77,7 +77,9 @@ export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, 
         <div key={w.id} className="flex items-center gap-3 opacity-55" data-testid="call-lobby-left">
           <span className="w-8 h-8 rounded-full bg-[color-mix(in_srgb,var(--ink)_10%,transparent)] text-ink-faint grid place-items-center text-[0.78rem] font-semibold shrink-0" aria-hidden="true">{initials(w.name)}</span>
           <span className="flex-1 text-[0.92rem] text-ink-soft truncate line-through decoration-1">{w.name || '•'}</span>
-          <span className="text-[0.78rem] text-ink-faint italic shrink-0">{leftLabel}</span>
+          <span className="text-[0.78rem] text-ink-faint italic shrink-0" data-testid="call-lobby-left-when">{w.at && leftAt ? leftAt(w.at, locale || 'en') : leftLabel}</span>
+          {/* The same button as for somebody waiting, greyed: they cannot be let in now. */}
+          <Button variant="primary" disabled data-testid="call-lobby-left-admit" className="!py-1 !px-3 text-[0.8rem] shrink-0 opacity-50 cursor-not-allowed">{admitLabel}</Button>
         </div>
       ))}
     </div>

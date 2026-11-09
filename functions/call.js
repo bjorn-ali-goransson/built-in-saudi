@@ -148,7 +148,9 @@ http('callSignal', async (req, res) => {
       if (d.closed) return res.json({ ok: true, closed: true, endedBy: d.endedBy || 'other', seq: 0, msgs: [] })
       const all = d.msgs || []
       const msgs = all.filter((m) => m.seq > since && m.from !== from && (m.to === 'all' || m.to === from))
-      return res.json({ ok: true, seq: d.count || 0, msgs })
+      // `now` is the relay's clock: a client ages a message (`ts`) by it, never by
+      // its own, which a phone can have wrong by hours.
+      return res.json({ ok: true, seq: d.count || 0, msgs, now })
     }
 
     // default: send

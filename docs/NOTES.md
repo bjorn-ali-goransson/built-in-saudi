@@ -7292,6 +7292,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     while open. The commit sends `remove` then `text` (a new id, in the old
     one's place in the stacking order); emptied, it is deleted; Escape puts it
     back as it was. Anybody's text can be reopened, as anybody's can be erased.
+  - **Nobody in the lobby vanishes unseen.** A guest who leaves before being
+    let in stays in the lobby list struck through, "left 19:26", with Let in
+    greyed out; with the participants panel closed, the knock bar stays for
+    them until dismissed. And a knock is answered only while fresh (younger
+    than KNOCK_FRESH by the relay's own clock: poll returns `now`, messages
+    carry `ts`): entering a room replays its history, and old knocks from
+    guests who closed the page without `leave` made a nameless "someone
+    connecting" flash up and vanish (a user's report). IP addresses are not
+    shown to the host: personal data, and useless behind mobile NAT or a relay.
   - **A guest knocking before the organiser starts is seen from the meeting
     page.** A waiting guest repeats its `knock` every 15 s until a host says
     `hello`, with its name in the payload (and again at once on a rename, as

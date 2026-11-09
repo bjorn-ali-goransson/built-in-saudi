@@ -49,7 +49,7 @@ export async function startRelay(): Promise<Relay> {
       if (b.action === 'poll') {
         const since = Number(b.since) || 0
         const msgs = r.msgs.filter((m) => m.seq > since && m.from !== b.from && (m.to === 'all' || m.to === b.from))
-        return res.end(JSON.stringify({ ok: true, seq: r.count, msgs }))
+        return res.end(JSON.stringify({ ok: true, seq: r.count, msgs, now: Date.now() }))
       }
       r.msgs.push({ seq: r.count, from: String(b.from), to: String(b.to || 'all'), type: String(b.type), payload: b.payload ?? null, ts: Date.now() })
       r.count++

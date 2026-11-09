@@ -347,7 +347,7 @@ export default function CallsTool() {
         for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < now - GONE_MS) {
           const info = m.get(id)
           // A guest who went quiet while still waiting → keep them listed, marked "left".
-          if (info && info.role === 'guest' && !info.inCall) setLeftWaiters((l) => l.some((w) => w.id === id) ? l : [...l, { id, name: info.name }])
+          if (info && info.role === 'guest' && !info.inCall) setLeftWaiters((l) => l.some((w) => w.id === id) ? l : [...l, { id, name: info.name, at: now }])
           m.delete(id); seen.current.delete(id); changed = true
         }
         return changed ? m : r
@@ -424,7 +424,11 @@ export default function CallsTool() {
   // The people the host still needs to let in (guests who haven't joined yet).
   const waiting = [...roster].filter(([, i]) => i.role === 'guest' && !i.inCall)
   // Guests who left while still waiting — kept in the list, shown as "left".
-  const [leftWaiters, setLeftWaiters] = useState<{ id: string; name: string }[]>([])
+  // Kept, with when they left, so a host who looked a moment too late still
+  // sees who it was; the banner keeps them until it is dismissed.
+  const [leftWaiters, setLeftWaiters] = useState<{ id: string; name: string; at: number }[]>([])
+  const [leftSeen, setLeftSeen] = useState<Set<string>>(new Set())
+  const bannerLeft = leftWaiters.filter((w) => !leftSeen.has(w.id))
   const knockSeen = useRef<Set<string>>(new Set())
   // A new knocker → close the Share invite, chime, and (host) let it be seen.
   useEffect(() => {
@@ -560,7 +564,7 @@ export default function CallsTool() {
         else {
           // A guest who left while still waiting — keep them in the list, marked "left".
           const info = rosterRef.current.get(pid)
-          if (info && info.role === 'guest') setLeftWaiters((l) => l.some((w) => w.id === pid) ? l : [...l, { id: pid, name: info.name }])
+          if (info && info.role === 'guest') setLeftWaiters((l) => l.some((w) => w.id === pid) ? l : [...l, { id: pid, name: info.name, at: Date.now() }])
         }
         setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }); setGeos((g) => { const n = new Map(g); n.delete(pid); return n })
         setConnectingIds((c) => { if (!c.has(pid)) return c; const n = new Set(c); n.delete(pid); return n })
@@ -972,7 +976,7 @@ export default function CallsTool() {
     </div>
   )
 
-  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed(false) }
+  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); setLeftSeen(new Set()); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed(false) }
   // `confirmed`: the host has agreed to end it for everyone. With nobody else
   // there (in the call or waiting) there is nobody to end it for, so no question.
   function hangup(confirmed = false) {
@@ -1806,7 +1810,7 @@ export default function CallsTool() {
           )}
           {/* Host waiting list (people knocking). */}
           {!isGuest && phase === 'hosting' && waiting.length > 0 && !willAutoAdmit() && (
-            <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} staleIds={staleIds} live /></div>
+            <div className="w-full"><LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} leftAt={s.leftAt} locale={locale} left={leftWaiters} staleIds={staleIds} live /></div>
           )}
 
           {/* Diagnostics on the connecting/waiting screen too — a guest whose data
@@ -1974,6 +1978,22 @@ export default function CallsTool() {
           </p>
           <button type="button" onClick={() => void videoAnyway()} data-testid="call-video-anyway"
             className="shrink-0 h-8 px-3 rounded-md bg-ink text-sand-100 border border-ink text-[0.8rem] font-semibold cursor-pointer">{s.videoAnyway}</button>
+        </div>
+      )}
+      {/* Somebody who knocked and left before being let in stays on the bar,
+          struck through with the time, until it is dismissed: a host who looked
+          a moment late still sees who it was (a guest who vanished unseen read
+          as a stranger). */}
+      {!isGuest && waiting.length === 0 && bannerLeft.length > 0 && !showParticipants && (
+        <div className="w-full bg-[color-mix(in_srgb,var(--ink)_82%,transparent)] text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-left">
+          <span className="shrink-0 opacity-70" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.92rem] font-semibold leading-tight truncate line-through decoration-1" data-testid="call-knock-left-who">{bannerLeft.map((w) => w.name || '•').join(', ')}</p>
+            <p className="text-[0.75rem] text-sand-100/70">{s.leftLobbyLong(bannerLeft[bannerLeft.length - 1].at, locale)}</p>
+          </div>
+          <button type="button" disabled data-testid="call-knock-left-admit" className="h-9 px-3 rounded-md bg-sand-100/25 text-sand-100/60 text-[0.85rem] font-semibold cursor-not-allowed border-0">{s.admit}</button>
+          <button type="button" onClick={() => setLeftSeen((x) => new Set([...x, ...bannerLeft.map((w) => w.id)]))} aria-label={s.dismiss} data-testid="call-knock-left-dismiss"
+            className="h-9 w-9 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/80 hover:text-sand-100 hover:bg-white/10 cursor-pointer text-[1.1rem] leading-none">✕</button>
         </div>
       )}
       {!isGuest && waiting.length > 0 && !showParticipants && !willAutoAdmit() && (
@@ -2332,7 +2352,7 @@ export default function CallsTool() {
                 would otherwise push the list out of view. */}
             {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && !willAutoAdmit() && (
               <div className="shrink-0 p-2.5 border-b border-[color:var(--line-soft)]">
-                <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} left={leftWaiters} live staleIds={staleIds} />
+                <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} leftAt={s.leftAt} locale={locale} left={leftWaiters} live staleIds={staleIds} />
               </div>
             )}
             {/* Full-bleed elastic video grid: tiles fill their cells (no gaps/margins),
