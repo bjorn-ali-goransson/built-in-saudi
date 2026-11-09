@@ -7279,9 +7279,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     The organiser's hang-up asks "End the meeting for everyone?" when anyone
     else is in the call or waiting; alone, it just ends (nobody to end it for,
     and Sawi Kalam's deploy-reload spec hangs up alone).
-  - **Call controls:** camera, mic and devices sit with the emoji button; End
-    call stands apart (a divider on desktop, the far end of the mobile bar), so
-    a tap aimed at the mic cannot hang up. In the open dock the dock icon is
+  - **Call controls:** camera, mic, then reactions (an outline `SmileIcon`, not
+    the 🙂 emoji, so it matches the other controls); settings and End call stand
+    apart (after a divider on desktop, the far end of the mobile bar), so a tap
+    aimed at the mic cannot hang up. In the open dock the dock icon is
     mirrored (it puts the dock away), and Maximize shows inward arrows once
     maximized.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call

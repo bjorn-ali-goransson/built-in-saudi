@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale, localePath } from '../../i18n'
 import { Button, Input, Spinner, Sheet, SheetTitle, SheetActions } from '../../components/ui'
-import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, ShrinkIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
+import { DownloadIcon, UploadIcon, ShareIcon, TrashIcon, RefreshIcon, GripIcon, PhoneIcon, EndCallIcon, UsersIcon, UserPlusIcon, ChatIcon, MicIcon, MicOffIcon, CameraIcon, CamOffIcon, WhiteboardIcon, ScreenShareIcon, FileIcon, EraserIcon, UndoIcon, ChevronDownIcon, CopyIcon, CheckIcon, HijabiIcon, LockIcon, CogIcon, BellIcon, DockIcon, ExpandIcon, ShrinkIcon, SmileIcon, MoreVIcon, CompassIcon, ImageIcon, KeyboardIcon } from '../../components/icons'
 import { decodeImage } from '../../lib/decodeImage'
 import { whyUnreadable } from '../../lib/imageInput'
 import { CallRoom, canCall, lockdownLikely, reportNoWebrtc, roomStatus, signalRoom, type ConnectFailure, type DataMsg, type DiagSnapshot, type PeerInfo, type WbObj } from './rtc'
@@ -1854,10 +1854,10 @@ export default function CallsTool() {
       data-testid="call-dock-header" onPointerDown={dockDown} onPointerMove={dockMove} onPointerUp={dockUp} onPointerCancel={dockUp}>
       <div onPointerDown={stopDrag}>
         <Menu align="start" testid="call-dock-title" triggerClass="flex items-center gap-1 h-8 px-2 rounded-md bg-transparent border-0 cursor-pointer text-[0.82rem] font-semibold text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:w-[16px] [&_svg]:h-[16px]"
-          trigger={<>{showReactions ? <span className="text-[1rem] leading-none">🙂</span> : showChat ? <ChatIcon /> : <UsersIcon />}<span>{showReactions ? s.reactions : showChat ? s.chat : s.participants}</span><ChevronDownIcon className="opacity-60" /></>}>
+          trigger={<>{showReactions ? <SmileIcon /> : showChat ? <ChatIcon /> : <UsersIcon />}<span>{showReactions ? s.reactions : showChat ? s.chat : s.participants}</span><ChevronDownIcon className="opacity-60" /></>}>
           <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} testid="call-dock-pick-p" onClick={() => pickPanel('p')} active={showParticipants} />
           <MenuItem icon={<ChatIcon />} label={s.chat} testid="call-dock-pick-c" onClick={() => pickPanel('c')} active={showChat} />
-          <MenuItem icon={<span className="text-[1rem] leading-none">🙂</span>} label={s.reactions} testid="call-dock-pick-r" onClick={() => pickPanel('r')} active={showReactions} />
+          <MenuItem icon={<SmileIcon />} label={s.reactions} testid="call-dock-pick-r" onClick={() => pickPanel('r')} active={showReactions} />
         </Menu>
       </div>
       {/* Grab handle centred across the whole header (not tucked beside the title). */}
@@ -2023,12 +2023,13 @@ export default function CallsTool() {
         <span className="max-[640px]:hidden flex items-center gap-1.5">
           <IconBtn onClick={() => toggleMode('p')} active={showParticipants} title={s.participants} testid="call-participants" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
           <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} testid="call-chat" badge={unseen.c || undefined}><ChatIcon /></IconBtn>
-          <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react"><span className="text-[1.15rem] leading-none">🙂</span></IconBtn>
           <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn} testid="call-cam">{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
           <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe} testid="call-mic">{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
-          {deviceMenu()}
-          {/* Ending the call sits apart: a mis-tap aimed at the mic must not hang up. */}
+          <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react"><SmileIcon /></IconBtn>
+          {/* Ending the call sits apart, with only the settings beside it: a
+              mis-tap aimed at the mic must not hang up. */}
           <span className="w-px h-6 bg-[color:var(--line)] ms-3 me-1.5" />
+          {deviceMenu()}
           <IconBtn onClick={() => hangup()} title={isGuest ? s.hangUp : s.endMeeting} danger big testid="call-hangup">{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
         </span>
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
@@ -2412,7 +2413,7 @@ export default function CallsTool() {
         <button type="button" onClick={toggleDock} data-testid="call-dock-bar" aria-label={s.dock}
           className="hidden max-[640px]:flex items-center justify-between shrink-0 h-11 ps-3.5 pe-1.5 border-0 border-t border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer">
           <span className="flex items-center gap-1.5 text-[0.82rem] font-semibold [&_svg]:w-[16px] [&_svg]:h-[16px]">
-            {lastPanel.current === 'r' ? <span className="text-[1rem] leading-none">🙂</span> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />}
+            {lastPanel.current === 'r' ? <SmileIcon /> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />}
             <span>{lastPanel.current === 'r' ? s.reactions : lastPanel.current === 'c' ? s.chat : s.participants}</span>
             {(unseen.p + unseen.c) > 0 && <span data-testid="call-dock-bar-badge" className="min-w-5 h-5 px-1.5 grid place-items-center rounded-full bg-green-600 text-sand-50 text-[0.7rem] leading-none">{unseen.p + unseen.c}</span>}
           </span>
@@ -2422,12 +2423,12 @@ export default function CallsTool() {
 
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
-        <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><span className="text-[1.2rem] leading-none">🙂</span></IconBtn>
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
-        {deviceMenu(true)}
-        {/* Ending the call sits apart, across the bar from the mic. */}
+        <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><SmileIcon /></IconBtn>
+        {/* Ending the call sits apart, across the bar from the mic, settings beside it. */}
         <div className="flex-1" />
+        {deviceMenu(true)}
         <IconBtn onClick={() => hangup()} title={isGuest ? s.hangUp : s.endMeeting} danger big>{isGuest ? <PhoneIcon /> : <EndCallIcon />}</IconBtn>
       </footer>
 

@@ -702,6 +702,17 @@ export function ExpandIcon({ className }: P) {
   )
 }
 
+// Reactions: an outline smiley in the same stroke as the other call controls.
+export function SmileIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+      <path d="M9 9.5h.01M15 9.5h.01" strokeWidth="2.6" />
+    </svg>
+  )
+}
+
 // ExpandIcon's opposite: arrows pointing in (restore from full size).
 export function ShrinkIcon({ className }: P) {
   return (
