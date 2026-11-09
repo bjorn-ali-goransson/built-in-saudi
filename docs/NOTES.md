@@ -7514,7 +7514,15 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   HMAC tokens on `SENDER_SECRET`, a month long. **meetCore takes its store as an
   argument** so Sawi Kalam's e2e runs this exact code in memory with Chromium's
   virtual authenticator — the tests are there, not here. Not covered by
-  `my-data` (no Google `sub`); deleting an organiser is still to build. Hosting is
+  `my-data` (no Google `sub`): Sawi Kalam's own **Your data** page (`/data`,
+  in the signed-in menu) is its `my-data`. `myData` returns the organiser,
+  each passkey (id prefix, dates), and every meeting they own with its slot,
+  guest name, counts of devices to notify and whether it has a picture, each
+  with its `expiresAt`; never secrets or push addresses. `deleteMeeting` and
+  `deleteAccount` (meetings + pictures, credentials, organiser) delete at once.
+  Meetings are keyed by code, so the store has a `find(col, field, value)`
+  (`where owner ==`, the automatic single-field index) for these two only.
+  The passkey stays on the device; the page says how to remove it. Hosting is
   decided by the embedder from `claim` before Calls mounts; the relay itself does
   not yet refuse a non-owner who forges the host role.
   **A meeting can carry an agreed time slot, with one invitee** (`schedule`,

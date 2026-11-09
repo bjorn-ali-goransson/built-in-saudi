@@ -54,7 +54,10 @@ function code7() {
 }
 
 /**
- * store: { get(col, id) → obj | null, set(col, id, obj), del(col, id) }, all async.
+ * store: { get(col, id) → obj | null, set(col, id, obj), del(col, id),
+ *   find(col, field, value) → [{ id, ...obj }] }, all async. `find` is only
+ *   for an organiser's own data (myData, deleteAccount): meetings are keyed by
+ *   their code, so the account cannot list them otherwise.
  * rp: { id: 'sawikalam.com', name: 'Sawi Kalam' }; origins: the page origins a
  * ceremony may come from. secret signs sessions.
  */
@@ -376,6 +379,53 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       return { image: b?.image || null }
     },
 
+    /** Everything the server keeps for the signed-in organiser, as it is
+     *  stored, with when each record will be forgotten if it is not used. Push
+     *  subscriptions are counted, not shown: their addresses mean nothing to a
+     *  person. Guest secrets are hashes and are never returned. */
+    async myData({ token }) {
+      const { s, org } = await organiser(token)
+      const passkeys = []
+      for (const id of org.creds || []) {
+        const c = await store.get('meetCredentials', id)
+        if (c) passkeys.push({ id: id.slice(0, 8), createdAt: c.createdAt || null, usedAt: c.usedAt || null, expiresAt: c.expiresAt, transports: c.transports || [] })
+      }
+      const meetings = []
+      for (const m of await store.find('meetings', 'owner', s.uid)) {
+        if (!(m.expiresAt > now())) continue
+        const bg = await live('meetBackgrounds', m.id)
+        meetings.push({
+          code: m.id, createdAt: m.createdAt || null, expiresAt: m.expiresAt,
+          title: m.slot?.title || '', by: m.slot?.by || '', at: m.slot?.at || null, minutes: m.slot?.minutes || 0, mode: m.slot?.mode || null,
+          guestName: m.guestName || '', guestAnswered: !!m.guestKey,
+          organiserDevices: (m.orgSubs || []).length, guestDevices: (m.guestSubs || []).length,
+          background: !!bg,
+        })
+      }
+      meetings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      return { organiser: { name: org.name || '', createdAt: org.createdAt || null, expiresAt: org.expiresAt }, passkeys, meetings, idleDays: Math.round(IDLE_MS / 86400000) }
+    },
+
+    /** One of the organiser's meetings, and its picture, gone now. Its link
+     *  then opens as a meeting that does not exist. */
+    async deleteMeeting({ token, code }) {
+      const { id } = await ownMeeting(token, code)
+      await store.del('meetBackgrounds', id)
+      await store.del('meetings', id)
+      return { ok: true }
+    },
+
+    /** The account, every passkey's public key and every meeting, gone now.
+     *  The passkey itself is on the person's device, which only they can
+     *  remove; without the account it can no longer sign in. */
+    async deleteAccount({ token }) {
+      const { s, org } = await organiser(token)
+      for (const m of await store.find('meetings', 'owner', s.uid)) { await store.del('meetBackgrounds', m.id); await store.del('meetings', m.id) }
+      for (const id of org.creds || []) await store.del('meetCredentials', id)
+      await store.del('meetOrganisers', s.uid)
+      return { ok: true }
+    },
+
     /** Is the signed-in organiser this meeting's owner? Starting it is a use, so
      *  the meeting and its organiser get another month. */
     async claim({ token, code }) {
@@ -392,4 +442,4 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 }
 
 /** The routes, so the function and the tests dispatch identically. */
-export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe', 'setBackground', 'background']
+export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe', 'setBackground', 'background', 'myData', 'deleteMeeting', 'deleteAccount']

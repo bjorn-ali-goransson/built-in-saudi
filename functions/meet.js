@@ -4,7 +4,9 @@
 //
 // POST { action, ... } → the action's JSON, or { error } with its status.
 // Collections: meetOrganisers/{uid}, meetCredentials/{credentialId} (a public
-// key, never a secret), meetChallenges/{id} (five minutes), meetings/{code}.
+// key, never a secret), meetChallenges/{id} (five minutes), meetings/{code},
+// meetBackgrounds/{code}. myData shows an organiser all of theirs; deleteMeeting
+// and deleteAccount remove them at once.
 // All four carry `expiresAt`: a month after last use, five minutes for a
 // challenge. Firestore's TTL policy on that field deletes them.
 import { http } from '@google-cloud/functions-framework'
@@ -27,6 +29,12 @@ const store = {
   },
   async set(col, id, obj) { await db.collection(col).doc(id).set(typeof obj.expiresAt === 'number' ? { ...obj, expiresAt: new Date(obj.expiresAt) } : obj) },
   async del(col, id) { await db.collection(col).doc(id).delete() },
+  // An organiser's own meetings, for myData and deleteAccount. One equality
+  // on one field: Firestore's automatic single-field index serves it.
+  async find(col, field, value) {
+    const q = await db.collection(col).where(field, '==', value).get()
+    return q.docs.map((d) => { const x = d.data(); return { ...x, id: d.id, ...(x.expiresAt?.toMillis ? { expiresAt: x.expiresAt.toMillis() } : {}) } })
+  },
 }
 
 // A passkey is bound to the site it was made on, so the relying party is
