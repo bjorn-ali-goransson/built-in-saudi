@@ -16,7 +16,7 @@ export interface Relay {
 }
 
 export async function startRelay(): Promise<Relay> {
-  const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown }[] }>()
+  const rooms = new Map<string, { count: number; msgs: { seq: number; from: string; to: string; type: string; payload: unknown; ts: number }[] }>()
   const bodies: string[] = []
   const pushes: Relay['pushes'] = []
   const links = new Set<string>()
@@ -51,7 +51,7 @@ export async function startRelay(): Promise<Relay> {
         const msgs = r.msgs.filter((m) => m.seq > since && m.from !== b.from && (m.to === 'all' || m.to === b.from))
         return res.end(JSON.stringify({ ok: true, seq: r.count, msgs }))
       }
-      r.msgs.push({ seq: r.count, from: String(b.from), to: String(b.to || 'all'), type: String(b.type), payload: b.payload ?? null })
+      r.msgs.push({ seq: r.count, from: String(b.from), to: String(b.to || 'all'), type: String(b.type), payload: b.payload ?? null, ts: Date.now() })
       r.count++
       res.end(JSON.stringify({ ok: true, seq: r.count - 1 }))
     })

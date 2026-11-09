@@ -26,6 +26,41 @@ export async function roomStatus(room: string): Promise<'open' | 'ended' | 'clos
   } catch { return 'open' }
 }
 
+/** Somebody knocking in a room whose host is not in it yet. */
+export interface Knocker { id: string; name: string }
+// A guest knocks again every KNOCK_EVERY until a host answers (CallRoom), so a
+// knock older than this is somebody who closed the page without saying so.
+const KNOCK_EVERY = 15_000
+const KNOCK_FRESH = KNOCK_EVERY * 3
+
+/** Who is knocking in `room`, read from the relay without joining it: the
+ *  organiser's meeting page, before they start the call, so a guest who opened
+ *  the link is not left waiting on someone who does not know. A knock counts
+ *  until its guest leaves, is let in (joins), or stops knocking. Slower while
+ *  the page is hidden, where the call is a notification away. Returns a stop. */
+export function watchLobby(room: string, onChange: (waiting: Knocker[]) => void): () => void {
+  const from = 'watch' + Math.random().toString(36).slice(2, 8)
+  let live = true, timer = 0, last = ''
+  const tick = async () => {
+    try {
+      const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from, action: 'poll', since: -1 }) })
+      const d = r.ok ? await r.json() as { closed?: boolean; msgs?: { from: string; type: string; payload?: { name?: unknown } | null; ts?: number }[] } : {}
+      const knocks = new Map<string, { name: string; ts: number }>()
+      if (!d.closed) for (const m of d.msgs || []) {
+        if (m.type === 'knock') knocks.set(m.from, { name: typeof m.payload?.name === 'string' ? m.payload.name.slice(0, 60) : '', ts: m.ts || 0 })
+        else if (m.type === 'leave' || m.type === 'join') knocks.delete(m.from)
+      }
+      const now = Date.now()
+      const waiting = [...knocks].filter(([, k]) => now - k.ts < KNOCK_FRESH).map(([id, k]) => ({ id, name: k.name }))
+      const key = waiting.map((w) => `${w.id}:${w.name}`).join()
+      if (live && key !== last) { last = key; onChange(waiting) }
+    } catch { /* offline: try again next tick */ }
+    if (live) timer = window.setTimeout(tick, document.hidden ? 15_000 : 4_000)
+  }
+  void tick()
+  return () => { live = false; window.clearTimeout(timer) }
+}
+
 /** One-off relay message into a room we're not connected to — used by a busy link
  *  owner to tell a waiting caller (in their own room) to switch rooms or that they
  *  were declined. Fire-and-forget; the caller's poll loop picks it up. */
@@ -255,6 +290,11 @@ export class CallRoom {
   private h: CallHandlers
   private peers = new Map<string, Peer>()
   private since = -1
+  // A guest's knock is repeated until a host says hello (KNOCK_EVERY): it is how a
+  // host who starts later, and an organiser's page watching the room, see a
+  // guest who is still there.
+  private heardHost = false
+  private lastKnock = 0
   private active = false
   private name = ''
   private role: Role = 'guest'
@@ -320,13 +360,18 @@ export class CallRoom {
     // A guest only KNOCKS (only the host answers) — so a waiting guest is connected
     // to the host alone and never sees the other participants until admitted. The
     // host announces itself with JOIN, and admitted peers JOIN to mesh (enableMedia).
-    void this.loadIce().then(() => { if (this.active) this.send(asHost ? 'join' : 'knock', 'all') })
-    this.heartbeat = window.setInterval(() => { this.broadcastInfo(); void this.watchPath() }, 2000)
+    void this.loadIce().then(() => { if (!this.active) return; if (asHost) this.send('join', 'all'); else this.knock() })
+    this.heartbeat = window.setInterval(() => {
+      this.broadcastInfo(); void this.watchPath()
+      if (this.role === 'guest' && !this.inCall && !this.heardHost && Date.now() - this.lastKnock > KNOCK_EVERY) this.knock()
+    }, 2000)
   }
 
   /** Guest: knock again after a connection to the host failed. The failed peer is
    *  already dropped, so the host's answer builds a fresh connection. */
-  retryKnock(): void { if (this.active && !this.inCall) this.send('knock', 'all') }
+  retryKnock(): void { if (this.active && !this.inCall) this.knock() }
+  // The name rides along so a page that is not in the room can say who it is.
+  private knock() { this.lastKnock = Date.now(); this.send('knock', 'all', { name: this.name }) }
 
   /** Join the call. Privacy-first: we open NO device here — we start muted with the
    *  camera off, so nothing is acquired until the user actually turns mic/cam on. */
@@ -396,7 +441,7 @@ export class CallRoom {
     // host alone and can't discover or reach the other participants.
     if (type === 'knock') { if (this.role === 'host') { this.send('hello', from); this.connect(from) } }
     else if (type === 'join') { if (this.role === 'host' || this.inCall) { this.send('hello', from); this.connect(from) } }
-    else if (type === 'hello') this.connect(from)
+    else if (type === 'hello') { this.heardHost = true; this.connect(from) }
     else if (type === 'offer' || type === 'answer') await this.onDesc(from, payload as RTCSessionDescriptionInit, type)
     else if (type === 'ice') {
       const c = payload as RTCIceCandidateInit; const p = this.peers.get(from)
@@ -668,7 +713,14 @@ export class CallRoom {
   }
   /** Publish our own call-link code to in-call peers so they can save us (#221). */
   /** A rename mid-call: everyone connected hears it now, not at the next heartbeat. */
-  setName(name: string) { if (name && name !== this.name) { this.name = name; if (this.active) this.broadcastInfo() } }
+  setName(name: string) {
+    if (!name || name === this.name) return
+    this.name = name
+    if (!this.active) return
+    this.broadcastInfo()
+    // Still knocking with nobody answering: say the new name to whoever watches the room.
+    if (this.role === 'guest' && !this.inCall && !this.heardHost) this.knock()
+  }
   setMyLink(code: string) { if (code !== this.myLink) { this.myLink = code || ''; this.broadcastInfo() } }
   private sendInfo(peer: Peer) { if (peer.dc?.readyState === 'open') peer.dc.send(JSON.stringify({ c: 'info', name: this.name, role: this.role, inCall: this.inCall, muted: this.muted, cam: this.cam, sharing: this.screenOn, aspect: this.aspect, link: this.myLink || undefined } as Ctrl)) }
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }

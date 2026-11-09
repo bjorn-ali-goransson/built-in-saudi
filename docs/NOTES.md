@@ -7285,6 +7285,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     aimed at the mic cannot hang up. In the open dock the dock icon is
     mirrored (it puts the dock away), and Maximize shows inward arrows once
     maximized.
+  - **A guest knocking before the organiser starts is seen from the meeting
+    page.** A waiting guest repeats its `knock` every 15 s until a host says
+    `hello`, with its name in the payload (and again at once on a rename, as
+    the name is asked after knocking). `watchLobby(room)` polls the relay as an
+    outsider (every 4 s, 15 s hidden) and counts a knock until that guest
+    sends `leave` or `join`, or stops knocking for 45 s (a closed tab sends
+    nothing). Sawi Kalam's meeting page shows "Sami is waiting to join" above
+    Start the meeting (filled), chimes, and sends an OS notification when
+    hidden. A made-up default name reads "Someone". Only while the page is
+    open: no push to a closed browser yet.
   - **The privacy copy changed with it** (privacy page, meta, seo, the call
     screen, the call-link page): "no data touches our servers" stopped being
     true for a relayed call. It is still end-to-end encrypted — the relay carries
