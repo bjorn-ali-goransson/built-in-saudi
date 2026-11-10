@@ -6930,6 +6930,22 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
 
 ## Infrastructure map
 
+- **Retention is Firestore TTL on `expiresAt`, and it was OFF until 2026-11-10.**
+  The deploy step that enables it was `continue-on-error` and failed with
+  PERMISSION_DENIED on every run, so only `logs` and `presence` (field `ttl`) were
+  ever deleted. 383 expired `callRooms` (from July on, the unclosed ones still
+  holding knock names and SDP with IP addresses) contradicted "2 hours" on the
+  privacy pages. Now on for `callRooms callLinks meetOrganisers meetCredentials
+  meetChallenges meetings meetBackgrounds shortLinks todoLists prayerSubs`; the
+  deploy account has `roles/datastore.indexAdmin` and the step fails the run. A
+  new collection with `expiresAt` goes in that step's list. Counts read before
+  deletion (2026-11-10): 388 call rooms since 2026-07-12 (277 in July, mostly
+  testing; ~82 with enough signalling to have connected; 124 closed, 4 by an
+  organiser), 33 Sawi Kalam meetings and 12 organisers since 2026-11-01.
+- **Sawi Kalam analytics:** Ali Analytics site `1yWi9iHRkYzXrsSiNbed`
+  (sawikalam.com). Its script posts `location.search` too; the server keeps the
+  path only (normalize.go), which matters because a meeting's code and names
+  are in the query string.
 - **DNS:** Google Cloud DNS (`blitz-ksa` / zone `built-in-saudi`). Registrar
   nameservers delegate to Cloud DNS. A/AAAA → GitHub Pages, `www` CNAME, plus
   TXT/CNAME verification records for the consoles below.

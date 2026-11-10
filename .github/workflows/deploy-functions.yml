@@ -98,16 +98,22 @@ jobs:
             echo '::error::One or more functions failed to deploy (see FAIL above).'; exit 1
           fi
 
-      # Sawi Kalam's records expire a month after last use (meetCore.js). The code
-      # already treats an expired record as gone; these TTL policies are what
-      # delete the ones nobody ever reads again. Idempotent, so every deploy can
-      # run it. If the deploy account lacks the Firestore field-admin permission
-      # this step goes amber and the functions above are unaffected.
-      - name: Firestore TTL for Sawi Kalam records
-        continue-on-error: true
+      # Every collection whose records carry `expiresAt` is deleted by Firestore's
+      # TTL on it. The code treats an expired record as gone; TTL is what deletes
+      # the ones nobody reads again, and it is what makes the retention the
+      # privacy pages promise true. This step was once `continue-on-error`, and
+      # failed on every deploy for want of a permission without anybody seeing:
+      # expired call rooms, with names and addresses in them, stayed for months.
+      # So it fails the run now. The deploy account holds roles/datastore.indexAdmin
+      # for it (granted 2026-11-10). A new collection with `expiresAt` goes here.
+      # Policies already enabled are left as they are (an update would only
+      # queue another operation), so every deploy can run this.
+      - name: Firestore TTL on every expiring collection
         env:
           PROJECT: ${{ vars.GCP_PROJECT }}
         run: |
-          for g in meetOrganisers meetCredentials meetChallenges meetings meetBackgrounds; do
+          on=$(gcloud firestore fields ttls list --project="$PROJECT" --format='value(name)')
+          for g in callRooms callLinks meetOrganisers meetCredentials meetChallenges meetings meetBackgrounds shortLinks todoLists prayerSubs; do
+            if grep -q "/collectionGroups/$g/fields/expiresAt\$" <<<"$on"; then echo "TTL on: $g"; continue; fi
             gcloud firestore fields ttls update expiresAt --collection-group="$g" --enable-ttl --project="$PROJECT" --async --quiet
           done
