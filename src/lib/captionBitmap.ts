@@ -50,14 +50,20 @@ export async function renderCaption(
   measure.font = font
 
   const maxWidth = Math.max(1, box.w - pad * 2)
+  // A LINE BREAK THE WRITER TYPED IS KEPT. Splitting the whole caption on
+  // whitespace folded Enter into a space, so the field showed two lines and
+  // the picture one. Each typed line is wrapped on its own, and an empty one
+  // stays as an empty line, as it does in the field.
   const lines: string[] = []
-  let line = ''
-  for (const word of text.split(/\s+/)) {
-    const next = line ? `${line} ${word}` : word
-    if (measure.measureText(next).width > maxWidth && line) { lines.push(line); line = word }
-    else line = next
+  for (const para of text.split(/\r?\n/)) {
+    let line = ''
+    for (const word of para.split(/[^\S\n]+/).filter(Boolean)) {
+      const next = line ? `${line} ${word}` : word
+      if (measure.measureText(next).width > maxWidth && line) { lines.push(line); line = word }
+      else line = next
+    }
+    lines.push(line)
   }
-  if (line) lines.push(line)
   const lineHeight = Math.round(px * 1.3)
 
   // THE BOX WRAPS THE TEXT; IT DOES NOT CUT IT. The rectangle is where the

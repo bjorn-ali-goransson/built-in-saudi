@@ -519,6 +519,48 @@ test('a caption is typed onto the picture and drawn into it', async ({ page }) =
   await expect.poll(() => coloursIn(page, BAND), { timeout: 15_000 }).toBeGreaterThan(bare)
 })
 
+test('a line break typed into a caption is a line break in the picture', async ({ page }) => {
+  await load(page)
+  await pick(page)
+  await page.getByTestId('ie-aspect-source').click()
+  await page.getByTestId('ie-mode-text').click()
+  await drawBox(page, [0.03, 0.36], [0.47, 0.54])
+  const field = page.getByTestId('ie-caption-text-0')
+
+  // How many rows of the EXPORTED file carry white ink on the dark half. Two
+  // short words fit one line of this box, so the only thing that can make the
+  // second caption taller than the first is the typed break — which used to be
+  // folded into a space when the words were split on any whitespace.
+  const inkRows = async (text: string) => {
+    await field.fill(text)
+    await page.getByTestId('ie-stage').click({ position: { x: 5, y: 5 } })
+    await page.getByTestId('ie-export').click()
+    await expect(page.getByTestId('ie-download')).toBeVisible({ timeout: 60_000 })
+    const rows = await page.evaluate(async (url) => {
+      const i = new Image()
+      await new Promise((res, rej) => { i.onload = res; i.onerror = rej; i.src = url })
+      const c = document.createElement('canvas')
+      c.width = i.naturalWidth; c.height = i.naturalHeight
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(i, 0, 0)
+      const x0 = Math.round(0.06 * c.width), x1 = Math.round(0.44 * c.width)
+      let n = 0
+      for (let y = Math.round(0.05 * c.height); y < Math.round(0.68 * c.height); y++) {
+        const px = ctx.getImageData(x0, y, x1 - x0, 1).data
+        for (let k = 0; k < px.length; k += 4) if (px[k] > 200) { n++; break }
+      }
+      return n
+    }, await page.getByTestId('ie-download').getAttribute('href'))
+    // Select the caption again for the next round.
+    await page.getByTestId('ie-caption-box-0').click()
+    return rows
+  }
+  const one = await inkRows('AB CD')
+  const two = await inkRows('AB\nCD')
+  expect(one).toBeGreaterThan(0)
+  expect(two).toBeGreaterThan(one * 1.6)
+})
+
 test('Arabic in a caption is shaped and joined, not left as separate letters', async ({ page }) => {
   await load(page, 'ar')
   await pick(page)
