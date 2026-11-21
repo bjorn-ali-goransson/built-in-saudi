@@ -43,7 +43,7 @@ const inRect = (d: Drag, col: number, row: number) =>
  * because a sticky header cell leaves its collapsed border behind as it
  * scrolls. State is a faded fill: green by how many are free, gold where
  * everyone is, grey for the past; my own times are a stronger green with a
- * bar down the inline-start edge, which runs unbroken through a block.
+ * 2px bar down the inline-start edge, which runs unbroken through a block.
  */
 export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, mine, onCommit, focus, onFocus, intl, labels }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -204,7 +204,7 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
                       style={{ background: bg }}
                     >
                       {/* Through the line below too, so a block's bar is unbroken. */}
-                      {isMine && <span aria-hidden="true" className={`pointer-events-none absolute start-0 top-0 w-[3px] bg-green-700 ${mineAt(col, row + 1) ? '-bottom-px' : 'bottom-0'}`} />}
+                      {isMine && <span aria-hidden="true" className={`pointer-events-none absolute start-0 top-0 w-[2px] bg-green-600 ${mineAt(col, row + 1) ? '-bottom-px' : 'bottom-0'}`} />}
                     </td>
                   )
                 })}
@@ -214,7 +214,7 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
         </table>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.78rem] text-ink-soft">
-        {editable && <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px] overflow-hidden" style={{ background: fill.mine }}><i className="absolute inset-y-0 start-0 w-[3px] bg-green-700" /></i>{labels.mineLegend}</span>}
+        {editable && <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px] overflow-hidden" style={{ background: fill.mine }}><i className="absolute inset-y-0 start-0 w-[2px] bg-green-600" /></i>{labels.mineLegend}</span>}
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.free(0.7) }} />{labels.freeLegend}</span>
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.gold }} />{labels.everyoneLegend}</span>
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px] border border-[color:var(--line-soft)]" style={{ background: fill.past }} />{labels.pastLegend}</span>

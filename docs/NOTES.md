@@ -6518,7 +6518,7 @@ job, one host's bookable slots, and keeps its own search phrases).
   `border-collapse` was not used: a sticky header cell leaves its collapsed
   border behind when it scrolls. State is a faded fill (green by how many are
   free, gold for everyone, grey for past); my own times are a stronger green
-  with a 3px bar on the inline-start edge, extended 1px over the line below
+  with a 2px bar (green-600, was 3px green-700: too heavy) on the inline-start edge, extended 1px over the line below
   so a block's bar is unbroken.
 - The grid opens scrolled to 08:00, or to the earliest time ANYBODY marked:
   the first e2e run showed the organiser's morning hidden above the fold for an
