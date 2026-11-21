@@ -23,7 +23,7 @@ interface Pos { col: number; row: number }
 interface Drag { anchor: Pos; current: Pos; paint: boolean }
 
 function posAt(x: number, y: number): (Pos & { slot: number | null }) | null {
-  const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-col]')
+  const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('td[data-col]')
   if (!el) return null
   return { col: Number(el.dataset.col), row: Number(el.dataset.row), slot: el.dataset.slot ? Number(el.dataset.slot) : null }
 }
@@ -34,9 +34,16 @@ const inRect = (d: Drag, col: number, row: number) =>
 /**
  * The week on this browser's clock. Drag across cells to mark (or, starting on
  * a marked cell, unmark) a block of time; each drag is one rectangle, so
- * several drags give several separate blocks. Behind my marks, every cell is
- * shaded by how many of those who answered are free then, and the cells that
- * suit all of them are gold.
+ * several drags give several separate blocks.
+ *
+ * Drawn with lines and fills only, nothing outlined per cell: it is a table in
+ * which every cell draws just its bottom and inline-end border (the scroller
+ * draws the outer edge), so each line between two cells is one hairline, a
+ * slightly darker one on the hour. `border-collapse` itself is not used
+ * because a sticky header cell leaves its collapsed border behind as it
+ * scrolls. State is a faded fill: green by how many are free, gold where
+ * everyone is, grey for the past; my own times are a stronger green with a
+ * bar down the inline-start edge, which runs unbroken through a block.
  */
 export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, mine, onCommit, focus, onFocus, intl, labels }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -56,8 +63,8 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
     if (!sc) return
     let row = (8 * 60) / slotMin
     for (const s of free.keys()) { const w = lay.where.get(s); if (w && w[1] < row) row = w[1] }
-    const el = sc.querySelector<HTMLElement>(`[data-row="${row}"]`)
-    const head = sc.querySelector<HTMLElement>('[data-head]')
+    const el = sc.querySelector<HTMLElement>(`tr[data-row="${row}"]`)
+    const head = sc.querySelector<HTMLElement>('thead')
     if (el) sc.scrollTop = el.offsetTop - (head?.offsetHeight || 0)
     // Once, when the grid first appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,35 +91,30 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
   function mineAt(col: number, row: number): boolean {
     if (!mine) return false
     const slot = lay.cell.get(`${col}:${row}`)
-    if (!selectable(slot)) return slot != null && mine.has(slot)
+    if (slot == null) return false
+    if (!selectable(slot)) return mine.has(slot)
     return drag && inRect(drag, col, row) ? drag.paint : mine.has(slot)
   }
-  // One outline round a marked block rather than one per half hour: an edge
-  // is drawn only where the neighbour across it is not marked. Inline-start
-  // and inline-end come out right in either direction, since the grid itself
-  // is laid out by `dir`.
-  const W = '2px', C = 'var(--green-700)'
-  function edge(col: number, row: number): string {
-    const rtl = scroller.current ? getComputedStyle(scroller.current).direction === 'rtl' : false
-    const sides: string[] = []
-    if (!mineAt(col, row - 1)) sides.push(`inset 0 ${W} 0 0 ${C}`)
-    if (!mineAt(col, row + 1)) sides.push(`inset 0 -${W} 0 0 ${C}`)
-    const left = rtl ? col + 1 : col - 1, right = rtl ? col - 1 : col + 1
-    if (!mineAt(left, row)) sides.push(`inset ${W} 0 0 0 ${C}`)
-    if (!mineAt(right, row)) sides.push(`inset -${W} 0 0 0 ${C}`)
-    return sides.join(', ') || 'none'
-  }
 
-  const cols = lay.cols.length
+  const fill = {
+    past: 'color-mix(in srgb, var(--ink) 5%, var(--surface))',
+    mine: 'color-mix(in srgb, var(--green-500) 34%, var(--surface))',
+    gold: 'color-mix(in srgb, var(--gold-500) 42%, var(--surface))',
+    free: (f: number) => `color-mix(in srgb, var(--green-500) ${Math.round(6 + f * 20)}%, var(--surface))`,
+  }
+  // Every cell draws only its own bottom and inline-end line.
+  const cellLine = (row: number) =>
+    `border-e border-e-[color:var(--line-soft)] border-b ${row % 2 === 1 ? 'border-b-[color:var(--line)]' : 'border-b-[color:var(--line-soft)]'}`
+
   return (
     <div className="select-none grid gap-2" data-testid="ft-grid">
       <div
         ref={scroller}
         className="relative max-h-[30rem] overflow-auto rounded-lg border border-[color:var(--line)] bg-[var(--surface)] max-[560px]:max-h-[70vh]"
       >
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: `3.2rem repeat(${cols}, minmax(2.6rem, 1fr))` }}
+        <table
+          className="w-full table-fixed border-separate border-spacing-0"
+          style={{ minWidth: `${3.2 + lay.cols.length * 2.6}rem` }}
           onPointerDown={(e) => {
             const p = posAt(e.clientX, e.clientY)
             if (!p) return
@@ -137,70 +139,85 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
           onPointerUp={commit}
           onPointerCancel={commit}
         >
-          <div data-head className="sticky top-0 start-0 z-30 h-11 bg-[var(--surface)] border-b border-[color:var(--line)]" />
-          {lay.cols.map((c, i) => {
-            const isToday = c.date.toDateString() === today
-            return (
-              <div
-                key={c.key}
-                data-testid={`ft-day-${i}`}
-                className={`sticky top-0 z-20 h-11 px-1 grid place-items-center text-center text-[0.74rem] leading-tight font-semibold border-b border-s border-[color:var(--line)] ${isToday ? 'bg-[color-mix(in_srgb,var(--green-500)_14%,var(--surface))] text-green-800' : 'bg-[var(--surface)] text-ink-soft'}`}
-              >
-                {dayFmt.format(c.date)}
-              </div>
-            )
-          })}
-
-          {Array.from({ length: lay.rows }, (_, row) => (
-            <div key={row} className="contents">
-              <div data-row={row} className="sticky start-0 z-10 bg-[var(--surface)] pe-1.5 h-6 flex items-start justify-end text-[0.68rem] tabular-nums text-ink-faint touch-pan-x touch-pan-y">
-                {row % 2 === 0 && <span className="-translate-y-[0.45em]">{timeFmt.format(new Date(2000, 0, 1, 0, row * slotMin))}</span>}
-              </div>
-              {lay.cols.map((_, col) => {
-                const slot = lay.cell.get(`${col}:${row}`)
-                const open = selectable(slot)
-                const isMine = mineAt(col, row)
-                const names = slot != null ? free.get(slot) || [] : []
-                const gold = slot != null && everyone.has(slot)
-                const frac = answered ? names.length / answered : 0
-                const bg = !open
-                  ? 'var(--line-soft)'
-                  : gold
-                    ? 'color-mix(in srgb, var(--gold-500) 55%, var(--surface))'
-                    : names.length
-                      ? `color-mix(in srgb, var(--green-500) ${Math.round(12 + frac * 55)}%, var(--surface))`
-                      : 'var(--surface)'
+          <colgroup>
+            <col style={{ width: '3.2rem' }} />
+            {lay.cols.map((c) => <col key={c.key} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="sticky top-0 start-0 z-30 h-11 bg-[var(--surface)] border-e border-b border-[color:var(--line)]" />
+              {lay.cols.map((c, i) => {
+                const isToday = c.date.toDateString() === today
                 return (
-                  <div
-                    key={col}
-                    data-col={col}
-                    data-row={row}
-                    data-slot={slot ?? ''}
-                    data-testid={slot != null ? `ft-cell-${slot}` : undefined}
-                    data-mine={isMine ? '1' : undefined}
-                    data-free={names.length || undefined}
-                    data-everyone={gold ? '1' : undefined}
-                    aria-label={slot != null ? `${dayFmt.format(lay.cols[col].date)} ${timeFmt.format(slotTime(start, slotMin, slot))}` : undefined}
-                    className={[
-                      'h-6 border-s border-[color:var(--line-soft)]',
-                      row % 2 === 1 ? 'border-b border-b-[color:var(--line)]' : 'border-b border-b-[color:var(--line-soft)] border-dashed',
-                      open && editable ? 'cursor-crosshair touch-none' : open ? 'cursor-pointer' : 'opacity-60',
-
-                      focus === slot && slot != null ? 'outline outline-2 -outline-offset-2 outline-[var(--ink)]' : '',
-                    ].join(' ')}
-                    style={{ background: bg, boxShadow: isMine ? edge(col, row) : undefined }}
-                  />
+                  <th
+                    key={c.key}
+                    data-testid={`ft-day-${i}`}
+                    className={`sticky top-0 z-20 h-11 px-1 text-center text-[0.74rem] leading-tight font-semibold border-b border-b-[color:var(--line)] ${i < lay.cols.length - 1 ? 'border-e border-e-[color:var(--line-soft)]' : ''} ${isToday ? 'text-green-800' : 'text-ink-soft'}`}
+                    style={{ background: isToday ? 'color-mix(in srgb, var(--green-500) 12%, var(--surface))' : 'var(--surface)' }}
+                  >
+                    {dayFmt.format(c.date)}
+                  </th>
                 )
               })}
-            </div>
-          ))}
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: lay.rows }, (_, row) => (
+              <tr key={row} data-row={row}>
+                <th
+                  scope="row"
+                  className={`sticky start-0 z-10 h-6 p-0 pe-1.5 align-top text-end text-[0.68rem] font-normal tabular-nums text-ink-faint bg-[var(--surface)] border-e border-e-[color:var(--line)] ${row % 2 === 1 ? 'border-b border-b-[color:var(--line)]' : ''}`}
+                >
+                  {row % 2 === 0 && row > 0 && <span className="relative -top-[0.55em]">{timeFmt.format(new Date(2000, 0, 1, 0, row * slotMin))}</span>}
+                </th>
+                {lay.cols.map((_, col) => {
+                  const slot = lay.cell.get(`${col}:${row}`)
+                  const open = selectable(slot)
+                  const isMine = mineAt(col, row)
+                  const names = slot != null ? free.get(slot) || [] : []
+                  const gold = slot != null && everyone.has(slot)
+                  const bg = !open ? fill.past
+                    : gold ? fill.gold
+                    : isMine ? fill.mine
+                    : names.length ? fill.free(answered ? names.length / answered : 0)
+                    : 'var(--surface)'
+                  const last = col === lay.cols.length - 1
+                  return (
+                    <td
+                      key={col}
+                      data-col={col}
+                      data-row={row}
+                      data-slot={slot ?? ''}
+                      data-testid={slot != null ? `ft-cell-${slot}` : undefined}
+                      data-mine={isMine ? '1' : undefined}
+                      data-free={names.length || undefined}
+                      data-everyone={gold ? '1' : undefined}
+                      aria-label={slot != null ? `${dayFmt.format(lay.cols[col].date)} ${timeFmt.format(slotTime(start, slotMin, slot))}` : undefined}
+                      className={[
+                        'relative h-6 p-0 transition-[filter] duration-75',
+                        cellLine(row),
+                        last ? '!border-e-0' : '',
+                        row === lay.rows - 1 ? '!border-b-0' : '',
+                        open && editable ? 'cursor-crosshair touch-none hover:brightness-[0.96]' : open ? 'cursor-pointer hover:brightness-[0.96]' : '',
+                        focus === slot && slot != null ? 'brightness-[0.92]' : '',
+                      ].join(' ')}
+                      style={{ background: bg }}
+                    >
+                      {/* Through the line below too, so a block's bar is unbroken. */}
+                      {isMine && <span aria-hidden="true" className={`pointer-events-none absolute start-0 top-0 w-[3px] bg-green-700 ${mineAt(col, row + 1) ? '-bottom-px' : 'bottom-0'}`} />}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.78rem] text-ink-soft">
-        {editable && <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[3px] shadow-[inset_0_0_0_2px_var(--green-700)]" />{labels.mineLegend}</span>}
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[3px]" style={{ background: 'color-mix(in srgb, var(--green-500) 45%, var(--surface))' }} />{labels.freeLegend}</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[3px]" style={{ background: 'color-mix(in srgb, var(--gold-500) 55%, var(--surface))' }} />{labels.everyoneLegend}</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[3px] opacity-60" style={{ background: 'var(--line-soft)' }} />{labels.pastLegend}</span>
+        {editable && <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px] overflow-hidden" style={{ background: fill.mine }}><i className="absolute inset-y-0 start-0 w-[3px] bg-green-700" /></i>{labels.mineLegend}</span>}
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.free(0.7) }} />{labels.freeLegend}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.gold }} />{labels.everyoneLegend}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px] border border-[color:var(--line-soft)]" style={{ background: fill.past }} />{labels.pastLegend}</span>
       </div>
     </div>
   )

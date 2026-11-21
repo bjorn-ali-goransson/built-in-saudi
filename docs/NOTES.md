@@ -6509,6 +6509,17 @@ job, one host's bookable slots, and keeps its own search phrases).
 - **Holding a name** is a passkey claim on an invited name (or a new one); a
   held name is not offered to anybody else, which is what stops a second
   holder of the link answering for you.
+- **The grid is lines and fills, not outlines.** The first version was a CSS
+  grid where every cell drew its own start and bottom border (dashed on the
+  half hour) and each marked cell an inset outline; together they read as
+  broken, doubled lines (reported). It is now a `<table>`, `border-separate`
+  with zero spacing, in which each cell draws only its bottom and inline-end
+  hairline, darker on the hour; the scroller draws the outer edge. Real
+  `border-collapse` was not used: a sticky header cell leaves its collapsed
+  border behind when it scrolls. State is a faded fill (green by how many are
+  free, gold for everyone, grey for past); my own times are a stronger green
+  with a 3px bar on the inline-start edge, extended 1px over the line below
+  so a block's bar is unbroken.
 - The grid opens scrolled to 08:00, or to the earliest time ANYBODY marked:
   the first e2e run showed the organiser's morning hidden above the fold for an
   invitee three hours behind.
