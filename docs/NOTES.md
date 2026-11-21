@@ -6516,10 +6516,11 @@ job, one host's bookable slots, and keeps its own search phrases).
   with zero spacing, in which each cell draws only its bottom and inline-end
   hairline, darker on the hour; the scroller draws the outer edge. Real
   `border-collapse` was not used: a sticky header cell leaves its collapsed
-  border behind when it scrolls. State is a faded fill (green by how many are
-  free, gold for everyone, grey for past); my own times are a stronger green
-  (an edge bar was tried, 3px then 2px, and dropped as too heavy); a cell that
-  suits everyone also has a green check.
+  border behind when it scrolls. State is a faded fill: blue where somebody
+  marked a time (darker as more did, strongest for my own), green with a
+  check where it suits everyone, grey for past. Gold for "everyone" was
+  dropped: it read as a warning. An edge bar on my own times was tried, 3px
+  then 2px, and dropped as too heavy.
 - The grid opens scrolled to 08:00, or to the earliest time ANYBODY marked:
   the first e2e run showed the organiser's morning hidden above the fold for an
   invitee three hours behind.
