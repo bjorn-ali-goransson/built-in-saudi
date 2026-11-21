@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Layout } from './lib'
 import { slotTime } from './lib'
+import { CheckIcon } from '../../components/icons'
 
 interface Props {
   lay: Layout
@@ -42,8 +43,9 @@ const inRect = (d: Drag, col: number, row: number) =>
  * slightly darker one on the hour. `border-collapse` itself is not used
  * because a sticky header cell leaves its collapsed border behind as it
  * scrolls. State is a faded fill: green by how many are free, gold where
- * everyone is, grey for the past; my own times are a stronger green with a
- * 2px bar down the inline-start edge, which runs unbroken through a block.
+ * everyone is, grey for the past; my own times are a stronger green. A cell
+ * that suits everyone also carries a green check, so it does not rest on
+ * telling gold from green.
  */
 export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, mine, onCommit, focus, onFocus, intl, labels }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -203,8 +205,7 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
                       ].join(' ')}
                       style={{ background: bg }}
                     >
-                      {/* Through the line below too, so a block's bar is unbroken. */}
-                      {isMine && <span aria-hidden="true" className={`pointer-events-none absolute start-0 top-0 w-[2px] bg-green-600 ${mineAt(col, row + 1) ? '-bottom-px' : 'bottom-0'}`} />}
+                      {gold && <CheckIcon className="pointer-events-none absolute inset-0 m-auto size-3.5 text-green-700 [stroke-width:3]" />}
                     </td>
                   )
                 })}
@@ -214,9 +215,9 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
         </table>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.78rem] text-ink-soft">
-        {editable && <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px] overflow-hidden" style={{ background: fill.mine }}><i className="absolute inset-y-0 start-0 w-[2px] bg-green-600" /></i>{labels.mineLegend}</span>}
+        {editable && <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.mine }} />{labels.mineLegend}</span>}
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.free(0.7) }} />{labels.freeLegend}</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.gold }} />{labels.everyoneLegend}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px]" style={{ background: fill.gold }}><CheckIcon className="absolute inset-0 m-auto size-3 text-green-700 [stroke-width:3]" /></i>{labels.everyoneLegend}</span>
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px] border border-[color:var(--line-soft)]" style={{ background: fill.past }} />{labels.pastLegend}</span>
       </div>
     </div>
