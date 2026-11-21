@@ -26,14 +26,15 @@ export const FUNCTIONS = {
   'prompt.js': [['analyze-prompt', 'analyzePrompt'], ['improve-prompt', 'improvePrompt']],
   'diacritize.js': [['diacritize', 'diacritize']],
   'meet.js': [['meet', 'meet']],
+  'findTime.js': [['find-time', 'findTime']],
   'todo.js': [['todo-sync', 'todoSync'], ['todo-mine', 'todoMine'], ['todo-share', 'todoShare'], ['todo-delete', 'todoDelete']],
 }
 
 /** Modules imported by another module, so a change to one redeploys the importer. */
-const USED_BY = { 'cvPrompts.js': ['cv.js'], 'cvText.js': ['cv.js'], 'cvShape.js': ['cv.js'], 'meetCore.js': ['meet.js'] }
+const USED_BY = { 'cvPrompts.js': ['cv.js'], 'cvText.js': ['cv.js'], 'cvShape.js': ['cv.js'], 'meetCore.js': ['meet.js'], 'findTimeCore.js': ['findTime.js'] }
 
 /** Changes that touch nothing deployed. */
-const INERT = new Set(['functions/README.md'])
+const INERT = new Set(['functions/README.md', 'functions/findTimeCore.d.ts'])
 
 export function plan(changed) {
   const all = () => Object.values(FUNCTIONS).flat()

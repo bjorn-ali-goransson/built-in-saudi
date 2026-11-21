@@ -63,6 +63,9 @@ const TEXT_SENDS_DATA = new Map([
   ['diacritize', 'posts the text to our backend for the OpenAI pass'],
   ['prompt-analyzer', 'posts the prompt to our backend for the OpenAI pass'],
   ['password-strength', 'k-anonymous range query to HIBP; proved by e2e/password-strength.spec.ts'],
+  // Matched by its passkey buttons' testids (`ft-create-key`); it takes no
+  // secret, but it does post the poll's title and the names typed into it.
+  ['find-time', 'posts the poll title and invitee names to our backend: a shared poll is the point'],
 ])
 
 /** Proved by a spec other than e2e/privacy.spec.ts, named so it can be checked. */

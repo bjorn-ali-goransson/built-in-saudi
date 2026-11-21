@@ -113,7 +113,7 @@ jobs:
           PROJECT: ${{ vars.GCP_PROJECT }}
         run: |
           on=$(gcloud firestore fields ttls list --project="$PROJECT" --format='value(name)')
-          for g in callRooms callLinks meetOrganisers meetCredentials meetChallenges meetings meetBackgrounds shortLinks todoLists prayerSubs; do
+          for g in callRooms callLinks meetOrganisers meetCredentials meetChallenges meetings meetBackgrounds shortLinks todoLists prayerSubs ftUsers ftCredentials ftChallenges ftPolls; do
             if grep -q "/collectionGroups/$g/fields/expiresAt\$" <<<"$on"; then echo "TTL on: $g"; continue; fi
             gcloud firestore fields ttls update expiresAt --collection-group="$g" --enable-ttl --project="$PROJECT" --async --quiet
           done

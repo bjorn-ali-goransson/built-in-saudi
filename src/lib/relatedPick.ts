@@ -50,6 +50,7 @@ export const CLUSTERS: string[][] = [
   ['saudi-phone', 'iban-validator', 'short-address', 'saudi-plate'],
   ['id-expiry', 'saudi-plate', 'date-diff'],
   ['calls', 'messages', 'book-me'],
+  ['find-time', 'book-me', 'calls'],
   ['translate', 'detect-language', 'diacritize'],
   ['stopwatch', 'metronome'],
   ['typing-test', 'stopwatch', 'spin-wheel'],

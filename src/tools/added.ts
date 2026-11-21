@@ -7,6 +7,7 @@
 //
 // Newest first, which is also the order the catalogue reads it in.
 export const ADDED: Record<string, string> = {
+  'find-time': '2026-11-21',
   'excel-editor': '2026-10-29',
   'word-editor': '2026-10-29',
   'powerpoint-editor': '2026-10-29',

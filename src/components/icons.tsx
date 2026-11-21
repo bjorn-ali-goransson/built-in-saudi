@@ -263,6 +263,18 @@ export function CalendarCheckIcon({ className }: P) {
   )
 }
 
+// A calendar whose cells are shaded, as the group grid is: who is free when.
+export function CalendarGroupIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 3v3M16 3v3" />
+      <circle cx="9" cy="14" r="1.6" /><circle cx="15" cy="14" r="1.6" />
+      <path d="M6.5 18.5a2.6 2.6 0 0 1 5 0M12.5 18.5a2.6 2.6 0 0 1 5 0" />
+    </svg>
+  )
+}
+
 // Calendar with a crescent-moon badge in the bottom-left, on a bg-filled disc.
 export function IslamicCalendarIcon({ className }: P) {
   return (

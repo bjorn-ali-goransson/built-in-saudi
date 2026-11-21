@@ -6491,6 +6491,36 @@ through a line") is verified to fail when the slicer ignores block boundaries.
 - **Leaving a show lands on the slide it reached**, as every presentation app
   does; the case drives the show past a hidden slide and back before Escape.
 
+## Find a Time (`find-time`)
+
+A group poll for a meeting time (Doodle/When2meet's job; Book Me is the other
+job, one host's bookable slots, and keeps its own search phrases).
+
+- **Slots are instants, not wall-clock times.** A poll is 7 × 48 half-hours from
+  the organiser's midnight today in their zone (`zonedMidnight`, two passes so a
+  DST day lands right; checked for Riyadh, New York's spring-forward day,
+  Kathmandu's +5:45). Each browser lays the slots out on its own clock
+  (`lib.ts` `layout`), so somebody hours away sees the same instants on other
+  rows, and the week may spill into an eighth column. A +x:45 zone rounds each
+  slot down to its half-hour row, still one slot per row.
+- **"Suits everyone" means everyone who has answered, once two have.** Somebody
+  who has not opened the link does not veto every time. The page also shows the
+  best-so-far count when nothing suits all.
+- **Holding a name** is a passkey claim on an invited name (or a new one); a
+  held name is not offered to anybody else, which is what stops a second
+  holder of the link answering for you.
+- The grid opens scrolled to 08:00, or to the earliest time ANYBODY marked:
+  the first e2e run showed the organiser's morning hidden above the fold for an
+  invitee three hours behind.
+- The e2e (`e2e/find-time.spec.ts`) runs `findTimeCore` itself in memory behind
+  `page.route` on the production URL, with Chromium's virtual authenticator
+  (CDP `WebAuthn.*`) and two contexts in different `timezoneId`s. That is why
+  `@simplewebauthn/server` is also a ROOT devDependency. It was checked to fail
+  when the core pushes on every change instead of on a consensus change.
+  A drag in a test must centre the cell first (`scrollIntoView({block:'center',
+  behavior:'instant'})`): at the scroller's edge a cell is under the sticky day
+  header, and the page's smooth scrolling moves cells while they are measured.
+
 ## Conventions
 
 - **A known backlog is not a stopping point.** If a turn would end with "still
@@ -7581,6 +7611,22 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   Calls gained two host fields for it: `newMeetingPath` (where "new call" and
   "start your own" go instead of an unowned lobby) and `pendingRoom` (a known
   meeting nobody has started is waited in, not shown as ended).
+- **Find a Time** (`functions/findTime.js` over `functions/findTimeCore.js`, one
+  function `find-time` with `action` in the body; tool `src/tools/find-time/`):
+  group availability polls. People sign up and in with a PASSKEY only (RP
+  `built-in-saudi.com`, the same ceremony as Sawi Kalam's `meetCore`, but its own
+  collections: a passkey is bound to its site). Firestore `ftUsers`,
+  `ftCredentials` (public keys), `ftChallenges` (5 min), `ftPolls/{code}`. A
+  person and their passkeys are forgotten after a month idle; **a poll is
+  deleted a month after it is made, use does not renew it**. All four are in
+  the deploy's TTL list. `ftPolls.members` (uids holding a name) exists only so
+  `myData`/`deleteAccount` find a person's polls with one `array-contains`.
+  **Not covered by the Google `my-data`** (no `sub`): the tool's own "Your data"
+  sheet is its `my-data`, and the Privacy page says so. Live updates are polling
+  `get` with the version the page has (`{unchanged}` costs one read), every 3s
+  while visible, 20s hidden. Web push (shared VAPID) goes to every subscription
+  on the poll when the set of slots that suit everyone who answered changes, and
+  only then; 404/410 drops the subscription.
 - **Functions deploy = CI** (not manual gcloud): `.github/workflows/deploy-functions.yml`
   deploys on any `functions/**` change — **only the functions that change touches**,
   six at a time (`scripts/functions-plan.mjs` maps each module to its handlers: a

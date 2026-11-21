@@ -49,6 +49,8 @@ export const BENCH_QUERIES = [
   ['cv', 'ats-cv-optimizer'],
   ['resume', 'ats-cv-optimizer'],
   ['book meeting', 'book-me'],
+  ['when is everyone free', 'find-time'],
+  ['أنسب موعد للاجتماع', 'find-time'],
   ['video call', 'calls'],
   ['background remove', 'image-edit'],
   ['ocr', 'pdf-ocr'],

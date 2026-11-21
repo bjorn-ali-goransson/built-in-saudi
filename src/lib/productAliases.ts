@@ -34,7 +34,10 @@
 const ALIASES: Record<string, string> = {
   // scheduling
   calendly: 'booking page appointment schedule',
-  doodle: 'booking page appointment schedule',
+  // Doodle and When2meet are GROUP polls — everyone marks when they are free —
+  // which is Find a Time, not a booking page.
+  doodle: 'find a time group availability meeting poll',
+  when2meet: 'find a time group availability meeting poll',
 
   // documents
   docusign: 'sign pdf signature',

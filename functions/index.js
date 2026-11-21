@@ -21,6 +21,8 @@ import './diacritize.js'
 import './todo.js'
 // Sawi Kalam organisers: passkey sign-in and the meetings they own (meet).
 import './meet.js'
+// Find a Time: passkey people, group availability polls, consensus pushes (findTime).
+import './findTime.js'
 
 const { Firestore } = firestore
 const db = new Firestore()

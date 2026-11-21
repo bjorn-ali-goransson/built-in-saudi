@@ -23,6 +23,7 @@ import { languageDetectTool } from './language-detect/meta'
 import { unitConverterTool } from './unit-converter/meta'
 import { dateDiffTool } from './date-diff/meta'
 import { bookWithMeTool } from './book-with-me/meta'
+import { findTimeTool } from './find-time/meta'
 import { cvGeneratorTool } from './cv-generator/meta'
 import { linkShortenerTool } from './link-shortener/meta'
 import { callsTool } from './calls/meta'
@@ -100,6 +101,7 @@ import { stopwatchTool } from './stopwatch/meta'
  */
 export const tools: Tool[] = [
   bookWithMeTool,
+  findTimeTool,
   callsTool,
   messagesTool,
   excelEditorTool,

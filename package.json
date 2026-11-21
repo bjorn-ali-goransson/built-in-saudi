@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@simplewebauthn/server": "^14.1.0",
     "@tailwindcss/vite": "^4.3.2",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.11",

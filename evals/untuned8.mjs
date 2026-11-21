@@ -28,7 +28,7 @@
 export const UNTUNED8 = [
   // --- products whose function we DO have -----------------------------------
   ['calendly', 'book-me'],
-  ['doodle poll', 'book-me'],
+  ['doodle poll', 'find-time'],
   ['docusign', 'pdf-edit'],
   ['bitly', 'link-shortener'],
   ['tinyurl', 'link-shortener'],

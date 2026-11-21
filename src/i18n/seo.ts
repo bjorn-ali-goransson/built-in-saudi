@@ -119,6 +119,11 @@ export const liveToolSeo: ToolSeo[] = [
     ar: { name: 'كشك تصوير الويب كام', description: 'التقط صورًا بكاميرا الويب، وطبّق مرشّحات ممتعة، واعكس الصورة، ونزّل كل لقطة. لا تعمل الكاميرا إلا حين تبدأها، وتبقى كل صورة على جهازك — لا يُرفع أي شيء.' },
   },
   {
+    id: 'find-time',
+    en: { name: 'Find a Time', description: 'Find a meeting time that suits a whole group. Invite people by name and send one link; each marks when they are free in a week view shown in their own time zone, and everybody sees who has answered and the times that suit everyone, live. Passkey sign-in, no password; each poll is deleted after a month.' },
+    ar: { name: 'ابحث عن موعد', description: 'ابحث عن موعد اجتماع يناسب المجموعة كلها. ادعُ الناس بأسمائهم وأرسل رابطًا واحدًا؛ يحدّد كلٌّ أوقات فراغه في عرض أسبوعي بتوقيته المحلي، ويرى الجميع من أجاب والأوقات التي تناسب الكل مباشرةً. الدخول بمفتاح مرور بلا كلمة مرور، ويُحذف كل استطلاع بعد شهر.' },
+  },
+  {
     id: 'todo',
     en: { name: 'To-do Lists', description: 'Simple to-do lists that live in your browser: add tasks, tick them off, clear the finished ones. No account needed and nothing is uploaded. Want a list on more than one device, or shared with other people so you can tick things off together? Sign in with Google and switch sync on for just that list — everything else stays local.' },
     ar: { name: 'قوائم المهام', description: 'قوائم مهام بسيطة تعيش في متصفحك: أضِف المهام وأنجِزها وامسح المنتهي منها. بلا حساب ودون رفع أي شيء. وإن أردت قائمة على أكثر من جهاز أو مشتركة مع آخرين لتنجزوا معًا، سجّل الدخول بحساب جوجل وفعّل المزامنة لتلك القائمة وحدها — وما عداها يبقى محليًا.' },
