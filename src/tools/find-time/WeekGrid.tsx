@@ -208,7 +208,7 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
                       ].join(' ')}
                       style={{ background: bg }}
                     >
-                      {all && <CheckIcon className="pointer-events-none absolute inset-0 m-auto size-3.5 text-green-700 [stroke-width:3]" />}
+                      {all && <AgreedBadge className="pointer-events-none absolute inset-0 m-auto size-4" />}
                     </td>
                   )
                 })}
@@ -220,9 +220,18 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.78rem] text-ink-soft">
         {editable && <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.mine }} />{labels.mineLegend}</span>}
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px]" style={{ background: fill.free(0.7) }} />{labels.freeLegend}</span>
-        <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px]" style={{ background: fill.all }}><CheckIcon className="absolute inset-0 m-auto size-3 text-green-700 [stroke-width:3]" /></i>{labels.everyoneLegend}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="relative inline-block size-3.5 rounded-[2px]" style={{ background: fill.all }}><AgreedBadge className="absolute inset-0 m-auto size-3" /></i>{labels.everyoneLegend}</span>
         <span className="inline-flex items-center gap-1.5"><i className="inline-block size-3.5 rounded-[2px] border border-[color:var(--line-soft)]" style={{ background: fill.past }} />{labels.pastLegend}</span>
       </div>
     </div>
+  )
+}
+
+/** "Suits everyone": a white check in a green disc with a darker green rim. */
+function AgreedBadge({ className = '' }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={`grid place-items-center rounded-full border-[1.5px] border-green-700 bg-green-500 ${className}`}>
+      <CheckIcon className="size-[70%] text-white [stroke-width:3.5]" />
+    </span>
   )
 }
