@@ -6521,6 +6521,9 @@ job, one host's bookable slots, and keeps its own search phrases).
   check where it suits everyone, grey for past. Gold for "everyone" was
   dropped: it read as a warning. An edge bar on my own times was tried, 3px
   then 2px, and dropped as too heavy.
+  The hour labels' column has no row lines: a label nudged up by a guessed
+  `0.55em` sat slightly on its line (reported). Each is now absolutely
+  centred on the hour line (`top:-0.5px; translate -50%`).
 - The grid opens scrolled to 08:00, or to the earliest time ANYBODY marked:
   the first e2e run showed the organiser's morning hidden above the fold for an
   invitee three hours behind.

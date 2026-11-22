@@ -171,9 +171,14 @@ export function WeekGrid({ lay, start, slotMin, now, free, answered, everyone, m
               <tr key={row} data-row={row}>
                 <th
                   scope="row"
-                  className={`sticky start-0 z-10 h-6 p-0 pe-1.5 align-top text-end text-[0.68rem] font-normal tabular-nums text-ink-faint bg-[var(--surface)] border-e border-e-[color:var(--line)] ${row % 2 === 1 ? 'border-b border-b-[color:var(--line)]' : ''}`}
+                  className="sticky start-0 z-10 h-6 p-0 align-top text-[0.68rem] font-normal tabular-nums leading-none text-ink-faint bg-[var(--surface)] border-e border-e-[color:var(--line)]"
                 >
-                  {row % 2 === 0 && row > 0 && <span className="relative -top-[0.55em]">{timeFmt.format(new Date(2000, 0, 1, 0, row * slotMin))}</span>}
+                  {/* No row lines in this column, so a label never sits on one;
+                      it is centred on the hour line its row starts at, which
+                      is the bottom hairline of the row above (hence -0.5px). */}
+                  {row % 2 === 0 && row > 0 && (
+                    <span className="absolute end-1.5 top-[-0.5px] -translate-y-1/2">{timeFmt.format(new Date(2000, 0, 1, 0, row * slotMin))}</span>
+                  )}
                 </th>
                 {lay.cols.map((_, col) => {
                   const slot = lay.cell.get(`${col}:${row}`)
