@@ -243,7 +243,6 @@ export default function CallsTool() {
   useEffect(() => { try { localStorage.setItem('bis-call-dock-w', String(dockW)) } catch { /* */ } }, [dockW])
   const dockDrag = useRef<{ startY: number; startH: number; max: number } | null>(null)
   const [maximized, setMaximized] = useState(false) // dock filling the whole mobile view
-  const lastPanel = useRef<'p' | 'c' | 'r'>('p') // reopen this mode from the put-away dock bar
   // Explain-first notifications: show an in-call banner rationale, and only call the
   // browser's requestPermission() when the user clicks Enable (never auto-prompt).
   const [notifyBar, setNotifyBar] = useState(() => {
@@ -419,7 +418,6 @@ export default function CallsTool() {
   rosterRef.current = roster
   chatRef.current = chat
   pinsRef.current = pins
-  if (dockMode) lastPanel.current = dockMode
   const phaseRef = useRef(phase); phaseRef.current = phase
   // "Checking again" spinner: shown once half the current relay-poll delay has
   // elapsed (only while waiting/hosting — not needed in a live call).
@@ -1219,12 +1217,6 @@ export default function CallsTool() {
   const seenPanel = (m: 'p' | 'c' | 'r') => { if (m === 'p') setUnseen((u) => ({ ...u, p: 0 })); else if (m === 'c') setUnseen((u) => ({ ...u, c: 0 })) }
   // Open a dock mode (participants / chat / reactions), or close it if it's already showing.
   function toggleMode(m: 'p' | 'c' | 'r') { setDockMode((cur) => (cur === m ? null : m)); seenPanel(m) }
-  function pickPanel(m: 'p' | 'c' | 'r') { setDockMode(m); seenPanel(m) }
-  // Footer dock icon: close the dock if open, else reopen the last mode.
-  function toggleDock() {
-    if (dockMode) { setDockMode(null); setMaximized(false) }
-    else { setDockMode(lastPanel.current); seenPanel(lastPanel.current) }
-  }
   // Keyboard shortcuts (live only): M mute · W whiteboard · S screen · F file · C chat · P/A participants.
   const kbd = useRef<{ live: boolean; act: Record<string, () => void> }>({ live: false, act: {} })
   kbd.current = { live: phase === 'live', act: {
@@ -1920,8 +1912,8 @@ export default function CallsTool() {
     dockDrag.current = null
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* */ }
   }
-  // Mobile-only dock header: drag to resize; a title DROPDOWN switches
-  // participants/chat; buttons to maximise and to close. The whole bar is the drag
+  // Mobile-only dock header: drag to resize; the title says which panel it is
+  // (the bottom bar's icons switch it); buttons to maximise and to close. The whole bar is the drag
   // handle — interactive children stopPropagation their pointerdown so a tap on them
   // doesn't start a resize.
   const stopDrag = (e: React.PointerEvent) => e.stopPropagation()
@@ -1929,12 +1921,9 @@ export default function CallsTool() {
     <div className="hidden max-[640px]:flex items-center justify-between shrink-0 relative border-b border-[color:var(--line)] bg-[var(--surface)] ps-1.5 pe-1.5 h-11 touch-none select-none cursor-row-resize"
       data-testid="call-dock-header" onPointerDown={dockDown} onPointerMove={dockMove} onPointerUp={dockUp} onPointerCancel={dockUp}>
       <div onPointerDown={stopDrag}>
-        <Menu align="start" testid="call-dock-title" triggerClass="flex items-center gap-1 h-8 px-2 rounded-md bg-transparent border-0 cursor-pointer text-[0.82rem] font-semibold text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] [&_svg]:w-[16px] [&_svg]:h-[16px]"
-          trigger={<>{showReactions ? <SmileIcon /> : showChat ? <ChatIcon /> : <UsersIcon />}<span>{showReactions ? s.reactions : showChat ? s.chat : s.participants}</span><ChevronDownIcon className="opacity-60" /></>}>
-          <MenuItem icon={<UsersIcon />} label={`${s.participants} · ${participantCount}`} testid="call-dock-pick-p" onClick={() => pickPanel('p')} active={showParticipants} />
-          <MenuItem icon={<ChatIcon />} label={s.chat} testid="call-dock-pick-c" onClick={() => pickPanel('c')} active={showChat} />
-          <MenuItem icon={<SmileIcon />} label={s.reactions} testid="call-dock-pick-r" onClick={() => pickPanel('r')} active={showReactions} />
-        </Menu>
+        <span data-testid="call-dock-title" className="flex items-center gap-1.5 h-8 px-2 text-[0.82rem] font-semibold text-ink-soft [&_svg]:w-[16px] [&_svg]:h-[16px]">
+          {showReactions ? <SmileIcon /> : showChat ? <ChatIcon /> : <UsersIcon />}<span>{showReactions ? s.reactions : showChat ? s.chat : `${s.participants} · ${participantCount}`}</span>
+        </span>
       </div>
       {/* Grab handle centred across the whole header (not tucked beside the title). */}
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-[3px] pointer-events-none" aria-hidden="true"><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /><span className="w-8 h-[2px] rounded-full bg-ink-faint/45" /></span>
@@ -1987,6 +1976,18 @@ export default function CallsTool() {
       onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }}
       onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragOver(false) }}
       onDrop={(e) => { e.preventDefault(); dragDepth.current = 0; setDragOver(false); pickFiles(e.dataTransfer.files) }}>
+      {/* Who is waiting to be let in floats over the top of the whole call, the
+          same whatever the dock shows (it used to live inside the participants
+          dock, then also in a bar when the dock was closed, #217). Somebody who
+          gave up stays on it, struck through with the time, until dismissed. */}
+      {!isGuest && (waiting.length > 0 || bannerLeft.length > 0) && !willAutoAdmit() && (
+        <div className="absolute inset-x-0 top-0 z-40 flex justify-center px-2 pt-2 pointer-events-none" data-testid="call-lobby-float">
+          <div className="relative w-full max-w-[30rem] pointer-events-auto shadow-[0_6px_24px_rgba(0,0,0,0.18)] rounded-lg">
+            <LobbyList waiting={waiting} admit={admit} hint="" title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} leftAt={s.leftAt} locale={locale} left={bannerLeft} live staleIds={staleIds}
+              dismiss={waiting.length === 0 ? () => setLeftSeen((x) => new Set([...x, ...bannerLeft.map((w) => w.id)])) : undefined} dismissLabel={s.dismiss} />
+          </div>
+        </div>
+      )}
       {shareModal}
       {declineComposerEl}
       {contactReqEl}
@@ -2004,38 +2005,6 @@ export default function CallsTool() {
           </p>
           <button type="button" onClick={() => void videoAnyway()} data-testid="call-video-anyway"
             className="shrink-0 h-8 px-3 rounded-md bg-ink text-sand-100 border border-ink text-[0.8rem] font-semibold cursor-pointer">{s.videoAnyway}</button>
-        </div>
-      )}
-      {/* Somebody who knocked and left before being let in stays on the bar,
-          struck through with the time, until it is dismissed: a host who looked
-          a moment late still sees who it was (a guest who vanished unseen read
-          as a stranger). */}
-      {!isGuest && waiting.length === 0 && bannerLeft.length > 0 && !showParticipants && (
-        <div className="w-full bg-[color-mix(in_srgb,var(--ink)_82%,transparent)] text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-left">
-          <span className="shrink-0 opacity-70" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.92rem] font-semibold leading-tight truncate line-through decoration-1" data-testid="call-knock-left-who">{bannerLeft.map((w) => w.name || '•').join(', ')}</p>
-            <p className="text-[0.75rem] text-sand-100/70">{s.leftLobbyLong(bannerLeft[bannerLeft.length - 1].at, locale)}</p>
-          </div>
-          <button type="button" disabled data-testid="call-knock-left-admit" className="h-9 px-3 rounded-md bg-sand-100/25 text-sand-100/60 text-[0.85rem] font-semibold cursor-not-allowed border-0">{s.admit}</button>
-          <button type="button" onClick={() => setLeftSeen((x) => new Set([...x, ...bannerLeft.map((w) => w.id)]))} aria-label={s.dismiss} data-testid="call-knock-left-dismiss"
-            className="h-9 w-9 grid place-items-center rounded-md bg-transparent border-0 text-sand-100/80 hover:text-sand-100 hover:bg-white/10 cursor-pointer text-[1.1rem] leading-none">✕</button>
-        </div>
-      )}
-      {!isGuest && waiting.length > 0 && !showParticipants && !willAutoAdmit() && (
-        <div className="w-full bg-green-700 text-sand-100 px-3 py-2 flex items-center gap-3 flex-wrap shrink-0" data-testid="call-knock-banner">
-          <span className="shrink-0 [animation:bis-bounce-y_1.2s_ease-in-out_infinite]" aria-hidden="true"><UserPlusIcon className="w-5 h-5" /></span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.92rem] font-semibold leading-tight truncate" data-testid="call-knock-who">{waiting.map(([, i]) => i.name || '•').join(', ')}</p>
-            <p className="text-[0.75rem] text-sand-100/70">{s.waitingToJoin}</p>
-          </div>
-          {waiting.length === 1 ? (
-            <button onClick={() => admit(waiting[0][0])} data-testid="call-knock-admit"
-              className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.admit}</button>
-          ) : (
-            <button onClick={() => pickPanel('p')} data-testid="call-knock-open"
-              className="h-9 px-3 rounded-md bg-sand-100 text-green-800 text-[0.85rem] font-semibold cursor-pointer hover:bg-white">{s.participants}</button>
-          )}
         </div>
       )}
       {connFail && (
@@ -2090,7 +2059,7 @@ export default function CallsTool() {
           : <button type="button" onClick={() => setEditingName(true)} title={s.editName} data-testid="call-name-display"
               className="h-9 max-w-[12rem] px-2.5 rounded-md bg-transparent border-0 text-[0.9rem] font-medium text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-text text-start flex items-center gap-1">
               <span className="truncate">{name || '—'}</span>{inCallPeers.length > 0 && <span className="text-ink-faint shrink-0">+{inCallPeers.length}</span>}</button>}
-        <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><UserPlusIcon /></IconBtn>
+        <IconBtn onClick={invite} title={s.shareInvite} testid="call-invite"><ShareIcon /></IconBtn>
 
         <div className="flex-1" />
 
@@ -2373,14 +2342,6 @@ export default function CallsTool() {
           <aside style={dockStyle} className={`relative w-full sm:w-[var(--dock-w)] shrink-0 border-s border-[color:var(--line)] bg-[var(--surface)] overflow-y-auto overflow-x-hidden flex flex-col max-[640px]:w-full max-[640px]:border-s-0 max-[640px]:border-t ${maximized ? 'max-[640px]:flex-1' : 'max-[640px]:[height:var(--dock-h,46vh)]'}`} data-testid="call-participants-panel">
             <DockResizer width={dockW} onWidth={setDockW} />
             {dockHeader}
-            {/* Knocks first — pinned above the video grid so the host never misses
-                someone waiting, even on a short mobile dock where the elastic grid
-                would otherwise push the list out of view. */}
-            {!isGuest && (waiting.length > 0 || leftWaiters.length > 0) && !willAutoAdmit() && (
-              <div className="shrink-0 p-2.5 border-b border-[color:var(--line-soft)]">
-                <LobbyList waiting={waiting} admit={admit} hint={s.shareHint} title={s.lobbyList} admitLabel={s.admit} leftLabel={s.leftLobby} leftAt={s.leftAt} locale={locale} left={leftWaiters} live staleIds={staleIds} />
-              </div>
-            )}
             {/* Full-bleed elastic video grid: tiles fill their cells (no gaps/margins),
                 the layout (cols×rows) adapts to the participant count + maximise. */}
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
@@ -2497,26 +2458,15 @@ export default function CallsTool() {
         )}
       </div>
 
-      {/* ---- mobile: the dock, put away ----
-          Putting the dock away leaves its title bar docked above the toolbar,
-          so it is found again where it went rather than behind an icon. The
-          bar opens it again on the panel it showed last. */}
-      {!dockMode && (
-        <button type="button" onClick={toggleDock} data-testid="call-dock-bar" aria-label={s.dock}
-          className="hidden max-[640px]:flex items-center justify-between shrink-0 h-11 ps-3.5 pe-1.5 border-0 border-t border-[color:var(--line)] bg-[var(--surface)] text-ink-soft cursor-pointer">
-          <span className="flex items-center gap-1.5 text-[0.82rem] font-semibold [&_svg]:w-[16px] [&_svg]:h-[16px]">
-            {lastPanel.current === 'r' ? <SmileIcon /> : lastPanel.current === 'c' ? <ChatIcon /> : <UsersIcon />}
-            <span>{lastPanel.current === 'r' ? s.reactions : lastPanel.current === 'c' ? s.chat : s.participants}</span>
-            {(unseen.p + unseen.c) > 0 && <span data-testid="call-dock-bar-badge" className="min-w-5 h-5 px-1.5 grid place-items-center rounded-full bg-green-600 text-sand-50 text-[0.7rem] leading-none">{unseen.p + unseen.c}</span>}
-          </span>
-          <span className="grid place-items-center w-8 h-8 [&_svg]:w-[18px] [&_svg]:h-[18px]" aria-hidden="true"><DockIcon /></span>
-        </button>
-      )}
-
       {/* ---- mobile bottom bar ---- */}
       <footer className="hidden max-[640px]:flex items-center gap-1.5 px-2 py-2 border-t border-[color:var(--line)] bg-[var(--surface)]">
         <IconBtn onClick={toggleCam} active={cam} title={cam ? s.camOff : s.camOn}>{cam ? <CameraIcon /> : <CamOffIcon />}</IconBtn>
         <IconBtn onClick={toggleMic} active={mic} danger={!mic} flash={speaking} title={mic ? s.muteMe : s.unmuteMe}>{mic ? <MicIcon /> : <MicOffIcon />}</IconBtn>
+        {/* Each panel of the dock is its own icon here, as on desktop: the dock's
+            title used to be a dropdown, and a put-away dock left a bar of its own
+            above this one — a second people icon a tap away from the first. */}
+        <IconBtn onClick={() => toggleMode('p')} active={showParticipants} title={s.participants} testid="call-participants-open" badge={unseen.p || undefined}><UsersIcon /></IconBtn>
+        <IconBtn onClick={() => toggleMode('c')} active={showChat} title={s.chat} testid="call-chat-open" badge={unseen.c || undefined}><ChatIcon /></IconBtn>
         <IconBtn onClick={() => toggleMode('r')} active={showReactions} title={s.reactions} testid="call-react-open"><SmileIcon /></IconBtn>
         {/* Ending the call sits apart, across the bar from the mic, settings beside it. */}
         <div className="flex-1" />

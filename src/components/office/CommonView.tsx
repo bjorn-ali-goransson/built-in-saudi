@@ -9,6 +9,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 // It covers the document area only, never the ribbon, and it is drawn over a
 // wrapper that does not scroll, so it stays put while the document moves.
 //
+// Sizes travel in DOCUMENT pixels: an editor that zooms passes `scale` (screen
+// pixels per document pixel). A phone at 45% fit-to-width shows the whole width
+// of a page and far more of its height than its few hundred pixels say; in
+// screen pixels a desktop friend saw a narrow strip dimmed around a page the
+// phone showed entire (a user's report).
+//
 // Each person's area travels with their presence (`vw`, merged in by
 // useCollab's sendPresence), so it needs no message of its own.
 
@@ -24,7 +30,7 @@ export type CommonViewCollab = {
  *  agrees: a page is centred across, a sheet starts at the top and the start. */
 export type Anchor = { x: 'center' | 'start'; y: 'center' | 'start' }
 
-export function CommonView({ collab, anchor, className, children }: { collab: CommonViewCollab; anchor: Anchor; className?: string; children: ReactNode }) {
+export function CommonView({ collab, anchor, className, children, scale = 1 }: { collab: CommonViewCollab; anchor: Anchor; className?: string; children: ReactNode; scale?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<[number, number] | null>(null)
   const live = collab.state === 'live'
@@ -36,12 +42,15 @@ export function CommonView({ collab, anchor, className, children }: { collab: Co
     const ro = new ResizeObserver(measure); ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  useEffect(() => { if (size && live) report.current(size[0], size[1]) }, [size, live])
+  const k = scale > 0 ? scale : 1
+  useEffect(() => { if (size && live) report.current(Math.round(size[0] / k), Math.round(size[1] / k)) }, [size, live, k])
 
   let fade: { w: number; h: number } | null = null
   if (size && live) {
     const here = new Set(collab.roster.map((r) => r.client))
-    let w = size[0], h = size[1], others = 0
+    // In document pixels until the end, then back to ours.
+    const mineW = size[0] / k, mineH = size[1] / k
+    let w = mineW, h = mineH, others = 0
     for (const [client, p] of Object.entries(collab.presence)) {
       if (client === collab.me || !here.has(client)) continue
       const vw = (p.d as { vw?: unknown } | null)?.vw
@@ -49,7 +58,7 @@ export function CommonView({ collab, anchor, className, children }: { collab: Co
       others++; w = Math.min(w, vw[0]); h = Math.min(h, vw[1])
     }
     // Under a couple of pixels is rounding, not a smaller screen.
-    if (others && (size[0] - w > 2 || size[1] - h > 2)) fade = { w, h }
+    if (others && ((mineW - w) * k > 2 || (mineH - h) * k > 2)) fade = { w: Math.round(w * k), h: Math.round(h * k) }
   }
   const x = fade && size ? (anchor.x === 'center' ? (size[0] - fade.w) / 2 : 0) : 0
   const y = fade && size ? (anchor.y === 'center' ? (size[1] - fade.h) / 2 : 0) : 0

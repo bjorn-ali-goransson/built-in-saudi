@@ -6215,6 +6215,15 @@ separate message would wipe the selection). A page is centred across and starts
 at the top; a sheet starts at the top and the start; a slide is centred.
 `e2e/office-common-view.spec.ts` drives two screen sizes through all three.
 
+**Measured in document pixels, not screen pixels** (Word passes `scale={zoom}`;
+a user's report, November 2026). A phone shows a page at fit-to-width, 45% or
+so: it sees the page's whole width and far more of its height than its 390
+pixels say, yet the desktop dimmed everything outside a phone-sized strip. Each
+side now reports its area divided by its own zoom, and draws the common
+rectangle at its own zoom. Excel and PowerPoint keep scale 1 (the sheet is not
+zoomed; a slide is fitted whole on every screen). What is still not shared is
+WHERE each person has scrolled: the rectangle is anchored at the top.
+
 ### The mesh dropped one join in twelve
 
 `lib/p2p/mesh.ts` is the Calls engine with media and lobbies removed: a data-only
@@ -7316,6 +7325,21 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     The organiser's hang-up asks "End the meeting for everyone?" when anyone
     else is in the call or waiting; alone, it just ends (nobody to end it for,
     and Sawi Kalam's deploy-reload spec hangs up alone).
+  - **The lobby floats over the top of the whole call** (`call-lobby-float`,
+    November 2026, a user's report with a phone screenshot): on a phone the
+    knock sat inside the participants dock, a third of the way down, and with
+    the dock closed it moved to a bar of its own. Now there is one place,
+    whatever the dock shows: the same `LobbyList` (Let in per person, a guest
+    who gave up struck through with the time), floating at the top edge over
+    everything, with ✕ once nobody is still waiting. The dock no longer lists
+    the lobby, and the `call-knock-*` bars are gone.
+  - **On a phone, each dock panel is an icon in the bottom bar** beside the
+    mic: participants, chat, reactions (`call-participants-open`,
+    `call-chat-open`, `call-react-open`, with the unseen badges), pressing the
+    open one puts the dock away. The dock's title is no longer a dropdown, and
+    the put-away dock no longer leaves a bar above the toolbar (it was a second
+    people icon a tap from the first). The top bar's invite is a `ShareIcon`,
+    not a third person-with-a-plus.
   - **Call controls:** camera, mic, then reactions (an outline `SmileIcon`, not
     the 🙂 emoji, so it matches the other controls); settings and End call stand
     apart (after a divider on desktop, the far end of the mobile bar), so a tap

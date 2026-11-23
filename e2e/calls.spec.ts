@@ -456,25 +456,27 @@ test('a guest who leaves the lobby stays in the list, marked "left" with the tim
   await ca.close()
 })
 
-// With the participants panel closed, the bar at the top is all the host sees of
-// a knock; a guest who gives up stays on it, struck through, until dismissed.
-test('the knock bar keeps a guest who left, struck through with the time, until it is dismissed', async ({ browser }) => {
+// The lobby floats over the top of the call whatever the dock shows; a guest who
+// gives up stays on it, struck through, until dismissed.
+test('the floating lobby keeps a guest who left, struck through with the time, until it is dismissed', async ({ browser }) => {
   const ca = await ctx(browser, base), cb = await ctx(browser, base)
   const pa = await ca.newPage(), pb = await cb.newPage()
   await pa.goto('/en/apps/calls'); await pa.getByTestId('call-name').fill('Alice'); await pa.getByTestId('call-start').click()
   await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 }); await closeShare(pa)
   const room = new URL(pa.url()).searchParams.get('code') || ''
-  // Close the participants panel, so the bar is the only place a knock shows.
+  // Close the participants panel: the lobby does not depend on it.
   const parts = pa.getByTestId('call-participants')
   if (await parts.getAttribute('aria-pressed') === 'true') await parts.click()
   await pb.goto(`/en/apps/calls?code=${room}`); await pb.getByTestId('call-name').fill('Bob'); await pb.getByTestId('call-join').click()
-  await expect(pa.getByTestId('call-knock-who')).toHaveText('Bob', { timeout: 15_000 })
+  await expect(pa.getByTestId('call-lobby-float')).toContainText('Bob', { timeout: 15_000 })
+  // Nothing to dismiss while somebody is still waiting.
+  await expect(pa.getByTestId('call-lobby-dismiss')).toHaveCount(0)
   await cb.close()
-  await expect(pa.getByTestId('call-knock-left-who')).toHaveText('Bob', { timeout: 20_000 })
-  await expect(pa.getByTestId('call-knock-left')).toContainText(/left the lobby at \d\d:\d\d/)
-  await expect(pa.getByTestId('call-knock-left-admit')).toBeDisabled()
-  await pa.getByTestId('call-knock-left-dismiss').click()
-  await expect(pa.getByTestId('call-knock-left')).toHaveCount(0)
+  await expect(pa.getByTestId('call-lobby-left')).toContainText('Bob', { timeout: 20_000 })
+  await expect(pa.getByTestId('call-lobby-left-when')).toHaveText(/^left \d\d:\d\d$/)
+  await expect(pa.getByTestId('call-lobby-left-admit')).toBeDisabled()
+  await pa.getByTestId('call-lobby-dismiss').click()
+  await expect(pa.getByTestId('call-lobby-float')).toHaveCount(0)
   await ca.close()
 })
 
@@ -694,7 +696,7 @@ test('device picker lists camera, microphone and speaker', async ({ browser }) =
   await c.close()
 })
 
-test('mobile: dock — title dropdown switches panels, header X closes, footer icon reopens', async ({ browser }) => {
+test('mobile: the bottom bar has an icon per dock panel beside the mic, and the invite is a share icon', async ({ browser }) => {
   const c = await ctx(browser, base)
   const p = await c.newPage()
   await p.setViewportSize({ width: 390, height: 800 })
@@ -708,25 +710,28 @@ test('mobile: dock — title dropdown switches panels, header X closes, footer i
   await expect(p.getByTestId('call-dock-header')).toBeVisible()
   const dock = (await p.getByTestId('call-participants-panel').boundingBox())!
   expect(dock.y).toBeGreaterThan(300)
-  // The dock TITLE dropdown (not the footer) switches the panel to chat.
-  await p.getByTestId('call-dock-title').click()
-  await p.getByTestId('call-dock-pick-c').click()
+  // The title only names the panel; switching is the bar's icons.
+  await expect(p.getByTestId('call-dock-title')).toContainText('Participants')
+  await expect(p.getByTestId('call-dock-title').locator('button')).toHaveCount(0)
+  const foot = p.locator('footer').last()
+  await expect(foot.getByTestId('call-participants-open')).toHaveAttribute('aria-pressed', 'true')
+  await foot.getByTestId('call-chat-open').click()
   await expect(p.getByTestId('call-chat-panel')).toBeVisible()
   await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
-  // The dock icon on its header puts it away: its title bar stays, docked
-  // just above the toolbar, and tapping it opens the last panel (chat) again.
-  // The toolbar has no dock button of its own.
-  await expect(p.getByTestId('call-dock-toggle')).toHaveCount(0)
-  await p.getByTestId('call-dock-close').click()
+  await expect(p.getByTestId('call-dock-title')).toHaveText('Chat')
+  // Pressing the open panel's icon again puts the dock away, and nothing is left
+  // in its place: no second people icon above the bar.
+  await foot.getByTestId('call-chat-open').click()
   await expect(p.getByTestId('call-chat-panel')).toHaveCount(0)
-  const bar = p.getByTestId('call-dock-bar')
-  await expect(bar).toBeVisible()
-  await expect(bar).toHaveText('Chat')
-  const box = (await bar.boundingBox())!, foot = (await p.locator('footer').last().boundingBox())!
-  expect(Math.round(box.y + box.height)).toBe(Math.round(foot.y))
-  await bar.click()
-  await expect(p.getByTestId('call-chat-panel')).toBeVisible()
-  await expect(bar).toHaveCount(0)
+  await expect(p.getByTestId('call-dock-bar')).toHaveCount(0)
+  // The header's dock icon puts it away too; the people icon opens it again.
+  await foot.getByTestId('call-participants-open').click()
+  await expect(p.getByTestId('call-participants-panel')).toBeVisible()
+  await p.getByTestId('call-dock-close').click()
+  await expect(p.getByTestId('call-participants-panel')).toHaveCount(0)
+  // The top bar's invite is a share icon, not a second people icon.
+  await expect(p.getByTestId('call-invite').locator('svg')).toHaveCount(1)
+  expect(await p.getByTestId('call-invite').innerHTML()).not.toContain('M18 7v6M15 10h6')
   await c.close()
 })
 
@@ -1075,7 +1080,7 @@ test('a saved name shows a checkmark (not shuffle); tapping it clears + randomis
   await c.close()
 })
 
-test('mobile: a knock shows in the participants dock (above the elastic video grid)', async ({ browser }) => {
+test('mobile: a knock floats at the top of the whole call, not inside the participants dock', async ({ browser }) => {
   const a = await ctx(browser, base), b = await ctx(browser, base)
   const pa = await a.newPage(), pb = await b.newPage()
   await pa.setViewportSize({ width: 390, height: 800 })
@@ -1093,9 +1098,14 @@ test('mobile: a knock shows in the participants dock (above the elastic video gr
   await pb.getByTestId('call-name').fill('Knocker')
   await pb.getByTestId('call-join').click()
 
-  // The waiting list is visible in the host's participants dock, with a Let-in button.
-  await expect(pa.getByTestId('call-participants-panel').getByTestId('call-lobby-live')).toContainText('Knocker', { timeout: 20_000 })
-  await expect(pa.getByTestId('call-admit')).toBeVisible()
+  // The waiting list floats at the top of the screen, with a Let-in button, and
+  // is not squeezed into the dock.
+  await expect(pa.getByTestId('call-lobby-float')).toContainText('Knocker', { timeout: 20_000 })
+  await expect(pa.getByTestId('call-participants-panel').getByTestId('call-lobby-live')).toHaveCount(0)
+  expect((await pa.getByTestId('call-lobby-live').boundingBox())!.y).toBeLessThan(40)
+  await pa.getByTestId('call-admit').click()
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await expect(pa.getByTestId('call-lobby-float')).toHaveCount(0)
   await a.close(); await b.close()
 })
 
@@ -1122,11 +1132,11 @@ test('a knock is admittable even when the host is on the chat tab (#217)', async
   await pc.getByTestId('call-name').fill('Latecomer')
   await pc.getByTestId('call-join').click()
 
-  // A docked banner names them and admits directly, without hunting for the dock.
-  const banner = pa.getByTestId('call-knock-banner')
+  // The floating lobby names them and admits directly, without hunting for the dock.
+  const banner = pa.getByTestId('call-lobby-float')
   await expect(banner).toBeVisible({ timeout: 20_000 })
-  await expect(pa.getByTestId('call-knock-who')).toContainText('Latecomer')
-  await pa.getByTestId('call-knock-admit').click()
+  await expect(banner).toContainText('Latecomer')
+  await pa.getByTestId('call-admit').click()
   // Admitted → they're in the call, and the banner clears itself.
   await expect(pc.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
   await expect(banner).toHaveCount(0)

@@ -490,7 +490,7 @@ export default function WordEditor({ locale, kit, doc, joinRoom, onBack, onSaveC
             ))}
           </aside>
         )}
-        <CommonView collab={collab} anchor={{ x: 'center', y: 'start' }} className="flex-1 min-w-0 flex">
+        <CommonView collab={collab} anchor={{ x: 'center', y: 'start' }} scale={zoom} className="flex-1 min-w-0 flex">
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-auto bg-[color-mix(in_srgb,var(--ink)_7%,var(--bg))]" data-testid="wd-scroll" onMouseDown={(e) => { if (e.target === e.currentTarget) viewRef.current?.focus() }}>
           <div data-zoom={zoom} style={{ zoom }} className={pageView ? 'py-6 px-3 w-fit min-w-full' : 'py-6 px-3 max-[560px]:px-0 max-[560px]:py-0'}>
             <div

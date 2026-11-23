@@ -60,12 +60,17 @@ export function StreamVideo({ stream, className, muted, mirror, onSize }: { stre
 }
 
 // The host's "Waiting in the lobby" list — a card of guests with a Let-in button.
-export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, leftAt, locale, left, live, staleIds }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; leftLabel: string; leftAt?: (at: number, locale: string) => string; locale?: string; left?: { id: string; name: string; at?: number }[]; live?: boolean; staleIds?: Set<string> }) {
+export function LobbyList({ waiting, admit, hint, title, admitLabel, leftLabel, leftAt, locale, left, live, staleIds, dismiss, dismissLabel }: { waiting: [string, PeerInfo][]; admit: (id: string) => void; hint: string; title: string; admitLabel: string; leftLabel: string; leftAt?: (at: number, locale: string) => string; locale?: string; left?: { id: string; name: string; at?: number }[]; live?: boolean; staleIds?: Set<string>; dismiss?: () => void; dismissLabel?: string }) {
   const gone = left || []
   if (waiting.length === 0 && gone.length === 0) return live ? null : <p className="max-w-[30rem] text-[0.85rem] text-ink-faint">{hint}</p>
   return (
     <div className="max-w-[30rem] rounded-lg border border-[color:var(--line)] bg-[var(--surface)] p-4 flex flex-col gap-2.5" data-testid={live ? 'call-lobby-live' : 'call-lobby'}>
-      <p className="text-[0.82rem] font-semibold text-ink-soft flex items-center justify-between">{title} <span className="font-mono text-ink-faint">{waiting.length}</span></p>
+      <p className="text-[0.82rem] font-semibold text-ink-soft flex items-center justify-between gap-2">
+        <span className="flex-1">{title}</span>
+        <span className="font-mono text-ink-faint">{waiting.length}</span>
+        {dismiss && <button type="button" onClick={dismiss} aria-label={dismissLabel} title={dismissLabel} data-testid="call-lobby-dismiss"
+          className="-my-1 -me-2 h-7 w-7 grid place-items-center rounded-md bg-transparent border-0 text-ink-faint hover:text-ink hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] cursor-pointer text-[1rem] leading-none">✕</button>}
+      </p>
       {waiting.map(([id, info]) => (
         <div key={id} className={`flex items-center gap-3 transition-opacity duration-500 ${staleIds?.has(id) ? 'opacity-40' : ''}`}>
           <span className="w-8 h-8 rounded-full bg-[color-mix(in_srgb,var(--color-green-400)_22%,transparent)] text-green-700 grid place-items-center text-[0.78rem] font-semibold shrink-0" aria-hidden="true">{initials(info.name)}</span>

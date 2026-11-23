@@ -78,3 +78,43 @@ test('with nobody else in the session there is nothing to dim', async ({ browser
   await p.waitForTimeout(500)
   await expect(p.getByTestId('office-common-view')).toHaveCount(0)
 })
+
+// A phone shows a Word page at fit-to-width (45% or so): it sees the page's whole
+// width and a long stretch of it. In screen pixels the desktop dimmed all but a
+// strip the phone's width; in document pixels it dims only below what the phone
+// can see (a user's report).
+test('word-editor: a zoomed-out phone is measured in document pixels, so its whole page width stays clear', async ({ browser }) => {
+  const oc = await relayContext(browser, relay, { relayOnly: true })
+  const big = await oc.newPage()
+  await big.setViewportSize({ width: 1280, height: 860 })
+  await big.goto('/en/apps/word-editor/')
+  await big.getByTestId('office-new').click()
+  await big.getByTestId('office-share').click()
+  await big.getByTestId('collab-start').click()
+  const link = await big.getByTestId('collab-link').inputValue()
+  await big.getByTestId('sheet-close').click()
+  const gc = await relayContext(browser, relay, { relayOnly: true })
+  const phone = await gc.newPage()
+  await phone.setViewportSize({ width: 390, height: 640 })
+  await phone.goto(link.replace(/^https?:\/\/[^/]+/, ''))
+  await phone.getByTestId('collab-name').fill('Omar')
+  await phone.getByTestId('office-join-go').click()
+  const zoomOf = (p: Page) => p.locator('[data-zoom]').first().getAttribute('data-zoom').then(Number)
+  await expect.poll(() => zoomOf(phone), { timeout: 30_000 }).toBeLessThan(0.7)
+  const clear = big.getByTestId('office-common-view')
+  await expect(clear).toBeVisible({ timeout: 30_000 })
+  // Its size is, per side, the smaller of the phone's area over the phone's zoom
+  // and ours over our zoom, drawn at our zoom.
+  const areaOf = (p: Page) => p.getByTestId('wd-scroll').evaluate((el) => ({ w: el.parentElement!.clientWidth, h: el.parentElement!.clientHeight }))
+  await expect.poll(async () => {
+    const a = await areaOf(phone), m = await areaOf(big)
+    const zp = await zoomOf(phone), zb = await zoomOf(big)
+    const w = Number(await clear.getAttribute('data-w')), h = Number(await clear.getAttribute('data-h'))
+    const ew = Math.min(Math.round(a.w / zp), m.w / zb) * zb, eh = Math.min(Math.round(a.h / zp), m.h / zb) * zb
+    return `${Math.abs(w - ew) <= 3 && Math.abs(h - eh) <= 3} ${w}x${h} vs ${ew}x${eh} (phone ${a.w}x${a.h} @${zp})`
+  }, { timeout: 15_000 }).toMatch(/^true/)
+  // ...which is wider than the page itself: nothing across the page is dimmed.
+  const page = (await big.getByTestId('wd-page').boundingBox())!
+  expect((await clear.boundingBox())!.width).toBeGreaterThanOrEqual(page.width)
+  await oc.close(); await gc.close()
+})

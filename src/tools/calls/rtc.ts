@@ -104,7 +104,12 @@ const connectTimeout = () => (typeof window !== 'undefined' && (window as unknow
 const reconnectFor = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RECONNECT_FOR?: number }).__CALL_RECONNECT_FOR) || 120_000
 // `disconnected` often heals by itself within a second or two; past this it is
 // rebuilt without waiting for the browser's own `failed` (~30 s in Chrome).
-const disconnectGrace = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_DISCONNECT_GRACE?: number }).__CALL_DISCONNECT_GRACE) || 5_000
+// Chrome itself says `disconnected` ~5 s after the last packet.
+const disconnectGrace = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_DISCONNECT_GRACE?: number }).__CALL_DISCONNECT_GRACE) || 3_000
+// A rebuild the other side never answers (no offer, answer or candidate over the
+// relay, which a live page does within a second or two) means they have gone —
+// a closed tab sends no `leave` — and they are dropped rather than waited for.
+const reconnectSilence = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RECONNECT_SILENCE?: number }).__CALL_RECONNECT_SILENCE) || 8_000
 // Both sides may notice the break and each ask the other to rebuild; a request
 // that arrives this soon after our own rebuild is the same break, not a new one.
 const RESET_SAME_BREAK = 8_000
@@ -300,6 +305,7 @@ interface Peer {
   lost?: number
   tries: number
   dtimer?: number // the disconnected grace
+  stimer?: number // a rebuild's wait for any word from the other side
   rebuilding?: boolean
 }
 
@@ -477,6 +483,7 @@ export class CallRoom {
     else if (type === 'ice') {
       const c = payload as RTCIceCandidateInit; const p = this.peers.get(from)
       const typ = / typ (\w+)/.exec(c?.candidate || '')?.[1]; if (p && typ) p.remote.add(typ)
+      if (p) p.heardFrom = true
       if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c)
     }
     else if (type === 'leave') this.drop(from)
@@ -539,6 +546,7 @@ export class CallRoom {
       if (peer.done || this.peers.get(id) !== peer) return
       if (this.recoverable(peer)) void this.reconnect(id); else this.fail(id, 'timeout')
     }, connectTimeout())
+    if (was) peer.stimer = window.setTimeout(() => { if (!peer.done && !peer.heardFrom && this.peers.get(id) === peer) this.fail(id, 'timeout') }, reconnectSilence())
     pc.ondatachannel = (e) => this.bindDc(id, peer, e.channel)
     if (initiator) this.bindDc(id, peer, pc.createDataChannel('bis', { ordered: true }))
     this.peers.set(id, peer)
@@ -565,11 +573,11 @@ export class CallRoom {
    *  the person is still in the call, only the wire between us is new. */
   private rebuild(id: string, old: Peer) {
     if (!this.active) return
-    window.clearTimeout(old.timer); window.clearTimeout(old.dtimer)
+    window.clearTimeout(old.timer); window.clearTimeout(old.dtimer); window.clearTimeout(old.stimer)
     old.lost ??= Date.now()
     const pc = old.pc
     pc.onconnectionstatechange = null; pc.onicecandidate = null; pc.ontrack = null; pc.onnegotiationneeded = null; pc.ondatachannel = null
-    if (old.dc) { old.dc.onmessage = null; old.dc.onopen = null }
+    if (old.dc) { old.dc.onmessage = null; old.dc.onopen = null; old.dc.onclose = null }
     try { pc.close() } catch { /* */ }
     this.peers.delete(id)
     const peer = this.mkPeer(id, this.me > id, old)
@@ -778,6 +786,9 @@ export class CallRoom {
   private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
     peer.dc = dc; dc.binaryType = 'arraybuffer'
     dc.onopen = () => { this.sendInfo(peer); if (peer.reqPx !== undefined) this.sendWant(peer) }
+    // Closed while the connection itself is still up: the other page closed it on
+    // purpose. (A killed tab ends nothing; that one is caught by reconnectSilence.)
+    dc.onclose = () => { if (this.peers.get(id) === peer && peer.pc.connectionState === 'connected') this.drop(id) }
     dc.onmessage = (e) => {
       if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
       let m: Record<string, unknown>
@@ -992,13 +1003,13 @@ export class CallRoom {
     }
   }
 
-  private drop(id: string) { const p = this.peers.get(id); if (!p) return; window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
+  private drop(id: string) { const p = this.peers.get(id); if (!p) return; window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); window.clearTimeout(p.stimer); try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
   leave() {
     if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false
     window.clearInterval(this.heartbeat)
     this.stopScreen()
-    this.peers.forEach((p) => { window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); try { p.pc.close() } catch { /* */ } }); this.peers.clear()
+    this.peers.forEach((p) => { window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); window.clearTimeout(p.stimer); try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())
     this.audioTrack?.stop(); this.videoTrack?.stop(); this.audioTrack = null; this.videoTrack = null
   }
