@@ -309,7 +309,7 @@ export function DebugPanel({ diag, mic, cam }: { diag: DiagSnapshot | null; mic:
 
 // A participant square. The <video> stays mounted whenever there's a stream; it's
 // always muted (audio is handled by the AudioSinks above), the avatar overlays it.
-export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, onSize, onAdd, added, addLabel, addedLabel, speaking, pending, pendingLabel, onVerify, verifyLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string; speaking?: boolean; pending?: boolean; pendingLabel?: string; onVerify?: () => void; verifyLabel?: string }) {
+export function ParticipantTile({ name, stream, camOn, muted, self, onMute, muteLabel, idle, idleLabel, reconnecting, reconnectingLabel, onSize, onAdd, added, addLabel, addedLabel, speaking, pending, pendingLabel, onVerify, verifyLabel }: { name: string; stream?: MediaStream | null; camOn: boolean; muted: boolean; self: boolean; onMute?: () => void; muteLabel: string; idle?: boolean; idleLabel?: string; reconnecting?: boolean; reconnectingLabel?: string; onSize?: (cssPx: number) => void; onAdd?: () => void; added?: boolean; addLabel?: string; addedLabel?: string; speaking?: boolean; pending?: boolean; pendingLabel?: string; onVerify?: () => void; verifyLabel?: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = ref.current; if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }, [stream])
@@ -328,7 +328,13 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
     <div ref={box} data-speaking={speaking ? '1' : undefined} className={`group relative w-full aspect-square max-[640px]:aspect-auto max-[640px]:h-full max-[640px]:min-h-0 min-w-0 overflow-hidden bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] transition-[opacity,filter] duration-500 ${idle ? 'opacity-40 grayscale' : ''} ${speaking ? 'ring-2 ring-inset ring-green-400' : ''}`} title={idle ? idleLabel : undefined}>
       {stream && <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${self ? '-scale-x-100' : ''} ${camOn ? '' : 'invisible'}`} />}
       {!camOn && <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--ink)_8%,var(--surface))] text-ink-faint/60"><UsersIcon className="w-9 h-9" /></div>}
-      {idle && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
+      {/* The connection broke and is being rebuilt: say so over their picture. */}
+      {reconnecting && (
+        <div className="absolute inset-0 grid place-items-center bg-black/35" data-testid="call-tile-reconnecting">
+          <span role="status" aria-label={reconnectingLabel} title={reconnectingLabel} className="inline-block size-9 rounded-full border-[3px] border-white/40 border-t-white animate-[spin_0.8s_linear_infinite]" />
+        </div>
+      )}
+      {idle && !reconnecting && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
       <div className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 text-white text-[0.72rem] transition-colors ${speaking ? 'bg-green-700/75' : 'bg-black/45'}`}>
         {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className={`w-3.5 h-3.5 shrink-0 ${speaking ? 'text-green-100' : ''}`} />}
         <span className={`truncate flex-1 ${speaking ? 'font-semibold' : ''}`}>{name}{self ? ' ·' : ''}</span>

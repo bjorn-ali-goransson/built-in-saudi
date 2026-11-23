@@ -96,6 +96,18 @@ const ICE: RTCIceServer[] = [
 // declare `failed` on their own after ~30s, and Safari can sit in `checking` far
 // longer, so without our own deadline a guest just waits. Specs shorten it.
 const connectTimeout = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_CONNECT_TIMEOUT?: number }).__CALL_CONNECT_TIMEOUT) || 25_000
+// A connection that was UP and then broke is rebuilt from scratch rather than
+// dropped: seen on the live site, a call failed after minutes on a stable phone,
+// and a reload — a new connection — came straight back. Rebuilding is what the
+// reload did, without losing the call. It is retried (every connectTimeout) for
+// this long after the break before it is reported as failed.
+const reconnectFor = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RECONNECT_FOR?: number }).__CALL_RECONNECT_FOR) || 120_000
+// `disconnected` often heals by itself within a second or two; past this it is
+// rebuilt without waiting for the browser's own `failed` (~30 s in Chrome).
+const disconnectGrace = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_DISCONNECT_GRACE?: number }).__CALL_DISCONNECT_GRACE) || 5_000
+// Both sides may notice the break and each ask the other to rebuild; a request
+// that arrives this soon after our own rebuild is the same break, not a new one.
+const RESET_SAME_BREAK = 8_000
 
 /** How the media to and from the other side travels: straight there, or through
  *  our TURN relay (either side's relay candidate counts — the bytes cross it). */
@@ -117,6 +129,9 @@ export interface ConnectFailure {
   ice: string[] // ICE state changes, "checking@1200"
   gathering: string
   dc: string
+  /** It had been up and could not be rebuilt in time: a person who dropped out
+   *  of the call, not a call that never started. */
+  wasUp?: boolean
 }
 /** The one-line cause a person can act on. */
 export type FailReason = 'no-answer' | 'relay-unreachable' | 'no-relay' | 'blocked'
@@ -149,7 +164,7 @@ export function reportNoWebrtc(room: string) {
   void fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, from: 'no-webrtc', action: 'diag', payload: { kind: 'fail', why: 'no-webrtc', reason: lockdownLikely() ? 'lockdown' : 'no-webrtc' } }) }).catch(() => {})
 }
 
-export type PeerState = 'connecting' | 'connected' | 'failed'
+export type PeerState = 'connecting' | 'connected' | 'reconnecting' | 'failed'
 export type Role = 'host' | 'guest'
 export interface PeerInfo { name: string; role: Role; inCall: boolean; muted: boolean; cam: boolean; sharing: boolean; aspect: number; link?: string }
 export interface DiagPeer { id: string; name: string; theirInCall: boolean; conn: string; ice: string; dc: string; sendMic: string; sendCam: string; recvAudio: string; recvVideo: string; path: Path; local: string; remote: string }
@@ -279,6 +294,13 @@ interface Peer {
   timer?: number
   done?: boolean // connected once, or reported failed — the deadline no longer applies
   path: Path
+  // Reconnection (see reconnectFor): this pair has been connected before (this
+  // connection or one it replaced), when it broke, and how many rebuilds so far.
+  up: boolean
+  lost?: number
+  tries: number
+  dtimer?: number // the disconnected grace
+  rebuilding?: boolean
 }
 
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 16)
@@ -458,6 +480,13 @@ export class CallRoom {
       if (p?.pc.remoteDescription) await p.pc.addIceCandidate(c).catch(() => {}); else p?.pending.push(c)
     }
     else if (type === 'leave') this.drop(from)
+    // The other side rebuilt its connection to us (see reconnect): ours is dead to
+    // them, so rebuild ours too — unless it IS the rebuild for the same break.
+    else if (type === 'reset') {
+      const p = this.peers.get(from)
+      if (p) { if (!(p.tries > 0 && Date.now() - p.born < RESET_SAME_BREAK)) this.rebuild(from, p) }
+      else if (this.role === 'host' || this.inCall || this.heardHost) this.connect(from)
+    }
     // Owner→waiting-caller control (sent from another room via signalRoom).
     else if (type === 'redirect') { const r = String((payload as { room?: string })?.room || ''); if (r) this.h.onRedirect?.(r) }
     else if (type === 'decline') this.h.onDeclined?.(String((payload as { msg?: string })?.msg || ''))
@@ -466,11 +495,14 @@ export class CallRoom {
   // Form a data-only connection. The larger id creates the channel (initiator).
   private connect(other: string) { if (!this.peers.has(other)) this.mkPeer(other, this.me > other) }
 
-  private mkPeer(id: string, initiator: boolean): Peer {
+  private mkPeer(id: string, initiator: boolean, was?: Peer): Peer {
     if (!canCall()) throw new Error('NoWebRTC') // the screen already says why (CallsTool)
     const pc = new RTCPeerConnection({ iceServers: this.ice })
     const born = Date.now()
-    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false, born, local: new Set(), remote: new Set(), turnErrors: new Set(), iceLog: [], heardFrom: false, path: 'unknown' }
+    const peer: Peer = { pc, pending: [], polite: this.me < id, makingOffer: false, mediaLinked: false, born, local: new Set(), remote: new Set(), turnErrors: new Set(), iceLog: [], heardFrom: false, path: 'unknown', up: false, tries: 0 }
+    // A rebuild keeps who they are and what size they want us at; the connection,
+    // its senders and its diagnostics start over.
+    if (was) { peer.up = true; peer.lost = was.lost ?? born; peer.tries = was.tries + 1; peer.info = was.info; peer.reqPx = was.reqPx }
     pc.onnegotiationneeded = async () => {
       try { peer.makingOffer = true; await pc.setLocalDescription(); this.send('offer', id, pc.localDescription) }
       catch { /* */ } finally { peer.makingOffer = false }
@@ -486,27 +518,69 @@ export class CallRoom {
     pc.ontrack = (e) => { peer.stream = e.streams[0]; this.h.onPeerStream?.(id, e.streams[0]) }
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
+      if (this.peers.get(id) !== peer) return // replaced by a rebuild
       if (s === 'connected') {
         if (!peer.done) { peer.done = true; window.clearTimeout(peer.timer); void this.reportConnected(peer) }
+        window.clearTimeout(peer.dtimer)
+        if (peer.tries > 0) void this.diagPost('reconnected', { ms: Date.now() - (peer.lost ?? peer.born), tries: peer.tries, role: this.role })
+        peer.up = true; peer.lost = undefined; peer.tries = 0
         this.h.onPeer?.(id, 'connected')
-      } else if (s === 'failed') { this.fail(id, 'failed'); return }
+      } else if (s === 'disconnected' && peer.up) {
+        peer.lost ??= Date.now()
+        this.h.onPeer?.(id, 'reconnecting')
+        window.clearTimeout(peer.dtimer)
+        peer.dtimer = window.setTimeout(() => { if (this.peers.get(id) === peer && pc.connectionState !== 'connected') void this.reconnect(id) }, disconnectGrace())
+      } else if (s === 'failed') { if (this.recoverable(peer)) void this.reconnect(id); else this.fail(id, 'failed'); return }
       if (s === 'closed') this.drop(id)
     }
     // Our own deadline for the FIRST connection; a call that was up and then broke
     // is `failed` above. Without it a guest waits on a spinner indefinitely.
-    peer.timer = window.setTimeout(() => { if (!peer.done && this.peers.get(id) === peer) this.fail(id, 'timeout') }, connectTimeout())
+    peer.timer = window.setTimeout(() => {
+      if (peer.done || this.peers.get(id) !== peer) return
+      if (this.recoverable(peer)) void this.reconnect(id); else this.fail(id, 'timeout')
+    }, connectTimeout())
     pc.ondatachannel = (e) => this.bindDc(id, peer, e.channel)
     if (initiator) this.bindDc(id, peer, pc.createDataChannel('bis', { ordered: true }))
     this.peers.set(id, peer)
-    this.h.onPeer?.(id, 'connecting')
+    this.h.onPeer?.(id, was ? 'reconnecting' : 'connecting')
     return peer
+  }
+
+  /** Worth rebuilding: it worked before, it broke recently, and we are still here. */
+  private recoverable(peer: Peer): boolean {
+    return this.active && peer.up && Date.now() - (peer.lost ?? Date.now()) < reconnectFor()
+  }
+  /** Tell the other side, THEN rebuild: the relay orders messages by arrival, so
+   *  they see `reset` (and drop the dead connection) before our new offer. */
+  private async reconnect(id: string) {
+    const old = this.peers.get(id)
+    if (!old || old.rebuilding) return
+    old.rebuilding = true
+    old.lost ??= Date.now()
+    this.h.onPeer?.(id, 'reconnecting')
+    try { await this.post('send', { to: id, type: 'reset' }) } catch { /* the rebuild still offers */ }
+    if (this.peers.get(id) === old) this.rebuild(id, old)
+  }
+  /** A brand-new connection in place of a dead one, silently: no leave, no join —
+   *  the person is still in the call, only the wire between us is new. */
+  private rebuild(id: string, old: Peer) {
+    if (!this.active) return
+    window.clearTimeout(old.timer); window.clearTimeout(old.dtimer)
+    old.lost ??= Date.now()
+    const pc = old.pc
+    pc.onconnectionstatechange = null; pc.onicecandidate = null; pc.ontrack = null; pc.onnegotiationneeded = null; pc.ondatachannel = null
+    if (old.dc) { old.dc.onmessage = null; old.dc.onopen = null }
+    try { pc.close() } catch { /* */ }
+    this.peers.delete(id)
+    const peer = this.mkPeer(id, this.me > id, old)
+    this.linkMedia(peer)
   }
 
   private failure(peer: Peer, why: ConnectFailure['why']): ConnectFailure {
     return {
       why, ms: Date.now() - peer.born, role: this.role, inCall: this.inCall, relayConfigured: this.relayConfigured,
       heardFrom: peer.heardFrom, local: [...peer.local], remote: [...peer.remote], turnErrors: [...peer.turnErrors],
-      ice: peer.iceLog, gathering: peer.pc.iceGatheringState, dc: peer.dc?.readyState || 'none',
+      ice: peer.iceLog, gathering: peer.pc.iceGatheringState, dc: peer.dc?.readyState || 'none', wasUp: peer.up,
     }
   }
   // Report, then drop. Exactly once per peer: the deadline and the browser's own
@@ -525,7 +599,7 @@ export class CallRoom {
   // The relay logs these (functions/call.js `diag`): candidate types and states,
   // never an address, a name or anything said. It is how a call that "just didn't
   // connect" can be explained afterwards.
-  private async diagPost(kind: 'fail' | 'connected', data: Record<string, unknown>) {
+  private async diagPost(kind: 'fail' | 'connected' | 'reconnected', data: Record<string, unknown>) {
     try { await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: this.room, from: this.me, action: 'diag', payload: { kind, ...data } }) }) } catch { /* best effort */ }
   }
   private async reportConnected(peer: Peer) {
@@ -703,7 +777,7 @@ export class CallRoom {
 
   private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
     peer.dc = dc; dc.binaryType = 'arraybuffer'
-    dc.onopen = () => this.sendInfo(peer)
+    dc.onopen = () => { this.sendInfo(peer); if (peer.reqPx !== undefined) this.sendWant(peer) }
     dc.onmessage = (e) => {
       if (typeof e.data !== 'string') { this.h.onFileChunk?.(id, e.data as ArrayBuffer); return }
       let m: Record<string, unknown>
@@ -918,13 +992,13 @@ export class CallRoom {
     }
   }
 
-  private drop(id: string) { const p = this.peers.get(id); if (!p) return; window.clearTimeout(p.timer); try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
+  private drop(id: string) { const p = this.peers.get(id); if (!p) return; window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); try { p.pc.close() } catch { /* */ } this.peers.delete(id); this.tuneVideo(); this.h.onLeave?.(id) }
   leave() {
     if (this.active) this.send('leave', 'all')
     this.active = false; this.inCall = false
     window.clearInterval(this.heartbeat)
     this.stopScreen()
-    this.peers.forEach((p) => { window.clearTimeout(p.timer); try { p.pc.close() } catch { /* */ } }); this.peers.clear()
+    this.peers.forEach((p) => { window.clearTimeout(p.timer); window.clearTimeout(p.dtimer); try { p.pc.close() } catch { /* */ } }); this.peers.clear()
     this.local?.getTracks().forEach((t) => t.stop())
     this.audioTrack?.stop(); this.videoTrack?.stop(); this.audioTrack = null; this.videoTrack = null
   }

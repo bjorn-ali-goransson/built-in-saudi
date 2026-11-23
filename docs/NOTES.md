@@ -7257,6 +7257,27 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     logged to Cloud Logging (`message: call-connect`, room hashed, whitelisted
     fields only — never an address), as is every successful connection's path,
     so a failed call can be explained afterwards from the logs.
+  - **A connection that was up and broke is rebuilt, not dropped** (a user's
+    report, November 2026: two phones on stable networks, `blocked · failed
+    after 395s`, the guest vanished and the host read a red "Couldn't connect
+    to Kamran"; a reload came straight back, twice). `rtc.ts` now treats
+    `failed` on a pair that had been `connected` (or `disconnected` for longer
+    than 5 s) as a break: it posts `reset` to the other side, THEN closes the
+    old `RTCPeerConnection` and builds a new one for the same peer id (the
+    relay orders by arrival, so `reset` is read before the new offer). The
+    other side rebuilds on `reset` too, unless it rebuilt for the same break
+    within 8 s (both sides often notice). No `leave`/`join`: the person stays
+    in the roster, their tile keeps its place with a spinner
+    (`call-tile-reconnecting`), the liveness sweep does not drop them while
+    rebuilding, and the boards and pins are re-sent once back. A rebuild that
+    does not come up within the 25 s connect deadline is tried again, for two
+    minutes from the break (`__CALL_RECONNECT_FOR` in specs); only then is the
+    peer dropped, as "left", never the red panel (`ConnectFailure.wasUp`).
+    Success is logged as `diag kind:'reconnected'`. An old client ignores
+    `reset` (unknown types are dropped), so mixed versions degrade to before.
+  - **The whiteboard is sized by a ResizeObserver**, not only window `resize`:
+    a banner appearing above it shrank the canvas element without resizing its
+    pixels, and the drawing showed stretched (same report).
   - **Two relayed phones meet relay-to-relay, at the TURN box's own address.**
     coturn denied that address (to keep the relay off the box's other
     services), so with both sides relayed every call failed at once with

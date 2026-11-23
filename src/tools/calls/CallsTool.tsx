@@ -138,6 +138,10 @@ export default function CallsTool() {
   const [hostLink, setHostLink] = useState<'none' | 'connecting' | 'connected'>('none')
   const [connFail, setConnFail] = useState<{ title: string; f: ConnectFailure } | null>(null)
   const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set())
+  // In-call peers whose connection broke and is being rebuilt (rtc.ts reconnect):
+  // they keep their tile, with a spinner over it, instead of vanishing.
+  const [reconnectingIds, setReconnectingIds] = useState<Set<string>>(new Set())
+  const reconnectingRef = useRef(reconnectingIds); reconnectingRef.current = reconnectingIds
   const [relayed, setRelayed] = useState(false)
   const [declineTarget, setDeclineTarget] = useState<{ room: string; mode: 'screen' | 'banner' } | null>(null)
   const addWindowRef = useRef(0) // admit knockers until this time (owner chose "Add to call")
@@ -344,7 +348,8 @@ export default function CallsTool() {
       const now = Date.now()
       setRoster((r) => {
         let changed = false; const m = new Map(r)
-        for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < now - GONE_MS) {
+        // Not while their connection is being rebuilt: no heartbeat can arrive then.
+        for (const id of [...m.keys()]) if ((seen.current.get(id) || 0) < now - GONE_MS && !reconnectingRef.current.has(id)) {
           const info = m.get(id)
           // A guest who went quiet while still waiting → keep them listed, marked "left".
           if (info && info.role === 'guest' && !info.inCall) setLeftWaiters((l) => l.some((w) => w.id === id) ? l : [...l, { id, name: info.name, at: now }])
@@ -463,11 +468,7 @@ export default function CallsTool() {
   const prevInCall = useRef(0)
   useEffect(() => {
     const n = inCallPeers.length
-    if (!isGuest && n > prevInCall.current) {
-      const boards = [...objects.current.entries()].filter(([, o]) => o.length) as [string, WbObj[]][]
-      if (boards.length) rtc.current?.broadcast({ t: 'wb-sync', boards })
-      for (const [b, bg] of bgs.current) sendBg(b, bg.id, bg.url)
-    }
+    if (!isGuest && n > prevInCall.current) resyncBoards()
     // Re-share existing pins to a fresh joiner (#235) — positions re-broadcast
     // continuously on their own, but a pin is one-shot, so a late arrival would miss
     // it. Everyone resends; receivers dedupe by id. Guarded to growth events only.
@@ -476,6 +477,12 @@ export default function CallsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inCallPeers.length, isGuest])
 
+  function resyncBoards() {
+    const boards = [...objects.current.entries()].filter(([, o]) => o.length) as [string, WbObj[]][]
+    if (boards.length) rtc.current?.broadcast({ t: 'wb-sync', boards })
+    for (const [b, bg] of bgs.current) sendBg(b, bg.id, bg.url)
+  }
+  function resyncShared() { resyncBoards(); for (const p of pinsRef.current) rtc.current?.broadcast({ t: 'pin', ...p }) }
   function onData(id: string, m: DataMsg) {
     if (m.t === 'chat') { setTypingBy((r) => { if (!r.has(id)) return r; const n = new Map(r); n.delete(id); return n }); setChat((c) => [...c, { id: m.id, from: id, name: m.name, text: m.text, doc: liveDoc(m.doc) }]); notify('c', `${m.name}: ${m.text}`) }
     else if (m.t === 'react') addFloat(m.emoji, m.name)
@@ -568,6 +575,7 @@ export default function CallsTool() {
         }
         setPeers((p) => { const n = new Map(p); n.delete(pid); return n }); setRoster((n) => { const m = new Map(n); m.delete(pid); return m }); setGeos((g) => { const n = new Map(g); n.delete(pid); return n })
         setConnectingIds((c) => { if (!c.has(pid)) return c; const n = new Set(c); n.delete(pid); return n })
+        setReconnectingIds((c) => { if (!c.has(pid)) return c; const n = new Set(c); n.delete(pid); return n })
         if (phaseRef.current === 'waiting' && !rtc.current?.inCall) setHostLink('none')
       },
       onData, onFileChunk,
@@ -576,7 +584,15 @@ export default function CallsTool() {
         // host link, and the waiting screen says which step that link is on.
         const guestWaiting = phaseRef.current === 'waiting' && !rtc.current?.inCall
         setConnectingIds((c) => { const n = new Set(c); if (state === 'connecting') n.add(id); else n.delete(id); return n })
-        if (state === 'connected') { connectedOnce.current = true; if (guestWaiting) setHostLink('connected') }
+        const wasReconnecting = reconnectingRef.current.has(id)
+        setReconnectingIds((c) => { if ((state === 'reconnecting') === c.has(id)) return c; const n = new Set(c); if (state === 'reconnecting') n.add(id); else n.delete(id); return n })
+        if (state === 'reconnecting') { seen.current.set(id, Date.now()); if (guestWaiting) setHostLink('connecting') }
+        else if (state === 'connected') {
+          connectedOnce.current = true; if (guestWaiting) setHostLink('connected')
+          // Back after a break: whatever was drawn or pinned meanwhile never reached
+          // them. Receivers merge by id, so resending everything is harmless.
+          if (wasReconnecting) window.setTimeout(() => resyncShared(), 800)
+        }
         else if (state === 'connecting') { if (guestWaiting) setHostLink('connecting') }
         else if (state === 'failed') {
           // If they publish a call-me link, offer to ring them back in rather than
@@ -590,6 +606,10 @@ export default function CallsTool() {
       // failed was left reading "waiting for the host to let you in" for ever.
       onPeerFail: (id, f) => {
         const info = rosterRef.current.get(id)
+        // Somebody who was in the call and dropped out after every rebuild failed
+        // has simply left, as far as we can tell: they are told so (onLeave) and
+        // come back by reopening the link. A red error here helps nobody.
+        if (f.wasUp && rtc.current?.inCall) return
         if (phaseRef.current === 'waiting' && !rtc.current?.inCall) { setHostLink('none'); setConnFail({ title: s.failTitle, f }); return }
         if (info?.link && rtc.current?.inCall) return // the lost-peer banner offers to ring them back
         setConnFail({ title: info?.name ? `${s.connectFail} ${info.name}` : s.failGuestTitle, f })
@@ -1462,8 +1482,14 @@ export default function CallsTool() {
   useEffect(() => {
     if (phase !== 'live') return
     const fit = () => { const c = wbRef.current; if (!c) return; if (c.width !== c.clientWidth || c.height !== c.clientHeight) { c.width = c.clientWidth; c.height = c.clientHeight }; const a = c.clientWidth / (c.clientHeight || 1); setSelfAspect(a); rtc.current?.setAspect(a); redraw() }
+    // Observed, not just on window resize: a banner appearing above the board
+    // shrinks it without resizing the window, and the drawing was then stretched
+    // into the smaller box at the old pixel size.
     const t = window.setTimeout(fit, 30); window.addEventListener('resize', fit)
-    return () => { window.clearTimeout(t); window.removeEventListener('resize', fit) }
+    const c = wbRef.current
+    const ro = c && typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null
+    if (c) ro?.observe(c)
+    return () => { window.clearTimeout(t); window.removeEventListener('resize', fit); ro?.disconnect() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, view, selected, sharing, roster, dockMode, files.length])
 
@@ -2360,7 +2386,7 @@ export default function CallsTool() {
             <div className="grid grid-cols-2 gap-0 max-[640px]:flex-1 max-[640px]:min-h-0 max-[640px]:[grid-template-columns:var(--gc)] max-[640px]:[grid-template-rows:var(--gr)]" style={tilesStyle} data-testid="call-tiles">
               <ParticipantTile name={name || s.you} stream={local} camOn={cam} muted={!mic} self muteLabel={s.muteThem} speaking={speaking && mic} />
               {inCallPeers.map(([id, info]) => (
-                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} onVerify={() => void openVerify(id)} verifyLabel={s.verify} idle={staleIds.has(id)} idleLabel={s.reconnecting} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
+                <ParticipantTile key={id} name={info.name || '•'} stream={peers.get(id)} camOn={info.cam} muted={info.muted} self={false} onMute={() => forceMute(id)} muteLabel={s.muteThem} onVerify={() => void openVerify(id)} verifyLabel={s.verify} idle={staleIds.has(id)} idleLabel={s.reconnecting} reconnecting={reconnectingIds.has(id)} reconnectingLabel={s.reconnectingTo(info.name || '•')} onSize={(px) => reportSize(id, 'tile', px)} speaking={speakingIds.has(id) && !info.muted}
                   onAdd={() => addOrAskContact(id, info)} added={!!info.link && contactCodes.has(info.link)}
                   pending={!info.link && requestedIds.has(id)} pendingLabel={s.contactAsked}
                   addLabel={info.link ? s.addContact : s.askToSave} addedLabel={s.savedContact} />

@@ -1303,6 +1303,63 @@ test('a dropped peer with a call link can be rung back into the call (#222)', as
   await pb.close(); await c.close(); await g.close()
 })
 
+// Seen live: a call on a stable phone failed after minutes, and a reload came
+// straight back. A connection that was up and broke is now rebuilt, both ends,
+// with a spinner over the person's tile meanwhile and no red error.
+test('a connection that breaks mid-call is rebuilt: a spinner over the tile, no error, and the call carries on', async ({ browser }) => {
+  const a = await ctx(browser, base), b = await ctx(browser, base)
+  // Keep every connection the page makes, so the spec can break one.
+  await b.addInitScript(() => {
+    const W = window as unknown as { RTCPeerConnection: typeof RTCPeerConnection; __pcs: RTCPeerConnection[] }
+    const Orig = W.RTCPeerConnection; W.__pcs = []
+    W.RTCPeerConnection = class extends Orig { constructor(c?: RTCConfiguration) { super(c); W.__pcs.push(this) } } as typeof RTCPeerConnection
+  })
+  // Hold the guest's "reset" a moment, so the spinner is there long enough to see.
+  await b.route(`${base}/**`, async (r) => {
+    if ((r.request().postData() || '').includes('"type":"reset"')) await new Promise((res) => setTimeout(res, 2500))
+    await r.continue()
+  })
+  const pa = await a.newPage(), pb = await b.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Alice')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 15_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  await pb.goto(`/en/apps/calls?code=${room}`)
+  await pb.getByTestId('call-name').fill('Bob')
+  await pb.getByTestId('call-join').click()
+  await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+  await expect(pb.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+  await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice', { timeout: 25_000 })
+  const before = diags.length
+
+  // Bob's connection to Alice dies, as the browser reports it.
+  await pb.evaluate(() => {
+    const pc = (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs.at(-1)!
+    pc.close()
+    Object.defineProperty(pc, 'connectionState', { get: () => 'failed' })
+    pc.dispatchEvent(new Event('connectionstatechange'))
+  })
+  // Alice's tile stays, with a spinner, while it is rebuilt.
+  await expect(pb.getByTestId('call-tile-reconnecting')).toBeVisible({ timeout: 2000 })
+  await expect(pb.getByTestId('call-participants-panel')).toContainText('Alice')
+  // ...and it comes back, on BOTH ends, with no error said to anybody.
+  await expect(pb.getByTestId('call-tile-reconnecting')).toHaveCount(0, { timeout: 25_000 })
+  await expect.poll(() => diags.slice(before).some((d) => d.payload.kind === 'reconnected'), { timeout: 10_000 }).toBe(true)
+  await expect(pa.getByTestId('call-conn-fail')).toHaveCount(0)
+  await expect(pb.getByTestId('call-conn-fail')).toHaveCount(0)
+  expect(await pb.evaluate(() => (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs.at(-1)!.connectionState)).toBe('connected')
+
+  // The new connection carries the call: chat goes through it.
+  await pb.getByRole('button', { name: 'Chat', exact: true }).click()
+  await pb.getByPlaceholder('Message…').fill('back-again')
+  await pb.getByRole('button', { name: 'Send', exact: true }).click()
+  await pa.getByRole('button', { name: 'Chat', exact: true }).click()
+  await expect(pa.getByTestId('call-chat-panel').getByText('back-again')).toBeVisible({ timeout: 15_000 })
+  await a.close(); await b.close()
+})
+
 // #219: answering a ring shows a connecting state. The caller already chose to
 // call — the copy must not imply they still have to act, or you'd go and nudge
 // them out of band while their connection is simply still coming up.
