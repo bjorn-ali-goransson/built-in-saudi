@@ -1459,6 +1459,12 @@ repeats, a location and an organizer, none of which a list of dated facts has,
 and bending one function into both would give every caller the other's
 parameters.
 
+**`buildIcs` takes an optional `uid` and `sequence`** (Sawi Kalam's Add to
+calendar): a meeting's file carries the meeting's own id, and a sequence that
+only grows (minutes since 1970), so adding it again after its time moved
+updates the event instead of leaving the old one too. Without them it is a
+random id and 0, as before.
+
 ## A capability with one caller (`evals/libreach.mjs`)
 
 `src/lib/` is where this site keeps what more than one tool needs, so **a module
@@ -7620,7 +7626,12 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   to learn which day (a user's report, November 2026). `subscribe` keeps the
   device's IANA zone (`tz`, checked with `Intl`), falling back to the hours'
   zone, then UTC. `respond` keeps the guest's zone as `slot.gtz` and `info`
-  returns it, so the organiser's page can give the time on the guest's clock. Calls' `splashExtra` host field is where the
+  returns it, so the organiser's page can give the time on the guest's clock.
+  **`unschedule` takes a slot back** (the organiser cleared or moved the time
+  on their page, which used to change only their own address, so the guest's
+  confirmation of the old time stood). The slot goes; a guest who had answered
+  is pushed "withdrew the time". A guest may answer again at any point (the
+  server always allowed it; Sawi Kalam's panel now offers it). Calls' `splashExtra` host field is where the
   embedder draws its panel on the pre-call screen; its `holdJoin(true)` keeps
   a guest's "Ask to join" back while that panel asks them something first.
   **The screens before and after a call take their colours from `--sp-*`**

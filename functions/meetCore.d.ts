@@ -7,7 +7,7 @@ export interface MeetStore {
   /** Records in `col` whose `field` equals `value`, each with its id. */
   find(col: string, field: string, value: string): Promise<({ id: string } & Record<string, unknown>)[]>
 }
-export type MeetAction = 'registerOptions' | 'register' | 'loginOptions' | 'login' | 'create' | 'info' | 'claim' | 'schedule' | 'respond' | 'confirm' | 'subscribe' | 'setBackground' | 'background' | 'myData' | 'deleteMeeting' | 'deleteAccount'
+export type MeetAction = 'registerOptions' | 'register' | 'loginOptions' | 'login' | 'create' | 'info' | 'claim' | 'schedule' | 'respond' | 'confirm' | 'unschedule' | 'subscribe' | 'setBackground' | 'background' | 'myData' | 'deleteMeeting' | 'deleteAccount'
 export const MEET_ACTIONS: MeetAction[]
 export function meetService(opts: { store: MeetStore; secret: string; rp: { id: string; name: string }; origins: string[]; now?: () => number
   /** Sends one web push; throws with `statusCode` 404/410 for a subscription that is gone. */

@@ -38,6 +38,10 @@ export interface EventInput {
   /** Minutes before the start; 0 for no reminder. */
   alarm: number
   organizer: string
+  /** A fixed id, so adding the same meeting again UPDATES it (with `sequence`
+   *  higher) instead of putting it in the calendar twice. Random when absent. */
+  uid?: string
+  sequence?: number
 }
 
 export type Repeat = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -112,7 +116,7 @@ export function buildIcs(ev: EventInput, now = new Date()): string {
     'PRODID:-//Built in Saudi//ICS Builder//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
-    `UID:${uid()}`,
+    `UID:${ev.uid || uid()}`,
     `DTSTAMP:${stampUtc(now)}`,
   ]
 
@@ -146,7 +150,7 @@ export function buildIcs(ev: EventInput, now = new Date()): string {
     const freq = ev.repeat.toUpperCase()
     lines.push(`RRULE:FREQ=${freq}${ev.repeatCount > 0 ? `;COUNT=${ev.repeatCount}` : ''}`)
   }
-  lines.push('SEQUENCE:0', 'STATUS:CONFIRMED', 'TRANSP:OPAQUE')
+  lines.push(`SEQUENCE:${Math.max(0, Math.floor(ev.sequence || 0))}`, 'STATUS:CONFIRMED', 'TRANSP:OPAQUE')
 
   if (ev.alarm > 0) {
     lines.push(

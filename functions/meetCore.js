@@ -141,6 +141,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       picked: (g, when) => [`${g || 'Your guest'} picked a time`, when ? `${when}. Open the meeting to confirm it.` : 'Open the meeting to confirm it.'],
       agreed: (g) => [`${g || 'Your guest'} confirmed the time`, 'The meeting is agreed.'],
       confirmed: (by) => [`${by || 'The organiser'} confirmed the time`, 'The meeting is agreed.'],
+      cleared: (by) => [`${by || 'The organiser'} withdrew the time`, 'Your answer no longer applies. Open the invitation to see it.'],
     },
     ar: {
       proposed: (by) => [`${by || 'المنظّم'} اقترح موعدًا`, 'افتح الدعوة لتأكيده.'],
@@ -148,6 +149,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       picked: (g, when) => [`${g || 'ضيفك'} اختار موعدًا`, when ? `${when}. افتح الاجتماع لتأكيده.` : 'افتح الاجتماع لتأكيده.'],
       agreed: (g) => [`${g || 'ضيفك'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
       confirmed: (by) => [`${by || 'المنظّم'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
+      cleared: (by) => [`${by || 'المنظّم'} ألغى الموعد`, 'لم يعد ردّك ساريًا. افتح الدعوة لترى ذلك.'],
     },
   }
   // The time a push names, on the receiving device's own clock and with its
@@ -354,6 +356,19 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       return { slot: publicSlot(next) }
     },
 
+    /** The organiser takes the time back: no slot, so nobody's confirmation of
+     *  it stands any more (it used to, after the organiser cleared the time on
+     *  their page). A guest who had answered is told. */
+    async unschedule({ token, code }) {
+      const { id, m } = await ownMeeting(token, code)
+      if (!m.slot) return { slot: null }
+      const answered = !!m.slot.guest
+      let next = { ...m, slot: null }
+      await store.set('meetings', id, next)
+      if (answered) next = await tell(id, next, 'guest', 'cleared', m.slot.by || m.ownerName)
+      return { slot: null }
+    },
+
     /** The organiser accepts the time the guest picked. */
     async confirm({ token, code }) {
       const { id, m } = await ownMeeting(token, code)
@@ -462,4 +477,4 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 }
 
 /** The routes, so the function and the tests dispatch identically. */
-export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'subscribe', 'setBackground', 'background', 'myData', 'deleteMeeting', 'deleteAccount']
+export const MEET_ACTIONS = ['registerOptions', 'register', 'loginOptions', 'login', 'create', 'info', 'claim', 'schedule', 'respond', 'confirm', 'unschedule', 'subscribe', 'setBackground', 'background', 'myData', 'deleteMeeting', 'deleteAccount']
