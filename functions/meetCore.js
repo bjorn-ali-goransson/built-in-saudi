@@ -120,7 +120,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   const isGuestSecret = (g) => typeof g === 'string' && g.length >= 16 && g.length <= 128
   /** What anybody may know about a slot: the time, its length, how it is being
    *  agreed, and who has confirmed. Never the secrets or the subscriptions. */
-  const publicSlot = (m) => (m.slot ? { at: m.slot.at, minutes: m.slot.minutes, mode: m.slot.mode, organiser: !!m.slot.org, guest: !!m.slot.guest, title: m.slot.title || '', by: m.slot.by || '', hours: m.slot.hours || null } : null)
+  const publicSlot = (m) => (m.slot ? { at: m.slot.at, minutes: m.slot.minutes, mode: m.slot.mode, organiser: !!m.slot.org, guest: !!m.slot.guest, title: m.slot.title || '', by: m.slot.by || '', hours: m.slot.hours || null, gtz: m.slot.gtz || '' } : null)
   /** The address a notification opens: the meeting's own link for the guest,
    *  the schedule page for the organiser, each carrying the status as it is. */
   function linkFor(code, m, role) {
@@ -138,17 +138,33 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     en: {
       proposed: (by) => [`${by || 'The organiser'} proposed a time`, 'Open the invitation to confirm it.'],
       pick: (by) => [`${by || 'The organiser'} asks you to pick a time`, 'Open the invitation to choose one.'],
-      picked: (g) => [`${g || 'Your guest'} picked a time`, 'Open the meeting to confirm it.'],
+      picked: (g, when) => [`${g || 'Your guest'} picked a time`, when ? `${when}. Open the meeting to confirm it.` : 'Open the meeting to confirm it.'],
       agreed: (g) => [`${g || 'Your guest'} confirmed the time`, 'The meeting is agreed.'],
       confirmed: (by) => [`${by || 'The organiser'} confirmed the time`, 'The meeting is agreed.'],
     },
     ar: {
       proposed: (by) => [`${by || 'المنظّم'} اقترح موعدًا`, 'افتح الدعوة لتأكيده.'],
       pick: (by) => [`${by || 'المنظّم'} يطلب منك اختيار موعد`, 'افتح الدعوة لتختار موعدًا.'],
-      picked: (g) => [`${g || 'ضيفك'} اختار موعدًا`, 'افتح الاجتماع لتأكيده.'],
+      picked: (g, when) => [`${g || 'ضيفك'} اختار موعدًا`, when ? `${when}. افتح الاجتماع لتأكيده.` : 'افتح الاجتماع لتأكيده.'],
       agreed: (g) => [`${g || 'ضيفك'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
       confirmed: (by) => [`${by || 'المنظّم'} أكّد الموعد`, 'تم الاتفاق على الاجتماع.'],
     },
+  }
+  // The time a push names, on the receiving device's own clock and with its
+  // weekday: "Kamran picked a time" alone made the organiser open the page to
+  // learn which day it was (a user's report). A device that did not say its
+  // zone (an older page) is told in the organiser's hours' zone, else UTC.
+  function whenFor(slot, s) {
+    const at = slot?.at
+    if (!at) return ''
+    const tz = s.tz || slot.hours?.tz || 'UTC'
+    try {
+      return new Intl.DateTimeFormat(s.locale === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: tz }).format(new Date(at))
+    } catch { return '' }
+  }
+  const cleanTz = (tz) => {
+    if (typeof tz !== 'string' || tz.length > 64) return ''
+    try { new Intl.DateTimeFormat('en', { timeZone: tz }); return tz } catch { return '' }
   }
   // A push to every device the other side gave us. A subscription the push
   // service says is gone (404/410) is dropped, so a dead phone is not asked
@@ -159,7 +175,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
     if (!subs.length) return m
     const keep = []
     for (const s of subs) {
-      const [title, body] = (TEXT[s.locale] || TEXT.en)[kind](who)
+      const [title, body] = (TEXT[s.locale] || TEXT.en)[kind](who, whenFor(m.slot, s))
       try {
         await notify(s.sub, { title, body, url: linkFor(code, m, role), tag: `sk-${code}` })
         keep.push(s)
@@ -320,7 +336,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
      *  which confirms their side and asks the organiser; or without one, which
      *  confirms the organiser's proposal. The first guest to answer is the
      *  invitee from then on. */
-    async respond({ code, guest, at, name }) {
+    async respond({ code, guest, at, name, tz }) {
       const { id, m } = await guestMeeting(code, guest)
       if (!m.slot) throw new MeetError(409, 'no time to answer')
       const t = at == null ? null : cleanAt(at)
@@ -328,7 +344,10 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
       if (!t && !m.slot.at) throw new MeetError(409, 'pick a time')
       if (t && t !== m.slot.at && m.slot.hours && !withinHours(m.slot.hours, t, m.slot.minutes)) throw new MeetError(400, 'outside the hours')
       const gname = clean(name, 40) || m.guestName || ''
-      const slot = t && t !== m.slot.at ? { ...m.slot, at: t, guest: true, org: false } : { ...m.slot, guest: true }
+      // The guest's own zone rides along, so the organiser can be told what the
+      // time is on the guest's clock too.
+      const gtz = cleanTz(tz) || m.slot.gtz || ''
+      const slot = t && t !== m.slot.at ? { ...m.slot, at: t, guest: true, org: false, gtz } : { ...m.slot, guest: true, gtz }
       let next = { ...m, slot, guestKey: m.guestKey || sha(guest), guestName: gname }
       await store.set('meetings', id, next)
       next = await tell(id, next, 'organiser', slot.org ? 'agreed' : 'picked', gname)
@@ -347,10 +366,11 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
 
     /** A device that wants to be told: the organiser's (with their session) or
      *  the invitee's (with their secret, which a first subscribe claims). */
-    async subscribe({ token, code, guest, sub, locale }) {
+    async subscribe({ token, code, guest, sub, locale, tz }) {
       const clean1 = cleanSub(sub)
       if (!clean1) throw new MeetError(400, 'subscription')
-      const entry = { sub: clean1, locale: locale === 'ar' ? 'ar' : 'en' }
+      const zone = cleanTz(tz)
+      const entry = { sub: clean1, locale: locale === 'ar' ? 'ar' : 'en', ...(zone ? { tz: zone } : {}) }
       let id, m, key
       if (token) { ({ id, m } = await ownMeeting(token, code)); key = 'orgSubs' }
       else { ({ id, m } = await guestMeeting(code, guest)); key = 'guestSubs'; if (!m.guestKey) m = { ...m, guestKey: sha(guest) } }

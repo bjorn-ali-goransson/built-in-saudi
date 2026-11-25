@@ -7614,7 +7614,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   refuses a picked time outside them (`withinHours`, through `Intl`, so
   daylight saving is the zone's own). `info` returns the slot and `you` (invitee / other / none); a dead
   subscription (404/410) is dropped. The server is the truth; links carry
-  `ok=o|g|og` only to mirror it. Calls' `splashExtra` host field is where the
+  `ok=o|g|og` only to mirror it. **A push names the time with its weekday, on the
+  receiving device's clock** ("Wednesday 2 December at 14:00. Open the meeting
+  to confirm it."): "Kamran picked a time" alone sent the organiser to the page
+  to learn which day (a user's report, November 2026). `subscribe` keeps the
+  device's IANA zone (`tz`, checked with `Intl`), falling back to the hours'
+  zone, then UTC. `respond` keeps the guest's zone as `slot.gtz` and `info`
+  returns it, so the organiser's page can give the time on the guest's clock. Calls' `splashExtra` host field is where the
   embedder draws its panel on the pre-call screen; its `holdJoin(true)` keeps
   a guest's "Ask to join" back while that panel asks them something first.
   **The screens before and after a call take their colours from `--sp-*`**
