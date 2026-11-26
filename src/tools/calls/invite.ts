@@ -104,9 +104,10 @@ function cover(x: Ctx, img: HTMLImageElement, W: number, H: number) {
   x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
 }
 
-/** A meeting's invitation: the title, the start time if there is one, the QR
- *  and the link. Nothing else — the picture is read at a glance in a chat, and
- *  the QR and the link say how to join without being told. */
+/** A meeting's invitation: the title, the start time if there is one, the QR,
+ *  the link and the title again. Nothing else — the picture is read at a
+ *  glance in a chat, and the QR and the link say how to join without being
+ *  told. */
 export function meetingTitle(ar: boolean, host = '', custom = '') {
   if (custom.trim()) return custom.trim()
   host = host.trim()
@@ -134,14 +135,16 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
   // The question takes a line of its own above the title.
   const down = ask ? 44 : 0
   const qy = (when ? 186 : 140) + down
-  const H = qy + qs + 96
+  // The headline again under the link: a chat (WhatsApp) often shows only the
+  // bottom of a tall picture, and a QR and a link alone do not say what for.
+  const H = qy + qs + 156
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
   x.fillStyle = b.bg; x.fillRect(0, 0, W, H)
   if (bg) {
     cover(x, bg, W, H)
     panel(x, 24, 32, W - 48, qy - 64, b.bg)
-    panel(x, 24, qy + qs + 26, W - 48, 52, b.bg)
+    panel(x, 24, qy + qs + 26, W - 48, 112, b.bg)
   }
   x.textAlign = 'center'
   words(x, ar)
@@ -167,6 +170,8 @@ async function drawMeeting(url: string, ar: boolean, when: string, host = '', ba
   }
   x.fillStyle = b.accent
   link(x, readable(url), W / 2, qy + qs + 62, W - 40, family, 18)
+  words(x, ar); x.fillStyle = b.ink
+  fit(x, ask || title, W / 2, qy + qs + 118, W - 72, '700', family, 36)
   return c
 }
 
