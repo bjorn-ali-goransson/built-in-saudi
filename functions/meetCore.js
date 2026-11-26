@@ -198,11 +198,24 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   // that week; and `days`, `from` and `to` are written back alongside
   // (the days with any span, the earliest start and the latest end), so an
   // older page reading a slot still finds what it knows.
+  //
+  // Or, once the organiser has opened particular hours on particular dates,
+  // `open`: those spans as instants (ms), and nothing else is open. Only the
+  // coming year, a few hundred spans at most.
   function cleanHours(h) {
     if (!h || typeof h !== 'object') return null
     const tz = clean(h.tz, 64)
     if (!tz) return null
     try { new Intl.DateTimeFormat('en-US', { timeZone: tz }) } catch { return null }
+    if (Array.isArray(h.open)) {
+      const t0 = now() - 24 * 3600_000, t1 = now() + 400 * 24 * 3600_000
+      const spans = h.open.slice(0, 500)
+        .map((s) => (Array.isArray(s) ? [Math.floor(Number(s[0]) / 60000) * 60000, Math.floor(Number(s[1]) / 60000) * 60000] : [NaN, NaN]))
+        .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b) && a < b && b > t0 && a < t1).sort((x, y) => x[0] - y[0])
+      const open = []
+      for (const s of spans) { const last = open[open.length - 1]; if (last && s[0] <= last[1]) last[1] = Math.max(last[1], s[1]); else open.push(s) }
+      return open.length ? { open, tz } : null
+    }
     let week
     if (Array.isArray(h.week)) {
       week = Array.from({ length: 7 }, (_, d) => mergeSpans((Array.isArray(h.week[d]) ? h.week[d] : []).slice(0, 48)))
@@ -224,6 +237,7 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   }
   /** Whether a meeting starting at `t` and lasting `minutes` is inside the hours. */
   function withinHours(h, t, minutes) {
+    if (Array.isArray(h.open)) return h.open.some(([a, b]) => t >= a && t + (minutes || 0) * 60000 <= b)
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: h.tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((p) => [p.type, p.value]))
     const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
     const start = Number(parts.hour) * 60 + Number(parts.minute)

@@ -7620,7 +7620,12 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   clock in their IANA zone; joined where they overlap). The older shape, one
   span on a set of weekdays (`days`, `from`, `to`), is still accepted and read
   as that week, and is written back alongside a week (open days, earliest
-  start, latest end) so an older page reading a slot finds what it knows;
+  start, latest end) so an older page reading a slot finds what it knows.
+  **Or `open`: hours on particular dates, as instants** (`[[startMs, endMs]]`,
+  joined where they touch, the coming year only, 500 at most). The owner did
+  not want a repeating week ("if you started opening up slots, anything else is
+  not available"), so once anything is opened only that is; Sawi Kalam sends
+  the working week only while nothing is.
   `respond`
   refuses a picked time outside them (`withinHours`, through `Intl`, so
   daylight saving is the zone's own). `info` returns the slot and `you` (invitee / other / none); a dead
