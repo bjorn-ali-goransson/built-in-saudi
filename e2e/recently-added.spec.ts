@@ -12,6 +12,14 @@ const ADDED = readFileSync('src/tools/added.ts', 'utf8')
 const dates = [...ADDED.matchAll(/'([a-z0-9-]+)': '(\d{4}-\d{2}-\d{2})'/g)].map((m) => [m[1], m[2]] as const)
 const newest = dates.map(([, d]) => d).sort().at(-1)!
 
+// The row goes away 14 days after the newest addition (NEW_MAX_DAYS in
+// src/lib/toolSections.ts), so these cases broke on their own the first time
+// two weeks passed with no new tool. They read the page on the day after the
+// newest addition; the last case checks the row really does go away.
+const DAY = 86_400_000
+const atNewest = new Date(`${newest}T12:00:00`).getTime()
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(atNewest + DAY) })
+
 test('the newest tools are surfaced in their own row', async ({ page }) => {
   await page.goto('/en')
   const sec = page.getByTestId('section-__new')
@@ -86,4 +94,11 @@ test('works in Arabic', async ({ page }) => {
   await page.goto('/ar')
   await expect(page.getByTestId('section-__new')).toBeVisible()
   await expect(page.getByTestId('section-nav-__new')).toContainText('أُضيفت')
+})
+
+test('the row goes away once nothing has been added for two weeks', async ({ page }) => {
+  await page.clock.setFixedTime(atNewest + 15 * DAY)
+  await page.goto('/en')
+  await expect(page.getByTestId('section-__rec')).toBeVisible()
+  await expect(page.getByTestId('section-__new')).toHaveCount(0)
 })

@@ -53,7 +53,10 @@ test('typing another letter puts the highlight back to the top', async ({ page }
   await box.press('ArrowDown')
   await box.press('ArrowDown')
   await box.pressSequentially(' merge')
-  await expect(page.getByTestId('result-active')).toBeVisible()
+  // Wait for the highlight to sit on the NEW list's top result, not merely for
+  // a highlight: under load, Enter could land while "pdf"'s list was still
+  // drawn and open its top result instead (CI, 26 Nov 2026: pdf-compress).
+  await expect(page.getByTestId('result-active').locator('[data-testid^="tool-"]')).toHaveAttribute('data-testid', 'tool-pdf-merge')
   await box.press('Enter')
   await expect(page).toHaveURL(/\/en\/apps\/pdf-merge$/)
 })
