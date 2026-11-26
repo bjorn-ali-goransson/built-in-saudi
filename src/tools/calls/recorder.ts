@@ -119,8 +119,11 @@ export class MeetingRecorder {
         const cur = this.live.get(key)
         if (track && track.readyState === 'live') {
           seen.add(key)
-          if (cur?.track === track) continue
-          if (cur) this.close(key)
+          // Chromium's recorder can sit on a remote video track it was started
+          // on before frames flowed and never emit a byte; a fresh one picks
+          // the frames up. The empty segment is dropped, not kept as a file.
+          if (cur?.track === track && !(cur.seg.bytes === 0 && this.now() - cur.seg.start > 4000)) continue
+          if (cur) this.close(key, cur.track === track)
           this.open(s.who, kind, track)
         }
       }
@@ -155,12 +158,12 @@ export class MeetingRecorder {
     this.live.set(`${who}|${kind}`, live)
   }
 
-  private close(key: string) {
+  private close(key: string, discard = false) {
     const l = this.live.get(key); if (!l) return
     this.live.delete(key)
     l.seg.end = this.now()
     try { if (l.rec.state !== 'inactive') l.rec.stop() } catch { /* already stopped */ }
-    this.finishing.push(l.done.then((blob) => { this.closed.push({ seg: l.seg, blob }) }))
+    this.finishing.push(l.done.then((blob) => { if (!discard || blob.size) this.closed.push({ seg: l.seg, blob }) }))
   }
 
   /** Stop everything and hand back the package. */

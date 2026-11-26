@@ -980,7 +980,10 @@ export default function CallsTool() {
   // Typing is said again at most every 2.5 s, and forgotten 4 s after the last.
   function sayTyping(v: string) {
     if (!v.trim() || Date.now() - typingSent.current < 2500) return
-    typingSent.current = Date.now(); rtc.current?.broadcast({ t: 'typing', name: name || s.you })
+    // Only a word that reached somebody starts the wait: typing straight after
+    // being let in, before the channel or the roster is ready, would otherwise
+    // be lost and not said again for 2.5 s (a typing pill that never showed, on CI).
+    if (rtc.current?.broadcast({ t: 'typing', name: name || s.you })) typingSent.current = Date.now()
   }
   useEffect(() => {
     if (!typingBy.size) return

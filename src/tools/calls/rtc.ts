@@ -860,7 +860,8 @@ export class CallRoom {
   private broadcastInfo() { for (const p of this.peers.values()) this.sendInfo(p) }
 
   // ---- app-facing send (only to peers actually in the call) ------------------
-  broadcast(msg: DataMsg) { this.tap?.('me', msg); const s = JSON.stringify(msg); for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) p.dc.send(s) }
+  /** Returns how many people it reached. */
+  broadcast(msg: DataMsg): number { this.tap?.('me', msg); const s = JSON.stringify(msg); let n = 0; for (const p of this.peers.values()) if (p.dc?.readyState === 'open' && p.info?.inCall) { p.dc.send(s); n++ } return n }
   /** Our own live tracks, as the others receive them: the screen while sharing,
    *  else the camera (the call sends both down the one video track). */
   myTracks(): { audio: MediaStreamTrack | null; video: MediaStreamTrack | null } {
