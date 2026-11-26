@@ -192,21 +192,43 @@ export function meetService({ store, secret, rp, origins, now = () => Date.now()
   const cleanMinutes = (n) => { const v = Math.round(Number(n)); return v > 0 && v <= 24 * 60 ? v : 0 }
   /** The hours a guest may pick in: weekdays (0 = Sunday), and a span of the
    *  day in minutes, on the organiser's wall clock in their time zone. */
+  // The hours a guest may pick in are a week: for each weekday (0 = Sunday),
+  // the spans of the day open on the organiser's clock, in minutes. An older
+  // page sends one span for a set of days (`days`, `from`, `to`), read here as
+  // that week; and `days`, `from` and `to` are written back alongside
+  // (the days with any span, the earliest start and the latest end), so an
+  // older page reading a slot still finds what it knows.
   function cleanHours(h) {
     if (!h || typeof h !== 'object') return null
-    const days = [...new Set((Array.isArray(h.days) ? h.days : []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b)
-    const from = Math.round(Number(h.from)), to = Math.round(Number(h.to))
     const tz = clean(h.tz, 64)
-    if (!days.length || !(from >= 0 && to <= 24 * 60 && from < to) || !tz) return null
+    if (!tz) return null
     try { new Intl.DateTimeFormat('en-US', { timeZone: tz }) } catch { return null }
-    return { days, from, to, tz }
+    let week
+    if (Array.isArray(h.week)) {
+      week = Array.from({ length: 7 }, (_, d) => mergeSpans((Array.isArray(h.week[d]) ? h.week[d] : []).slice(0, 48)))
+    } else {
+      const days = (Array.isArray(h.days) ? h.days : []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+      week = Array.from({ length: 7 }, (_, d) => (days.includes(d) ? mergeSpans([[h.from, h.to]]) : []))
+    }
+    if (!week.some((s) => s.length)) return null
+    const all = week.flat()
+    return { week, tz, days: week.map((s, d) => (s.length ? d : -1)).filter((d) => d >= 0), from: Math.min(...all.map((s) => s[0])), to: Math.max(...all.map((s) => s[1])) }
+  }
+  /** Whole minutes within the day, starts before ends, overlaps joined. */
+  function mergeSpans(list) {
+    const ok = list.map((s) => (Array.isArray(s) ? [Math.round(Number(s[0])), Math.round(Number(s[1]))] : [NaN, NaN]))
+      .filter(([a, b]) => a >= 0 && b <= 24 * 60 && a < b).sort((x, y) => x[0] - y[0])
+    const out = []
+    for (const s of ok) { const last = out[out.length - 1]; if (last && s[0] <= last[1]) last[1] = Math.max(last[1], s[1]); else out.push([...s]) }
+    return out
   }
   /** Whether a meeting starting at `t` and lasting `minutes` is inside the hours. */
   function withinHours(h, t, minutes) {
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: h.tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((p) => [p.type, p.value]))
     const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
     const start = Number(parts.hour) * 60 + Number(parts.minute)
-    return h.days.includes(day) && start >= h.from && start + (minutes || 0) <= h.to
+    const spans = Array.isArray(h.week) ? h.week[day] || [] : h.days.includes(day) ? [[h.from, h.to]] : []
+    return spans.some(([a, b]) => start >= a && start + (minutes || 0) <= b)
   }
   async function ownMeeting(token, code) {
     const { s, org } = await organiser(token)

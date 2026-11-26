@@ -7615,8 +7615,13 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
   capture it; `meet.js` sends through `web-push` with the shared VAPID keys).
   The first guest to answer is the invitee, held by a browser secret stored as
   a hash, so anybody else with the link reads the status and cannot answer.
-  A pick can carry the organiser's `hours` (weekdays, 0 = Sunday, and a span
-  of the day in minutes, on their wall clock in their IANA zone); `respond`
+  A pick can carry the organiser's `hours`: a `week` (seven lists, Sunday
+  first, of the spans of each day that are open, in minutes, on their wall
+  clock in their IANA zone; joined where they overlap). The older shape, one
+  span on a set of weekdays (`days`, `from`, `to`), is still accepted and read
+  as that week, and is written back alongside a week (open days, earliest
+  start, latest end) so an older page reading a slot finds what it knows;
+  `respond`
   refuses a picked time outside them (`withinHours`, through `Intl`, so
   daylight saving is the zone's own). `info` returns the slot and `you` (invitee / other / none); a dead
   subscription (404/410) is dropped. The server is the truth; links carry
