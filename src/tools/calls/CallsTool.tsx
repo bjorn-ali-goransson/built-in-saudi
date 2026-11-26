@@ -1489,9 +1489,12 @@ export default function CallsTool() {
   // Auto-grow the text box to fit its wrapped content (on text/width/size change).
   useEffect(() => { const el = textInputRef.current; if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }, [draft?.text, draft?.w, draft?.size])
   // Focus the text box a tick after it opens (autoFocus gets blurred by the click
-  // that placed it, since the canvas isn't focusable). Ignore that first blur.
+  // that placed it, since the canvas isn't focusable). Ignore that first blur —
+  // for every box, including one that replaces another: the tap that reopens
+  // placed text blurs the box before it, and must not commit the reopened one.
   useEffect(() => {
-    if (!draft) { textReady.current = false; return }
+    textReady.current = false
+    if (!draft) return
     const t = window.setTimeout(() => { textReady.current = true; textInputRef.current?.focus() }, 60)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2299,9 +2302,10 @@ export default function CallsTool() {
           })()}
 
           {/* whiteboard tools (hidden while the location map owns the stage) */}
+          {/* A tool chosen within 60ms of opening a text box gets no blur commit (textReady), so commit here too. */}
           <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 ${view === 'loc' ? 'hidden' : 'flex'} items-center gap-0.5 bg-[var(--surface)] border border-[color:var(--line)] rounded-full shadow-[var(--shadow-md)] px-1.5 py-1`} data-testid="wb-tools">
             {[0.005, 0.011, 0.022].map((w, i) => (
-              <button key={w} type="button" onClick={() => { setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
+              <button key={w} type="button" onClick={() => { finishDraft(); setTool('pen'); setPenW(w) }} title={`Pen ${['S', 'M', 'L'][i]}`} aria-label={`Pen ${i}`}
                 className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 ${tool === 'pen' && penW === w ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>
                 <span className="rounded-full border-2 border-[color:var(--ink)]" style={{ width: `${6 + i * 4}px`, height: `${6 + i * 4}px` }} />
               </button>
@@ -2326,7 +2330,7 @@ export default function CallsTool() {
               <input ref={bgFileRef} type="file" className="hidden" data-testid="wb-bg-input" onChange={(e) => { void pickBoardBg(e.target.files?.[0]); e.target.value = '' }} />
             </>}
             <span className="w-px h-5 bg-[color:var(--line)] mx-0.5 shrink-0" />
-            <button type="button" onClick={() => setTool('eraser')} title="Eraser" aria-label="Eraser" data-testid="wb-eraser"
+            <button type="button" onClick={() => { finishDraft(); setTool('eraser') }} title="Eraser" aria-label="Eraser" data-testid="wb-eraser"
               className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 [&_svg]:w-[18px] [&_svg]:h-[18px] ${tool === 'eraser' ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-ink' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}><EraserIcon /></button>
             <button type="button" onClick={() => placeText(-0.15, -0.06)} title="Text" aria-label="Text" data-testid="wb-text"
               className={`grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer shrink-0 font-display font-bold text-[1.05rem] ${tool === 'text' ? 'bg-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-ink' : 'text-ink-soft hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]'}`}>T</button>
