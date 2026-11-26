@@ -7255,11 +7255,16 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     the room (coturn logs usernames; the code is the link), shared per room per
     hour so coturn's `user-quota` bounds a room. `ice` never creates a room.
   - **`rtc.ts` waits for those servers before the first knock** (5 s bound, then
-    STUN alone), watches the SELECTED pair every 2 s, and treats one relayed leg
-    as a relayed call: video stops going out, the camera is released (not left
-    lit sending nothing) and cannot be turned on, screen share is refused. The
-    relay is capped per session in coturn (`max-bps`) for voice; the client half
-    makes that graceful rather than a frozen picture.
+    STUN alone), watches each peer's SELECTED pair every 2 s, and decides PER
+    LEG: a relayed leg (`Peer.voiceOnly`) gets voice only, while video keeps
+    going directly to everybody else (asked November 2026: one relayed guest
+    had turned the whole call voice only). Only when EVERY leg is relayed is
+    the camera released (not left lit sending nothing) and share refused
+    (`allRelayed`). The bar names who is voice only. The relay is capped per
+    session in coturn (`max-bps`) for voice; the client half makes that
+    graceful rather than a frozen picture. TURN is no scaling tool: a mesh
+    past 3–4 people is limited by each sender's upload, which only an SFU
+    (a media server, a separate server decision for SK's PLAN) fixes.
   - **The relay is the last resort, and is only believed once it holds**
     (a user asked, November 2026, whether it is mandatory: their camera went
     off in a call that should not have needed it). Nothing forces it: STUN and
@@ -7271,9 +7276,10 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     the camera for good, and Safari, which reports no selected pair, was read
     from the FIRST nominated, succeeded pair, which can be a relay pair ICE
     has already moved off. Now a relay reading must hold 8 s
-    (`__CALL_RELAY_HOLD`) before the call counts as relayed, and the Safari
-    fallback takes the highest-priority nominated pair. Not covered by e2e
-    (no TURN in specs); check `path relay` diags in Cloud Logging instead.
+    (`__CALL_RELAY_HOLD`) before that leg counts as relayed, and the Safari
+    fallback takes the highest-priority nominated pair. No TURN runs in specs:
+    `__CALL_RELAY_NAMES` makes the named peers' legs read as relayed, and the
+    three-person spec checks video still reaches the direct one.
   - **A connection that does not come up is reported, never dropped quietly:**
     our own 25 s deadline (browsers wait ~30 s, Safari longer), then
     `onPeerFail` with a `ConnectFailure` — candidate TYPES each side gathered,

@@ -1143,6 +1143,51 @@ test('a knock is admittable even when the host is on the chat tab (#217)', async
   await pb.close(); await a.close(); await b.close()
 })
 
+// One relayed leg must not cost the rest of the call its video. ICE tries the
+// direct pairs first per peer, so in a call of three the host may reach Bea only
+// through the relay and Cy directly: Bea gets voice only, Cy still gets video, and
+// the host's camera stays on. No TURN server runs here, so __CALL_RELAY_NAMES
+// makes the engine read Bea's leg as relayed.
+test('a relayed leg goes voice only while video still goes directly to the others', async ({ browser }) => {
+  const CAPTURE = `
+    const orig = window.RTCPeerConnection
+    const all = []; window.__pcs = all
+    window.RTCPeerConnection = function (...a) { const pc = new orig(...a); all.push(pc); return pc }
+    window.RTCPeerConnection.prototype = orig.prototype
+    window.__CALL_RELAY_HOLD = 300
+    window.__CALL_RELAY_NAMES = ['Bea']
+  `
+  const a = await ctx(browser, base), b = await ctx(browser, base), c = await ctx(browser, base)
+  await a.addInitScript(CAPTURE)
+  const pa = await a.newPage(), pb = await b.newPage(), pc = await c.newPage()
+  await pa.goto('/en/apps/calls')
+  await pa.getByTestId('call-name').fill('Host')
+  await pa.getByTestId('call-start').click()
+  await expect(pa.getByTestId('calls-live')).toBeVisible({ timeout: 20_000 })
+  await closeShare(pa)
+  const room = new URL(pa.url()).searchParams.get('code') || ''
+  for (const [p, n] of [[pb, 'Bea'], [pc, 'Cy']] as const) {
+    await p.goto(`/en/apps/calls?code=${room}`)
+    await p.getByTestId('call-name').fill(n)
+    await p.getByTestId('call-join').click()
+    await pa.getByTestId('call-admit').click({ timeout: 25_000 })
+    await expect(p.getByTestId('calls-live')).toBeVisible({ timeout: 25_000 })
+  }
+  const camBtn = pa.getByTestId('call-cam')
+  await camBtn.click()
+  // Which of the host's connections carry its camera: one per guest, sorted.
+  const sending = () => pa.evaluate(() => {
+    const pcs = (window as never as { __pcs: RTCPeerConnection[] }).__pcs || []
+    return pcs.filter((x) => x.connectionState === 'connected').map((x) => x.getTransceivers().some((t) => t.receiver?.track?.kind === 'video' && t.sender.track?.kind === 'video')).sort()
+  })
+  await expect.poll(sending, { timeout: 20_000 }).toEqual([false, true])
+  await expect(camBtn).toHaveAttribute('aria-pressed', 'true')
+  const bar = pa.getByTestId('call-relay-bar')
+  await expect(bar).toContainText('Voice only with Bea')
+  await expect(bar).not.toContainText('Cy')
+  await a.close(); await b.close(); await c.close()
+})
+
 // #214: a tile in the participants dock is ~120px wide, so sending a 960px frame
 // into it wastes ~40x the pixels it can show. The receiver measures its tile and
 // asks the sender over the data channel; the sender scales its encoder to match.

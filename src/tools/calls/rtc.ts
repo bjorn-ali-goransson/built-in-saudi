@@ -109,9 +109,12 @@ const disconnectGrace = () => (typeof window !== 'undefined' && (window as unkno
 // A rebuild the other side never answers (no offer, answer or candidate over the
 // relay, which a live page does within a second or two) means they have gone —
 // a closed tab sends no `leave` — and they are dropped rather than waited for.
-// How long the selected pair must stay relayed before the call is treated as
-// relayed (camera released, share refused). Specs shorten it.
-const relayHold = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RELAY_HOLD?: number }).__CALL_RELAY_HOLD) || 8_000
+// How long a peer's selected pair must stay relayed before that leg is treated
+// as relayed (voice only). Specs shorten it, and name peers whose leg should read
+// as relayed (`__CALL_RELAY_NAMES`), since no TURN server runs under test.
+type RelayHooks = { __CALL_RELAY_HOLD?: number; __CALL_RELAY_NAMES?: string[] }
+const hooks = (): RelayHooks => (typeof window !== 'undefined' ? (window as unknown as RelayHooks) : {})
+const relayHold = () => hooks().__CALL_RELAY_HOLD || 8_000
 const reconnectSilence = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RECONNECT_SILENCE?: number }).__CALL_RECONNECT_SILENCE) || 8_000
 // Both sides may notice the break and each ask the other to rebuild; a request
 // that arrives this soon after our own rebuild is the same break, not a new one.
@@ -253,9 +256,8 @@ export interface CallHandlers {
   /** A connection did not come up (or broke and could not recover). Fired once,
    *  before the peer is dropped, with what we know — `onPeer(…,'failed')` too. */
   onPeerFail?(id: string, f: ConnectFailure): void
-  /** The media path changed. `relay` means the call goes through our TURN server,
-   *  which carries voice only: video is withheld and the camera turned off. */
-  onPath?(path: Path, from: Path): void
+  /** Who is reached only through our TURN server now (voice only to them). */
+  onRelayed?(ids: string[]): void
   onLeave?(id: string): void
   onData?(id: string, msg: DataMsg): void
   onFileChunk?(id: string, chunk: ArrayBuffer): void
@@ -302,6 +304,8 @@ interface Peer {
   timer?: number
   done?: boolean // connected once, or reported failed — the deadline no longer applies
   path: Path
+  relaySince?: number // when this leg's selected pair was first read as relayed
+  voiceOnly?: boolean // relayed for relayHold: no video goes this way
   // Reconnection (see reconnectFor): this pair has been connected before (this
   // connection or one it replaced), when it broke, and how many rebuilds so far.
   up: boolean
@@ -359,9 +363,11 @@ export class CallRoom {
   /** We hold TURN credentials, so a pair that cannot connect directly is relayed. */
   relayConfigured = false
   private iceReady: Promise<void> | null = null
-  /** The worst media path across in-call peers (one relayed leg = a relayed call). */
+  /** The worst media path across in-call peers, for diagnostics. What is SENT is
+   *  decided per leg (Peer.voiceOnly), never for the whole call. */
   path: Path = 'unknown'
-  private relaySeen: number | undefined
+  /** Every in-call leg is relayed: there is nobody to send video to at all. */
+  allRelayed = false
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
@@ -649,34 +655,44 @@ export class CallRoom {
       if (!pair) return
       const lt = cands.get(String(pair.localCandidateId))?.candidateType, rt = cands.get(String(pair.remoteCandidateId))?.candidateType
       if (lt || rt) peer.path = lt === 'relay' || rt === 'relay' ? 'relay' : 'direct'
+      if (peer.info?.name && hooks().__CALL_RELAY_NAMES?.includes(peer.info.name)) peer.path = 'relay'
     } catch { /* a closing pc */ }
   }
   // Watched, not sampled once: ICE can move to the relay mid-call (wifi → mobile).
+  // Decided per leg: ICE always tries the direct pairs first and settles on the
+  // relay only for a pair that cannot connect otherwise, so in a call of three
+  // one relayed leg says nothing about the other two. Video keeps going directly
+  // to everybody it can reach; only the relayed leg carries voice alone.
   private async watchPath() {
-    let worst: Path = 'unknown'
+    let worst: Path = 'unknown', inCall = 0, relayed = 0
+    const now = Date.now()
     for (const p of this.peers.values()) {
       if (!p.info?.inCall) continue
+      inCall++
       await this.readPath(p)
       if (p.path === 'relay') worst = 'relay'
       else if (p.path === 'direct' && worst !== 'relay') worst = 'direct'
+      // A relay pair can be the selected one for a moment (it answered first, or
+      // while a network changes) before ICE settles on a direct route, so the
+      // relay is believed only once it has held for relayHold; leaving it is at once.
+      if (p.path === 'relay') p.relaySince ??= now
+      else p.relaySince = undefined
+      const voiceOnly = p.relaySince !== undefined && now - p.relaySince >= relayHold()
+      if (voiceOnly) relayed++
+      if (voiceOnly !== !!p.voiceOnly) { p.voiceOnly = voiceOnly; this.applyVideo(p); this.h.onRelayed?.(this.relayedIds()) }
     }
-    // A relay pair can be the selected one for a moment (it answered first, or
-    // while a network changes) before ICE settles on a direct route. Acting on one
-    // reading released the camera of a call that never needed the relay, so the
-    // relay is believed only once it has held for RELAY_HOLD; leaving it is at once.
-    if (worst === 'relay') { this.relaySeen ??= Date.now(); if (Date.now() - this.relaySeen < relayHold()) return }
-    else this.relaySeen = undefined
-    if (!this.inCall || worst === this.path) return
-    const from = this.path
     this.path = worst
-    // The relay carries voice only (it is capped well below what video needs),
-    // so video stops going out — and the camera is released rather than left lit
-    // sending nothing. Coming back to direct does NOT turn it on again: that is
-    // the person's choice to make.
-    if (worst === 'relay') { if (this.cam) await this.toggleCam(false); if (this.screenOn) this.stopScreen() }
-    this.applyVideoAll()
-    this.h.onPath?.(worst, from)
+    const all = this.inCall && inCall > 0 && relayed === inCall
+    if (all === this.allRelayed) return
+    this.allRelayed = all
+    // With every leg relayed there is nobody to send video to, so the camera is
+    // released rather than left lit sending nothing, and a share stops. Coming
+    // back does NOT turn it on again: that is the person's choice to make.
+    if (all) { if (this.cam) await this.toggleCam(false); if (this.screenOn) this.stopScreen() }
+    this.h.onRelayed?.(this.relayedIds())
   }
+  /** In-call peers reached only through the relay (voice only). */
+  relayedIds(): string[] { return [...this.peers].filter(([, p]) => p.info?.inCall && p.voiceOnly).map(([id]) => id) }
 
   // Perfect negotiation: tolerate simultaneous (re)negotiation from both sides.
   private async onDesc(id: string, desc: RTCSessionDescriptionInit, kind: 'offer' | 'answer') {
@@ -703,11 +719,11 @@ export class CallRoom {
     this.applyVideo(peer)
   }
 
-  /** The video track we'd be sending right now, if anyone wanted it. */
-  private wantedVideoTrack(): MediaStreamTrack | null {
+  /** The video track we'd be sending to `peer` right now, if they wanted it. */
+  private wantedVideoTrack(peer: Peer): MediaStreamTrack | null {
     // The one place that decides what video reaches the wire, so the relay rule
-    // cannot be forgotten by a fifth caller.
-    if (this.path === 'relay') return null
+    // cannot be forgotten by a fifth caller: the relay is capped at voice rates.
+    if (peer.voiceOnly) return null
     if (this.screenOn) return this.screen?.getVideoTracks()[0] || null
     return this.cam ? this.videoTrack : null
   }
@@ -719,7 +735,7 @@ export class CallRoom {
    *  replaceTrack, so the sender persists and nothing renegotiates. */
   private applyVideo(peer: Peer) {
     if (!peer.info?.inCall) return
-    const track = peer.videoPaused ? null : this.wantedVideoTrack()
+    const track = peer.videoPaused ? null : this.wantedVideoTrack(peer)
     if (peer.vSender) { peer.vSender.replaceTrack(track).catch(() => {}); if (track) this.tuneVideo(); return }
     if (!track || !this.local) return
     peer.vSender = peer.pc.addTrack(track, this.local)
@@ -907,7 +923,7 @@ export class CallRoom {
   async toggleCam(on: boolean): Promise<boolean> {
     // Refused rather than opened and not sent: a lit camera indicator with nothing
     // going out is the one thing a private call must not do.
-    if (on && this.path === 'relay') return false
+    if (on && this.allRelayed) return false
     if (on) {
       if (!this.videoTrack) {
         try { const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: this.camId ? { exact: this.camId } : undefined, ...CAM } }); this.videoTrack = s.getVideoTracks()[0] }
@@ -995,7 +1011,7 @@ export class CallRoom {
   // Throws on failure (the caller surfaces the reason) instead of swallowing it —
   // a silent null made mobile screen-share failures impossible to diagnose.
   async shareScreen(): Promise<MediaStream> {
-    if (this.path === 'relay') throw new DOMException('The call goes through the relay, which carries voice only', 'RelayVoiceOnly')
+    if (this.allRelayed) throw new DOMException('The call goes through the relay, which carries voice only', 'RelayVoiceOnly')
     this.screen = await navigator.mediaDevices.getDisplayMedia({ video: true })
     const track = this.screen.getVideoTracks()[0]
     this.screenOn = true // set BEFORE wiring, so tuneVideo picks the screen ceiling

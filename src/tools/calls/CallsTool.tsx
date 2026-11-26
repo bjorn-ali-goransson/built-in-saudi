@@ -142,7 +142,8 @@ export default function CallsTool() {
   // they keep their tile, with a spinner over it, instead of vanishing.
   const [reconnectingIds, setReconnectingIds] = useState<Set<string>>(new Set())
   const reconnectingRef = useRef(reconnectingIds); reconnectingRef.current = reconnectingIds
-  const [relayed, setRelayed] = useState(false)
+  // Peers reached only through our relay (voice only to them), and whether that is everybody.
+  const [relayed, setRelayed] = useState<{ ids: string[]; all: boolean }>({ ids: [], all: false })
   const [declineTarget, setDeclineTarget] = useState<{ room: string; mode: 'screen' | 'banner' } | null>(null)
   const addWindowRef = useRef(0) // admit knockers until this time (owner chose "Add to call")
 
@@ -612,13 +613,17 @@ export default function CallsTool() {
         if (info?.link && rtc.current?.inCall) return // the lost-peer banner offers to ring them back
         setConnFail({ title: info?.name ? `${s.connectFail} ${info.name}` : s.failGuestTitle, f })
       },
-      onPath: (p) => {
-        setRelayed(p === 'relay')
-        if (p === 'relay') {
-          // The engine has already released the camera and stopped any share.
-          setCam(false); setSharing(false); setScreenStream(null)
-          setToast(s.relayOn); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 8000)
-        }
+      onRelayed: (ids) => {
+        const all = !!rtc.current?.allRelayed
+        setRelayed((was) => {
+          if (all && !was.all) {
+            // Every leg is relayed: the engine has already released the camera
+            // and stopped any share, as there is nobody left to send video to.
+            setCam(false); setSharing(false); setScreenStream(null)
+            setToast(s.relayOn); window.clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(''), 8000)
+          }
+          return { ids, all }
+        })
       },
       onPeerInfo: (id, info) => {
         seen.current.set(id, Date.now())
@@ -994,7 +999,7 @@ export default function CallsTool() {
     </div>
   )
 
-  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); setLeftSeen(new Set()); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed(false) }
+  function resetLive() { stopLocationWatch(); setPeers(new Map()); setLocal(null); setChat([]); setRoster(new Map()); setGraceEndsAt(null); setFiles([]); setSelected(''); setView('board'); setSharing(false); setScreenStream(null); setShareOpen(false); setGeos(new Map()); setPins([]); setMyGeo(null); setSharingLoc(false); knownInCall.current.clear(); sizes.current.clear(); objects.current.clear(); myStack.current.clear(); setLeftWaiters([]); setLeftSeen(new Set()); knockSeen.current.clear(); setConnFail(null); setHostLink('none'); setConnectingIds(new Set()); setRelayed({ ids: [], all: false }) }
   // `confirmed`: the host has agreed to end it for everyone. With nobody else
   // there (in the call or waiting) there is nobody to end it for, so no question.
   function hangup(confirmed = false) {
@@ -1084,7 +1089,7 @@ export default function CallsTool() {
     if (v && govRef.current.paused) govOverride.current = true // asked for video anyway
     if (!v) autoOff.current = false // their choice now, not ours to undo
     setCam(v); const ok = await rtc.current?.toggleCam(v)
-    if (v && ok === false) { setCam(false); if (rtc.current?.path === 'relay') screenToast(s.camRelay) }
+    if (v && ok === false) { setCam(false); if (rtc.current?.allRelayed) screenToast(s.camRelay) }
   }
   useEffect(() => {
     if (phase !== 'live') return
@@ -2100,11 +2105,13 @@ export default function CallsTool() {
         <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pickFiles(e.target.files); e.target.value = '' }} />
       </header>
       {nameAsk && nameForm('bar')}
-      {/* The lasting record of the relay: the toast announces it, this stays,
-          because video stopping with no reason on screen reads as a broken call. */}
-      {relayed && (
+      {/* The lasting record of the relay: video stopping with no reason on screen
+          reads as a broken call. Only the relayed legs go without video, so the
+          bar names who they are; video still goes directly to everybody else. */}
+      {relayed.ids.length > 0 && (
         <div className="flex items-center gap-2.5 px-3 py-1.5 border-b border-[color:var(--line)] bg-[color-mix(in_srgb,var(--gold-500)_14%,var(--surface))] text-[0.82rem] text-ink leading-snug" data-testid="call-relay-bar">
-          <span className="w-2 h-2 rounded-full bg-[var(--gold-500)] shrink-0" aria-hidden="true" /> {s.relayOn}
+          <span className="w-2 h-2 rounded-full bg-[var(--gold-500)] shrink-0" aria-hidden="true" />
+          {relayed.all ? s.relayOn : `${s.relayWith} ${relayed.ids.map((id) => roster.get(id)?.name || '•').join(locale === 'ar' ? '، ' : ', ')}${s.relayWhy}`}
         </div>
       )}
       {(recording || recFinishing || recBy.size > 0) && (
