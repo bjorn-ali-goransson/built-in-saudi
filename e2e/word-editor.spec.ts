@@ -142,15 +142,25 @@ test('links: Ctrl+K on a selection, kept as a link mark; a javascript: address i
   await expect(editor(p)).toHaveText('see the site')
   // A Shift+Arrow that lands while the editor is still taking in the last letter can be undone
   // by it restoring its own selection (measured: 2 runs in 20 under load, with nothing else
-  // changed). This case is about links, so it waits for the selection it means to make.
+  // changed). This case is about links, so it waits for the selection it means to make —
+  // as the EDITOR holds it, read from the dialog's text field: the page's selection can
+  // say "site" while the editor has not taken it in yet (CI, 1 run in ~250).
   await expect(async () => {
+    if (await p.getByTestId('wd-link-dialog').isVisible()) {
+      await p.keyboard.press('Escape')
+      await expect(p.getByTestId('wd-link-dialog')).toBeHidden()
+    }
+    // Closing the dialog refocuses the editor, and ProseMirror's focus handler puts
+    // its own selection back 20ms later, undoing a Shift+Arrow pressed inside that
+    // window ("ite": every retry failed the same way). No hand is that fast.
+    await p.waitForTimeout(60)
     await p.keyboard.press('End')
     await p.keyboard.down('Shift')
     for (let i = 0; i < 4; i++) await p.keyboard.press('ArrowLeft')
     await p.keyboard.up('Shift')
-    expect(await p.evaluate(() => window.getSelection()!.toString())).toBe('site')
+    await p.keyboard.press('Control+k')
+    await expect(p.getByTestId('wd-link-text')).toHaveValue('site', { timeout: 1000 })
   }).toPass({ timeout: 10_000 })
-  await p.keyboard.press('Control+k')
   await p.getByTestId('wd-link-url').fill('javascript:alert(1)')
   await expect(p.getByTestId('wd-link-save')).toBeDisabled()
   await p.getByTestId('wd-link-url').fill('example.com/about')

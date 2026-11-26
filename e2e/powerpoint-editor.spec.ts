@@ -141,6 +141,10 @@ test('typing over a selected box starts editing it, without double-clicking', as
   const c = await at(p, ell.x + ell.w / 2, ell.y + ell.h / 2)
   await p.mouse.dblclick(c.x, c.y)
   await expect(p.getByTestId('sl-text-editor')).toBeVisible()
+  // ProseMirror's focus handler puts its own selection back into the page 20ms
+  // after focus; an End pressed inside that window is undone ("G!o", 1 run in ~30).
+  // No hand presses a key that soon after a double-click.
+  await p.waitForTimeout(60)
   await p.keyboard.press('End')
   await p.keyboard.type('!')
   await p.keyboard.press('Escape')
