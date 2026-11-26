@@ -109,6 +109,9 @@ const disconnectGrace = () => (typeof window !== 'undefined' && (window as unkno
 // A rebuild the other side never answers (no offer, answer or candidate over the
 // relay, which a live page does within a second or two) means they have gone —
 // a closed tab sends no `leave` — and they are dropped rather than waited for.
+// How long the selected pair must stay relayed before the call is treated as
+// relayed (camera released, share refused). Specs shorten it.
+const relayHold = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RELAY_HOLD?: number }).__CALL_RELAY_HOLD) || 8_000
 const reconnectSilence = () => (typeof window !== 'undefined' && (window as unknown as { __CALL_RECONNECT_SILENCE?: number }).__CALL_RECONNECT_SILENCE) || 8_000
 // Both sides may notice the break and each ask the other to rebuild; a request
 // that arrives this soon after our own rebuild is the same break, not a new one.
@@ -358,6 +361,7 @@ export class CallRoom {
   private iceReady: Promise<void> | null = null
   /** The worst media path across in-call peers (one relayed leg = a relayed call). */
   path: Path = 'unknown'
+  private relaySeen: number | undefined
 
   constructor(room: string, handlers: CallHandlers) { this.room = room; this.h = handlers }
 
@@ -629,8 +633,18 @@ export class CallRoom {
         else if (r.type === 'candidate-pair') pairs.set(String(r.id), r)
         else if (r.type === 'local-candidate' || r.type === 'remote-candidate') cands.set(String(r.id), r)
       })
-      // Safari reports no transport selection: the nominated, succeeded pair is it.
-      if (!sel) for (const [k, p] of pairs) if (p.state === 'succeeded' && (p.nominated || p.selected)) { sel = k; break }
+      // Safari reports no transport selection. More than one pair can be nominated
+      // and succeeded (a relay pair that answered first, then the direct one ICE
+      // moved to); taking the first of them read a direct call as relayed. ICE uses
+      // the highest-priority one, and a relay pair always ranks lowest.
+      if (!sel) {
+        let best = -1
+        for (const [k, p] of pairs) {
+          if (p.state !== 'succeeded' || !(p.nominated || p.selected)) continue
+          const pr = p.selected ? Number.MAX_VALUE : Number(p.priority) || 0
+          if (pr > best) { best = pr; sel = k }
+        }
+      }
       const pair = pairs.get(sel)
       if (!pair) return
       const lt = cands.get(String(pair.localCandidateId))?.candidateType, rt = cands.get(String(pair.remoteCandidateId))?.candidateType
@@ -646,6 +660,12 @@ export class CallRoom {
       if (p.path === 'relay') worst = 'relay'
       else if (p.path === 'direct' && worst !== 'relay') worst = 'direct'
     }
+    // A relay pair can be the selected one for a moment (it answered first, or
+    // while a network changes) before ICE settles on a direct route. Acting on one
+    // reading released the camera of a call that never needed the relay, so the
+    // relay is believed only once it has held for RELAY_HOLD; leaving it is at once.
+    if (worst === 'relay') { this.relaySeen ??= Date.now(); if (Date.now() - this.relaySeen < relayHold()) return }
+    else this.relaySeen = undefined
     if (!this.inCall || worst === this.path) return
     const from = this.path
     this.path = worst

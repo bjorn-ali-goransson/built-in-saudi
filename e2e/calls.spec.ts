@@ -1800,5 +1800,18 @@ test('a see-through pill in the corner of the stage says who is speaking and who
   const speaking = pa.getByTestId('call-speaking')
   await expect(speaking).toHaveText('Bob is speaking', { timeout: 15_000 })
   expect(await speaking.locator('svg').count()).toBe(1)
+  // The mic in the pill is still; the pill itself is the signal.
+  expect(await speaking.locator('svg').evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
+  // Every tile's name tag is one height, whether or not it carries the
+  // safety-code shield (the own tile has none).
+  const tags = pa.getByTestId('call-tag')
+  await expect(tags).toHaveCount(2)
+  const heights = await tags.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height))
+  expect(new Set(heights).size).toBe(1)
+  // Muted, the pill stays a moment, so a pause between words does not flash it away.
+  await pb.getByTestId('call-mic').click()
+  await pa.waitForTimeout(1200)
+  await expect(speaking).toBeVisible()
+  await expect(speaking).toHaveCount(0, { timeout: 6_000 })
   await a.close(); await b.close()
 })

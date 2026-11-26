@@ -244,6 +244,22 @@ export function useSpeaking(stream: MediaStream | null, active: boolean): boolea
 // talking. Keeps one analyser per id and rebuilds only when the set of ids or their
 // audio tracks changes — a roster re-render doesn't tear every AudioContext down.
 // Same tap-only approach as useSpeaking: never connected to output, so no echo.
+/** The names last said to be speaking, kept for `holdMs` after they fall silent.
+ *  The speaking detector lets go after 350 ms (right for a tile's highlight), but a
+ *  pill that comes and goes with every breath is unreadable; it stays put across a
+ *  pause and changes at once when somebody else speaks. */
+export function useLingering(names: string[], holdMs: number): string[] {
+  const [shown, setShown] = useState<string[]>(names)
+  const key = names.join('\u0000')
+  useEffect(() => {
+    if (names.length) { setShown(names); return }
+    const t = window.setTimeout(() => setShown([]), holdMs)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, holdMs])
+  return shown
+}
+
 export function useSpeakingSet(streams: [string, MediaStream][]): Set<string> {
   const [speaking, setSpeaking] = useState<Set<string>>(() => new Set())
   // A cheap signature so the effect only re-runs when a stream/track actually changes.
@@ -340,7 +356,8 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
         </div>
       )}
       {idle && !reconnecting && <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black/30 animate-pulse" aria-hidden="true" />}
-      <div className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1 text-white text-[0.72rem] transition-colors ${speaking ? 'bg-green-700/75' : 'bg-black/45'}`}>
+      {/* A fixed height: every tile's tag lines up whatever controls it holds. */}
+      <div className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 h-6 text-white text-[0.72rem] transition-colors ${speaking ? 'bg-green-700/75' : 'bg-black/45'}`} data-testid="call-tag">
         {muted ? <MicOffIcon className="w-3.5 h-3.5 text-red-300 shrink-0" /> : <MicIcon className={`w-3.5 h-3.5 shrink-0 ${speaking ? 'text-green-100' : ''}`} />}
         <span className={`truncate flex-1 ${speaking ? 'font-semibold' : ''}`}>{name}{self ? ' ·' : ''}</span>
         {/* They publish a call-me link → offer to keep them (#221). Stays visible
@@ -353,7 +370,7 @@ export function ParticipantTile({ name, stream, camOn, muted, self, onMute, mute
         )}
         {!self && onVerify && (
           <button type="button" onClick={onVerify} title={verifyLabel} aria-label={verifyLabel} data-testid="call-verify"
-            className="opacity-70 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 grid place-items-center w-5 h-5 rounded bg-white/15 hover:bg-white/30 text-white border-0 cursor-pointer transition-opacity">
+            className="opacity-70 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 hover:opacity-100 focus-visible:opacity-100 grid place-items-center shrink-0 p-0 bg-transparent text-white border-0 cursor-pointer transition-opacity">
             <ShieldIcon className="w-3.5 h-3.5" />
           </button>
         )}

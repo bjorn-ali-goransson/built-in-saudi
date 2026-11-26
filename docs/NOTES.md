@@ -7260,6 +7260,20 @@ from the URL) to make that a config flip, not a rewrite. Trend home toward a
     lit sending nothing) and cannot be turned on, screen share is refused. The
     relay is capped per session in coturn (`max-bps`) for voice; the client half
     makes that graceful rather than a frozen picture.
+  - **The relay is the last resort, and is only believed once it holds**
+    (a user asked, November 2026, whether it is mandatory: their camera went
+    off in a call that should not have needed it). Nothing forces it: STUN and
+    TURN sit in one `RTCPeerConnection` with no `iceTransportPolicy`, so ICE
+    ranks relay pairs lowest and uses one only when no direct pair works; the
+    5 s bound is only for fetching credentials and the 25 s deadline only
+    reports. What did misfire was our READING of the path: one 2 s sample
+    showing a relay pair (selected for a moment while ICE settles) released
+    the camera for good, and Safari, which reports no selected pair, was read
+    from the FIRST nominated, succeeded pair, which can be a relay pair ICE
+    has already moved off. Now a relay reading must hold 8 s
+    (`__CALL_RELAY_HOLD`) before the call counts as relayed, and the Safari
+    fallback takes the highest-priority nominated pair. Not covered by e2e
+    (no TURN in specs); check `path relay` diags in Cloud Logging instead.
   - **A connection that does not come up is reported, never dropped quietly:**
     our own 25 s deadline (browsers wait ~30 s, Safari longer), then
     `onPeerFail` with a `ConnectFailure` — candidate TYPES each side gathered,

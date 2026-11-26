@@ -19,7 +19,7 @@ import {
 } from './helpers'
 import {
   StreamVideo, LobbyList, IconBtn, Menu, MenuItem, dropTrigger, AudioSinks,
-  DeviceGroup, useSpeaking, useSpeakingSet, DebugPanel, ParticipantTile, DeclineComposer, DockResizer, ConnFailPanel,
+  DeviceGroup, useSpeaking, useSpeakingSet, useLingering, DebugPanel, ParticipantTile, DeclineComposer, DockResizer, ConnFailPanel,
 } from './parts'
 import { LockdownHelp } from './LockdownHelp'
 import { CallLinkPanel, IncomingCallNote } from './CallLinkPanel'
@@ -1078,6 +1078,7 @@ export default function CallsTool() {
   // because the video grid lives in the dock, which may be closed or on the chat tab.
   const speakingIds = useSpeakingSet([...peers])
   const speakingNames = inCallPeers.filter(([id]) => speakingIds.has(id)).map(([, i]) => i.name || '•')
+  const speakingPill = useLingering(speakingNames, 2500)
   async function toggleCam() {
     const v = !cam
     if (v && govRef.current.paused) govOverride.current = true // asked for video anyway
@@ -2214,12 +2215,12 @@ export default function CallsTool() {
           {/* And who is typing in the chat, so a message on its way is seen
               without opening the chat. Both are small see-through pills over the
               corner of whatever is on the stage, never in the way of it. */}
-          {(speakingNames.length > 0 || typingBy.size > 0) && (
+          {(speakingPill.length > 0 || typingBy.size > 0) && (
             <div className="absolute bottom-3 start-3 z-30 flex flex-col items-start gap-1.5 max-w-[70%] pointer-events-none">
-              {speakingNames.length > 0 && (
+              {speakingPill.length > 0 && (
                 <div className="flex items-center gap-1.5 max-w-full px-3 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white text-[0.78rem]" data-testid="call-speaking">
-                  <MicIcon className="w-3.5 h-3.5 shrink-0 [animation:mic-pulse_0.9s_ease-in-out_infinite]" />
-                  <span className="truncate font-medium">{s.speakingNow(speakingNames)}</span>
+                  <MicIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate font-medium">{s.speakingNow(speakingPill)}</span>
                 </div>
               )}
               {typingBy.size > 0 && (
