@@ -822,6 +822,10 @@ export class CallRoom {
   private bindDc(id: string, peer: Peer, dc: RTCDataChannel) {
     peer.dc = dc; dc.binaryType = 'arraybuffer'
     dc.onopen = () => { this.sendInfo(peer); if (peer.reqPx !== undefined) this.sendWant(peer) }
+    // The answering side is handed its channel by `ondatachannel`, which can come
+    // after the channel opened: `onopen` then never fires and the host never
+    // hears this guest's name (a knock that never showed in the lobby, on CI).
+    if (dc.readyState === 'open') dc.onopen(new Event('open'))
     // Closed while the connection itself is still up: the other page closed it on
     // purpose. (A killed tab ends nothing; that one is caught by reconnectSilence.)
     dc.onclose = () => { if (this.peers.get(id) === peer && peer.pc.connectionState === 'connected') this.drop(id) }
